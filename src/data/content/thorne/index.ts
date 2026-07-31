@@ -6,6 +6,7 @@
  */
 
 import { spellSchema, type Spell } from "@/data/schemas/spell";
+import type { BannedSpell } from "@/rules/restrictions";
 
 import absorbElements from "./spells/absorb-elements.json";
 import arcaneVigor from "./spells/arcane-vigor.json";
@@ -115,15 +116,12 @@ export function loadThorneSpells(): Spell[] {
   return parseSpells(RAW_SPELLS);
 }
 
-/** Причина, по которой заклинание недоступно Торну (F-14). */
-export type BanReason = "harmful_to_species" | "dungeon_master";
-
-export type BannedSpell = {
-  nameRu: string;
-  nameEn: string;
-  reason: BanReason;
-  explanationRu: string;
-};
+/**
+ * Причина, по которой заклинание недоступно Торну (F-14).
+ *
+ * Тип живёт в движке правил: реестр — данные конкретного персонажа, а понятие запрета общее.
+ */
+export type { BanCategory as BanReason, BannedSpell } from "@/rules/restrictions";
 
 /**
  * Реестр запретов. Огонь определяется по типу урона в данных заклинания и здесь не перечисляется

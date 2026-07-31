@@ -27,7 +27,7 @@ import { ResourceHeader } from "@/components/combat/ResourceHeader";
 import { SpellFilters, type AvailableFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
-import { loadThorneSpells } from "@/data/content/thorne";
+import { BANNED_SPELLS, loadThorneSpells } from "@/data/content/thorne";
 import { HitPointsSheet } from "@/components/combat/HitPointsSheet";
 import {
   describeConcentration,
@@ -37,6 +37,7 @@ import {
 import { BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
 import { preparedLimit } from "@/rules/abilities";
 import { rolesPresent } from "@/rules/combatRole";
+import { findBan, matchesQuery } from "@/rules/restrictions";
 import {
   bestCastPlan,
   filterSpells,
@@ -125,6 +126,7 @@ export function CombatScreen() {
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const economy = useMemo(
@@ -163,7 +165,10 @@ export function CombatScreen() {
   // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список
   // (FR-200). Карточка открывается из всей книги — режим не должен закрывать уже открытое.
   const inMode = spellsForScreen(SPELLS, character);
-  const shown = filterSpells(inMode, filters, context);
+  // Поиск живёт в «Книге»: там 29 карточек и вопрос «где оно» настоящий. В бою и на привале список
+  // короткий, и поле ввода забрало бы ряд ради задачи, которой нет (FR-162).
+  const searched = inMode.filter((spell) => matchesQuery(spell, query));
+  const shown = filterSpells(searched, filters, context);
   const available = availableFilters(inMode);
   // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам (FR-207).
   const bloodShown =
@@ -178,6 +183,7 @@ export function CombatScreen() {
   // приложение предлагать не должно.
   const preparing = character.screenMode === "book";
   const limit = preparedLimit(character.intelligence, character.level);
+  const ban = findBan(query, BANNED_SPELLS);
 
   const rows = shown.map((spell) => (
     <SpellCardCompact
@@ -241,6 +247,7 @@ export function CombatScreen() {
     // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым это
     // снять, на экране уже нет (FR-212).
     setFilters(NO_FILTERS);
+    setQuery("");
     apply((current) => setScreenMode(current, mode));
     if (leavingFight && combatEndRecovery(character) > 0) setFightOverOpen(true);
   };
@@ -363,7 +370,17 @@ export function CombatScreen() {
         карточки над таким списком — чистая потеря (FR-202).
       */}
       {character.screenMode === "camp" ? null : (
-        <div className="shrink-0 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+        <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+          {preparing ? (
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Поиск по названию"
+              placeholder="Поиск по названию"
+              className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
+            />
+          ) : null}
           <SpellFilters
             filters={filters}
             available={available}
@@ -384,7 +401,23 @@ export function CombatScreen() {
         {/* Пусто — только когда не подошло вообще ничего, включая «Магию крови». */}
         {rows.length === 0 ? (
           <div className="flex flex-col items-start gap-2 text-sm">
-            <p>Под выбранные фильтры не подходит ни одно заклинание.</p>
+            {/*
+              Пустой результат поиска читается как потеря данных или поломка. Если искали
+              запрещённое, приложение отвечает причиной — «Понимание языков запрещено мастером», —
+              а не молчанием (FR-162).
+            */}
+            {ban === null ? (
+              <p>
+                {query.trim() === ""
+                  ? "Под выбранные фильтры не подходит ни одно заклинание."
+                  : `По запросу «${query.trim()}» ничего не найдено.`}
+              </p>
+            ) : (
+              <p role="status">
+                <span className="font-medium">{ban.nameRu}</span> ({ban.nameEn}) —{" "}
+                {ban.explanationRu}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => setFilters(NO_FILTERS)}

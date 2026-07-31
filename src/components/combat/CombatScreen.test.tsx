@@ -374,6 +374,43 @@ describe("операции привала (FR-202, FR-215)", () => {
   });
 });
 
+describe("поиск и запреты (FR-160, FR-161, FR-162)", () => {
+  it("ищет по названию в «Книге»", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.type(screen.getByLabelText("Поиск по названию"), "туман");
+
+    const list = within(screen.getByLabelText(/^Заклинания/));
+    expect(list.getByText("Туманный шаг")).toBeDefined();
+    expect(list.queryByText("Паутина")).toBeNull();
+  });
+
+  it("на запрещённое отвечает причиной, а не пустым экраном (FR-162)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.type(screen.getByLabelText("Поиск по названию"), "понимание языков");
+
+    expect(screen.getByRole("status").textContent).toContain("Запрещено мастером");
+    expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
+  });
+
+  it("на просто ненайденное отвечает запросом, а не запретом", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.type(screen.getByLabelText("Поиск по названию"), "дракон");
+
+    expect(screen.getByText(/По запросу «дракон» ничего не найдено/)).toBeDefined();
+  });
+
+  it("в бою поля поиска нет: там список короткий", async () => {
+    await renderWithStores(<CombatScreen />);
+    expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
+  });
+});
+
 describe("реакции (FR-060, FR-061, FR-062)", () => {
   it("вход одним нажатием, вопрос о событии первым", async () => {
     const user = userEvent.setup();
