@@ -50,7 +50,7 @@ describe("звёздчатый многоугольник", () => {
   });
 
   it("вершины лежат на окружности заданного радиуса", () => {
-    for (const point of starPolygons(7, 3, 100)[0]) {
+    for (const point of starPolygons(7, 3, 100)[0] ?? []) {
       const distance = Math.hypot(point.x - CENTER, point.y - CENTER);
       expect(distance).toBeCloseTo(100, 1);
     }
@@ -61,16 +61,16 @@ describe("деления и надпись", () => {
   it("делений столько, сколько заказано, и каждое — пара точек", () => {
     const ticks = tickMarks(36, 400, 20);
     expect(ticks).toHaveLength(36);
-    expect(ticks[0][0]).toEqual({ x: CENTER, y: CENTER - 400 });
-    expect(ticks[0][1]).toEqual({ x: CENTER, y: CENTER - 380 });
+    expect(ticks[0]?.[0]).toEqual({ x: CENTER, y: CENTER - 400 });
+    expect(ticks[0]?.[1]).toEqual({ x: CENTER, y: CENTER - 380 });
   });
 
   it("знаки надписи расставлены по кругу и повёрнуты наружу", () => {
     const places = inscriptionPlacements(4, 400);
     expect(places).toHaveLength(4);
     expect(places[0]).toEqual({ at: { x: CENTER, y: CENTER - 400 }, rotation: 0 });
-    expect(places[1].rotation).toBe(90);
-    expect(places[3].rotation).toBe(270);
+    expect(places[1]?.rotation).toBe(90);
+    expect(places[3]?.rotation).toBe(270);
   });
 });
 
