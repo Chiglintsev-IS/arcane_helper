@@ -415,3 +415,43 @@ describe("инструкция обмена (FR-172, FR-174, FR-175)", () => {
     expect(bloodExchangeInstructions(6, dying).join(" ")).toMatch(/итого 3 раны/);
   });
 });
+
+describe("руна в объявлении (FR-151, FR-152)", () => {
+  it("называет руну и её эффект отдельной фразой", () => {
+    const announcement = renderAnnouncement(
+      spell("web"),
+      context({ payment: { kind: "slot", slotLevel: 3 }, rune: "war" }),
+    );
+    expect(announcement.text).toContain(
+      "Применяю руну войны: +2 к броскам атаки союзников в пределах 30 футов" +
+        " до конца вашего следующего хода.",
+    );
+  });
+
+  it("пересчитывает эффект по уровню ячейки", () => {
+    const announcement = renderAnnouncement(
+      spell("web"),
+      context({ payment: { kind: "slot", slotLevel: 4 }, rune: "life" }),
+    );
+    expect(announcement.text).toContain("Применяю руну жизни: 20 временных хитов");
+  });
+
+  it("при оплате кровью руну не называет (OQ-17)", () => {
+    const announcement = renderAnnouncement(
+      spell("web"),
+      context({ payment: { kind: "spell_points" }, rune: "war" }),
+    );
+    expect(announcement.text).not.toMatch(/руну/);
+  });
+
+  it("инструкция говорит, что руна спишется", () => {
+    const steps = castInstructions(
+      spell("web"),
+      context({ payment: { kind: "slot", slotLevel: 2 }, rune: "wind" }),
+    );
+    expect(steps).toContain(
+      "Спишется руна ветра: +10 футов скорости и защита от атак вдогонку" +
+        " до начала вашего следующего хода",
+    );
+  });
+});

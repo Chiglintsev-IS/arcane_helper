@@ -327,6 +327,7 @@ function SummaryStep({
     mode: draft.mode,
     payment: draft.payment,
     ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
+    ...(draft.rune === null ? {} : { rune: draft.rune }),
   };
   const announcement = renderAnnouncement(draft.spell, context);
   const instructions = castInstructions(draft.spell, context);

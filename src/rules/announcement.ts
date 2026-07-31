@@ -23,6 +23,7 @@ import {
   woundsFromExchange,
 } from "./bloodMagic";
 import { MINIMUM_CONCENTRATION_DC } from "./concentration";
+import { RUNE_LABEL, runeEffect, type Rune } from "./runes";
 import { effectiveDamage } from "./scaling";
 import type { CastMode } from "./slots";
 
@@ -46,6 +47,8 @@ export type AnnouncementContext = {
   payment: PaymentChoice;
   /** Цель свободным текстом: модели противников в MVP нет (OQ-10). */
   targetLabel?: string;
+  /** Приложенная руна (FR-151). К оплате кровью не применяется — OQ-17. */
+  rune?: Rune;
 };
 
 /** Знак обязателен: игрок называет «плюс восемь», а не «восемь». */
@@ -140,6 +143,19 @@ function paymentSentence(spell: Spell, payment: PaymentChoice): string {
 }
 
 /**
+ * Руна в шаблонах карточек не предусмотрена: она добавляется фразой, как и оплата кровью (FR-151).
+ *
+ * Молчит при любой оплате, кроме ячейки: руна прикладывается только к сотворению с расходом ячейки
+ * ([OQ-17](../../docs/open-questions.md#oq-17)), и названная вслух она обещала бы мастеру эффект,
+ * которого не будет.
+ */
+function runeSentence(context: AnnouncementContext): string {
+  if (context.rune === undefined || context.payment.kind !== "slot") return "";
+  const name = RUNE_LABEL[context.rune].replace("Руна ", "руну ");
+  return ` Применяю ${name}: ${runeEffect(context.rune, context.payment.slotLevel)}.`;
+}
+
+/**
  * Готовое объявление. Порядок замечаний: сначала подстановки в порядке словаря, затем режим —
  * так список читается как «чего не хватает в тексте» сверху вниз.
  */
@@ -157,7 +173,9 @@ export function renderAnnouncement(spell: Spell, context: AnnouncementContext): 
   }
 
   // Пустая подстановка цели оставляет двойной пробел — он виден на экране и слышен в паузе.
-  text = `${text.replace(/ {2,}/g, " ").trim()}${paymentSentence(spell, context.payment)}`;
+  text =
+    `${text.replace(/ {2,}/g, " ").trim()}` +
+    `${paymentSentence(spell, context.payment)}${runeSentence(context)}`;
 
   return { text, gaps: [...gaps, ...modeGap(spell, context.mode)] };
 }
@@ -194,6 +212,14 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
     );
   } else if (context.mode === "ritual") {
     steps.push("Ячейка не расходуется, но накладывание займёт на 10 минут дольше");
+  }
+
+  // Руна списывается той же транзакцией, что и ячейка (FR-023), поэтому названа рядом с ценой.
+  if (context.rune !== undefined && context.payment.kind === "slot") {
+    steps.push(
+      `Спишется ${RUNE_LABEL[context.rune].replace("Руна ", "руна ")}:` +
+        ` ${runeEffect(context.rune, context.payment.slotLevel)}`,
+    );
   }
 
   switch (spell.resolution.type) {
