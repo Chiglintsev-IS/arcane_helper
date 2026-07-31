@@ -12,6 +12,7 @@ import detectMagic from "./spells/detect-magic.json";
 import disguiseSelf from "./spells/disguise-self.json";
 import findFamiliar from "./spells/find-familiar.json";
 import identify from "./spells/identify.json";
+import mageArmor from "./spells/mage-armor.json";
 import mending from "./spells/mending.json";
 import message from "./spells/message.json";
 import rayOfFrost from "./spells/ray-of-frost.json";
@@ -27,6 +28,7 @@ const RAW_SPELLS: readonly unknown[] = [
   mending,
   shield,
   absorbElements,
+  mageArmor,
   disguiseSelf,
   findFamiliar,
   detectMagic,

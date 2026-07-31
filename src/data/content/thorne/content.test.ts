@@ -21,10 +21,10 @@ function roleplayTexts(spell: (typeof spells)[number]): string[] {
 }
 
 describe("первая партия контента", () => {
-  it("состоит из 11 карточек: 4 заговора и 7 заклинаний 1 уровня", () => {
-    expect(spells).toHaveLength(11);
+  it("состоит из 12 карточек: 4 заговора и 8 заклинаний 1 уровня", () => {
+    expect(spells).toHaveLength(12);
     expect(spells.filter((spell) => spell.level === CANTRIP_LEVEL)).toHaveLength(4);
-    expect(spells.filter((spell) => spell.level === 1)).toHaveLength(7);
+    expect(spells.filter((spell) => spell.level === 1)).toHaveLength(8);
   });
 
   it("все карточки проходят схему и имеют уникальные идентификаторы", () => {
