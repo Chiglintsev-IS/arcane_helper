@@ -13,8 +13,13 @@
  *   FR-174 — потеря хитов от кровавого колдовства не порождает проверку концентрации.
  */
 
-import type { ActiveEffect, CharacterState } from "@/data/schemas/character";
+import type {
+  ActiveEffect,
+  CharacterState,
+  RoleplayPreference,
+} from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
+import type { RoleplayCategory } from "@/store/castDraftStore";
 import {
   ACTION_SPENT_MESSAGES,
   turnResourceFor,
@@ -1164,6 +1169,222 @@ export function setSpellNote(session: Session, spellId: string, note: string): S
     },
     journal: session.journal,
   };
+}
+
+// —————————————————————————— Отыгрыш ——————————————————————————
+
+/** Категории готовых вариантов в порядке показа (FR-051). */
+export const ROLEPLAY_CATEGORIES = [
+  "short",
+  "atmospheric",
+  "sarcastic",
+] as const satisfies readonly RoleplayCategory[];
+
+/** Пустые предпочтения: запись заводится, только когда игрок что-то пометил. */
+const NO_ROLEPLAY_PREFERENCES: RoleplayPreference = {
+  favoriteVariantIds: [],
+  disabledVariantIds: [],
+  customVariants: [],
+  usageCount: {},
+};
+
+export type RoleplayVariant = {
+  id: string;
+  text: string;
+  category: RoleplayCategory;
+  /** Написан игроком: идёт первым в своей категории (FR-053). */
+  own: boolean;
+  favorite: boolean;
+  disabled: boolean;
+  usedTimes: number;
+};
+
+/**
+ * Идентификатор готового варианта — категория и место в карточке.
+ *
+ * Не сам текст: правка опечатки стирала бы и «любимое», и счётчик ротации. Обратная сторона
+ * честная — перестановка вариантов в карточке оставит пометки на местах, а не на текстах
+ * ([FR-053](../../docs/features/F-04-roleplay.md#fr-053)).
+ */
+export function roleplayVariantId(category: RoleplayCategory, index: number): string {
+  return `${category}-${index}`;
+}
+
+function roleplayPreferencesFor(character: CharacterState, spellId: string): RoleplayPreference {
+  return character.roleplayPreferences[spellId] ?? NO_ROLEPLAY_PREFERENCES;
+}
+
+/**
+ * Место варианта в списке: свои, любимые, остальные, отключённые.
+ *
+ * Счётчик использований сюда не входит намеренно: сортируй список по нему — и он пересобирался бы
+ * под пальцем ровно тогда, когда игрок в него целится. Счётчик двигает выбор, а не порядок
+ * (FR-053).
+ */
+function roleplayRank(variant: RoleplayVariant): number {
+  if (variant.disabled) return 3;
+  if (variant.own) return 0;
+  return variant.favorite ? 1 : 2;
+}
+
+/** Варианты категории в порядке показа, включая отключённые (FR-053). */
+export function roleplayVariants(
+  character: CharacterState,
+  spell: Spell,
+  category: RoleplayCategory,
+): RoleplayVariant[] {
+  const preference = roleplayPreferencesFor(character, spell.id);
+  const describe = (id: string, text: string, own: boolean): RoleplayVariant => ({
+    id,
+    text,
+    category,
+    own,
+    favorite: preference.favoriteVariantIds.includes(id),
+    disabled: preference.disabledVariantIds.includes(id),
+    usedTimes: preference.usageCount[id] ?? 0,
+  });
+
+  const variants = [
+    ...preference.customVariants
+      .filter((custom) => custom.category === category)
+      .map((custom) => describe(custom.id, custom.text, true)),
+    ...spell.roleplay.completeVariants[category].map((text, index) =>
+      describe(roleplayVariantId(category, index), text, false),
+    ),
+  ];
+  // Сортировка устойчива, поэтому внутри группы сохраняется порядок карточки.
+  return variants.sort((left, right) => roleplayRank(left) - roleplayRank(right));
+}
+
+/** Категории, в которых остался хоть один включённый вариант (FR-051, FR-053). */
+export function roleplayCategories(character: CharacterState, spell: Spell): RoleplayCategory[] {
+  return ROLEPLAY_CATEGORIES.filter((category) =>
+    roleplayVariants(character, spell, category).some((variant) => !variant.disabled),
+  );
+}
+
+/**
+ * Что показать в категории при открытии: реже других использованный вариант (FR-053).
+ *
+ * При равенстве счётчиков берётся первый по порядку показа — своё раньше любимого, любимое раньше
+ * остального. `undefined` значит, что в категории не осталось включённых вариантов.
+ */
+export function defaultRoleplayVariant(
+  character: CharacterState,
+  spell: Spell,
+  category: RoleplayCategory,
+): RoleplayVariant | undefined {
+  const enabled = roleplayVariants(character, spell, category).filter(
+    (variant) => !variant.disabled,
+  );
+  return enabled.reduce<RoleplayVariant | undefined>(
+    (rarest, variant) =>
+      rarest === undefined || variant.usedTimes < rarest.usedTimes ? variant : rarest,
+    undefined,
+  );
+}
+
+/**
+ * Правка предпочтений одного заклинания.
+ *
+ * Журнала не касается и отмене не подлежит: игрового состояния предпочтения не меняют, а
+ * «Отменить» — механизм возврата ресурсов, а не история правок текста
+ * ([F-10](../../docs/features/F-10-journal-undo.md)). Запись без единой пометки удаляется целиком:
+ * пустая структура прошла бы схему, но осталась бы мусором в каждой выгрузке.
+ */
+function withRoleplayPreference(
+  session: Session,
+  spellId: string,
+  change: (current: RoleplayPreference) => RoleplayPreference,
+): Session {
+  const next = change(roleplayPreferencesFor(session.character, spellId));
+  const { [spellId]: _replaced, ...rest } = session.character.roleplayPreferences;
+  const empty =
+    next.favoriteVariantIds.length === 0 &&
+    next.disabledVariantIds.length === 0 &&
+    next.customVariants.length === 0 &&
+    Object.keys(next.usageCount).length === 0;
+
+  return {
+    character: {
+      ...session.character,
+      roleplayPreferences: empty ? rest : { ...rest, [spellId]: next },
+    },
+    journal: session.journal,
+  };
+}
+
+function toggledId(ids: string[], id: string): string[] {
+  return ids.includes(id) ? ids.filter((candidate) => candidate !== id) : [...ids, id];
+}
+
+/** «Любимое» ставится и снимается одним нажатием (FR-053). */
+export function toggleRoleplayFavorite(
+  session: Session,
+  spellId: string,
+  variantId: string,
+): Session {
+  return withRoleplayPreference(session, spellId, (current) => ({
+    ...current,
+    favoriteVariantIds: toggledId(current.favoriteVariantIds, variantId),
+  }));
+}
+
+/**
+ * Отключение нежелательного варианта и возврат его обратно (FR-053).
+ *
+ * Отключить все варианты категории можно — тогда категория скрывается. Все три категории скрыть
+ * нельзя: шаг отыгрыша остался бы пустым экраном. Отказ называет причину, а не молчит: нажатие,
+ * которое ничего не сделало и ничего не сказало, читается как поломка.
+ */
+export function toggleRoleplayDisabled(session: Session, spell: Spell, variantId: string): Session {
+  const disabling = !roleplayPreferencesFor(
+    session.character,
+    spell.id,
+  ).disabledVariantIds.includes(variantId);
+
+  const next = withRoleplayPreference(session, spell.id, (current) => ({
+    ...current,
+    disabledVariantIds: toggledId(current.disabledVariantIds, variantId),
+  }));
+
+  if (disabling && roleplayCategories(next.character, spell).length === 0) {
+    throw new SessionError(
+      "Последний вариант отыгрыша: хотя бы одна категория должна остаться доступной",
+    );
+  }
+  return next;
+}
+
+/** Собственный вариант отыгрыша (FR-053). Хранится рядом с готовыми и ведёт себя как они. */
+export function addRoleplayVariant(
+  session: Session,
+  spellId: string,
+  category: RoleplayCategory,
+  text: string,
+  clock: Clock,
+): Session {
+  const trimmed = text.trim();
+  if (trimmed === "") {
+    throw new SessionError("Свой вариант отыгрыша не может быть пустым");
+  }
+  return withRoleplayPreference(session, spellId, (current) => ({
+    ...current,
+    customVariants: [...current.customVariants, { id: clock.nextId(), category, text: trimmed }],
+  }));
+}
+
+/**
+ * Отметка использования: счётчик ротации (FR-053).
+ *
+ * Растёт и от выбора варианта, и от копирования — оба жеста значат «беру этот текст». Различать их
+ * незачем: счётчик решает, что показать в следующий раз, а не ведёт статистику.
+ */
+export function useRoleplayVariant(session: Session, spellId: string, variantId: string): Session {
+  return withRoleplayPreference(session, spellId, (current) => ({
+    ...current,
+    usageCount: { ...current.usageCount, [variantId]: (current.usageCount[variantId] ?? 0) + 1 },
+  }));
 }
 
 /**
