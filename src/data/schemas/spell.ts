@@ -328,6 +328,16 @@ const spellShape = z.object({
   damage: damageSchema.optional(),
   armorClassEffect: armorClassEffectSchema.optional(),
 
+  /**
+   * Что придётся делать каждый ход, пока эффект держится (FR-092).
+   *
+   * Отсутствие поля означает «эффект висит сам», а не пустое напоминание: различие видно в данных.
+   * Копируется в активный эффект при применении — тем же способом, что и вклад в КД (ADR-0013).
+   */
+  repeatableAction: z
+    .object({ label: nonEmpty, description: nonEmpty })
+    .optional(),
+
   shortRulesRu: nonEmpty,
   fullRulesRu: nonEmpty,
   higherLevelsRu: nonEmpty.optional(),

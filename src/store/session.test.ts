@@ -6,6 +6,7 @@ import { characterStateSchema } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import {
   actionUsedBy,
+  adjustRunes,
   beginTurn,
   bloodCostFor,
   castSpell,
@@ -29,6 +30,7 @@ import {
   setSunlight,
   shortRest,
   spendRuneOnWardingSigil,
+  spendSpellSlot,
   takeDamage,
   togglePreparation,
   undoLast,
@@ -1360,6 +1362,35 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     // подготовленный ритуал в бою творится за ячейку обычным временем (FR-208).
     const after = togglePreparation(withRoom(), spell("identify"), LIMIT, clock);
     expect(after.character.preparedSpellIds).toContain("identify");
+  });
+});
+
+describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", () => {
+  it("возвращает и тратит руну, записывая обе правки", () => {
+    const spent = adjustRunes(session, -1, clock);
+    expect(spent.character.runes.remaining).toBe(2);
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачена руна: 2");
+
+    const returned = adjustRunes(spent, 1, clock);
+    expect(returned.character.runes.remaining).toBe(3);
+    expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена руна: 3");
+  });
+
+  it("за границы пула не выпускает", () => {
+    expect(() => adjustRunes(session, 1, clock)).toThrow(/от 0 до 3/);
+    const empty = adjustRunes(adjustRunes(adjustRunes(session, -1, clock), -1, clock), -1, clock);
+    expect(() => adjustRunes(empty, -1, clock)).toThrow(/от 0 до 3/);
+  });
+
+  it("ручное списание ячейки пишется в журнал и обратимо (FR-111)", () => {
+    const spent = spendSpellSlot(session, 1, clock);
+    expect(spent.character.spellSlots[1]?.remaining).toBe(3);
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Списана ячейка 1 уровня");
+    expect(undoLast(spent).character.spellSlots[1]?.remaining).toBe(4);
+  });
+
+  it("правка руны обратима", () => {
+    expect(undoLast(adjustRunes(session, -1, clock)).character.runes.remaining).toBe(3);
   });
 });
 

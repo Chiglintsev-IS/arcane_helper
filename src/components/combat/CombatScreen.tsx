@@ -24,6 +24,7 @@ import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 import { ModeSwitcher } from "@/components/combat/ModeSwitcher";
 import { ReactionsSheet } from "@/components/combat/ReactionsSheet";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
+import { ResourcesSheet } from "@/components/combat/ResourcesSheet";
 import { SpellFilters, type AvailableFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
@@ -49,6 +50,7 @@ import { compareCombatTraits, spellsForScreen, type ScreenMode } from "@/rules/m
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
 import {
+  adjustRunes,
   beginTurn,
   castSpell,
   combatEndRecovery,
@@ -61,11 +63,13 @@ import {
   heal,
   longRest,
   recoverHitPointMaximum,
+  refundSpellSlot,
   setScreenMode,
   setSpellNote,
   setSunlight,
   shortRest,
   spendRuneOnWardingSigil,
+  spendSpellSlot,
   takeDamage,
   togglePreparation,
   undoLast,
@@ -127,6 +131,7 @@ export function CombatScreen() {
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [resourcesOpen, setResourcesOpen] = useState(false);
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const economy = useMemo(
@@ -273,6 +278,7 @@ export function CombatScreen() {
           bookCastingTimes={available.castingTimes}
           showResources={!preparing}
           onOpenHitPoints={() => setDamageOpen(true)}
+          onEditResources={() => setResourcesOpen(true)}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
         />
@@ -511,6 +517,16 @@ export function CombatScreen() {
             if (apply((current) => endCombat(current, clock)) === null) setFightOverOpen(false);
           }}
           onCancel={() => setFightOverOpen(false)}
+        />
+      ) : null}
+
+      {resourcesOpen ? (
+        <ResourcesSheet
+          character={character}
+          onSpendSlot={(level) => apply((current) => spendSpellSlot(current, level, clock))}
+          onRefundSlot={(level) => apply((current) => refundSpellSlot(current, level, clock))}
+          onAdjustRunes={(delta) => apply((current) => adjustRunes(current, delta, clock))}
+          onClose={() => setResourcesOpen(false)}
         />
       ) : null}
 

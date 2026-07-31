@@ -73,23 +73,43 @@ function armorClassNote(effect: ActiveEffect, armorClass: number): string {
   return effect.armorClass === undefined ? "" : ` · КД ${armorClass}`;
 }
 
-/** Ячейка уровня: остаток и максимум. Минус — долг, разрешённый «Применить всё равно» (FR-031). */
-function SlotCounter({ level, remaining, maximum }: { level: number; remaining: number; maximum: number }) {
+/**
+ * Ячейка уровня: остаток и максимум. Минус — долг, разрешённый «Применить всё равно» (FR-031).
+ *
+ * Плитка — кнопка правки, как и плитка хитов: место, где число видно, и место, где его меняют, —
+ * одно и то же (FR-071, FR-142).
+ */
+function SlotCounter({
+  level,
+  remaining,
+  maximum,
+  onEdit,
+}: {
+  level: number;
+  remaining: number;
+  maximum: number;
+  onEdit: () => void;
+}) {
   const exhausted = remaining <= 0;
   return (
-    <li
-      className={`flex-1 rounded-md border px-1 py-1 text-center ${
-        exhausted
-          ? "border-slate-200 text-slate-500 dark:border-slate-800"
-          : "border-action/40 bg-action/5"
-      }`}
-    >
-      <span className="block text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
-        {level} ур.
-      </span>
-      <span className="text-sm font-semibold tabular-nums">
-        {remaining}/{maximum}
-      </span>
+    <li className="flex-1">
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Ячейки ${level} уровня: ${remaining} из ${maximum}. Правка ресурсов`}
+        className={`w-full rounded-md border px-1 py-1 text-center ${
+          exhausted
+            ? "border-slate-200 text-slate-500 dark:border-slate-800"
+            : "border-action/40 bg-action/5"
+        }`}
+      >
+        <span className="block text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
+          {level} ур.
+        </span>
+        <span className="text-sm font-semibold tabular-nums">
+          {remaining}/{maximum}
+        </span>
+      </button>
     </li>
   );
 }
@@ -101,6 +121,7 @@ export function ResourceHeader({
   bookCastingTimes,
   showResources = true,
   onOpenHitPoints,
+  onEditResources,
   onOpenConcentration,
   onEndEffect,
 }: {
@@ -119,6 +140,8 @@ export function ResourceHeader({
    */
   showResources?: boolean;
   onOpenHitPoints: () => void;
+  /** Ручная правка ячеек и рун (FR-071, FR-142, FR-155). */
+  onEditResources: () => void;
   onOpenConcentration: () => void;
   onEndEffect: (effectId: string) => void;
 }) {
@@ -162,11 +185,17 @@ export function ResourceHeader({
             level={slot.level}
             remaining={slot.remaining}
             maximum={slot.maximum}
+            onEdit={onEditResources}
           />
         ))}
       </ul>
 
       <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
+        {/*
+          Значок рун — не кнопка: правило 44 пикселей на зону нажатия сделало бы весь ряд значков
+          вдвое выше, а это пятая часть карточки заклинания. Правка рун открывается плиткой ячейки —
+          там же, где правятся ячейки (FR-155).
+        */}
         <li>
           <Badge tone="ritual" icon="❖">
             Руны {character.runes.remaining}/{character.runes.maximum}
@@ -273,6 +302,19 @@ export function ResourceHeader({
               <span>
                 <span aria-hidden="true">◈</span> {effect.nameRu}
                 {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
+                {/*
+                  Что придётся делать каждый ход, пока эффект держится (FR-092). Приложение бросок
+                  не делает и таймера не ведёт — оно напоминает, что бросок нужен: «Мерцание» без
+                  напоминания забывают на втором раунде.
+                */}
+                {effect.repeatableAction === undefined ? null : (
+                  <span
+                    className="block text-[0.6875rem] text-action-strong dark:text-action"
+                    title={effect.repeatableAction.description}
+                  >
+                    ↻ {effect.repeatableAction.label}
+                  </span>
+                )}
               </span>
               <button
                 type="button"

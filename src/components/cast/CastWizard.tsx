@@ -29,6 +29,7 @@ import {
   type RoleplayCategory,
   type WizardStep,
 } from "@/store/castDraftStore";
+import { RUNES, RUNE_LABEL, runeEffect, type Rune } from "@/rules/runes";
 import { useDraft, useStores } from "@/store/provider";
 import type { TurnEconomy } from "@/store/session";
 
@@ -39,6 +40,65 @@ const STEP_TITLES: Record<WizardStep, string> = {
   concentration: "Концентрация",
   summary: "Объявление и подтверждение",
 };
+
+/**
+ * Шаг руны (FR-151, FR-152).
+ *
+ * Число показывается до подтверждения и по выбранному уровню ячейки: «половина уровня с округлением
+ * вверх, минимум +1» — ровно то, что игрок иначе считает в уме в момент объявления мастеру.
+ *
+ * Руна необязательна: шаг проходится дальше без выбора, и это отдельная кнопка «Без руны», а не
+ * молчание — иначе непонятно, ждёт ли мастер выбора.
+ */
+function RuneStep({
+  draft,
+  character,
+  onChoose,
+}: {
+  draft: CastDraft;
+  character: CharacterState;
+  onChoose: (rune: Rune) => void;
+}) {
+  const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
+
+  return (
+    <section aria-label="Руна" className="flex flex-col gap-2">
+      <p className="text-xs text-slate-600 dark:text-slate-400">
+        Руна не требует действия и не более одной на заклинание. Осталось рун:{" "}
+        {character.runes.remaining} из {character.runes.maximum}.
+      </p>
+      <ul className="flex flex-col gap-1">
+        {RUNES.map((rune) => {
+          const chosen = draft.rune === rune;
+          return (
+            <li key={rune}>
+              <button
+                type="button"
+                aria-pressed={chosen}
+                onClick={() => onChoose(rune)}
+                className={`flex min-h-11 w-full flex-col items-start rounded-lg border px-3 py-1 text-left ${
+                  chosen
+                    ? "border-ritual bg-ritual/10 text-ritual-strong dark:text-ritual"
+                    : "border-slate-200 dark:border-slate-800"
+                }`}
+              >
+                <span className="text-sm font-medium leading-tight">{RUNE_LABEL[rune]}</span>
+                <span className="text-xs leading-tight text-slate-600 dark:text-slate-400">
+                  {runeEffect(rune, slotLevel)}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {draft.rune === null ? (
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Руна не выбрана — заклинание сотворится без неё.
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
 /** Подпись способа сотворения: что именно спишется. */
 function optionLabel(option: CastOption, draft: CastDraft, character: CharacterState): string {
@@ -384,11 +444,25 @@ export function CastWizard({
           />
         ) : null}
         {draft.step === "slot" ? (
-          <SlotStep
-            draft={draft}
-            character={character}
-            onChoose={(option) => actions.chooseCastOption(option)}
-          />
+          <>
+            <SlotStep
+              draft={draft}
+              character={character}
+              onChoose={(option) => actions.chooseCastOption(option)}
+            />
+            {/*
+              Руна живёт на этом же шаге, а не на своём: её эффект зависит от выбранного уровня
+              ячейки (FR-152), и отдельный экран сделал бы типовое применение трёхшаговым — против
+              бюджета M-03 в четыре шага, из которых боевое заклинание сегодня тратит два.
+            */}
+            {draft.payment.kind === "slot" && character.runes.remaining > 0 ? (
+              <RuneStep
+                draft={draft}
+                character={character}
+                onChoose={(rune) => actions.chooseRune(rune)}
+              />
+            ) : null}
+          </>
         ) : null}
         {draft.step === "components" ? <ComponentsStep availability={availability} /> : null}
         {draft.step === "concentration" ? (

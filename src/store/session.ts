@@ -490,6 +490,8 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
     slotLevelUsed: slotLevelUsed(request),
     // Вклад в КД копируется из заклинания, чтобы итог считался из одного состояния (ADR-0013).
     ...(spell.armorClassEffect === undefined ? {} : { armorClass: spell.armorClassEffect }),
+    // Напоминание о ежеходной работе — оттуда же и по той же причине (FR-092).
+    ...(spell.repeatableAction === undefined ? {} : { repeatableAction: spell.repeatableAction }),
     endConditionRu: endConditionRu(duration, spell.concentration),
   };
 }
@@ -1065,6 +1067,49 @@ export function setSpellNote(session: Session, spellId: string, note: string): S
     },
     journal: session.journal,
   };
+}
+
+/**
+ * Ручная правка ресурса вне модели приложения (FR-142, FR-155).
+ *
+ * Мастер вправе вернуть реакцию посреди раунда, а эффект предмета — потратить руну без заклинания.
+ * Приложение не знает всех правил стола и не должно спорить: правка записывается в журнал и
+ * отменяется как всё остальное (FR-111).
+ *
+ * Учёт хода выводится из журнала (ADR-0008), поэтому возврат действия — это отметка «начало хода» по
+ * своей сути и делается ею же. Здесь правятся только те ресурсы, у которых есть собственное поле.
+ */
+export function adjustRunes(session: Session, delta: number, clock: Clock): Session {
+  const { character } = session;
+  const remaining = character.runes.remaining + delta;
+  if (remaining < 0 || remaining > character.runes.maximum) {
+    throw new SessionError(
+      `Рун может быть от 0 до ${character.runes.maximum}, получилось ${remaining}`,
+    );
+  }
+  return commit(
+    session,
+    { ...character, runes: { ...character.runes, remaining } },
+    {
+      kind: "manual_adjustment",
+      summaryRu: delta > 0 ? `Возвращена руна: ${remaining}` : `Потрачена руна: ${remaining}`,
+    },
+    clock,
+  );
+}
+
+/** Ручное списание ячейки: эффект предмета или чужое заклинание вне модели (FR-071, FR-142). */
+export function spendSpellSlot(session: Session, slotLevel: number, clock: Clock): Session {
+  const after: CharacterState = {
+    ...session.character,
+    spellSlots: spendSlot(session.character.spellSlots, slotLevel),
+  };
+  return commit(
+    session,
+    after,
+    { kind: "slot_spent", summaryRu: `Списана ячейка ${slotLevel} уровня`, slotLevel },
+    clock,
+  );
 }
 
 /** Возврат ошибочно потраченной ячейки (FR-071). */

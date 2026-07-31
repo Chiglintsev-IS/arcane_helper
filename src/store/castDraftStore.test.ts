@@ -45,6 +45,48 @@ function draftOf(): CastDraft {
   return draft;
 }
 
+describe("руна при сотворении (FR-151)", () => {
+  it("прикладывается к заклинанию и попадает в запрос применения", () => {
+    store.getState().start(mageArmor, context());
+    store.getState().chooseRune("war");
+
+    expect(draftOf().rune).toBe("war");
+    expect(toCastRequest(draftOf()).rune).toBe("war");
+  });
+
+  it("повторное нажатие снимает руну: выбор без возможности передумать — ловушка", () => {
+    store.getState().start(mageArmor, context());
+    store.getState().chooseRune("life");
+    store.getState().chooseRune("life");
+
+    expect(draftOf().rune).toBeNull();
+    expect(toCastRequest(draftOf()).rune).toBeUndefined();
+  });
+
+  it("выбор другой руны заменяет прежнюю: больше одной на заклинание не бывает", () => {
+    store.getState().start(mageArmor, context());
+    store.getState().chooseRune("life");
+    store.getState().chooseRune("wind");
+
+    expect(draftOf().rune).toBe("wind");
+  });
+
+  it("смена оплаты на ритуал снимает руну: ритуал её не принимает", () => {
+    store.getState().start(detectMagic, context({ ...createThorne(), screenMode: "camp" }));
+    store.getState().chooseCastOption({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
+    store.getState().chooseRune("war");
+    expect(draftOf().rune).toBe("war");
+
+    store.getState().chooseCastOption({ mode: "ritual", payment: { kind: "none" } });
+    expect(draftOf().rune).toBeNull();
+  });
+
+  it("без черновика выбор руны ничего не делает", () => {
+    store.getState().chooseRune("war");
+    expect(store.getState().draft).toBeNull();
+  });
+});
+
 describe("начало применения", () => {
   it("подготовленное заклинание начинается с ячейки своего уровня и первого видимого шага", () => {
     store.getState().start(mageArmor, context());

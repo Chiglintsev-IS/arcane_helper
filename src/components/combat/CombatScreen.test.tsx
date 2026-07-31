@@ -374,6 +374,70 @@ describe("операции привала (FR-202, FR-215)", () => {
   });
 });
 
+describe("повторяемое действие эффекта (FR-092)", () => {
+  it("напоминает о ежеходной работе, пока эффект держится", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: /^Отражения/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const effects = within(screen.getByLabelText("Активные эффекты"));
+    expect(effects.getByText(/Считать отражения/)).toBeDefined();
+  });
+
+  it("у эффекта без ежеходной работы напоминания нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: /^Доспехи мага/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const effects = within(screen.getByLabelText("Активные эффекты"));
+    expect(effects.getByText(/Доспехи мага/)).toBeDefined();
+    expect(effects.queryByText(/↻/)).toBeNull();
+  });
+});
+
+describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", () => {
+  it("плитка ячейки открывает правку и возвращает списанное", async () => {
+    const user = userEvent.setup();
+    const character = createThorne();
+    character.spellSlots = { ...character.spellSlots, 1: { maximum: 4, remaining: 2 } };
+    const { stores } = await renderWithStores(<CombatScreen />, character);
+
+    await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня: 2 из 4/ }));
+    await user.click(screen.getByRole("button", { name: "Вернуть: Ячейка 1 ур." }));
+
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
+  });
+
+  it("руны правятся вручную и правка обратима (FR-111)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
+    await user.click(screen.getByRole("button", { name: "Потратить: Руны" }));
+    expect(stores.session.getState().session?.character.runes.remaining).toBe(2);
+
+    await user.click(screen.getByRole("button", { name: "Закрыть" }));
+    await user.click(screen.getByRole("button", { name: /^Отменить/ }));
+    expect(stores.session.getState().session?.character.runes.remaining).toBe(3);
+  });
+
+  it("за границы пула правка не пускает", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
+    expect(screen.getByRole("button", { name: "Вернуть: Руны" })).toHaveProperty("disabled", true);
+  });
+});
+
 describe("поиск и запреты (FR-160, FR-161, FR-162)", () => {
   it("ищет по названию в «Книге»", async () => {
     const user = userEvent.setup();

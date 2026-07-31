@@ -16,6 +16,7 @@ import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import { checkAvailability, type TurnResources } from "@/rules/availability";
 import { bestCastPlan, castOptions, type CastOption } from "@/rules/filters";
+import type { Rune } from "@/rules/runes";
 import { CANTRIP_LEVEL } from "@/rules/slots";
 import type { CastRequest } from "./session";
 
@@ -59,6 +60,8 @@ export type CastDraft = {
   roleplayCategory: RoleplayCategory;
   /** Мастер разрешил исключение (FR-031). */
   allowAnyway: boolean;
+  /** Приложенная руна или `null`. Не более одной на заклинание (FR-151). */
+  rune: Rune | null;
   step: WizardStep;
 };
 
@@ -160,6 +163,7 @@ export function toCastRequest(draft: CastDraft): CastRequest {
     mode: draft.mode,
     payment: draft.payment,
     ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
+    ...(draft.rune === null ? {} : { rune: draft.rune }),
     allowAnyway: draft.allowAnyway,
   };
 }
@@ -171,6 +175,8 @@ export type CastDraftState = {
 
   start: (spell: Spell, context: DraftContext) => void;
   chooseCastOption: (option: CastOption) => void;
+  /** Приложить руну или снять её. Не более одной на заклинание (FR-151). */
+  chooseRune: (rune: Rune) => void;
   setTarget: (label: string) => void;
   setRoleplayCategory: (category: RoleplayCategory) => void;
   /** «Применить всё равно»: предупреждения перестают мешать (FR-031). */
@@ -214,6 +220,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           targetLabel: null,
           roleplayCategory: remembered.roleplay[spell.id] ?? DEFAULT_ROLEPLAY_CATEGORY,
           allowAnyway: false,
+          rune: null,
           step: "summary",
         };
         // Первый видимый шаг: у списка всегда есть хотя бы итоговый экран.
@@ -221,9 +228,17 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
         set({ draft: { ...draft, step: first } });
       },
 
+      chooseRune(rune) {
+        // Повторное нажатие снимает руну: выбор из трёх без возможности передумать — ловушка.
+        edit((draft) => ({ ...draft, rune: draft.rune === rune ? null : rune }));
+      },
+
       chooseCastOption(option) {
         edit((draft) => {
           remembered.payment[draft.spell.id] = option.payment;
+          // Ритуал и заговор руну не принимают: выбранная до смены оплаты, она молча пропала бы
+          // при подтверждении (FR-151).
+          if (option.payment.kind !== "slot") return { ...draft, ...option, rune: null };
           return { ...draft, mode: option.mode, payment: option.payment };
         });
       },
