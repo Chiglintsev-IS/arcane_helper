@@ -35,6 +35,19 @@ function assertSlotLevel(slotLevel: number): void {
 }
 
 /**
+ * Временные хиты «Руны жизни» числом ([FR-152](../../docs/features/F-13-runes.md#fr-152)).
+ *
+ * Отдельно от текста объявления, потому что это же число начисляется состоянию: заклинатель входит
+ * в число союзников в пределах 30 футов ([OQ-14](../../docs/open-questions.md#oq-14), подтверждено
+ * игроком). Считаются они здесь одной формулой — иначе мастеру можно было бы назвать одно, а
+ * персонажу начислить другое.
+ */
+export function lifeRuneTemporaryHitPoints(slotLevel: number): number {
+  assertSlotLevel(slotLevel);
+  return 5 * slotLevel;
+}
+
+/**
  * Числовой результат руны на выбранном уровне ячейки — готовым числом, а не формулой.
  *
  * «Половина уровня ячейки с округлением вверх, минимум +1» — это то, что игрок иначе считает в уме
@@ -44,7 +57,7 @@ export function runeEffect(rune: Rune, slotLevel: number): string {
   assertSlotLevel(slotLevel);
   switch (rune) {
     case "life":
-      return `${5 * slotLevel} временных хитов союзникам в пределах 30 футов`;
+      return `${lifeRuneTemporaryHitPoints(slotLevel)} временных хитов союзникам в пределах 30 футов`;
     case "war":
       return `+${Math.max(1, Math.ceil(slotLevel / 2))} к броскам атаки союзников в пределах 30 футов до конца вашего следующего хода`;
     default:

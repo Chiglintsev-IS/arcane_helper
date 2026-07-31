@@ -537,6 +537,47 @@ describe("руна при сотворении (FR-151)", () => {
   });
 });
 
+describe("руна жизни начисляет временные хиты (FR-152)", () => {
+  function withRune(rune: "life" | "war" | "wind", slotLevel: number, from = session): Session {
+    return castSpell(
+      from,
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel }, rune },
+      clock,
+    );
+  }
+
+  it("даёт Торну 5 временных хитов за уровень ячейки", () => {
+    expect(withRune("life", 1).character.temporaryHitPoints).toBe(5);
+    expect(withRune("life", 3).character.temporaryHitPoints).toBe(15);
+  });
+
+  it("начисление идёт той же записью журнала, что и сотворение (FR-023)", () => {
+    const after = withRune("life", 2);
+    expect(after.journal).toHaveLength(1);
+    expect(after.journal[0]?.summaryRu).toBe(
+      "Доспехи мага — ячейкой 2 уровня · руна жизни: 10 временных хитов",
+    );
+  });
+
+  it("не складываются с имеющимися: меньшее не берётся (FR-206)", () => {
+    const stocked: Session = { ...session, character: { ...session.character, temporaryHitPoints: 12 } };
+    expect(withRune("life", 1, stocked).character.temporaryHitPoints).toBe(12);
+    // Руна всё равно потрачена: союзникам её хиты достались, даже если Торну нечего добавить.
+    expect(withRune("life", 1, stocked).character.runes.remaining).toBe(2);
+  });
+
+  it("руны войны и ветра состояния Торна не меняют: их эффект у союзников", () => {
+    expect(withRune("war", 4).character.temporaryHitPoints).toBe(0);
+    expect(withRune("wind", 4).character.temporaryHitPoints).toBe(0);
+  });
+
+  it("начисление обратимо вместе с сотворением (FR-111)", () => {
+    const undone = undoLast(withRune("life", 4));
+    expect(undone.character.temporaryHitPoints).toBe(0);
+    expect(undone.character.runes.remaining).toBe(3);
+  });
+});
+
 describe("кровавое колдовство (FR-170…FR-174)", () => {
   it("цена заклинания в хитах соответствует ступени Торна", () => {
     expect(bloodCostFor(session.character, 1)).toBe(6);

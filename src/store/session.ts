@@ -40,6 +40,7 @@ import {
 import { hitPointCost, spellPointCost } from "@/rules/bloodMagic";
 import { durationWithRoundsRu } from "@/rules/concentration";
 import type { ScreenMode } from "@/rules/modes";
+import { lifeRuneTemporaryHitPoints, RUNE_LABEL } from "@/rules/runes";
 
 /** Глубина журнала — предложенное значение OQ-08, уточняется после игровой сессии. */
 export const JOURNAL_LIMIT = 100;
@@ -111,6 +112,9 @@ const STATE_KEYS = [
   "turnTracking",
   "arcaneRecoveryAvailable",
   "hitPoints",
+  // Временные хиты — такой же расходуемый ресурс, как и остальные: их снимает урон, их даёт руна
+  // жизни. Без них в снимке отмена возвращала бы хиты, но не поглощённый ими урон (FR-111).
+  "temporaryHitPoints",
   "runes",
   "spellPoints",
   "suppression",
@@ -426,6 +430,17 @@ function applyPayment(character: CharacterState, request: CastRequest): Characte
   throw new SessionError("Заклинание с ячейкой требует способа оплаты");
 }
 
+/**
+ * Применяет руну к состоянию (FR-151, FR-152).
+ *
+ * «Руна жизни» начисляет свои временные хиты и Торну: в пределах 30 футов от себя стоит и он сам
+ * ([OQ-14](../../docs/open-questions.md#oq-14), подтверждено игроком). Руны войны и ветра его
+ * состояния не меняют — чужие броски атаки и чужую скорость приложение не ведёт, и их число живёт
+ * только в объявлении мастеру.
+ *
+ * Меньшее начисление не отказывает в сотворении, в отличие от `grantTemporaryHitPoints`: руна уже
+ * потрачена и союзникам свои хиты дала, а Торну просто нечего добавить к большему запасу.
+ */
 function applyRune(character: CharacterState, request: CastRequest): CharacterState {
   if (request.rune === undefined) return character;
   if (request.payment.kind !== "slot") {
@@ -434,7 +449,32 @@ function applyRune(character: CharacterState, request: CastRequest): CharacterSt
   if (character.runes.remaining <= 0) {
     throw new SessionError("Рун не осталось");
   }
-  return { ...character, runes: { ...character.runes, remaining: character.runes.remaining - 1 } };
+  const spent: CharacterState = {
+    ...character,
+    runes: { ...character.runes, remaining: character.runes.remaining - 1 },
+  };
+  if (request.rune !== "life") return spent;
+  return {
+    ...spent,
+    temporaryHitPoints: higherTemporaryHitPoints(
+      character.temporaryHitPoints,
+      lifeRuneTemporaryHitPoints(request.payment.slotLevel),
+    ),
+  };
+}
+
+/**
+ * Что руна добавит к строке журнала (FR-152): применённая руна не должна менять хиты молча.
+ *
+ * Число называется у той руны, которая меняет состояние, — отменять будут именно эти хиты. Эффект
+ * остальных рун целиком сказан мастеру объявлением, и повторять его в подписи кнопки «Отменить»
+ * значит уводить её от того, что отменяется.
+ */
+function runeNote(request: CastRequest): string {
+  if (request.rune === undefined || request.payment.kind !== "slot") return "";
+  const name = RUNE_LABEL[request.rune].replace("Руна ", "руна ");
+  if (request.rune !== "life") return ` · ${name}`;
+  return ` · ${name}: ${lifeRuneTemporaryHitPoints(request.payment.slotLevel)} временных хитов`;
 }
 
 function slotLevelUsed(request: CastRequest): number {
@@ -543,7 +583,7 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
     after,
     {
       kind: spell.castingTime.type === "reaction" ? "reaction_cast" : "spell_cast",
-      summaryRu: `${spell.nameRu} — ${how}`,
+      summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}`,
       spellId: spell.id,
       slotLevel: level,
       // Записываем всегда, даже при выключенном учёте: журнал фиксирует факт,
@@ -833,8 +873,21 @@ export function heal(session: Session, amount: number, clock: Clock): Session {
 }
 
 /**
- * Временные хиты (FR-206). Не складываются: берётся большее из двух — таково правило, и оно же
+ * Временные хиты не складываются: берётся большее из двух (FR-206) — таково правило, и оно же
  * защищает от привычки «накопить» их несколькими источниками.
+ *
+ * Отдельной функцией потому, что источников уже два: ручное начисление и руна жизни (FR-152).
+ * Разойдясь, они дали бы одному источнику право складывать хиты, а другому — нет.
+ */
+function higherTemporaryHitPoints(existing: number, granted: number): number {
+  return Math.max(existing, granted);
+}
+
+/**
+ * Ручное начисление временных хитов (FR-206).
+ *
+ * Меньшее значение здесь отказ, а не молчаливое «ничего не изменилось»: игрок ввёл число сам и
+ * вправе узнать, что оно не сработало. У руны это не так — там начисление следствие сотворения.
  */
 export function grantTemporaryHitPoints(session: Session, amount: number, clock: Clock): Session {
   const { character } = session;
@@ -848,7 +901,7 @@ export function grantTemporaryHitPoints(session: Session, amount: number, clock:
   }
   return commit(
     session,
-    { ...character, temporaryHitPoints: amount },
+    { ...character, temporaryHitPoints: higherTemporaryHitPoints(character.temporaryHitPoints, amount) },
     { kind: "hit_points_changed", summaryRu: `Временные хиты: ${amount}` },
     clock,
   );
