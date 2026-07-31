@@ -167,3 +167,31 @@ describe("загрузчик контента отказывает целико�
     expect(() => parseSpells(["это не карточка"])).toThrow(/Карточка №1 не прошла проверку — —/);
   });
 });
+
+describe("схемы ритуалов (FR-190)", () => {
+  it("схема есть у каждого ритуала и только у ритуала", () => {
+    for (const spell of spells) {
+      expect(spell.ritualDiagram !== undefined, spell.nameRu).toBe(spell.ritual);
+    }
+  });
+
+  it("у каждой схемы есть подпись и печать", () => {
+    for (const spell of spells.filter((candidate) => candidate.ritual)) {
+      expect(spell.ritualDiagram?.captionRu, spell.nameRu).toBeTruthy();
+      expect(spell.ritualDiagram?.centralSeal.kind, spell.nameRu).toBeTruthy();
+    }
+  });
+
+  it("надпись сопровождается переводом: иначе её содержание не вычитать", () => {
+    for (const spell of spells.filter((candidate) => candidate.ritualDiagram?.inscription)) {
+      expect(spell.ritualDiagram?.inscription?.meaningRu, spell.nameRu).toBeTruthy();
+    }
+  });
+
+  it("схемы не повторяют друг друга: у каждой свой набор слоёв", () => {
+    const shapes = spells
+      .filter((spell) => spell.ritual)
+      .map((spell) => JSON.stringify(spell.ritualDiagram));
+    expect(new Set(shapes).size).toBe(4);
+  });
+});

@@ -9,6 +9,11 @@
  * Пустые поля не показываются: заклинание без урона не должно иметь строки «Урон: —».
  */
 
+"use client";
+
+import { useState } from "react";
+
+import { RitualDiagramView } from "@/components/ritual/RitualDiagramView";
 import {
   CASTING_TIME,
   areaLabel,
@@ -52,6 +57,7 @@ export function SpellCardDetails({
   onNoteChange: (note: string) => void;
   onClose: () => void;
 }) {
+  const [diagramOpen, setDiagramOpen] = useState(false);
   const castingTime = CASTING_TIME[spell.castingTime.type];
   const mode: CastMode = spell.level === CANTRIP_LEVEL ? "cantrip" : spell.ritual ? "ritual" : "normal";
   const announcementContext = {
@@ -110,6 +116,17 @@ export function SpellCardDetails({
             </Badge>
           ) : null}
         </div>
+
+        {/* Рядом со значками, а не в подвале: за десять минут ритуала схему открывают первой. */}
+        {spell.ritualDiagram === undefined ? null : (
+          <button
+            type="button"
+            onClick={() => setDiagramOpen(true)}
+            className="min-h-11 rounded-lg border border-ritual/60 px-3 text-sm font-medium text-ritual"
+          >
+            Схема ритуала
+          </button>
+        )}
 
         <p className="text-slate-700 dark:text-slate-300">{spell.shortRulesRu}</p>
 
@@ -197,6 +214,10 @@ export function SpellCardDetails({
           Сотворить
         </button>
       </footer>
+
+      {diagramOpen ? (
+        <RitualDiagramView spell={spell} onClose={() => setDiagramOpen(false)} />
+      ) : null}
     </section>
   );
 }

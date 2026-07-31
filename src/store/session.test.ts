@@ -1137,3 +1137,30 @@ describe("почасовое восстановление максимума х�
     expect(undoLast(recovered).character.hitPoints.maximumReduction).toBe(9);
   });
 })
+
+describe("схема ритуала не влияет на механику (FR-193)", () => {
+  it("подмена схемы не меняет результат применения", () => {
+    const ritual = spell("unseen-servant");
+    const diagram = ritual.ritualDiagram;
+    if (diagram === undefined) throw new Error("у «Незримого слуги» нет схемы");
+    const repainted: Spell = {
+      ...ritual,
+      ritualDiagram: {
+        ...diagram,
+        captionRu: "Другая подпись",
+        centralSeal: { kind: "sphere", radius: 0.2 },
+      },
+    };
+    const request = { mode: "ritual", payment: { kind: "none" } } as const;
+
+    // Двое одинаковых часов вместо одних общих: идентификаторы и время у обоих применений
+    // совпадают, и сравнение идёт по существу, а не по счётчику.
+    const original = castSpell(session, { spell: ritual, ...request }, testClock());
+    const other = castSpell(session, { spell: repainted, ...request }, testClock());
+
+    expect(other.character).toEqual(original.character);
+    expect(other.journal.map((entry) => entry.summaryRu)).toEqual(
+      original.journal.map((entry) => entry.summaryRu),
+    );
+  });
+});

@@ -81,6 +81,19 @@ function mutate(base: unknown, change: (draft: Record<string, unknown>) => void)
   return draft;
 }
 
+/** Заготовка ритуального заклинания со схемой: минимальный набор слоёв. */
+function ritualCard(): unknown {
+  return mutate(web(), (draft) => {
+    draft.ritual = true;
+    draft.concentration = false;
+    draft.ritualDiagram = {
+      rings: [1, 0.7],
+      centralSeal: { kind: "eye", radius: 0.3 },
+      captionRu: "Двойное кольцо и глаз в центре",
+    };
+  });
+}
+
 function firstError(input: unknown): string {
   const result = spellSchema.safeParse(input);
   expect(result.success, "ожидалась ошибка валидации").toBe(false);
@@ -257,5 +270,158 @@ describe("чистота технической формулировки (FR-042
         }),
       ),
     ).toContain("художественный текст");
+  });
+});
+
+describe("схема ритуала (FR-190, FR-191)", () => {
+  it("принимает ритуал со схемой", () => {
+    expect(spellSchema.safeParse(ritualCard()).success).toBe(true);
+  });
+
+  it("отклоняет ритуал без схемы", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          delete draft.ritualDiagram;
+        }),
+      ),
+    ).toContain("Ритуальное заклинание обязано иметь схему");
+  });
+
+  it("отклоняет схему у неритуального заклинания", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          draft.ritual = false;
+        }),
+      ),
+    ).toContain("Схема ритуала есть только у ритуального заклинания");
+  });
+
+  it("отклоняет кольца не по убыванию", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.rings = [0.7, 1];
+        }),
+      ),
+    ).toContain("Кольца перечисляются снаружи внутрь");
+  });
+
+  it("отклоняет внешнее кольцо меньше единицы", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.rings = [0.9, 0.5];
+        }),
+      ),
+    ).toContain("Внешнее кольцо равно 1");
+  });
+
+  it("отклоняет skip, не дающий звезды", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.star = { points: 6, skip: 3, radius: 0.6 };
+        }),
+      ),
+    ).toContain("Шаг звезды");
+  });
+
+  it("отклоняет число знаков, не равное числу вершин на том же радиусе", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.star = { points: 7, skip: 3, radius: 0.6 };
+          diagram.radialGlyphs = { glyphs: ["sun", "moon", "mars"], radius: 0.6 };
+        }),
+      ),
+    ).toContain("Знаки стоят на вершинах звезды");
+  });
+
+  it("принимает знаки на своём радиусе без звезды", () => {
+    const withGlyphs = mutate(ritualCard(), (draft) => {
+      const diagram = draft.ritualDiagram as Record<string, unknown>;
+      diagram.radialGlyphs = { glyphs: ["sun", "moon", "mars", "venus"], radius: 0.6 };
+    });
+    expect(spellSchema.safeParse(withGlyphs).success).toBe(true);
+  });
+
+  it("отклоняет неизвестный знак", () => {
+    expect(
+      spellSchema.safeParse(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.radialGlyphs = { glyphs: ["sun", "moon", "phlogiston"], radius: 0.6 };
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("отклоняет надпись с символом вне футарка", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.inscription = { runes: "ᚨжᚢ", meaningRu: "проверка", radius: 0.9 };
+        }),
+      ),
+    ).toContain("не руна старшего футарка");
+  });
+
+  it("принимает надпись из рун", () => {
+    const withInscription = mutate(ritualCard(), (draft) => {
+      const diagram = draft.ritualDiagram as Record<string, unknown>;
+      diagram.inscription = { runes: "ᚨᛚᚢ", meaningRu: "«алу» — освящение", radius: 0.9 };
+    });
+    expect(spellSchema.safeParse(withInscription).success).toBe(true);
+  });
+
+  it("отклоняет немагический числовой квадрат", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.magicSquare = { rows: [[1, 2, 3], [4, 5, 6], [7, 8, 9]], radius: 0.44 };
+          diagram.centralSeal = { kind: "eye", radius: 0.14 };
+        }),
+      ),
+    ).toContain("Квадрат не магический");
+  });
+
+  it("принимает квадрат Сатурна", () => {
+    const withSquare = mutate(ritualCard(), (draft) => {
+      const diagram = draft.ritualDiagram as Record<string, unknown>;
+      diagram.magicSquare = { rows: [[4, 9, 2], [3, 5, 7], [8, 1, 6]], radius: 0.44 };
+      diagram.centralSeal = { kind: "eye", radius: 0.14 };
+    });
+    expect(spellSchema.safeParse(withSquare).success).toBe(true);
+  });
+
+  it("отклоняет печать, не влезающую в центральную клетку квадрата", () => {
+    expect(
+      firstError(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.magicSquare = { rows: [[4, 9, 2], [3, 5, 7], [8, 1, 6]], radius: 0.44 };
+          diagram.centralSeal = { kind: "eye", radius: 0.4 };
+        }),
+      ),
+    ).toContain("Печать не помещается");
+  });
+
+  it("отклоняет угловые знаки числом, отличным от четырёх", () => {
+    expect(
+      spellSchema.safeParse(
+        mutate(ritualCard(), (draft) => {
+          const diagram = draft.ritualDiagram as Record<string, unknown>;
+          diagram.cornerMarks = ["air", "water", "earth"];
+        }),
+      ).success,
+    ).toBe(false);
   });
 });

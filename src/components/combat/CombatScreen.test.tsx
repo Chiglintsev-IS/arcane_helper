@@ -336,3 +336,30 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     expect(stores.session.getState().session?.journal).toHaveLength(0);
   });
 });
+
+describe("схема ритуала (FR-192)", () => {
+  it("карточка ритуала открывает схему на полный экран", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    // Ритуалы в боевом списке скрыты по умолчанию (FR-103): сначала фильтр, потом строка списка.
+    await user.click(screen.getByRole("button", { name: "Ритуал" }));
+    await user.click(
+      within(screen.getByLabelText("Заклинания")).getByRole("button", { name: /Опознание/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Схема ритуала" }));
+
+    expect(screen.getByRole("dialog", { name: /Схема ритуала «Опознание»/ })).toBeDefined();
+  });
+
+  it("у неритуального заклинания кнопки схемы нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(
+      within(screen.getByLabelText("Заклинания")).getByRole("button", { name: /Луч холода/ }),
+    );
+
+    expect(screen.queryByRole("button", { name: "Схема ритуала" })).toBeNull();
+  });
+});

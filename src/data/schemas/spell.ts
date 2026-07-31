@@ -7,6 +7,9 @@
 
 import { z } from "zod";
 
+import { GLYPH_IDS, SEAL_KINDS } from "@/diagram/glyphs";
+import { isRune } from "@/diagram/runes";
+
 export const CANTRIP_LEVEL = 0;
 export const MAXIMUM_SPELL_LEVEL = 9;
 export const MAXIMUM_CHARACTER_LEVEL = 20;
@@ -150,6 +153,135 @@ const roleplaySchema = z.object({
   }),
 });
 
+/** Доля внешнего радиуса схемы: 1 — внешнее кольцо, 0 — центр. */
+const diagramRadius = z.number().gt(0).max(1);
+
+const glyphIdSchema = z.enum(GLYPH_IDS);
+
+const magicSquareSchema = z.object({
+  rows: z.array(z.array(z.number().int().positive()).length(3)).length(3),
+  radius: diagramRadius,
+});
+
+/**
+ * Схема ритуала (FR-190, FR-191, ADR-0014).
+ *
+ * Слои перечисляются снаружи внутрь — этот же порядок игрок повторяет на бумаге. Обязательны только
+ * кольца, печать и подпись: остальное набирается по вкусу ритуала.
+ */
+export const ritualDiagramSchema = z.object({
+  rings: z.array(diagramRadius).min(2).max(4),
+  tickRing: z.object({ count: z.union([z.literal(36), z.literal(72)]), radius: diagramRadius }).optional(),
+  inscription: z
+    .object({ runes: nonEmpty, meaningRu: nonEmpty, radius: diagramRadius })
+    .optional(),
+  star: z
+    .object({
+      points: z.number().int().min(5).max(12),
+      skip: z.number().int().min(2),
+      radius: diagramRadius,
+    })
+    .optional(),
+  radialGlyphs: z.object({ glyphs: z.array(glyphIdSchema).min(3), radius: diagramRadius }).optional(),
+  crossAxes: z.object({ count: z.number().int().min(2).max(8), radius: diagramRadius }).optional(),
+  magicSquare: magicSquareSchema.optional(),
+  centralSeal: z.object({ kind: z.enum(SEAL_KINDS), radius: diagramRadius }),
+  cornerMarks: z.array(glyphIdSchema).length(4).optional(),
+  captionRu: nonEmpty,
+});
+
+export type RitualDiagram = z.infer<typeof ritualDiagramSchema>;
+
+/**
+ * Сумма строки, столбца и диагонали у магического квадрата одна и та же.
+ *
+ * Строки, столбцы и обе диагонали собираются одним проходом, а не индексацией `rows[0][2]`:
+ * `noUncheckedIndexedAccess` такую запись не пропускает, а обкладывать её `?? 0` значило бы завести
+ * ветки, недостижимые для теста — размер 3×3 уже гарантирован схемой.
+ */
+function isMagicSquare(rows: number[][]): boolean {
+  const columns: number[][] = [];
+  const main: number[] = [];
+  const anti: number[] = [];
+
+  for (const [rowIndex, row] of rows.entries()) {
+    for (const [columnIndex, value] of row.entries()) {
+      (columns[columnIndex] ??= []).push(value);
+      if (rowIndex === columnIndex) main.push(value);
+      if (rowIndex + columnIndex === rows.length - 1) anti.push(value);
+    }
+  }
+
+  const sums = [...rows, ...columns, main, anti].map((line) =>
+    line.reduce((sum, value) => sum + value, 0),
+  );
+  return sums.every((sum) => sum === sums[0]);
+}
+
+type DiagramIssue = { path: (string | number)[]; message: string };
+
+/**
+ * Проверки слоёв, которые типами не выражаются. Возвращает список нарушений, а не пишет их сама:
+ * так функция остаётся чистой и не зависит от типа контекста Zod.
+ */
+function ritualDiagramIssues(diagram: RitualDiagram): DiagramIssue[] {
+  const issues: DiagramIssue[] = [];
+  const issue = (message: string, where: (string | number)[]): void => {
+    issues.push({ message, path: where });
+  };
+
+  if (diagram.rings[0] !== 1) {
+    issue("Внешнее кольцо равно 1: схема рисуется от обвода", ["rings", 0]);
+  }
+  let outer: number | undefined;
+  for (const [index, radius] of diagram.rings.entries()) {
+    if (outer !== undefined && radius >= outer) {
+      issue("Кольца перечисляются снаружи внутрь и строго убывают", ["rings", index]);
+    }
+    outer = radius;
+  }
+
+  if (diagram.star !== undefined && diagram.star.skip >= diagram.star.points / 2) {
+    issue(
+      `Шаг звезды ${diagram.star.skip} при ${diagram.star.points} вершинах повторяет уже нарисованное`,
+      ["star", "skip"],
+    );
+  }
+
+  if (
+    diagram.star !== undefined &&
+    diagram.radialGlyphs !== undefined &&
+    diagram.radialGlyphs.radius === diagram.star.radius &&
+    diagram.radialGlyphs.glyphs.length !== diagram.star.points
+  ) {
+    issue("Знаки стоят на вершинах звезды: их число равно числу вершин", ["radialGlyphs", "glyphs"]);
+  }
+
+  if (diagram.inscription !== undefined) {
+    for (const char of diagram.inscription.runes) {
+      if (!isRune(char)) {
+        issue(`«${char}» — не руна старшего футарка`, ["inscription", "runes"]);
+        break;
+      }
+    }
+  }
+
+  if (diagram.magicSquare !== undefined) {
+    if (!isMagicSquare(diagram.magicSquare.rows)) {
+      issue("Квадрат не магический: суммы строк, столбцов и диагоналей расходятся", [
+        "magicSquare",
+        "rows",
+      ]);
+    }
+    // Печать садится в центральную клетку квадрата, иначе они наложатся друг на друга.
+    if (diagram.centralSeal.radius > diagram.magicSquare.radius / 2) {
+      issue("Печать не помещается в центральную клетку квадрата", ["centralSeal", "radius"]);
+    }
+  }
+
+  return issues;
+}
+
 const spellShape = z.object({
   id: nonEmpty,
 
@@ -180,6 +312,7 @@ const spellShape = z.object({
   tacticalAdviceRu: nonEmpty.optional(),
 
   roleplay: roleplaySchema,
+  ritualDiagram: ritualDiagramSchema.optional(),
   announcementTemplate: nonEmpty,
 });
 
@@ -201,6 +334,31 @@ function countCompleteVariants(roleplay: z.infer<typeof roleplaySchema>): number
 }
 
 export const spellSchema = spellShape.superRefine((spell, context) => {
+  // FR-190: схема ритуала есть ровно у ритуального заклинания.
+  if (spell.ritual && spell.ritualDiagram === undefined) {
+    context.addIssue({
+      code: "custom",
+      path: ["ritualDiagram"],
+      message: "Ритуальное заклинание обязано иметь схему ритуала",
+    });
+  }
+  if (!spell.ritual && spell.ritualDiagram !== undefined) {
+    context.addIssue({
+      code: "custom",
+      path: ["ritualDiagram"],
+      message: "Схема ритуала есть только у ритуального заклинания",
+    });
+  }
+  if (spell.ritualDiagram !== undefined) {
+    for (const issue of ritualDiagramIssues(spell.ritualDiagram)) {
+      context.addIssue({
+        code: "custom",
+        path: ["ritualDiagram", ...issue.path],
+        message: issue.message,
+      });
+    }
+  }
+
   // Заговор не может быть ритуальным: ритуал требует уровня 1 и выше.
   if (spell.level === CANTRIP_LEVEL && spell.ritual) {
     context.addIssue({
