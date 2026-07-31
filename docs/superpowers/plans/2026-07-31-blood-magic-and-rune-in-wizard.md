@@ -20,9 +20,16 @@
 - Курс ступени и цены в очках не хардкодить в компонентах: только через `src/rules/bloodMagic.ts`.
 - Проверка после каждой задачи: `npm run typecheck && npx vitest run <файлы задачи>`. Перед последним коммитом — `npm run check:docs && npm run typecheck && npm run test:coverage && npm run build`.
 
-## Конфликт с параллельной работой
+## Состояние на 23:31, после параллельной работы
 
-В рабочем дереве есть незакоммиченные правки `CombatScreen.tsx`, `src/data/content/thorne/index.ts` и новый `src/rules/restrictions.ts` — их делает другая сессия. Задачи 1–5 их не касаются. Задачи 6 и 7 трогают `ResourceHeader.tsx` и `CombatScreen.tsx` — выполнять только после того, как та работа закоммичена.
+Пока писался план, другая сессия закрыла руны коммитом `0f4502e` — и тем же решением, что выбрано здесь: блок на шаге «Чем сотворить», отдельного шага в `WIZARD_STEPS` нет.
+
+**Задачи 1 и 5 выполнены не мной.** Отличия от плана — в именах, не в поведении: модуль экспортирует `RUNES`, `Rune`, `RUNE_LABEL` и `runeEffect(rune, slotLevel): string` (строка, а не `{ value, textRu }`). Эти имена и используются дальше; переименовывать нечего.
+
+Остались два расхождения со спекой, они становятся задачами 5a и 5b:
+
+1. Блок руны исчезает при оплате кровью и при нулевом пуле ([CastWizard.tsx:458](../../../src/components/cast/CastWizard.tsx#L458)) — спека требует причину вместо исчезновения.
+2. Эффект руны не попадает в объявление мастеру — этого требует строка проверки в [F-13](../../features/F-13-runes.md#проверка).
 
 ## Структура файлов
 
@@ -42,174 +49,10 @@
 
 ---
 
-### Task 1: Числовые эффекты рун
+### Task 1: Числовые эффекты рун — сделано в `0f4502e`
 
-**Files:**
-- Create: `src/rules/runes.ts`
-- Test: `src/rules/runes.test.ts`
-
-**Interfaces:**
-- Produces: `RuneKind = "life" | "war" | "wind"`, `RUNE_KINDS: readonly RuneKind[]`, `RUNE_NAMES: Record<RuneKind, string>`, `runeEffect(kind: RuneKind, slotLevel: number): { value: number; textRu: string }`.
-
-- [ ] **Step 1: Написать падающий тест**
-
-```ts
-import { describe, expect, it } from "vitest";
-import { RulesError } from "@/rules/abilities";
-import { runeEffect, RUNE_KINDS, RUNE_NAMES } from "@/rules/runes";
-
-describe("руна жизни (FR-152)", () => {
-  it("даёт по 5 временных хитов за уровень ячейки", () => {
-    expect(runeEffect("life", 1).value).toBe(5);
-    expect(runeEffect("life", 4).value).toBe(20);
-  });
-
-  it("называет эффект словами, а не числом без единиц", () => {
-    expect(runeEffect("life", 3).textRu).toBe(
-      "15 временных хитов союзникам в пределах 30 футов",
-    );
-  });
-});
-
-describe("руна войны (FR-152)", () => {
-  it("даёт половину уровня вверх, но не меньше +1", () => {
-    expect(runeEffect("war", 1).value).toBe(1);
-    expect(runeEffect("war", 2).value).toBe(1);
-    expect(runeEffect("war", 3).value).toBe(2);
-    expect(runeEffect("war", 4).value).toBe(2);
-  });
-
-  it("называет эффект со знаком", () => {
-    expect(runeEffect("war", 3).textRu).toBe(
-      "+2 к броскам атаки союзников в пределах 30 футов до конца вашего следующего хода",
-    );
-  });
-});
-
-describe("руна ветра (FR-152)", () => {
-  it("даёт по 5 футов за уровень ячейки", () => {
-    expect(runeEffect("wind", 2).value).toBe(10);
-  });
-
-  it("называет и скорость, и защиту от атак вдогонку", () => {
-    expect(runeEffect("wind", 4).textRu).toBe(
-      "+20 футов к скорости и защита от атак вдогонку до начала вашего следующего хода",
-    );
-  });
-});
-
-describe("границы", () => {
-  it("руна применяется только к ячейке 1…9 уровня", () => {
-    expect(() => runeEffect("life", 0)).toThrow(RulesError);
-    expect(() => runeEffect("life", 10)).toThrow(RulesError);
-    expect(() => runeEffect("life", 1.5)).toThrow(RulesError);
-  });
-
-  it("словарь названий покрывает все руны", () => {
-    for (const kind of RUNE_KINDS) {
-      expect(RUNE_NAMES[kind].length).toBeGreaterThan(0);
-    }
-  });
-});
-```
-
-- [ ] **Step 2: Убедиться, что тест падает**
-
-Run: `npx vitest run src/rules/runes.test.ts`
-Expected: FAIL — `Failed to resolve import "@/rules/runes"`.
-
-- [ ] **Step 3: Написать модуль**
-
-```ts
-/**
- * Руны создателя рун (FR-152).
- *
- * Числа взяты из материала Unearthed Arcana и перенесены в
- * docs/features/F-13-runes.md#fr-152. Источник неофициальный, подтверждения мастера нет — OQ-14.
- * Менять их следует здесь и в спеке одновременно.
- *
- * Эффект зависит от уровня ячейки, поэтому руна выбирается там же, где ячейка: на одном экране
- * число пересчитывается на глазах.
- */
-
-import { RulesError } from "./abilities";
-import { MAXIMUM_SPELL_LEVEL, MINIMUM_SPELL_LEVEL } from "./slots";
-
-export const RUNE_KINDS = ["life", "war", "wind"] as const;
-
-export type RuneKind = (typeof RUNE_KINDS)[number];
-
-/** Название в родительном падеже: подпись читается как «Руна жизни». */
-export const RUNE_NAMES: Record<RuneKind, string> = {
-  life: "жизни",
-  war: "войны",
-  wind: "ветра",
-};
-
-export type RuneEffect = {
-  value: number;
-  /** Готовая формулировка для объявления мастеру и для подписи варианта. */
-  textRu: string;
-};
-
-/** Футов и временных хитов за уровень ячейки. */
-const PER_LEVEL = 5;
-
-function assertSlotLevel(slotLevel: number): void {
-  if (
-    !Number.isInteger(slotLevel) ||
-    slotLevel < MINIMUM_SPELL_LEVEL ||
-    slotLevel > MAXIMUM_SPELL_LEVEL
-  ) {
-    throw new RulesError(`Уровень ячейки вне допустимого диапазона: ${slotLevel}`);
-  }
-}
-
-export function runeEffect(kind: RuneKind, slotLevel: number): RuneEffect {
-  assertSlotLevel(slotLevel);
-
-  switch (kind) {
-    case "life": {
-      const value = PER_LEVEL * slotLevel;
-      return { value, textRu: `${value} временных хитов союзникам в пределах 30 футов` };
-    }
-    case "war": {
-      // Минимум +1: половина первого уровня вверх и так равна единице, но правило названо
-      // отдельно, и без него ячейка 1 уровня читалась бы как «+0,5».
-      const value = Math.max(1, Math.ceil(slotLevel / 2));
-      return {
-        value,
-        textRu:
-          `+${value} к броскам атаки союзников в пределах 30 футов` +
-          " до конца вашего следующего хода",
-      };
-    }
-    case "wind": {
-      const value = PER_LEVEL * slotLevel;
-      return {
-        value,
-        textRu:
-          `+${value} футов к скорости и защита от атак вдогонку` +
-          " до начала вашего следующего хода",
-      };
-    }
-  }
-}
-```
-
-`MINIMUM_SPELL_LEVEL` (1) и `MAXIMUM_SPELL_LEVEL` (9) уже экспортируются из [`src/rules/slots.ts:10-11`](../../../src/rules/slots.ts); `RulesError` — из [`src/rules/abilities.ts`](../../../src/rules/abilities.ts).
-
-- [ ] **Step 4: Убедиться, что тест проходит**
-
-Run: `npx vitest run src/rules/runes.test.ts && npm run typecheck`
-Expected: PASS.
-
-- [ ] **Step 5: Коммит**
-
-```bash
-git add src/rules/runes.ts src/rules/runes.test.ts
-git commit -m "Give runes numbers that depend on the slot level"
-```
+`src/rules/runes.ts` и `src/rules/runes.test.ts` написаны параллельной сессией. Экспорт:
+`RUNES`, `Rune`, `RUNE_LABEL`, `runeEffect(rune: Rune, slotLevel: number): string`.
 
 ---
 
@@ -537,100 +380,124 @@ git commit -m "Put the blood exchange through the wizard, not one tap"
 
 ---
 
-### Task 5: Блок руны на шаге выбора ячейки
+### Task 5: Блок руны — сделано в `0f4502e`
+
+`RuneStep` рендерится внутри шага `slot` ([CastWizard.tsx:446-466](../../../src/components/cast/CastWizard.tsx#L446-L466)),
+`CastDraft.rune` и `chooseRune` есть в сторе, руна снимается при смене оплаты на не-ячейку.
+
+---
+
+### Task 5a: Причина вместо исчезновения блока руны
 
 **Files:**
-- Modify: `src/store/castDraftStore.ts`
-- Modify: `src/components/cast/CastWizard.tsx` — `SlotStep`
-- Modify: `src/rules/announcement.ts` — фраза руны
+- Modify: `src/components/cast/CastWizard.tsx:446-466`
 - Test: `src/components/cast/CastWizard.test.tsx`
-
-**Interfaces:**
-- Consumes: `runeEffect`, `RUNE_KINDS`, `RUNE_NAMES` из задачи 1.
-- Produces: `CastDraft.rune?: RuneKind`, `chooseRune(kind: RuneKind | undefined)` в сторе черновика, `toCastRequest` кладёт `rune` в заявку.
 
 - [ ] **Step 1: Написать падающий тест**
 
 ```tsx
-describe("руна при сотворении (FR-151, FR-152)", () => {
-  it("эффект пересчитывается при смене уровня ячейки", async () => {
-    const { user } = await openWizardFor("web");
-    await user.click(screen.getByRole("button", { name: /Ячейка 2 уровня/ }));
-    expect(screen.getByRole("button", { name: /Жизни · 10 временных хитов/ })).toBeDefined();
+it("при оплате кровью руна не применяется и говорит почему (OQ-17)", async () => {
+  const { user } = await openWizardFor("web");
+  await user.click(screen.getByRole("button", { name: /Кровью/ }));
+  expect(screen.getByText("При оплате кровью руна не применяется")).toBeDefined();
+});
 
-    await user.click(screen.getByRole("button", { name: /Ячейка 4 уровня/ }));
-    expect(screen.getByRole("button", { name: /Жизни · 20 временных хитов/ })).toBeDefined();
-  });
-
-  it("выбранная руна попадает в объявление и списывается подтверждением", async () => {
-    const { user, stores } = await openWizardFor("web");
-    await user.click(screen.getByRole("button", { name: /Войны/ }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
-    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-
-    expect(stores.session.getState().session?.character.runes.remaining).toBe(2);
-  });
-
-  it("при оплате кровью руна не применяется и говорит почему", async () => {
-    const { user } = await openWizardFor("web");
-    await user.click(screen.getByRole("button", { name: /Кровью/ }));
-    expect(screen.getByText(/При оплате кровью руна не применяется/)).toBeDefined();
-  });
-
-  it("без рун объясняет, когда они вернутся", async () => {
-    const spent = createThorne();
-    spent.runes = { remaining: 0, maximum: 3 };
-    const { user } = await openWizardFor("web", spent);
-    expect(screen.getByText(/Рун не осталось, вернутся долгим отдыхом/)).toBeDefined();
-  });
-
-  it("у заговора блока руны нет вовсе", async () => {
-    await openWizardFor("fire-bolt");
-    expect(screen.queryByText(/Руна/)).toBeNull();
-  });
+it("без рун объясняет, когда они вернутся", async () => {
+  const spent = createThorne();
+  spent.runes = { remaining: 0, maximum: 3 };
+  await openWizardFor("web", spent);
+  expect(screen.getByText("Рун не осталось, вернутся долгим отдыхом")).toBeDefined();
 });
 ```
 
-`openWizardFor` написать рядом с существующими помощниками `CastWizard.test.tsx`; заговор взять тот, что есть в книге — проверить по `src/data/content/thorne/index.ts`.
-
 - [ ] **Step 2: Убедиться, что тест падает**
 
-Run: `npx vitest run src/components/cast/CastWizard.test.tsx`
-Expected: FAIL — блока руны нет.
+Run: `npx vitest run src/components/cast/CastWizard.test.tsx -t "руна"`
+Expected: FAIL — блок скрыт целиком, текста нет.
 
 - [ ] **Step 3: Реализовать**
 
-В `castDraftStore`: поле `rune?: RuneKind` в `CastDraft`, действие `chooseRune`, сброс руны в `chooseCastOption`, когда выбранная оплата — не ячейка (OQ-17). В `toCastRequest` — `...(draft.rune === undefined ? {} : { rune: draft.rune })`.
+Условие показа блока сузить до «заклинание оплачивается ячейкой в принципе» (`draft.spell.level !== CANTRIP_LEVEL && draft.mode !== "ritual"`), а внутри `RuneStep` вместо списка вариантов показывать строку причины, когда `payment.kind !== "slot"` или `runes.remaining === 0`.
 
-В `SlotStep` — блок под списком способов. Показывается, когда `spell.level !== CANTRIP_LEVEL && draft.mode !== "ritual"`. Внутри: заголовок «Руна» со счётчиком пула; при `runes.remaining === 0` — строка «Рун не осталось, вернутся долгим отдыхом» вместо вариантов; при `draft.payment.kind !== "slot"` — строка «При оплате кровью руна не применяется» вместо вариантов; иначе «Без руны» и три варианта с `runeEffect(kind, draft.payment.slotLevel).textRu`.
+- [ ] **Step 4: Убедиться, что тест проходит**
 
-В `announcement.ts` — фраза руны рядом с `paymentSentence`:
+Run: `npx vitest run src/components/cast && npm run typecheck`
+Expected: PASS.
+
+- [ ] **Step 5: Коммит**
+
+```bash
+git add src/components/cast/CastWizard.tsx src/components/cast/CastWizard.test.tsx
+git commit -m "Say why the rune is unavailable instead of hiding it"
+```
+
+---
+
+### Task 5b: Эффект руны в объявлении мастеру
+
+**Files:**
+- Modify: `src/rules/announcement.ts`
+- Test: `src/rules/announcement.test.ts`
+
+**Interfaces:**
+- Produces: поле `rune?: Rune` в `AnnouncementContext`; фраза руны в конце `renderAnnouncement`; шаг «Спишется руна» в `castInstructions`.
+
+- [ ] **Step 1: Написать падающий тест**
 
 ```ts
-/** Эффект руны в объявлении: в шаблонах карточек руны нет, она добавляется фразой (FR-151). */
+it("называет руну и её эффект отдельной фразой (FR-151, FR-152)", () => {
+  const announcement = renderAnnouncement(web, {
+    character: createThorne(),
+    mode: "normal",
+    payment: { kind: "slot", slotLevel: 3 },
+    rune: "war",
+  });
+  expect(announcement.text).toContain(
+    "Применяю руну войны: +2 к броскам атаки союзников в пределах 30 футов",
+  );
+});
+
+it("при оплате кровью руну не называет (OQ-17)", () => {
+  const announcement = renderAnnouncement(web, {
+    character: createThorne(),
+    mode: "normal",
+    payment: { kind: "spell_points" },
+    rune: "war",
+  });
+  expect(announcement.text).not.toMatch(/руну/);
+});
+```
+
+- [ ] **Step 2: Убедиться, что тест падает**
+
+Run: `npx vitest run src/rules/announcement.test.ts -t "руну"`
+Expected: FAIL — поля `rune` в контексте нет.
+
+- [ ] **Step 3: Реализовать**
+
+```ts
+/** Руна в шаблонах карточек не предусмотрена: она добавляется фразой, а не подстановкой (FR-151). */
 function runeSentence(context: AnnouncementContext): string {
   if (context.rune === undefined || context.payment.kind !== "slot") return "";
-  const effect = runeEffect(context.rune, context.payment.slotLevel);
-  return ` Применяю руну ${RUNE_NAMES[context.rune]}: ${effect.textRu}.`;
+  const name = RUNE_LABEL[context.rune].replace("Руна ", "руну ");
+  return ` Применяю ${name}: ${runeEffect(context.rune, context.payment.slotLevel)}.`;
 }
 ```
 
-Поле `rune?: RuneKind` добавить в `AnnouncementContext`, вызов — в конец `renderAnnouncement` рядом с `paymentSentence`. В `castInstructions` — шаг «Спишется руна: <эффект>» после строки об оплате.
+Вызов — рядом с `paymentSentence` в `renderAnnouncement`. В `castInstructions` — шаг `Спишется руна: ${runeEffect(...)}` после строки об оплате. `CastWizard` передаёт `rune: draft.rune ?? undefined` в контекст.
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [ ] **Step 4: Убедиться, что тест проходит**
 
-Run: `npx vitest run src/components/cast src/rules && npm run typecheck`
+Run: `npx vitest run src/rules src/components/cast && npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Коммит вместе со спекой**
+- [ ] **Step 5: Коммит**
 
 ```bash
-git add src/store/castDraftStore.ts src/components/cast/CastWizard.tsx src/rules/announcement.ts \
-        src/components/cast/CastWizard.test.tsx docs/features/F-13-runes.md
-git commit -m "Offer the rune where the slot is chosen, with its number"
+git add src/rules/announcement.ts src/rules/announcement.test.ts \
+        src/components/cast/CastWizard.tsx docs/features/F-13-runes.md
+git commit -m "Let the rune reach the words said to the DM"
 ```
-
-Правки F-13 в этом же коммите: FR-151 — «блок на шаге выбора ячейки» вместо «отдельный шаг»; FR-152 → `Готово` с указанием проверок; в «Поведение» — руна не применяется при оплате кровью (OQ-17).
 
 ---
 
