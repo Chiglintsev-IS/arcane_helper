@@ -99,6 +99,7 @@ export function ResourceHeader({
   economy,
   concentration,
   bookCastingTimes,
+  showResources = true,
   onOpenHitPoints,
   onOpenConcentration,
   onEndEffect,
@@ -108,6 +109,15 @@ export function ResourceHeader({
   concentration: ConcentrationSummary | null;
   /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем (FR-001). */
   bookCastingTimes: ReadonlySet<CastingTimeType>;
+  /**
+   * Показывать ли числа и счётчики ресурсов.
+   *
+   * В «Книге» их нет: КС спасброска, модификатор атаки, КД и остаток ячеек — вопросы боя, а книгу
+   * читают и по ней готовятся (FR-203). На экране шириной 320 пикселей этот блок стоил ровно одной
+   * карточки заклинания. Концентрация остаётся во всех режимах: она держится и во время чтения и
+   * уйти с экрана незаметно не может (F-07).
+   */
+  showResources?: boolean;
   onOpenHitPoints: () => void;
   onOpenConcentration: () => void;
   onEndEffect: (effectId: string) => void;
@@ -132,6 +142,8 @@ export function ResourceHeader({
         </p>
       </header>
 
+      {showResources ? (
+        <>
       <dl className="grid grid-cols-4 gap-1">
         <Stat label="КС закл." value={`${character.spellSaveDc}`} />
         <Stat label="Атака" value={signed(character.spellAttackModifier)} />
@@ -240,6 +252,8 @@ export function ResourceHeader({
           </>
         ) : null}
       </ul>
+        </>
+      ) : null}
 
       <ConcentrationCard
         summary={concentration}

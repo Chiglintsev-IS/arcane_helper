@@ -14,7 +14,7 @@ import {
   CASTING_TIME,
   COMBAT_ROLE,
   TONE_CLASS,
-  levelLabel,
+  levelChipLabel,
   type CastingTimeType,
 } from "@/components/spell/format";
 import type { CombatRole } from "@/rules/combatRole";
@@ -175,7 +175,7 @@ export function SpellFilters({
                 tone="muted"
                 onClick={() => onChange({ ...filters, levels: toggleValue(filters.levels, level) })}
               >
-                {levelLabel(level)}
+                {levelChipLabel(level)}
               </Toggle>
             ))}
             <Toggle

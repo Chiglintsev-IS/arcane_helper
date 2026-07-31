@@ -43,11 +43,11 @@ test("combat-screen renders all resource blocks", async ({ page }) => {
   await expect(slots.getByRole("listitem")).toHaveCount(4);
   await expect(slots.getByText("4/4")).toBeVisible();
 
-  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет; бонусного действия нет
-  // ни у одной карточки — ни значка, ни переключателя (FR-001). Экономия хода в бою ведётся всегда.
+  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет (FR-001). Экономия хода
+  // в бою ведётся всегда, а бонусное действие появилось вместе с «Туманным шагом».
   await expect(page.getByLabel("Концентрация")).toBeHidden();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Бонусное", exact: true })).toBeHidden();
+  await expect(page.getByLabel("Бонусное действие доступно")).toBeVisible();
   await expect(page.getByRole("button", { name: "Учёт хода", exact: true })).toBeHidden();
 });
 
@@ -96,14 +96,15 @@ test("filter by casting time", async ({ page }) => {
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
 
   const list = page.getByLabel("Заклинания");
-  await expect(list.getByRole("listitem")).toHaveCount(2);
+  // Три подготовленные реакции: «Щит», «Поглощение стихий», «Контрзаклинание».
+  await expect(list.getByRole("listitem")).toHaveCount(3);
   // Точное совпадение: подстрока «щит» есть и в подписи роли «Защита» (FR-211).
   await expect(list.getByText("Щит", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Сбросить" }).click();
-  // Восемь: семь карточек боя — девять режима минус два неподготовленных ритуала (FR-103, FR-201) —
-  // и строка «Магия крови», которая стоит в том же списке и тратит то же действие (FR-207).
-  await expect(list.getByRole("listitem")).toHaveCount(8);
+  // Пятнадцать: четыре заговора и одиннадцать подготовленных минус «Починка», которая творится
+  // минуту (FR-201), плюс строка «Магия крови» в том же списке (FR-207).
+  await expect(list.getByRole("listitem")).toHaveCount(15);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {
@@ -236,10 +237,14 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 
 test("book mode prepares spells", async ({ page }) => {
   await page.getByRole("radio", { name: /^Книга/ }).click();
-  await expect(page.getByText("Подготовлено 4 из 11")).toBeVisible();
+  // Стартовый набор занимает лимит целиком, и двенадцатое заклинание в него не влезает (FR-101).
+  await expect(page.getByText("Подготовлено 11 из 11")).toBeVisible();
+
+  await page.getByRole("button", { name: "Снять подготовку: Отражения" }).click();
+  await expect(page.getByText("Подготовлено 10 из 11")).toBeVisible();
 
   await page.getByRole("button", { name: "Подготовить: Обнаружение магии" }).click();
-  await expect(page.getByText("Подготовлено 5 из 11")).toBeVisible();
+  await expect(page.getByText("Подготовлено 11 из 11")).toBeVisible();
 
   // Подготовка определяет состав боевого списка (FR-209).
   await page.getByRole("radio", { name: /^Бой/ }).click();

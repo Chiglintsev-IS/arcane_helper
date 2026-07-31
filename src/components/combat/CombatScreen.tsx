@@ -262,6 +262,7 @@ export function CombatScreen() {
           economy={economy}
           concentration={concentrationSummary}
           bookCastingTimes={available.castingTimes}
+          showResources={!preparing}
           onOpenHitPoints={() => setDamageOpen(true)}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}

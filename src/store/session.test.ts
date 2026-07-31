@@ -1277,8 +1277,22 @@ describe("заметка к заклинанию (FR-012)", () => {
 describe("подготовка заклинаний (FR-100, FR-101, FR-214)", () => {
   const LIMIT = 11;
 
+  /**
+   * Стартовый набор Торна — ровно 11 из 11, то есть предел. Тесты добавления начинают с одним
+   * свободным местом: иначе они проверяли бы лимит, а не подготовку.
+   */
+  function withRoom(): Session {
+    return {
+      ...session,
+      character: {
+        ...session.character,
+        preparedSpellIds: session.character.preparedSpellIds.slice(0, LIMIT - 1),
+      },
+    };
+  }
+
   it("готовит и снимает подготовку, записывая каждое действие в журнал", () => {
-    const prepared = togglePreparation(session, spell("detect-magic"), LIMIT, clock);
+    const prepared = togglePreparation(withRoom(), spell("detect-magic"), LIMIT, clock);
     expect(prepared.character.preparedSpellIds).toContain("detect-magic");
     expect(prepared.journal.at(-1)?.summaryRu).toBe("Подготовлено: Обнаружение магии");
 
@@ -1288,9 +1302,10 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   });
 
   it("подготовка обратима (FR-111)", () => {
-    const prepared = togglePreparation(session, spell("detect-magic"), LIMIT, clock);
+    const before = withRoom();
+    const prepared = togglePreparation(before, spell("detect-magic"), LIMIT, clock);
     expect(undoLast(prepared).character.preparedSpellIds).toEqual(
-      session.character.preparedSpellIds,
+      before.character.preparedSpellIds,
     );
   });
 
@@ -1322,6 +1337,13 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     expect(after.character.preparedSpellIds).toHaveLength(2);
   });
 
+  it("набор Торна начинается ровно на пределе: 11 из 11 (FR-101)", () => {
+    expect(session.character.preparedSpellIds).toHaveLength(LIMIT);
+    expect(() => togglePreparation(session, spell("blink"), LIMIT, clock)).toThrow(
+      /Подготовлено 11 из 11/,
+    );
+  });
+
   it("заговор не готовится: он вне лимита и доступен всегда (FR-102)", () => {
     expect(() => togglePreparation(session, spell("ray-of-frost"), LIMIT, clock)).toThrow(
       /Заговор не готовится/,
@@ -1336,7 +1358,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   it("ритуал готовится как обычное заклинание (FR-103)", () => {
     // FR-103 говорит, что ритуалом его можно творить и без подготовки, а не что готовить нельзя:
     // подготовленный ритуал в бою творится за ячейку обычным временем (FR-208).
-    const after = togglePreparation(session, spell("identify"), LIMIT, clock);
+    const after = togglePreparation(withRoom(), spell("identify"), LIMIT, clock);
     expect(after.character.preparedSpellIds).toContain("identify");
   });
 });

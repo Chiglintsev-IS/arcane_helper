@@ -76,12 +76,22 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(screen.queryByLabelText("Реакция доступна")).toBeNull();
   });
 
-  it("в бою показывает действие и реакцию, но не бонусное (FR-001)", async () => {
-    // Бонусного действия нет ни у одной карточки книги — значку нечего отражать.
+  it("показывает все три вида экономии, когда все три есть в списке (FR-001)", async () => {
+    // Бонусное действие появилось вместе с «Туманным шагом»: значку стало что отражать, и
+    // переключатель вернулся сам, без правки интерфейса.
     await renderWithStores(<CombatScreen />, withTurnTracking());
 
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
     expect(screen.getByLabelText("Реакция доступна")).toBeDefined();
+    expect(screen.getByLabelText("Бонусное действие доступно")).toBeDefined();
+  });
+
+  it("вида действия, которого в списке нет, в шапке тоже нет (FR-001)", async () => {
+    // Снимаем «Туманный шаг» с подготовки — бонусных заклинаний в бою не остаётся.
+    const character = createThorne();
+    character.preparedSpellIds = character.preparedSpellIds.filter((id) => id !== "misty-step");
+    await renderWithStores(<CombatScreen />, character);
+
     expect(screen.queryByLabelText("Бонусное действие доступно")).toBeNull();
   });
 
@@ -216,10 +226,12 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 
     await user.click(screen.getByRole("button", { name: "Реакция" }));
 
+    // Три подготовленные реакции: «Щит», «Поглощение стихий», «Контрзаклинание». «Падение
+    // пёрышком» в стартовый набор не входит.
     const list = screen.getByLabelText(/^Заклинания/);
-    expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
     expect(within(list).getByText("Щит")).toBeDefined();
-    expect(within(list).getByText("Поглощение стихий")).toBeDefined();
+    expect(within(list).getByText("Контрзаклинание")).toBeDefined();
   });
 
   it("значения одной категории соединяются «или»", async () => {
@@ -367,6 +379,8 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<CombatScreen />, inBookMode());
 
+    // Набор Торна ровно на пределе, поэтому сначала освобождаем место (FR-101).
+    await user.click(screen.getByRole("button", { name: "Снять подготовку: Отражения" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
     expect(stores.session.getState().session?.character.preparedSpellIds).toContain("detect-magic");
 
@@ -380,19 +394,20 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />, inBookMode());
 
+    await user.click(screen.getByRole("button", { name: "Снять подготовку: Отражения" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
     await user.click(screen.getByRole("radio", { name: /^Бой/ }));
 
-    expect(
-      within(screen.getByLabelText(/^Заклинания/)).getByText("Обнаружение магии"),
-    ).toBeDefined();
+    const list = within(screen.getByLabelText(/^Заклинания/));
+    expect(list.getByText("Обнаружение магии")).toBeDefined();
+    expect(list.queryByText("Отражения")).toBeNull();
   });
 
   it("считает подготовленное и не считает заговоры (FR-102)", async () => {
     await renderWithStores(<CombatScreen />, inBookMode());
 
-    // У Торна подготовлено четыре из одиннадцати; четыре заговора в лимит не входят.
-    expect(screen.getByText(/Подготовлено 4 из 11/)).toBeDefined();
+    // Стартовый набор Торна занимает лимит целиком; четыре заговора в него не входят.
+    expect(screen.getByText(/Подготовлено 11 из 11/)).toBeDefined();
     expect(screen.queryByRole("button", { name: /Подготовить: Луч холода/ })).toBeNull();
   });
 

@@ -46,19 +46,13 @@ describe("отбор по режиму (FR-201, FR-202, FR-203)", () => {
     }
   });
 
-  it("бой — девять карточек из двенадцати", () => {
-    // «Починка», «Поиск фамильяра» и «Опознание» творятся минутами и часами: в бою их нет.
-    expect(idsFor("combat")).toEqual([
-      "absorb-elements",
-      "detect-magic",
-      "disguise-self",
-      "mage-armor",
-      "message",
-      "ray-of-frost",
-      "shield",
-      "shocking-grasp",
-      "unseen-servant",
-    ]);
+  it("бой — вся книга, кроме накладываемого минутами и часами", () => {
+    // «Починка» (1 минута), «Опознание» (1 минута) и «Поиск фамильяра» (1 час) в ход не влезают.
+    const combat = new Set(idsFor("combat"));
+    expect(combat.size).toBe(SPELLS.length - 3);
+    for (const id of ["mending", "identify", "find-familiar"]) {
+      expect(combat.has(id), id).toBe(false);
+    }
   });
 
   it("привал — долгое накладывание и ритуалы", () => {
@@ -93,23 +87,33 @@ describe("боевой список: состав и порядок (FR-209, FR-
   it("содержит заговоры и подготовленные, но не остальное", () => {
     const shown = spellsForScreen(SPELLS, createThorne()).map((spell) => spell.id);
 
-    // Заговоры входят вне лимита подготовки; «Обнаружение магии» подготовлено не было.
+    // Заговоры входят вне лимита подготовки; ритуалы в стартовый набор не входят (FR-103).
     expect(shown).toContain("ray-of-frost");
     expect(shown).toContain("mage-armor");
     expect(shown).not.toContain("detect-magic");
     expect(shown).not.toContain("unseen-servant");
+    // «Мерцание» есть в книге, но сегодня не подготовлено — в бою его нет.
+    expect(shown).not.toContain("blink");
   });
 
   it("реакции, затем цена, затем роль (FR-210)", () => {
-    // Реакции наверху; дальше бесплатное — заговоры, сначала боевые; потом ячейки по возрастанию.
+    // Реакции наверху; дальше бесплатное — заговоры, сначала боевые; потом ячейки по возрастанию,
+    // и внутри уровня боевое раньше защитного.
     expect(spellsForScreen(SPELLS, createThorne()).map((spell) => spell.id)).toEqual([
       "shield",
       "absorb-elements",
+      "counterspell",
       "shocking-grasp",
       "ray-of-frost",
       "message",
       "mage-armor",
-      "disguise-self",
+      "web",
+      "misty-step",
+      "mirror-image",
+      "invisibility",
+      "hypnotic-pattern",
+      "lightning-bolt",
+      "polymorph",
     ]);
   });
 
@@ -122,15 +126,16 @@ describe("боевой список: состав и порядок (FR-209, FR-
     const rows = combat.map((spell) => spell.id);
     rows.splice(at, 0, "магия-крови");
 
-    expect(rows).toEqual([
+    // Последним заговором идёт «Сообщение» — та же цена и та же роль «другое», что у обмена.
+    expect(rows.slice(0, 8)).toEqual([
       "shield",
       "absorb-elements",
+      "counterspell",
       "shocking-grasp",
       "ray-of-frost",
       "message",
       "магия-крови",
       "mage-armor",
-      "disguise-self",
     ]);
   });
 

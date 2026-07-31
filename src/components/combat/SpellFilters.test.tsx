@@ -64,7 +64,7 @@ describe("состав фильтров зависит от книги (FR-002)"
     renderFilters(EVERYTHING);
     expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Заговор" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "2 уровень" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "2 ур." })).toBeDefined();
   });
 
   it("не показывает того, чего в книге нет", () => {
@@ -112,7 +112,7 @@ describe("фильтры боя (FR-212)", () => {
       expect(screen.getByRole("button", { name }), name).toBeDefined();
     }
     // Уровень, ритуальность, подготовка и «доступно сейчас» в бою не отвечают ни на один вопрос.
-    for (const name of ["Заговор", "2 уровень", "Ритуал", "Подготовлено", "Доступно сейчас"]) {
+    for (const name of ["Заговор", "2 ур.", "Ритуал", "Подготовлено", "Доступно сейчас"]) {
       expect(screen.queryByRole("button", { name }), name).toBeNull();
     }
   });

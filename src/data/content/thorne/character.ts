@@ -25,19 +25,57 @@ const RAW: unknown = {
   constitutionSaveModifier: 4,
 
   cantripIds: ["shocking-grasp", "ray-of-frost", "message", "mending"],
+  // Двадцать пять записей книги: состав назван игроком, состав и решения — docs/content.md.
   spellbookSpellIds: [
     "shield",
     "absorb-elements",
+    "feather-fall",
     "mage-armor",
     "disguise-self",
     "find-familiar",
     "detect-magic",
     "identify",
     "unseen-servant",
+
+    "misty-step",
+    "mirror-image",
+    "arcane-vigor",
+    "web",
+    "invisibility",
+    "rimes-binding-ice",
+    "vortex-warp",
+    "tashas-mind-whip",
+
+    "counterspell",
+    "dispel-magic",
+    "hypnotic-pattern",
+    "lightning-bolt",
+    "blink",
+    "fly",
+
+    "polymorph",
+    "dimension-door",
   ],
-  // Ритуалы не подготавливаются: они доступны прямо из книги (FR-103).
-  // Из лимита 11 занято 4 — остальное заполнится с заклинаниями 2–4 уровней.
-  preparedSpellIds: ["shield", "absorb-elements", "mage-armor", "disguise-self"],
+  /**
+   * Стартовый набор подготовки — 11 из 11 (docs/content.md#предлагаемый-стартовый-набор-подготовки).
+   *
+   * Ритуалы в него не входят: подготовка им не нужна (FR-103), и место в лимите они занимали бы зря.
+   * Набор — предложение спеки, а не выбор игрока: он пересобирается в «Книге» одним нажатием на
+   * строку (FR-214).
+   */
+  preparedSpellIds: [
+    "shield",
+    "absorb-elements",
+    "mage-armor",
+    "misty-step",
+    "mirror-image",
+    "web",
+    "invisibility",
+    "counterspell",
+    "hypnotic-pattern",
+    "lightning-bolt",
+    "polymorph",
+  ],
 
   spellSlots: SLOTS,
   reactionAvailable: true,

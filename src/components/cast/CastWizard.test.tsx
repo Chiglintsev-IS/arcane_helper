@@ -142,9 +142,11 @@ describe("подтверждение (FR-023, AC-11)", () => {
 
 describe("объявление мастеру (FR-041, AC-12)", () => {
   it("называет выбранный уровень ячейки и цель", async () => {
+    // «Молния»: выбор ячейки есть, концентрации нет — значит шага замены между ними не встанет,
+    // а в объявлении стоят и уровень ячейки, и КС спасброска.
     await renderWithStores(<CombatScreen />);
 
-    const user = await openWizard(/Маскировка/);
+    const user = await openWizard(/^Молния/);
     await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
@@ -207,7 +209,7 @@ describe("предупреждение вместо запрета (FR-031)", ()
 describe("замена концентрации (FR-081, AC-13)", () => {
   it("требует выбора из двух вариантов, а не «всё равно»", async () => {
     await renderWithStores(<CombatScreen />, concentrating());
-    const user = await openWizard(/Обнаружение магии/);
+    const user = await openWizard(/^Обнаружение магии/);
 
     expect(screen.getByText(/Шаг 1 из 3: Чем сотворить/)).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -221,7 +223,7 @@ describe("замена концентрации (FR-081, AC-13)", () => {
 
   it("после замены остаётся ровно одна концентрация (FR-080)", async () => {
     const { stores } = await renderWithStores(<CombatScreen />, concentrating());
-    const user = await openWizard(/Обнаружение магии/);
+    const user = await openWizard(/^Обнаружение магии/);
 
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Заменить концентрацию" }));
@@ -236,7 +238,7 @@ describe("замена концентрации (FR-081, AC-13)", () => {
   it("отмена на шаге концентрации оставляет прежний эффект", async () => {
     const { stores } = await renderWithStores(<CombatScreen />, concentrating());
     const before = structuredClone(stores.session.getState().session);
-    const user = await openWizard(/Обнаружение магии/);
+    const user = await openWizard(/^Обнаружение магии/);
 
     await user.click(screen.getByRole("button", { name: "Далее" }));
     // На шаге концентрации две кнопки: «Отмена» рядом с «Заменить концентрацию».

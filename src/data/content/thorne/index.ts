@@ -8,17 +8,34 @@
 import { spellSchema, type Spell } from "@/data/schemas/spell";
 
 import absorbElements from "./spells/absorb-elements.json";
+import arcaneVigor from "./spells/arcane-vigor.json";
+import blink from "./spells/blink.json";
+import counterspell from "./spells/counterspell.json";
 import detectMagic from "./spells/detect-magic.json";
+import dimensionDoor from "./spells/dimension-door.json";
 import disguiseSelf from "./spells/disguise-self.json";
+import dispelMagic from "./spells/dispel-magic.json";
+import featherFall from "./spells/feather-fall.json";
 import findFamiliar from "./spells/find-familiar.json";
+import fly from "./spells/fly.json";
+import hypnoticPattern from "./spells/hypnotic-pattern.json";
 import identify from "./spells/identify.json";
+import invisibility from "./spells/invisibility.json";
+import lightningBolt from "./spells/lightning-bolt.json";
 import mageArmor from "./spells/mage-armor.json";
 import mending from "./spells/mending.json";
 import message from "./spells/message.json";
+import mirrorImage from "./spells/mirror-image.json";
+import mistyStep from "./spells/misty-step.json";
+import polymorph from "./spells/polymorph.json";
 import rayOfFrost from "./spells/ray-of-frost.json";
+import rimesBindingIce from "./spells/rimes-binding-ice.json";
 import shield from "./spells/shield.json";
 import shockingGrasp from "./spells/shocking-grasp.json";
+import tashasMindWhip from "./spells/tashas-mind-whip.json";
 import unseenServant from "./spells/unseen-servant.json";
+import vortexWarp from "./spells/vortex-warp.json";
+import web from "./spells/web.json";
 
 /** Сырые карточки в порядке уровня, затем по алфавиту. Импорты явные: каталог сам себя не соберёт. */
 const RAW_SPELLS: readonly unknown[] = [
@@ -26,14 +43,35 @@ const RAW_SPELLS: readonly unknown[] = [
   rayOfFrost,
   message,
   mending,
+
   shield,
   absorbElements,
+  featherFall,
   mageArmor,
   disguiseSelf,
   findFamiliar,
   detectMagic,
   identify,
   unseenServant,
+
+  mistyStep,
+  mirrorImage,
+  arcaneVigor,
+  web,
+  invisibility,
+  rimesBindingIce,
+  vortexWarp,
+  tashasMindWhip,
+
+  counterspell,
+  dispelMagic,
+  hypnoticPattern,
+  lightningBolt,
+  blink,
+  fly,
+
+  polymorph,
+  dimensionDoor,
 ];
 
 export class ContentError extends Error {

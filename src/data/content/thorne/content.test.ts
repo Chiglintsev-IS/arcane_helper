@@ -20,11 +20,25 @@ function roleplayTexts(spell: (typeof spells)[number]): string[] {
   ];
 }
 
-describe("первая партия контента", () => {
-  it("состоит из 12 карточек: 4 заговора и 8 заклинаний 1 уровня", () => {
-    expect(spells).toHaveLength(12);
-    expect(spells.filter((spell) => spell.level === CANTRIP_LEVEL)).toHaveLength(4);
-    expect(spells.filter((spell) => spell.level === 1)).toHaveLength(8);
+describe("книга заклинаний Торна", () => {
+  it("состоит из 29 карточек: 4 заговора и 25 заклинаний по уровням", () => {
+    // Состав назван игроком — docs/content.md#состав-книги. Числа держат этот тест и реестр
+    // подготовки: карточка, забытая в загрузчике, иначе исчезает молча.
+    expect(spells).toHaveLength(29);
+    const byLevel = (level: number) => spells.filter((spell) => spell.level === level).length;
+    expect(byLevel(CANTRIP_LEVEL)).toBe(4);
+    expect(byLevel(1)).toBe(9);
+    expect(byLevel(2)).toBe(8);
+    expect(byLevel(3)).toBe(6);
+    expect(byLevel(4)).toBe(2);
+  });
+
+  it("у каждой карточки указан источник (ADR-0015)", () => {
+    // Смешанная редакция: 2024 там, где заклинание переиздано, иначе книга, где оно вышло.
+    // Без источника невозможно проверить, по какой версии написана карточка.
+    for (const spell of spells) {
+      expect(spell.source, `${spell.nameRu} без источника`).toBeTruthy();
+    }
   });
 
   it("все карточки проходят схему и имеют уникальные идентификаторы", () => {
@@ -48,7 +62,11 @@ describe("первая партия контента", () => {
     expect(byId.get("mage-armor")).toBe("defense");
     expect(byId.get("ray-of-frost")).toBe("offense");
     expect(byId.get("shocking-grasp")).toBe("offense");
-    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(7);
+    // «Паутина» урона не наносит и всё же боевая: она выключает противника, а не защищает своих.
+    expect(byId.get("web")).toBe("offense");
+    expect(byId.get("hypnotic-pattern")).toBe("offense");
+    expect(byId.get("counterspell")).toBe("defense");
+    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(10);
   });
 
   it("не содержит запрещённых мастером заклинаний", () => {
@@ -129,10 +147,17 @@ describe("покрытие механик первой партией", () => {
   });
 
   it("каждая реакция описывает свой триггер", () => {
+    // Четыре разных триггера: попадание по себе, стихийный урон, чужое падение, чужое заклинание.
+    // Реакция без описанного триггера бесполезна — узнать её момент неоткуда (F-05).
     const reactions = spells.filter((spell) => spell.castingTime.type === "reaction");
-    expect(reactions).toHaveLength(2);
+    expect(reactions.map((spell) => spell.id).sort()).toEqual([
+      "absorb-elements",
+      "counterspell",
+      "feather-fall",
+      "shield",
+    ]);
     for (const reaction of reactions) {
-      expect(reaction.castingTime.reactionTrigger).toBeTruthy();
+      expect(reaction.castingTime.reactionTrigger, reaction.nameRu).toBeTruthy();
     }
   });
 

@@ -4,19 +4,40 @@
   "nameEn": "Ray of Frost",
   "level": 0,
   "school": "Воплощение",
+  "source": "Player's Handbook (2024)",
   "combatRole": "offense",
-  "castingTime": { "type": "action" },
-  "range": { "type": "distance", "distanceFeet": 60 },
-  "components": { "verbal": true, "somatic": true, "material": false },
-  "duration": { "type": "instant" },
+  "castingTime": {
+    "type": "action"
+  },
+  "range": {
+    "type": "distance",
+    "distanceFeet": 60
+  },
+  "components": {
+    "verbal": true,
+    "somatic": true,
+    "material": false
+  },
+  "duration": {
+    "type": "instant"
+  },
   "concentration": false,
   "ritual": false,
-  "targeting": { "type": "creature", "maximumTargets": 1 },
-  "resolution": { "type": "spell_attack" },
+  "targeting": {
+    "type": "creature",
+    "maximumTargets": 1
+  },
+  "resolution": {
+    "type": "spell_attack"
+  },
   "damage": {
     "dice": "1d8",
     "type": "холод",
-    "scaling": { "5": "2d8", "11": "3d8", "17": "4d8" }
+    "scaling": {
+      "5": "2d8",
+      "11": "3d8",
+      "17": "4d8"
+    }
   },
   "shortRulesRu": "Ледяной луч на 60 футов. При попадании наносит урон холодом и снижает скорость цели на 10 футов до начала следующего хода заклинателя.",
   "fullRulesRu": "Луч бледно-синего света устремляется к существу в пределах дальности. Совершается атака заклинанием. При попадании цель получает урон холодом, а её скорость снижается на 10 футов до начала следующего хода заклинателя.",
@@ -27,11 +48,15 @@
     "gesture": "Ведёт указательным пальцем короткую прямую руну в воздухе, будто прочерчивает линию до цели.",
     "visualEffect": "Тонкий белый луч тянется от пальца, оставляя на камне полосу изморози.",
     "completeVariants": {
-      "short": ["Короткий росчерк пальцем — и по цели проходит изморозь."],
+      "short": [
+        "Короткий росчерк пальцем — и по цели проходит изморозь."
+      ],
       "atmospheric": [
         "Руна на пальце наливается синим, воздух между Торном и целью звенит от сухого холода, а на земле остаётся белая полоса."
       ],
-      "sarcastic": ["«Остынь», — советует Торн и чертит линию в воздухе."]
+      "sarcastic": [
+        "«Остынь», — советует Торн и чертит линию в воздухе."
+      ]
     }
   },
   "announcementTemplate": "Использую действие и сотворяю «Луч холода» по цели {target} в пределах {range} футов. Атака заклинанием, модификатор {spellAttackModifier}. При попадании урон {damage} холодом и скорость цели снижается на 10 футов до начала моего следующего хода."

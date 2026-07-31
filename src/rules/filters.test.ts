@@ -71,15 +71,14 @@ describe("filterSpells: список без фильтров", () => {
 
 describe("filterSpells: значения одной категории соединяются «или» (FR-003)", () => {
   it("время накладывания: действие", () => {
-    expect(ids(filterSpells(allSpells, filters({ castingTimes: ["action"] }), context()))).toEqual([
-      "shocking-grasp",
-      "ray-of-frost",
-      "message",
-      "mage-armor",
-      "disguise-self",
-      "detect-magic",
-      "unseen-servant",
-    ]);
+    const shown = ids(filterSpells(allSpells, filters({ castingTimes: ["action"] }), context()));
+
+    expect(shown).toContain("ray-of-frost");
+    expect(shown).toContain("mage-armor");
+    // Реакции, бонусные действия и долгое накладывание отсеиваются.
+    expect(shown).not.toContain("shield");
+    expect(shown).not.toContain("misty-step");
+    expect(shown).not.toContain("mending");
   });
 
   it("время накладывания: действие или реакция", () => {
@@ -97,8 +96,8 @@ describe("filterSpells: значения одной категории соед�
     const both = ids(filterSpells(allSpells, filters({ levels: [0, 1] }), context()));
 
     expect(onlyCantrips).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
-    // Все двенадцать: четыре заговора и восемь заклинаний первого уровня.
-    expect(both).toHaveLength(12);
+    // Четыре заговора и девять заклинаний первого уровня.
+    expect(both).toHaveLength(13);
   });
 });
 
@@ -188,18 +187,24 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
 
 describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
   it("«Защита» оставляет защитные, включая несущее урон «Поглощение стихий»", () => {
-    expect(ids(filterSpells(allSpells, filters({ roles: ["defense"] }), context()))).toEqual([
-      "shield",
-      "absorb-elements",
-      "mage-armor",
-    ]);
+    const shown = ids(filterSpells(allSpells, filters({ roles: ["defense"] }), context()));
+
+    // «Поглощение стихий» несёт урон в данных и всё же защитное — ровно тот случай, ради которого
+    // роль хранится, а не выводится (FR-213).
+    expect(shown).toContain("absorb-elements");
+    expect(shown).toContain("shield");
+    expect(shown).toContain("counterspell");
+    expect(shown).not.toContain("lightning-bolt");
   });
 
   it("«Боевое» оставляет боевые", () => {
-    expect(ids(filterSpells(allSpells, filters({ roles: ["offense"] }), context()))).toEqual([
-      "shocking-grasp",
-      "ray-of-frost",
-    ]);
+    const shown = ids(filterSpells(allSpells, filters({ roles: ["offense"] }), context()));
+
+    // «Паутина» урона не наносит и всё же боевая: она выключает противника.
+    expect(shown).toContain("ray-of-frost");
+    expect(shown).toContain("web");
+    expect(shown).toContain("polymorph");
+    expect(shown).not.toContain("mage-armor");
   });
 
   it("две роли соединяются «или», как и любые значения одной категории (FR-003)", () => {
@@ -211,7 +216,13 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
 
   it("роль соединяется с временем накладывания через «и»", () => {
     const both = filters({ roles: ["defense"], castingTimes: ["reaction"] });
-    expect(ids(filterSpells(allSpells, both, context()))).toEqual(["shield", "absorb-elements"]);
+    // Все четыре реакции книги защитные, кроме «Падения пёрышком» — оно тоже защитное.
+    expect(ids(filterSpells(allSpells, both, context()))).toEqual([
+      "shield",
+      "absorb-elements",
+      "feather-fall",
+      "counterspell",
+    ]);
   });
 });
 
