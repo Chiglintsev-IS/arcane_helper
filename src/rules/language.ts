@@ -21,6 +21,22 @@ export function withPlural(count: number, forms: [string, string, string]): stri
   return `${count} ${plural(count, forms)}`;
 }
 
+/**
+ * Названия характеристик в родительном падеже: «спасбросок Телосложения».
+ *
+ * Здесь, а не в двух местах: объявление мастеру и блок концентрации называют один и тот же
+ * спасбросок, и разойтись в слове они не должны. Сокращений нет — правила интерфейса разрешают
+ * только «КС» и «КД» (ux.md#текст-в-интерфейсе).
+ */
+export const SAVING_THROW_NAMES = {
+  STR: "Силы",
+  DEX: "Ловкости",
+  CON: "Телосложения",
+  INT: "Интеллекта",
+  WIS: "Мудрости",
+  CHA: "Харизмы",
+} as const;
+
 /** Единица долгого накладывания: минуты или часы ([FR-033](../../docs/features/F-03-cast-wizard.md#fr-033)). */
 export type LongCastingUnit = "minute" | "hour";
 

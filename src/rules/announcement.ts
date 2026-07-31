@@ -14,7 +14,7 @@ import type { Spell } from "@/data/schemas/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/data/schemas/spell";
 import { armorClassWithSpell } from "./armorClass";
 import { componentRequirements, type PaymentChoice } from "./availability";
-import { withPlural } from "./language";
+import { SAVING_THROW_NAMES, withPlural } from "./language";
 import { hitPointCost, spellPointCost } from "./bloodMagic";
 import { MINIMUM_CONCENTRATION_DC } from "./concentration";
 import { effectiveDamage } from "./scaling";
@@ -155,17 +155,6 @@ export function renderAnnouncement(spell: Spell, context: AnnouncementContext): 
 
   return { text, gaps: [...gaps, ...modeGap(spell, context.mode)] };
 }
-
-type SavingThrowAbility = NonNullable<Spell["resolution"]["savingThrow"]>;
-
-const SAVING_THROW_NAMES: Record<SavingThrowAbility, string> = {
-  STR: "Силы",
-  DEX: "Ловкости",
-  CON: "Телосложения",
-  INT: "Интеллекта",
-  WIS: "Мудрости",
-  CHA: "Харизмы",
-};
 
 /**
  * Урон, с которого КС проверки концентрации перестаёт быть минимальной: половина урона превышает

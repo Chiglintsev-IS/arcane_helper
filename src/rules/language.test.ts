@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { longCastingTimeRu, plural, withPlural } from "./language";
+import { longCastingTimeRu, plural, SAVING_THROW_NAMES, withPlural } from "./language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -39,5 +39,12 @@ describe("longCastingTimeRu (FR-033)", () => {
     ["hour" as const, 8, "8 часов"],
   ])("%s %i — %s", (unit, value, expected) => {
     expect(longCastingTimeRu(unit, value)).toBe(expected);
+  });
+});
+
+describe("SAVING_THROW_NAMES", () => {
+  it("называет характеристику в родительном падеже полным словом", () => {
+    expect(SAVING_THROW_NAMES.CON).toBe("Телосложения");
+    expect(SAVING_THROW_NAMES.DEX).toBe("Ловкости");
   });
 });
