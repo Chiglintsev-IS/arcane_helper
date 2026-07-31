@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { RulesError } from "./abilities";
-import { RUNES, RUNE_LABEL, runeEffect } from "./runes";
+import { lifeRuneTemporaryHitPoints, RUNES, RUNE_LABEL, runeEffect } from "./runes";
 
 describe("runeEffect (FR-152)", () => {
   it.each([
@@ -35,5 +35,28 @@ describe("runeEffect (FR-152)", () => {
     expect(() => runeEffect("life", 0)).toThrow(RulesError);
     expect(() => runeEffect("life", 10)).toThrow(RulesError);
     expect(() => runeEffect("life", 1.5)).toThrow(RulesError);
+  });
+});
+
+describe("временные хиты руны жизни числом (FR-152)", () => {
+  it.each([
+    [1, 5],
+    [2, 10],
+    [4, 20],
+  ])("на ячейке %s даёт %s", (slotLevel, expected) => {
+    expect(lifeRuneTemporaryHitPoints(slotLevel)).toBe(expected);
+  });
+
+  it("совпадает с числом, названным мастеру: формула одна", () => {
+    for (const slotLevel of [1, 2, 3, 4]) {
+      expect(runeEffect("life", slotLevel)).toContain(
+        `${lifeRuneTemporaryHitPoints(slotLevel)} временных хитов`,
+      );
+    }
+  });
+
+  it("уровень вне диапазона ячеек — ошибка, а не выдуманное число", () => {
+    expect(() => lifeRuneTemporaryHitPoints(0)).toThrow(RulesError);
+    expect(() => lifeRuneTemporaryHitPoints(10)).toThrow(RulesError);
   });
 });

@@ -71,6 +71,13 @@ export const roleplayProfileSchema = z.object({
   maximumPhraseLength: z.number().int().positive(),
 });
 
+/**
+ * Пометки игрока на вариантах отыгрыша одного заклинания (FR-053).
+ *
+ * Идентификатор готового варианта — категория и место в карточке (`short-0`), собственного — тот,
+ * что выдан при создании. Счётчик использований ведёт ротацию: показывается реже других
+ * использованный вариант.
+ */
 const roleplayPreferenceSchema = z.object({
   favoriteVariantIds: z.array(nonEmpty),
   disabledVariantIds: z.array(nonEmpty),
@@ -262,4 +269,5 @@ export const exportFileSchema = z.object({
 export type SpellSlotsData = z.infer<typeof spellSlotsSchema>;
 export type ActiveEffect = z.infer<typeof activeEffectSchema>;
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
+export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;
 export type CharacterState = z.infer<typeof characterStateSchema>;

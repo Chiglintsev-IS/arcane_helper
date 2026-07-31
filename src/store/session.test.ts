@@ -4,14 +4,17 @@ import { createThorne } from "@/data/content/thorne/character";
 import { loadThorneSpells } from "@/data/content/thorne";
 import { characterStateSchema } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
+import type { RoleplayCategory } from "@/store/castDraftStore";
 import {
   actionUsedBy,
+  addRoleplayVariant,
   adjustRunes,
   beginTurn,
   bloodCostFor,
   castSpell,
   combatEndRecovery,
   createSession,
+  defaultRoleplayVariant,
   deriveTurnEconomy,
   endCombat,
   endConcentration,
@@ -24,6 +27,9 @@ import {
   recoverHitPointMaximum,
   refundSpellSlot,
   regenerationDue,
+  roleplayCategories,
+  roleplayVariantId,
+  roleplayVariants,
   SessionError,
   setScreenMode,
   setSpellNote,
@@ -33,8 +39,11 @@ import {
   spendSpellSlot,
   takeDamage,
   togglePreparation,
+  toggleRoleplayDisabled,
+  toggleRoleplayFavorite,
   undoLast,
   useArcaneRecovery,
+  useRoleplayVariant,
   wardingSigilAvailable,
   type Session,
 } from "./session";
@@ -537,6 +546,47 @@ describe("руна при сотворении (FR-151)", () => {
   });
 });
 
+describe("руна жизни начисляет временные хиты (FR-152)", () => {
+  function withRune(rune: "life" | "war" | "wind", slotLevel: number, from = session): Session {
+    return castSpell(
+      from,
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel }, rune },
+      clock,
+    );
+  }
+
+  it("даёт Торну 5 временных хитов за уровень ячейки", () => {
+    expect(withRune("life", 1).character.temporaryHitPoints).toBe(5);
+    expect(withRune("life", 3).character.temporaryHitPoints).toBe(15);
+  });
+
+  it("начисление идёт той же записью журнала, что и сотворение (FR-023)", () => {
+    const after = withRune("life", 2);
+    expect(after.journal).toHaveLength(1);
+    expect(after.journal[0]?.summaryRu).toBe(
+      "Доспехи мага — ячейкой 2 уровня · руна жизни: 10 временных хитов",
+    );
+  });
+
+  it("не складываются с имеющимися: меньшее не берётся (FR-206)", () => {
+    const stocked: Session = { ...session, character: { ...session.character, temporaryHitPoints: 12 } };
+    expect(withRune("life", 1, stocked).character.temporaryHitPoints).toBe(12);
+    // Руна всё равно потрачена: союзникам её хиты достались, даже если Торну нечего добавить.
+    expect(withRune("life", 1, stocked).character.runes.remaining).toBe(2);
+  });
+
+  it("руны войны и ветра состояния Торна не меняют: их эффект у союзников", () => {
+    expect(withRune("war", 4).character.temporaryHitPoints).toBe(0);
+    expect(withRune("wind", 4).character.temporaryHitPoints).toBe(0);
+  });
+
+  it("начисление обратимо вместе с сотворением (FR-111)", () => {
+    const undone = undoLast(withRune("life", 4));
+    expect(undone.character.temporaryHitPoints).toBe(0);
+    expect(undone.character.runes.remaining).toBe(3);
+  });
+});
+
 describe("кровавое колдовство (FR-170…FR-174)", () => {
   it("цена заклинания в хитах соответствует ступени Торна", () => {
     expect(bloodCostFor(session.character, 1)).toBe(6);
@@ -674,6 +724,48 @@ describe("отдых и восстановление", () => {
     expect(current.character.concentration).toBeUndefined();
     expect(current.character.spellPoints).toEqual({ remaining: 0, createdAt: null });
     expect(current.character.arcaneRecoveryAvailable).toBe(true);
+  });
+
+  it("долгий отдых возвращает здоровье (FR-130)", () => {
+    const wounded = takeDamage(session, 41, clock);
+    expect(longRest(wounded, clock).character.hitPoints).toEqual({
+      current: 60,
+      maximum: 60,
+      maximumReduction: 0,
+    });
+  });
+
+  it("долгий отдых возвращает восемь часов снижённого максимума (FR-130, FR-173)", () => {
+    // 30 хитов на очки: максимум 30, вернуть предстоит 30. За восемь часов по 3 — 24 очка,
+    // остаётся 6, и текущие поднимаются ровно до нового максимума.
+    const spent = exchangeBlood(session, 30, clock);
+    expect(spent.character.hitPoints).toEqual({ current: 30, maximum: 30, maximumReduction: 30 });
+
+    expect(longRest(spent, clock).character.hitPoints).toEqual({
+      current: 54,
+      maximum: 54,
+      maximumReduction: 6,
+    });
+  });
+
+  it("отдых не обнуляет снижение махом: правило возвращает по часам", () => {
+    const spent = exchangeBlood(session, 30, clock);
+    expect(longRest(spent, clock).character.hitPoints.maximumReduction).toBeGreaterThan(0);
+  });
+
+  it("небольшое снижение отдых закрывает целиком", () => {
+    const spent = exchangeBlood(session, 9, clock);
+    expect(longRest(spent, clock).character.hitPoints).toEqual({
+      current: 60,
+      maximum: 60,
+      maximumReduction: 0,
+    });
+  });
+
+  it("возврат здоровья отменяется вместе с отдыхом (FR-111)", () => {
+    const spent = exchangeBlood(takeDamage(session, 10, clock), 9, clock);
+    const undone = undoLast(longRest(spent, clock));
+    expect(undone.character.hitPoints).toEqual(spent.character.hitPoints);
   });
 
   it("долгий отдых сохраняет эффекты с особой длительностью", () => {
@@ -1275,6 +1367,175 @@ describe("заметка к заклинанию (FR-012)", () => {
   });
 })
 
+describe("предпочтения отыгрыша (FR-053)", () => {
+  /**
+   * Карточка с тремя вариантами в одной категории. В контенте их по одному на категорию
+   * (FR-050 требует минимум три на заклинание), а порядок показа виден только на нескольких.
+   */
+  const card: Spell = (() => {
+    const base = spell("shield");
+    return {
+      ...base,
+      roleplay: {
+        ...base.roleplay,
+        completeVariants: {
+          short: ["Первый.", "Второй.", "Третий."],
+          atmospheric: ["Атмосферный."],
+          sarcastic: ["Саркастичный."],
+        },
+      },
+    };
+  })();
+
+  const short0 = roleplayVariantId("short", 0);
+  const short1 = roleplayVariantId("short", 1);
+  const short2 = roleplayVariantId("short", 2);
+
+  function texts(current: Session, category: RoleplayCategory = "short"): string[] {
+    return roleplayVariants(current.character, card, category).map((variant) => variant.text);
+  }
+
+  function disableAll(current: Session, category: RoleplayCategory): Session {
+    let next = current;
+    for (const [index] of card.roleplay.completeVariants[category].entries()) {
+      next = toggleRoleplayDisabled(next, card, roleplayVariantId(category, index));
+    }
+    return next;
+  }
+
+  it("без пометок показывает варианты в порядке карточки", () => {
+    expect(texts(session)).toEqual(["Первый.", "Второй.", "Третий."]);
+    expect(session.character.roleplayPreferences).toEqual({});
+  });
+
+  it("свой вариант показывается первым в своей категории", () => {
+    const own = addRoleplayVariant(session, card.id, "short", "Не сегодня.", clock);
+    expect(texts(own)).toEqual(["Не сегодня.", "Первый.", "Второй.", "Третий."]);
+    // Категории не смешиваются: свой вариант живёт только в той, куда написан.
+    expect(texts(own, "atmospheric")).toEqual(["Атмосферный."]);
+  });
+
+  it("пустой свой вариант отклоняется, а не сохраняется пробелами", () => {
+    expect(() => addRoleplayVariant(session, card.id, "short", "   ", clock)).toThrow(SessionError);
+  });
+
+  it("любимый идёт раньше остальных, но позже своего", () => {
+    let current = addRoleplayVariant(session, card.id, "short", "Не сегодня.", clock);
+    current = toggleRoleplayFavorite(current, card.id, short2);
+    expect(texts(current)).toEqual(["Не сегодня.", "Третий.", "Первый.", "Второй."]);
+  });
+
+  it("пометка «любимое» снимается тем же нажатием", () => {
+    const once = toggleRoleplayFavorite(session, card.id, short1);
+    expect(once.character.roleplayPreferences[card.id]?.favoriteVariantIds).toEqual([short1]);
+
+    const twice = toggleRoleplayFavorite(once, card.id, short1);
+    // Запись без единой пометки не хранится: в выгрузке ей взяться неоткуда.
+    expect(twice.character.roleplayPreferences).toEqual({});
+  });
+
+  it("отключённый вариант уходит в конец, но категория остаётся видимой", () => {
+    const after = toggleRoleplayDisabled(session, card, short0);
+    const variants = roleplayVariants(after.character, card, "short");
+
+    expect(variants.at(-1)?.id).toBe(short0);
+    expect(variants.at(-1)?.disabled).toBe(true);
+    expect(roleplayCategories(after.character, card)).toContain("short");
+  });
+
+  it("категория без включённых вариантов скрывается", () => {
+    const current = disableAll(session, "short");
+    expect(roleplayCategories(current.character, card)).toEqual(["atmospheric", "sarcastic"]);
+  });
+
+  it("последнюю категорию отключить нельзя: шаг потерял бы смысл", () => {
+    let current = disableAll(session, "short");
+    current = disableAll(current, "atmospheric");
+    expect(roleplayCategories(current.character, card)).toEqual(["sarcastic"]);
+
+    expect(() => toggleRoleplayDisabled(current, card, roleplayVariantId("sarcastic", 0))).toThrow(
+      /Последний вариант отыгрыша/,
+    );
+  });
+
+  it("отключение снимается тем же нажатием", () => {
+    const off = toggleRoleplayDisabled(session, card, short0);
+    const on = toggleRoleplayDisabled(off, card, short0);
+    expect(roleplayVariants(on.character, card, "short")[0]?.disabled).toBe(false);
+  });
+
+  it("ротация показывает реже использованный вариант", () => {
+    expect(defaultRoleplayVariant(session.character, card, "short")?.id).toBe(short0);
+
+    const used = useRoleplayVariant(session, card.id, short0);
+    expect(used.character.roleplayPreferences[card.id]?.usageCount[short0]).toBe(1);
+    expect(defaultRoleplayVariant(used.character, card, "short")?.id).toBe(short1);
+
+    // Порядок показа от счётчика не зависит: список не пересобирается под пальцем.
+    expect(texts(used)).toEqual(["Первый.", "Второй.", "Третий."]);
+  });
+
+  it("счётчик копится, и ротация возвращается к первому варианту", () => {
+    let current = session;
+    for (const variantId of [short0, short1, short2]) {
+      current = useRoleplayVariant(current, card.id, variantId);
+    }
+    expect(defaultRoleplayVariant(current.character, card, "short")?.id).toBe(short0);
+  });
+
+  it("ротация обходит отключённые варианты", () => {
+    const off = toggleRoleplayDisabled(session, card, short0);
+    expect(defaultRoleplayVariant(off.character, card, "short")?.id).toBe(short1);
+  });
+
+  it("у скрытой категории показывать нечего", () => {
+    const current = disableAll(session, "short");
+    expect(defaultRoleplayVariant(current.character, card, "short")).toBeUndefined();
+  });
+
+  it("предпочтения журнала не касаются и проходят схему состояния", () => {
+    let current = addRoleplayVariant(session, card.id, "sarcastic", "Опять?", clock);
+    current = toggleRoleplayFavorite(current, card.id, short0);
+    current = useRoleplayVariant(current, card.id, short0);
+
+    expect(current.journal).toHaveLength(0);
+    expect(characterStateSchema.safeParse(current.character).success).toBe(true);
+  });
+
+  it("предпочтения одного заклинания не задевают другое", () => {
+    const after = toggleRoleplayFavorite(session, card.id, short0);
+    expect(roleplayVariants(after.character, spell("mage-armor"), "short")[0]?.favorite).toBe(false);
+  });
+});
+
+describe("художественный текст не влияет на механику (FR-054)", () => {
+  it("подмена отыгрыша не меняет результат применения", () => {
+    const original = spell("mage-armor");
+    const rewritten: Spell = {
+      ...original,
+      roleplay: {
+        incantation: "Совсем другие слова.",
+        gesture: "Совсем другой жест.",
+        visualEffect: "Совсем другое свечение.",
+        completeVariants: {
+          short: ["Иначе."],
+          atmospheric: ["Иначе, но длиннее."],
+          sarcastic: ["Иначе, но с усмешкой."],
+        },
+      },
+    };
+    const request = { mode: "normal", payment: { kind: "slot", slotLevel: 2 } } as const;
+
+    // Двое одинаковых часов вместо одних общих: идентификаторы и время у обоих применений
+    // совпадают, и сравнение идёт по существу, а не по счётчику.
+    const first = castSpell(session, { spell: original, ...request }, testClock());
+    const second = castSpell(session, { spell: rewritten, ...request }, testClock());
+
+    expect(second.character).toEqual(first.character);
+    expect(second.journal).toEqual(first.journal);
+  });
+});
+
 
 describe("подготовка заклинаний (FR-100, FR-101, FR-214)", () => {
   const LIMIT = 11;
@@ -1412,9 +1673,11 @@ describe("конец боя (FR-216)", () => {
     expect(endCombat(wounded(29), clock).character.hitPoints.current).toBe(30);
   });
 
-  it("на здоровье не ниже половины отказывает, а не пишет пустую запись", () => {
-    expect(() => endCombat(wounded(30), clock)).toThrow(SessionError);
-    expect(() => endCombat(session, clock)).toThrow(/восстанавливать нечего/);
+  it("закончить бой можно и здоровым: конец боя — факт, а не лечение", () => {
+    const after = endCombat(wounded(30), clock);
+    expect(after.character.hitPoints.current).toBe(30);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен");
+    expect(after.journal.at(-1)?.kind).toBe("combat_ended");
   });
 
   it("считает половину от снижённого максимума, а не от исходного (FR-172)", () => {
@@ -1426,6 +1689,43 @@ describe("конец боя (FR-216)", () => {
 
   it("восстановление обратимо (FR-111)", () => {
     expect(undoLast(endCombat(wounded(12), clock)).character.hitPoints.current).toBe(12);
+  });
+
+  it("сбрасывает счёт раундов: следующий бой начинается с первого", () => {
+    let current = withTurnTracking(session);
+    for (let round = 0; round < 5; round += 1) current = beginTurn(current, clock);
+    expect(deriveTurnEconomy(current).round).toBe(5);
+
+    current = endCombat(current, clock);
+    expect(deriveTurnEconomy(current).round).toBe(1);
+    expect(deriveTurnEconomy(current).started).toBe(false);
+
+    current = beginTurn(current, clock);
+    expect(deriveTurnEconomy(current).round).toBe(1);
+  });
+
+  it("потраченное в прошлом бою нового не связывает", () => {
+    let current = beginTurn(withTurnTracking(session), clock);
+    current = castSpell(
+      current,
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
+
+    current = endCombat(current, clock);
+    expect(deriveTurnEconomy(current)).toMatchObject({
+      actionAvailable: true,
+      bonusActionAvailable: true,
+      reactionAvailable: true,
+    });
+  });
+
+  it("отмена возвращает и счёт раундов прежнего боя (FR-111)", () => {
+    let current = withTurnTracking(session);
+    for (let round = 0; round < 3; round += 1) current = beginTurn(current, clock);
+    const undone = undoLast(endCombat(current, clock));
+    expect(deriveTurnEconomy(undone).round).toBe(3);
   });
 });
 

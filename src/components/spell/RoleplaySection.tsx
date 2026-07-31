@@ -1,10 +1,14 @@
 /**
- * Блок отыгрыша (F-04) с маркером обязательного.
+ * Блок отыгрыша (F-04) с маркером обязательного и управлением вариантами.
  *
  * Оформление у блока заведомо другое — пунктир, курсив, свой цвет: художественный текст нельзя
  * перепутать с механикой (AC-20, ADR-0005). Единственная механическая строка здесь — что из отыгрыша
  * обязательно по правилам ([ADR-0011](../../../docs/decisions.md#adr-0011)): вербальный компонент
  * значит, что заклинание нужно произнести вслух, и забывают об этом чаще всего.
+ *
+ * Предпочтения (`FR-053`) компонент читает сам, а не принимает пропсами: он рендерится и из
+ * карточки, и из мастера применения, и прокидывание через обоих завело бы два источника одной
+ * правды. Пропсы остались прежними — от них зависит мастер.
  */
 
 "use client";
@@ -13,14 +17,23 @@ import { useState } from "react";
 
 import type { Spell } from "@/data/schemas/spell";
 import type { RoleplayCategory } from "@/store/castDraftStore";
+import { useSession, useStores } from "@/store/provider";
+import {
+  addRoleplayVariant,
+  defaultRoleplayVariant,
+  roleplayCategories,
+  roleplayVariants,
+  toggleRoleplayDisabled,
+  toggleRoleplayFavorite,
+  useRoleplayVariant,
+  type RoleplayVariant,
+} from "@/store/session";
 
 const CATEGORY_LABELS: Record<RoleplayCategory, string> = {
   short: "Коротко",
   atmospheric: "Атмосферно",
   sarcastic: "Саркастично",
 };
-
-const CATEGORIES = Object.keys(CATEGORY_LABELS) as RoleplayCategory[];
 
 /** Что из отыгрыша требуют правила, а что остаётся украшением. */
 function requirementNote(components: Spell["components"]): string {
@@ -32,6 +45,13 @@ function requirementNote(components: Spell["components"]): string {
   return "Ни голоса, ни жеста правила не требуют — отыгрыш по желанию";
 }
 
+/**
+ * Кнопка действия над вариантом. Ряд из них переносится, а не делится на равные доли: на 320
+ * пикселях «Скопировать» в трети ширины не помещается, а перенос ничего не ломает.
+ */
+const ACTION_CLASS =
+  "min-h-11 grow rounded-lg border border-slate-200 px-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300";
+
 function Variants({
   spell,
   category,
@@ -41,7 +61,45 @@ function Variants({
   category: RoleplayCategory;
   onCategory: (category: RoleplayCategory) => void;
 }) {
-  const variants = spell.roleplay.completeVariants[category];
+  const { clock, session: sessionStore } = useStores();
+  const character = useSession((state) => state.session?.character);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [ownText, setOwnText] = useState<string | null>(null);
+
+  if (character === undefined) return null;
+
+  const apply = sessionStore.getState().apply;
+  const categories = roleplayCategories(character, spell);
+  // Отключённая категория пропадает из ряда, и показывать её нечем: берём первую оставшуюся.
+  // Скрыть все три нельзя (FR-053), поэтому запасной вариант здесь всегда есть.
+  const shown = categories.includes(category) ? category : (categories[0] ?? category);
+
+  const variants = roleplayVariants(character, spell, shown);
+  const visible = variants.filter((variant) => !variant.disabled);
+  const hidden = variants.filter((variant) => variant.disabled);
+  const rotated = defaultRoleplayVariant(character, spell, shown);
+  const selected =
+    visible.find((variant) => variant.id === selectedId) ?? rotated ?? visible[0];
+
+  /** Выбор варианта — это и есть его использование: счётчик ведёт ротацию (FR-053). */
+  const choose = (variant: RoleplayVariant): void => {
+    setSelectedId(variant.id);
+    apply((current) => useRoleplayVariant(current, spell.id, variant.id));
+  };
+
+  const copy = (variant: RoleplayVariant): void => {
+    // Safari на iOS отдаёт буфер только внутри пользовательского жеста: любое ожидание до вызова —
+    // и разрешение потеряно. Сохранение состояния асинхронно, поэтому идёт после (F-04).
+    void navigator.clipboard?.writeText(variant.text);
+    apply((current) => useRoleplayVariant(current, spell.id, variant.id));
+  };
+
+  const addOwn = (text: string): void => {
+    // Пустой текст сюда не доходит: операция его отклонит, но поле не должно и предлагать отправку.
+    if (text.trim() === "") return;
+    apply((current) => addRoleplayVariant(current, spell.id, shown, text, clock));
+    setOwnText(null);
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -51,14 +109,14 @@ function Variants({
       </p>
 
       <div className="flex flex-wrap gap-1">
-        {CATEGORIES.map((value) => (
+        {categories.map((value) => (
           <button
             key={value}
             type="button"
-            aria-pressed={category === value}
+            aria-pressed={shown === value}
             onClick={() => onCategory(value)}
             className={`min-h-11 rounded-lg border px-2 text-xs ${
-              category === value
+              shown === value
                 ? "border-concentration text-concentration-strong dark:text-concentration"
                 : "border-slate-200 text-slate-500 dark:border-slate-800"
             }`}
@@ -68,14 +126,99 @@ function Variants({
         ))}
       </div>
 
-      {variants.length === 0 ? (
-        <p className="text-sm">Отыгрыш этой категории не заполнен</p>
+      <ul aria-label="Варианты отыгрыша" className="flex flex-col gap-1">
+        {visible.map((variant) => (
+          <li key={variant.id}>
+            <button
+              type="button"
+              aria-pressed={selected?.id === variant.id}
+              onClick={() => choose(variant)}
+              className={`min-h-11 w-full rounded-lg border px-2 py-1 text-left text-sm italic ${
+                selected?.id === variant.id
+                  ? "border-concentration bg-concentration/10"
+                  : "border-transparent"
+              }`}
+            >
+              {variant.text}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {selected === undefined ? null : (
+        <div className="flex flex-wrap gap-1">
+          <button type="button" onClick={() => copy(selected)} className={ACTION_CLASS}>
+            Скопировать
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              apply((current) => toggleRoleplayFavorite(current, spell.id, selected.id))
+            }
+            className={ACTION_CLASS}
+          >
+            {selected.favorite ? "Из любимых" : "В любимые"}
+          </button>
+          <button
+            type="button"
+            onClick={() => apply((current) => toggleRoleplayDisabled(current, spell, selected.id))}
+            className={ACTION_CLASS}
+          >
+            Отключить
+          </button>
+        </div>
+      )}
+
+      {ownText === null ? (
+        <button
+          type="button"
+          onClick={() => setOwnText("")}
+          className={`${ACTION_CLASS} not-italic`}
+        >
+          Написать свой
+        </button>
       ) : (
-        <ul className="flex flex-col gap-1 text-sm italic">
-          {variants.map((text) => (
-            <li key={text}>{text}</li>
-          ))}
-        </ul>
+        <div className="flex flex-col gap-1">
+          <textarea
+            aria-label="Свой вариант отыгрыша"
+            value={ownText}
+            rows={2}
+            onChange={(event) => setOwnText(event.target.value)}
+            className="rounded-lg border border-slate-200 px-2 py-1 text-sm dark:border-slate-800 dark:bg-slate-900"
+          />
+          <div className="flex flex-wrap gap-1">
+            <button type="button" onClick={() => addOwn(ownText)} className={ACTION_CLASS}>
+              Добавить
+            </button>
+            <button type="button" onClick={() => setOwnText(null)} className={ACTION_CLASS}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Отключённое не исчезает: предпочтения журналом не отменяются, и вернуть их больше нечем. */}
+      {hidden.length === 0 ? null : (
+        <details className="text-xs not-italic text-slate-500">
+          <summary className="min-h-11 cursor-pointer py-3">Отключено: {hidden.length}</summary>
+          <ul className="flex flex-col gap-1">
+            {hidden.map((variant) => (
+              <li key={variant.id} className="flex items-center gap-1">
+                <span className="flex-1 italic">{variant.text}</span>
+                <button
+                  type="button"
+                  aria-label={`Включить: ${variant.text}`}
+                  onClick={() =>
+                    apply((current) => toggleRoleplayDisabled(current, spell, variant.id))
+                  }
+                  className={ACTION_CLASS}
+                >
+                  Включить
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <dl className="flex flex-col gap-1 text-xs italic text-slate-600 dark:text-slate-400">

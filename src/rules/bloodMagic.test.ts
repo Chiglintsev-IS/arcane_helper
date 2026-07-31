@@ -8,7 +8,9 @@ import {
   exchangeForSpellLevel,
   exchangeHitPoints,
   hitPointCost,
+  LONG_REST_HOURS,
   maximumRecoveryPerHour,
+  maximumReductionAfterHours,
   regenerationApplies,
   regenerationPerTurn,
   spellPointCost,
@@ -151,6 +153,35 @@ describe("регенерация и восстановление максиму�
 
   it("отклоняет недопустимый уровень", () => {
     expect(() => regenerationPerTurn(0)).toThrow(RulesError);
+  });
+});
+
+describe("снижённый максимум за несколько часов (FR-173)", () => {
+  it("возвращает по три очка за час на уровне Торна", () => {
+    expect(maximumReductionAfterHours(24, THORNE_LEVEL, 1)).toBe(21);
+    expect(maximumReductionAfterHours(24, THORNE_LEVEL, 2)).toBe(18);
+  });
+
+  it("за восемь часов долгого отдыха возвращает 24 очка", () => {
+    expect(LONG_REST_HOURS).toBe(8);
+    expect(maximumReductionAfterHours(30, THORNE_LEVEL, LONG_REST_HOURS)).toBe(6);
+  });
+
+  it("ниже нуля не уходит: вернуть больше утраченного нечего", () => {
+    expect(maximumReductionAfterHours(9, THORNE_LEVEL, LONG_REST_HOURS)).toBe(0);
+    expect(maximumReductionAfterHours(0, THORNE_LEVEL, LONG_REST_HOURS)).toBe(0);
+  });
+
+  it("нулевой час ничего не возвращает", () => {
+    expect(maximumReductionAfterHours(9, THORNE_LEVEL, 0)).toBe(9);
+  });
+
+  it("отклоняет нецелые и отрицательные аргументы, а не выдумывает число", () => {
+    expect(() => maximumReductionAfterHours(-1, THORNE_LEVEL, 1)).toThrow(RulesError);
+    expect(() => maximumReductionAfterHours(1.5, THORNE_LEVEL, 1)).toThrow(RulesError);
+    expect(() => maximumReductionAfterHours(9, THORNE_LEVEL, -1)).toThrow(RulesError);
+    expect(() => maximumReductionAfterHours(9, THORNE_LEVEL, 0.5)).toThrow(RulesError);
+    expect(() => maximumReductionAfterHours(9, 0, 1)).toThrow(RulesError);
   });
 });
 

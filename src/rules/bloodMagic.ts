@@ -136,6 +136,30 @@ export function maximumRecoveryPerHour(level: number): number {
   return regenerationPerTurn(level);
 }
 
+/** Долгий отдых — восемь часов: столько же почасовых возвратов максимума (FR-130). */
+export const LONG_REST_HOURS = 8;
+
+/**
+ * Каким останется снижение максимума после нескольких часов без солнца и огня (FR-173).
+ *
+ * Часы считаются тем же почасовым правилом, а не отдельным «отдых всё обнуляет»: за восемь часов
+ * Торн возвращает 24 очка, и если он отдал больше, остаток переходит на следующий день. Списать
+ * его значило бы вернуть персонажу здоровье, которого правило не даёт.
+ */
+export function maximumReductionAfterHours(
+  reduction: number,
+  level: number,
+  hours: number,
+): number {
+  if (!Number.isInteger(reduction) || reduction < 0) {
+    throw new RulesError(`Снижение максимума должно быть целым неотрицательным, получено: ${reduction}`);
+  }
+  if (!Number.isInteger(hours) || hours < 0) {
+    throw new RulesError(`Число часов должно быть целым неотрицательным, получено: ${hours}`);
+  }
+  return Math.max(0, reduction - maximumRecoveryPerHour(level) * hours);
+}
+
 export type SuppressionState = {
   /** Урон огнём получен: особенности не работают до конца следующего хода. */
   firedUpon: boolean;
