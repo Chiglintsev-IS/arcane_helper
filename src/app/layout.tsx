@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Arcane Helper", statusBarStyle: "black-translucent" },
   // Относительные пути: статический экспорт кладут и в подкаталог, и абсолютный «/» там сломался бы.
   manifest: "./manifest.webmanifest",
+  // Устаревшее имя мета-тега рядом с современным: Next пишет только `mobile-web-app-capable`, а
+  // Safari до iOS 17 читает полноэкранный режим из `apple-mobile-web-app-capable` и без него
+  // открывает приложение с домашнего экрана в обычной вкладке (F-12, AC-01).
+  other: { "apple-mobile-web-app-capable": "yes" },
   icons: {
     icon: [{ url: "./icon-192.png", sizes: "192x192", type: "image/png" }],
     apple: [{ url: "./apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
