@@ -96,6 +96,9 @@ type Spell = {
     };
   };
 
+  /** Схема ритуала: только у ritual: true (FR-190). */
+  ritualDiagram?: RitualDiagram;
+
   announcementTemplate: string;
 };
 ```
