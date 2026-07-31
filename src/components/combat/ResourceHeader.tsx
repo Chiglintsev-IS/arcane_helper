@@ -64,11 +64,13 @@ export function ResourceHeader({
   economy,
   concentration,
   onOpenConcentration,
+  onEndEffect,
 }: {
   character: CharacterState;
   economy: TurnEconomy;
   concentration: ConcentrationSummary | null;
   onOpenConcentration: () => void;
+  onEndEffect: (effectId: string) => void;
 }) {
   const slots = Object.entries(character.spellSlots)
     .map(([level, slot]) => ({ level: Number.parseInt(level, 10), ...slot }))
@@ -193,9 +195,22 @@ export function ResourceHeader({
       {otherEffects.length > 0 ? (
         <ul aria-label="Активные эффекты" className="flex flex-col gap-0.5 text-xs">
           {otherEffects.map((effect) => (
-            <li key={effect.id} className="text-slate-700 dark:text-slate-300">
-              <span aria-hidden="true">◈</span> {effect.nameRu}
-            {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
+            <li
+              key={effect.id}
+              className="flex items-center justify-between gap-2 text-slate-700 dark:text-slate-300"
+            >
+              <span>
+                <span aria-hidden="true">◈</span> {effect.nameRu}
+                {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
+              </span>
+              <button
+                type="button"
+                onClick={() => onEndEffect(effect.id)}
+                aria-label={`Завершить: ${effect.nameRu}`}
+                className="min-h-11 shrink-0 px-2 text-slate-500"
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
             </li>
           ))}
         </ul>

@@ -216,3 +216,30 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
     expect(screen.getByText(/Концентрации нет/)).toBeDefined();
   });
 });
+
+describe("завершение активного эффекта (FR-091)", () => {
+  it("закрывает неконцентрационный эффект и пишет это в журнал", async () => {
+    const character = createThorne();
+    character.activeEffects = [
+      {
+        id: "effect-2",
+        spellId: "mage-armor",
+        nameRu: "Доспехи мага",
+        type: "buff",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "hours", value: 8 },
+        isConcentration: false,
+        slotLevelUsed: 1,
+        endConditionRu: "До истечения длительности.",
+      },
+    ];
+    await renderWithStores(<CombatScreen />, character);
+
+    await userEvent.click(screen.getByRole("button", { name: "Завершить: Доспехи мага" }));
+
+    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Отменить: Эффект завершён: Доспехи мага/ }),
+    ).toBeDefined();
+  });
+});

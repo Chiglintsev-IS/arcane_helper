@@ -36,6 +36,7 @@ import {
   castSpell,
   deriveTurnEconomy,
   endConcentration,
+  endEffect,
   exchangeBlood,
   recoverHitPointMaximum,
   setSpellNote,
@@ -154,6 +155,7 @@ export function CombatScreen() {
           economy={economy}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
+          onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
         />
 
         <div className="flex flex-wrap items-center gap-2">
