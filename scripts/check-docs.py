@@ -13,6 +13,11 @@
   5. Требования из ТЗ не потеряны.
   6. Статусы взяты из словаря CLAUDE.md.
 
+Черновики рабочего процесса (docs/superpowers: брифы дизайна и планы реализации)
+из проверки исключены. Они цитируют требования, которых ещё нет, и содержат
+образцы строк спеки для вставки в другие файлы — от них ложные срабатывания по
+всем шести правилам. Источник истины — docs/ без этого каталога.
+
 Скрипт не имеет зависимостей. После появления Node-проекта его следует
 перенести в CI рядом с проверкой контента заклинаний.
 """
@@ -23,6 +28,7 @@ import sys
 
 DOCS = "docs"
 FEATURES = os.path.join(DOCS, "features")
+DRAFTS = os.path.join(DOCS, "superpowers")
 
 # Требования из ТЗ (§9, §15, §17). Потеря любого — ошибка.
 SPEC_REQUIREMENTS = {f"FR-{n:03d}" for n in (
@@ -58,6 +64,8 @@ STATUS_LINE = re.compile(r"\*\*Статус:\*\*\s*([^·\n]+)")
 def markdown_files():
     for dirpath, dirnames, filenames in os.walk("."):
         dirnames[:] = [d for d in dirnames if d not in {".git", "node_modules", ".next"}]
+        if os.path.normpath(dirpath).startswith(DRAFTS):
+            continue
         for name in sorted(filenames):
             if name.endswith(".md"):
                 yield os.path.normpath(os.path.join(dirpath, name))
