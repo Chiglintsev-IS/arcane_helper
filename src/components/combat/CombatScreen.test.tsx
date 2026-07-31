@@ -374,6 +374,89 @@ describe("операции привала (FR-202, FR-215)", () => {
   });
 });
 
+describe("реакции (FR-060, FR-061, FR-062)", () => {
+  it("вход одним нажатием, вопрос о событии первым", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+
+    const sheet = within(screen.getByRole("dialog", { name: "Реакции" }));
+    expect(sheet.getByText("Что произошло?")).toBeDefined();
+    // Список заклинаний до выбора события не показывается: игрок думает о событии, а не о названии.
+    expect(screen.queryByLabelText("Подходящие реакции")).toBeNull();
+  });
+
+  it("событие находит своё заклинание и называет изменённое число (FR-062)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("radio", { name: "По мне попали" }));
+
+    const matching = within(screen.getByLabelText("Подходящие реакции"));
+    expect(matching.getByText("Щит")).toBeDefined();
+    // Готовое число, а не формула: 14 базовых плюс 5 (FR-093).
+    expect(matching.getByText("КД 19 вместо 14")).toBeDefined();
+  });
+
+  it("на событие без ответа переключателя нет (FR-002)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    // «Искусная острота» в книгу не вошла — отвечать на успешный бросок врага нечем (OQ-04).
+    expect(screen.queryByRole("radio", { name: "Враг преуспел в броске" })).toBeNull();
+    expect(screen.getByRole("radio", { name: "Я провалил спасбросок" })).toBeDefined();
+  });
+
+  it("выбор реакции открывает мастер применения (FR-022)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("radio", { name: "Враг творит заклинание" }));
+    await user.click(
+      within(screen.getByLabelText("Подходящие реакции")).getByRole("button", {
+        name: /Контрзаклинание/,
+      }),
+    );
+
+    expect(screen.getByRole("dialog", { name: /Применение/ })).toBeDefined();
+    // До подтверждения состояние не тронуто.
+    expect(stores.session.getState().session?.journal).toHaveLength(0);
+  });
+
+  it("израсходованная реакция не прячет варианты, а объясняет причину (FR-031)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    // Тратим реакцию «Щитом», затем открываем экран реакций снова.
+    await user.click(screen.getByRole("button", { name: /^Щит/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("radio", { name: "По мне попали" }));
+
+    expect(screen.getByText(/Реакция израсходована и вернётся/)).toBeDefined();
+    expect(within(screen.getByLabelText("Подходящие реакции")).getByText("Щит")).toBeDefined();
+  });
+
+  it("провал спасброска отвечает руной, а не заклинанием (FR-153)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("radio", { name: "Я провалил спасбросок" }));
+    await user.click(screen.getByRole("button", { name: /Потратить руну/ }));
+
+    expect(stores.session.getState().session?.character.runes.remaining).toBe(2);
+    expect(stores.session.getState().session?.character.reactionAvailable).toBe(false);
+  });
+});
+
 describe("подготовка в «Книге» (FR-214, FR-101)", () => {
   it("отмечает и снимает подготовку прямо в списке", async () => {
     const user = userEvent.setup();

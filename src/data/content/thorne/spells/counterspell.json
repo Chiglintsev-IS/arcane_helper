@@ -8,14 +8,27 @@
   "combatRole": "defense",
   "castingTime": {
     "type": "reaction",
-    "reactionTrigger": "видимое вами в пределах 60 футов существо творит заклинание с вербальным, соматическим или материальным компонентом"
+    "reactionTrigger": "видимое вами в пределах 60 футов существо творит заклинание с вербальным, соматическим или материальным компонентом",
+    "trigger": "enemy_casts"
   },
-  "range": { "type": "distance", "distanceFeet": 60 },
-  "components": { "verbal": false, "somatic": true, "material": false },
-  "duration": { "type": "instant" },
+  "range": {
+    "type": "distance",
+    "distanceFeet": 60
+  },
+  "components": {
+    "verbal": false,
+    "somatic": true,
+    "material": false
+  },
+  "duration": {
+    "type": "instant"
+  },
   "concentration": false,
   "ritual": false,
-  "targeting": { "type": "creature", "maximumTargets": 1 },
+  "targeting": {
+    "type": "creature",
+    "maximumTargets": 1
+  },
   "resolution": {
     "type": "saving_throw",
     "savingThrow": "CON",
@@ -30,11 +43,15 @@
     "gesture": "Резко сводит два пальца, будто перекусывает нить.",
     "visualEffect": "Между заклинателем и целью проступает и тут же гаснет короткая рунная черта.",
     "completeVariants": {
-      "short": ["Сводит два пальца — чужая формула обрывается на середине слова."],
+      "short": [
+        "Сводит два пальца — чужая формула обрывается на середине слова."
+      ],
       "atmospheric": [
         "Тролль даже не поворачивает головы: два пальца сходятся, между ним и чужой рукой вспыхивает короткая черта, и заклинание осыпается, так и не сложившись."
       ],
-      "sarcastic": ["«Нет», — говорит Торн. Больше он ничего не говорит."]
+      "sarcastic": [
+        "«Нет», — говорит Торн. Больше он ничего не говорит."
+      ]
     }
   },
   "announcementTemplate": "Использую реакцию и сотворяю «Контрзаклинание» ячейкой {slotLevel} уровня по цели {target} в пределах {range}. Спасбросок Телосложения против КС {spellSaveDc}: при провале заклинание рассеивается, но ячейку цель не теряет."

@@ -22,6 +22,7 @@ import { ConfirmSheet } from "@/components/combat/ConfirmSheet";
 import { ConcentrationCheckCard } from "@/components/combat/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 import { ModeSwitcher } from "@/components/combat/ModeSwitcher";
+import { ReactionsSheet } from "@/components/combat/ReactionsSheet";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
 import { SpellFilters, type AvailableFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
@@ -123,6 +124,7 @@ export function CombatScreen() {
   const [longRestOpen, setLongRestOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
+  const [reactionsOpen, setReactionsOpen] = useState(false);
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const economy = useMemo(
@@ -303,13 +305,27 @@ export function CombatScreen() {
           ) : null}
           {/* Ход начинается только в бою: вне боя ходов нет, и кнопка звала бы начать то, чего не происходит (FR-202). */}
           {character.screenMode === "combat" ? (
-            <button
-              type="button"
-              onClick={() => apply((current) => beginTurn(current, clock))}
-              className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold leading-tight text-white"
-            >
-              Мой ход начался
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => apply((current) => beginTurn(current, clock))}
+                className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold leading-tight text-white"
+              >
+                Мой ход начался
+              </button>
+              {/*
+                Реакции — отдельный вход, видимый независимо от фильтров и прокрутки списка
+                (FR-060): триггер приходит в чужой ход, и искать заклинание по списку в этот момент
+                некогда.
+              */}
+              <button
+                type="button"
+                onClick={() => setReactionsOpen(true)}
+                className="min-h-11 shrink-0 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
+              >
+                Реакции
+              </button>
+            </>
           ) : null}
           <button
             type="button"
@@ -462,6 +478,25 @@ export function CombatScreen() {
             if (apply((current) => endCombat(current, clock)) === null) setFightOverOpen(false);
           }}
           onCancel={() => setFightOverOpen(false)}
+        />
+      ) : null}
+
+      {reactionsOpen ? (
+        <ReactionsSheet
+          spells={inMode}
+          character={character}
+          reactionAvailable={economy.reactionAvailable}
+          runeAvailable={wardingSigilAvailable(character)}
+          onCast={(spell) => {
+            setReactionsOpen(false);
+            draftStore.getState().start(spell, context);
+          }}
+          onSpendRune={() => {
+            if (apply((current) => spendRuneOnWardingSigil(current, clock)) === null) {
+              setReactionsOpen(false);
+            }
+          }}
+          onClose={() => setReactionsOpen(false)}
         />
       ) : null}
 

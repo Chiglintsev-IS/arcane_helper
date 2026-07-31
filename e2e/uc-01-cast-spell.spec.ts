@@ -230,9 +230,30 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await page.getByRole("radio", { name: /^Привал/ }).click();
   await scan("привал");
 
+  await page.getByRole("radio", { name: /^Бой/ }).click();
+  await page.getByRole("button", { name: "Реакции" }).click();
+  await page.getByRole("radio", { name: "По мне попали" }).click();
+  await scan("экран реакций");
+  await page.getByRole("button", { name: "Закрыть" }).click();
+  await page.getByRole("radio", { name: /^Привал/ }).click();
+
   await page.getByRole("button", { name: /Магическое восстановление/ }).click();
   await expect(page.getByRole("dialog", { name: "Магическое восстановление" })).toBeVisible();
   await scan("магическое восстановление");
+});
+
+test("reactions in one tap", async ({ page }) => {
+  // Триггер приходит в чужой ход: путь от события до результата обязан быть коротким (AC-08).
+  await page.getByRole("button", { name: "Реакции" }).click();
+  await page.getByRole("radio", { name: "По мне попали" }).click();
+
+  const matching = page.getByLabel("Подходящие реакции");
+  await expect(matching.getByText("Щит", { exact: true })).toBeVisible();
+  // Готовое число, а не формула (FR-062).
+  await expect(matching.getByText("КД 19 вместо 14")).toBeVisible();
+
+  await matching.getByRole("button", { name: /Щит/ }).click();
+  await expect(page.getByRole("dialog", { name: /Применение/ })).toBeVisible();
 });
 
 test("book mode prepares spells", async ({ page }) => {

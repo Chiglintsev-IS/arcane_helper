@@ -158,6 +158,9 @@ describe("покрытие механик первой партией", () => {
     ]);
     for (const reaction of reactions) {
       expect(reaction.castingTime.reactionTrigger, reaction.nameRu).toBeTruthy();
+      // Текст триггера — для человека, вид — для отбора по событию (FR-061). Без вида карточка
+      // не найдётся на экране реакций, хотя в книге она есть.
+      expect(reaction.castingTime.trigger, reaction.nameRu).toBeTruthy();
     }
   });
 
