@@ -19,6 +19,7 @@ import { BloodMagicRow } from "@/components/combat/BloodMagicRow";
 import { CampActions } from "@/components/combat/CampActions";
 import { CastWizard } from "@/components/cast/CastWizard";
 import { ConfirmSheet } from "@/components/combat/ConfirmSheet";
+import { DataSheet } from "@/components/combat/DataSheet";
 import { ConcentrationCheckCard } from "@/components/combat/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 import { ModeSwitcher } from "@/components/combat/ModeSwitcher";
@@ -38,6 +39,7 @@ import {
 import { BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
 import { preparedLimit } from "@/rules/abilities";
 import { rolesPresent } from "@/rules/combatRole";
+import { applyImport, exportFileName, exportSnapshot, parseImport } from "@/rules/dataIo";
 import { findBan, matchesQuery } from "@/rules/restrictions";
 import {
   bestCastPlan,
@@ -64,6 +66,7 @@ import {
   longRest,
   recoverHitPointMaximum,
   refundSpellSlot,
+  replaceCharacter,
   setScreenMode,
   setSpellNote,
   setSunlight,
@@ -132,6 +135,8 @@ export function CombatScreen() {
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [dataOpen, setDataOpen] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const economy = useMemo(
@@ -306,6 +311,19 @@ export function CombatScreen() {
             ряд — это пятая часть карточки.
           */}
           {preparing ? (
+            <>
+            {/*
+              Выгрузка и загрузка живут в «Книге» (F-11): резервную копию делают до игры, а не в
+              бою, и на боевом экране кнопка занимала бы ряд ради задачи, которая случается раз в
+              несколько сессий.
+            */}
+            <button
+              type="button"
+              onClick={() => setDataOpen(true)}
+              className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+            >
+              Данные
+            </button>
             <p
               className={`flex-1 text-xs tabular-nums ${
                 character.preparedSpellIds.length >= limit
@@ -315,6 +333,7 @@ export function CombatScreen() {
             >
               Подготовлено {character.preparedSpellIds.length} из {limit}
             </p>
+            </>
           ) : null}
           {/* Ход начинается только в бою: вне боя ходов нет, и кнопка звала бы начать то, чего не происходит (FR-202). */}
           {character.screenMode === "combat" ? (
@@ -517,6 +536,31 @@ export function CombatScreen() {
             if (apply((current) => endCombat(current, clock)) === null) setFightOverOpen(false);
           }}
           onCancel={() => setFightOverOpen(false)}
+        />
+      ) : null}
+
+      {dataOpen ? (
+        <DataSheet
+          exportText={JSON.stringify(exportSnapshot(character, SPELLS, clock.now()), null, 2)}
+          fileName={exportFileName(clock.now())}
+          error={importError}
+          onImport={(raw) => {
+            const outcome = parseImport(raw);
+            if (!outcome.ok) {
+              setImportError(outcome.reasonRu);
+              return;
+            }
+            // Разбор прошёл целиком — значит применять по частям нечего (FR-122).
+            const { character: replacement } = applyImport(character, outcome.file, "replace");
+            // Замена идёт той же единственной точкой изменения, что и всё остальное (ADR-0003).
+            apply(() => replaceCharacter(replacement));
+            setImportError(null);
+            setDataOpen(false);
+          }}
+          onClose={() => {
+            setImportError(null);
+            setDataOpen(false);
+          }}
         />
       ) : null}
 

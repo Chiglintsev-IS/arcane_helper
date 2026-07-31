@@ -9,7 +9,9 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import { loadThorneSpells } from "@/data/content/thorne";
 import { createThorne } from "@/data/content/thorne/character";
+import { exportSnapshot } from "@/rules/dataIo";
 import type { CharacterState } from "@/data/schemas/character";
 import { renderWithStores, spell } from "@/testing/stores";
 import { CombatScreen } from "./CombatScreen";
@@ -435,6 +437,51 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
 
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
     expect(screen.getByRole("button", { name: "Вернуть: Руны" })).toHaveProperty("disabled", true);
+  });
+});
+
+describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => {
+  /** Выгрузка приложения, снятая с текущего состояния: её же и загружаем обратно. */
+  async function openData() {
+    const user = userEvent.setup();
+    const rendered = await renderWithStores(<CombatScreen />, inBookMode());
+    await user.click(screen.getByRole("button", { name: "Данные" }));
+    return { user, ...rendered };
+  }
+
+  it("живёт в «Книге», а не на боевом экране", async () => {
+    await renderWithStores(<CombatScreen />);
+    expect(screen.queryByRole("button", { name: "Данные" })).toBeNull();
+  });
+
+  it("битый файл называет причину и состояние не трогает (FR-121, FR-122)", async () => {
+    const { user, stores } = await openData();
+    const before = stores.session.getState().session?.character.preparedSpellIds;
+
+    await user.type(screen.getByLabelText("Данные для загрузки"), "не файл");
+    await user.click(screen.getByRole("button", { name: "Загрузить" }));
+
+    expect(screen.getByRole("alert").textContent).toContain("не JSON");
+    expect(stores.session.getState().session?.character.preparedSpellIds).toEqual(before);
+  });
+
+  it("своя выгрузка загружается обратно и восстанавливает ресурсы (FR-120)", async () => {
+    const saved = exportSnapshot(createThorne(), loadThorneSpells(), "2026-07-31T18:00:00.000Z");
+
+    const user = userEvent.setup();
+    const spent = inBookMode();
+    spent.spellSlots = { ...spent.spellSlots, 1: { maximum: 4, remaining: 0 } };
+    const { stores } = await renderWithStores(<CombatScreen />, spent);
+
+    await user.click(screen.getByRole("button", { name: "Данные" }));
+    // `type` посимвольно на длинном JSON слишком медленный: вставляем как из буфера.
+    await user.click(screen.getByLabelText("Данные для загрузки"));
+    await user.paste(JSON.stringify(saved));
+    await user.click(screen.getByRole("button", { name: "Загрузить" }));
+
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
+    // Журнал начинается заново: записи прежнего персонажа к новому состоянию не относятся.
+    expect(stores.session.getState().session?.journal).toEqual([]);
   });
 });
 
