@@ -27,29 +27,38 @@ import type { Stroke } from "@/diagram/strokes";
 
 const DASH = "10 8";
 
-/** Штрих в своём боксе 100×100 — превращается в элемент SVG. */
+/**
+ * Штрих в своём боксе 100×100 — превращается в элемент SVG.
+ *
+ * `vectorEffect` стоит на каждой фигуре, а не на группе: атрибут не наследуется, и на `<g>` он не
+ * делает ничего. Без него масштаб группы умножает толщину линии — печать в центре выходила жирной
+ * втрое, а руны надписи истончались до волоска и на экране пропадали.
+ */
 function StrokeShape({ stroke }: { stroke: Stroke }) {
-  const dash = stroke.dashed === true ? { strokeDasharray: DASH } : {};
+  const common = {
+    vectorEffect: "non-scaling-stroke" as const,
+    ...(stroke.dashed === true ? { strokeDasharray: DASH } : {}),
+  };
 
   if (stroke.kind === "circle") {
-    return <circle cx={stroke.cx} cy={stroke.cy} r={stroke.r} {...dash} />;
+    return <circle cx={stroke.cx} cy={stroke.cy} r={stroke.r} {...common} />;
   }
   if (stroke.kind === "line") {
-    return <line x1={stroke.x1} y1={stroke.y1} x2={stroke.x2} y2={stroke.y2} {...dash} />;
+    return <line x1={stroke.x1} y1={stroke.y1} x2={stroke.x2} y2={stroke.y2} {...common} />;
   }
   if (stroke.kind === "arc") {
     return (
       <path
         d={arcPath(stroke.cx, stroke.cy, stroke.r, stroke.fromDegrees, stroke.toDegrees)}
-        {...dash}
+        {...common}
       />
     );
   }
   const points = stroke.points.map(([x, y]) => `${x},${y}`).join(" ");
   return stroke.closed === true ? (
-    <polygon points={points} {...dash} />
+    <polygon points={points} {...common} />
   ) : (
-    <polyline points={points} {...dash} />
+    <polyline points={points} {...common} />
   );
 }
 
@@ -69,10 +78,7 @@ function Shape({
 }) {
   const scale = size / 100;
   return (
-    <g
-      transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale}) translate(-50 -50)`}
-      vectorEffect="non-scaling-stroke"
-    >
+    <g transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale}) translate(-50 -50)`}>
       {strokes.map((stroke, index) => (
         <StrokeShape key={index} stroke={stroke} />
       ))}

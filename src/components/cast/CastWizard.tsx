@@ -11,6 +11,9 @@
 
 "use client";
 
+import { useState } from "react";
+
+import { RitualDiagramView } from "@/components/ritual/RitualDiagramView";
 import { CASTING_TIME, castingTimeLabel, levelLabel } from "@/components/spell/format";
 import { RoleplaySection } from "@/components/spell/RoleplaySection";
 import { Badge } from "@/components/ui/Badge";
@@ -243,6 +246,7 @@ function SummaryStep({
   const announcement = renderAnnouncement(draft.spell, context);
   const instructions = castInstructions(draft.spell, context);
   const shownGaps = announcement.gaps.filter((gap) => gap.placeholder !== "target");
+  const [diagramOpen, setDiagramOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-3">
@@ -276,6 +280,21 @@ function SummaryStep({
           </ul>
         )}
       </section>
+
+      {/* Схема только в ритуальном режиме: рисовать десять минут в бою нельзя (FR-192). */}
+      {draft.mode === "ritual" && draft.spell.ritualDiagram !== undefined ? (
+        <button
+          type="button"
+          onClick={() => setDiagramOpen(true)}
+          className="min-h-11 rounded-lg border border-ritual/60 px-3 text-sm font-medium text-ritual"
+        >
+          Схема ритуала
+        </button>
+      ) : null}
+
+      {diagramOpen ? (
+        <RitualDiagramView spell={draft.spell} onClose={() => setDiagramOpen(false)} />
+      ) : null}
 
       <RoleplaySection
         spell={draft.spell}
