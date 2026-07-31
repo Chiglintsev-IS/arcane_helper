@@ -63,6 +63,7 @@ export type JournalKind =
   | "blood_exchange"
   | "rune_spent"
   | "hit_points_changed"
+  | "combat_ended"
   | "suppression_changed";
 
 /**
@@ -225,22 +226,28 @@ const ALL_AVAILABLE = {
  * Выводит экономию хода из журнала: доступно то, что не потрачено после последней отметки
  * «начало хода» (ADR-0008). Флага в состоянии для этого нет намеренно — он мог бы разойтись с журналом.
  *
- * Если отметки нет вовсе — журнал новый или обрезан — считаем всё доступным: приложение не должно
- * запрещать лишнего из-за нехватки истории.
+ * Прежний бой в счёт не идёт: и раунды, и потраченное считаются от последней отметки о конце боя
+ * (FR-216). Без неё пятираундовая стычка продолжалась бы вечно — следующий бой начинался с шестого
+ * раунда, а реакция, потраченная вчера, оставалась потраченной.
+ *
+ * Если отметки хода нет вовсе — бой только начался, журнал новый или обрезан — считаем всё
+ * доступным: приложение не должно запрещать лишнего из-за нехватки истории.
  */
 export function deriveTurnEconomy(session: Session): TurnEconomy {
-  const lastTurnIndex = session.journal.findLastIndex((entry) => entry.kind === "turn_started");
-  const round = Math.max(1, session.journal.filter((entry) => entry.kind === "turn_started").length);
+  const combatEndIndex = session.journal.findLastIndex((entry) => entry.kind === "combat_ended");
+  const journal = session.journal.slice(combatEndIndex + 1);
+  const lastTurnIndex = journal.findLastIndex((entry) => entry.kind === "turn_started");
+  const round = Math.max(1, journal.filter((entry) => entry.kind === "turn_started").length);
 
   if (!turnTracked(session.character)) {
     return { round, started: lastTurnIndex !== -1, ...ALL_AVAILABLE };
   }
 
-  // Отметки хода ещё нет — считаем с начала журнала. Иначе при включённом учёте контроль
+  // Отметки хода ещё нет — считаем с начала боя. Иначе при включённом учёте контроль
   // молча не работал бы до первого нажатия «Мой ход начался», а это худший из возможных
   // исходов: игрок думает, что приложение следит, а оно не следит.
   const spent = new Set<ActionUsed>();
-  for (const entry of session.journal.slice(lastTurnIndex + 1)) {
+  for (const entry of journal.slice(lastTurnIndex + 1)) {
     if (entry.actionUsed !== undefined) spent.add(entry.actionUsed);
   }
 
@@ -922,13 +929,19 @@ export function combatEndRecovery(character: CharacterState): number {
   return Math.max(0, half - character.hitPoints.current);
 }
 
-/** Конец боя: здоровье поднимается до половины максимума, если оно ниже (FR-216). */
+/**
+ * Конец боя (FR-216): отметка о факте, а восстановление тролля — её следствие.
+ *
+ * Здоровым бой тоже заканчивают, и раньше это было нельзя: операция отказывала, когда лечить нечего,
+ * а вместе с ней отказывался и счёт раундов — новый бой начинался номером старого. Поэтому запись
+ * появляется всегда, а хиты поднимаются, только если есть куда.
+ *
+ * Отметка нужна `deriveTurnEconomy`: от неё считаются раунды и потраченное. Хранить вместо неё
+ * признак «бой идёт» нельзя — он разошёлся бы с журналом (ADR-0008).
+ */
 export function endCombat(session: Session, clock: Clock): Session {
   const { character } = session;
   const restored = combatEndRecovery(character);
-  if (restored === 0) {
-    throw new SessionError("Здоровье не ниже половины максимума: восстанавливать нечего");
-  }
   const after: CharacterState = {
     ...character,
     hitPoints: { ...character.hitPoints, current: character.hitPoints.current + restored },
@@ -937,8 +950,11 @@ export function endCombat(session: Session, clock: Clock): Session {
     session,
     after,
     {
-      kind: "hit_points_changed",
-      summaryRu: `Бой закончен: восстановлено ${restored} до половины максимума`,
+      kind: "combat_ended",
+      summaryRu:
+        restored === 0
+          ? "Бой закончен"
+          : `Бой закончен: восстановлено ${restored} до половины максимума`,
     },
     clock,
   );

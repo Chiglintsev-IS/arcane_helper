@@ -1495,9 +1495,11 @@ describe("конец боя (FR-216)", () => {
     expect(endCombat(wounded(29), clock).character.hitPoints.current).toBe(30);
   });
 
-  it("на здоровье не ниже половины отказывает, а не пишет пустую запись", () => {
-    expect(() => endCombat(wounded(30), clock)).toThrow(SessionError);
-    expect(() => endCombat(session, clock)).toThrow(/восстанавливать нечего/);
+  it("закончить бой можно и здоровым: конец боя — факт, а не лечение", () => {
+    const after = endCombat(wounded(30), clock);
+    expect(after.character.hitPoints.current).toBe(30);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен");
+    expect(after.journal.at(-1)?.kind).toBe("combat_ended");
   });
 
   it("считает половину от снижённого максимума, а не от исходного (FR-172)", () => {
@@ -1509,6 +1511,43 @@ describe("конец боя (FR-216)", () => {
 
   it("восстановление обратимо (FR-111)", () => {
     expect(undoLast(endCombat(wounded(12), clock)).character.hitPoints.current).toBe(12);
+  });
+
+  it("сбрасывает счёт раундов: следующий бой начинается с первого", () => {
+    let current = withTurnTracking(session);
+    for (let round = 0; round < 5; round += 1) current = beginTurn(current, clock);
+    expect(deriveTurnEconomy(current).round).toBe(5);
+
+    current = endCombat(current, clock);
+    expect(deriveTurnEconomy(current).round).toBe(1);
+    expect(deriveTurnEconomy(current).started).toBe(false);
+
+    current = beginTurn(current, clock);
+    expect(deriveTurnEconomy(current).round).toBe(1);
+  });
+
+  it("потраченное в прошлом бою нового не связывает", () => {
+    let current = beginTurn(withTurnTracking(session), clock);
+    current = castSpell(
+      current,
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
+
+    current = endCombat(current, clock);
+    expect(deriveTurnEconomy(current)).toMatchObject({
+      actionAvailable: true,
+      bonusActionAvailable: true,
+      reactionAvailable: true,
+    });
+  });
+
+  it("отмена возвращает и счёт раундов прежнего боя (FR-111)", () => {
+    let current = withTurnTracking(session);
+    for (let round = 0; round < 3; round += 1) current = beginTurn(current, clock);
+    const undone = undoLast(endCombat(current, clock));
+    expect(deriveTurnEconomy(undone).round).toBe(3);
   });
 });
 
