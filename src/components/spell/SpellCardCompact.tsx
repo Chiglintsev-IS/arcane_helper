@@ -68,14 +68,15 @@ export function SpellCardCompact({
    */
   onTogglePrepared?: (() => void) | undefined;
 }) {
-  // В бою значка подготовки нет: неподготовленного в списке уже нет, и значок сообщал бы то, что
-  // и так верно про каждую строку (FR-209, FR-211).
+  // В бою значков подготовки нет: неподготовленного в списке уже нет, и значок сообщал бы то, что
+  // и так верно про каждую строку (FR-209, FR-211). Вне боя остаются только те, что говорят о цене
+  // и о ритуале, — про саму подготовку отвечает кнопка рядом (FR-219).
   const inCombat = character.screenMode === "combat";
   // Эффект уже висит — строка перестаёт претендовать на внимание, но из списка не уходит: повторное
   // применение бывает нужно (FR-210).
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
-  const preparation = preparationBadge(spell, character.preparedSpellIds);
+  const preparation = inCombat ? null : preparationBadge(spell, character.preparedSpellIds);
   const resolution = resolutionBadge(spell.resolution, character);
   const damage = damageLabel(spell, spell.level, character.level);
   // Вне боя «Без ячейки» не пишется: рядом стоит значок «Заговор» и говорит то же самое (FR-010).
@@ -126,7 +127,7 @@ export function SpellCardCompact({
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
             {castingTimeLabel(spell.castingTime)}
           </Badge>
-          {inCombat ? null : (
+          {preparation === null ? null : (
             <Badge tone={preparation.tone} icon={preparation.icon}>
               {preparation.label}
             </Badge>

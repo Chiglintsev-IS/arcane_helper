@@ -254,20 +254,27 @@ export function damageLabel(spell: Spell, slotLevel: number, characterLevel: num
 }
 
 /**
- * Подготовлено, лежит в книге или это заговор.
+ * Что о подготовке добавляет значок — или `null`, если добавлять нечего
+ * ([FR-219](../../../docs/features/F-18-screen-modes.md#fr-219)).
  *
- * Различие обязательно: сотворить можно только подготовленное, а из книги — лишь ритуалом
- * ([FR-100](../../../docs/features/F-09-preparation.md#fr-100), [FR-103](../../../docs/features/F-09-preparation.md#fr-103)).
+ * «Подготовлено» и «Не подготовлено» отсюда убраны: в «Книге» рядом со строкой стоит кнопка
+ * подготовки — нажатая, с галочкой и с `aria-pressed`, — а когда из-за подготовки нельзя сотворить,
+ * строка пишет причину словами. Значок был третьим ответом на тот же вопрос и стоил ряда.
+ *
+ * Остаются два случая, о которых сказать больше некому:
+ *   заговор — он вне лимита подготовки ([FR-102](../../../docs/features/F-09-preparation.md#fr-102)),
+ *     кнопки не получает вовсе, и значок говорит о цене: ячейку заговор не тратит;
+ *   неподготовленный ритуал — он творится прямо из книги
+ *     ([FR-103](../../../docs/features/F-09-preparation.md#fr-103)), и без подписи цена «Ячейка 1
+ *     ур. или ритуал» обещала бы способ, которого сейчас нет.
  */
 export function preparationBadge(
   spell: Spell,
   preparedSpellIds: readonly string[],
-): { label: string; icon: string; tone: Tone } {
+): { label: string; icon: string; tone: Tone } | null {
   if (spell.level === CANTRIP_LEVEL) return { label: "Заговор", icon: "◎", tone: "muted" };
-  if (preparedSpellIds.includes(spell.id)) {
-    return { label: "Подготовлено", icon: "✓", tone: "ritual" };
+  if (spell.ritual && !preparedSpellIds.includes(spell.id)) {
+    return { label: "Только ритуалом", icon: "❖", tone: "muted" };
   }
-  return spell.ritual
-    ? { label: "Из книги, только ритуалом", icon: "❖", tone: "muted" }
-    : { label: "Не подготовлено", icon: "✗", tone: "muted" };
+  return null;
 }
