@@ -20,6 +20,20 @@ export const ROUNDS_PER_HOUR = 600;
 
 const ROUND_FORMS: [string, string, string] = ["раунд", "раунда", "раундов"];
 
+/**
+ * Дольше скольких раундов перевод перестаёт помогать.
+ *
+ * Раунды нужны, чтобы прикинуть «доживёт ли эффект до конца боя». Десять раундов — минута, и это
+ * примерно длина боя: всё, что дольше, доживёт в любом случае, а «(4800 раундов)» рядом с «8 часов»
+ * — шум, который вытесняет полезное.
+ */
+const MAXIMUM_USEFUL_ROUNDS = 10;
+
+/** Перевод в раунды, пока он что-то говорит: « (10 раундов)» либо пустая строка. */
+function roundsHint(rounds: number): string {
+  return rounds > MAXIMUM_USEFUL_ROUNDS ? "" : ` (${withPlural(rounds, ROUND_FORMS)})`;
+}
+
 /** Те же раунды после предлога «до»: «до 1 раунда», «до 3 раундов». */
 const ROUND_FORMS_GENITIVE: [string, string, string] = ["раунда", "раундов", "раундов"];
 
@@ -53,7 +67,8 @@ export function startRound(marks: readonly TurnMark[], startedAt: string): Start
 }
 
 /**
- * Длительность в исходных единицах и в раундах с предлогом: «до 10 минут (100 раундов)».
+ * Длительность в исходных единицах и, пока это помогает, в раундах: «до 1 минуты (10 раундов)»,
+ * но «до 10 минут» и «до 8 часов» — без перевода (см. `MAXIMUM_USEFUL_ROUNDS`).
  *
  * Перевод нужен потому, что за столом время считается раундами, а карточка заклинания — минутами.
  * Отсчёта здесь нет и не будет: таймеры вне MVP (F-08).
@@ -69,9 +84,9 @@ export function durationWithRoundsRu(duration: ActiveEffect["duration"]): string
     case "rounds":
       return `до ${withPlural(value, ROUND_FORMS_GENITIVE)}`;
     case "minutes":
-      return `до ${withPlural(value, ["минуты", "минут", "минут"])} (${withPlural(value * ROUNDS_PER_MINUTE, ROUND_FORMS)})`;
+      return `до ${withPlural(value, ["минуты", "минут", "минут"])}${roundsHint(value * ROUNDS_PER_MINUTE)}`;
     case "hours":
-      return `до ${withPlural(value, ["часа", "часов", "часов"])} (${withPlural(value * ROUNDS_PER_HOUR, ROUND_FORMS)})`;
+      return `до ${withPlural(value, ["часа", "часов", "часов"])}${roundsHint(value * ROUNDS_PER_HOUR)}`;
     default:
       return "особая длительность";
   }

@@ -161,9 +161,10 @@ describe("durationWithRoundsRu", () => {
   it.each([
     [{ type: "rounds", value: 3 } as const, "до 3 раундов"],
     [{ type: "rounds", value: 1 } as const, "до 1 раунда"],
-    [{ type: "minutes", value: 10 } as const, "до 10 минут (100 раундов)"],
+    // Перевод в раунды помогает, пока их можно пересчитать в уме и сравнить с длиной боя.
     [{ type: "minutes", value: 1 } as const, "до 1 минуты (10 раундов)"],
-    [{ type: "hours", value: 1 } as const, "до 1 часа (600 раундов)"],
+    [{ type: "minutes", value: 10 } as const, "до 10 минут"],
+    [{ type: "hours", value: 1 } as const, "до 1 часа"],
     [{ type: "special" } as const, "особая длительность"],
     [{ type: "minutes" } as const, "до 0 минут (0 раундов)"],
   ])("%o читается как «%s»", (duration, expected) => {
@@ -209,7 +210,7 @@ describe("describeConcentration (FR-084)", () => {
     expect(summary.nameRu).toBe("Обнаружение магии");
     expect(summary.slotLabel).toBe("ячейка 1 ур.");
     expect(summary.startLabel).toBe("раунд 1");
-    expect(summary.durationLabel).toBe("до 10 минут (100 раундов)");
+    expect(summary.durationLabel).toBe("до 10 минут");
     expect(summary.mechanicsLabel).toBe("Сфера 30 футов от себя · без спасброска");
     expect(summary.breakLabel).toBe("Урон → спасбросок Телосложения +4, КС от 10");
     expect(summary.shortRulesRu).toContain("чувствует магию");

@@ -71,7 +71,7 @@ describe("лист концентрации (FR-084, FR-091)", () => {
     await openPanel();
 
     const panel = screen.getByRole("dialog", { name: /Концентрация/ });
-    expect(within(panel).getByText(/до 10 минут \(100 раундов\)/)).toBeDefined();
+    expect(within(panel).getByText(/до 10 минут/)).toBeDefined();
     expect(within(panel).getByText(/чувствует магию/)).toBeDefined();
 
     const breakers = within(panel).getByLabelText("Чем прерывается");
