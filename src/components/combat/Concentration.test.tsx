@@ -71,8 +71,10 @@ describe("лист концентрации (FR-084, FR-091)", () => {
     await openPanel();
 
     const panel = screen.getByRole("dialog", { name: /Концентрация/ });
-    expect(within(panel).getByText(/до 10 минут/)).toBeDefined();
-    expect(within(panel).getByText(/чувствует магию/)).toBeDefined();
+    // Длительность ищется по всей строке шапки: те же «до 10 минут» стоят и в кратких правилах,
+    // и одиночный поиск по ним нашёл бы два элемента вместо одного.
+    expect(within(panel).getByText(/ячейка 1 ур\..*до 10 минут/)).toBeDefined();
+    expect(within(panel).getByText(/чувствует присутствие магии/)).toBeDefined();
 
     const breakers = within(panel).getByLabelText("Чем прерывается");
     expect(within(breakers).getAllByRole("listitem")).toHaveLength(6);
