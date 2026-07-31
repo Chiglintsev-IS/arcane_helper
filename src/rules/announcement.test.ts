@@ -223,9 +223,9 @@ describe("renderAnnouncement: чистота формулировки (FR-042)",
       );
 
       const roleplay = [
-        ...card.roleplay.incantations,
-        ...card.roleplay.gestures,
-        ...card.roleplay.visualEffects,
+        card.roleplay.incantation,
+        card.roleplay.gesture,
+        card.roleplay.visualEffect,
         ...card.roleplay.completeVariants.short,
         ...card.roleplay.completeVariants.atmospheric,
         ...card.roleplay.completeVariants.sarcastic,

@@ -138,9 +138,11 @@ export const armorClassEffectSchema = z.object({
 });
 
 const roleplaySchema = z.object({
-  incantations: z.array(nonEmpty).min(1),
-  gestures: z.array(nonEmpty).min(1),
-  visualEffects: z.array(nonEmpty).min(1),
+  // Ровно одна реплика, один жест, один эффект (FR-050): список из двух склеивался в карточке
+  // через « · » и читался обрывками. Разнообразие живёт в completeVariants, где оно и задумано.
+  incantation: nonEmpty,
+  gesture: nonEmpty,
+  visualEffect: nonEmpty,
   completeVariants: z.object({
     short: z.array(nonEmpty),
     atmospheric: z.array(nonEmpty),
@@ -184,9 +186,9 @@ const spellShape = z.object({
 /** Все художественные тексты заклинания одним списком — для проверки FR-042. */
 function roleplayTexts(roleplay: z.infer<typeof roleplaySchema>): string[] {
   return [
-    ...roleplay.incantations,
-    ...roleplay.gestures,
-    ...roleplay.visualEffects,
+    roleplay.incantation,
+    roleplay.gesture,
+    roleplay.visualEffect,
     ...roleplay.completeVariants.short,
     ...roleplay.completeVariants.atmospheric,
     ...roleplay.completeVariants.sarcastic,

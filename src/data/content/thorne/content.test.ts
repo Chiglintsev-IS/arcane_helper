@@ -11,9 +11,9 @@ const MAXIMUM_PHRASE_WORDS = 15;
 
 function roleplayTexts(spell: (typeof spells)[number]): string[] {
   return [
-    ...spell.roleplay.incantations,
-    ...spell.roleplay.gestures,
-    ...spell.roleplay.visualEffects,
+    spell.roleplay.incantation,
+    spell.roleplay.gesture,
+    spell.roleplay.visualEffect,
     ...spell.roleplay.completeVariants.short,
     ...spell.roleplay.completeVariants.atmospheric,
     ...spell.roleplay.completeVariants.sarcastic,
@@ -66,23 +66,18 @@ describe("соответствие профилю отыгрыша (FR-052)", ()
   );
 
   it.each(spells.map((spell) => [spell.nameRu, spell] as const))(
-    "реплики «%s» не длиннее 15 слов",
+    "реплика «%s» не длиннее 15 слов",
     (_name, spell) => {
-      for (const incantation of spell.roleplay.incantations) {
-        const words = incantation.split(/\s+/).filter(Boolean);
-        expect(words.length, `${spell.nameRu}: «${incantation}»`).toBeLessThanOrEqual(
-          MAXIMUM_PHRASE_WORDS,
-        );
-      }
+      const words = spell.roleplay.incantation.split(/\s+/).filter(Boolean);
+      expect(words.length, `${spell.nameRu}: «${spell.roleplay.incantation}»`).toBeLessThanOrEqual(
+        MAXIMUM_PHRASE_WORDS,
+      );
     },
   );
 
   it.each(spells.map((spell) => [spell.nameRu, spell] as const))(
     "«%s» имеет минимум контента по FR-050",
     (_name, spell) => {
-      expect(spell.roleplay.incantations.length).toBeGreaterThanOrEqual(1);
-      expect(spell.roleplay.gestures.length).toBeGreaterThanOrEqual(1);
-      expect(spell.roleplay.visualEffects.length).toBeGreaterThanOrEqual(1);
       const variants =
         spell.roleplay.completeVariants.short.length +
         spell.roleplay.completeVariants.atmospheric.length +

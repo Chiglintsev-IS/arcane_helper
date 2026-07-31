@@ -86,9 +86,9 @@ type Spell = {
   tacticalAdviceRu?: string;
 
   roleplay: {
-    incantations: string[];
-    gestures: string[];
-    visualEffects: string[];
+    incantation: string;
+    gesture: string;
+    visualEffect: string;
     completeVariants: {
       short: string[];
       atmospheric: string[];

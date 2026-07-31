@@ -28,9 +28,9 @@ function web(): unknown {
     fullRulesRu: "Собственный пересказ механики заклинания.",
     tacticalAdviceRu: "Удобно против группы противников в узком проходе.",
     roleplay: {
-      incantations: ["Стой."],
-      gestures: ["Чертит мелом знак связи."],
-      visualEffects: ["Из воздуха проступают ледяные нити."],
+      incantation: "Стой.",
+      gesture: "Чертит мелом знак связи.",
+      visualEffect: "Из воздуха проступают ледяные нити.",
       completeVariants: {
         short: ["Чертит знак — проход зарастает нитями."],
         atmospheric: ["Воздух густеет, и между камнями прорастает морозная сеть."],
@@ -62,9 +62,9 @@ function rayOfFrost(): unknown {
     shortRulesRu: "Луч холода наносит урон и снижает скорость цели на 10 футов.",
     fullRulesRu: "Собственный пересказ механики заклинания.",
     roleplay: {
-      incantations: ["Холодно."],
-      gestures: ["Ведёт пальцем короткую руну."],
-      visualEffects: ["Тонкий белый луч оставляет иней на камне."],
+      incantation: "Холодно.",
+      gesture: "Ведёт пальцем короткую руну.",
+      visualEffect: "Тонкий белый луч оставляет иней на камне.",
       completeVariants: {
         short: ["Короткий взмах — и по цели проходит изморозь."],
         atmospheric: ["Руна на пальце вспыхивает синим, воздух звенит от холода."],
@@ -206,12 +206,23 @@ describe("минимум художественного контента (FR-050
     ).toContain("минимум 3 варианта");
   });
 
-  it("отклоняет заклинание без реплики", () => {
+  it("отклоняет пустую реплику", () => {
     expect(
       spellSchema.safeParse(
         mutate(web(), (draft) => {
           const roleplay = draft.roleplay as Record<string, unknown>;
-          roleplay.incantations = [];
+          roleplay.incantation = "   ";
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("отклоняет список реплик: реплика ровно одна (FR-050)", () => {
+    expect(
+      spellSchema.safeParse(
+        mutate(web(), (draft) => {
+          const roleplay = draft.roleplay as Record<string, unknown>;
+          roleplay.incantation = ["Стой.", "Холодно."];
         }),
       ).success,
     ).toBe(false);

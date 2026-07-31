@@ -81,11 +81,12 @@ function Variants({
       <dl className="flex flex-col gap-1 text-xs italic text-slate-600 dark:text-slate-400">
         <div>
           <dt className="not-italic">Реплика</dt>
-          <dd>{spell.roleplay.incantations.join(" · ")}</dd>
+          {/* Кавычки-ёлочки отличают прямую речь от описания жеста рядом. */}
+          <dd>«{spell.roleplay.incantation}»</dd>
         </div>
         <div>
           <dt className="not-italic">Жест</dt>
-          <dd>{spell.roleplay.gestures.join(" · ")}</dd>
+          <dd>{spell.roleplay.gesture}</dd>
         </div>
       </dl>
     </div>
