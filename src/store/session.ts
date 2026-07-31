@@ -38,6 +38,7 @@ import {
   type SlotRecoveryPlan,
 } from "@/rules/slots";
 import { hitPointCost, spellPointCost } from "@/rules/bloodMagic";
+import { durationWithRoundsRu } from "@/rules/concentration";
 
 /** Глубина журнала — предложенное значение OQ-08, уточняется после игровой сессии. */
 export const JOURNAL_LIMIT = 100;
@@ -388,6 +389,22 @@ function slotLevelUsed(request: CastRequest): number {
   return request.spell.level;
 }
 
+/**
+ * Чем и когда закончится эффект (FR-090).
+ *
+ * Длительность называется числом, а не словом «истечение». «До истечения длительности» — это ответ
+ * «закончится, когда закончится»: он не отвечает на единственный вопрос, который задают за столом, —
+ * сколько ещё держится. Раунды приписаны потому, что в бою считают ими, а карточка написана
+ * минутами.
+ */
+function endConditionRu(duration: ActiveEffect["duration"], concentration: boolean): string {
+  if (duration.type === "special") {
+    return concentration ? "До конца концентрации; длительность особая." : "Длительность особая.";
+  }
+  const held = durationWithRoundsRu(duration);
+  return concentration ? `Держится ${held} или до конца концентрации.` : `Держится ${held}.`;
+}
+
 /** Создаёт активный эффект, если заклинание продолжается (FR-090). Мгновенное — не создаёт. */
 function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
   const { spell } = request;
@@ -399,22 +416,28 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
       ? "buff"
       : "utility";
 
+  // Длительность эффекта собирается до записи: из неё же строится и текст окончания, чтобы число
+  // в подписи и число в состоянии не могли разойтись.
+  const duration: ActiveEffect["duration"] =
+    spell.duration.type === "special"
+      ? { type: "special" }
+      : {
+          type: spell.duration.type,
+          ...(spell.duration.value === undefined ? {} : { value: spell.duration.value }),
+        };
+
   return {
     id: clock.nextId(),
     spellId: spell.id,
     nameRu: spell.nameRu,
     type,
     startedAt: clock.now(),
-    duration: spell.duration.type === "special"
-      ? { type: "special" }
-      : { type: spell.duration.type, ...(spell.duration.value === undefined ? {} : { value: spell.duration.value }) },
+    duration,
     isConcentration: spell.concentration,
     slotLevelUsed: slotLevelUsed(request),
     // Вклад в КД копируется из заклинания, чтобы итог считался из одного состояния (ADR-0013).
     ...(spell.armorClassEffect === undefined ? {} : { armorClass: spell.armorClassEffect }),
-    endConditionRu: spell.concentration
-      ? "До конца концентрации или истечения длительности."
-      : "До истечения длительности.",
+    endConditionRu: endConditionRu(duration, spell.concentration),
   };
 }
 

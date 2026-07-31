@@ -79,7 +79,11 @@ export function levelLabel(level: number): string {
  */
 export function slotCostLabel(spell: Spell): string | null {
   if (spell.level === CANTRIP_LEVEL) return null;
-  return spell.ritual ? `Ячейка от ${spell.level} ур. или ритуал` : `Ячейка от ${spell.level} ур.`;
+  // «От» — обещание, что ячейка повыше что-то даст. Если повышать нечего, обещать нельзя: игрок
+  // потратит ячейку 3 уровня на заклинание, которое сработает ровно как с ячейки первой (FR-010).
+  const scales = spell.damage?.scaling !== undefined || spell.higherLevelsRu !== undefined;
+  const slot = scales ? `Ячейка от ${spell.level} ур.` : `Ячейка ${spell.level} ур.`;
+  return spell.ritual ? `${slot} или ритуал` : slot;
 }
 
 export function rangeLabel(range: Spell["range"]): string {

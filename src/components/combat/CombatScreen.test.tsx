@@ -211,9 +211,21 @@ describe("краткая карточка (FR-010)", () => {
   it("называет минимальную стоимость применения", async () => {
     await renderWithStores(<CombatScreen />);
 
+    // «Поглощение стихий» растёт с уровнем ячейки — «от» обещает выгоду, и она есть.
     expect(
-      within(screen.getByRole("button", { name: /Доспехи мага/ })).getByText("Ячейка от 1 ур."),
+      within(screen.getByRole("button", { name: /Поглощение стихий/ })).getByText(
+        "Ячейка от 1 ур.",
+      ),
     ).toBeDefined();
+  });
+
+  it("не обещает выгоды от ячейки повыше там, где её нет (FR-010)", async () => {
+    // «Доспехи мага» с ячейки 3 уровня работают ровно как с первой: «от» звало бы тратить зря.
+    await renderWithStores(<CombatScreen />);
+
+    const row = within(screen.getByRole("button", { name: /Доспехи мага/ }));
+    expect(row.getByText("Ячейка 1 ур.")).toBeDefined();
+    expect(row.queryByText("Ячейка от 1 ур.")).toBeNull();
   });
 
   it("у заговора стоимость не повторяет значок «Заговор» (FR-010)", async () => {

@@ -1034,6 +1034,37 @@ describe("активный эффект без указанной длитель
   });
 });
 
+describe("окончание эффекта называет срок числом (FR-090)", () => {
+  function endCondition(spellOverride: Partial<Spell>): string | undefined {
+    const subject: Spell = { ...spell("mage-armor"), ...spellOverride };
+    const after = castSpell(
+      session,
+      { spell: subject, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    return after.character.activeEffects[0]?.endConditionRu;
+  }
+
+  it("часы переводятся в раунды: за столом считают раундами", () => {
+    expect(endCondition({ duration: { type: "hours", value: 8 } })).toBe(
+      "Держится до 8 часов (4800 раундов).",
+    );
+  });
+
+  it("концентрация названа вместе со сроком, а не вместо него", () => {
+    expect(
+      endCondition({ duration: { type: "minutes", value: 10 }, concentration: true }),
+    ).toBe("Держится до 10 минут (100 раундов) или до конца концентрации.");
+  });
+
+  it("особой длительности срок не приписывается", () => {
+    expect(endCondition({ duration: { type: "special" } })).toBe("Длительность особая.");
+    expect(endCondition({ duration: { type: "special" }, concentration: true })).toBe(
+      "До конца концентрации; длительность особая.",
+    );
+  });
+});
+
 describe("заметка к заклинанию (FR-012)", () => {
   it("сохраняется в состоянии и не попадает в журнал", () => {
     const after = setSpellNote(session, "shield", "мастер считает, что щит гасит и «Волшебную стрелу»");
