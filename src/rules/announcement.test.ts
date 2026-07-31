@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 import { createThorne } from "@/data/content/thorne/character";
 import { loadThorneSpells } from "@/data/content/thorne";
 import type { Spell } from "@/data/schemas/spell";
-import { castInstructions, renderAnnouncement, type AnnouncementContext } from "./announcement";
+import {
+  bloodExchangeAnnouncement,
+  bloodExchangeInstructions,
+  castInstructions,
+  renderAnnouncement,
+  type AnnouncementContext,
+} from "./announcement";
 
 const allSpells = loadThorneSpells();
 const spells = new Map(allSpells.map((spell) => [spell.id, spell]));
@@ -361,3 +367,51 @@ describe("castInstructions: что сделать этому персонажу 
     expect(steps).toContain("Бросьте d20 -2 — попадание, если результат не ниже КД цели");
   });
 })
+
+describe("объявление обмена (FR-177)", () => {
+  it("называет и хиты, и очки", () => {
+    expect(bloodExchangeAnnouncement(5, thorne)).toBe(
+      "Действием обмениваю 15 хитов на 5 очков заклинаний.",
+    );
+  });
+
+  it("склоняет единственное число", () => {
+    expect(bloodExchangeAnnouncement(1, thorne)).toBe(
+      "Действием обмениваю 3 хита на 1 очко заклинаний.",
+    );
+  });
+});
+
+describe("инструкция обмена (FR-172, FR-174, FR-175)", () => {
+  it("называет остаток хитов и снижение максимума", () => {
+    const steps = bloodExchangeInstructions(5, thorne);
+    expect(steps[0]).toBe("Отметьте 15 хитов: было 60, станет 45");
+    expect(steps[1]).toBe(
+      "Максимум тоже 45 — лечение выше не поднимет, вернуть можно только по 3 за полный час",
+    );
+  });
+
+  it("напоминает о ненужной проверке концентрации только при активной концентрации", () => {
+    expect(bloodExchangeInstructions(2, thorne).join(" ")).not.toMatch(/концентрац/);
+
+    const busy = {
+      ...thorne,
+      concentration: { spellId: "web", startedAt: "2026-07-31T20:00:00.000Z" },
+    };
+    expect(bloodExchangeInstructions(2, busy).join(" ")).toMatch(
+      /Проверка концентрации не нужна: потеря хитов от кровавого колдовства уроном не считается/,
+    );
+  });
+
+  it("предупреждает о ранах, когда обмен опускает хиты в ноль", () => {
+    const dying = { ...thorne, hitPoints: { current: 6, maximum: 60, maximumReduction: 0 } };
+    expect(bloodExchangeInstructions(2, dying).join(" ")).toMatch(
+      /Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка — итого 1 рана/,
+    );
+  });
+
+  it("считает раны от числа созданных очков", () => {
+    const dying = { ...thorne, hitPoints: { current: 18, maximum: 60, maximumReduction: 0 } };
+    expect(bloodExchangeInstructions(6, dying).join(" ")).toMatch(/итого 3 раны/);
+  });
+});

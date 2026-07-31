@@ -15,7 +15,13 @@ import { ANNOUNCEMENT_PLACEHOLDERS } from "@/data/schemas/spell";
 import { armorClassWithSpell } from "./armorClass";
 import { componentRequirements, type PaymentChoice } from "./availability";
 import { SAVING_THROW_NAMES, withPlural } from "./language";
-import { hitPointCost, spellPointCost } from "./bloodMagic";
+import {
+  ascensionTierRate,
+  hitPointCost,
+  maximumRecoveryPerHour,
+  spellPointCost,
+  woundsFromExchange,
+} from "./bloodMagic";
 import { MINIMUM_CONCENTRATION_DC } from "./concentration";
 import { effectiveDamage } from "./scaling";
 import type { CastMode } from "./slots";
@@ -247,6 +253,60 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
         ` Нужно ${MINIMUM_CONCENTRATION_DC} и больше` +
         ` (при уроне от ${DAMAGE_ABOVE_MINIMUM_CONCENTRATION_DC} — половину урона и больше),` +
         " иначе заклинание спадает",
+    );
+  }
+
+  return steps;
+}
+
+/**
+ * Объявление обмена хитов на очки (FR-177).
+ *
+ * Шаблона у расовой особенности нет и быть не может: она не заклинание, карточки у неё не заведено
+ * ([content.md](../../docs/content.md)). Текст собирается из чисел состояния — значит остаётся
+ * верным и после смены ступени возвышения.
+ */
+export function bloodExchangeAnnouncement(points: number, character: CharacterState): string {
+  const spent = points * ascensionTierRate(character.level);
+  return (
+    `Действием обмениваю ${withPlural(spent, ["хит", "хита", "хитов"])}` +
+    ` на ${withPlural(points, ["очко", "очка", "очков"])} заклинаний.`
+  );
+}
+
+/**
+ * Что игрок должен сделать при обмене — числами этого персонажа (FR-032 для расовой особенности).
+ *
+ * Снижение максимума названо отдельной строкой: это вторая, невосстановимая половина цены, и без неё
+ * игрок не понимает, почему лечение не поднимает до полного ([FR-172](../../docs/features/F-15-blood-magic.md#fr-172)).
+ *
+ * Напоминание о концентрации — самое ценное здесь: потеря хитов от кровавого колдовства уроном не
+ * считается ([FR-174](../../docs/features/F-15-blood-magic.md#fr-174)), и за столом ошибаются в обе
+ * стороны. Без активной концентрации оно молчит: напоминать было бы не о чем.
+ */
+export function bloodExchangeInstructions(points: number, character: CharacterState): string[] {
+  const spent = points * ascensionTierRate(character.level);
+  const { hitPoints } = character;
+  const after = hitPoints.current - spent;
+
+  const steps = [
+    `Отметьте ${withPlural(spent, ["хит", "хита", "хитов"])}:` +
+      ` было ${hitPoints.current}, станет ${after}`,
+    `Максимум тоже ${hitPoints.maximum - spent} — лечение выше не поднимет,` +
+      ` вернуть можно только по ${maximumRecoveryPerHour(character.level)} за полный час`,
+  ];
+
+  // Предупреждение, а не запрет: решение рискнуть принадлежит игроку (FR-031, FR-175).
+  if (after <= 0) {
+    steps.push(
+      "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка —" +
+        ` итого ${withPlural(woundsFromExchange(points), ["рана", "раны", "ран"])}`,
+    );
+  }
+
+  if (character.concentration !== undefined) {
+    steps.push(
+      "Проверка концентрации не нужна: потеря хитов от кровавого колдовства уроном не считается",
     );
   }
 
