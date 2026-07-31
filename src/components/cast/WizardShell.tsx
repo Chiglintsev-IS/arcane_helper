@@ -1,0 +1,100 @@
+/**
+ * Оболочка мастера: шапка, прокручиваемое тело, футер ([ADR-0017](../../../docs/decisions.md#adr-0017)).
+ *
+ * Существует ради того, чтобы обмен хитов на очки выглядел ровно как сотворение заклинания
+ * ([FR-177](../../../docs/features/F-15-blood-magic.md#fr-177)). Одинаковость держится не
+ * дисциплиной и не копированием классов, а одним компонентом на оба мастера: правка шапки
+ * не может задеть один экран и не задеть другой.
+ *
+ * О заклинаниях оболочка не знает ничего — ни `Spell`, ни черновика. Всё, что ей нужно, приходит
+ * параметрами: иначе второй мастер тащил бы за собой чужую модель.
+ */
+
+import type { ReactNode } from "react";
+
+import type { Tone } from "@/components/spell/format";
+import { Badge } from "@/components/ui/Badge";
+
+export type WizardFooter = {
+  /** Кнопка «Назад»: нет её — нет и первого шага позади. */
+  onBack?: () => void;
+  primaryLabel: string;
+  onPrimary: () => void;
+  /** Непроходимое предупреждение держит кнопку выключенной (FR-031, FR-081). */
+  primaryDisabled?: boolean;
+};
+
+export function WizardShell({
+  ariaLabel,
+  title,
+  subtitle,
+  badge,
+  stepLabel,
+  onCancel,
+  footer,
+  children,
+}: {
+  ariaLabel: string;
+  title: string;
+  subtitle: string;
+  badge: { tone: Tone; icon: string; label: string };
+  stepLabel: string;
+  onCancel: () => void;
+  footer: WizardFooter;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+      className="fixed inset-0 z-20 flex flex-col bg-slate-50 dark:bg-slate-950"
+    >
+      <header className="flex flex-col gap-1 border-b border-slate-200 p-3 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h2 className="text-base font-semibold leading-tight">{title}</h2>
+            <p className="text-xs text-slate-500">{subtitle}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-2 text-sm text-slate-500 underline"
+          >
+            Отмена
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone={badge.tone} icon={badge.icon}>
+            {badge.label}
+          </Badge>
+          <p className="text-xs text-slate-500">{stepLabel}</p>
+        </div>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+        {children}
+      </div>
+
+      <footer className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-800">
+        {footer.onBack === undefined ? null : (
+          <button
+            type="button"
+            onClick={footer.onBack}
+            className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm dark:border-slate-800"
+          >
+            Назад
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={footer.primaryDisabled === true}
+          onClick={footer.onPrimary}
+          className="min-h-12 flex-1 rounded-xl bg-action-strong px-4 text-base font-semibold text-white disabled:bg-slate-300 disabled:text-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-300"
+        >
+          {footer.primaryLabel}
+        </button>
+      </footer>
+    </section>
+  );
+}

@@ -287,3 +287,36 @@ describe("обязательность в блоке отыгрыша (ADR-0011)
     expect(screen.queryByText("Цель не указана")).toBeNull();
   });
 })
+
+describe("недоступность руны названа причиной (FR-151, OQ-17)", () => {
+  it("при оплате кровью руна не применяется и говорит почему", async () => {
+    const user = userEvent.setup();
+    const rich = withTurnTracking();
+    rich.spellPoints = { remaining: 6, createdAt: "2026-07-31T18:00:00.000Z" };
+    await renderWithStores(<CombatScreen />, rich);
+    await openWizard(/^Паутина/);
+
+    await user.click(screen.getByRole("button", { name: /^Кровью/ }));
+
+    const rune = screen.getByLabelText("Руна");
+    expect(within(rune).getByText("При оплате кровью руна не применяется")).toBeDefined();
+    expect(within(rune).queryByRole("button")).toBeNull();
+  });
+
+  it("без рун объясняет, когда они вернутся", async () => {
+    const spent = withTurnTracking();
+    spent.runes = { maximum: 3, remaining: 0 };
+    await renderWithStores(<CombatScreen />, spent);
+    await openWizard(/^Паутина/);
+
+    const rune = screen.getByLabelText("Руна");
+    expect(within(rune).getByText("Рун не осталось, вернутся долгим отдыхом")).toBeDefined();
+  });
+
+  it("у заговора блока руны нет вовсе: ячейку он не тратит", async () => {
+    await renderWithStores(<CombatScreen />);
+    await openWizard(/Луч холода/);
+
+    expect(screen.queryByLabelText("Руна")).toBeNull();
+  });
+});

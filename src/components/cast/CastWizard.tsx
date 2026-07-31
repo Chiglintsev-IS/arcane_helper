@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 
+import { WizardShell } from "@/components/cast/WizardShell";
 import { RitualDiagramView } from "@/components/ritual/RitualDiagramView";
 import { CASTING_TIME, castingTimeLabel, levelLabel } from "@/components/spell/format";
 import { RoleplaySection } from "@/components/spell/RoleplaySection";
@@ -23,6 +24,7 @@ import { castOptions, type CastOption } from "@/rules/filters";
 import { castInstructions, renderAnnouncement } from "@/rules/announcement";
 import { effectiveDamage } from "@/rules/scaling";
 import { hitPointCost, spellPointCost } from "@/rules/bloodMagic";
+import { CANTRIP_LEVEL } from "@/rules/slots";
 import {
   visibleSteps,
   type CastDraft,
@@ -40,6 +42,19 @@ const STEP_TITLES: Record<WizardStep, string> = {
   concentration: "Концентрация",
   summary: "Объявление и подтверждение",
 };
+
+/**
+ * Причина, по которой руну сейчас не приложить, — словами. `null` — приложить можно.
+ *
+ * Недоступное показывается с причиной, а не исчезает ([ux.md](../../../docs/ux.md#цветовая-система)):
+ * пропавший блок читается как «руны в этой игре нет», а не как «не к этому сотворению».
+ */
+function runeUnavailable(draft: CastDraft, character: CharacterState): string | null {
+  // Руна прикладывается только к заклинанию, оплаченному ячейкой (FR-151, OQ-17).
+  if (draft.payment.kind !== "slot") return "При оплате кровью руна не применяется";
+  if (character.runes.remaining <= 0) return "Рун не осталось, вернутся долгим отдыхом";
+  return null;
+}
 
 /**
  * Шаг руны (FR-151, FR-152).
@@ -60,6 +75,16 @@ function RuneStep({
   onChoose: (rune: Rune) => void;
 }) {
   const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
+  const unavailable = runeUnavailable(draft, character);
+
+  if (unavailable !== null) {
+    return (
+      <section aria-label="Руна" className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Руна</h3>
+        <p className="text-xs text-slate-600 dark:text-slate-400">{unavailable}</p>
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Руна" className="flex flex-col gap-2">
@@ -404,119 +429,81 @@ export function CastWizard({
     !draft.allowAnyway;
   const availabilityBlocked = draft.step === "availability" && !draft.allowAnyway;
 
-  return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Применение «${draft.spell.nameRu}»`}
-      className="fixed inset-0 z-20 flex flex-col bg-slate-50 dark:bg-slate-950"
-    >
-      <header className="flex flex-col gap-1 border-b border-slate-200 p-3 dark:border-slate-800">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 className="text-base font-semibold leading-tight">{draft.spell.nameRu}</h2>
-            <p className="text-xs text-slate-500">{levelLabel(draft.spell.level)}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => actions.cancel()}
-            className="px-2 text-sm text-slate-500 underline"
-          >
-            Отмена
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge tone={castingTime.tone} icon={castingTime.icon}>
-            {castingTimeLabel(draft.spell.castingTime)}
-          </Badge>
-          <p className="text-xs text-slate-500">
-            Шаг {index + 1} из {steps.length}: {STEP_TITLES[draft.step]}
-          </p>
-        </div>
-      </header>
+  const back = index > 0 ? { onBack: () => actions.back(steps) } : {};
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
-        {draft.step === "availability" ? (
-          <AvailabilityStep
-            availability={availability}
-            allowAnyway={draft.allowAnyway}
-            onAllowAnyway={() => actions.allowAnyway()}
-          />
-        ) : null}
-        {draft.step === "slot" ? (
-          <>
-            <SlotStep
-              draft={draft}
-              character={character}
-              onChoose={(option) => actions.chooseCastOption(option)}
-            />
-            {/*
-              Руна живёт на этом же шаге, а не на своём: её эффект зависит от выбранного уровня
-              ячейки (FR-152), и отдельный экран сделал бы типовое применение трёхшаговым — против
-              бюджета M-03 в четыре шага, из которых боевое заклинание сегодня тратит два.
-            */}
-            {draft.payment.kind === "slot" && character.runes.remaining > 0 ? (
-              <RuneStep
-                draft={draft}
-                character={character}
-                onChoose={(rune) => actions.chooseRune(rune)}
-              />
-            ) : null}
-          </>
-        ) : null}
-        {draft.step === "components" ? <ComponentsStep availability={availability} /> : null}
-        {draft.step === "concentration" ? (
-          <ConcentrationStep
-            character={character}
-            replaceConfirmed={draft.allowAnyway}
-            onReplace={() => actions.allowAnyway()}
-            onCancel={() => actions.cancel()}
-          />
-        ) : null}
-        {draft.step === "summary" ? (
-          <SummaryStep
+  return (
+    <WizardShell
+      ariaLabel={`Применение «${draft.spell.nameRu}»`}
+      title={draft.spell.nameRu}
+      subtitle={levelLabel(draft.spell.level)}
+      badge={{
+        tone: castingTime.tone,
+        icon: castingTime.icon,
+        label: castingTimeLabel(draft.spell.castingTime),
+      }}
+      stepLabel={`Шаг ${index + 1} из ${steps.length}: ${STEP_TITLES[draft.step]}`}
+      onCancel={() => actions.cancel()}
+      footer={
+        isLast
+          ? { ...back, primaryLabel: "Подтвердить", onPrimary: () => onConfirm(draft) }
+          : {
+              ...back,
+              primaryLabel: "Далее",
+              onPrimary: () => actions.next(steps),
+              primaryDisabled: availabilityBlocked || concentrationBlocked,
+            }
+      }
+    >
+      {draft.step === "availability" ? (
+        <AvailabilityStep
+          availability={availability}
+          allowAnyway={draft.allowAnyway}
+          onAllowAnyway={() => actions.allowAnyway()}
+        />
+      ) : null}
+      {draft.step === "slot" ? (
+        <>
+          <SlotStep
             draft={draft}
             character={character}
-            onRoleplay={(category) => actions.setRoleplayCategory(category)}
+            onChoose={(option) => actions.chooseCastOption(option)}
           />
-        ) : null}
+          {/*
+            Руна живёт на этом же шаге, а не на своём: её эффект зависит от выбранного уровня
+            ячейки (FR-152), и отдельный экран сделал бы типовое применение трёхшаговым — против
+            бюджета M-03 в четыре шага, из которых боевое заклинание сегодня тратит два.
+          */}
+          {draft.spell.level === CANTRIP_LEVEL || draft.mode === "ritual" ? null : (
+            <RuneStep
+              draft={draft}
+              character={character}
+              onChoose={(rune) => actions.chooseRune(rune)}
+            />
+          )}
+        </>
+      ) : null}
+      {draft.step === "components" ? <ComponentsStep availability={availability} /> : null}
+      {draft.step === "concentration" ? (
+        <ConcentrationStep
+          character={character}
+          replaceConfirmed={draft.allowAnyway}
+          onReplace={() => actions.allowAnyway()}
+          onCancel={() => actions.cancel()}
+        />
+      ) : null}
+      {draft.step === "summary" ? (
+        <SummaryStep
+          draft={draft}
+          character={character}
+          onRoleplay={(category) => actions.setRoleplayCategory(category)}
+        />
+      ) : null}
 
-        {error === null ? null : (
-          <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
-            {error}
-          </p>
-        )}
-      </div>
-
-      <footer className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-800">
-        {index > 0 ? (
-          <button
-            type="button"
-            onClick={() => actions.back(steps)}
-            className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm dark:border-slate-800"
-          >
-            Назад
-          </button>
-        ) : null}
-        {isLast ? (
-          <button
-            type="button"
-            onClick={() => onConfirm(draft)}
-            className="min-h-12 flex-1 rounded-xl bg-action-strong px-4 text-base font-semibold text-white"
-          >
-            Подтвердить
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={availabilityBlocked || concentrationBlocked}
-            onClick={() => actions.next(steps)}
-            className="min-h-12 flex-1 rounded-xl bg-action-strong px-4 text-base font-semibold text-white disabled:bg-slate-300 disabled:text-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-300"
-          >
-            Далее
-          </button>
-        )}
-      </footer>
-    </section>
+      {error === null ? null : (
+        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+          {error}
+        </p>
+      )}
+    </WizardShell>
   );
 }
