@@ -1821,6 +1821,40 @@ describe("почасовое восстановление максимума х�
     const recovered = recoverHitPointMaximum(afterExchange(), clock);
     expect(undoLast(recovered).character.hitPoints.maximumReduction).toBe(9);
   });
+
+  it("час не только поднимает максимум, но и лечит: регенерация идёт непрерывно", () => {
+    // Раненый обменом: 20 из 51 при снижении 9. За час максимум станет 54, а регенерация успевает
+    // дойти до половины нового максимума — 27, а не 25 от прежнего.
+    const wounded = takeDamage(afterExchange(), 31, clock);
+    expect(wounded.character.hitPoints.current).toBe(20);
+
+    const recovered = recoverHitPointMaximum(wounded, clock);
+    expect(recovered.character.hitPoints).toEqual({ current: 27, maximum: 54, maximumReduction: 6 });
+    expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: максимум +3, регенерация +7");
+  });
+})
+
+describe("короткий отдых — это час (FR-132, FR-173)", () => {
+  it("возвращает ступень максимума и доводит здоровье до половины", () => {
+    const wounded = takeDamage(exchangeBlood(session, 9, clock), 31, clock);
+    expect(wounded.character.hitPoints).toEqual({ current: 20, maximum: 51, maximumReduction: 9 });
+
+    const rested = shortRest(wounded, clock);
+    expect(rested.character.hitPoints).toEqual({ current: 27, maximum: 54, maximumReduction: 6 });
+    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · максимум +3, регенерация +7");
+  });
+
+  it("здоровому и не занимавшему в долг отдых пишется коротко", () => {
+    expect(shortRest(session, clock).journal.at(-1)?.summaryRu).toBe("Короткий отдых");
+  });
+
+  it("под подавлением час проходит впустую: особенности не действуют (FR-176)", () => {
+    const burned = takeDamage(exchangeBlood(session, 9, clock), 31, clock, { fire: true });
+    const rested = shortRest(burned, clock);
+
+    expect(rested.character.hitPoints).toEqual({ current: 20, maximum: 51, maximumReduction: 9 });
+    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых");
+  });
 })
 
 describe("схема ритуала не влияет на механику (FR-193)", () => {

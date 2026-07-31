@@ -196,7 +196,7 @@ test("reaction shows when it returns", async ({ page }) => {
 
   await expect(page.getByText(/Реакция израсходована, вернётся в начале вашего хода/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Мой ход начался" }).click();
+  await page.getByRole("button", { name: "Начать бой" }).click();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
 });
 
@@ -353,7 +353,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await switchMode(page, /^Вне боя/);
 
   // Вне боя ходов нет: ни кнопки, ни счётчика раундов (FR-202).
-  await expect(page.getByRole("button", { name: "Мой ход начался" })).toBeHidden();
+  await expect(page.getByRole("button", { name: /Начать бой|Мой ход/ })).toBeHidden();
   // Точное имя: подстрока «Ресурсы» есть и у списка «Прочие ресурсы».
   await expect(page.getByLabel("Ресурсы", { exact: true })).not.toContainText("раунд");
 

@@ -70,6 +70,7 @@ import {
   setScreenMode,
   setSpellNote,
   setSunlight,
+  startCombat,
   shortRest,
   spendRuneOnWardingSigil,
   spendSpellSlot,
@@ -247,21 +248,17 @@ export function CombatScreen() {
   /**
    * Смена режима (FR-204) и вопрос о конце боя (FR-216).
    *
-   * Режим переключается сразу и без условий: игрок мог уйти в книгу за справкой посреди боя. Вопрос
-   * задаётся на любом выходе из боя, в том числе при полном здоровье: конец боя — это факт, который
-   * сбрасывает счёт раундов и потраченное, а восстановление тролля — его следствие. Пока вопрос
-   * зависел от раны, здоровый персонаж уходил из боя без отметки, и следующий бой начинался с
-   * шестого раунда.
+   * Режим переключается сразу и ничего не спрашивает: игрок мог уйти в книгу за справкой посреди
+   * боя, и вопрос «бой закончен?» на каждый такой взгляд — шум. Конец боя отмечается явной кнопкой
+   * в режиме «Вне боя» (FR-216), а начало — кнопкой в бою (FR-140).
    */
   const changeMode = (mode: ScreenMode): void => {
-    const leavingFight = character.screenMode === "combat" && mode !== "combat";
     // Наборы фильтров у режимов разные, и выбранное в одном становится в другом невидимым:
     // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым это
     // снять, на экране уже нет (FR-212).
     setFilters(NO_FILTERS);
     setQuery("");
     apply((current) => setScreenMode(current, mode));
-    if (leavingFight) setFightOverOpen(true);
   };
 
   /** Подтверждение применения: одна транзакция, одна запись журнала (FR-023). */
@@ -301,6 +298,8 @@ export function CombatScreen() {
             onLongRest={() => setLongRestOpen(true)}
             onArcaneRecovery={() => setRecoveryOpen(true)}
             onRecoverMaximum={() => apply((current) => recoverHitPointMaximum(current, clock))}
+            inFight={economy.inFight}
+            onFightOver={() => setFightOverOpen(true)}
           />
         ) : null}
 
@@ -339,12 +338,22 @@ export function CombatScreen() {
           {/* Ход начинается только в бою: вне боя ходов нет, и кнопка звала бы начать то, чего не происходит (FR-202). */}
           {character.screenMode === "combat" ? (
             <>
+              {/*
+                Бой начинается явно (FR-140). Пока он не начат, кнопка предлагает начать: это же и
+                первый ход. Дальше она называет то, что делает каждый следующий раз, — «Мой ход».
+                Без явного начала приложение не знает, где кончился прежний бой, и следующий
+                открывался шестым раундом.
+              */}
               <button
                 type="button"
-                onClick={() => apply((current) => beginTurn(current, clock))}
+                onClick={() =>
+                  apply((current) =>
+                    economy.inFight ? beginTurn(current, clock) : startCombat(current, clock),
+                  )
+                }
                 className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold leading-tight text-white"
               >
-                Мой ход начался
+                {economy.inFight ? "Мой ход" : "Начать бой"}
               </button>
               {/*
                 Реакции — отдельный вход, видимый независимо от фильтров и прокрутки списка

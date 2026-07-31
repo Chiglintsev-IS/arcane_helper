@@ -69,6 +69,7 @@ export type JournalKind =
   | "blood_exchange"
   | "rune_spent"
   | "hit_points_changed"
+  | "combat_started"
   | "combat_ended"
   | "suppression_changed";
 
@@ -204,6 +205,8 @@ export type TurnEconomy = {
   round: number;
   /** Начинался ли свой ход хоть раз: до этого учёт вести не от чего. */
   started: boolean;
+  /** Идёт ли бой: отмечен явно кнопкой «Начать бой» и ещё не закрыт (FR-140, FR-216). */
+  inFight: boolean;
   actionAvailable: boolean;
   bonusActionAvailable: boolean;
   reactionAvailable: boolean;
@@ -240,13 +243,21 @@ const ALL_AVAILABLE = {
  * доступным: приложение не должно запрещать лишнего из-за нехватки истории.
  */
 export function deriveTurnEconomy(session: Session): TurnEconomy {
-  const combatEndIndex = session.journal.findLastIndex((entry) => entry.kind === "combat_ended");
-  const journal = session.journal.slice(combatEndIndex + 1);
+  // Границей служит последняя отметка о начале или конце боя: и та, и другая закрывают прежний бой.
+  // Хранимого признака «бой идёт» нет — он разошёлся бы с журналом (ADR-0008).
+  const boundary = session.journal.findLastIndex(
+    (entry) => entry.kind === "combat_started" || entry.kind === "combat_ended",
+  );
+  const inFight = session.journal[boundary]?.kind === "combat_started";
+  const journal = session.journal.slice(boundary + 1);
   const lastTurnIndex = journal.findLastIndex((entry) => entry.kind === "turn_started");
-  const round = Math.max(1, journal.filter((entry) => entry.kind === "turn_started").length);
+  // Начало боя — это и первый ход: «Мой ход» после него открывает второй раунд, а не первый.
+  const turns = journal.filter((entry) => entry.kind === "turn_started").length;
+  const round = Math.max(1, turns + (inFight ? 1 : 0));
+  const started = inFight || lastTurnIndex !== -1;
 
   if (!turnTracked(session.character)) {
-    return { round, started: lastTurnIndex !== -1, ...ALL_AVAILABLE };
+    return { round, started, inFight, ...ALL_AVAILABLE };
   }
 
   // Отметки хода ещё нет — считаем с начала боя. Иначе при включённом учёте контроль
@@ -260,7 +271,8 @@ export function deriveTurnEconomy(session: Session): TurnEconomy {
   const reactionAvailable = !spent.has("reaction");
   return {
     round,
-    started: lastTurnIndex !== -1,
+    started,
+    inFight,
     actionAvailable: !spent.has("action"),
     bonusActionAvailable: !spent.has("bonus_action"),
     reactionAvailable,
@@ -277,7 +289,28 @@ export function deriveTurnEconomy(session: Session): TurnEconomy {
  * Регенерация начисляется, а не предлагается: по правилам она происходит сама, и требовать
  * подтверждения — значит добавлять нажатие там, где выбора нет.
  */
+/**
+ * Начало боя (FR-140): явная отметка, с которой считается первый раунд.
+ *
+ * Это и есть первый ход, поэтому вся работа начала хода — восстановление действия и реакции,
+ * регенерация, истечение раундовых эффектов — выполняется здесь же. Отдельная отметка нужна не
+ * ради ритуала: без неё приложение не знает, где кончился прежний бой, и следующий начинается
+ * с шестого раунда (замечание игрока, [FR-216](../../docs/features/F-18-screen-modes.md#fr-216)).
+ */
+export function startCombat(session: Session, clock: Clock): Session {
+  return advanceTurn(session, clock, "combat_started", "Бой начался");
+}
+
 export function beginTurn(session: Session, clock: Clock): Session {
+  return advanceTurn(session, clock, "turn_started", "Начало хода");
+}
+
+function advanceTurn(
+  session: Session,
+  clock: Clock,
+  kind: "combat_started" | "turn_started",
+  title: string,
+): Session {
   const { character } = session;
   const healed = regenerationDue(character);
   const { kept, expired } = expireRoundEffects(session);
@@ -307,8 +340,8 @@ export function beginTurn(session: Session, clock: Clock): Session {
     ...(healed > 0 ? [`регенерация +${healed}`] : []),
     ...expired.map((effect) => `«${effect.nameRu}» истёк`),
   ];
-  const summaryRu = notes.length === 0 ? "Начало хода" : `Начало хода · ${notes.join(", ")}`;
-  return commit(session, after, { kind: "turn_started", summaryRu }, clock);
+  const summaryRu = notes.length === 0 ? title : `${title} · ${notes.join(", ")}`;
+  return commit(session, after, { kind, summaryRu }, clock);
 }
 
 /**
@@ -789,11 +822,18 @@ export function recoverHitPointMaximum(session: Session, clock: Clock): Session 
     maximumRecoveryPerHour(character.level),
     character.hitPoints.maximumReduction,
   );
+  const maximum = character.hitPoints.maximum + returned;
+  // За час регенерация тролля успевает всё, что может: она идёт непрерывно и упирается в половину
+  // максимума (F-16). Порог считается от нового максимума — он только что вырос, и держать
+  // здоровье по прежней половине значило бы забыть о часе ровно там, где его отсчитали.
+  const current = Math.max(character.hitPoints.current, Math.floor(maximum / 2));
+  const healed = current - character.hitPoints.current;
   const after: CharacterState = {
     ...character,
     hitPoints: {
       ...character.hitPoints,
-      maximum: character.hitPoints.maximum + returned,
+      current,
+      maximum,
       maximumReduction: character.hitPoints.maximumReduction - returned,
     },
   };
@@ -802,7 +842,10 @@ export function recoverHitPointMaximum(session: Session, clock: Clock): Session 
     after,
     {
       kind: "hit_points_changed",
-      summaryRu: `Прошёл час: максимум хитов восстановлен на ${returned}`,
+      summaryRu:
+        healed > 0
+          ? `Прошёл час: максимум +${returned}, регенерация +${healed}`
+          : `Прошёл час: максимум хитов восстановлен на ${returned}`,
     },
     clock,
   );
@@ -1039,13 +1082,46 @@ export function longRest(session: Session, clock: Clock): Session {
 /** Короткий отдых (FR-132). Ячейки сам по себе не восстанавливает. */
 export function shortRest(session: Session, clock: Clock): Session {
   const { character } = session;
+  // Короткий отдых — это час (FR-132), и час делает всё, что делает час: возвращает ступень
+  // снижённого максимума и даёт регенерации дойти до половины (FR-173, FR-182). Отдельная кнопка
+  // «Прошёл час» рядом с ним не должна значить больше, чем сам отдых.
+  const suppressed = traitsSuppressed(character.suppression);
+  const returned = suppressed
+    ? 0
+    : Math.min(maximumRecoveryPerHour(character.level), character.hitPoints.maximumReduction);
+  const maximum = character.hitPoints.maximum + returned;
+  const current = suppressed
+    ? character.hitPoints.current
+    : Math.max(character.hitPoints.current, Math.floor(maximum / 2));
+  const healed = current - character.hitPoints.current;
+
   const after: CharacterState = {
     ...character,
     reactionAvailable: true,
     turnTracking: { actionAvailable: true, bonusActionAvailable: true },
+    hitPoints: {
+      ...character.hitPoints,
+      current,
+      maximum,
+      maximumReduction: character.hitPoints.maximumReduction - returned,
+    },
+    // Подавление огнём снимается отдыхом: оно держится до конца следующего хода, а отдых длиннее.
     suppression: { ...character.suppression, firedUpon: false },
   };
-  return commit(session, after, { kind: "short_rest", summaryRu: "Короткий отдых" }, clock);
+
+  const notes = [
+    ...(returned > 0 ? [`максимум +${returned}`] : []),
+    ...(healed > 0 ? [`регенерация +${healed}`] : []),
+  ];
+  return commit(
+    session,
+    after,
+    {
+      kind: "short_rest",
+      summaryRu: notes.length === 0 ? "Короткий отдых" : `Короткий отдых · ${notes.join(", ")}`,
+    },
+    clock,
+  );
 }
 
 /** Магическое восстановление (FR-131). Один раз между долгими отдыхами. */

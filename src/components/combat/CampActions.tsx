@@ -1,5 +1,5 @@
 /**
- * Операции привала (FR-215).
+ * Операции режима «Вне боя» (FR-215).
  *
  * Все четыре написаны и покрыты тестами давно, но входа к ним не было ни одного: отдохнуть в
  * приложении было нечем. Режим «Привал» их и открывает ([FR-202](../../../docs/features/F-18-screen-modes.md#fr-202)).
@@ -16,16 +16,21 @@ import { maximumRecoveryPerHour } from "@/rules/bloodMagic";
 
 export function CampActions({
   character,
+  inFight,
   onShortRest,
   onLongRest,
   onArcaneRecovery,
   onRecoverMaximum,
+  onFightOver,
 }: {
   character: CharacterState;
+  /** Бой отмечен начатым и ещё не закрыт: тогда его есть чем закончить (FR-216). */
+  inFight: boolean;
   onShortRest: () => void;
   onLongRest: () => void;
   onArcaneRecovery: () => void;
   onRecoverMaximum: () => void;
+  onFightOver: () => void;
 }) {
   const hourReturns = Math.min(
     maximumRecoveryPerHour(character.level),
@@ -33,9 +38,15 @@ export function CampActions({
   );
 
   return (
-    <section aria-label="Привал" className="flex flex-wrap gap-1">
-      <Action onClick={onShortRest} name="Короткий отдых" />
-      <Action onClick={onLongRest} name="Долгий отдых" tone="strong" />
+    <section aria-label="Вне боя" className="flex flex-wrap gap-1">
+      {/*
+        Конец боя отмечается явно и здесь (FR-216): раньше приложение спрашивало об этом на каждом
+        уходе из «Боя», в том числе когда игрок просто заглядывал в книгу за справкой. Кнопка стоит
+        первой, потому что это первое, что делают, выйдя из боя.
+      */}
+      {inFight ? <Action onClick={onFightOver} name="Бой закончен" tone="strong" /> : null}
+      <Action onClick={onShortRest} name="Короткий отдых · час" />
+      <Action onClick={onLongRest} name="Долгий отдых" />
       {character.arcaneRecoveryAvailable ? (
         <Action onClick={onArcaneRecovery} name="Магическое восстановление" />
       ) : null}
