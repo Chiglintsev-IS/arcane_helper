@@ -94,7 +94,7 @@ function AvailabilityStep({
         <button
           type="button"
           onClick={onAllowAnyway}
-          className="min-h-11 rounded-lg border border-reaction/60 px-3 text-sm font-medium text-reaction"
+          className="min-h-11 rounded-lg border border-reaction/60 px-3 text-sm font-medium text-reaction-strong dark:text-reaction"
         >
           Применить всё равно
         </button>
@@ -135,7 +135,7 @@ function SlotStep({
               onClick={() => onChoose(option)}
               className={`flex min-h-11 w-full flex-col items-start rounded-lg border px-3 py-1 text-left text-sm ${
                 chosen(option)
-                  ? "border-action bg-action/10 text-action"
+                  ? "border-action bg-action/10 text-action-strong dark:text-action"
                   : "border-slate-200 dark:border-slate-800"
               }`}
             >
@@ -208,7 +208,7 @@ function ConcentrationStep({
           <button
             type="button"
             onClick={onReplace}
-            className="min-h-11 flex-1 rounded-lg border border-concentration bg-concentration/10 px-3 font-medium text-concentration"
+            className="min-h-11 flex-1 rounded-lg border border-concentration bg-concentration/10 px-3 font-medium text-concentration-strong dark:text-concentration"
           >
             Заменить концентрацию
           </button>
@@ -409,7 +409,7 @@ export function CastWizard({
           <button
             type="button"
             onClick={() => onConfirm(draft)}
-            className="min-h-12 flex-1 rounded-xl bg-action px-4 text-base font-semibold text-white"
+            className="min-h-12 flex-1 rounded-xl bg-action-strong px-4 text-base font-semibold text-white"
           >
             Подтвердить
           </button>
@@ -418,7 +418,7 @@ export function CastWizard({
             type="button"
             disabled={availabilityBlocked || concentrationBlocked}
             onClick={() => actions.next(steps)}
-            className="min-h-12 flex-1 rounded-xl bg-action px-4 text-base font-semibold text-white disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-800"
+            className="min-h-12 flex-1 rounded-xl bg-action-strong px-4 text-base font-semibold text-white disabled:bg-slate-300 disabled:text-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-300"
           >
             Далее
           </button>

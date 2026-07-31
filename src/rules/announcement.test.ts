@@ -224,11 +224,13 @@ describe("castInstructions: что сделать этому персонажу 
       context({ mode: "cantrip", targetLabel: "гоблин" }),
     );
 
-    expect(steps).toContain("Бросьте d20 +8 и сравните с КД цели");
-    expect(steps).toContain("Урон: 2d8 (холод), модификатор к урону не добавляется");
+    expect(steps).toContain("Бросьте d20 +8 — попадание, если результат не ниже КД цели");
+    expect(steps).toContain(
+      "Урон: 2d8 (холод) — только кубики, модификатор характеристики к урону не прибавляется",
+    );
   });
 
-  it("для спасброска называет характеристику и КС персонажа", () => {
+  it("для спасброска называет характеристику и порог, а не сокращение (ADR-0012)", () => {
     // В первой партии контента заклинаний со спасброском нет: они появятся на уровнях 2–4.
     const withSave: Spell = {
       ...spell("disguise-self"),
@@ -238,17 +240,17 @@ describe("castInstructions: что сделать этому персонажу 
       withSave,
       context({ payment: { kind: "slot", slotLevel: 1 } }),
     );
-    expect(steps).toContain("Цель бросает спасбросок Ловкости против вашей КС 16");
+    expect(steps).toContain("Цель бросает спасбросок Ловкости: 16 и выше — спаслась, ниже — нет");
   });
 
-  it("на испорченных данных без характеристики называет хотя бы КС", () => {
+  it("на испорченных данных без характеристики называет хотя бы порог", () => {
     const broken: Spell = {
       ...spell("disguise-self"),
       resolution: { type: "saving_throw" },
     };
     expect(
       castInstructions(broken, context({ payment: { kind: "slot", slotLevel: 1 } })),
-    ).toContain("Цель бросает спасбросок против вашей КС 16");
+    ).toContain("Цель бросает спасбросок: 16 и выше — спаслась, ниже — нет");
   });
 
   it("перечисляет компоненты действиями, а не буквами", () => {
@@ -274,17 +276,20 @@ describe("castInstructions: что сделать этому персонажу 
     const byRitual = castInstructions(spell("identify"), context({ mode: "ritual" }));
 
     expect(bySlot).toContain("Спишется ячейка 3 уровня");
-    expect(byBlood).toContain("Спишется 2 очка заклинаний — это 6 хитов и столько же максимума");
-    expect(byRitual).toContain("Ячейка не расходуется, накладывание дольше на 10 минут");
+    expect(byBlood).toContain(
+      "Спишется 2 очка заклинаний — заплатите 6 хитов, максимум хитов упадёт на столько же",
+    );
+    expect(byRitual).toContain("Ячейка не расходуется, но накладывание займёт на 10 минут дольше");
   });
 
-  it("напоминает о проверке концентрации с модификатором персонажа", () => {
+  it("напоминает о проверке концентрации порогом, а не формулой (ADR-0012)", () => {
     const steps = castInstructions(
       spell("detect-magic"),
       context({ mode: "ritual" }),
     );
     expect(steps).toContain(
-      "Держите концентрацию: при получении урона спасбросок Телосложения +4, КС — 10 или половина урона, что больше",
+      "Держите концентрацию: получите урон — бросьте d20 +4." +
+        " Нужно 10 и больше (при уроне от 22 — половину урона и больше), иначе заклинание спадает",
     );
   });
 
@@ -308,8 +313,8 @@ describe("castInstructions: что сделать этому персонажу 
       context({ payment: { kind: "slot", slotLevel: 1 } }),
     );
 
-    expect(steps).toContain("При успехе цели: половина урона");
-    expect(steps).toContain("При провале цели: полный урон и падение");
+    expect(steps).toContain("Если цель спаслась: половина урона");
+    expect(steps).toContain("Если цель провалила спасбросок: полный урон и падение");
   });
 
   it("отрицательный модификатор атаки сохраняет знак", () => {
@@ -318,6 +323,6 @@ describe("castInstructions: что сделать этому персонажу 
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip" }),
     );
-    expect(steps).toContain("Бросьте d20 -2 и сравните с КД цели");
+    expect(steps).toContain("Бросьте d20 -2 — попадание, если результат не ниже КД цели");
   });
 })

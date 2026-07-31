@@ -19,9 +19,7 @@ import { SpellFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
 import { loadThorneSpells } from "@/data/content/thorne";
-import { canCastNow, countHiddenRituals, filterSpells, NO_FILTERS } from "@/rules/filters";
-import { castOptions } from "@/rules/filters";
-import { checkAvailability } from "@/rules/availability";
+import { bestCastPlan, countHiddenRituals, filterSpells, NO_FILTERS } from "@/rules/filters";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
 import {
@@ -36,20 +34,20 @@ import {
 /** Контент разбирается схемой один раз на модуль: карточки в бою не меняются. */
 const SPELLS = loadThorneSpells();
 
-/** Первая причина, по которой заклинание сейчас не применить, — для строки списка. */
+/**
+ * Первая причина, по которой заклинание сейчас не применить, — для строки списка.
+ *
+ * Причина берётся у лучшего способа сотворения, а не у первого попавшегося: строка обязана называть
+ * то же, что скажет мастер применения (F-02, «Причина недоступности берётся у лучшего способа»).
+ */
 function firstReason(
   spell: (typeof SPELLS)[number],
-  character: Parameters<typeof canCastNow>[1],
-  turn: Parameters<typeof canCastNow>[2],
+  character: Parameters<typeof bestCastPlan>[1],
+  turn: Parameters<typeof bestCastPlan>[2],
 ): string | null {
-  if (canCastNow(spell, character, turn)) return null;
-  const options = castOptions(spell, character);
-  for (const option of options) {
-    const availability = checkAvailability({ spell, character, turn, ...option });
-    const warning = availability.warnings[0];
-    if (warning !== undefined) return warning.reasonRu;
-  }
-  return "нет доступного способа сотворения";
+  const plan = bestCastPlan(spell, character, turn);
+  if (plan === null) return "нет доступного способа сотворения";
+  return plan.availability.warnings[0]?.reasonRu ?? null;
 }
 
 export function CombatScreen() {
@@ -103,7 +101,7 @@ export function CombatScreen() {
           <button
             type="button"
             onClick={() => apply((current) => beginTurn(current, clock))}
-            className="min-h-11 flex-1 rounded-xl bg-action px-3 text-sm font-semibold leading-tight text-white"
+            className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold leading-tight text-white"
           >
             Мой ход начался
           </button>
@@ -127,7 +125,7 @@ export function CombatScreen() {
             }
             className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-3 text-xs ${
               character.turnTracking.enabled
-                ? "border-action text-action"
+                ? "border-action text-action-strong dark:text-action"
                 : "border-slate-200 text-slate-500 dark:border-slate-800"
             }`}
           >

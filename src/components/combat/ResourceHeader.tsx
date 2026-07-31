@@ -107,7 +107,11 @@ export function ResourceHeader({
             </Badge>
           </li>
         ) : null}
-        <li>
+        {/*
+          Подпись на экране короткая, а доступное имя — полное: на iPhone SE места нет, но
+          «Действие» без пояснения незрячему пользователю ничего не говорит.
+        */}
+        <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
           {economy.actionAvailable ? (
             <Badge tone="action" icon="✓">
               Действие
@@ -118,7 +122,13 @@ export function ResourceHeader({
             </Badge>
           )}
         </li>
-        <li>
+        <li
+          aria-label={
+            economy.bonusActionAvailable
+              ? "Бонусное действие доступно"
+              : "Бонусное действие израсходовано"
+          }
+        >
           {economy.bonusActionAvailable ? (
             <Badge tone="bonus" icon="✓">
               Бонусное
@@ -129,7 +139,13 @@ export function ResourceHeader({
             </Badge>
           )}
         </li>
-        <li>
+        <li
+          aria-label={
+            economy.reactionAvailable
+              ? "Реакция доступна"
+              : `Реакция израсходована, вернётся ${economy.reactionReturns}`
+          }
+        >
           {economy.reactionAvailable ? (
             <Badge tone="reaction" icon="✓">
               Реакция
@@ -148,7 +164,7 @@ export function ResourceHeader({
             <span aria-hidden="true">✦</span> Концентрации нет
           </p>
         ) : (
-          <p className="text-concentration">
+          <p className="text-concentration-strong dark:text-concentration">
             <span aria-hidden="true">✦</span> Концентрация: «{concentrationEffect.nameRu}» ·{" "}
             {concentrationEffect.endConditionRu}
           </p>

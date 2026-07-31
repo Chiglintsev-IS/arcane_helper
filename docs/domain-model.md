@@ -23,6 +23,7 @@ type Spell = {
 
   castingTime: {
     type: "action" | "bonus_action" | "reaction" | "minute" | "hour";
+    value?: number;              // обязателен при type "minute" и "hour": 1 минута ≠ 10 минут
     reactionTrigger?: string;    // обязателен при type === "reaction"
   };
 
@@ -97,6 +98,8 @@ type Spell = {
 
 - `level === 0` → `ritual === false`, `concentration` допустим, ячейка не расходуется.
 - `castingTime.type === "reaction"` → `reactionTrigger` задан.
+- `castingTime.type ∈ {"minute", "hour"}` → `value` задан; для действия, бонусного действия и реакции
+  `value` отсутствует — число там не имеет смысла.
 - `resolution.type === "saving_throw"` → `savingThrow` задан.
 - `components.material === true` → `materialText` задан.
 - `roleplay` заполнен по минимуму [FR-050](features/F-04-roleplay.md#fr-050): ≥1 реплика, ≥1 жест,

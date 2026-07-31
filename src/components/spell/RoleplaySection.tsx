@@ -46,7 +46,7 @@ function Variants({
   return (
     <div className="flex flex-col gap-2">
       {/* Механическая строка внутри художественного блока — единственная и помечена как требование. */}
-      <p className="rounded-md border border-concentration/40 bg-concentration/10 px-2 py-1 text-xs font-medium not-italic text-concentration">
+      <p className="rounded-md border border-concentration/40 bg-concentration/10 px-2 py-1 text-xs font-medium not-italic text-concentration-strong dark:text-concentration">
         {requirementNote(spell.components)}
       </p>
 
@@ -59,7 +59,7 @@ function Variants({
             onClick={() => onCategory(value)}
             className={`min-h-11 rounded-lg border px-2 text-xs ${
               category === value
-                ? "border-concentration text-concentration"
+                ? "border-concentration text-concentration-strong dark:text-concentration"
                 : "border-slate-200 text-slate-500 dark:border-slate-800"
             }`}
           >
@@ -117,7 +117,7 @@ export function RoleplaySection({
   if (collapsible) {
     return (
       <details className="rounded-lg border border-dashed border-concentration/50 bg-concentration/5 p-2">
-        <summary className="cursor-pointer text-sm font-medium text-concentration">Отыгрыш</summary>
+        <summary className="cursor-pointer text-sm font-medium text-concentration-strong dark:text-concentration">Отыгрыш</summary>
         <div className="mt-2">
           <Variants spell={spell} category={category} onCategory={change} />
         </div>
@@ -130,7 +130,7 @@ export function RoleplaySection({
       aria-label="Отыгрыш"
       className="flex flex-col gap-2 rounded-lg border border-dashed border-concentration/50 bg-concentration/5 p-2"
     >
-      <h3 className="text-xs font-medium uppercase tracking-wide text-concentration">Отыгрыш</h3>
+      <h3 className="text-xs font-medium uppercase tracking-wide text-concentration-strong dark:text-concentration">Отыгрыш</h3>
       <Variants spell={spell} category={category} onCategory={change} />
     </section>
   );

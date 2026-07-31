@@ -15,8 +15,8 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import { checkAvailability, type TurnResources } from "@/rules/availability";
-import { castOptions, type CastOption } from "@/rules/filters";
-import { CANTRIP_LEVEL, hasSlotAvailable } from "@/rules/slots";
+import { bestCastPlan, castOptions, type CastOption } from "@/rules/filters";
+import { CANTRIP_LEVEL } from "@/rules/slots";
 import type { CastRequest } from "./session";
 
 /**
@@ -76,16 +76,20 @@ type Remembered = {
 };
 
 /**
- * Способ оплаты по умолчанию: сначала запомненный, затем первая ячейка со свободным зарядом,
- * иначе первый доступный способ. Заговор и неподготовленный ритуал не платят вовсе.
+ * Способ оплаты для нового черновика: запомненный выбор игрока важнее предложения по умолчанию.
+ *
+ * Предложение по умолчанию берётся у `bestCastPlan` — того же способа, чью причину недоступности
+ * показывает строка списка. Одна функция на оба места: иначе список объясняет одно, а мастер
+ * предлагает другое (F-02, «Причина недоступности берётся у лучшего способа»).
  */
-function defaultOption(spell: Spell, character: CharacterState, remembered: Remembered): CastOption {
-  if (spell.level === CANTRIP_LEVEL) return { mode: "cantrip", payment: { kind: "none" } };
-
-  const options = castOptions(spell, character);
+function defaultOption(
+  spell: Spell,
+  context: DraftContext,
+  remembered: Remembered,
+): CastOption {
   const rememberedPayment = remembered.payment[spell.id];
   if (rememberedPayment !== undefined) {
-    const match = options.find(
+    const match = castOptions(spell, context.character).find(
       (option) =>
         option.payment.kind === rememberedPayment.kind &&
         (option.payment.kind !== "slot" ||
@@ -95,19 +99,10 @@ function defaultOption(spell: Spell, character: CharacterState, remembered: Reme
     if (match !== undefined) return match;
   }
 
-  // Ритуал из книги без подготовки: именно так его и сотворяют (FR-103).
-  if (spell.ritual && !character.preparedSpellIds.includes(spell.id)) {
-    return { mode: "ritual", payment: { kind: "none" } };
-  }
-
-  const free = options.find(
-    (option) =>
-      option.payment.kind === "slot" &&
-      hasSlotAvailable(character.spellSlots, option.payment.slotLevel),
-  );
-  // Способов может не быть вовсе — заклинание уровня, до которого персонаж не дорос. Тогда
-  // оплата не выбрана, и шаг доступности объяснит причину, а не молчаливо пустой мастер.
-  return free ?? options[0] ?? { mode: "normal", payment: { kind: "none" } };
+  // Способов может не быть вовсе — заклинание уровня, до которого персонаж не дорос. Тогда оплата
+  // не выбрана, и шаг доступности объяснит причину, а не молчаливо пустой мастер.
+  const plan = bestCastPlan(spell, context.character, context.turn);
+  return plan?.option ?? { mode: "normal", payment: { kind: "none" } };
 }
 
 /** Требуется ли отдельный шаг компонентов: фокусировка заменяет всё, кроме стоимости и расхода. */
@@ -211,7 +206,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
       recentTargets: [],
 
       start(spell, context) {
-        const option = defaultOption(spell, context.character, remembered);
+        const option = defaultOption(spell, context, remembered);
         const draft: CastDraft = {
           spell,
           mode: option.mode,

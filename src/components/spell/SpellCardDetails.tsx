@@ -191,7 +191,7 @@ export function SpellCardDetails({
         <button
           type="button"
           onClick={onCast}
-          className="w-full rounded-xl bg-action px-4 py-3 text-base font-semibold text-white"
+          className="w-full rounded-xl bg-action-strong px-4 py-3 text-base font-semibold text-white"
         >
           Сотворить
         </button>

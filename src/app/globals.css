@@ -10,6 +10,16 @@
   --color-reaction: oklch(0.62 0.2 25);
   --color-concentration: oklch(0.62 0.19 300);
   --color-ritual: oklch(0.62 0.15 150);
+
+  /*
+   * Тёмные варианты — для текста на светлом фоне: цвета выше рассчитаны на тёмную тему и на
+   * светлой не дают контраста 4.5:1, которого требует WCAG 1.4.3 и проверка axe-core.
+   */
+  --color-action-strong: oklch(0.45 0.16 255);
+  --color-bonus-strong: oklch(0.45 0.12 85);
+  --color-reaction-strong: oklch(0.45 0.19 25);
+  --color-concentration-strong: oklch(0.45 0.19 300);
+  --color-ritual-strong: oklch(0.42 0.12 150);
 }
 
 :root {

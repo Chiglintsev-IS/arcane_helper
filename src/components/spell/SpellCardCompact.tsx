@@ -87,7 +87,7 @@ export function SpellCardCompact({
         </span>
 
         {unavailableReason === null ? null : (
-          <span className="text-xs font-medium text-reaction">Недоступно: {unavailableReason}</span>
+          <span className="text-xs font-medium text-reaction-strong dark:text-reaction">Недоступно: {unavailableReason}</span>
         )}
       </button>
     </li>

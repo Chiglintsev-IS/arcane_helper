@@ -5,6 +5,7 @@ import { loadThorneSpells } from "@/data/content/thorne";
 import type { CharacterState } from "@/data/schemas/character";
 import { ALL_TURN_RESOURCES, checkAvailability, type TurnResources } from "./availability";
 import {
+  bestCastPlan,
   canCastNow,
   castOptions,
   countHiddenRituals,
@@ -211,6 +212,39 @@ describe("castOptions", () => {
       mode: "ritual",
       payment: { kind: "none" },
     });
+  });
+});
+
+describe("bestCastPlan", () => {
+  const detectMagic = allSpells.find((spell) => spell.id === "detect-magic")!;
+  const mageArmor = allSpells.find((spell) => spell.id === "mage-armor")!;
+
+  it("для неподготовленного ритуала выбирает ритуал, а не ячейку (FR-103)", () => {
+    const plan = bestCastPlan(detectMagic, createThorne(), ALL_TURN_RESOURCES);
+
+    expect(plan?.option).toEqual({ mode: "ritual", payment: { kind: "none" } });
+    expect(plan?.availability.available).toBe(true);
+  });
+
+  it("объясняет недоступность причиной лучшего способа, а не первого попавшегося", () => {
+    // Ритуалу подготовка не нужна, поэтому мешает ему только занятая концентрация. Причина
+    // «не подготовлено» пришла бы от ячейки — способа, которым это заклинание и не творят.
+    const character = createThorne();
+    character.concentration = { spellId: "web", startedAt: "2026-07-31T18:00:00.000Z" };
+
+    const plan = bestCastPlan(detectMagic, character, ALL_TURN_RESOURCES);
+
+    expect(plan?.availability.warnings.map((warning) => warning.code)).toEqual([
+      "concentration_busy",
+    ]);
+  });
+
+  it("без способов сотворения возвращает null", () => {
+    const character = createThorne();
+    character.spellSlots = {};
+    const sixthLevel = { ...mageArmor, level: 6 };
+
+    expect(bestCastPlan(sixthLevel, character, ALL_TURN_RESOURCES)).toBeNull();
   });
 });
 

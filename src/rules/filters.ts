@@ -13,6 +13,7 @@ import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import {
   checkAvailability,
+  type Availability,
   type PaymentChoice,
   type TurnResources,
   type TurnResource,
@@ -84,11 +85,37 @@ export function castOptions(spell: Spell, character: CharacterState): CastOption
   return options;
 }
 
+/** Способ сотворения вместе с его проверкой доступности. */
+export type CastPlan = { option: CastOption; availability: Availability };
+
+/**
+ * Способ, которому мешает меньше всего: доступный, если он есть, иначе с наименьшим числом
+ * предупреждений. `null` — способов нет вовсе (заклинание уровня, до которого персонаж не дорос).
+ *
+ * Вердикт «доступно» и объяснение «почему нет» обязаны приходить из одного способа. Взять причину у
+ * произвольного значит соврать: неподготовленный ритуал объяснялся бы подготовкой, хотя ритуалу она
+ * не нужна (FR-103) и мастер применения предложит именно ритуал (F-02, «Причина недоступности
+ * берётся у лучшего способа»).
+ */
+export function bestCastPlan(
+  spell: Spell,
+  character: CharacterState,
+  turn: TurnResources,
+): CastPlan | null {
+  let best: CastPlan | null = null;
+  for (const option of castOptions(spell, character)) {
+    const availability = checkAvailability({ spell, character, turn, ...option });
+    if (availability.available) return { option, availability };
+    if (best === null || availability.warnings.length < best.availability.warnings.length) {
+      best = { option, availability };
+    }
+  }
+  return best;
+}
+
 /** Есть ли хоть один способ сотворить заклинание прямо сейчас (FR-002, фильтр «доступно сейчас»). */
 export function canCastNow(spell: Spell, character: CharacterState, turn: TurnResources): boolean {
-  return castOptions(spell, character).some(
-    (option) => checkAvailability({ spell, character, turn, ...option }).available,
-  );
+  return bestCastPlan(spell, character, turn)?.availability.available === true;
 }
 
 function matchesCastingTime(spell: Spell, filters: SpellFilters): boolean {

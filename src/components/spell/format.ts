@@ -14,12 +14,13 @@ import { CANTRIP_LEVEL } from "@/rules/slots";
 export type Tone = "action" | "bonus" | "reaction" | "concentration" | "ritual" | "muted";
 
 export const TONE_CLASS: Record<Tone, string> = {
-  action: "border-action/50 bg-action/10 text-action",
-  bonus: "border-bonus/50 bg-bonus/10 text-bonus",
-  reaction: "border-reaction/50 bg-reaction/10 text-reaction",
-  concentration: "border-concentration/50 bg-concentration/10 text-concentration",
-  ritual: "border-ritual/50 bg-ritual/10 text-ritual",
-  muted: "border-slate-400/50 bg-slate-400/10 text-slate-600 dark:text-slate-400",
+  action: "border-action/50 bg-action/10 text-action-strong dark:text-action",
+  bonus: "border-bonus/50 bg-bonus/10 text-bonus-strong dark:text-bonus",
+  reaction: "border-reaction/50 bg-reaction/10 text-reaction-strong dark:text-reaction",
+  concentration:
+    "border-concentration/50 bg-concentration/10 text-concentration-strong dark:text-concentration",
+  ritual: "border-ritual/50 bg-ritual/10 text-ritual-strong dark:text-ritual",
+  muted: "border-slate-400/50 bg-slate-400/10 text-slate-700 dark:text-slate-300",
 };
 
 type CastingTimeType = Spell["castingTime"]["type"];

@@ -31,3 +31,18 @@ jobs:
 
       - name: Сборка статического экспорта
         run: npm run build
+
+      # E2E на WebKit: это движок Safari на iOS, то есть та же среда, что на телефоне игрока.
+      - name: Установка браузера для E2E
+        run: npx playwright install --with-deps webkit
+
+      # Сценарий UC-01 в viewport iPhone SE плюс проверка доступности axe-core.
+      - name: E2E и доступность
+        run: npx playwright test
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

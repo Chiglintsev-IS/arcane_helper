@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "check:docs": "python3 scripts/check-docs.py"
+    "check:docs": "python3 scripts/check-docs.py",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:only": "playwright test"
   },
   "dependencies": {
     "dexie": "^4.4.4",
@@ -37,6 +39,7 @@
     "@types/react-dom": "^19.2.4",
     "@vitest/coverage-v8": "^4.1.10",
     "fake-indexeddb": "^6.2.5",
+    "http-server": "^14.1.1",
     "jsdom": "^30.0.1",
     "postcss": "^8.5.25",
     "tailwindcss": "^4.3.3",

@@ -55,9 +55,8 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(within(slots).getByText("4/4")).toBeDefined();
 
     expect(screen.getByText(/Концентрации нет/)).toBeDefined();
-    const resources = screen.getByLabelText("Прочие ресурсы");
-    expect(within(resources).getByText("Реакция")).toBeDefined();
-    expect(within(resources).getByText("Действие")).toBeDefined();
+    expect(screen.getByLabelText("Реакция доступна")).toBeDefined();
+    expect(screen.getByLabelText("Действие доступно")).toBeDefined();
   });
 
   it("показывает активную концентрацию и условие её завершения", async () => {
@@ -179,6 +178,19 @@ describe("краткая карточка (FR-010)", () => {
     const row = screen.getByRole("button", { name: /Доспехи мага/ });
     expect(within(row).getByText(/Нет свободной ячейки 1 уровня/)).toBeDefined();
   });
+
+  it("неподготовленный ритуал не объясняется подготовкой (FR-103)", async () => {
+    // Ритуалу подготовка не нужна, и мастер применения предложит именно ритуал. Строка списка
+    // обязана назвать ту же причину, иначе она отговаривает от способа, который работает.
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, concentrating());
+
+    await user.click(screen.getByRole("button", { name: "Ритуал" }));
+
+    const row = screen.getByRole("button", { name: /Обнаружение магии/ });
+    expect(within(row).queryByText(/Заклинание не подготовлено/)).toBeNull();
+    expect(within(row).getByText(/Уже идёт концентрация/)).toBeDefined();
+  });
 });
 
 describe("учёт хода и отмена (FR-111, FR-143)", () => {
@@ -193,9 +205,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     expect(screen.getByText(/Действие израсходовано/)).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Мой ход начался" }));
-    expect(
-      within(screen.getByLabelText("Прочие ресурсы")).getByText("Действие"),
-    ).toBeDefined();
+    expect(screen.getByLabelText("Действие доступно")).toBeDefined();
     expect(stores.session.getState().session?.character.turnTracking.actionAvailable).toBe(true);
   });
 
