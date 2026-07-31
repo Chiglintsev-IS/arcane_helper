@@ -23,7 +23,7 @@ MVP считается готовым, когда все 20 критериев �
 | AC-12 | Повышение уровня корректно меняет параметры | [FR-071](features/F-06-resources.md#fr-071), [FR-041](features/F-03-cast-wizard.md#fr-041) | Проверено |
 | AC-13 | Второе концентрационное заклинание вызывает предупреждение | [FR-081](features/F-07-concentration.md#fr-081) | Проверено |
 | AC-14 | Активная концентрация и активные эффекты постоянно видны | [FR-082](features/F-07-concentration.md#fr-082), [FR-090](features/F-08-active-effects.md#fr-090), [FR-001](features/F-01-combat-screen.md#fr-001) | Проверено |
-| AC-15 | Проверка концентрации рассчитывается по полученному урону | [FR-083](features/F-07-concentration.md#fr-083) | План |
+| AC-15 | Проверка концентрации рассчитывается по полученному урону | [FR-083](features/F-07-concentration.md#fr-083), [FR-084](features/F-07-concentration.md#fr-084) | Проверено |
 | AC-16 | Долгий отдых восстанавливает ресурсы | [FR-130](features/F-06-resources.md#fr-130), [FR-131](features/F-06-resources.md#fr-131) | План |
 | AC-17 | Последнее действие можно отменить | [FR-111](features/F-10-journal-undo.md#fr-111) | Проверено |
 | AC-18 | Состояние сохраняется после закрытия браузера и обновления | [NFR-003](features/F-12-offline-pwa.md#nfr-003) | План |
@@ -130,7 +130,9 @@ MVP должен пройти минимум две реальные игров�
 | FR-063 | — | расход реакции | UC-02 | AC-08 |
 | FR-070…073 | `slots` | — | — | AC-05, AC-06, AC-11 |
 | FR-080, FR-081 | `startConcentration` | замена концентрации | UC-03 | AC-13 |
-| FR-083 | `concentrationCheckDc` | проверка после урона | — | AC-15 |
+| FR-083 | `concentrationCheckDc`, `checkGuidanceRu` | проверка после урона, руна при провале | `concentration block explains the effect` | AC-15 |
+| FR-084 | `describeConcentration`, `startRound`, `durationWithRoundsRu` | карточка и лист концентрации | `concentration block explains the effect` | AC-14, AC-15 |
+| FR-091 | `endEffect` | завершение активного эффекта | — | — |
 | FR-101, FR-102 | `preparedLimit` | — | лимит подготовки | AC-04, AC-05 |
 | FR-111 | property-based | отмена всех типов событий | перезапуск | AC-17 |
 | FR-121, FR-122 | `importSnapshot` | провал импорта | — | AC-19 |

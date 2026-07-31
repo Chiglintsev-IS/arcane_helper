@@ -127,6 +127,45 @@ test("reaction shows when it returns", async ({ page }) => {
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
 });
 
+test("concentration block explains the effect", async ({ page }) => {
+  // «Обнаружение магии» — неподготовленный ритуал, поэтому в списке по умолчанию его нет (F-09).
+  // Концентрацию оно требует в любом режиме, а проверять надо тот, которым творят в бою: ячейкой.
+  await page.getByRole("button", { name: "Ритуал", exact: true }).click();
+  await page.getByRole("button", { name: /Обнаружение магии/ }).click();
+  await page.getByRole("button", { name: "Сотворить" }).click();
+  await page.getByRole("button", { name: /Ячейка 1 уровня/ }).click();
+  await page.getByRole("button", { name: "Далее" }).click();
+
+  // Ритуал неподготовлен, а заклинание концентрационное, поэтому шагов четыре: условия, чем
+  // сотворить, концентрация и подтверждение. Шаг концентрации — то самое предупреждение FR-081.
+  await expect(page.getByText("Шаг 3 из 4: Концентрация")).toBeVisible();
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByRole("button", { name: "Подтвердить" }).click();
+
+  // Виден после закрытия карточки заклинания (AC-14).
+  const card = page.getByRole("button", { name: /Концентрация: Обнаружение магии/ });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("Сфера 30 футов от себя");
+  await expect(card).toContainText("спасбросок Телосложения");
+
+  // Ключевая механика по-прежнему без прокрутки страницы (F-01).
+  const layout = await page.evaluate(() => ({
+    documentHeight: document.documentElement.scrollHeight,
+    viewportHeight: window.innerHeight,
+  }));
+  expect(layout.documentHeight).toBeLessThanOrEqual(layout.viewportHeight);
+
+  await card.click();
+  const panel = page.getByRole("dialog", { name: /Концентрация/ });
+  await expect(panel.getByLabel("Чем прерывается")).toContainText("Недееспособность или смерть");
+
+  // КС считается по введённому урону (AC-15).
+  await panel.getByRole("button", { name: "Получил урон" }).click();
+  await page.getByLabel("Полученный урон").fill("24");
+  await page.getByRole("button", { name: "Записать" }).click();
+  await expect(page.getByRole("dialog", { name: "Проверка концентрации" })).toContainText("КС 12");
+});
+
 test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   const scan = async (label: string): Promise<void> => {
     const results = await new AxeBuilder({ page })

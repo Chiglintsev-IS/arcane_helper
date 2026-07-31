@@ -63,7 +63,11 @@ STATUS_LINE = re.compile(r"\*\*Статус:\*\*\s*([^·\n]+)")
 
 def markdown_files():
     for dirpath, dirnames, filenames in os.walk("."):
-        dirnames[:] = [d for d in dirnames if d not in {".git", "node_modules", ".next"}]
+        # `.worktrees` — рабочие копии других веток: их спека проверяется своим прогоном в них же,
+        # а отсюда выглядит как второй набор требований с теми же номерами.
+        dirnames[:] = [
+            d for d in dirnames if d not in {".git", ".worktrees", "node_modules", ".next"}
+        ]
         if os.path.normpath(dirpath).startswith(DRAFTS):
             continue
         for name in sorted(filenames):
