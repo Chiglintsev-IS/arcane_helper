@@ -13,11 +13,13 @@ import type { ConcentrationSummary } from "@/rules/concentration";
 export function ConcentrationPanel({
   summary,
   onOpenSpell,
+  onTakeDamage,
   onDrop,
   onClose,
 }: {
   summary: ConcentrationSummary;
   onOpenSpell: () => void;
+  onTakeDamage: () => void;
   onDrop: () => void;
   onClose: () => void;
 }) {
@@ -78,6 +80,13 @@ export function ConcentrationPanel({
       </div>
 
       <footer className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-800">
+        <button
+          type="button"
+          onClick={onTakeDamage}
+          className="min-h-11 flex-1 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
+        >
+          Получил урон
+        </button>
         <button
           type="button"
           onClick={onDrop}

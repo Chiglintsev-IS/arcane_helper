@@ -99,3 +99,48 @@ describe("лист концентрации (FR-084, FR-091)", () => {
     ).toBeDefined();
   });
 });
+
+describe("ввод урона (FR-083, FR-180, FR-183)", () => {
+  it("списывает хиты и без активной концентрации", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.type(screen.getByLabelText("Полученный урон"), "12");
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    expect(screen.getByText("48/60")).toBeDefined();
+    expect(screen.queryByText(/Проверка концентрации/)).toBeNull();
+  });
+
+  it("отмечает подавление особенностей огнём", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.type(screen.getByLabelText("Полученный урон"), "5");
+    await userEvent.click(screen.getByLabelText("Урон огнём"));
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    expect(screen.getByText(/Особенности подавлены: урон огнём/)).toBeDefined();
+  });
+
+  it("при активной концентрации предлагает проверку с готовой КС", async () => {
+    await renderWithStores(<CombatScreen />, concentrating());
+
+    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.type(screen.getByLabelText("Полученный урон"), "24");
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    const check = screen.getByRole("dialog", { name: "Проверка концентрации" });
+    expect(within(check).getByText(/КС 12/)).toBeDefined();
+    expect(within(check).getByText(/нужно 8 и выше/)).toBeDefined();
+  });
+
+  it("не принимает ноль и не пишет пустую запись", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    expect(screen.getByText("60/60")).toBeDefined();
+  });
+});

@@ -21,7 +21,12 @@ import { SpellFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
 import { loadThorneSpells } from "@/data/content/thorne";
-import { describeConcentration } from "@/rules/concentration";
+import { DamagePrompt } from "@/components/combat/DamagePrompt";
+import {
+  describeConcentration,
+  describeConcentrationCheck,
+  type ConcentrationCheck,
+} from "@/rules/concentration";
 import { bestCastPlan, countHiddenRituals, filterSpells, NO_FILTERS } from "@/rules/filters";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
@@ -69,6 +74,8 @@ export function CombatScreen() {
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [damageOpen, setDamageOpen] = useState(false);
+  const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const economy = useMemo(
     () => (session === null ? null : deriveTurnEconomy(session)),
@@ -110,6 +117,23 @@ export function CombatScreen() {
 
   const apply = sessionStore.getState().apply;
 
+  /**
+   * Урон из любой точки ввода: хиты списываются, и при активной концентрации сразу предлагается
+   * проверка (FR-083).
+   *
+   * Обработчик один на все точки ввода намеренно: вторая реализация рано или поздно забыла бы
+   * предложить проверку, а незаметно потерять концентрацию нельзя (F-07). Обмен хитов на очки сюда
+   * не идёт — это не урон и проверки не требует (FR-174).
+   */
+  const recordDamage = (damage: number, fire: boolean): void => {
+    if (apply((current) => takeDamage(current, damage, clock, { fire })) !== null) return;
+    setDamageOpen(false);
+    setPanelOpen(false);
+    if (character.concentration !== undefined) {
+      setPendingCheck(describeConcentrationCheck(damage, character.constitutionSaveModifier));
+    }
+  };
+
   /** Подтверждение применения: одна транзакция, одна запись журнала (FR-023). */
   const confirm = (confirmed: CastDraft): void => {
     const failure = apply((current) => castSpell(current, toCastRequest(confirmed), clock));
@@ -148,6 +172,13 @@ export function CombatScreen() {
             className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-800"
           >
             Отменить
+          </button>
+          <button
+            type="button"
+            onClick={() => setDamageOpen(true)}
+            className="min-h-11 shrink-0 whitespace-nowrap rounded-xl border border-reaction px-3 text-xs text-reaction-strong dark:text-reaction"
+          >
+            Получил урон
           </button>
           <button
             type="button"
@@ -244,8 +275,7 @@ export function CombatScreen() {
           character={character}
           actions={{
             onExchange: (hitPoints) => apply((current) => exchangeBlood(current, hitPoints, clock)),
-            onDamage: (value, fire) =>
-              apply((current) => takeDamage(current, value, clock, { fire })),
+            onDamage: recordDamage,
             onRecoverMaximum: () => apply((current) => recoverHitPointMaximum(current, clock)),
             onSunlight: (under) => apply((current) => setSunlight(current, under, clock)),
             onClose: () => setBloodOpen(false),
@@ -260,6 +290,7 @@ export function CombatScreen() {
             setPanelOpen(false);
             setOpenSpellId(concentrationSummary.spellId);
           }}
+          onTakeDamage={() => setDamageOpen(true)}
           onDrop={() => {
             // Подтверждения нет: ошибка отменяется журналом (FR-111, ux.md).
             if (apply((current) => endConcentration(current, "manual", clock)) === null) {
@@ -269,6 +300,21 @@ export function CombatScreen() {
           onClose={() => setPanelOpen(false)}
         />
       ) : null}
+
+      {damageOpen ? (
+        <DamagePrompt onCancel={() => setDamageOpen(false)} onSubmit={recordDamage} />
+      ) : null}
+
+      {pendingCheck === null ? null : (
+        <section role="dialog" aria-modal="true" aria-label="Проверка концентрации" className="fixed inset-x-0 bottom-0 z-20 bg-slate-50 p-3 dark:bg-slate-950">
+          <p>
+            КС {pendingCheck.dc} · нужно {pendingCheck.minimumRoll} и выше
+          </p>
+          <button type="button" onClick={() => setPendingCheck(null)} className="min-h-11 underline">
+            Закрыть
+          </button>
+        </section>
+      )}
 
       <CastWizard character={character} economy={economy} onConfirm={confirm} error={error} />
     </main>

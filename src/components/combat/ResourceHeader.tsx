@@ -124,6 +124,13 @@ export function ResourceHeader({
             </Badge>
           </li>
         ) : null}
+        {character.suppression.firedUpon ? (
+          <li>
+            <Badge tone="reaction" icon="✖">
+              Особенности подавлены: урон огнём
+            </Badge>
+          </li>
+        ) : null}
         {/*
           Подпись на экране короткая, а доступное имя — полное: на iPhone SE места нет, но
           «Действие» без пояснения незрячему пользователю ничего не говорит.
