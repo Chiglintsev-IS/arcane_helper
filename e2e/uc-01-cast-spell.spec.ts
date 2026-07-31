@@ -325,3 +325,23 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await page.getByRole("button", { name: "Отдохнуть" }).click();
   await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
 });
+
+test("blood exchange goes through the wizard, not one tap", async ({ page }) => {
+  await page.getByRole("button", { name: /Магия крови/ }).click();
+
+  // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется (FR-177).
+  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Очки 0");
+  await expect(page.getByLabel("Сколько очков создать")).toContainText("6 хитов");
+
+  // Счётчик создаёт запас на два заклинания первого уровня одним действием (FR-178).
+  await page.getByRole("button", { name: "Больше очков" }).click();
+  await page.getByRole("button", { name: "Больше очков" }).click();
+  await expect(page.getByLabel("Сколько очков создать")).toContainText("12 хитов");
+
+  await page.getByRole("button", { name: "Далее" }).click();
+  await expect(page.getByText("Действием обмениваю 12 хитов на 4 очка заклинаний.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Подтвердить" }).click();
+  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Очки 4");
+  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 12");
+});
