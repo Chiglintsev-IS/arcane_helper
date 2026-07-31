@@ -183,7 +183,7 @@ type CharacterState = {
   };
 
   // Очки заклинаний от кровавого колдовства — см. F-15.
-  // Исчезают через час после создания; приложение показывает время, но не отсчитывает его.
+  // Держатся до долгого отдыха; время создания показывается как справка, отсчёта нет.
   spellPoints: {
     remaining: number;
     createdAt: string | null;  // ISO 8601
@@ -222,7 +222,7 @@ type CharacterState = {
 - Заговоры не входят в `preparedSpellIds`.
 - `0 ≤ runes.remaining ≤ runes.maximum`.
 - `hitPoints.current ≤ hitPoints.maximum`; `maximumReduction ≥ 0`.
-- `spellPoints.remaining > 0 → createdAt` задан: очки без времени создания невозможно погасить через час.
+- `spellPoints.remaining > 0 → createdAt` задан: время создания показывается игроку как справка.
 - `armorClass` хранит слагаемые, а не итог: итог вычисляется движком с учётом активных эффектов
   ([FR-093](features/F-08-active-effects.md#fr-093)), иначе одно и то же число пришлось бы поддерживать
   в двух местах.
