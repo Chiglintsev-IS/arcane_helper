@@ -15,6 +15,7 @@ import { useMemo, useState } from "react";
 
 import { BloodMagicPanel } from "@/components/combat/BloodMagicPanel";
 import { CastWizard } from "@/components/cast/CastWizard";
+import { ConcentrationCheckCard } from "@/components/combat/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
 import { SpellFilters } from "@/components/combat/SpellFilters";
@@ -40,8 +41,10 @@ import {
   setSpellNote,
   setSunlight,
   setTurnTracking,
+  spendRuneOnWardingSigil,
   takeDamage,
   undoLast,
+  wardingSigilAvailable,
 } from "@/store/session";
 
 /** Контент разбирается схемой один раз на модуль: карточки в бою не меняются. */
@@ -305,15 +308,23 @@ export function CombatScreen() {
         <DamagePrompt onCancel={() => setDamageOpen(false)} onSubmit={recordDamage} />
       ) : null}
 
-      {pendingCheck === null ? null : (
-        <section role="dialog" aria-modal="true" aria-label="Проверка концентрации" className="fixed inset-x-0 bottom-0 z-20 bg-slate-50 p-3 dark:bg-slate-950">
-          <p>
-            КС {pendingCheck.dc} · нужно {pendingCheck.minimumRoll} и выше
-          </p>
-          <button type="button" onClick={() => setPendingCheck(null)} className="min-h-11 underline">
-            Закрыть
-          </button>
-        </section>
+      {pendingCheck === null || concentrationSummary === null ? null : (
+        <ConcentrationCheckCard
+          check={pendingCheck}
+          spellNameRu={concentrationSummary.nameRu}
+          runeAvailable={wardingSigilAvailable(character)}
+          onSuccess={() => setPendingCheck(null)}
+          onSpendRune={() => {
+            if (apply((current) => spendRuneOnWardingSigil(current, clock)) === null) {
+              setPendingCheck(null);
+            }
+          }}
+          onFail={() => {
+            if (apply((current) => endConcentration(current, "failed_check", clock)) === null) {
+              setPendingCheck(null);
+            }
+          }}
+        />
       )}
 
       <CastWizard character={character} economy={economy} onConfirm={confirm} error={error} />

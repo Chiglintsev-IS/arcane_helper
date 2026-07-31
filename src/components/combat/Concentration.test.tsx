@@ -144,3 +144,75 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
     expect(screen.getByText("60/60")).toBeDefined();
   });
 });
+
+describe("проверка концентрации (FR-083, FR-154)", () => {
+  async function damage(amount: string, character: CharacterState = concentrating()): Promise<void> {
+    await renderWithStores(<CombatScreen />, character);
+    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.type(screen.getByLabelText("Полученный урон"), amount);
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+  }
+
+  it("успех оставляет концентрацию и не пишет запись", async () => {
+    await damage("24");
+
+    await userEvent.click(screen.getByRole("button", { name: "Успех" }));
+
+    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.queryByRole("dialog", { name: "Проверка концентрации" })).toBeNull();
+    // Последняя запись журнала — урон, а не результат проверки.
+    expect(screen.getByRole("button", { name: /Отменить: Получено урона: 24/ })).toBeDefined();
+  });
+
+  it("провал при доступной руне сначала предлагает Знаки ограждения", async () => {
+    await damage("24");
+
+    await userEvent.click(screen.getByRole("button", { name: "Провал" }));
+
+    expect(screen.getByText(/Знаки ограждения/)).toBeDefined();
+    // Эффект ещё держится: предложение обязано появиться до завершения (FR-154).
+    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+  });
+
+  it("руна сохраняет концентрацию, списывая реакцию", async () => {
+    // Учёт хода включён: без него шапка показывает всё доступным, и трату реакции не видно
+    // (deriveTurnEconomy). Сама трата происходит в обоих режимах — она в состоянии и в журнале.
+    const character = concentrating();
+    character.turnTracking = { enabled: true, actionAvailable: true, bonusActionAvailable: true };
+    await damage("24", character);
+    await userEvent.click(screen.getByRole("button", { name: "Провал" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Потратить руну" }));
+
+    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.getByText(/Руны 2\/3/)).toBeDefined();
+    expect(screen.getByLabelText(/Реакция израсходована/)).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /Отменить: Знаки ограждения/ }),
+    ).toBeDefined();
+  });
+
+  it("отказ от руны завершает концентрацию и эффект", async () => {
+    await damage("24");
+    await userEvent.click(screen.getByRole("button", { name: "Провал" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Всё равно провал" }));
+
+    expect(screen.getByText(/Концентрации нет/)).toBeDefined();
+    expect(
+      screen.getByRole("button", {
+        name: /Отменить: Концентрация завершена: провалена проверка концентрации/,
+      }),
+    ).toBeDefined();
+  });
+
+  it("без руны провал завершает концентрацию сразу", async () => {
+    const character = concentrating();
+    character.runes = { remaining: 0, maximum: 3 };
+    await damage("24", character);
+
+    await userEvent.click(screen.getByRole("button", { name: "Провал" }));
+
+    expect(screen.getByText(/Концентрации нет/)).toBeDefined();
+  });
+});
