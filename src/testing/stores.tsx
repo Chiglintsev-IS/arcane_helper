@@ -51,6 +51,7 @@ export async function createTestStores(
     repository: createMemoryRepository(),
     clock,
     createInitialCharacter: () => character,
+    loadBuiltInCatalog: loadThorneSpells,
   });
   await session.getState().hydrate();
   return { session, draft: createCastDraftStore(), clock };
