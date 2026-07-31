@@ -62,7 +62,8 @@ export type AvailabilityCode =
   | "no_slot"
   | "slot_too_low"
   | "not_enough_spell_points"
-  | "concentration_busy";
+  | "concentration_busy"
+  | "no_component";
 
 export type AvailabilityWarning = {
   code: AvailabilityCode;
@@ -272,13 +273,52 @@ function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
 }
 
 /**
+ * Наличие материального компонента (FR-030).
+ *
+ * Компонент без стоимости заменяет фокусировка или мешочек — их наличие приложение теперь знает
+ * ([OQ-06](../../docs/open-questions.md#oq-06) закрыт ответом игрока). Компонент со стоимостью или
+ * расходуемый фокусировка не заменяет: он должен лежать в сумке штучно.
+ *
+ * Без записи о снаряжении вердикта нет вовсе: состояние могло прийти импортом из сборки, которая
+ * про снаряжение не знала, и «компонента нет» было бы выдумкой про чужого персонажа.
+ */
+function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
+  const { spell, character } = input;
+  const { equipment } = character;
+  const { components } = spell;
+  if (equipment === undefined || !components.material) return [];
+
+  const costly = components.costGp !== undefined || components.consumed === true;
+  if (costly) {
+    if (equipment.materialsForSpellIds.includes(spell.id)) return [];
+    const cost = components.costGp === undefined ? "" : ` (${components.costGp} зм)`;
+    return [
+      {
+        code: "no_component",
+        reasonRu: `Нет компонента${cost}: ${components.materialText ?? "материальный компонент"}`,
+        overridable: true,
+      },
+    ];
+  }
+
+  if (equipment.spellcastingFocus || equipment.componentPouch) return [];
+  return [
+    {
+      code: "no_component",
+      reasonRu: "Нет ни фокусировки, ни мешочка с компонентами",
+      overridable: true,
+    },
+  ];
+}
+
+/**
  * Что нужно сделать, чтобы сотворить заклинание — словами, а не аббревиатурами.
  *
  * «В, С, М» за столом не читается: игрок должен видеть действие, а не букву. Формулировка одна на
  * весь проект, потому что она нужна и в проверке доступности, и в карточке, и в мастере применения.
  *
- * Наличия компонентов приложение не знает и не притворяется, что знает (OQ-06): это перечень
- * требований, а не вердикт.
+ * Это перечень требований, а не вердикт: вердикт о наличии даёт `checkComponents` по записи о
+ * снаряжении, а перечень нужен и там, где снаряжение неизвестно.
  */
 export function componentRequirements(components: Spell["components"]): string[] {
   const requirements: string[] = [];
@@ -318,6 +358,7 @@ export function checkAvailability(input: AvailabilityInput): Availability {
       : []),
     ...checkCastingTime(input),
     ...checkPayment(input),
+    ...checkComponents(input),
     ...checkConcentration(input),
   ];
 

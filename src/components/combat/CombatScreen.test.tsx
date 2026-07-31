@@ -467,13 +467,19 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
   /** Выгрузка приложения, снятая с текущего состояния: её же и загружаем обратно. */
   async function openData() {
     const user = userEvent.setup();
-    const rendered = await renderWithStores(<CombatScreen />, inBookMode());
+    const rendered = await renderWithStores(<CombatScreen />, {
+      ...createThorne(),
+      screenMode: "camp",
+    });
     await user.click(screen.getByRole("button", { name: "Данные" }));
     return { user, ...rendered };
   }
 
-  it("живёт в «Книге», а не на боевом экране", async () => {
+  it("живёт вне боя, а не на боевом экране и не за чтением книги", async () => {
     await renderWithStores(<CombatScreen />);
+    expect(screen.queryByRole("button", { name: "Данные" })).toBeNull();
+
+    await renderWithStores(<CombatScreen />, inBookMode());
     expect(screen.queryByRole("button", { name: "Данные" })).toBeNull();
   });
 
@@ -492,7 +498,7 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
     const saved = exportSnapshot(createThorne(), loadThorneSpells(), "2026-07-31T18:00:00.000Z");
 
     const user = userEvent.setup();
-    const spent = inBookMode();
+    const spent: CharacterState = { ...createThorne(), screenMode: "camp" };
     spent.spellSlots = { ...spent.spellSlots, 1: { maximum: 4, remaining: 0 } };
     const { stores } = await renderWithStores(<CombatScreen />, spent);
 

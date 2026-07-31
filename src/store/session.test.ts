@@ -39,6 +39,7 @@ import {
   spendRuneOnWardingSigil,
   spendSpellSlot,
   takeDamage,
+  toggleMaterial,
   togglePreparation,
   toggleRoleplayDisabled,
   toggleRoleplayFavorite,
@@ -1627,6 +1628,30 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   });
 });
 
+describe("дорогие компоненты (FR-030)", () => {
+  it("отмечается купленным и обратно израсходованным", () => {
+    const bought = toggleMaterial(session, "identify", clock);
+    expect(bought.character.equipment?.materialsForSpellIds).toEqual(["identify"]);
+    expect(bought.journal.at(-1)?.summaryRu).toBe("Компонент куплен: identify");
+
+    const spent = toggleMaterial(bought, "identify", clock);
+    expect(spent.character.equipment?.materialsForSpellIds).toEqual([]);
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Компонент израсходован: identify");
+  });
+
+  it("обратимо, как любой расход (FR-111)", () => {
+    const bought = toggleMaterial(session, "identify", clock);
+    expect(undoLast(bought).character.equipment?.materialsForSpellIds).toEqual([]);
+  });
+
+  it("состоянию без снаряжения отвечает причиной", () => {
+    const { equipment: _none, ...unknown } = session.character;
+    expect(() => toggleMaterial(createSession(unknown), "identify", clock)).toThrow(
+      /не заведено снаряжение/,
+    );
+  });
+});
+
 describe("кости хитов (FR-134)", () => {
   it("тратятся и возвращаются по одной, обе правки в журнале", () => {
     const spent = adjustHitDice(session, -1, clock);
@@ -1636,6 +1661,11 @@ describe("кости хитов (FR-134)", () => {
     const returned = adjustHitDice(spent, 1, clock);
     expect(returned.character.hitDice?.remaining).toBe(7);
     expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена кость хитов: 7");
+  });
+
+  it("трата кости отменяется (FR-111)", () => {
+    const spent = adjustHitDice(session, -1, clock);
+    expect(undoLast(spent).character.hitDice?.remaining).toBe(7);
   });
 
   it("за пределы пула не выходит ни вверх, ни вниз", () => {

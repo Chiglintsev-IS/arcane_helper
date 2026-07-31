@@ -17,6 +17,7 @@ import { ArcaneRecoverySheet } from "@/components/combat/ArcaneRecoverySheet";
 import { BloodMagicWizard } from "@/components/cast/BloodMagicWizard";
 import { BloodMagicRow } from "@/components/combat/BloodMagicRow";
 import { CampActions } from "@/components/combat/CampActions";
+import { MaterialsList } from "@/components/combat/MaterialsList";
 import { CastWizard } from "@/components/cast/CastWizard";
 import { ConfirmSheet } from "@/components/combat/ConfirmSheet";
 import { DataSheet } from "@/components/combat/DataSheet";
@@ -75,6 +76,7 @@ import {
   spendRuneOnWardingSigil,
   spendSpellSlot,
   takeDamage,
+  toggleMaterial,
   togglePreparation,
   undoLast,
   useArcaneRecovery,
@@ -301,6 +303,17 @@ export function CombatScreen() {
             onRecoverMaximum={() => apply((current) => recoverHitPointMaximum(current, clock))}
             inFight={economy.inFight}
             onFightOver={() => setFightOverOpen(true)}
+            onData={() => setDataOpen(true)}
+          />
+        ) : null}
+        {/*
+          Список покупок живёт вне боя: докупают между сессиями, а не под чужой ход (FR-030).
+        */}
+        {character.screenMode === "camp" ? (
+          <MaterialsList
+            spells={spells}
+            character={character}
+            onToggle={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
           />
         ) : null}
 
@@ -313,18 +326,6 @@ export function CombatScreen() {
           */}
           {preparing ? (
             <>
-            {/*
-              Выгрузка и загрузка живут в «Книге» (F-11): резервную копию делают до игры, а не в
-              бою, и на боевом экране кнопка занимала бы ряд ради задачи, которая случается раз в
-              несколько сессий.
-            */}
-            <button
-              type="button"
-              onClick={() => setDataOpen(true)}
-              className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
-            >
-              Данные
-            </button>
             <button
               type="button"
               aria-pressed={searchOpen}

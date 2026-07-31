@@ -238,6 +238,10 @@ function SlotStep({
 }
 
 function ComponentsStep({ availability }: { availability: Availability }) {
+  // Вердикт, а не напоминание: приложение знает про фокусировку и про то, что лежит в сумке
+  // (FR-030). Пока OQ-06 был открыт, здесь стояла честная отговорка «проверьте по листу».
+  const missing = availability.warnings.filter((warning) => warning.code === "no_component");
+
   return (
     <ul className="flex flex-col gap-1 text-sm">
       {availability.componentReminders.map((reminder) => (
@@ -245,9 +249,21 @@ function ComponentsStep({ availability }: { availability: Availability }) {
           {reminder}
         </li>
       ))}
-      <li className="text-xs text-slate-500">
-        Наличие компонентов приложение не отслеживает: проверьте по листу персонажа.
-      </li>
+      {missing.map((warning) => (
+        <li
+          key={warning.code}
+          className="rounded-lg border border-reaction bg-reaction/10 p-2 font-medium"
+        >
+          {warning.reasonRu}
+        </li>
+      ))}
+      {missing.length === 0 ? (
+        <li className="text-xs text-slate-500">Всё нужное есть.</li>
+      ) : (
+        <li className="text-xs text-slate-500">
+          Купить и положить в сумку можно в режиме «Вне боя».
+        </li>
+      )}
     </ul>
   );
 }

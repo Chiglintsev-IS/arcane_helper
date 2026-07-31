@@ -126,6 +126,10 @@ const STATE_KEYS = [
   // жизни. Без них в снимке отмена возвращала бы хиты, но не поглощённый ими урон (FR-111).
   "temporaryHitPoints",
   "runes",
+  // Кости хитов и снаряжение — тоже расходуемое: кость тратит отдых, компонент тратит сотворение.
+  // Каждый новый ресурс обязан попадать сюда, иначе отмена молча оставляет его потраченным.
+  "hitDice",
+  "equipment",
   "spellPoints",
   "suppression",
   "preparedSpellIds",
@@ -1513,6 +1517,35 @@ export function adjustHitDice(session: Session, delta: number, clock: Clock): Se
         delta > 0
           ? `Возвращена кость хитов: ${remaining}`
           : `Потрачена кость хитов: осталось ${remaining}`,
+    },
+    clock,
+  );
+}
+
+/**
+ * Отметить дорогой компонент купленным или потраченным (FR-030).
+ *
+ * Списка предметов у приложения нет и не будет — инвентарь вне MVP. Есть ровно то, что нужно
+ * проверке доступности: лежит ли в сумке компонент конкретного заклинания.
+ */
+export function toggleMaterial(session: Session, spellId: string, clock: Clock): Session {
+  const { character } = session;
+  const { equipment } = character;
+  if (equipment === undefined) {
+    throw new SessionError("У персонажа не заведено снаряжение");
+  }
+  const owned = equipment.materialsForSpellIds.includes(spellId);
+  const materialsForSpellIds = owned
+    ? equipment.materialsForSpellIds.filter((id) => id !== spellId)
+    : [...equipment.materialsForSpellIds, spellId];
+
+  return commit(
+    session,
+    { ...character, equipment: { ...equipment, materialsForSpellIds } },
+    {
+      kind: "manual_adjustment",
+      summaryRu: owned ? `Компонент израсходован: ${spellId}` : `Компонент куплен: ${spellId}`,
+      spellId,
     },
     clock,
   );

@@ -385,3 +385,125 @@ describe("checkAvailability: несколько нарушений сразу", 
     expect(availability.overridable).toBe(true);
   });
 });
+
+describe("наличие компонентов (FR-030, OQ-06)", () => {
+  const identify = spell("identify");
+  const mageArmor = spell("mage-armor");
+
+  function withEquipment(equipment: CharacterState["equipment"]): CharacterState {
+    return { ...createThorne(), equipment };
+  }
+
+  it("дорогого компонента нет в сумке — предупреждение с ценой", () => {
+    const warnings = checkAvailability({
+      spell: identify,
+      character: createThorne(),
+      turn: ALL_TURN_RESOURCES,
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    }).warnings;
+
+    const missing = warnings.find((warning) => warning.code === "no_component");
+    expect(missing?.reasonRu).toContain("100 зм");
+    // Проходимо: мастер вправе разрешить, а игрок — вспомнить, что жемчужина всё-таки есть.
+    expect(missing?.overridable).toBe(true);
+  });
+
+  it("купленный компонент предупреждения не даёт", () => {
+    const bought = withEquipment({
+      spellcastingFocus: true,
+      componentPouch: false,
+      materialsForSpellIds: ["identify"],
+    });
+    const warnings = checkAvailability({
+      spell: identify,
+      character: bought,
+      turn: ALL_TURN_RESOURCES,
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    }).warnings;
+
+    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
+  });
+
+  it("компонент без стоимости закрывает фокусировка", () => {
+    const warnings = checkAvailability({
+      spell: mageArmor,
+      character: createThorne(),
+      turn: ALL_TURN_RESOURCES,
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    }).warnings;
+
+    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
+  });
+
+  it("без фокусировки и мешочка не закрывает ничего", () => {
+    const empty = withEquipment({
+      spellcastingFocus: false,
+      componentPouch: false,
+      materialsForSpellIds: [],
+    });
+    const warnings = checkAvailability({
+      spell: mageArmor,
+      character: empty,
+      turn: ALL_TURN_RESOURCES,
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    }).warnings;
+
+    expect(warnings.find((warning) => warning.code === "no_component")?.reasonRu).toContain(
+      "ни мешочка",
+    );
+  });
+
+  it("мешочек заменяет фокусировку", () => {
+    const pouch = withEquipment({
+      spellcastingFocus: false,
+      componentPouch: true,
+      materialsForSpellIds: [],
+    });
+    const warnings = checkAvailability({
+      spell: mageArmor,
+      character: pouch,
+      turn: ALL_TURN_RESOURCES,
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    }).warnings;
+
+    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
+  });
+
+  it("расходуемый компонент без цены и без описания тоже называется", () => {
+    // Такое приходит импортом чужой книги: цена не указана, текста нет — но расходуемое
+    // фокусировка всё равно не заменяет, и молчать об этом нельзя (FR-121).
+    const imported: Spell = {
+      ...identify,
+      components: { verbal: true, somatic: true, material: true, consumed: true },
+    };
+    const warnings = checkAvailability({
+      spell: imported,
+      character: createThorne(),
+      turn: ALL_TURN_RESOURCES,
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    }).warnings;
+
+    expect(warnings.find((warning) => warning.code === "no_component")?.reasonRu).toBe(
+      "Нет компонента: материальный компонент",
+    );
+  });
+
+  it("состоянию без записи о снаряжении вердикта не выдумывает", () => {
+    const { equipment: _none, ...unknown } = createThorne();
+    const warnings = checkAvailability({
+      spell: identify,
+      character: unknown,
+      turn: ALL_TURN_RESOURCES,
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    }).warnings;
+
+    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
+  });
+});

@@ -22,6 +22,7 @@ export function CampActions({
   onArcaneRecovery,
   onRecoverMaximum,
   onFightOver,
+  onData,
 }: {
   character: CharacterState;
   /** Бой отмечен начатым и ещё не закрыт: тогда его есть чем закончить (FR-216). */
@@ -31,6 +32,8 @@ export function CampActions({
   onArcaneRecovery: () => void;
   onRecoverMaximum: () => void;
   onFightOver: () => void;
+  /** Выгрузка и загрузка (F-11): резервную копию делают между сессиями, а не в бою и не за чтением. */
+  onData: () => void;
 }) {
   const hourReturns = Math.min(
     maximumRecoveryPerHour(character.level),
@@ -53,6 +56,7 @@ export function CampActions({
       {character.hitPoints.maximumReduction > 0 ? (
         <Action onClick={onRecoverMaximum} name={`Прошёл час · максимум +${hourReturns}`} />
       ) : null}
+      <Action onClick={onData} name="Данные" />
     </section>
   );
 }

@@ -167,6 +167,24 @@ export const characterStateSchema = z
       itemBonus: z.number().int(),
     }),
 
+    /**
+     * Снаряжение, от которого зависит проверка компонентов (FR-030, OQ-06).
+     *
+     * Минимальная модель: чем заменяются компоненты без стоимости и что из дорогого лежит в сумке.
+     * Инвентарь целиком вне MVP — учитываются только компоненты заклинаний.
+     *
+     * Поле необязательное: та же схема проверяет импорт чужих выгрузок (FR-121), и старая выгрузка
+     * его не знает. Без него проверка ведёт себя как прежде — перечисляет компоненты напоминанием.
+     */
+    equipment: z
+      .object({
+        spellcastingFocus: z.boolean(),
+        componentPouch: z.boolean(),
+        /** Идентификаторы заклинаний, чей дорогой компонент есть в сумке. */
+        materialsForSpellIds: z.array(nonEmpty),
+      })
+      .optional(),
+
     runes: z
       .object({
         maximum: z.number().int().nonnegative(),
@@ -291,4 +309,5 @@ export type ActiveEffect = z.infer<typeof activeEffectSchema>;
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
 export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;
 export type HitDice = NonNullable<z.infer<typeof characterStateSchema>["hitDice"]>;
+export type Equipment = NonNullable<z.infer<typeof characterStateSchema>["equipment"]>;
 export type CharacterState = z.infer<typeof characterStateSchema>;
