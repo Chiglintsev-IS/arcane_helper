@@ -29,7 +29,8 @@ import { ResourcesSheet } from "@/components/combat/ResourcesSheet";
 import { SpellFilters, type AvailableFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
-import { BANNED_SPELLS, loadThorneSpells } from "@/data/content/thorne";
+import { BANNED_SPELLS } from "@/data/content/thorne";
+import type { Spell } from "@/data/schemas/spell";
 import { HitPointsSheet } from "@/components/combat/HitPointsSheet";
 import {
   describeConcentration,
@@ -39,7 +40,7 @@ import {
 import { ascensionTierRate, BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
 import { preparedLimit } from "@/rules/abilities";
 import { rolesPresent } from "@/rules/combatRole";
-import { applyImport, exportFileName, exportSnapshot, parseImport } from "@/rules/dataIo";
+import { exportFileName, exportSnapshot, parseImport } from "@/rules/dataIo";
 import { findBan, matchesQuery } from "@/rules/restrictions";
 import {
   bestCastPlan,
@@ -66,7 +67,6 @@ import {
   longRest,
   recoverHitPointMaximum,
   refundSpellSlot,
-  replaceCharacter,
   setScreenMode,
   setSpellNote,
   setSunlight,
@@ -80,9 +80,6 @@ import {
   wardingSigilAvailable,
 } from "@/store/session";
 
-/** Контент разбирается схемой один раз на модуль: карточки в бою не меняются. */
-const SPELLS = loadThorneSpells();
-
 /**
  * Что встречается в переданном списке.
  *
@@ -91,7 +88,7 @@ const SPELLS = loadThorneSpells();
  * режима, а не от всей книги, — иначе в бою предлагался бы фильтр «Ритуал», за которым в этом
  * режиме ничего не стоит.
  */
-function availableFilters(spells: readonly (typeof SPELLS)[number][]): AvailableFilters {
+function availableFilters(spells: readonly Spell[]): AvailableFilters {
   return {
     castingTimes: new Set(spells.map((spell) => spell.castingTime.type)),
     levels: [...new Set(spells.map((spell) => spell.level))].sort((a, b) => a - b),
@@ -108,7 +105,7 @@ function availableFilters(spells: readonly (typeof SPELLS)[number][]): Available
  * то же, что скажет мастер применения (F-02, «Причина недоступности берётся у лучшего способа»).
  */
 function firstReason(
-  spell: (typeof SPELLS)[number],
+  spell: Spell,
   character: Parameters<typeof bestCastPlan>[1],
   turn: Parameters<typeof bestCastPlan>[2],
 ): string | null {
@@ -123,6 +120,9 @@ export function CombatScreen() {
   const status = useSession((state) => state.status);
   const error = useSession((state) => state.error);
   const draft = useDraft((state) => state.draft);
+  // Каталог — данные, а не константа модуля: импорт подменяет его целиком (FR-123).
+  const spells = useSession((state) => state.spellCatalog);
+  const catalogSource = useSession((state) => state.spellCatalogSource);
 
   const [filters, setFilters] = useState(NO_FILTERS);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
@@ -154,12 +154,12 @@ export function CombatScreen() {
     const effect = session.character.activeEffects.find((candidate) => candidate.isConcentration);
     if (effect === undefined) return null;
     return describeConcentration({
-      spell: SPELLS.find((candidate) => candidate.id === effect.spellId) ?? null,
+      spell: spells.find((candidate) => candidate.id === effect.spellId) ?? null,
       effect,
       character: session.character,
       journal: session.journal,
     });
-  }, [session]);
+  }, [session, spells]);
 
   if (status === "loading" || session === null || economy === null) {
     return (
@@ -174,7 +174,7 @@ export function CombatScreen() {
   const apply = sessionStore.getState().apply;
   // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список
   // (FR-200). Карточка открывается из всей книги — режим не должен закрывать уже открытое.
-  const inMode = spellsForScreen(SPELLS, character);
+  const inMode = spellsForScreen(spells, character);
   // Поиск живёт в «Книге»: там 29 карточек и вопрос «где оно» настоящий. В бою и на привале список
   // короткий, и поле ввода забрало бы ряд ради задачи, которой нет (FR-162).
   const searched = inMode.filter((spell) => matchesQuery(spell, query));
@@ -224,7 +224,7 @@ export function CombatScreen() {
   }
   // Имя списка называет то, что в нём есть: вне боя — только заклинания, в бою ещё и «Магия крови».
   const listLabel = bloodShown ? "Заклинания и действия" : "Заклинания";
-  const openSpell = SPELLS.find((spell) => spell.id === openSpellId) ?? null;
+  const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
   const lastEntry = session.journal.at(-1);
 
   /**
@@ -548,21 +548,24 @@ export function CombatScreen() {
 
       {dataOpen ? (
         <DataSheet
-          exportText={JSON.stringify(exportSnapshot(character, SPELLS, clock.now()), null, 2)}
+          exportText={JSON.stringify(exportSnapshot(character, spells, clock.now()), null, 2)}
           fileName={exportFileName(clock.now())}
           error={importError}
+          catalogSource={catalogSource}
           onImport={(raw) => {
             const outcome = parseImport(raw);
             if (!outcome.ok) {
               setImportError(outcome.reasonRu);
               return;
             }
-            // Разбор прошёл целиком — значит применять по частям нечего (FR-122).
-            const { character: replacement } = applyImport(character, outcome.file, "replace");
-            // Замена идёт той же единственной точкой изменения, что и всё остальное (ADR-0003).
-            apply(() => replaceCharacter(replacement));
-            setImportError(null);
-            setDataOpen(false);
+            // Персонаж и каталог заменяются одной записью: половины импорта не бывает (FR-122).
+            const failure = sessionStore.getState().importSnapshot(outcome.file);
+            setImportError(failure);
+            if (failure === null) setDataOpen(false);
+          }}
+          onRestoreBuiltInCatalog={() => {
+            // Отказ оставляет каталог прежним и называет карточку, которой в сборке нет (FR-123).
+            setImportError(sessionStore.getState().restoreBuiltInCatalog());
           }}
           onClose={() => {
             setImportError(null);
