@@ -29,6 +29,18 @@ test.beforeEach(async ({ page }) => {
   await openFreshApp(page);
 });
 
+/**
+ * Уйти из «Боя» в другой режим, ответив «нет» на вопрос о конце боя.
+ *
+ * Вопрос задаётся на каждом выходе из боя (FR-216): конец боя — факт, сбрасывающий счёт раундов, и
+ * приложение обязано о нём узнать. Прогону, который просто заглядывает в книгу, нужен ответ «нет».
+ */
+async function switchMode(page: Page, name: RegExp): Promise<void> {
+  await page.getByRole("radio", { name }).click();
+  const sheet = page.getByRole("dialog", { name: "Бой закончен?" });
+  if (await sheet.isVisible()) await sheet.getByRole("button", { name: "Нет, продолжается" }).click();
+}
+
 test("combat-screen renders all resource blocks", async ({ page }) => {
   const resources = page.getByLabel("Ресурсы");
 
@@ -88,7 +100,7 @@ test("combat keeps the first card whole, the book keeps the header", async ({ pa
 
   // «Вне боя» списка не показывает вовсе (FR-202) — мерить там нечего.
   // В «Книге» бюджет другой (FR-218): шапка целиком и начало первой строки, а не строка целиком.
-  await page.getByRole("radio", { name: /^Книга/ }).click();
+  await switchMode(page, /^Книга/);
 
   const headerBottom = await page
     .getByRole("region", { name: "Ресурсы" })
@@ -106,7 +118,7 @@ test("combat keeps the first card whole, the book keeps the header", async ({ pa
 
 test("book mode shows slots", async ({ page }) => {
   // Ячейки нужны там, где выбирают состав на день (FR-217): подготовка — это вопрос «чем платить».
-  await page.getByRole("radio", { name: /^Книга/ }).click();
+  await switchMode(page, /^Книга/);
 
   const header = page.getByRole("region", { name: "Ресурсы" });
   await expect(header.getByLabel("Ячейки заклинаний")).toBeVisible();
@@ -165,7 +177,7 @@ test("state survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
   // Заодно проверяется, что режим переживает перезапуск (FR-204).
-  await page.getByRole("radio", { name: /^Книга/ }).click();
+  await switchMode(page, /^Книга/);
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Торн" })).toBeVisible();
@@ -192,7 +204,7 @@ test("concentration block explains the effect", async ({ page }) => {
   // «Обнаружение магии» не подготовлено, поэтому в боевом списке его нет вовсе (FR-209): идём в
   // книгу. Концентрацию оно требует в любом режиме, а творить надо тем способом, что и в бою, —
   // ячейкой, а не ритуалом.
-  await page.getByRole("radio", { name: /^Книга/ }).click();
+  await switchMode(page, /^Книга/);
   await page.getByRole("button", { name: "Ритуал", exact: true }).click();
   await page.getByRole("button", { name: /^Обнаружение магии/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
@@ -252,15 +264,15 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   // Привал — второй по времени экран после боя: там отдыхают и готовятся (FR-202).
   await page.getByRole("button", { name: "Отмена" }).click();
   await page.getByRole("button", { name: "Закрыть" }).click();
-  await page.getByRole("radio", { name: /^Вне боя/ }).click();
+  await switchMode(page, /^Вне боя/);
   await scan("привал");
 
-  await page.getByRole("radio", { name: /^Бой/ }).click();
+  await switchMode(page, /^Бой/);
   await page.getByRole("button", { name: "Реакции" }).click();
   await page.getByRole("radio", { name: "По мне попали" }).click();
   await scan("экран реакций");
   await page.getByRole("button", { name: "Закрыть" }).click();
-  await page.getByRole("radio", { name: /^Вне боя/ }).click();
+  await switchMode(page, /^Вне боя/);
 
   await page.getByRole("button", { name: /Магическое восстановление/ }).click();
   await expect(page.getByRole("dialog", { name: "Магическое восстановление" })).toBeVisible();
@@ -282,7 +294,7 @@ test("reactions in one tap", async ({ page }) => {
 });
 
 test("book mode prepares spells", async ({ page }) => {
-  await page.getByRole("radio", { name: /^Книга/ }).click();
+  await switchMode(page, /^Книга/);
   // Стартовый набор занимает лимит целиком, и двенадцатое заклинание в него не влезает (FR-101).
   await expect(page.getByText("Подготовлено 11 из 11")).toBeVisible();
 
@@ -293,7 +305,7 @@ test("book mode prepares spells", async ({ page }) => {
   await expect(page.getByText("Подготовлено 11 из 11")).toBeVisible();
 
   // Подготовка определяет состав боевого списка (FR-209).
-  await page.getByRole("radio", { name: /^Бой/ }).click();
+  await switchMode(page, /^Бой/);
   await expect(page.getByLabel(/^Заклинания/)).toContainText("Обнаружение магии");
 });
 
@@ -338,7 +350,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByLabel("Ячейки заклинаний")).toContainText("3/4");
 
-  await page.getByRole("radio", { name: /^Вне боя/ }).click();
+  await switchMode(page, /^Вне боя/);
 
   // Вне боя ходов нет: ни кнопки, ни счётчика раундов (FR-202).
   await expect(page.getByRole("button", { name: "Мой ход начался" })).toBeHidden();

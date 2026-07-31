@@ -727,12 +727,19 @@ describe("конец боя (FR-216)", () => {
     expect(stores.session.getState().session?.journal).toHaveLength(0);
   });
 
-  it("при здоровье выше половины вопрос не задаётся: отвечать «да» было бы не на что", async () => {
+  it("при полном здоровье вопрос всё равно задаётся, но лечения не обещает", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />);
+    const { stores } = await renderWithStores(<CombatScreen />);
 
     await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
-    expect(screen.queryByRole("dialog", { name: "Бой закончен?" })).toBeNull();
+
+    // Конец боя — факт, а не лечение: он сбрасывает счёт раундов, и здоровому это нужно так же.
+    const sheet = screen.getByRole("dialog", { name: "Бой закончен?" });
+    expect(within(sheet).getByText(/Счёт раундов начнётся заново/)).toBeDefined();
+    expect(within(sheet).queryByText(/здоровье поднимется/)).toBeNull();
+
+    await user.click(within(sheet).getByRole("button", { name: "Да, бой закончен" }));
+    expect(stores.session.getState().session?.journal.at(-1)?.kind).toBe("combat_ended");
   });
 
   it("переход между привалом и книгой вопроса не задаёт: бой уже позади", async () => {

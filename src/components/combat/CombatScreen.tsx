@@ -248,8 +248,10 @@ export function CombatScreen() {
    * Смена режима (FR-204) и вопрос о конце боя (FR-216).
    *
    * Режим переключается сразу и без условий: игрок мог уйти в книгу за справкой посреди боя. Вопрос
-   * задаётся только на выходе из боя и только когда ответ «да» что-то изменит, — при полном
-   * здоровье он предлагал бы восстановить нечего.
+   * задаётся на любом выходе из боя, в том числе при полном здоровье: конец боя — это факт, который
+   * сбрасывает счёт раундов и потраченное, а восстановление тролля — его следствие. Пока вопрос
+   * зависел от раны, здоровый персонаж уходил из боя без отметки, и следующий бой начинался с
+   * шестого раунда.
    */
   const changeMode = (mode: ScreenMode): void => {
     const leavingFight = character.screenMode === "combat" && mode !== "combat";
@@ -259,7 +261,7 @@ export function CombatScreen() {
     setFilters(NO_FILTERS);
     setQuery("");
     apply((current) => setScreenMode(current, mode));
-    if (leavingFight && combatEndRecovery(character) > 0) setFightOverOpen(true);
+    if (leavingFight) setFightOverOpen(true);
   };
 
   /** Подтверждение применения: одна транзакция, одна запись журнала (FR-023). */
@@ -546,7 +548,11 @@ export function CombatScreen() {
       {fightOverOpen ? (
         <ConfirmSheet
           title="Бой закончен?"
-          body={`Регенерация вне боя идёт непрерывно: здоровье поднимется до половины максимума, это ${combatEndRecovery(character)} хитов.`}
+          body={
+            combatEndRecovery(character) > 0
+              ? `Регенерация вне боя идёт непрерывно: здоровье поднимется до половины максимума, это ${combatEndRecovery(character)} хитов.`
+              : "Счёт раундов начнётся заново, потраченное в этом бою перестанет связывать. Лечить нечего: здоровье не ниже половины максимума."
+          }
           confirmLabel="Да, бой закончен"
           cancelLabel="Нет, продолжается"
           onConfirm={() => {
