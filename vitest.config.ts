@@ -12,7 +12,15 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     coverage: {
       provider: "v8",
-      include: ["src/rules/**", "src/data/schemas/**", "src/store/**", "src/data/content/**"],
+      include: [
+        "src/rules/**",
+        "src/data/schemas/**",
+        "src/store/**",
+        "src/data/content/**",
+        // Геометрия и таблицы штрихов — вычисления, а не разметка: ошибка здесь выглядит как
+        // испорченная схема, по которой игрок будет рисовать.
+        "src/diagram/**",
+      ],
       // Движок правил покрывается полностью: ошибка здесь не выглядит как сбой,
       // а проявляется как неверно проведённая игра. См. docs/quality.md.
       // Компоненты в список не входят: они проверяются поведением, а не покрытием строк.
