@@ -23,7 +23,9 @@ import {
 } from "@/rules/availability";
 import {
   exchangeHitPoints,
+  LONG_REST_HOURS,
   maximumRecoveryPerHour,
+  maximumReductionAfterHours,
   regenerationPerTurn,
   traitsSuppressed,
 } from "@/rules/bloodMagic";
@@ -965,12 +967,26 @@ export function setSunlight(session: Session, underSunlight: boolean, clock: Clo
 
 // —————————————————————————————— Отдых ——————————————————————————————
 
-/** Долгий отдых (FR-130). Восстанавливает всё, включая руны, и снимает концентрацию. */
+/**
+ * Долгий отдых (FR-130). Восстанавливает всё, включая руны и здоровье, и снимает концентрацию.
+ *
+ * Снижённый кровавым колдовством максимум возвращается не махом, а восемью часами почасового
+ * правила (FR-173): у Торна это 24 очка, и остаток переходит на следующий день. Текущие хиты
+ * поднимаются уже до нового максимума — иначе они упёрлись бы в потолок, который отдых только что
+ * поднял, и персонаж вышел бы из отдыха с недобором, не видным ни на одном экране.
+ */
 export function longRest(session: Session, clock: Clock): Session {
   const { character } = session;
   const { concentration: _dropped, ...withoutConcentration } = character;
+  const reduction = maximumReductionAfterHours(
+    character.hitPoints.maximumReduction,
+    character.level,
+    LONG_REST_HOURS,
+  );
+  const maximum = character.hitPoints.maximum + (character.hitPoints.maximumReduction - reduction);
   const after: CharacterState = {
     ...withoutConcentration,
+    hitPoints: { current: maximum, maximum, maximumReduction: reduction },
     spellSlots: restoreAllSlots(character.spellSlots),
     runes: { ...character.runes, remaining: character.runes.maximum },
     reactionAvailable: true,

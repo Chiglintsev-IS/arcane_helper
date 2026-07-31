@@ -717,6 +717,48 @@ describe("отдых и восстановление", () => {
     expect(current.character.arcaneRecoveryAvailable).toBe(true);
   });
 
+  it("долгий отдых возвращает здоровье (FR-130)", () => {
+    const wounded = takeDamage(session, 41, clock);
+    expect(longRest(wounded, clock).character.hitPoints).toEqual({
+      current: 60,
+      maximum: 60,
+      maximumReduction: 0,
+    });
+  });
+
+  it("долгий отдых возвращает восемь часов снижённого максимума (FR-130, FR-173)", () => {
+    // 30 хитов на очки: максимум 30, вернуть предстоит 30. За восемь часов по 3 — 24 очка,
+    // остаётся 6, и текущие поднимаются ровно до нового максимума.
+    const spent = exchangeBlood(session, 30, clock);
+    expect(spent.character.hitPoints).toEqual({ current: 30, maximum: 30, maximumReduction: 30 });
+
+    expect(longRest(spent, clock).character.hitPoints).toEqual({
+      current: 54,
+      maximum: 54,
+      maximumReduction: 6,
+    });
+  });
+
+  it("отдых не обнуляет снижение махом: правило возвращает по часам", () => {
+    const spent = exchangeBlood(session, 30, clock);
+    expect(longRest(spent, clock).character.hitPoints.maximumReduction).toBeGreaterThan(0);
+  });
+
+  it("небольшое снижение отдых закрывает целиком", () => {
+    const spent = exchangeBlood(session, 9, clock);
+    expect(longRest(spent, clock).character.hitPoints).toEqual({
+      current: 60,
+      maximum: 60,
+      maximumReduction: 0,
+    });
+  });
+
+  it("возврат здоровья отменяется вместе с отдыхом (FR-111)", () => {
+    const spent = exchangeBlood(takeDamage(session, 10, clock), 9, clock);
+    const undone = undoLast(longRest(spent, clock));
+    expect(undone.character.hitPoints).toEqual(spent.character.hitPoints);
+  });
+
   it("долгий отдых сохраняет эффекты с особой длительностью", () => {
     const special: Spell = { ...spell("mage-armor"), duration: { type: "special" } };
     let current = castSpell(
