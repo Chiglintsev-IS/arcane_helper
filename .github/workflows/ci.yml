@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Целостность спецификации: ссылки, якоря, покрытие требований.
+      - name: Проверка спецификации
+        run: python3 scripts/check-docs.py
+
+      - name: Проверка типов
+        run: npm run typecheck
+
+      # Движок правил и схемы покрываются полностью — порог 100% задан в vitest.config.ts.
+      - name: Тесты и покрытие
+        run: npm run test:coverage
+
+      - name: Сборка статического экспорта
+        run: npm run build

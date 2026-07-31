@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/*
+ * Тёмная тема обязательна: играют вечером и при слабом свете (docs/ux.md#доступность).
+ * Цветовые роли соответствуют цветовой системе спеки — цвет всегда дублируется иконкой и текстом.
+ */
+@theme {
+  --color-action: oklch(0.62 0.17 255);
+  --color-bonus: oklch(0.78 0.15 85);
+  --color-reaction: oklch(0.62 0.2 25);
+  --color-concentration: oklch(0.62 0.19 300);
+  --color-ritual: oklch(0.62 0.15 150);
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  /* Основное действие внизу экрана: учитываем системные отступы iPhone. */
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Минимальный размер интерактивной области — 44 × 44 px (docs/ux.md#общие-правила). */
+button,
+a[role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
