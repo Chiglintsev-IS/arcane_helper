@@ -24,10 +24,12 @@ function firstVariant(category: "short" | "sarcastic"): string {
   return text;
 }
 
+/**
+ * Учёт хода ведётся ровно в режиме «Бой» (FR-143), а он же начальный, — так что помощник ничего не
+ * включает. Имя оставлено: оно объясняет, зачем тесту учёт.
+ */
 function withTurnTracking(): CharacterState {
-  const character = createThorne();
-  character.turnTracking = { enabled: true, actionAvailable: true, bonusActionAvailable: true };
-  return character;
+  return { ...createThorne(), screenMode: "combat" };
 }
 
 function withoutSlots(): CharacterState {
@@ -250,7 +252,8 @@ describe("замена концентрации (FR-081, AC-13)", () => {
 describe("шаг компонентов", () => {
   it("появляется для компонента со стоимостью и объясняет, что фокусировка его не заменяет", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />);
+    // «Опознание» творится минуту, поэтому в режиме «Бой» его нет (FR-201): берём книгу.
+    await renderWithStores(<CombatScreen />, { ...createThorne(), screenMode: "book" });
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /Опознание/ }));

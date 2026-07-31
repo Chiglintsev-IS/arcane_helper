@@ -69,8 +69,11 @@ export function SpellFilters({
   const castingTimes = CASTING_TIME_FILTERS.filter((value) => available.castingTimes.has(value));
 
   return (
-    <section aria-label="Фильтры" className="flex flex-col gap-1">
-      {/* Полоса прокручивается по горизонтали: перенос на три ряда съедал список заклинаний. */}
+    <section aria-label="Фильтры">
+      {/*
+        Одна полоса с горизонтальной прокруткой. Второй ряд забирал у списка 48 пикселей из 568 —
+        больше, чем треть карточки, — а набор переключателей и так сузился: он строится из режима.
+      */}
       <div className="-mx-1 flex gap-1 overflow-x-auto px-1">
         {castingTimes.map((value) => (
           <Toggle
@@ -105,9 +108,6 @@ export function SpellFilters({
             Ритуал
           </Toggle>
         ) : null}
-      </div>
-
-      <div className="-mx-1 flex gap-1 overflow-x-auto px-1">
         {available.levels.map((level) => (
           <Toggle
             key={level}

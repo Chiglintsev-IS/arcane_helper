@@ -124,7 +124,8 @@ function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
   const { castingTime } = input.spell;
   const unit = LONG_CASTING_UNITS[castingTime.type];
   if (unit === undefined || castingTime.value === undefined) return [];
-  if (!input.character.turnTracking.enabled) return [];
+  // Ходов вне боя нет, значит и тратить в них нечего (FR-143).
+  if (input.character.screenMode !== "combat") return [];
   return [
     {
       code: "long_casting_time",

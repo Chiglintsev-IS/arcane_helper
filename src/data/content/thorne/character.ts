@@ -54,7 +54,7 @@ const RAW: unknown = {
     maximumPhraseLength: 15,
   },
 
-  turnTracking: { enabled: false, actionAvailable: true, bonusActionAvailable: true },
+  turnTracking: { actionAvailable: true, bonusActionAvailable: true },
   arcaneRecoveryAvailable: true,
 
   hitPoints: { current: 60, maximum: 60, maximumReduction: 0 },

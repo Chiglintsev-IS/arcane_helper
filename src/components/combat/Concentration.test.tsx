@@ -105,7 +105,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   it("списывает хиты и без активной концентрации", async () => {
     await renderWithStores(<CombatScreen />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "12");
     await userEvent.click(screen.getByRole("button", { name: "Записать" }));
 
@@ -116,7 +116,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   it("отмечает подавление особенностей огнём", async () => {
     await renderWithStores(<CombatScreen />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "5");
     await userEvent.click(screen.getByLabelText("Урон огнём"));
     await userEvent.click(screen.getByRole("button", { name: "Записать" }));
@@ -127,7 +127,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   it("при активной концентрации предлагает проверку с готовой КС", async () => {
     await renderWithStores(<CombatScreen />, concentrating());
 
-    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "24");
     await userEvent.click(screen.getByRole("button", { name: "Записать" }));
 
@@ -139,7 +139,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   it("не принимает ноль и не пишет пустую запись", async () => {
     await renderWithStores(<CombatScreen />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.click(screen.getByRole("button", { name: "Записать" }));
 
     expect(screen.getByText("60/60")).toBeDefined();
@@ -149,7 +149,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
 describe("проверка концентрации (FR-083, FR-154)", () => {
   async function damage(amount: string, character: CharacterState = concentrating()): Promise<void> {
     await renderWithStores(<CombatScreen />, character);
-    await userEvent.click(screen.getByRole("button", { name: "Получил урон" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), amount);
     await userEvent.click(screen.getByRole("button", { name: "Записать" }));
   }
@@ -176,10 +176,8 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
   });
 
   it("руна сохраняет концентрацию, списывая реакцию", async () => {
-    // Учёт хода включён: без него шапка показывает всё доступным, и трату реакции не видно
-    // (deriveTurnEconomy). Сама трата происходит в обоих режимах — она в состоянии и в журнале.
+    // Режим «Бой» — значит учёт хода ведётся и трата реакции видна в шапке (FR-143).
     const character = concentrating();
-    character.turnTracking = { enabled: true, actionAvailable: true, bonusActionAvailable: true };
     await damage("24", character);
     await userEvent.click(screen.getByRole("button", { name: "Провал" }));
 

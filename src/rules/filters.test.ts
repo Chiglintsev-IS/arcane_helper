@@ -138,7 +138,8 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
     const shown = ids(
       filterSpells(allSpells, filters({ availableNow: true }), context({ character: withoutSlots() })),
     );
-    expect(shown).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
+    // «Починки» здесь нет, хотя она заговор: минута не укладывается в ход, а режим — «Бой».
+    expect(shown).toEqual(["shocking-grasp", "ray-of-frost", "message"]);
   });
 
   it("израсходованное действие скрывает заклинания действием, но не реакции", () => {
@@ -159,9 +160,8 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
     );
   });
 
-  it("при учёте хода не показывает накладывание дольше хода (FR-033)", () => {
-    const character = createThorne();
-    character.turnTracking = { ...character.turnTracking, enabled: true };
+  it("в бою не показывает накладывание дольше хода (FR-033)", () => {
+    const character: CharacterState = { ...createThorne(), screenMode: "combat" };
 
     const shown = ids(filterSpells(allSpells, filters({ availableNow: true }), context({ character })));
     expect(shown).not.toContain("mending");

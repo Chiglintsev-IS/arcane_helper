@@ -39,6 +39,7 @@ import {
 } from "@/rules/slots";
 import { hitPointCost, spellPointCost } from "@/rules/bloodMagic";
 import { durationWithRoundsRu } from "@/rules/concentration";
+import type { ScreenMode } from "@/rules/modes";
 
 /** Глубина журнала — предложенное значение OQ-08, уточняется после игровой сессии. */
 export const JOURNAL_LIMIT = 100;
@@ -197,6 +198,16 @@ export type TurnEconomy = {
   reactionReturns: "в начале вашего хода" | null;
 };
 
+/**
+ * Ведётся ли учёт хода. Ровно в режиме «Бой»: вне боя ходов нет, и считать нечего (FR-143).
+ *
+ * Раньше это был переключатель в шапке, и он умел врать — с выключенным учётом значки стояли
+ * зелёными всегда. Теперь состояние выводится из режима и разойтись с ним не может.
+ */
+export function turnTracked(character: CharacterState): boolean {
+  return character.screenMode === "combat";
+}
+
 const ALL_AVAILABLE = {
   actionAvailable: true,
   bonusActionAvailable: true,
@@ -215,7 +226,7 @@ export function deriveTurnEconomy(session: Session): TurnEconomy {
   const lastTurnIndex = session.journal.findLastIndex((entry) => entry.kind === "turn_started");
   const round = Math.max(1, session.journal.filter((entry) => entry.kind === "turn_started").length);
 
-  if (!session.character.turnTracking.enabled) {
+  if (!turnTracked(session.character)) {
     return { round, started: lastTurnIndex !== -1, ...ALL_AVAILABLE };
   }
 
@@ -308,7 +319,7 @@ export function actionUsedBy(spell: Spell): ActionUsed | undefined {
 function spendActionFor(session: Session, spell: Spell, allowAnyway: boolean): CharacterState {
   const { character } = session;
   const used = actionUsedBy(spell);
-  if (used === undefined || !character.turnTracking.enabled) return character;
+  if (used === undefined || !turnTracked(character)) return character;
 
   const economy = deriveTurnEconomy(session);
   const available =
@@ -635,7 +646,7 @@ export function exchangeBlood(
       remaining: character.spellPoints.remaining + exchange.pointsCreated,
       createdAt: clock.now(),
     },
-    ...(character.turnTracking.enabled
+    ...(turnTracked(character)
       ? { turnTracking: { ...character.turnTracking, actionAvailable: false } }
       : {}),
   };
@@ -719,21 +730,78 @@ export function takeDamage(
   if (!Number.isInteger(damage) || damage <= 0) {
     throw new SessionError(`Урон должен быть целым положительным, получено: ${damage}`);
   }
+  // Урон идёт сначала по временным хитам, и только остаток — по текущим (FR-206).
+  const absorbed = Math.min(character.temporaryHitPoints, damage);
   const after: CharacterState = {
     ...character,
+    temporaryHitPoints: character.temporaryHitPoints - absorbed,
     hitPoints: {
       ...character.hitPoints,
-      current: Math.max(0, character.hitPoints.current - damage),
+      current: Math.max(0, character.hitPoints.current - (damage - absorbed)),
     },
     ...(options.fire === true
       ? { suppression: { ...character.suppression, firedUpon: true } }
       : {}),
   };
   const note = options.fire === true ? " (огонь: особенности подавлены)" : "";
+  const absorbedNote = absorbed > 0 ? `, из них ${absorbed} временными хитами` : "";
   return commit(
     session,
     after,
-    { kind: "hit_points_changed", summaryRu: `Получено урона: ${damage}${note}` },
+    { kind: "hit_points_changed", summaryRu: `Получено урона: ${damage}${absorbedNote}${note}` },
+    clock,
+  );
+}
+
+/**
+ * Лечение (FR-205).
+ *
+ * Выше максимума не поднимает, а максимум уже учитывает снижение от кровавого колдовства
+ * ([FR-172](../../docs/features/F-15-blood-magic.md#fr-172)) — иначе зелье «долечивало» бы до числа,
+ * которого у персонажа нет. Временные хиты лечением не восстанавливаются: это не хиты (FR-206).
+ */
+export function heal(session: Session, amount: number, clock: Clock): Session {
+  const { character } = session;
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new SessionError(`Лечение должно быть целым положительным, получено: ${amount}`);
+  }
+  const ceiling = character.hitPoints.maximum - character.hitPoints.maximumReduction;
+  const current = Math.min(ceiling, character.hitPoints.current + amount);
+  const restored = current - character.hitPoints.current;
+  if (restored === 0) {
+    throw new SessionError("Здоровье уже на максимуме");
+  }
+  const after: CharacterState = {
+    ...character,
+    hitPoints: { ...character.hitPoints, current },
+  };
+  const note = restored < amount ? ` (из ${amount}: упёрлись в максимум)` : "";
+  return commit(
+    session,
+    after,
+    { kind: "hit_points_changed", summaryRu: `Вылечено: ${restored}${note}` },
+    clock,
+  );
+}
+
+/**
+ * Временные хиты (FR-206). Не складываются: берётся большее из двух — таково правило, и оно же
+ * защищает от привычки «накопить» их несколькими источниками.
+ */
+export function grantTemporaryHitPoints(session: Session, amount: number, clock: Clock): Session {
+  const { character } = session;
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new SessionError(`Временные хиты должны быть целым положительным, получено: ${amount}`);
+  }
+  if (amount <= character.temporaryHitPoints) {
+    throw new SessionError(
+      `Временных хитов уже ${character.temporaryHitPoints}: они не складываются, меньшее не берётся`,
+    );
+  }
+  return commit(
+    session,
+    { ...character, temporaryHitPoints: amount },
+    { kind: "hit_points_changed", summaryRu: `Временные хиты: ${amount}` },
     clock,
   );
 }
@@ -771,10 +839,12 @@ export function longRest(session: Session, clock: Clock): Session {
     runes: { ...character.runes, remaining: character.runes.maximum },
     reactionAvailable: true,
     arcaneRecoveryAvailable: true,
-    turnTracking: { ...character.turnTracking, actionAvailable: true, bonusActionAvailable: true },
+    turnTracking: { actionAvailable: true, bonusActionAvailable: true },
     // Эффекты короче отдыха закрываются; «до рассеивания» и подобные — нет.
     activeEffects: character.activeEffects.filter((effect) => effect.duration.type === "special"),
     spellPoints: { remaining: 0, createdAt: null },
+    // Временные хиты отдых снимает: они не восстанавливаются, а заканчиваются (FR-206).
+    temporaryHitPoints: 0,
     suppression: { ...character.suppression, firedUpon: false },
   };
   return commit(session, after, { kind: "long_rest", summaryRu: "Долгий отдых" }, clock);
@@ -786,7 +856,7 @@ export function shortRest(session: Session, clock: Clock): Session {
   const after: CharacterState = {
     ...character,
     reactionAvailable: true,
-    turnTracking: { ...character.turnTracking, actionAvailable: true, bonusActionAvailable: true },
+    turnTracking: { actionAvailable: true, bonusActionAvailable: true },
     suppression: { ...character.suppression, firedUpon: false },
   };
   return commit(session, after, { kind: "short_rest", summaryRu: "Короткий отдых" }, clock);
@@ -825,25 +895,20 @@ export function useArcaneRecovery(
  * При выключенном учёте действие и реакция считаются доступными всегда: вне боя отслеживание ходов
  * создаёт ложные предупреждения. Операция обратима, как и всё остальное (FR-111).
  */
-export function setTurnTracking(session: Session, enabled: boolean, clock: Clock): Session {
-  const { character } = session;
-  if (character.turnTracking.enabled === enabled) {
-    throw new SessionError(enabled ? "Учёт хода уже включён" : "Учёт хода уже выключен");
-  }
-  const after: CharacterState = {
-    ...character,
-    turnTracking: { ...character.turnTracking, enabled },
-  };
-  return commit(
-    session,
-    after,
-    {
-      kind: "manual_adjustment",
-      summaryRu: enabled ? "Учёт хода включён" : "Учёт хода выключен",
-    },
-    clock,
-  );
+/**
+ * Смена режима экрана (FR-204).
+ *
+ * Без записи в журнал и без отмены: режим меняет вид, а не состояние персонажа. Записывать его
+ * значило бы засорять журнал глубиной 100 ([FR-111](../../docs/features/F-10-journal-undo.md)) тем,
+ * что нечего отменять, и заставлять «Отменить» переключать экран вместо возврата ресурса.
+ *
+ * Сохранение всё равно происходит: `apply` пишет сессию целиком после любой операции.
+ */
+export function setScreenMode(session: Session, mode: ScreenMode): Session {
+  if (session.character.screenMode === mode) return session;
+  return { ...session, character: { ...session.character, screenMode: mode } };
 }
+
 
 // —————————————————————————— Заметки ——————————————————————————
 

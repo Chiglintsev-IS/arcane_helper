@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 
+import { DEFAULT_SCREEN_MODE, SCREEN_MODES } from "@/rules/modes";
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "./spell";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется (F-11). */
@@ -110,11 +111,33 @@ export const characterStateSchema = z
     activeEffects: z.array(activeEffectSchema),
     roleplayProfile: roleplayProfileSchema,
 
+    /**
+     * Кэш экономии хода для интерфейса. Признака «включён» здесь нет: учёт ведётся ровно в режиме
+     * «Бой» и больше нигде (FR-143) — вне боя ходов не существует, и отдельный переключатель
+     * предлагал бы считать то, чего нет.
+     */
     turnTracking: z.object({
-      enabled: z.boolean(),
       actionAvailable: z.boolean(),
       bonusActionAvailable: z.boolean(),
     }),
+
+    /**
+     * Выбранный режим экрана (FR-204).
+     *
+     * Со значением по умолчанию, а не обязательное: иначе сохранения, сделанные до появления
+     * режимов, перестали бы читаться, а обновление приложения не имеет права терять данные
+     * (NFR-003). Отсутствие поля означает «первый запуск после обновления», а не порчу.
+     */
+    screenMode: z.enum(SCREEN_MODES).default(DEFAULT_SCREEN_MODE),
+
+    /**
+     * Временные хиты (FR-206).
+     *
+     * Отдельным числом, а не прибавкой к текущим: сложенные вместе, они молча исказили бы и
+     * максимум, и КС проверки концентрации. Со значением по умолчанию — по той же причине, что и
+     * `screenMode` (NFR-003).
+     */
+    temporaryHitPoints: z.number().int().nonnegative().default(0),
 
     arcaneRecoveryAvailable: z.boolean(),
 

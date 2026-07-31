@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/Badge";
 import type { ActiveEffect, CharacterState } from "@/data/schemas/character";
 import { effectiveArmorClass } from "@/rules/armorClass";
 import type { ConcentrationSummary } from "@/rules/concentration";
-import type { TurnEconomy } from "@/store/session";
+import { turnTracked, type TurnEconomy } from "@/store/session";
 
 function signed(value: number): string {
   return value < 0 ? `${value}` : `+${value}`;
@@ -25,6 +25,40 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="rounded-md border border-slate-200 px-2 py-1 dark:border-slate-800">
       <dt className="text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">{label}</dt>
       <dd className="text-base font-semibold leading-tight tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * Плитка хитов — кнопка: урон, лечение и временные хиты правятся отсюда (FR-205). Число, которое
+ * чаще всего меняется, и место, где его меняют, — одно и то же.
+ */
+function HitPointsStat({
+  value,
+  temporary,
+  onOpen,
+}: {
+  value: string;
+  temporary: number;
+  onOpen: () => void;
+}) {
+  // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
+  return (
+    <div className="rounded-md border border-slate-200 dark:border-slate-800">
+      <dt className="sr-only">Хиты</dt>
+      <dd>
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`Хиты ${value}. Правка: урон, лечение, временные`}
+          className="w-full px-2 py-1 text-left"
+        >
+          <span className="block text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
+            Хиты{temporary > 0 ? ` +${temporary}` : ""}
+          </span>
+          <span className="block text-base font-semibold leading-tight tabular-nums">{value}</span>
+        </button>
+      </dd>
     </div>
   );
 }
@@ -65,6 +99,7 @@ export function ResourceHeader({
   economy,
   concentration,
   bookCastingTimes,
+  onOpenHitPoints,
   onOpenConcentration,
   onEndEffect,
 }: {
@@ -73,6 +108,7 @@ export function ResourceHeader({
   concentration: ConcentrationSummary | null;
   /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем (FR-001). */
   bookCastingTimes: ReadonlySet<CastingTimeType>;
+  onOpenHitPoints: () => void;
   onOpenConcentration: () => void;
   onEndEffect: (effectId: string) => void;
 }) {
@@ -98,7 +134,11 @@ export function ResourceHeader({
         <Stat label="КС закл." value={`${character.spellSaveDc}`} />
         <Stat label="Атака" value={signed(character.spellAttackModifier)} />
         <Stat label="КД" value={`${armorClass}`} />
-        <Stat label="Хиты" value={`${character.hitPoints.current}/${character.hitPoints.maximum}`} />
+        <HitPointsStat
+          value={`${character.hitPoints.current}/${character.hitPoints.maximum}`}
+          temporary={character.temporaryHitPoints}
+          onOpen={onOpenHitPoints}
+        />
       </dl>
 
       <ul aria-label="Ячейки заклинаний" className="flex gap-1">
@@ -138,14 +178,14 @@ export function ResourceHeader({
           </li>
         ) : null}
         {/*
-          Экономия хода показывается только когда её ведут. С выключенным учётом
-          `deriveTurnEconomy` возвращает «всё доступно» независимо от журнала, и три вечно зелёные
-          галочки не сообщали бы ничего, кроме неправды (FR-001).
+          Экономия хода показывается только в бою: вне боя ходов нет, и `deriveTurnEconomy`
+          возвращает «всё доступно» независимо от журнала (FR-143). Три вечно зелёные галочки не
+          сообщали бы ничего, кроме неправды (FR-001).
 
           Подпись на экране короткая, а доступное имя — полное: на iPhone SE места нет, но
           «Действие» без пояснения незрячему пользователю ничего не говорит.
         */}
-        {character.turnTracking.enabled ? (
+        {turnTracked(character) ? (
           <>
             <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
               {economy.actionAvailable ? (

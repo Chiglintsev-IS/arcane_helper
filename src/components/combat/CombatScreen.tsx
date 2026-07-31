@@ -14,21 +14,24 @@
 import { useMemo, useState } from "react";
 
 import { BloodMagicPanel } from "@/components/combat/BloodMagicPanel";
+import { BloodMagicRow } from "@/components/combat/BloodMagicRow";
 import { CastWizard } from "@/components/cast/CastWizard";
 import { ConcentrationCheckCard } from "@/components/combat/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
+import { ModeSwitcher } from "@/components/combat/ModeSwitcher";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
 import { SpellFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
 import { loadThorneSpells } from "@/data/content/thorne";
-import { DamagePrompt } from "@/components/combat/DamagePrompt";
+import { HitPointsSheet } from "@/components/combat/HitPointsSheet";
 import {
   describeConcentration,
   describeConcentrationCheck,
   type ConcentrationCheck,
 } from "@/rules/concentration";
 import { bestCastPlan, countHiddenRituals, filterSpells, NO_FILTERS } from "@/rules/filters";
+import { spellsForMode } from "@/rules/modes";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
 import {
@@ -38,10 +41,12 @@ import {
   endConcentration,
   endEffect,
   exchangeBlood,
+  grantTemporaryHitPoints,
+  heal,
   recoverHitPointMaximum,
+  setScreenMode,
   setSpellNote,
   setSunlight,
-  setTurnTracking,
   spendRuneOnWardingSigil,
   takeDamage,
   undoLast,
@@ -52,19 +57,21 @@ import {
 const SPELLS = loadThorneSpells();
 
 /**
- * Что вообще встречается в книге. Считается один раз рядом с контентом, потому что от состояния
- * персонажа не зависит: книга в бою не меняется.
+ * Что встречается в переданном списке.
  *
  * Переключатели и значки строятся отсюда, а не из списка всех мыслимых значений: элемент, за которым
- * нет ни одного заклинания, обещает возможность, которой нет (FR-001, FR-002). Появится «Туманный
- * шаг» — вернётся и «Бонусное», без правки интерфейса.
+ * нет ни одного заклинания, обещает возможность, которой нет (FR-001, FR-002). Считается от списка
+ * режима, а не от всей книги, — иначе в бою предлагался бы фильтр «Ритуал», за которым в этом
+ * режиме ничего не стоит.
  */
-const AVAILABLE = {
-  castingTimes: new Set(SPELLS.map((spell) => spell.castingTime.type)),
-  levels: [...new Set(SPELLS.map((spell) => spell.level))].sort((a, b) => a - b),
-  concentration: SPELLS.some((spell) => spell.concentration),
-  ritual: SPELLS.some((spell) => spell.ritual),
-};
+function availableFilters(spells: readonly (typeof SPELLS)[number][]) {
+  return {
+    castingTimes: new Set(spells.map((spell) => spell.castingTime.type)),
+    levels: [...new Set(spells.map((spell) => spell.level))].sort((a, b) => a - b),
+    concentration: spells.some((spell) => spell.concentration),
+    ritual: spells.some((spell) => spell.ritual),
+  };
+}
 
 /**
  * Первая причина, по которой заклинание сейчас не применить, — для строки списка.
@@ -128,8 +135,12 @@ export function CombatScreen() {
 
   const { character } = session;
   const context = { character, turn: economy };
-  const shown = filterSpells(SPELLS, filters, context);
-  const hiddenRituals = countHiddenRituals(SPELLS, filters, context);
+  // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список
+  // (FR-200). Карточка открывается из всей книги — режим не должен закрывать уже открытое.
+  const inMode = spellsForMode(SPELLS, character.screenMode);
+  const shown = filterSpells(inMode, filters, context);
+  const hiddenRituals = countHiddenRituals(inMode, filters, context);
+  const available = availableFilters(inMode);
   const openSpell = SPELLS.find((spell) => spell.id === openSpellId) ?? null;
   const lastEntry = session.journal.at(-1);
 
@@ -164,11 +175,17 @@ export function CombatScreen() {
   return (
     <main className="flex h-dvh flex-col">
       <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
+        <ModeSwitcher
+          mode={character.screenMode}
+          onChange={(mode) => apply((current) => setScreenMode(current, mode))}
+        />
+
         <ResourceHeader
           character={character}
           economy={economy}
           concentration={concentrationSummary}
-          bookCastingTimes={AVAILABLE.castingTimes}
+          bookCastingTimes={available.castingTimes}
+          onOpenHitPoints={() => setDamageOpen(true)}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
         />
@@ -193,34 +210,6 @@ export function CombatScreen() {
           >
             Отменить
           </button>
-          <button
-            type="button"
-            onClick={() => setDamageOpen(true)}
-            className="min-h-11 shrink-0 whitespace-nowrap rounded-xl border border-reaction px-3 text-xs text-reaction-strong dark:text-reaction"
-          >
-            Получил урон
-          </button>
-          <button
-            type="button"
-            onClick={() => setBloodOpen(true)}
-            className="min-h-11 shrink-0 whitespace-nowrap rounded-xl border border-slate-200 px-3 text-xs dark:border-slate-800"
-          >
-            Кровь и хиты
-          </button>
-          <button
-            type="button"
-            aria-pressed={character.turnTracking.enabled}
-            onClick={() =>
-              apply((current) => setTurnTracking(current, !character.turnTracking.enabled, clock))
-            }
-            className={`min-h-11 shrink-0 whitespace-nowrap rounded-xl border px-3 text-xs ${
-              character.turnTracking.enabled
-                ? "border-action text-action-strong dark:text-action"
-                : "border-slate-200 text-slate-500 dark:border-slate-800"
-            }`}
-          >
-            Учёт хода
-          </button>
         </div>
 
         {error === null ? null : (
@@ -240,13 +229,28 @@ export function CombatScreen() {
       <div className="shrink-0 border-b border-slate-200 p-3 dark:border-slate-800">
         <SpellFilters
           filters={filters}
-          available={AVAILABLE}
+          available={available}
           onChange={setFilters}
           onReset={() => setFilters(NO_FILTERS)}
         />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        {/*
+          Магия крови — не заклинание, поэтому живёт своим списком, но стоит вплотную к
+          заклинаниям: это конкурент за то же действие, и выбор между ними делается глазами
+          (FR-207).
+        */}
+        {character.screenMode === "combat" ? (
+          <ul aria-label="Действия" className="mb-2 flex flex-col gap-2">
+            <BloodMagicRow
+              character={character}
+              economy={economy}
+              onOpen={() => setBloodOpen(true)}
+            />
+          </ul>
+        ) : null}
+
         {shown.length === 0 ? (
           <div className="flex flex-col items-start gap-2 text-sm">
             <p>
@@ -322,7 +326,18 @@ export function CombatScreen() {
       ) : null}
 
       {damageOpen ? (
-        <DamagePrompt onCancel={() => setDamageOpen(false)} onSubmit={recordDamage} />
+        <HitPointsSheet
+          onCancel={() => setDamageOpen(false)}
+          onDamage={recordDamage}
+          onHeal={(amount) => {
+            if (apply((current) => heal(current, amount, clock)) === null) setDamageOpen(false);
+          }}
+          onTemporary={(amount) => {
+            if (apply((current) => grantTemporaryHitPoints(current, amount, clock)) === null) {
+              setDamageOpen(false);
+            }
+          }}
+        />
       ) : null}
 
       {pendingCheck === null || concentrationSummary === null ? null : (

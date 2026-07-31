@@ -43,11 +43,12 @@ test("combat-screen renders all resource blocks", async ({ page }) => {
   await expect(slots.getByRole("listitem")).toHaveCount(4);
   await expect(slots.getByText("4/4")).toBeVisible();
 
-  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет, учёт хода выключен —
-  // значков экономии нет, бонусного действия нет ни у одной карточки — переключателя нет (FR-001).
+  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет; бонусного действия нет
+  // ни у одной карточки — ни значка, ни переключателя (FR-001). Экономия хода в бою ведётся всегда.
   await expect(page.getByLabel("Концентрация")).toBeHidden();
-  await expect(page.getByLabel("Реакция доступна")).toBeHidden();
+  await expect(page.getByLabel("Реакция доступна")).toBeVisible();
   await expect(page.getByRole("button", { name: "Бонусное", exact: true })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Учёт хода", exact: true })).toBeHidden();
 });
 
 test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
@@ -71,7 +72,8 @@ test("filter by casting time", async ({ page }) => {
   await expect(list.getByText("Щит")).toBeVisible();
 
   await page.getByRole("button", { name: "Сбросить" }).click();
-  await expect(list.getByRole("listitem")).toHaveCount(8);
+  // Семь: девять карточек режима «Бой» минус два неподготовленных ритуала (FR-103, FR-201).
+  await expect(list.getByRole("listitem")).toHaveCount(7);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {
@@ -106,19 +108,19 @@ test("state survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: /Луч холода/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  // Точное имя: у кнопки отмены доступное имя содержит текст последней записи журнала.
-  await page.getByRole("button", { name: "Учёт хода", exact: true }).click();
+  // Заодно проверяется, что режим переживает перезапуск (FR-204).
+  await page.getByRole("radio", { name: /^Книга/ }).click();
 
   await page.reload();
   await expect(page.getByRole("heading", { name: "Торн" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Учёт хода", exact: true })).toHaveAttribute(
-    "aria-pressed",
+  await expect(page.getByRole("radio", { name: /^Книга/ })).toHaveAttribute(
+    "aria-checked",
     "true",
   );
 });
 
 test("reaction shows when it returns", async ({ page }) => {
-  await page.getByRole("button", { name: "Учёт хода", exact: true }).click();
+  // Учёт хода в бою ведётся всегда — включать нечего (FR-143).
   await page.getByRole("button", { name: /Щит/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Далее" }).click();

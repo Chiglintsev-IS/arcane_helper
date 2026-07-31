@@ -20,7 +20,7 @@ async function openPanel(character?: CharacterState) {
     character === undefined
       ? await renderWithStores(<CombatScreen />)
       : await renderWithStores(<CombatScreen />, character);
-  await user.click(screen.getByRole("button", { name: "Кровь и хиты" }));
+  await user.click(screen.getByRole("button", { name: /Магия крови/ }));
   return { user, ...rendered };
 }
 

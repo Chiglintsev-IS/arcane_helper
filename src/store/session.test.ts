@@ -14,15 +14,17 @@ import {
   endConcentration,
   endEffect,
   exchangeBlood,
+  grantTemporaryHitPoints,
+  heal,
   JOURNAL_LIMIT,
   longRest,
   recoverHitPointMaximum,
   refundSpellSlot,
   regenerationDue,
   SessionError,
+  setScreenMode,
   setSpellNote,
   setSunlight,
-  setTurnTracking,
   shortRest,
   spendRuneOnWardingSigil,
   takeDamage,
@@ -57,15 +59,17 @@ beforeEach(() => {
   session = createSession(createThorne());
 });
 
-/** Учёт хода по умолчанию выключен: включаем там, где он проверяется. */
+/**
+ * Учёт хода ведётся ровно в режиме «Бой» (FR-143), а он же начальный, — поэтому помощник ничего не
+ * включает. Оставлен именем: он объясняет, зачем тесту вообще учёт.
+ */
 function withTurnTracking(base: Session): Session {
-  return {
-    ...base,
-    character: {
-      ...base.character,
-      turnTracking: { enabled: true, actionAvailable: true, bonusActionAvailable: true },
-    },
-  };
+  return { ...base, character: { ...base.character, screenMode: "combat" } };
+}
+
+/** Вне боя: ходов нет, значит и расходовать в них нечего (FR-143). */
+function outOfCombat(base: Session): Session {
+  return { ...base, character: { ...base.character, screenMode: "camp" } };
 }
 
 describe("начальное состояние Торна", () => {
@@ -263,8 +267,8 @@ describe("экономия действий (FR-141)", () => {
     ).toThrow(/Бонусное действие уже израсходовано/);
   });
 
-  it("при выключенном учёте хода не жалуется (FR-143)", () => {
-    let current = session;
+  it("вне боя действие не расходуется (FR-143)", () => {
+    let current = outOfCombat(session);
     for (let index = 0; index < 3; index += 1) {
       current = castSpell(
         current,
@@ -635,7 +639,7 @@ describe("отдых и восстановление", () => {
   });
 
   it("магическое восстановление не превышает бюджет", () => {
-    let current = session;
+    let current = outOfCombat(session);
     for (const level of [3, 2] as const) {
       current = castSpell(
         current,
@@ -740,7 +744,7 @@ describe("отмена последнего действия (FR-111)", () => {
   });
 
   it("многократная отмена идёт по одному действию назад", () => {
-    let current = session;
+    let current = outOfCombat(session);
     const snapshots = [structuredClone(current.character)];
     for (const level of [1, 2, 3] as const) {
       current = castSpell(
@@ -759,15 +763,16 @@ describe("отмена последнего действия (FR-111)", () => {
 
 describe("журнал (FR-110, FR-112)", () => {
   it("событие без изменения ресурсов всё равно записывается", () => {
-    // Заговор при выключенном учёте хода не тратит ничего, но FR-110 требует записать применение.
+    // Заговор вне боя не тратит ничего, но FR-110 требует записать применение.
+    const before = outOfCombat(session);
     const after = castSpell(
-      session,
+      before,
       { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
       clock,
     );
     expect(after.journal).toHaveLength(1);
     expect(after.journal[0]?.undoPatch).toEqual({});
-    expect(after.character).toEqual(session.character);
+    expect(after.character).toEqual(before.character);
   });
 
   it("отмена записи без изменений убирает только строку журнала", () => {
@@ -782,7 +787,7 @@ describe("журнал (FR-110, FR-112)", () => {
   });
 
   it("не растёт бесконечно", () => {
-    let current = session;
+    let current = outOfCombat(session);
     for (let index = 0; index < JOURNAL_LIMIT + 15; index += 1) {
       current = castSpell(
         current,
@@ -810,8 +815,8 @@ describe("экономия хода выводится из журнала (ADR-
     expect(economy).toMatchObject({ started: false, reactionAvailable: true, round: 1 });
   });
 
-  it("при выключенном учёте всё доступно независимо от журнала", () => {
-    let current = beginTurn(session, clock);
+  it("вне боя всё доступно независимо от журнала", () => {
+    let current = beginTurn(outOfCombat(session), clock);
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
@@ -1034,6 +1039,103 @@ describe("активный эффект без указанной длитель
   });
 });
 
+describe("режим экрана (FR-200, FR-204)", () => {
+  it("меняется без записи в журнал: отменять в виде нечего", () => {
+    const after = setScreenMode(session, "camp");
+    expect(after.character.screenMode).toBe("camp");
+    expect(after.journal).toHaveLength(0);
+  });
+
+  it("повторный выбор того же режима возвращает ту же сессию", () => {
+    expect(setScreenMode(session, "combat")).toBe(session);
+  });
+});
+
+describe("обмен крови вне боя действие не расходует (FR-143, FR-170)", () => {
+  it("на привале хиты уходят, а кэш действия остаётся нетронутым", () => {
+    const after = exchangeBlood(outOfCombat(session), 6, clock);
+    expect(after.character.spellPoints.remaining).toBe(2);
+    expect(after.character.turnTracking.actionAvailable).toBe(true);
+  });
+});
+
+describe("правка хитов: лечение и временные (FR-205, FR-206)", () => {
+  function hurt(current: number): Session {
+    return { ...session, character: { ...session.character, hitPoints: { current, maximum: 60, maximumReduction: 0 } } };
+  }
+
+  it("лечение поднимает текущие хиты и пишется в журнал", () => {
+    const after = heal(hurt(40), 12, clock);
+    expect(after.character.hitPoints.current).toBe(52);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Вылечено: 12");
+  });
+
+  it("выше максимума не поднимает и говорит об этом", () => {
+    const after = heal(hurt(55), 20, clock);
+    expect(after.character.hitPoints.current).toBe(60);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Вылечено: 5 (из 20: упёрлись в максимум)");
+  });
+
+  it("упирается в снижённый максимум, а не в исходный (FR-172)", () => {
+    const reduced: Session = {
+      ...session,
+      character: { ...session.character, hitPoints: { current: 40, maximum: 60, maximumReduction: 9 } },
+    };
+    expect(heal(reduced, 30, clock).character.hitPoints.current).toBe(51);
+  });
+
+  it("на полном здоровье отказывает, а не пишет пустую запись", () => {
+    expect(() => heal(session, 5, clock)).toThrow(/уже на максимуме/);
+  });
+
+  it.each([0, -3, 1.5])("отклоняет недопустимое лечение %s", (amount) => {
+    expect(() => heal(hurt(40), amount, clock)).toThrow(SessionError);
+  });
+
+  it("временные хиты записываются отдельным числом", () => {
+    const after = grantTemporaryHitPoints(session, 8, clock);
+    expect(after.character.temporaryHitPoints).toBe(8);
+    expect(after.character.hitPoints.current).toBe(60);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Временные хиты: 8");
+  });
+
+  it("не складываются: меньшее значение отклоняется", () => {
+    const granted = grantTemporaryHitPoints(session, 8, clock);
+    expect(() => grantTemporaryHitPoints(granted, 5, clock)).toThrow(/не складываются/);
+    expect(grantTemporaryHitPoints(granted, 10, clock).character.temporaryHitPoints).toBe(10);
+  });
+
+  it.each([0, -1, 2.5])("отклоняет недопустимое значение %s", (amount) => {
+    expect(() => grantTemporaryHitPoints(session, amount, clock)).toThrow(SessionError);
+  });
+
+  it("урон идёт сначала по временным хитам", () => {
+    const granted = grantTemporaryHitPoints(session, 8, clock);
+    const after = takeDamage(granted, 5, clock);
+    expect(after.character.temporaryHitPoints).toBe(3);
+    expect(after.character.hitPoints.current).toBe(60);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Получено урона: 5, из них 5 временными хитами");
+  });
+
+  it("остаток урона сверх временных хитов бьёт по текущим", () => {
+    const granted = grantTemporaryHitPoints(session, 8, clock);
+    const after = takeDamage(granted, 20, clock);
+    expect(after.character.temporaryHitPoints).toBe(0);
+    expect(after.character.hitPoints.current).toBe(48);
+  });
+
+  it("лечение временные хиты не восстанавливает", () => {
+    const spent = takeDamage(grantTemporaryHitPoints(hurt(40), 8, clock), 20, clock);
+    expect(spent.character.temporaryHitPoints).toBe(0);
+    expect(heal(spent, 10, clock).character.temporaryHitPoints).toBe(0);
+  });
+
+  it("долгий отдых снимает временные хиты", () => {
+    const granted = grantTemporaryHitPoints(session, 8, clock);
+    expect(longRest(granted, clock).character.temporaryHitPoints).toBe(0);
+  });
+});
+
 describe("окончание эффекта называет срок числом (FR-090)", () => {
   function endCondition(spellOverride: Partial<Spell>): string | undefined {
     const subject: Spell = { ...spell("mage-armor"), ...spellOverride };
@@ -1099,34 +1201,6 @@ describe("заметка к заклинанию (FR-012)", () => {
   });
 })
 
-describe("переключение учёта хода (FR-143)", () => {
-  it("включается и обратимо через журнал", () => {
-    const enabled = setTurnTracking(session, true, clock);
-
-    expect(enabled.character.turnTracking.enabled).toBe(true);
-    expect(enabled.journal.at(-1)?.summaryRu).toBe("Учёт хода включён");
-    expect(undoLast(enabled).character.turnTracking.enabled).toBe(false);
-  });
-
-  it("выключается и возвращает доступность всего (FR-143)", () => {
-    const enabled = setTurnTracking(session, true, clock);
-    const spent = castSpell(
-      enabled,
-      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
-    );
-    expect(deriveTurnEconomy(spent).actionAvailable).toBe(false);
-
-    const disabled = setTurnTracking(spent, false, clock);
-    expect(deriveTurnEconomy(disabled).actionAvailable).toBe(true);
-  });
-
-  it("повторное переключение в то же состояние — ошибка, а не пустая запись журнала", () => {
-    expect(() => setTurnTracking(session, false, clock)).toThrow("Учёт хода уже выключен");
-    const enabled = setTurnTracking(session, true, clock);
-    expect(() => setTurnTracking(enabled, true, clock)).toThrow("Учёт хода уже включён");
-  });
-});
 
 describe("почасовое восстановление максимума хитов (FR-173)", () => {
   function afterExchange(): Session {

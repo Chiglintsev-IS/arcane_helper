@@ -138,9 +138,8 @@ describe("checkAvailability: экономия хода (FR-030, FR-141)", () => 
 describe("checkAvailability: накладывание дольше хода (FR-033)", () => {
   /** Предупреждение о минутах имеет смысл только там, где ход считается (FR-143). */
   function inCombat(): CharacterState {
-    const character = createThorne();
-    character.turnTracking = { ...character.turnTracking, enabled: true };
-    return character;
+    // Учёт хода следует из режима: в «Бою» он ведётся всегда (FR-143).
+    return { ...createThorne(), screenMode: "combat" };
   }
 
   it("минуты предупреждают о цене по правилам и называют время", () => {
@@ -177,8 +176,8 @@ describe("checkAvailability: накладывание дольше хода (FR-
     expect(reasonsOf(check({ spell: broken, character: inCombat() }), "long_casting_time")).toEqual([]);
   });
 
-  it("при выключенном учёте хода молчит: вне боя минута ничего не стоит (FR-143)", () => {
-    const availability = check({ spell: mending });
+  it("вне боя молчит: на привале минута ничего не стоит (FR-143)", () => {
+    const availability = check({ spell: mending, character: { ...createThorne(), screenMode: "camp" } });
     expect(availability.warnings).toEqual([]);
     expect(availability.available).toBe(true);
   });

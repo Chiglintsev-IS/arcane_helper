@@ -14,10 +14,22 @@ import type { CharacterState } from "@/data/schemas/character";
 import { renderWithStores, spell } from "@/testing/stores";
 import { CombatScreen } from "./CombatScreen";
 
+/**
+ * Торн в режиме «Книга»: виден весь состав, включая долгое накладывание и ритуалы.
+ *
+ * Нужен там, где проверяется сама карточка, а не отбор по режиму: в «Бою» «Починки» и «Опознания»
+ * нет по FR-201, и тест о формате подписи спотыкался бы о режим (F-18).
+ */
+function inBookMode(): CharacterState {
+  return { ...createThorne(), screenMode: "book" };
+}
+
+/**
+ * Учёт хода ведётся ровно в режиме «Бой» (FR-143), а он же начальный, — так что помощник ничего не
+ * включает. Имя оставлено: оно объясняет, зачем тесту учёт.
+ */
 function withTurnTracking(): CharacterState {
-  const character = createThorne();
-  character.turnTracking = { enabled: true, actionAvailable: true, bonusActionAvailable: true };
-  return character;
+  return { ...createThorne(), screenMode: "combat" };
 }
 
 function concentrating(): CharacterState {
@@ -55,16 +67,16 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(within(slots).getByText("4/4")).toBeDefined();
   });
 
-  it("без учёта хода не показывает экономию действий (FR-001)", async () => {
-    // С выключенным учётом deriveTurnEconomy возвращает «всё доступно» независимо от журнала:
-    // значки были бы зелёными всегда и сообщали бы неправду, а не состояние.
-    await renderWithStores(<CombatScreen />);
+  it("вне боя не показывает экономию действий (FR-001, FR-143)", async () => {
+    // Вне боя ходов нет: deriveTurnEconomy вернул бы «всё доступно» независимо от журнала, и
+    // значки сообщали бы не состояние, а неправду.
+    await renderWithStores(<CombatScreen />, { ...createThorne(), screenMode: "camp" });
 
     expect(screen.queryByLabelText("Действие доступно")).toBeNull();
     expect(screen.queryByLabelText("Реакция доступна")).toBeNull();
   });
 
-  it("с включённым учётом показывает действие и реакцию, но не бонусное (FR-001)", async () => {
+  it("в бою показывает действие и реакцию, но не бонусное (FR-001)", async () => {
     // Бонусного действия нет ни у одной карточки книги — значку нечего отражать.
     await renderWithStores(<CombatScreen />, withTurnTracking());
 
@@ -129,6 +141,63 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 });
 
+describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
+  it("начинает с боя и не показывает долгое накладывание", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.getByRole("radio", { name: /^Бой/ })).toHaveProperty("ariaChecked", "true");
+    const list = within(screen.getByLabelText("Заклинания"));
+    expect(list.getByText("Луч холода")).toBeDefined();
+    expect(list.queryByText("Починка")).toBeNull();
+    expect(list.queryByText("Поиск фамильяра")).toBeNull();
+  });
+
+  it("привал показывает то, чего в бою нет, и прячет мгновенное", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+
+    const list = within(screen.getByLabelText("Заклинания"));
+    expect(list.getByText("Починка")).toBeDefined();
+    expect(list.queryByText("Щит")).toBeNull();
+  });
+
+  it("книга не отбирает ничего", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+
+    const list = within(screen.getByLabelText("Заклинания"));
+    expect(list.getByText("Щит")).toBeDefined();
+    expect(list.getByText("Починка")).toBeDefined();
+  });
+
+  it("режим попадает в состояние, а журнал не засоряет (FR-204)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+
+    // Сохранение — да, запись в журнал — нет: режим меняет вид, отменять в нём нечего.
+    expect(stores.session.getState().session?.character.screenMode).toBe("camp");
+    expect(stores.session.getState().session?.journal).toHaveLength(0);
+  });
+
+  it("в бою не предлагает фильтр «Ритуал» с ритуалами, которых там нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    // В бою ритуалы есть («Обнаружение магии» действием), поэтому переключатель на месте.
+    expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
+
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    // На привале нет реакций — переключателя «Реакция» тоже нет (FR-002).
+    expect(screen.queryByRole("button", { name: "Реакция" })).toBeNull();
+  });
+});
+
 describe("фильтры (FR-002, FR-003, AC-07)", () => {
   it("фильтр по времени накладывания оставляет только подходящие заклинания", async () => {
     const user = userEvent.setup();
@@ -163,7 +232,8 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     await user.click(screen.getByRole("button", { name: "Заговор" }));
 
     expect(screen.getByText(/не подходит ни одно заклинание/)).toBeDefined();
-    expect(screen.getByText(/4 ритуалов скрыты как неподготовленные/)).toBeDefined();
+    // Двух, а не четырёх: в режиме «Бой» из ритуалов есть только те, что творятся действием.
+    expect(screen.getByText(/2 ритуалов скрыты как неподготовленные/)).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
     expect(screen.getByLabelText("Заклинания")).toBeDefined();
@@ -201,7 +271,7 @@ describe("краткая карточка (FR-010)", () => {
   });
 
   it("накладывание дольше хода называет точное время, а не категорию (FR-033)", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<CombatScreen />, inBookMode());
     const row = screen.getByRole("button", { name: /Починка/ });
 
     expect(within(row).getByText("1 минута")).toBeDefined();
@@ -302,27 +372,25 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     expect(stores.session.getState().session?.journal).toHaveLength(0);
   });
 
-  it("учёт хода переключается и обратим", async () => {
+  it("учёт хода следует из режима, а не из переключателя (FR-143)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<CombatScreen />);
 
-    const toggle = screen.getByRole("button", { name: "Учёт хода" });
-    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    // Кнопки «Учёт хода» больше нет: она умела выключить счёт и оставить зелёные галочки.
+    expect(screen.queryByRole("button", { name: "Учёт хода" })).toBeNull();
+    expect(screen.getByLabelText("Действие доступно")).toBeDefined();
 
-    await user.click(toggle);
-    expect(stores.session.getState().session?.character.turnTracking.enabled).toBe(true);
-    expect(screen.getByRole("button", { name: "Учёт хода" }).getAttribute("aria-pressed")).toBe(
-      "true",
-    );
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    expect(stores.session.getState().session?.character.screenMode).toBe("camp");
+    expect(screen.queryByLabelText("Действие доступно")).toBeNull();
   });
 });
 
 describe("подробная карточка (FR-011, FR-012)", () => {
   it("открывается по строке списка и показывает механику", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />);
-
-    // Неподготовленные ритуалы в боевом списке скрыты: показываем их фильтром (F-09).
+    // Неподготовленные ритуалы в списке скрыты: показываем их фильтром (F-09).
+    await renderWithStores(<CombatScreen />, inBookMode());
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /Опознание/ }));
 
@@ -373,9 +441,8 @@ describe("подробная карточка (FR-011, FR-012)", () => {
 describe("схема ритуала (FR-192)", () => {
   it("карточка ритуала открывает схему на полный экран", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />);
-
-    // Ритуалы в боевом списке скрыты по умолчанию (FR-103): сначала фильтр, потом строка списка.
+    // Ритуалы в списке скрыты по умолчанию (FR-103): сначала фильтр, потом строка списка.
+    await renderWithStores(<CombatScreen />, inBookMode());
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(
       within(screen.getByLabelText("Заклинания")).getByRole("button", { name: /Опознание/ }),
