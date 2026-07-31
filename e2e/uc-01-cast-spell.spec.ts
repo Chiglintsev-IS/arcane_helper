@@ -272,6 +272,39 @@ test("book mode prepares spells", async ({ page }) => {
   await expect(page.getByLabel(/^Заклинания/)).toContainText("Обнаружение магии");
 });
 
+test("serves the app from cache when the network is gone", async ({ page, context }) => {
+  // Игра идёт за столом, где телефон может быть в авиарежиме: офлайн — условие
+  // работоспособности, а не оптимизация (NFR-001, NFR-002, AC-02).
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, {
+    timeout: 10_000,
+  });
+
+  // Оболочка и её ресурсы оседают в кэше по мере загрузки: список файлов сборки заранее
+  // неизвестен — статический экспорт даёт имена с хешами.
+  await page.waitForFunction(
+    async () => {
+      const names = await caches.keys();
+      const cache = await caches.open(names[0] ?? "");
+      const paths = (await cache.keys()).map((request) => new URL(request.url).pathname);
+      return paths.includes("/index.html") && paths.some((path) => path.startsWith("/_next/"));
+    },
+    null,
+    { timeout: 10_000 },
+  );
+
+  // Сеть глушится маршрутом, а не `setOffline`: перехват идёт после service worker, то есть
+  // отвечать будет именно кэш. Перезагрузку под перехватом WebKit не выполняет, поэтому
+  // проверяется сам запрос — он и есть то, что делает браузер при открытии в офлайне.
+  await context.route("**", (route) => route.abort());
+  const offline = await page.evaluate(async () => {
+    const response = await fetch("./index.html");
+    return { ok: response.ok, html: (await response.text()).includes("Arcane Helper") };
+  });
+  await context.unroute("**");
+
+  expect(offline).toEqual({ ok: true, html: true });
+});
+
 test("camp mode reaches rest and recovery", async ({ page }) => {
   // Тратим ячейку в бою, чтобы на привале было что восстанавливать.
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
