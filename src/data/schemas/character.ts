@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 
-import { MAXIMUM_SPELL_LEVEL } from "./spell";
+import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "./spell";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется (F-11). */
 export const EXPORT_SCHEMA_VERSION = 1;
@@ -52,6 +52,9 @@ export const activeEffectSchema = z.object({
   repeatableAction: z
     .object({ label: nonEmpty, description: nonEmpty })
     .optional(),
+
+  // Копия вклада заклинания в КД: итог считается из одного состояния, без каталога (ADR-0013).
+  armorClass: armorClassEffectSchema.optional(),
 
   endConditionRu: nonEmpty,
   note: nonEmpty.optional(),

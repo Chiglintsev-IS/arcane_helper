@@ -12,6 +12,7 @@
 import {
   CASTING_TIME,
   areaLabel,
+  castingTimeLabel,
   durationLabel,
   levelLabel,
   rangeLabel,
@@ -96,7 +97,7 @@ export function SpellCardDetails({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 text-sm">
         <div className="flex flex-wrap gap-1">
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
-            {castingTime.label}
+            {castingTimeLabel(spell.castingTime)}
           </Badge>
           {spell.concentration ? (
             <Badge tone="concentration" icon="✦">

@@ -20,3 +20,21 @@ export function plural(count: number, forms: [string, string, string]): string {
 export function withPlural(count: number, forms: [string, string, string]): string {
   return `${count} ${plural(count, forms)}`;
 }
+
+/** Единица долгого накладывания: минуты или часы ([FR-033](../../docs/features/F-03-cast-wizard.md#fr-033)). */
+export type LongCastingUnit = "minute" | "hour";
+
+const LONG_CASTING_FORMS: Record<LongCastingUnit, [string, string, string]> = {
+  minute: ["минута", "минуты", "минут"],
+  hour: ["час", "часа", "часов"],
+};
+
+/**
+ * Время накладывания дольше хода словами: «1 минута», «10 минут», «1 час».
+ *
+ * Здесь, а не в подписях интерфейса, потому что это же время называет и проверка доступности:
+ * две реализации разошлись бы в падеже или в числе.
+ */
+export function longCastingTimeRu(unit: LongCastingUnit, value: number): string {
+  return withPlural(value, LONG_CASTING_FORMS[unit]);
+}

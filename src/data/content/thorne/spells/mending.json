@@ -4,7 +4,7 @@
   "nameEn": "Mending",
   "level": 0,
   "school": "Преобразование",
-  "castingTime": { "type": "minute" },
+  "castingTime": { "type": "minute", "value": 1 },
   "range": { "type": "touch" },
   "components": {
     "verbal": true,

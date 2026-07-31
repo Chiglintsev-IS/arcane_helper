@@ -124,22 +124,57 @@ describe("renderAnnouncement: режим применения (FR-041)", () => {
   });
 });
 
-describe("renderAnnouncement: чего приложение не считает", () => {
-  it("не выдумывает готовый КД: подстановка помечена пробелом с причиной (FR-062, OQ-02)", () => {
+describe("renderAnnouncement: готовый КД (FR-093)", () => {
+  it("называет КД со «Щитом» числом, а не формулой: 19 без «Доспехов мага»", () => {
     const announcement = renderAnnouncement(
       spell("shield"),
       context({ payment: { kind: "slot", slotLevel: 1 } }),
     );
 
-    expect(announcement.text).toContain("Мой КД становится ?");
-    expect(announcement.gaps).toEqual([
-      {
-        placeholder: "armorClass",
-        reasonRu: "Готовый КД с учётом заклинания приложение пока не считает (FR-062, OQ-02)",
-      },
-    ]);
+    expect(announcement.text).toContain("Мой КД становится 19");
+    expect(announcement.gaps).toEqual([]);
   });
 
+  it("учитывает активные «Доспехи мага»: КД со «Щитом» становится 22", () => {
+    const withMageArmor = renderAnnouncement(
+      spell("shield"),
+      context({
+        character: {
+          ...createThorne(),
+          activeEffects: [
+            {
+              id: "effect-mage-armor",
+              spellId: "mage-armor",
+              nameRu: "Доспехи мага",
+              type: "buff",
+              startedAt: "2026-07-31T12:00:00.000Z",
+              duration: { type: "hours", value: 8 },
+              isConcentration: false,
+              slotLevelUsed: 1,
+              armorClass: { kind: "base_override", value: 13 },
+              endConditionRu: "До истечения длительности.",
+            },
+          ],
+        },
+        payment: { kind: "slot", slotLevel: 1 },
+      }),
+    );
+
+    expect(withMageArmor.text).toContain("Мой КД становится 22");
+  });
+
+  it("«Доспехи мага» называют итоговый КД 17", () => {
+    const announcement = renderAnnouncement(
+      spell("mage-armor"),
+      context({ payment: { kind: "slot", slotLevel: 1 }, targetLabel: "на себя" }),
+    );
+
+    expect(announcement.text).toContain("итоговый КД цели — 17");
+    expect(announcement.gaps).toEqual([]);
+  });
+});
+
+describe("renderAnnouncement: чего приложение не считает", () => {
   it("помечает дальность, которой нет в данных заклинания", () => {
     const selfRange: Spell = {
       ...spell("mage-armor"),

@@ -36,6 +36,8 @@ test("combat-screen renders all resource blocks", async ({ page }) => {
   await expect(resources.getByText("Волшебник, 7 уровень", { exact: false })).toBeVisible();
   await expect(resources.getByText("16", { exact: true })).toBeVisible();
   await expect(resources.getByText("+8", { exact: true })).toBeVisible();
+  // КД без активных эффектов: 10 базы + 2 Ловкости + 2 предметов (FR-093).
+  await expect(resources.getByText("14", { exact: true })).toBeVisible();
 
   const slots = page.getByLabel("Ячейки заклинаний");
   await expect(slots.getByRole("listitem")).toHaveCount(4);

@@ -25,6 +25,8 @@ const mageArmor = spell("mage-armor");
 const shield = spell("shield");
 const detectMagic = spell("detect-magic");
 const identify = spell("identify");
+const mending = spell("mending");
+const findFamiliar = spell("find-familiar");
 
 function check(overrides: Partial<AvailabilityInput> & { spell: Spell }) {
   const input: AvailabilityInput = {
@@ -127,7 +129,58 @@ describe("checkAvailability: экономия хода (FR-030, FR-141)", () => 
       payment: { kind: "none" },
       turn: { actionAvailable: false, bonusActionAvailable: false, reactionAvailable: false },
     });
+    expect(reasonsOf(availability, "action_spent")).toEqual([]);
+    expect(reasonsOf(availability, "bonus_action_spent")).toEqual([]);
+    expect(reasonsOf(availability, "reaction_spent")).toEqual([]);
+  });
+});
+
+describe("checkAvailability: накладывание дольше хода (FR-033)", () => {
+  /** Предупреждение о минутах имеет смысл только там, где ход считается (FR-143). */
+  function inCombat(): CharacterState {
+    const character = createThorne();
+    character.turnTracking = { ...character.turnTracking, enabled: true };
+    return character;
+  }
+
+  it("минуты предупреждают о цене по правилам и называют время", () => {
+    const availability = check({ spell: mending, character: inCombat() });
+    expect(reasonsOf(availability, "long_casting_time")).toEqual([
+      "Не уложится в один ход — 1 минута, действие каждый ход и концентрация",
+    ]);
+  });
+
+  it("часы называют время в своих единицах", () => {
+    const availability = check({
+      spell: findFamiliar,
+      character: inCombat(),
+      mode: "ritual",
+      payment: { kind: "none" },
+    });
+    expect(reasonsOf(availability, "long_casting_time")).toEqual([
+      "Не уложится в один ход — 1 час, действие каждый ход и концентрация",
+    ]);
+  });
+
+  it("предупреждение проходимо: мастер вправе разрешить исключение (FR-031)", () => {
+    expect(check({ spell: mending, character: inCombat() }).overridable).toBe(true);
+  });
+
+  it("заклинание действием такого предупреждения не получает", () => {
+    expect(reasonsOf(check({ spell: rayOfFrost, character: inCombat() }), "long_casting_time"))
+      .toEqual([]);
+  });
+
+  it("без числа в данных молчит: назвать время нечем, а половина предупреждения хуже тишины", () => {
+    // Схема такого не пропускает, но тип допускает: импорт чужих данных не должен ломать проверку.
+    const broken: Spell = { ...mending, castingTime: { type: "minute" } };
+    expect(reasonsOf(check({ spell: broken, character: inCombat() }), "long_casting_time")).toEqual([]);
+  });
+
+  it("при выключенном учёте хода молчит: вне боя минута ничего не стоит (FR-143)", () => {
+    const availability = check({ spell: mending });
     expect(availability.warnings).toEqual([]);
+    expect(availability.available).toBe(true);
   });
 });
 

@@ -17,6 +17,7 @@ import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import { RulesError } from "./abilities";
 import { spellPointCost, hitPointCost } from "./bloodMagic";
+import { longCastingTimeRu, type LongCastingUnit } from "./language";
 import { CANTRIP_LEVEL, consumesSlot, type CastMode } from "./slots";
 
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
@@ -56,6 +57,7 @@ export type AvailabilityCode =
   | "action_spent"
   | "bonus_action_spent"
   | "reaction_spent"
+  | "long_casting_time"
   | "no_payment"
   | "no_slot"
   | "slot_too_low"
@@ -100,6 +102,39 @@ export function turnResourceFor(castingTime: Spell["castingTime"]["type"]): Turn
     default:
       return undefined;
   }
+}
+
+/** Минуты и часы: ресурс хода не тратят, но и в ход не укладываются (FR-033). */
+const LONG_CASTING_UNITS: Partial<Record<Spell["castingTime"]["type"], LongCastingUnit>> = {
+  minute: "minute",
+  hour: "hour",
+};
+
+/**
+ * Предупреждение о накладывании дольше хода (FR-033).
+ *
+ * Называет не только время, но и цену по правилам: действие каждый ход и концентрация всё время
+ * накладывания ([rules-engine.md](../../docs/rules-engine.md#накладывание-дольше-одного-хода)).
+ *
+ * Молчит при выключенном учёте хода ([FR-143](../../docs/features/F-06-resources.md#fr-143)): вне боя
+ * ход не считается, и минута ничего не стоит. Иначе каждый ритуал получал бы предупреждение всегда, а
+ * предупреждение, которое нельзя не увидеть, перестаёт что-либо значить.
+ */
+function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
+  const { castingTime } = input.spell;
+  const unit = LONG_CASTING_UNITS[castingTime.type];
+  if (unit === undefined || castingTime.value === undefined) return [];
+  if (!input.character.turnTracking.enabled) return [];
+  return [
+    {
+      code: "long_casting_time",
+      // Тире, а не двоеточие: строка списка печатает причину после «Недоступно:» (F-02).
+      reasonRu:
+        `Не уложится в один ход — ${longCastingTimeRu(unit, castingTime.value)},` +
+        " действие каждый ход и концентрация",
+      overridable: true,
+    },
+  ];
 }
 
 const SPENT_CODES: Record<TurnResource, AvailabilityCode> = {
@@ -280,6 +315,7 @@ export function checkAvailability(input: AvailabilityInput): Availability {
           },
         ]
       : []),
+    ...checkCastingTime(input),
     ...checkPayment(input),
     ...checkConcentration(input),
   ];

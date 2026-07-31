@@ -11,6 +11,7 @@
 
 import {
   CASTING_TIME,
+  castingTimeLabel,
   damageLabel,
   durationBadge,
   preparationBadge,
@@ -58,7 +59,7 @@ export function SpellCardCompact({
 
         <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
-            {castingTime.label}
+            {castingTimeLabel(spell.castingTime)}
           </Badge>
           <Badge tone={preparation.tone} icon={preparation.icon}>
             {preparation.label}

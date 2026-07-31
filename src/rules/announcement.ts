@@ -12,6 +12,7 @@
 import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/data/schemas/spell";
+import { armorClassWithSpell } from "./armorClass";
 import { componentRequirements, type PaymentChoice } from "./availability";
 import { withPlural } from "./language";
 import { hitPointCost, spellPointCost } from "./bloodMagic";
@@ -104,14 +105,9 @@ function resolve(
       return { value: `${spell.range.distanceFeet}` };
 
     case "armorClass":
-      // КД с учётом заклинания складывается из активных эффектов и предметов: пока не считается.
-      return {
-        value: UNKNOWN,
-        gap: {
-          placeholder,
-          reasonRu: "Готовый КД с учётом заклинания приложение пока не считает (FR-062, OQ-02)",
-        },
-      };
+      // Считается вклад выбранного заклинания вместе с уже активными эффектами (FR-093).
+      // Состояние при этом не меняется: до подтверждения его менять нельзя (FR-022).
+      return { value: `${armorClassWithSpell(character, spell)}` };
   }
 }
 

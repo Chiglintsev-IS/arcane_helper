@@ -9,7 +9,8 @@
  */
 
 import { Badge } from "@/components/ui/Badge";
-import type { CharacterState } from "@/data/schemas/character";
+import type { ActiveEffect, CharacterState } from "@/data/schemas/character";
+import { effectiveArmorClass } from "@/rules/armorClass";
 import type { TurnEconomy } from "@/store/session";
 
 function signed(value: number): string {
@@ -23,6 +24,16 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dd className="text-base font-semibold leading-tight tabular-nums">{value}</dd>
     </div>
   );
+}
+
+/**
+ * Подпись вклада эффекта в КД: отвечает на вопрос «почему КД 17, а не 14» (FR-093).
+ *
+ * Приложение не хранит цель эффекта, поэтому «Доспехи мага» на союзника поднимут КД Торна
+ * (OQ-19). Подпись делает это видимым: неверный эффект снимается вручную (FR-091).
+ */
+function armorClassNote(effect: ActiveEffect, armorClass: number): string {
+  return effect.armorClass === undefined ? "" : ` · КД ${armorClass}`;
 }
 
 /** Ячейка уровня: остаток и максимум. Минус — долг, разрешённый «Применить всё равно» (FR-031). */
@@ -59,8 +70,8 @@ export function ResourceHeader({
 
   const concentrationEffect = character.activeEffects.find((effect) => effect.isConcentration);
   const otherEffects = character.activeEffects.filter((effect) => !effect.isConcentration);
-  const armorClass =
-    character.armorClass.base + character.armorClass.dexterityModifier + character.armorClass.itemBonus;
+  // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок (FR-093).
+  const armorClass = effectiveArmorClass(character);
 
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
@@ -165,8 +176,8 @@ export function ResourceHeader({
           </p>
         ) : (
           <p className="text-concentration-strong dark:text-concentration">
-            <span aria-hidden="true">✦</span> Концентрация: «{concentrationEffect.nameRu}» ·{" "}
-            {concentrationEffect.endConditionRu}
+            <span aria-hidden="true">✦</span> Концентрация: «{concentrationEffect.nameRu}»
+            {armorClassNote(concentrationEffect, armorClass)} · {concentrationEffect.endConditionRu}
           </p>
         )}
       </section>
@@ -175,7 +186,8 @@ export function ResourceHeader({
         <ul aria-label="Активные эффекты" className="flex flex-col gap-0.5 text-xs">
           {otherEffects.map((effect) => (
             <li key={effect.id} className="text-slate-700 dark:text-slate-300">
-              <span aria-hidden="true">◈</span> {effect.nameRu} · {effect.endConditionRu}
+              <span aria-hidden="true">◈</span> {effect.nameRu}
+            {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
             </li>
           ))}
         </ul>

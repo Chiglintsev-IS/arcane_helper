@@ -116,6 +116,23 @@ describe("обязательные связи полей", () => {
     expect(spellSchema.safeParse(withTrigger).success).toBe(true);
   });
 
+  it("накладывание в минутах без числа отклоняется (FR-033)", () => {
+    expect(firstError(mutate(web(), (draft) => { draft.castingTime = { type: "minute" }; })))
+      .toContain("обязано указывать число");
+  });
+
+  it("накладывание с числом принимается: 1 минута и 1 час", () => {
+    for (const castingTime of [{ type: "minute", value: 1 }, { type: "hour", value: 1 }]) {
+      const withValue = mutate(web(), (draft) => { draft.castingTime = castingTime; });
+      expect(spellSchema.safeParse(withValue).success).toBe(true);
+    }
+  });
+
+  it("число при накладывании действием отклоняется: «1 действие» смысла не имеет", () => {
+    expect(firstError(mutate(web(), (draft) => { draft.castingTime = { type: "action", value: 1 }; })))
+      .toContain("не относится");
+  });
+
   it("дальность «distance» без расстояния отклоняется", () => {
     expect(firstError(mutate(web(), (draft) => { draft.range = { type: "distance" }; })))
       .toContain("расстояние");

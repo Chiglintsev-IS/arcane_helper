@@ -138,3 +138,5 @@ MVP должен пройти минимум две реальные игров�
 | NFR-001…003 | — | сохранность при обновлении | офлайн-прогон | AC-01, AC-02, AC-18 |
 | FR-001 | — | состав шапки | `combat-screen renders all resource blocks` | AC-14 |
 | FR-032 | `castInstructions` | — | `wizard steps order and cast spends the slot` | — |
+| FR-093 | `effectiveArmorClass`, `armorClassWithSpell` | КД в шапке после применения | `combat-screen renders all resource blocks` | AC-14 |
+| FR-033 | `checkAvailability`, `castingTimeLabel`, `longCastingTimeRu` | время в бейдже карточки | — | — |

@@ -64,6 +64,39 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(screen.getByText(/Концентрация: «Обнаружение магии»/)).toBeDefined();
   });
 
+  it("КД меняется после применения «Доспехов мага»: 14 → 17 (FR-093)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    const numbers = screen.getByLabelText("Ресурсы");
+    expect(within(numbers).getByText("14")).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(within(numbers).getByText("17")).toBeDefined();
+    // Вклад подписан на строке эффекта: игрок видит, откуда взялось новое число (OQ-19).
+    expect(screen.getByText(/Доспехи мага · КД 17/)).toBeDefined();
+  });
+
+  it("отмена применения возвращает КД к 14", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const numbers = screen.getByLabelText("Ресурсы");
+    expect(within(numbers).getByText("17")).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: /Отменить/ }));
+    expect(within(numbers).getByText("14")).toBeDefined();
+  });
+
   it("на израсходованную реакцию отвечает «когда вернётся», а не «нет» (FR-144)", async () => {
     const character = withTurnTracking();
     character.reactionAvailable = false;
@@ -150,6 +183,14 @@ describe("краткая карточка (FR-010)", () => {
     expect(within(row).getByText("Действие")).toBeDefined();
     expect(within(row).getByText("60 футов")).toBeDefined();
     expect(within(row).getByText(spell("ray-of-frost").shortRulesRu)).toBeDefined();
+  });
+
+  it("накладывание дольше хода называет точное время, а не категорию (FR-033)", async () => {
+    await renderWithStores(<CombatScreen />);
+    const row = screen.getByRole("button", { name: /Починка/ });
+
+    expect(within(row).getByText("1 минута")).toBeDefined();
+    expect(within(row).queryByText("Минуты")).toBeNull();
   });
 
   it("называет минимальную стоимость применения", async () => {

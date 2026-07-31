@@ -159,6 +159,15 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
     );
   });
 
+  it("при учёте хода не показывает накладывание дольше хода (FR-033)", () => {
+    const character = createThorne();
+    character.turnTracking = { ...character.turnTracking, enabled: true };
+
+    const shown = ids(filterSpells(allSpells, filters({ availableNow: true }), context({ character })));
+    expect(shown).not.toContain("mending");
+    expect(shown).toContain("ray-of-frost");
+  });
+
   it("согласован с проверкой доступности мастера применения (FR-030)", () => {
     const character = withoutSlots();
     const turn = ALL_TURN_RESOURCES;

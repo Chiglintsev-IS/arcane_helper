@@ -32,15 +32,35 @@ const PLACEHOLDER_PATTERN = /\{[^}]*\}/g;
 
 const nonEmpty = z.string().trim().min(1);
 
+/** Минуты и часы — единственные типы, у которых число осмысленно: 1 минута ≠ 10 минут (FR-033). */
+const LONG_CASTING_TYPES = ["minute", "hour"] as const;
+
 const castingTimeSchema = z
   .object({
     type: z.enum(["action", "bonus_action", "reaction", "minute", "hour"]),
+    value: z.number().int().positive().optional(),
     reactionTrigger: nonEmpty.optional(),
   })
   .refine((value) => value.type !== "reaction" || value.reactionTrigger !== undefined, {
     message: "Заклинание с временем накладывания «реакция» обязано описывать триггер",
     path: ["reactionTrigger"],
-  });
+  })
+  .refine(
+    (value) =>
+      !(LONG_CASTING_TYPES as readonly string[]).includes(value.type) || value.value !== undefined,
+    {
+      message: "Накладывание в минутах или часах обязано указывать число",
+      path: ["value"],
+    },
+  )
+  .refine(
+    (value) =>
+      (LONG_CASTING_TYPES as readonly string[]).includes(value.type) || value.value === undefined,
+    {
+      message: "Число ко времени накладывания «действие», «бонусное действие» и «реакция» не относится",
+      path: ["value"],
+    },
+  );
 
 const rangeSchema = z
   .object({
@@ -106,6 +126,17 @@ const damageSchema = z.object({
   scaling: scalingSchema.optional(),
 });
 
+/**
+ * Вклад заклинания в Класс Доспеха (FR-093, ADR-0013).
+ *
+ * Отсутствие поля означает «к КД отношения не имеет», а не нулевой вклад: различие видно в данных
+ * и не требует от движка знать список заклинаний, влияющих на защиту.
+ */
+export const armorClassEffectSchema = z.object({
+  kind: z.enum(["base_override", "bonus"]),
+  value: z.number().int().positive(),
+});
+
 const roleplaySchema = z.object({
   incantations: z.array(nonEmpty).min(1),
   gestures: z.array(nonEmpty).min(1),
@@ -139,6 +170,7 @@ const spellShape = z.object({
   targeting: targetingSchema,
   resolution: resolutionSchema,
   damage: damageSchema.optional(),
+  armorClassEffect: armorClassEffectSchema.optional(),
 
   shortRulesRu: nonEmpty,
   fullRulesRu: nonEmpty,
@@ -241,3 +273,4 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
 
 export type Spell = z.infer<typeof spellSchema>;
 export type SpellRoleplay = z.infer<typeof roleplaySchema>;
+export type ArmorClassEffect = z.infer<typeof armorClassEffectSchema>;

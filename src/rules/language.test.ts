@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { plural, withPlural } from "./language";
+import { longCastingTimeRu, plural, withPlural } from "./language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -28,5 +28,16 @@ describe("plural", () => {
 describe("withPlural", () => {
   it("склеивает число со словом", () => {
     expect(withPlural(6, ["хит", "хита", "хитов"])).toBe("6 хитов");
+  });
+});
+
+describe("longCastingTimeRu (FR-033)", () => {
+  it.each([
+    ["minute" as const, 1, "1 минута"],
+    ["minute" as const, 10, "10 минут"],
+    ["hour" as const, 1, "1 час"],
+    ["hour" as const, 8, "8 часов"],
+  ])("%s %i — %s", (unit, value, expected) => {
+    expect(longCastingTimeRu(unit, value)).toBe(expected);
   });
 });

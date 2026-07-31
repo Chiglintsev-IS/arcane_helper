@@ -74,6 +74,12 @@ type Spell = {
     scaling?: Record<number, string>;    // уровень ячейки → формула
   };
 
+  // Вклад в Класс Доспеха — см. F-08, ADR-0013. Отсутствует у заклинаний, не влияющих на КД.
+  armorClassEffect?: {
+    kind: "base_override" | "bonus";     // замена базы или прибавка к итогу
+    value: number;                       // 13 у «Доспехов мага», 5 у «Щита»
+  };
+
   shortRulesRu: string;          // собственный пересказ, 1–2 строки
   fullRulesRu: string;
   higherLevelsRu?: string;
@@ -214,8 +220,9 @@ type CharacterState = {
 - `0 ≤ runes.remaining ≤ runes.maximum`.
 - `hitPoints.current ≤ hitPoints.maximum`; `maximumReduction ≥ 0`.
 - `spellPoints.remaining > 0 → createdAt` задан: очки без времени создания невозможно погасить через час.
-- `armorClass` хранит слагаемые, а не итог: итог вычисляется движком с учётом активных «Доспехов мага»,
-  иначе одно и то же число пришлось бы поддерживать в двух местах.
+- `armorClass` хранит слагаемые, а не итог: итог вычисляется движком с учётом активных эффектов
+  ([FR-093](features/F-08-active-effects.md#fr-093)), иначе одно и то же число пришлось бы поддерживать
+  в двух местах.
 
 ## Активный эффект
 
@@ -239,6 +246,13 @@ type ActiveEffect = {
   repeatableAction?: {
     label: string;                     // «Спасбросок Ловкости для входящих в область»
     description: string;
+  };
+
+  // Копия armorClassEffect заклинания — см. ADR-0013. Нужна затем, чтобы итоговый КД считался
+  // из одного состояния персонажа, без обращения к каталогу заклинаний.
+  armorClass?: {
+    kind: "base_override" | "bonus";
+    value: number;
   };
 
   endConditionRu: string;              // текстом, формализация вне MVP

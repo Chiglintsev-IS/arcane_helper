@@ -11,7 +11,7 @@
 
 "use client";
 
-import { CASTING_TIME, levelLabel } from "@/components/spell/format";
+import { CASTING_TIME, castingTimeLabel, levelLabel } from "@/components/spell/format";
 import { RoleplaySection } from "@/components/spell/RoleplaySection";
 import { Badge } from "@/components/ui/Badge";
 import type { CharacterState } from "@/data/schemas/character";
@@ -348,7 +348,7 @@ export function CastWizard({
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
-            {castingTime.label}
+            {castingTimeLabel(draft.spell.castingTime)}
           </Badge>
           <p className="text-xs text-slate-500">
             Шаг {index + 1} из {steps.length}: {STEP_TITLES[draft.step]}

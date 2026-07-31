@@ -6,7 +6,7 @@
  */
 
 import type { Spell } from "@/data/schemas/spell";
-import { plural } from "@/rules/language";
+import { longCastingTimeRu, plural, type LongCastingUnit } from "@/rules/language";
 import { effectiveDamage } from "@/rules/scaling";
 import { CANTRIP_LEVEL } from "@/rules/slots";
 
@@ -30,10 +30,30 @@ export const CASTING_TIME: Record<CastingTimeType, { label: string; icon: string
   action: { label: "Действие", icon: "●", tone: "action" },
   bonus_action: { label: "Бонусное", icon: "◆", tone: "bonus" },
   reaction: { label: "Реакция", icon: "▲", tone: "reaction" },
-  // Точного числа минут и часов в модели нет: оно указано в полных правилах и в объявлении.
+  // Серые: минуты и часы вне экономии действий, цвет действия обещал бы ход, которого не хватит.
   minute: { label: "Минуты", icon: "◷", tone: "muted" },
   hour: { label: "Часы", icon: "◷", tone: "muted" },
 };
+
+const LONG_CASTING_UNITS: Partial<Record<CastingTimeType, LongCastingUnit>> = {
+  minute: "minute",
+  hour: "hour",
+};
+
+/**
+ * Время накладывания для бейджа: «Действие» или точное «1 минута» ([FR-033](../../../docs/features/F-03-cast-wizard.md#fr-033)).
+ *
+ * Категория «Минуты» остаётся только для данных без числа: схема такого не пропускает
+ * ([domain-model.md](../../../docs/domain-model.md#заклинание)), но приблизительная подпись честнее
+ * выдуманного числа.
+ */
+export function castingTimeLabel(castingTime: Spell["castingTime"]): string {
+  const unit = LONG_CASTING_UNITS[castingTime.type];
+  if (unit === undefined || castingTime.value === undefined) {
+    return CASTING_TIME[castingTime.type].label;
+  }
+  return longCastingTimeRu(unit, castingTime.value);
+}
 
 const ABILITY_NAMES: Record<string, string> = {
   STR: "Силы",
