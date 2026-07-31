@@ -4,10 +4,68 @@
  * Формула — docs/rules-engine.md#кс-проверки-концентрации.
  */
 
+import type { ActiveEffect } from "@/data/schemas/character";
+
 import { RulesError } from "./abilities";
+import { withPlural } from "./language";
 
 /** Минимальная КС проверки концентрации. */
 export const MINIMUM_CONCENTRATION_DC = 10;
+
+/** Раунд равен шести секундам (rules-engine.md#что-прерывает-концентрацию). */
+export const ROUNDS_PER_MINUTE = 10;
+export const ROUNDS_PER_HOUR = 600;
+
+const ROUND_FORMS: [string, string, string] = ["раунд", "раунда", "раундов"];
+
+/**
+ * Запись журнала в том объёме, который нужен для раунда начала.
+ *
+ * Структурный тип, а не импорт из стора: правила не зависят от состояния приложения, иначе
+ * получится цикл — `session.ts` сам импортирует правила.
+ */
+export type TurnMark = { at: string; kind: string };
+
+export type StartRound = {
+  round: number;
+  /** Начало вытеснено из обрезанного журнала: число — нижняя граница, а не точное значение. */
+  approximate: boolean;
+};
+
+/**
+ * Раунд, в котором начался эффект: столько ходов началось к его времени (FR-084).
+ *
+ * Считается так же, как раунд в экономии хода — по записям о начале хода. Журнал обрезается
+ * (OQ-08), поэтому у долгого эффекта начало может быть потеряно: тогда число помечается неточным.
+ */
+export function startRound(marks: readonly TurnMark[], startedAt: string): StartRound {
+  const started = marks.filter((mark) => mark.kind === "turn_started" && mark.at <= startedAt).length;
+  const earliest = marks[0];
+  return {
+    round: Math.max(1, started),
+    approximate: earliest === undefined || earliest.at > startedAt,
+  };
+}
+
+/**
+ * Длительность в исходных единицах и в раундах: «10 минут (100 раундов)».
+ *
+ * Перевод нужен потому, что за столом время считается раундами, а карточка заклинания — минутами.
+ * Отсчёта здесь нет и не будет: таймеры вне MVP (F-08).
+ */
+export function durationWithRoundsRu(duration: ActiveEffect["duration"]): string {
+  const value = duration.value ?? 0;
+  switch (duration.type) {
+    case "rounds":
+      return withPlural(value, ROUND_FORMS);
+    case "minutes":
+      return `${withPlural(value, ["минута", "минуты", "минут"])} (${withPlural(value * ROUNDS_PER_MINUTE, ROUND_FORMS)})`;
+    case "hours":
+      return `${withPlural(value, ["час", "часа", "часов"])} (${withPlural(value * ROUNDS_PER_HOUR, ROUND_FORMS)})`;
+    default:
+      return "особая длительность";
+  }
+}
 
 /**
  * КС проверки концентрации: максимум из 10 и половины полученного урона (округление вниз).

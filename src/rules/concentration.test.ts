@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { RulesError } from "./abilities";
-import { concentrationCheckDc, describeConcentrationCheck } from "./concentration";
+import { concentrationCheckDc, describeConcentrationCheck, durationWithRoundsRu, startRound } from "./concentration";
 
 describe("concentrationCheckDc", () => {
   // Таблица из docs/rules-engine.md — граница проходит между 21 и 22.
@@ -46,5 +46,60 @@ describe("describeConcentrationCheck", () => {
 
   it("отклоняет нецелый модификатор", () => {
     expect(() => describeConcentrationCheck(10, 1.5)).toThrow(RulesError);
+  });
+});
+
+describe("startRound", () => {
+  const marks = [
+    { at: "2026-07-31T18:00:00.000Z", kind: "turn_started" },
+    { at: "2026-07-31T18:00:01.000Z", kind: "spell_cast" },
+    { at: "2026-07-31T18:00:02.000Z", kind: "turn_started" },
+    { at: "2026-07-31T18:00:03.000Z", kind: "turn_started" },
+  ];
+
+  it("считает начавшиеся ходы до времени начала эффекта", () => {
+    expect(startRound(marks, "2026-07-31T18:00:02.500Z")).toEqual({
+      round: 2,
+      approximate: false,
+    });
+  });
+
+  it("учитывает ход, начавшийся тем же мгновением", () => {
+    expect(startRound(marks, "2026-07-31T18:00:02.000Z")).toEqual({
+      round: 2,
+      approximate: false,
+    });
+  });
+
+  it("даёт первый раунд, пока ни один ход не отмечен", () => {
+    expect(startRound([{ at: "2026-07-31T18:00:01.000Z", kind: "spell_cast" }], "2026-07-31T18:00:01.000Z")).toEqual({
+      round: 1,
+      approximate: false,
+    });
+  });
+
+  it("помечает число неточным, если начало вытеснено из журнала", () => {
+    expect(startRound(marks, "2026-07-31T17:00:00.000Z")).toEqual({
+      round: 1,
+      approximate: true,
+    });
+  });
+
+  it("помечает число неточным при пустом журнале: состояние импортировано", () => {
+    expect(startRound([], "2026-07-31T18:00:00.000Z")).toEqual({ round: 1, approximate: true });
+  });
+});
+
+describe("durationWithRoundsRu", () => {
+  it.each([
+    [{ type: "rounds", value: 3 } as const, "3 раунда"],
+    [{ type: "rounds", value: 1 } as const, "1 раунд"],
+    [{ type: "minutes", value: 10 } as const, "10 минут (100 раундов)"],
+    [{ type: "minutes", value: 1 } as const, "1 минута (10 раундов)"],
+    [{ type: "hours", value: 1 } as const, "1 час (600 раундов)"],
+    [{ type: "special" } as const, "особая длительность"],
+    [{ type: "minutes" } as const, "0 минут (0 раундов)"],
+  ])("%o читается как «%s»", (duration, expected) => {
+    expect(durationWithRoundsRu(duration)).toBe(expected);
   });
 });
