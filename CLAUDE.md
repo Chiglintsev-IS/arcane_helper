@@ -1,5 +1,16 @@
 # Правила работы в этом репозитории
 
+## С чего начать
+
+Прочитай [docs/roadmap.md](docs/roadmap.md): там состояние на сегодня, следующий шаг и чего не хватает
+в логике. Затем [docs/features/README.md](docs/features/README.md) — реестр фич со статусами.
+
+Быстрая проверка, что репозиторий в порядке:
+
+```bash
+npm run check:docs && npm run typecheck && npm run test:coverage && npm run build
+```
+
 ## Что это за проект
 
 Arcane Helper — оффлайн PWA-помощник по применению и отыгрышу магии в бою D&D 5e (2014).
