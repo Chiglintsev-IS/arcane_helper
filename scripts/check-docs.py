@@ -23,6 +23,7 @@
 """
 
 import os
+import pathlib
 import re
 import sys
 
@@ -59,6 +60,7 @@ HEADING = re.compile(r"^#{1,6}\s+(.*)$")
 HTML_ANCHOR = re.compile(r'<a\s+id="([^"]+)"')
 LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 STATUS_LINE = re.compile(r"\*\*Статус:\*\*\s*([^·\n]+)")
+CODE_SPAN = re.compile(r"`([^`]+)`")
 
 
 def markdown_files():
@@ -218,6 +220,32 @@ def main():
             elif value in STATUSES:
                 continue
             errors.append(f"{path}: неизвестный статус «{value}»")
+
+    # 7. Имена прогонов из разделов «Проверка» существуют в коде.
+    #
+    # Правило добавлено после находки: четырнадцать требований ссылались на прогоны, которых нет —
+    # часть не написали никогда, часть переименовали вместе с кодом. Строка «Проверка», называющая
+    # несуществующий прогон, хуже пустой: она читается как доказательство. Раньше расхождение
+    # ловилось только вручную, о чём прямо говорил roadmap.md.
+    #
+    # Совпадение подстрокой, а не разбор `it(...)`: в разделе законно встречаются имена функций,
+    # заготовок и `it.each` с подстановкой `%s`. Задача проверки — поймать выдуманное имя, а не
+    # разобрать синтаксис тестов.
+    sources = []
+    for pattern in ("src/**/*.ts", "src/**/*.tsx", "e2e/*.spec.ts"):
+        for source in pathlib.Path(".").glob(pattern):
+            sources.append(source.read_text(encoding="utf-8"))
+    suite = "\n".join(sources)
+    for name in sorted(os.listdir(FEATURES)):
+        if not name.startswith("F-"):
+            continue
+        path = os.path.join(FEATURES, name)
+        for line in read_lines(path):
+            if "**Проверка:**" not in line:
+                continue
+            for claim in CODE_SPAN.findall(line):
+                if claim not in suite:
+                    errors.append(f"{path}: прогона «{claim}» в коде нет")
 
     print(f"документов: {len(files)}")
     print(f"требований определено: {len(defined)}")
