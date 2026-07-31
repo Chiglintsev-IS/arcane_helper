@@ -13,7 +13,8 @@ import {
   type CastDraft,
   type DraftContext,
 } from "./castDraftStore";
-import { createSession, type Session } from "./session";
+import { testClock } from "@/testing/stores";
+import { castSpell, createSession, type Session } from "./session";
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 
@@ -31,6 +32,20 @@ const shield = spell("shield");
 
 function context(character: CharacterState = createThorne()): DraftContext {
   return { character, turn: ALL_TURN_RESOURCES };
+}
+
+/**
+ * Персонаж, который уже что-то держит. Собирается настоящим применением, а не вручную: схема
+ * требует, чтобы у концентрации был соответствующий активный эффект, и фикстура, собранная руками,
+ * однажды разошлась бы с тем, что порождает игра.
+ */
+function concentrating(): CharacterState {
+  const session = castSpell(
+    createSession(createThorne()),
+    { spell: spell("web"), mode: "normal", payment: { kind: "slot", slotLevel: 2 } },
+    testClock(),
+  );
+  return session.character;
 }
 
 let store: ReturnType<typeof createCastDraftStore>;
@@ -155,9 +170,15 @@ describe("шаги мастера (FR-021, M-03)", () => {
     expect(draftOf().step).toBe("availability");
   });
 
-  it("концентрационное заклинание добавляет шаг предупреждения", () => {
+  it("концентрационное заклинание само по себе шага не добавляет: заменять нечего", () => {
     store.getState().start(detectMagic, context());
-    expect(visibleSteps(draftOf(), context())).toContain("concentration");
+    expect(visibleSteps(draftOf(), context())).not.toContain("concentration");
+  });
+
+  it("занятая концентрация добавляет шаг замены (FR-081)", () => {
+    const busy = concentrating();
+    store.getState().start(detectMagic, context(busy));
+    expect(visibleSteps(draftOf(), context(busy))).toContain("concentration");
   });
 
   it("компонент со стоимостью добавляет шаг проверки компонентов", () => {

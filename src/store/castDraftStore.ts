@@ -138,6 +138,11 @@ export function visibleSteps(
   const blocking = availability.warnings.filter(
     (warning) => warning.code !== "concentration_busy",
   );
+  // Шаг концентрации — это выбор между двумя эффектами, а не сообщение. Предупреждение приходит
+  // ровно тогда, когда концентрация занята и её придётся бросить (FR-081).
+  const replacesConcentration = availability.warnings.some(
+    (warning) => warning.code === "concentration_busy",
+  );
 
   const optional = OPTIONAL_STEPS.filter((step) => {
     switch (step) {
@@ -148,7 +153,7 @@ export function visibleSteps(
       case "components":
         return needsComponentStep(spell);
       case "concentration":
-        return spell.concentration;
+        return replacesConcentration;
     }
   });
 

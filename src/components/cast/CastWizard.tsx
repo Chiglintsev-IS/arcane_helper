@@ -255,6 +255,9 @@ function ComponentsStep({ availability }: { availability: Availability }) {
 /**
  * Предупреждение о концентрации (FR-081). Единственное место мастера, где нужен выбор из двух:
  * «Применить всё равно» здесь недостаточно, потому что цена ошибки — молча потерянный эффект.
+ *
+ * Шаг показывается, только когда концентрация занята ([FR-021](../../../docs/features/F-03-cast-wizard.md#fr-021)):
+ * без замены выбирать не из чего, а о самой концентрации напоминает итоговый экран.
  */
 function ConcentrationStep({
   character,
@@ -267,20 +270,20 @@ function ConcentrationStep({
   onCancel: () => void;
   replaceConfirmed: boolean;
 }) {
-  const current = character.activeEffects.find((effect) => effect.isConcentration);
+  const current = character.concentration;
+  if (current === undefined) return null;
 
-  if (current === undefined) {
-    return (
-      <p className="text-sm">
-        Заклинание требует концентрации. Она прервётся от урона при провале проверки Телосложения.
-      </p>
-    );
-  }
+  // Имя берётся у эффекта, а при его отсутствии — у самой концентрации: так же поступает проверка
+  // доступности, и расхождение двух источников не оставит на экране пустые кавычки.
+  const effect = character.activeEffects.find(
+    (candidate) => candidate.isConcentration && candidate.spellId === current.spellId,
+  );
 
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="rounded-lg border border-concentration/50 bg-concentration/10 p-2">
-        Идёт концентрация: «{current.nameRu}». Новое заклинание её завершит, и эффект закроется.
+        Идёт концентрация: «{effect?.nameRu ?? current.spellId}». Новое заклинание её завершит, и
+        эффект закроется.
       </p>
       {replaceConfirmed ? (
         <p className="text-slate-600 dark:text-slate-400">Замена подтверждена.</p>
