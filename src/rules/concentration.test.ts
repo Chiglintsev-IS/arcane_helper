@@ -7,6 +7,7 @@ import type { Spell } from "@/data/schemas/spell";
 
 import { RulesError } from "./abilities";
 import {
+  checkGuidanceRu,
   concentrationCheckDc,
   describeConcentration,
   describeConcentrationCheck,
@@ -68,6 +69,7 @@ describe("describeConcentrationCheck", () => {
       dc: 15,
       modifier: 2,
       hasAdvantage: false,
+      minimumRoll: 13,
     });
   });
 
@@ -77,11 +79,39 @@ describe("describeConcentrationCheck", () => {
       dc: 10,
       modifier: -1,
       hasAdvantage: true,
+      minimumRoll: 11,
     });
   });
 
   it("отклоняет нецелый модификатор", () => {
     expect(() => describeConcentrationCheck(10, 1.5)).toThrow(RulesError);
+  });
+
+  it("считает наименьший проходящий бросок", () => {
+    expect(describeConcentrationCheck(24, 4).minimumRoll).toBe(8);
+    expect(describeConcentrationCheck(10, -1).minimumRoll).toBe(11);
+  });
+});
+
+describe("checkGuidanceRu", () => {
+  it("называет наименьший проходящий бросок", () => {
+    expect(checkGuidanceRu(describeConcentrationCheck(24, 4))).toBe("Бросьте d20, нужно 8 и выше");
+  });
+
+  it("предупреждает о преимуществе", () => {
+    expect(checkGuidanceRu(describeConcentrationCheck(24, 4, { hasAdvantage: true }))).toBe(
+      "Бросьте d20 с преимуществом, нужно 8 и выше",
+    );
+  });
+
+  it("говорит, что проходит любой бросок", () => {
+    expect(checkGuidanceRu(describeConcentrationCheck(10, 9))).toBe("Проходит любой бросок d20");
+  });
+
+  it("говорит, что бросок не спасёт", () => {
+    expect(checkGuidanceRu(describeConcentrationCheck(60, 4))).toBe(
+      "Не проходит даже 20: концентрация держится только руной",
+    );
   });
 });
 

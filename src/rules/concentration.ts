@@ -96,6 +96,8 @@ export type ConcentrationCheck = {
   modifier: number;
   /** «Боевой заклинатель» даёт преимущество на проверку. */
   hasAdvantage: boolean;
+  /** Наименьший результат d20, который проходит проверку: КС минус модификатор. */
+  minimumRoll: number;
 };
 
 /**
@@ -112,12 +114,28 @@ export function describeConcentrationCheck(
       `Модификатор спасброска должен быть целым, получено: ${constitutionSaveModifier}`,
     );
   }
+  const dc = concentrationCheckDc(damage);
   return {
     ability: "CON",
-    dc: concentrationCheckDc(damage),
+    dc,
     modifier: constitutionSaveModifier,
     hasAdvantage: options.hasAdvantage === true,
+    minimumRoll: dc - constitutionSaveModifier,
   };
+}
+
+/**
+ * Что делать игроку словами: приложение считает разницу КС и модификатора, чтобы за столом не
+ * считали в голове (ux.md#текст-в-интерфейсе). Кубик бросает игрок (OQ-09).
+ *
+ * Натуральная 20 спасбросок не проходит автоматически, поэтому непроходимая проверка называется
+ * непроходимой: единственный выход — «Знаки ограждения» (FR-154).
+ */
+export function checkGuidanceRu(check: ConcentrationCheck): string {
+  if (check.minimumRoll <= 1) return "Проходит любой бросок d20";
+  if (check.minimumRoll > 20) return "Не проходит даже 20: концентрация держится только руной";
+  const dice = check.hasAdvantage ? "d20 с преимуществом" : "d20";
+  return `Бросьте ${dice}, нужно ${check.minimumRoll} и выше`;
 }
 
 const AREA_SHAPES: Record<NonNullable<Spell["area"]>["shape"], string> = {
