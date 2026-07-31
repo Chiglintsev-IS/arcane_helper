@@ -59,9 +59,10 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
   });
 
-  it("показывает активную концентрацию и условие её завершения", async () => {
+  it("показывает активную концентрацию карточкой с механикой (FR-084)", async () => {
+    // Состав карточки проверяется в Concentration.test.tsx; здесь — что шапка её вообще показывает.
     await renderWithStores(<CombatScreen />, concentrating());
-    expect(screen.getByText(/Концентрация: «Обнаружение магии»/)).toBeDefined();
+    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
   });
 
   it("КД меняется после применения «Доспехов мага»: 14 → 17 (FR-093)", async () => {
@@ -228,7 +229,10 @@ describe("краткая карточка (FR-010)", () => {
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
 
-    const row = screen.getByRole("button", { name: /Обнаружение магии/ });
+    // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием (FR-084).
+    const row = within(screen.getByLabelText("Заклинания")).getByRole("button", {
+      name: /Обнаружение магии/,
+    });
     expect(within(row).queryByText(/Заклинание не подготовлено/)).toBeNull();
     expect(within(row).getByText(/Уже идёт концентрация/)).toBeDefined();
   });

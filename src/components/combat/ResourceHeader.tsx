@@ -8,9 +8,11 @@
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
 
+import { ConcentrationCard } from "@/components/combat/ConcentrationCard";
 import { Badge } from "@/components/ui/Badge";
 import type { ActiveEffect, CharacterState } from "@/data/schemas/character";
 import { effectiveArmorClass } from "@/rules/armorClass";
+import type { ConcentrationSummary } from "@/rules/concentration";
 import type { TurnEconomy } from "@/store/session";
 
 function signed(value: number): string {
@@ -60,9 +62,13 @@ function SlotCounter({ level, remaining, maximum }: { level: number; remaining: 
 export function ResourceHeader({
   character,
   economy,
+  concentration,
+  onOpenConcentration,
 }: {
   character: CharacterState;
   economy: TurnEconomy;
+  concentration: ConcentrationSummary | null;
+  onOpenConcentration: () => void;
 }) {
   const slots = Object.entries(character.spellSlots)
     .map(([level, slot]) => ({ level: Number.parseInt(level, 10), ...slot }))
@@ -169,18 +175,13 @@ export function ResourceHeader({
         </li>
       </ul>
 
-      <section aria-label="Концентрация" className="text-xs">
-        {concentrationEffect === undefined ? (
-          <p className="text-slate-600 dark:text-slate-400">
-            <span aria-hidden="true">✦</span> Концентрации нет
-          </p>
-        ) : (
-          <p className="text-concentration-strong dark:text-concentration">
-            <span aria-hidden="true">✦</span> Концентрация: «{concentrationEffect.nameRu}»
-            {armorClassNote(concentrationEffect, armorClass)} · {concentrationEffect.endConditionRu}
-          </p>
-        )}
-      </section>
+      <ConcentrationCard
+        summary={concentration}
+        armorClassNote={
+          concentrationEffect === undefined ? "" : armorClassNote(concentrationEffect, armorClass)
+        }
+        onOpen={onOpenConcentration}
+      />
 
       {otherEffects.length > 0 ? (
         <ul aria-label="Активные эффекты" className="flex flex-col gap-0.5 text-xs">

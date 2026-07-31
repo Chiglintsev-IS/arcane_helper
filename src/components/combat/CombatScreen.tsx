@@ -20,6 +20,7 @@ import { SpellFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
 import { loadThorneSpells } from "@/data/content/thorne";
+import { describeConcentration } from "@/rules/concentration";
 import { bestCastPlan, countHiddenRituals, filterSpells, NO_FILTERS } from "@/rules/filters";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
@@ -65,11 +66,29 @@ export function CombatScreen() {
   const [filters, setFilters] = useState(NO_FILTERS);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const economy = useMemo(
     () => (session === null ? null : deriveTurnEconomy(session)),
     [session],
   );
+
+  /**
+   * Описание концентрации собирается из контента по `spellId` эффекта. Карточки может не быть —
+   * состояние пришло импортом из другой сборки — тогда описание деградирует, но не исчезает:
+   * концентрация не может уйти с экрана незаметно (F-07).
+   */
+  const concentrationSummary = useMemo(() => {
+    if (session === null) return null;
+    const effect = session.character.activeEffects.find((candidate) => candidate.isConcentration);
+    if (effect === undefined) return null;
+    return describeConcentration({
+      spell: SPELLS.find((candidate) => candidate.id === effect.spellId) ?? null,
+      effect,
+      character: session.character,
+      journal: session.journal,
+    });
+  }, [session]);
 
   if (status === "loading" || session === null || economy === null) {
     return (
@@ -101,7 +120,12 @@ export function CombatScreen() {
   return (
     <main className="flex h-dvh flex-col">
       <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
-        <ResourceHeader character={character} economy={economy} />
+        <ResourceHeader
+          character={character}
+          economy={economy}
+          concentration={concentrationSummary}
+          onOpenConcentration={() => setPanelOpen(true)}
+        />
 
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -225,6 +249,19 @@ export function CombatScreen() {
             onClose: () => setBloodOpen(false),
           }}
         />
+      ) : null}
+
+      {panelOpen && concentrationSummary !== null ? (
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Концентрация: ${concentrationSummary.nameRu}`}
+          className="fixed inset-0 z-10 flex flex-col bg-slate-50 p-3 dark:bg-slate-950"
+        >
+          <button type="button" onClick={() => setPanelOpen(false)} className="min-h-11 self-end px-2 underline">
+            Закрыть
+          </button>
+        </section>
       ) : null}
 
       <CastWizard character={character} economy={economy} onConfirm={confirm} error={error} />
