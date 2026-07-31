@@ -10,7 +10,8 @@ import { CANTRIP_LEVEL } from "./slots";
 export type DamageSpec = {
   dice: string;
   type: string;
-  scaling?: Record<number, string>;
+  /** `undefined` допустимо явно: поле карточки заклинания необязательно (exactOptionalPropertyTypes). */
+  scaling?: Record<number, string> | undefined;
 };
 
 /**

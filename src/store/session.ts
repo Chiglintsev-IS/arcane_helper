@@ -15,6 +15,12 @@
 
 import type { ActiveEffect, CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
+import {
+  ACTION_SPENT_MESSAGES,
+  turnResourceFor,
+  type PaymentChoice,
+  type TurnResource,
+} from "@/rules/availability";
 import { exchangeHitPoints, regenerationPerTurn, traitsSuppressed } from "@/rules/bloodMagic";
 import {
   applyArcaneRecovery,
@@ -49,8 +55,12 @@ export type JournalKind =
   | "hit_points_changed"
   | "suppression_changed";
 
-/** Что потрачено внутри хода. Без этого доступность из журнала не вывести (ADR-0008). */
-export type ActionUsed = "action" | "bonus_action" | "reaction";
+/**
+ * Что потрачено внутри хода. Без этого доступность из журнала не вывести (ADR-0008).
+ * Словарь ресурсов хода один и живёт в движке правил: журнал и проверка доступности обязаны
+ * понимать «действие» одинаково.
+ */
+export type ActionUsed = TurnResource;
 
 export type JournalEntry = {
   id: string;
@@ -266,10 +276,8 @@ export function regenerationDue(character: CharacterState): number {
 
 // ———————————————————————— Применение заклинания ————————————————————————
 
-export type Payment =
-  | { kind: "slot"; slotLevel: number }
-  | { kind: "spell_points" }
-  | { kind: "none" };
+/** Способ оплаты сотворения определён движком правил — здесь только его применение к состоянию. */
+export type Payment = PaymentChoice;
 
 export type CastRequest = {
   spell: Spell;
@@ -284,24 +292,8 @@ export type CastRequest = {
 
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
 export function actionUsedBy(spell: Spell): ActionUsed | undefined {
-  switch (spell.castingTime.type) {
-    case "reaction":
-      return "reaction";
-    case "bonus_action":
-      return "bonus_action";
-    case "action":
-      return "action";
-    default:
-      return undefined;
-  }
+  return turnResourceFor(spell.castingTime.type);
 }
-
-/** Фразы целиком: род в русском не выводится из названия, «Реакция израсходовано» недопустимо. */
-const ACTION_SPENT_MESSAGES: Record<ActionUsed, string> = {
-  action: "Действие уже израсходовано",
-  bonus_action: "Бонусное действие уже израсходовано",
-  reaction: "Реакция уже израсходована",
-};
 
 /**
  * Списывает потраченное внутри хода. Доступность проверяется по журналу (ADR-0008), а флаги

@@ -1,0 +1,150 @@
+/**
+ * Фильтрация боевого списка заклинаний (FR-002, FR-003).
+ *
+ * Правило комбинирования одно: значения внутри категории соединяются «или», категории между собой —
+ * «и». Пустая категория ничего не ограничивает, поэтому список без фильтров показывает всё.
+ *
+ * Фильтр «доступно сейчас» не повторяет логику доступности, а вызывает `checkAvailability`
+ * (FR-030): расхождение фильтра и мастера применения — та ошибка, которая заставляет игрока
+ * перестать доверять приложению.
+ */
+
+import type { CharacterState } from "@/data/schemas/character";
+import type { Spell } from "@/data/schemas/spell";
+import {
+  checkAvailability,
+  type PaymentChoice,
+  type TurnResources,
+  type TurnResource,
+} from "./availability";
+import { MAXIMUM_PAYABLE_SPELL_LEVEL } from "./bloodMagic";
+import { castableSlotLevels, CANTRIP_LEVEL, type CastMode } from "./slots";
+
+/** Время накладывания как фильтр: минуты и часы в бою не выбирают. */
+export type CastingTimeFilter = TurnResource;
+
+export type SpellFilters = {
+  /** Категория «время накладывания»: действие, бонусное действие, реакция. */
+  castingTimes: CastingTimeFilter[];
+  /** Категория «уровень»: 0 — заговоры, далее уровни заклинаний. */
+  levels: number[];
+  concentration: boolean;
+  ritual: boolean;
+  prepared: boolean;
+  availableNow: boolean;
+};
+
+/** Ничего не выбрано. Набор фильтров сохраняется между сессиями, но начинается отсюда (F-01). */
+export const NO_FILTERS: SpellFilters = {
+  castingTimes: [],
+  levels: [],
+  concentration: false,
+  ritual: false,
+  prepared: false,
+  availableNow: false,
+};
+
+export type FilterContext = {
+  character: CharacterState;
+  turn: TurnResources;
+};
+
+/** Способ сотворения: режим плюс оплата. Ровно то, что нужно `checkAvailability` и мастеру. */
+export type CastOption = {
+  mode: CastMode;
+  payment: PaymentChoice;
+};
+
+/** Готово ли заклинание к сотворению без подготовки: заговоры — всегда (FR-102). */
+function isReady(spell: Spell, character: CharacterState): boolean {
+  return spell.level === CANTRIP_LEVEL || character.preparedSpellIds.includes(spell.id);
+}
+
+/**
+ * Все способы сотворить заклинание: ячейки от собственного уровня и выше, оплата очками и
+ * ритуальный режим. Наличие свободной ячейки здесь не проверяется — это дело `checkAvailability`.
+ */
+export function castOptions(spell: Spell, character: CharacterState): CastOption[] {
+  if (spell.level === CANTRIP_LEVEL) {
+    return [{ mode: "cantrip", payment: { kind: "none" } }];
+  }
+
+  const options: CastOption[] = castableSlotLevels(character.spellSlots, spell.level).map(
+    (slotLevel) => ({ mode: "normal", payment: { kind: "slot", slotLevel } }),
+  );
+
+  // Очки заклинаний предлагаются, только если цена известна: таблица кровавого колдовства
+  // заканчивается пятым уровнем (F-15, rules-engine.md#кровавое-колдовство).
+  if (spell.level <= MAXIMUM_PAYABLE_SPELL_LEVEL) {
+    options.push({ mode: "normal", payment: { kind: "spell_points" } });
+  }
+  if (spell.ritual) {
+    options.push({ mode: "ritual", payment: { kind: "none" } });
+  }
+  return options;
+}
+
+/** Есть ли хоть один способ сотворить заклинание прямо сейчас (FR-002, фильтр «доступно сейчас»). */
+export function canCastNow(spell: Spell, character: CharacterState, turn: TurnResources): boolean {
+  return castOptions(spell, character).some(
+    (option) => checkAvailability({ spell, character, turn, ...option }).available,
+  );
+}
+
+function matchesCastingTime(spell: Spell, filters: SpellFilters): boolean {
+  if (filters.castingTimes.length === 0) return true;
+  return filters.castingTimes.some((value) => value === spell.castingTime.type);
+}
+
+function matchesLevel(spell: Spell, filters: SpellFilters): boolean {
+  if (filters.levels.length === 0) return true;
+  return filters.levels.includes(spell.level);
+}
+
+/**
+ * Ритуал, который не подготовлен, в боевом списке скрыт: +10 минут накладывания делают его
+ * бесполезным в бою (F-09). Показывается по фильтру «ритуал».
+ */
+function hiddenAsRitual(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
+  return spell.ritual && !filters.ritual && !isReady(spell, context.character);
+}
+
+function matches(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
+  if (hiddenAsRitual(spell, filters, context)) return false;
+  if (!matchesCastingTime(spell, filters)) return false;
+  if (!matchesLevel(spell, filters)) return false;
+  if (filters.concentration && !spell.concentration) return false;
+  if (filters.ritual && !spell.ritual) return false;
+  // «Подготовлено» не скрывает заговоры: они не готовятся, но доступны всегда (AC-05).
+  if (filters.prepared && !isReady(spell, context.character)) return false;
+  if (filters.availableNow && !canCastNow(spell, context.character, context.turn)) return false;
+  return true;
+}
+
+/** Отфильтрованный список в исходном порядке: контент упорядочен по уровню, затем по алфавиту. */
+export function filterSpells(
+  spells: readonly Spell[],
+  filters: SpellFilters,
+  context: FilterContext,
+): Spell[] {
+  return spells.filter((spell) => matches(spell, filters, context));
+}
+
+/**
+ * Сколько ритуалов скрыто правилом боевого списка. Нужно, чтобы пустой результат объяснялся
+ * причиной, а не выглядел поломкой приложения (F-01).
+ */
+export function countHiddenRituals(
+  spells: readonly Spell[],
+  filters: SpellFilters,
+  context: FilterContext,
+): number {
+  return spells.filter((spell) => hiddenAsRitual(spell, filters, context)).length;
+}
+
+/** Переключение значения внутри категории фильтров. */
+export function toggleValue<T>(values: readonly T[], value: T): T[] {
+  return values.includes(value)
+    ? values.filter((candidate) => candidate !== value)
+    : [...values, value];
+}
