@@ -1,0 +1,66 @@
+name: Pages
+
+# Сборка и публикация статического экспорта на GitHub Pages.
+#
+# Отдельно от CI намеренно: проверки должны падать на любой ветке и в пул-реквесте, а публикуется
+# только main. Смешивать их значило бы либо публиковать непроверенное, либо гонять сборку страницы
+# на каждой ветке.
+#
+# BASE_PATH обязателен: Pages отдаёт проект по адресу вида `/имя-репозитория/`, и без него
+# абсолютные пути к файлам сборки ведут в пустоту (next.config.ts).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Одна публикация за раз; начатую не обрываем, чтобы не оставить страницу в половинчатом виде.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Отдаёт base_path вида `/имя-репозитория` — руками его вписывать нельзя: репозиторий
+      # переименуют, и адрес молча сломается.
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      # Публикуется только то, что прошло проверки: спека, типы, тесты.
+      - run: npm run check:docs
+      - run: npm run typecheck
+      - run: npm run test:coverage
+
+      - run: npm run build
+        env:
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
