@@ -28,5 +28,31 @@
       "sarcastic": ["«Кто-то очень старался спрятать», — говорит Торн, глядя сквозь рамку."]
     }
   },
+  "ritualDiagram": {
+    "rings": [1, 0.86, 0.7, 0.54],
+    "tickRing": { "count": 36, "radius": 0.93 },
+    "inscription": {
+      "runes": "ᛚᚨᚢᚲᚨᛉ",
+      "meaningRu": "«лауказ» — формульное слово рунных брактеатов, знак роста и оберега: надпись, которая проявляет скрытое",
+      "radius": 0.96
+    },
+    "star": { "points": 8, "skip": 3, "radius": 0.66 },
+    "radialGlyphs": {
+      "glyphs": [
+        "rune-ansuz",
+        "rune-raidho",
+        "rune-kaunan",
+        "rune-hagalaz",
+        "rune-isaz",
+        "rune-sowilo",
+        "rune-tiwaz",
+        "rune-laguz"
+      ],
+      "radius": 0.66
+    },
+    "crossAxes": { "count": 4, "radius": 0.86 },
+    "centralSeal": { "kind": "sphere", "radius": 0.34 },
+    "captionRu": "Четыре кольца-волны и восемь лучей: сфера 30 футов, расходящаяся от заклинателя"
+  },
   "announcementTemplate": "Сотворяю «Обнаружение магии» ритуалом. Ячейка не расходуется, накладывание +10 минут, требуется концентрация. Броска нет; чувствую магию в пределах 30 футов, действием определяю школу."
 }
