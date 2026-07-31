@@ -213,7 +213,7 @@ describe("describeConcentration (FR-084)", () => {
     expect(summary.durationLabel).toBe("до 10 минут");
     expect(summary.mechanicsLabel).toBe("Сфера 30 футов от себя · без спасброска");
     expect(summary.breakLabel).toBe("Урон → спасбросок Телосложения +4, КС от 10");
-    expect(summary.shortRulesRu).toContain("чувствует магию");
+    expect(summary.shortRulesRu).toContain("чувствует присутствие магии");
   });
 
   it("подставляет КС спасброска цели", () => {
