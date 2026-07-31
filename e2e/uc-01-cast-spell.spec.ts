@@ -43,8 +43,11 @@ test("combat-screen renders all resource blocks", async ({ page }) => {
   await expect(slots.getByRole("listitem")).toHaveCount(4);
   await expect(slots.getByText("4/4")).toBeVisible();
 
-  await expect(page.getByText("Концентрации нет")).toBeVisible();
-  await expect(page.getByLabel("Реакция доступна")).toBeVisible();
+  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет, учёт хода выключен —
+  // значков экономии нет, бонусного действия нет ни у одной карточки — переключателя нет (FR-001).
+  await expect(page.getByLabel("Концентрация")).toBeHidden();
+  await expect(page.getByLabel("Реакция доступна")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Бонусное", exact: true })).toBeHidden();
 });
 
 test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {

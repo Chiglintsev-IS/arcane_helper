@@ -52,6 +52,21 @@ import {
 const SPELLS = loadThorneSpells();
 
 /**
+ * Что вообще встречается в книге. Считается один раз рядом с контентом, потому что от состояния
+ * персонажа не зависит: книга в бою не меняется.
+ *
+ * Переключатели и значки строятся отсюда, а не из списка всех мыслимых значений: элемент, за которым
+ * нет ни одного заклинания, обещает возможность, которой нет (FR-001, FR-002). Появится «Туманный
+ * шаг» — вернётся и «Бонусное», без правки интерфейса.
+ */
+const AVAILABLE = {
+  castingTimes: new Set(SPELLS.map((spell) => spell.castingTime.type)),
+  levels: [...new Set(SPELLS.map((spell) => spell.level))].sort((a, b) => a - b),
+  concentration: SPELLS.some((spell) => spell.concentration),
+  ritual: SPELLS.some((spell) => spell.ritual),
+};
+
+/**
  * Первая причина, по которой заклинание сейчас не применить, — для строки списка.
  *
  * Причина берётся у лучшего способа сотворения, а не у первого попавшегося: строка обязана называть
@@ -116,7 +131,6 @@ export function CombatScreen() {
   const shown = filterSpells(SPELLS, filters, context);
   const hiddenRituals = countHiddenRituals(SPELLS, filters, context);
   const openSpell = SPELLS.find((spell) => spell.id === openSpellId) ?? null;
-  const levels = [...new Set(SPELLS.map((spell) => spell.level))].sort((a, b) => a - b);
   const lastEntry = session.journal.at(-1);
 
   const apply = sessionStore.getState().apply;
@@ -154,6 +168,7 @@ export function CombatScreen() {
           character={character}
           economy={economy}
           concentration={concentrationSummary}
+          bookCastingTimes={AVAILABLE.castingTimes}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
         />
@@ -225,7 +240,7 @@ export function CombatScreen() {
       <div className="shrink-0 border-b border-slate-200 p-3 dark:border-slate-800">
         <SpellFilters
           filters={filters}
-          availableLevels={levels}
+          available={AVAILABLE}
           onChange={setFilters}
           onReset={() => setFilters(NO_FILTERS)}
         />

@@ -9,6 +9,7 @@
  */
 
 import { ConcentrationCard } from "@/components/combat/ConcentrationCard";
+import type { CastingTimeType } from "@/components/spell/format";
 import { Badge } from "@/components/ui/Badge";
 import type { ActiveEffect, CharacterState } from "@/data/schemas/character";
 import { effectiveArmorClass } from "@/rules/armorClass";
@@ -63,12 +64,15 @@ export function ResourceHeader({
   character,
   economy,
   concentration,
+  bookCastingTimes,
   onOpenConcentration,
   onEndEffect,
 }: {
   character: CharacterState;
   economy: TurnEconomy;
   concentration: ConcentrationSummary | null;
+  /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем (FR-001). */
+  bookCastingTimes: ReadonlySet<CastingTimeType>;
   onOpenConcentration: () => void;
   onEndEffect: (effectId: string) => void;
 }) {
@@ -134,54 +138,65 @@ export function ResourceHeader({
           </li>
         ) : null}
         {/*
+          Экономия хода показывается только когда её ведут. С выключенным учётом
+          `deriveTurnEconomy` возвращает «всё доступно» независимо от журнала, и три вечно зелёные
+          галочки не сообщали бы ничего, кроме неправды (FR-001).
+
           Подпись на экране короткая, а доступное имя — полное: на iPhone SE места нет, но
           «Действие» без пояснения незрячему пользователю ничего не говорит.
         */}
-        <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
-          {economy.actionAvailable ? (
-            <Badge tone="action" icon="✓">
-              Действие
-            </Badge>
-          ) : (
-            <Badge tone="muted" icon="✗">
-              Действие израсходовано
-            </Badge>
-          )}
-        </li>
-        <li
-          aria-label={
-            economy.bonusActionAvailable
-              ? "Бонусное действие доступно"
-              : "Бонусное действие израсходовано"
-          }
-        >
-          {economy.bonusActionAvailable ? (
-            <Badge tone="bonus" icon="✓">
-              Бонусное
-            </Badge>
-          ) : (
-            <Badge tone="muted" icon="✗">
-              Бонусное израсходовано
-            </Badge>
-          )}
-        </li>
-        <li
-          aria-label={
-            economy.reactionAvailable
-              ? "Реакция доступна"
-              : `Реакция израсходована, вернётся ${economy.reactionReturns}`
-          }
-        >
-          {economy.reactionAvailable ? (
-            <Badge tone="reaction" icon="✓">
-              Реакция
-            </Badge>
-          ) : (
-            <Badge tone="muted" icon="✗">
-              Реакция израсходована, вернётся {economy.reactionReturns}
-            </Badge>
-          )}
-        </li>
+        {character.turnTracking.enabled ? (
+          <>
+            <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
+              {economy.actionAvailable ? (
+                <Badge tone="action" icon="✓">
+                  Действие
+                </Badge>
+              ) : (
+                <Badge tone="muted" icon="✗">
+                  Действие израсходовано
+                </Badge>
+              )}
+            </li>
+            {/* Бонусного действия нет ни у одной карточки — тратить его не на что (FR-001). */}
+            {bookCastingTimes.has("bonus_action") ? (
+              <li
+                aria-label={
+                  economy.bonusActionAvailable
+                    ? "Бонусное действие доступно"
+                    : "Бонусное действие израсходовано"
+                }
+              >
+                {economy.bonusActionAvailable ? (
+                  <Badge tone="bonus" icon="✓">
+                    Бонусное
+                  </Badge>
+                ) : (
+                  <Badge tone="muted" icon="✗">
+                    Бонусное израсходовано
+                  </Badge>
+                )}
+              </li>
+            ) : null}
+            <li
+              aria-label={
+                economy.reactionAvailable
+                  ? "Реакция доступна"
+                  : `Реакция израсходована, вернётся ${economy.reactionReturns}`
+              }
+            >
+              {economy.reactionAvailable ? (
+                <Badge tone="reaction" icon="✓">
+                  Реакция
+                </Badge>
+              ) : (
+                <Badge tone="muted" icon="✗">
+                  Реакция израсходована, вернётся {economy.reactionReturns}
+                </Badge>
+              )}
+            </li>
+          </>
+        ) : null}
       </ul>
 
       <ConcentrationCard

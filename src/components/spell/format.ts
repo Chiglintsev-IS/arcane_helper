@@ -23,7 +23,7 @@ export const TONE_CLASS: Record<Tone, string> = {
   muted: "border-slate-400/50 bg-slate-400/10 text-slate-700 dark:text-slate-300",
 };
 
-type CastingTimeType = Spell["castingTime"]["type"];
+export type CastingTimeType = Spell["castingTime"]["type"];
 
 /** Подпись, иконка и цвет времени накладывания. Иконка обязательна: цвет один не решает. */
 export const CASTING_TIME: Record<CastingTimeType, { label: string; icon: string; tone: Tone }> = {

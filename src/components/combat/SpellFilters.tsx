@@ -6,9 +6,15 @@
  * (ux.md#доступность).
  */
 
-import { CASTING_TIME, TONE_CLASS, levelLabel } from "@/components/spell/format";
+import {
+  CASTING_TIME,
+  TONE_CLASS,
+  levelLabel,
+  type CastingTimeType,
+} from "@/components/spell/format";
 import { toggleValue, type CastingTimeFilter, type SpellFilters as Filters } from "@/rules/filters";
 
+/** Порядок переключателей времени накладывания. Показываются не все — только имеющиеся в книге. */
 const CASTING_TIME_FILTERS: CastingTimeFilter[] = ["action", "bonus_action", "reaction"];
 
 function Toggle({
@@ -41,21 +47,32 @@ function Toggle({
 
 export function SpellFilters({
   filters,
-  availableLevels,
+  available,
   onChange,
   onReset,
 }: {
   filters: Filters;
-  /** Уровни, которые вообще есть у персонажа: пустых кнопок в бою быть не должно. */
-  availableLevels: number[];
+  /**
+   * Что вообще встречается в книге. Переключатель, который не может найти ни одного заклинания, —
+   * обещание несуществующего: он занимает место в полосе и всегда возвращает пустой список
+   * (FR-002).
+   */
+  available: {
+    castingTimes: ReadonlySet<CastingTimeType>;
+    levels: number[];
+    concentration: boolean;
+    ritual: boolean;
+  };
   onChange: (filters: Filters) => void;
   onReset: () => void;
 }) {
+  const castingTimes = CASTING_TIME_FILTERS.filter((value) => available.castingTimes.has(value));
+
   return (
     <section aria-label="Фильтры" className="flex flex-col gap-1">
       {/* Полоса прокручивается по горизонтали: перенос на три ряда съедал список заклинаний. */}
       <div className="-mx-1 flex gap-1 overflow-x-auto px-1">
-        {CASTING_TIME_FILTERS.map((value) => (
+        {castingTimes.map((value) => (
           <Toggle
             key={value}
             pressed={filters.castingTimes.includes(value)}
@@ -68,26 +85,30 @@ export function SpellFilters({
             {CASTING_TIME[value].label}
           </Toggle>
         ))}
-        <Toggle
-          pressed={filters.concentration}
-          tone="concentration"
-          icon="✦"
-          onClick={() => onChange({ ...filters, concentration: !filters.concentration })}
-        >
-          Концентрация
-        </Toggle>
-        <Toggle
-          pressed={filters.ritual}
-          tone="ritual"
-          icon="❖"
-          onClick={() => onChange({ ...filters, ritual: !filters.ritual })}
-        >
-          Ритуал
-        </Toggle>
+        {available.concentration ? (
+          <Toggle
+            pressed={filters.concentration}
+            tone="concentration"
+            icon="✦"
+            onClick={() => onChange({ ...filters, concentration: !filters.concentration })}
+          >
+            Концентрация
+          </Toggle>
+        ) : null}
+        {available.ritual ? (
+          <Toggle
+            pressed={filters.ritual}
+            tone="ritual"
+            icon="❖"
+            onClick={() => onChange({ ...filters, ritual: !filters.ritual })}
+          >
+            Ритуал
+          </Toggle>
+        ) : null}
       </div>
 
       <div className="-mx-1 flex gap-1 overflow-x-auto px-1">
-        {availableLevels.map((level) => (
+        {available.levels.map((level) => (
           <Toggle
             key={level}
             pressed={filters.levels.includes(level)}

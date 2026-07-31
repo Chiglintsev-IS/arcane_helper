@@ -34,10 +34,11 @@ function concentrating(): CharacterState {
 }
 
 describe("карточка концентрации в шапке (FR-082, FR-084)", () => {
-  it("без концентрации показывает, что её нет", async () => {
+  it("без концентрации карточки нет вовсе", async () => {
+    // Ряд нескролящейся шапки не тратится на сообщение об отсутствии (FR-001).
     await renderWithStores(<CombatScreen />);
 
-    expect(within(screen.getByLabelText("Концентрация")).getByText(/Концентрации нет/)).toBeDefined();
+    expect(screen.queryByLabelText("Концентрация")).toBeNull();
   });
 
   it("показывает название, ячейку, механику и чем сорвётся", async () => {
@@ -92,7 +93,7 @@ describe("лист концентрации (FR-084, FR-091)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Снять концентрацию" }));
 
-    expect(screen.getByText(/Концентрации нет/)).toBeDefined();
+    expect(screen.queryByLabelText("Концентрация")).toBeNull();
     expect(screen.queryByRole("dialog", { name: /Концентрация/ })).toBeNull();
     expect(
       screen.getByRole("button", { name: /Отменить: Концентрация завершена: снята вручную/ }),
@@ -198,7 +199,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Всё равно провал" }));
 
-    expect(screen.getByText(/Концентрации нет/)).toBeDefined();
+    expect(screen.queryByLabelText("Концентрация")).toBeNull();
     expect(
       screen.getByRole("button", {
         name: /Отменить: Концентрация завершена: провалена проверка концентрации/,
@@ -213,7 +214,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Провал" }));
 
-    expect(screen.getByText(/Концентрации нет/)).toBeDefined();
+    expect(screen.queryByLabelText("Концентрация")).toBeNull();
   });
 });
 

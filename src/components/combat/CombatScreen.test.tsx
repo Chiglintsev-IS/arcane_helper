@@ -40,7 +40,7 @@ function concentrating(): CharacterState {
 }
 
 describe("состав экрана (FR-001, AC-14)", () => {
-  it("показывает персонажа, производные числа, ячейки, концентрацию и доступность реакции", async () => {
+  it("показывает персонажа, производные числа и ячейки", async () => {
     await renderWithStores(<CombatScreen />);
 
     expect(screen.getByRole("heading", { name: "Торн" })).toBeDefined();
@@ -53,10 +53,24 @@ describe("состав экрана (FR-001, AC-14)", () => {
     const slots = screen.getByLabelText("Ячейки заклинаний");
     expect(within(slots).getAllByRole("listitem")).toHaveLength(4);
     expect(within(slots).getByText("4/4")).toBeDefined();
+  });
 
-    expect(screen.getByText(/Концентрации нет/)).toBeDefined();
-    expect(screen.getByLabelText("Реакция доступна")).toBeDefined();
+  it("без учёта хода не показывает экономию действий (FR-001)", async () => {
+    // С выключенным учётом deriveTurnEconomy возвращает «всё доступно» независимо от журнала:
+    // значки были бы зелёными всегда и сообщали бы неправду, а не состояние.
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.queryByLabelText("Действие доступно")).toBeNull();
+    expect(screen.queryByLabelText("Реакция доступна")).toBeNull();
+  });
+
+  it("с включённым учётом показывает действие и реакцию, но не бонусное (FR-001)", async () => {
+    // Бонусного действия нет ни у одной карточки книги — значку нечего отражать.
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
+    expect(screen.getByLabelText("Реакция доступна")).toBeDefined();
+    expect(screen.queryByLabelText("Бонусное действие доступно")).toBeNull();
   });
 
   it("показывает активную концентрацию карточкой с механикой (FR-084)", async () => {
