@@ -13,18 +13,26 @@
 
 import { useState } from "react";
 
+import type { SpellCatalogSource } from "@/store/sessionStore";
+
 export function DataSheet({
   exportText,
   fileName,
   error,
+  catalogSource = "built_in",
   onImport,
+  onRestoreBuiltInCatalog,
   onClose,
 }: {
   exportText: string;
   fileName: string;
-  /** Причина отказа от прошлой попытки импорта или `null`. */
+  /** Причина отказа от прошлой попытки загрузки или возврата к встроенным карточкам, или `null`. */
   error: string | null;
+  /** Чем играют прямо сейчас (FR-123). */
+  catalogSource?: SpellCatalogSource;
   onImport: (raw: string) => void;
+  /** Вернуть карточки из сборки. Без обработчика кнопки нет: возвращать нечем. */
+  onRestoreBuiltInCatalog?: () => void;
   onClose: () => void;
 }) {
   const [raw, setRaw] = useState("");
@@ -68,10 +76,30 @@ export function DataSheet({
         </button>
       </div>
 
+      {/*
+        Чем играют сейчас — раньше кнопки загрузки: игрок должен видеть, что именно он собирается
+        заменить, а не узнавать об этом после (FR-123).
+      */}
+      <h2 className="text-base font-semibold">Каталог заклинаний</h2>
+      <p className="text-xs text-slate-600 dark:text-slate-400">
+        {catalogSource === "imported"
+          ? "Сейчас действуют карточки из загруженного файла."
+          : "Сейчас действуют встроенные карточки приложения."}
+      </p>
+      {catalogSource === "imported" && onRestoreBuiltInCatalog !== undefined ? (
+        <button
+          type="button"
+          onClick={onRestoreBuiltInCatalog}
+          className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+        >
+          Вернуть встроенные карточки
+        </button>
+      ) : null}
+
       <h2 className="text-base font-semibold">Загрузка</h2>
       <p className="text-xs text-slate-600 dark:text-slate-400">
-        Заменяет персонажа целиком: подготовку, остаток ресурсов, заметки. Книга заклинаний из файла
-        проверяется, но не подменяет встроенную — своих карточек приложение пока не хранит.
+        Заменяет персонажа целиком: подготовку, остаток ресурсов, заметки. Карточки из файла тоже
+        становятся действующими и остаются после перезапуска.
       </p>
 
       <label className="flex flex-col gap-1 text-sm">

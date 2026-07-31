@@ -9,6 +9,8 @@
 import { z } from "zod";
 
 import { characterStateSchema } from "@/data/schemas/character";
+import { spellSchema, type Spell } from "@/data/schemas/spell";
+import { checkIntegrity } from "@/rules/dataIo";
 import type { Session } from "./session";
 
 /** Версия формата хранения. Читать чужое будущее приложение не берётся. */
@@ -31,6 +33,13 @@ export const persistedSessionSchema = z.object({
   savedAt: z.string().min(1),
   character: characterStateSchema,
   journal: z.array(journalEntrySchema),
+  /**
+   * Каталог заклинаний, загруженный игроком (FR-123). Отсутствие поля означает встроенный каталог,
+   * а не пустую книгу: копия встроенных карточек в хранилище заморозила бы книгу на дате установки
+   * ([ADR-0019](../../docs/decisions.md#adr-0019)). Оно же делает записи, сделанные до FR-123,
+   * читаемыми без миграции (NFR-003).
+   */
+  spellCatalog: z.array(spellSchema).optional(),
 });
 
 export type PersistedSession = z.infer<typeof persistedSessionSchema>;
@@ -67,13 +76,24 @@ export class StorageVersionError extends Error {
   }
 }
 
-/** Готовит сессию к записи. Время берётся снаружи: модуль его не изобретает. */
-export function toPersisted(session: Session, savedAt: string): PersistedSession {
+/**
+ * Готовит сессию к записи. Время берётся снаружи: модуль его не изобретает.
+ *
+ * Каталог передаётся явно и обязательным аргументом, `null` — «играем встроенным». Необязательный
+ * аргумент здесь означал бы, что забытый вызов молча выбрасывает загруженные игроком карточки.
+ */
+export function toPersisted(
+  session: Session,
+  savedAt: string,
+  spellCatalog: readonly Spell[] | null,
+): PersistedSession {
   return {
     schemaVersion: STORAGE_SCHEMA_VERSION,
     savedAt,
     character: session.character,
     journal: session.journal,
+    // Ключа нет вовсе, а не `undefined`: «поля нет» и «каталог пуст» — разные состояния.
+    ...(spellCatalog === null ? {} : { spellCatalog: [...spellCatalog] }),
   };
 }
 
@@ -88,6 +108,10 @@ export function fromPersisted(persisted: PersistedSession): Session {
 /**
  * Проверяет прочитанное. Разделяет два случая: версия новее — приложение старое; всё остальное —
  * данные повреждены. Сообщения разные потому, что действия пользователя разные.
+ *
+ * Ссылочная целостность проверяется здесь, а не только на входе импорта (FR-123). Пока каталог был
+ * константой сборки, рассогласование могло прийти только из файла; с собственным каталогом оно
+ * лежит в базе, и подняться с подготовленным заклинанием без карточки нельзя — открыть его нечем.
  */
 export function parsePersisted(raw: unknown): PersistedSession {
   const version = (raw as { schemaVersion?: unknown } | null)?.schemaVersion;
@@ -102,6 +126,12 @@ export function parsePersisted(raw: unknown): PersistedSession {
       .map((issue) => `${issue.path.join(".") || "—"}: ${issue.message}`)
       .join("; ");
     throw new StorageCorruptedError(details);
+  }
+
+  const { spellCatalog } = result.data;
+  if (spellCatalog !== undefined) {
+    const broken = checkIntegrity(result.data.character, spellCatalog);
+    if (broken !== null) throw new StorageCorruptedError(broken);
   }
   return result.data;
 }

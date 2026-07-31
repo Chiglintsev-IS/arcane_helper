@@ -110,6 +110,15 @@ describe("сторы для браузера", () => {
     expect(stores.session.getState().session?.character.name).toBe(createThorne().name);
   });
 
+  it("играют встроенным каталогом, пока игрок не загрузил свой (FR-123)", async () => {
+    // Контент подставляет провайдер: стор его не импортирует и потому проверяется без сборки.
+    const stores = createBrowserStores();
+    await stores.session.getState().hydrate();
+
+    expect(stores.session.getState().spellCatalog).toHaveLength(29);
+    expect(stores.session.getState().spellCatalogSource).toBe("built_in");
+  });
+
   it("часы приложения дают время в ISO и разные идентификаторы", () => {
     const clock = systemClock();
     expect(Number.isNaN(Date.parse(clock.now()))).toBe(false);

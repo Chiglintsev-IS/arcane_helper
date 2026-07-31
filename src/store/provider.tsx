@@ -14,6 +14,7 @@ import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
 
+import { loadThorneSpells } from "@/data/content/thorne";
 import { createThorne } from "@/data/content/thorne/character";
 import { createCastDraftStore, type CastDraftState } from "./castDraftStore";
 import { createDexieRepository } from "./dexieRepository";
@@ -35,7 +36,13 @@ export function systemClock(): Clock {
   };
 }
 
-/** Сторы для браузера: состояние в IndexedDB, персонаж по умолчанию — Торн. */
+/**
+ * Сторы для браузера: состояние в IndexedDB, персонаж по умолчанию — Торн, каталог заклинаний —
+ * встроенный, пока игрок не загрузил свой (FR-123).
+ *
+ * Контент подставляется здесь, а не берётся стором самостоятельно: так стор не зависит от сборки
+ * и проверяется на любом наборе карточек.
+ */
 export function createBrowserStores(): AppStores {
   const clock = systemClock();
   return {
@@ -43,6 +50,7 @@ export function createBrowserStores(): AppStores {
       repository: createDexieRepository(),
       clock,
       createInitialCharacter: createThorne,
+      loadBuiltInCatalog: loadThorneSpells,
     }),
     draft: createCastDraftStore(),
     clock,

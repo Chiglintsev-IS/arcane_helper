@@ -7,6 +7,7 @@
 
 import { expect, it } from "vitest";
 
+import { loadThorneSpells } from "@/data/content/thorne";
 import { createThorne } from "@/data/content/thorne/character";
 import {
   parsePersisted,
@@ -19,8 +20,9 @@ import { createSession } from "./session";
 
 const SAVED_AT = "2026-07-31T18:00:00.000Z";
 
+/** Снимок на встроенном каталоге: карточки в записи не лежат (ADR-0019). */
 function snapshot() {
-  return toPersisted(createSession(createThorne()), SAVED_AT);
+  return toPersisted(createSession(createThorne()), SAVED_AT, null);
 }
 
 /**
@@ -106,6 +108,40 @@ export function describeRepositoryContract(
     ];
     await repository.save(stored);
     expect((await repository.load())?.journal).toEqual(stored.journal);
+  });
+
+  it("каталог заклинаний переживает запись и чтение (FR-123)", async () => {
+    const repository = await createRepository();
+    const catalog = loadThorneSpells().map((spell) =>
+      spell.id === "shield" ? { ...spell, nameRu: "Щит по-домашнему" } : spell,
+    );
+    await repository.save(toPersisted(createSession(createThorne()), SAVED_AT, catalog));
+
+    const loaded = await repository.load();
+    expect(loaded?.spellCatalog).toHaveLength(29);
+    expect(loaded?.spellCatalog?.find((spell) => spell.id === "shield")?.nameRu).toBe(
+      "Щит по-домашнему",
+    );
+  });
+
+  it("запись без каталога читается: играем встроенным (NFR-003)", async () => {
+    // Так выглядит сохранение, сделанное до FR-123. Обновление приложения не вправе его потерять.
+    const repository = await createRepository();
+    await repository.save(snapshot());
+    const loaded = await repository.load();
+
+    expect(loaded).not.toBeNull();
+    expect(loaded?.spellCatalog).toBeUndefined();
+  });
+
+  it("сохранённый каталог без нужной карточки не загружается (FR-123)", async () => {
+    // Ссылочная целостность после подмены каталога — инвариант хранилища, а не свойство файла.
+    const repository = await createRepository();
+    const withoutShield = loadThorneSpells().filter((spell) => spell.id !== "shield");
+    await repository.save(toPersisted(createSession(createThorne()), SAVED_AT, withoutShield));
+
+    await expect(repository.load()).rejects.toThrow(StorageCorruptedError);
+    await expect(repository.load()).rejects.toThrow(/shield/);
   });
 }
 

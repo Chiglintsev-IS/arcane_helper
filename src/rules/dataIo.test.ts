@@ -109,6 +109,23 @@ describe("checkIntegrity (FR-121)", () => {
     character.cantripIds = [...character.cantripIds, "fireball"];
     expect(checkIntegrity(character, SPELLS)).toContain("fireball");
   });
+
+  it("называет набор по-русски: сообщение читает игрок, а не автор схемы", () => {
+    const character = createThorne();
+    character.cantripIds = [...character.cantripIds, "fireball"];
+    expect(checkIntegrity(character, SPELLS)).toContain("заговоры");
+  });
+
+  it("проверяет и книгу: карточка нужна не только подготовленному", () => {
+    const character = createThorne();
+    character.spellbookSpellIds = [...character.spellbookSpellIds, "wish"];
+    expect(checkIntegrity(character, SPELLS)).toContain("книга заклинаний");
+  });
+
+  it("говорит про каталог, а не про файл: проверка работает и при возврате к встроенному", () => {
+    const withoutShield = SPELLS.filter((spell) => spell.id !== "shield");
+    expect(checkIntegrity(createThorne(), withoutShield)).toContain("каталоге");
+  });
 });
 
 describe("applyImport (FR-122)", () => {
