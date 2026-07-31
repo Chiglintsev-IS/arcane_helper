@@ -296,24 +296,16 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     expect(screen.getByLabelText(/^Заклинания/)).toBeDefined();
   });
 
-  it("«доступно сейчас» согласовано с проверкой доступности мастера", async () => {
-    // Переключатель живёт вне боя: в бою он прячет строку ровно тогда, когда игрок выясняет, чего
-    // ему не хватает, — а причина написана на самой строке словами (FR-212).
-    const character = inBookMode();
-    character.spellSlots = {
-      1: { maximum: 4, remaining: 0 },
-      2: { maximum: 3, remaining: 0 },
-      3: { maximum: 3, remaining: 0 },
-      4: { maximum: 1, remaining: 0 },
-    };
+  it("в «Книге» переключателя «Доступно» нет: он повторял бы «Подготовлено» (FR-212)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, character);
+    await renderWithStores(<CombatScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Доступно" }));
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+    const sheet = screen.queryByRole("dialog", { name: "Бой закончен?" });
+    if (sheet !== null) await user.click(within(sheet).getByRole("button", { name: "Нет, продолжается" }));
 
-    const list = screen.getByLabelText(/^Заклинания/);
-    expect(within(list).queryByText("Щит")).toBeNull();
-    expect(within(list).getByText("Луч холода")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Подготовлено" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Доступно" })).toBeNull();
   });
 });
 

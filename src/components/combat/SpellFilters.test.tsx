@@ -98,9 +98,10 @@ describe("состав фильтров зависит от книги (FR-002)"
 
     expect(screen.queryByRole("button", { name: "Концентрация" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
-    // «Подготовлено» и «Доступно сейчас» от состава книги не зависят и остаются всегда.
+    // «Подготовлено» от состава книги не зависит и остаётся всегда.
     expect(screen.getByRole("button", { name: "Подготовлено" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Доступно" })).toBeDefined();
+    // «Доступно» не остаётся: вне боя оно отбирает ровно то же, что «Подготовлено» (FR-212).
+    expect(screen.queryByRole("button", { name: "Доступно" })).toBeNull();
   });
 });
 
