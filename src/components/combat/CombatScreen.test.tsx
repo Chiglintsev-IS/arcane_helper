@@ -164,15 +164,15 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(list.queryByText("Поиск фамильяра")).toBeNull();
   });
 
-  it("привал показывает то, чего в бою нет, и прячет мгновенное", async () => {
+  it("«Вне боя» списка заклинаний не показывает вовсе (FR-202)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
-    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
 
-    const list = within(screen.getByLabelText(/^Заклинания/));
-    expect(list.getByText("Починка")).toBeDefined();
-    expect(list.queryByText("Щит")).toBeNull();
+    // Ни списка, ни сообщения о пустом результате: искать там никто не начинал.
+    expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
+    expect(screen.queryByText(/не подходит ни одно заклинание/)).toBeNull();
   });
 
   it("книга не отбирает ничего", async () => {
@@ -190,7 +190,7 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<CombatScreen />);
 
-    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
 
     // Сохранение — да, запись в журнал — нет: режим меняет вид, отменять в нём нечего.
     expect(stores.session.getState().session?.character.screenMode).toBe("camp");
@@ -210,14 +210,45 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(screen.queryByRole("button", { name: "Действие" })).toBeNull();
   });
 
-  it("на привале полосы фильтров нет: список короткий и отобран режимом (FR-202)", async () => {
+  it("в «Книге» шапка показывает ячейки и только их (FR-217)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
-    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    const inCombat = within(screen.getByLabelText("Ресурсы"));
+    expect(inCombat.getByLabelText("Ячейки заклинаний")).toBeDefined();
+    expect(inCombat.getByText("КС закл.")).toBeDefined();
+
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+
+    // Ячейки — тем же компонентом и теми же плитками: подготовка это вопрос «чем платить».
+    const inBook = within(screen.getByLabelText("Ресурсы"));
+    expect(inBook.getByLabelText("Ячейки заклинаний")).toBeDefined();
+    expect(inBook.getByLabelText(/Ячейки 1 уровня/)).toBeDefined();
+    // Числа боя отсюда уходят: они не отвечают ни на один вопрос подготовки.
+    expect(inBook.queryByText("КС закл.")).toBeNull();
+    expect(inBook.queryByText("КД")).toBeNull();
+    expect(inBook.queryByLabelText("Прочие ресурсы")).toBeNull();
+  });
+
+  it("вне боя шапка называет кости хитов (FR-134)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    // В бою их нет: тратятся они коротким отдыхом, и решать в бою по ним нечего.
+    expect(screen.queryByText(/Кости хитов/)).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+
+    expect(screen.getByText("Кости хитов 7d6")).toBeDefined();
+  });
+
+  it("вне боя полосы фильтров нет: отбирать нечего (FR-202)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
 
     expect(screen.queryByLabelText("Фильтры")).toBeNull();
-    expect(within(screen.getByLabelText(/^Заклинания/)).getAllByRole("listitem")).toHaveLength(5);
   });
 });
 
@@ -676,7 +707,7 @@ describe("конец боя (FR-216)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<CombatScreen />, wounded());
 
-    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
 
     // Режим переключается сразу и без условий: игрок мог уйти за справкой посреди боя.
     expect(stores.session.getState().session?.character.screenMode).toBe("camp");
@@ -700,7 +731,7 @@ describe("конец боя (FR-216)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
-    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
     expect(screen.queryByRole("dialog", { name: "Бой закончен?" })).toBeNull();
   });
 
@@ -913,7 +944,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     expect(screen.queryByRole("button", { name: "Учёт хода" })).toBeNull();
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
 
-    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
     expect(stores.session.getState().session?.character.screenMode).toBe("camp");
     expect(screen.queryByLabelText("Действие доступно")).toBeNull();
   });

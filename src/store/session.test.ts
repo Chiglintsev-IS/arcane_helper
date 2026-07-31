@@ -8,6 +8,7 @@ import type { RoleplayCategory } from "@/store/castDraftStore";
 import {
   actionUsedBy,
   addRoleplayVariant,
+  adjustHitDice,
   adjustRunes,
   beginTurn,
   bloodCostFor,
@@ -1623,6 +1624,54 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     // подготовленный ритуал в бою творится за ячейку обычным временем (FR-208).
     const after = togglePreparation(withRoom(), spell("identify"), LIMIT, clock);
     expect(after.character.preparedSpellIds).toContain("identify");
+  });
+});
+
+describe("кости хитов (FR-134)", () => {
+  it("тратятся и возвращаются по одной, обе правки в журнале", () => {
+    const spent = adjustHitDice(session, -1, clock);
+    expect(spent.character.hitDice?.remaining).toBe(6);
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачена кость хитов: осталось 6");
+
+    const returned = adjustHitDice(spent, 1, clock);
+    expect(returned.character.hitDice?.remaining).toBe(7);
+    expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена кость хитов: 7");
+  });
+
+  it("за пределы пула не выходит ни вверх, ни вниз", () => {
+    expect(() => adjustHitDice(session, 1, clock)).toThrow(/от 0 до 7/);
+    const empty = Array.from({ length: 7 }).reduce<Session>(
+      (current) => adjustHitDice(current, -1, clock),
+      session,
+    );
+    expect(empty.character.hitDice?.remaining).toBe(0);
+    expect(() => adjustHitDice(empty, -1, clock)).toThrow(/от 0 до 7/);
+  });
+
+  it("состоянию без костей отвечает причиной, а не падением на undefined", () => {
+    const { hitDice: _none, ...withoutDice } = session.character;
+    expect(() => adjustHitDice(createSession(withoutDice), -1, clock)).toThrow(
+      /не заведены кости хитов/,
+    );
+  });
+
+  it("долгий отдых возвращает половину костей, округляя вниз (FR-134)", () => {
+    const spent = Array.from({ length: 5 }).reduce<Session>(
+      (current) => adjustHitDice(current, -1, clock),
+      session,
+    );
+    expect(spent.character.hitDice?.remaining).toBe(2);
+    // Половина от семи — три: 2 + 3 = 5, а не все семь. Долгий бой обязан стоить.
+    expect(longRest(spent, clock).character.hitDice?.remaining).toBe(5);
+  });
+
+  it("возврат не переливается через край", () => {
+    expect(longRest(session, clock).character.hitDice?.remaining).toBe(7);
+  });
+
+  it("персонажу без костей отдых их не выдумывает", () => {
+    const { hitDice: _none, ...withoutDice } = session.character;
+    expect(longRest(createSession(withoutDice), clock).character.hitDice).toBeUndefined();
   });
 });
 

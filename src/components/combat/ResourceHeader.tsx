@@ -11,6 +11,7 @@
 import { ConcentrationCard } from "@/components/combat/ConcentrationCard";
 import type { CastingTimeType } from "@/components/spell/format";
 import { Badge } from "@/components/ui/Badge";
+import { hitDiceLabel } from "@/rules/hitDice";
 import type { ActiveEffect, CharacterState } from "@/data/schemas/character";
 import { effectiveArmorClass } from "@/rules/armorClass";
 import type { ConcentrationSummary } from "@/rules/concentration";
@@ -119,7 +120,6 @@ export function ResourceHeader({
   economy,
   concentration,
   bookCastingTimes,
-  showResources = true,
   onOpenHitPoints,
   onEditResources,
   onOpenConcentration,
@@ -130,15 +130,6 @@ export function ResourceHeader({
   concentration: ConcentrationSummary | null;
   /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем (FR-001). */
   bookCastingTimes: ReadonlySet<CastingTimeType>;
-  /**
-   * Показывать ли числа и счётчики ресурсов.
-   *
-   * В «Книге» их нет: КС спасброска, модификатор атаки, КД и остаток ячеек — вопросы боя, а книгу
-   * читают и по ней готовятся (FR-203). На экране шириной 320 пикселей этот блок стоил ровно одной
-   * карточки заклинания. Концентрация остаётся во всех режимах: она держится и во время чтения и
-   * уйти с экрана незаметно не может (F-07).
-   */
-  showResources?: boolean;
   onOpenHitPoints: () => void;
   /** Ручная правка ячеек и рун (FR-071, FR-142, FR-155). */
   onEditResources: () => void;
@@ -153,6 +144,14 @@ export function ResourceHeader({
   const otherEffects = character.activeEffects.filter((effect) => !effect.isConcentration);
   // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок (FR-093).
   const armorClass = effectiveArmorClass(character);
+  /**
+   * В «Книге» из всей шапки полезны ячейки (FR-217): там выбирают состав на день, и вопрос там один
+   * — чем сегодня платить. КС заклинаний, модификатор атаки, КД и хиты — числа боя; в книге они
+   * стоили ровно одной карточки заклинания на экране 320 × 568 и не отвечали ни на один вопрос
+   * подготовки. Плитки ячеек при этом те же самые, что в бою: один и тот же ресурс не может
+   * выглядеть в двух режимах по-разному.
+   */
+  const combatNumbers = character.screenMode !== "book";
 
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
@@ -165,18 +164,18 @@ export function ResourceHeader({
         </p>
       </header>
 
-      {showResources ? (
-        <>
-      <dl className="grid grid-cols-4 gap-1">
-        <Stat label="КС закл." value={`${character.spellSaveDc}`} />
-        <Stat label="Атака" value={signed(character.spellAttackModifier)} />
-        <Stat label="КД" value={`${armorClass}`} />
-        <HitPointsStat
-          value={`${character.hitPoints.current}/${character.hitPoints.maximum}`}
-          temporary={character.temporaryHitPoints}
-          onOpen={onOpenHitPoints}
-        />
-      </dl>
+      {combatNumbers ? (
+        <dl className="grid grid-cols-4 gap-1">
+          <Stat label="КС закл." value={`${character.spellSaveDc}`} />
+          <Stat label="Атака" value={signed(character.spellAttackModifier)} />
+          <Stat label="КД" value={`${armorClass}`} />
+          <HitPointsStat
+            value={`${character.hitPoints.current}/${character.hitPoints.maximum}`}
+            temporary={character.temporaryHitPoints}
+            onOpen={onOpenHitPoints}
+          />
+        </dl>
+      ) : null}
 
       <ul aria-label="Ячейки заклинаний" className="flex gap-1">
         {slots.map((slot) => (
@@ -190,109 +189,120 @@ export function ResourceHeader({
         ))}
       </ul>
 
-      <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
-        {/*
-          Значок рун — не кнопка: правило 44 пикселей на зону нажатия сделало бы весь ряд значков
-          вдвое выше, а это пятая часть карточки заклинания. Правка рун открывается плиткой ячейки —
-          там же, где правятся ячейки (FR-155).
-        */}
-        <li>
-          <Badge tone="ritual" icon="❖">
-            Руны {character.runes.remaining}/{character.runes.maximum}
-          </Badge>
-        </li>
-        <li>
-          <Badge tone="muted" icon="✚">
-            Очки {character.spellPoints.remaining}
-          </Badge>
-        </li>
-        {character.hitPoints.maximumReduction > 0 ? (
-          <li>
-            <Badge tone="reaction" icon="✖">
-              Максимум снижен на {character.hitPoints.maximumReduction}
-            </Badge>
-          </li>
-        ) : null}
-        {character.suppression.firedUpon ? (
-          <li>
-            <Badge tone="reaction" icon="✖">
-              Особенности подавлены: урон огнём
-            </Badge>
-          </li>
-        ) : null}
-        {/*
-          Солнце показывается наравне с огнём: подавление одинаковое, а молчал экран только о нём
-          (FR-183). Переключается признак в правке ресурсов — значок остаётся значком.
-        */}
-        {character.suppression.underDirectSunlight ? (
-          <li>
-            <Badge tone="reaction" icon="✖">
-              Особенности подавлены: солнечный свет
-            </Badge>
-          </li>
-        ) : null}
-        {/*
-          Экономия хода показывается только в бою: вне боя ходов нет, и `deriveTurnEconomy`
-          возвращает «всё доступно» независимо от журнала (FR-143). Три вечно зелёные галочки не
-          сообщали бы ничего, кроме неправды (FR-001).
-
-          Подпись на экране короткая, а доступное имя — полное: на iPhone SE места нет, но
-          «Действие» без пояснения незрячему пользователю ничего не говорит.
-        */}
-        {turnTracked(character) ? (
-          <>
-            <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
-              {economy.actionAvailable ? (
-                <Badge tone="action" icon="✓">
-                  Действие
-                </Badge>
-              ) : (
-                <Badge tone="muted" icon="✗">
-                  Действие израсходовано
-                </Badge>
-              )}
+      {combatNumbers ? (
+        <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
+          {/*
+            Кости хитов — вне боя: тратятся они коротким отдыхом, а в бою о них нечего решать
+            (FR-134). Значок стоит первым, потому что вне боя это главный вопрос — чем лечиться.
+          */}
+          {turnTracked(character) ? null : (
+            <li>
+              <Badge tone="muted" icon="✚">
+                Кости хитов {hitDiceLabel(character.hitDice)}
+              </Badge>
             </li>
-            {/* Бонусного действия нет ни у одной карточки — тратить его не на что (FR-001). */}
-            {bookCastingTimes.has("bonus_action") ? (
-              <li
-                aria-label={
-                  economy.bonusActionAvailable
-                    ? "Бонусное действие доступно"
-                    : "Бонусное действие израсходовано"
-                }
-              >
-                {economy.bonusActionAvailable ? (
-                  <Badge tone="bonus" icon="✓">
-                    Бонусное
+          )}
+          {/*
+            Значок рун — не кнопка: правило 44 пикселей на зону нажатия сделало бы весь ряд значков
+            вдвое выше, а это пятая часть карточки заклинания. Правка рун открывается плиткой ячейки —
+            там же, где правятся ячейки (FR-155).
+          */}
+          <li>
+            <Badge tone="ritual" icon="❖">
+              Руны {character.runes.remaining}/{character.runes.maximum}
+            </Badge>
+          </li>
+          <li>
+            <Badge tone="muted" icon="✚">
+              Очки {character.spellPoints.remaining}
+            </Badge>
+          </li>
+          {character.hitPoints.maximumReduction > 0 ? (
+            <li>
+              <Badge tone="reaction" icon="✖">
+                Максимум снижен на {character.hitPoints.maximumReduction}
+              </Badge>
+            </li>
+          ) : null}
+          {character.suppression.firedUpon ? (
+            <li>
+              <Badge tone="reaction" icon="✖">
+                Особенности подавлены: урон огнём
+              </Badge>
+            </li>
+          ) : null}
+          {/*
+            Солнце показывается наравне с огнём: подавление одинаковое, а молчал экран только о нём
+            (FR-183). Переключается признак в правке ресурсов — значок остаётся значком.
+          */}
+          {character.suppression.underDirectSunlight ? (
+            <li>
+              <Badge tone="reaction" icon="✖">
+                Особенности подавлены: солнечный свет
+              </Badge>
+            </li>
+          ) : null}
+          {/*
+            Экономия хода показывается только в бою: вне боя ходов нет, и `deriveTurnEconomy`
+            возвращает «всё доступно» независимо от журнала (FR-143). Три вечно зелёные галочки не
+            сообщали бы ничего, кроме неправды (FR-001).
+
+            Подпись на экране короткая, а доступное имя — полное: на iPhone SE места нет, но
+            «Действие» без пояснения незрячему пользователю ничего не говорит.
+          */}
+          {turnTracked(character) ? (
+            <>
+              <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
+                {economy.actionAvailable ? (
+                  <Badge tone="action" icon="✓">
+                    Действие
                   </Badge>
                 ) : (
                   <Badge tone="muted" icon="✗">
-                    Бонусное израсходовано
+                    Действие израсходовано
                   </Badge>
                 )}
               </li>
-            ) : null}
-            <li
-              aria-label={
-                economy.reactionAvailable
-                  ? "Реакция доступна"
-                  : `Реакция израсходована, вернётся ${economy.reactionReturns}`
-              }
-            >
-              {economy.reactionAvailable ? (
-                <Badge tone="reaction" icon="✓">
-                  Реакция
-                </Badge>
-              ) : (
-                <Badge tone="muted" icon="✗">
-                  Реакция израсходована, вернётся {economy.reactionReturns}
-                </Badge>
-              )}
-            </li>
-          </>
-        ) : null}
-      </ul>
-        </>
+              {/* Бонусного действия нет ни у одной карточки — тратить его не на что (FR-001). */}
+              {bookCastingTimes.has("bonus_action") ? (
+                <li
+                  aria-label={
+                    economy.bonusActionAvailable
+                      ? "Бонусное действие доступно"
+                      : "Бонусное действие израсходовано"
+                  }
+                >
+                  {economy.bonusActionAvailable ? (
+                    <Badge tone="bonus" icon="✓">
+                      Бонусное
+                    </Badge>
+                  ) : (
+                    <Badge tone="muted" icon="✗">
+                      Бонусное израсходовано
+                    </Badge>
+                  )}
+                </li>
+              ) : null}
+              <li
+                aria-label={
+                  economy.reactionAvailable
+                    ? "Реакция доступна"
+                    : `Реакция израсходована, вернётся ${economy.reactionReturns}`
+                }
+              >
+                {economy.reactionAvailable ? (
+                  <Badge tone="reaction" icon="✓">
+                    Реакция
+                  </Badge>
+                ) : (
+                  <Badge tone="muted" icon="✗">
+                    Реакция израсходована, вернётся {economy.reactionReturns}
+                  </Badge>
+                )}
+              </li>
+            </>
+          ) : null}
+        </ul>
       ) : null}
 
       <ConcentrationCard

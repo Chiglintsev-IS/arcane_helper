@@ -64,7 +64,7 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
   await expect(page.getByLabel("Заклинания")).toBeVisible();
 });
 
-test("first card fits without scrolling in every mode", async ({ page }) => {
+test("combat keeps the first card whole, the book keeps the header", async ({ page }) => {
   // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
   // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18, ux.md#общие-правила).
   const firstCardBottom = async (): Promise<number> =>
@@ -86,10 +86,34 @@ test("first card fits without scrolling in every mode", async ({ page }) => {
   }));
   expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
 
-  for (const mode of ["Привал", "Книга"]) {
-    await page.getByRole("radio", { name: new RegExp(`^${mode}`) }).click();
-    expect(await firstCardBottom(), mode).toBeLessThanOrEqual(viewport);
-  }
+  // «Вне боя» списка не показывает вовсе (FR-202) — мерить там нечего.
+  // В «Книге» бюджет другой (FR-218): шапка целиком и начало первой строки, а не строка целиком.
+  await page.getByRole("radio", { name: /^Книга/ }).click();
+
+  const headerBottom = await page
+    .getByRole("region", { name: "Ресурсы" })
+    .evaluate((node) => Math.round(node.getBoundingClientRect().bottom));
+  expect(headerBottom, "шапка «Книги» целиком").toBeLessThanOrEqual(viewport);
+
+  const rowTop = await page.evaluate(() => {
+    const first = document.querySelector('[aria-label^="Заклинания"] li');
+    if (first === null) throw new Error("список пуст");
+    return Math.round(first.getBoundingClientRect().top);
+  });
+  // Экран, который заканчивается шапкой, читается как пустой: начало строки обязано быть видно.
+  expect(rowTop, "начало первой строки «Книги»").toBeLessThan(viewport - 24);
+});
+
+test("book mode shows slots", async ({ page }) => {
+  // Ячейки нужны там, где выбирают состав на день (FR-217): подготовка — это вопрос «чем платить».
+  await page.getByRole("radio", { name: /^Книга/ }).click();
+
+  const header = page.getByRole("region", { name: "Ресурсы" });
+  await expect(header.getByLabel("Ячейки заклинаний")).toBeVisible();
+  await expect(header.getByLabel(/Ячейки 1 уровня/)).toBeVisible();
+  // И только они: числа боя на вопрос «чем сегодня платить» не отвечают (FR-217).
+  await expect(header.getByText("КС закл.")).toHaveCount(0);
+  await expect(header.getByLabel("Прочие ресурсы")).toHaveCount(0);
 });
 
 test("filter by casting time", async ({ page }) => {
@@ -125,7 +149,8 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
 
   await expect(page.getByLabel("Что сделать")).toContainText("Спишется ячейка 2 уровня");
   await expect(page.getByLabel("Объявление мастеру")).toContainText("ячейкой 2 уровня");
-  await expect(page.getByLabel("Отыгрыш")).toContainText("Обязательно");
+  // Именно раздел, а не список внутри него: «Варианты отыгрыша» содержит ту же подстроку.
+  await expect(page.getByRole("region", { name: "Отыгрыш" })).toContainText("Обязательно");
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
@@ -174,10 +199,10 @@ test("concentration block explains the effect", async ({ page }) => {
   await page.getByRole("button", { name: /Ячейка 1 уровня/ }).click();
   await page.getByRole("button", { name: "Далее" }).click();
 
-  // Ритуал неподготовлен, а заклинание концентрационное, поэтому шагов четыре: условия, чем
-  // сотворить, концентрация и подтверждение. Шаг концентрации — то самое предупреждение FR-081.
-  await expect(page.getByText("Шаг 3 из 4: Концентрация")).toBeVisible();
-  await page.getByRole("button", { name: "Далее" }).click();
+  // Шагов три: условия (ритуал неподготовлен), чем сотворить, подтверждение. Отдельного экрана про
+  // концентрацию нет — заменять нечего, и о ней говорит инструкция на итоговом (FR-021).
+  await expect(page.getByText("Шаг 3 из 3: Объявление и подтверждение")).toBeVisible();
+  await expect(page.getByText(/Держите концентрацию/)).toBeVisible();
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   // Виден после закрытия карточки заклинания (AC-14).
@@ -227,7 +252,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   // Привал — второй по времени экран после боя: там отдыхают и готовятся (FR-202).
   await page.getByRole("button", { name: "Отмена" }).click();
   await page.getByRole("button", { name: "Закрыть" }).click();
-  await page.getByRole("radio", { name: /^Привал/ }).click();
+  await page.getByRole("radio", { name: /^Вне боя/ }).click();
   await scan("привал");
 
   await page.getByRole("radio", { name: /^Бой/ }).click();
@@ -235,7 +260,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await page.getByRole("radio", { name: "По мне попали" }).click();
   await scan("экран реакций");
   await page.getByRole("button", { name: "Закрыть" }).click();
-  await page.getByRole("radio", { name: /^Привал/ }).click();
+  await page.getByRole("radio", { name: /^Вне боя/ }).click();
 
   await page.getByRole("button", { name: /Магическое восстановление/ }).click();
   await expect(page.getByRole("dialog", { name: "Магическое восстановление" })).toBeVisible();
@@ -313,7 +338,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByLabel("Ячейки заклинаний")).toContainText("3/4");
 
-  await page.getByRole("radio", { name: /^Привал/ }).click();
+  await page.getByRole("radio", { name: /^Вне боя/ }).click();
 
   // Вне боя ходов нет: ни кнопки, ни счётчика раундов (FR-202).
   await expect(page.getByRole("button", { name: "Мой ход начался" })).toBeHidden();

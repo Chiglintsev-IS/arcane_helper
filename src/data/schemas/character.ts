@@ -177,6 +177,26 @@ export const characterStateSchema = z
         path: ["remaining"],
       }),
 
+    /**
+     * Кости хитов (FR-134): по одной за уровень, размер задаёт класс — у волшебника d6.
+     *
+     * Поле необязательное: той же схемой проверяется импорт чужих данных
+     * ([FR-121](../../../docs/features/F-11-data-io.md#fr-121)), и выгрузка прежней версии не
+     * обязана его знать ([NFR-003](../../../docs/features/F-12-offline-pwa.md#nfr-003)). У Торна
+     * оно есть — этого требует тест контента.
+     */
+    hitDice: z
+      .object({
+        total: z.number().int().positive(),
+        size: z.number().int().positive(),
+        remaining: z.number().int().nonnegative(),
+      })
+      .refine((value) => value.remaining <= value.total, {
+        message: "Костей хитов не может остаться больше, чем есть",
+        path: ["remaining"],
+      })
+      .optional(),
+
     spellPoints: z
       .object({
         remaining: z.number().int().nonnegative(),
@@ -270,4 +290,5 @@ export type SpellSlotsData = z.infer<typeof spellSlotsSchema>;
 export type ActiveEffect = z.infer<typeof activeEffectSchema>;
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
 export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;
+export type HitDice = NonNullable<z.infer<typeof characterStateSchema>["hitDice"]>;
 export type CharacterState = z.infer<typeof characterStateSchema>;

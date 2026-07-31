@@ -281,7 +281,6 @@ export function CombatScreen() {
           economy={economy}
           concentration={concentrationSummary}
           bookCastingTimes={available.castingTimes}
-          showResources={!preparing}
           onOpenHitPoints={() => setDamageOpen(true)}
           onEditResources={() => setResourcesOpen(true)}
           onOpenConcentration={() => setPanelOpen(true)}
@@ -391,8 +390,8 @@ export function CombatScreen() {
 
       {/*
         Полоса фильтров жмётся по вертикали: каждые 8 пикселей здесь — это восьмая часть карточки.
-        На привале её нет вовсе: список там из пяти строк, отобранных самим режимом, и полоса выше
-        карточки над таким списком — чистая потеря (FR-202).
+        В «Бою» она закреплена: список просматривают под чужой ход, и уехавший за край переключатель —
+        переключатель, которого нет. Вне боя её нет вовсе: списка там тоже нет (FR-202).
       */}
       {character.screenMode === "camp" ? null : (
         <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
@@ -417,41 +416,52 @@ export function CombatScreen() {
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-        {rows.length > 0 ? (
-          <ul aria-label={listLabel} className="flex flex-col gap-2">
-            {rows}
-          </ul>
-        ) : null}
 
-        {/* Пусто — только когда не подошло вообще ничего, включая «Магию крови». */}
-        {rows.length === 0 ? (
-          <div className="flex flex-col items-start gap-2 text-sm">
-            {/*
-              Пустой результат поиска читается как потеря данных или поломка. Если искали
-              запрещённое, приложение отвечает причиной — «Понимание языков запрещено мастером», —
-              а не молчанием (FR-162).
-            */}
-            {ban === null ? (
-              <p>
-                {query.trim() === ""
-                  ? "Под выбранные фильтры не подходит ни одно заклинание."
-                  : `По запросу «${query.trim()}» ничего не найдено.`}
-              </p>
-            ) : (
-              <p role="status">
-                <span className="font-medium">{ban.nameRu}</span> ({ban.nameEn}) —{" "}
-                {ban.explanationRu}
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => setFilters(NO_FILTERS)}
-              className="min-h-11 rounded-lg border border-slate-200 px-3 dark:border-slate-800"
-            >
-              Сбросить фильтры
-            </button>
-          </div>
-        ) : null}
+        {/*
+          «Вне боя» списка заклинаний не показывает вовсе (FR-202): читать книгу игрок идёт в
+          «Книгу», а здесь работают отдых, восстановление и подготовка. Без этой проверки режим
+          отвечал бы «под выбранные фильтры не подходит ни одно заклинание» — сообщением о пустом
+          результате там, где искать никто не начинал.
+        */}
+        {character.screenMode === "camp" ? null : (
+          <>
+            {rows.length > 0 ? (
+              <ul aria-label={listLabel} className="flex flex-col gap-2">
+                {rows}
+              </ul>
+            ) : null}
+
+            {/* Пусто — только когда не подошло вообще ничего, включая «Магию крови». */}
+            {rows.length === 0 ? (
+              <div className="flex flex-col items-start gap-2 text-sm">
+                {/*
+                  Пустой результат поиска читается как потеря данных или поломка. Если искали
+                  запрещённое, приложение отвечает причиной — «Понимание языков запрещено
+                  мастером», — а не молчанием (FR-162).
+                */}
+                {ban === null ? (
+                  <p>
+                    {query.trim() === ""
+                      ? "Под выбранные фильтры не подходит ни одно заклинание."
+                      : `По запросу «${query.trim()}» ничего не найдено.`}
+                  </p>
+                ) : (
+                  <p role="status">
+                    <span className="font-medium">{ban.nameRu}</span> ({ban.nameEn}) —{" "}
+                    {ban.explanationRu}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setFilters(NO_FILTERS)}
+                  className="min-h-11 rounded-lg border border-slate-200 px-3 dark:border-slate-800"
+                >
+                  Сбросить фильтры
+                </button>
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
 
       {openSpell === null || draft !== null ? null : (

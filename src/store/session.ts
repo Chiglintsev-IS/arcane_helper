@@ -45,6 +45,7 @@ import {
   type SlotRecoveryPlan,
 } from "@/rules/slots";
 import { hitPointCost, spellPointCost } from "@/rules/bloodMagic";
+import { hitDiceRegainedOnLongRest } from "@/rules/hitDice";
 import { durationWithRoundsRu } from "@/rules/concentration";
 import type { ScreenMode } from "@/rules/modes";
 import { lifeRuneTemporaryHitPoints, RUNE_LABEL } from "@/rules/runes";
@@ -1016,6 +1017,18 @@ export function longRest(session: Session, clock: Clock): Session {
     // Эффекты короче отдыха закрываются; «до рассеивания» и подобные — нет.
     activeEffects: character.activeEffects.filter((effect) => effect.duration.type === "special"),
     spellPoints: { remaining: 0, createdAt: null },
+    // Половина костей хитов, округляя вниз (FR-134). Не все: иначе долгий бой ничего не стоил бы.
+    ...(character.hitDice === undefined
+      ? {}
+      : {
+          hitDice: {
+            ...character.hitDice,
+            remaining: Math.min(
+              character.hitDice.total,
+              character.hitDice.remaining + hitDiceRegainedOnLongRest(character.hitDice.total),
+            ),
+          },
+        }),
     // Временные хиты отдых снимает: они не восстанавливаются, а заканчиваются (FR-206).
     temporaryHitPoints: 0,
     suppression: { ...character.suppression, firedUpon: false },
@@ -1397,6 +1410,38 @@ export function useRoleplayVariant(session: Session, spellId: string, variantId:
  * Учёт хода выводится из журнала (ADR-0008), поэтому возврат действия — это отметка «начало хода» по
  * своей сути и делается ею же. Здесь правятся только те ресурсы, у которых есть собственное поле.
  */
+/**
+ * Ручной учёт костей хитов (FR-134).
+ *
+ * Приложение их не бросает и лечение по ним не считает — бросок и сложение остаются за столом
+ * (ADR-0007). Его дело — помнить остаток, поэтому операция одна: изменить его на единицу.
+ */
+export function adjustHitDice(session: Session, delta: number, clock: Clock): Session {
+  const { character } = session;
+  const { hitDice } = character;
+  if (hitDice === undefined) {
+    throw new SessionError("У персонажа не заведены кости хитов");
+  }
+  const remaining = hitDice.remaining + delta;
+  if (remaining < 0 || remaining > hitDice.total) {
+    throw new SessionError(
+      `Костей хитов может быть от 0 до ${hitDice.total}, получилось ${remaining}`,
+    );
+  }
+  return commit(
+    session,
+    { ...character, hitDice: { ...hitDice, remaining } },
+    {
+      kind: "manual_adjustment",
+      summaryRu:
+        delta > 0
+          ? `Возвращена кость хитов: ${remaining}`
+          : `Потрачена кость хитов: осталось ${remaining}`,
+    },
+    clock,
+  );
+}
+
 export function adjustRunes(session: Session, delta: number, clock: Clock): Session {
   const { character } = session;
   const remaining = character.runes.remaining + delta;

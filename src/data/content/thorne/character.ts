@@ -100,6 +100,9 @@ const RAW: unknown = {
   armorClass: { base: 10, dexterityModifier: 2, itemBonus: 2 },
 
   // Рун столько же, сколько бонус мастерства (F-13).
+  // Одна кость за уровень, размер по классу: волшебник — d6 (FR-134). Расовые «11 очков здоровья»
+  // на счёт костей не влияют, пока это надбавка к максимуму, а не замена кости — OQ-15, пункт 3.
+  hitDice: { total: 7, size: 6, remaining: 7 },
   runes: { maximum: 3, remaining: 3 },
   spellPoints: { remaining: 0, createdAt: null },
   suppression: { firedUpon: false, underDirectSunlight: false },
