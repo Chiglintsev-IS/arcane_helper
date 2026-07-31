@@ -135,6 +135,7 @@ export function CombatScreen() {
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -324,14 +325,30 @@ export function CombatScreen() {
             >
               Данные
             </button>
+            <button
+              type="button"
+              aria-pressed={searchOpen}
+              onClick={() => {
+                setSearchOpen((open) => !open);
+                if (searchOpen) setQuery("");
+              }}
+              className={`min-h-11 shrink-0 rounded-xl border px-3 text-sm ${
+                searchOpen
+                  ? "border-action text-action-strong dark:text-action"
+                  : "border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              Поиск
+            </button>
             <p
+              aria-label={`Подготовлено ${character.preparedSpellIds.length} из ${limit}`}
               className={`flex-1 text-xs tabular-nums ${
                 character.preparedSpellIds.length >= limit
                   ? "font-medium text-reaction-strong dark:text-reaction"
                   : "text-slate-600 dark:text-slate-400"
               }`}
             >
-              Подготовлено {character.preparedSpellIds.length} из {limit}
+              {character.preparedSpellIds.length} из {limit}
             </p>
             </>
           ) : null}
@@ -406,9 +423,16 @@ export function CombatScreen() {
       */}
       {character.screenMode === "camp" ? null : (
         <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
-          {preparing ? (
+          {/*
+            Поле поиска открывается кнопкой, а не стоит всегда (FR-218): полоса фильтров в «Книге»
+            повторяет боевой набор и занимает на ряд больше, а вместе с полем страница переставала
+            помещаться в 568 пикселей. Порядок уступок назван в самом требовании, и поиск в нём
+            первый: им пользуются раз за сессию, а фильтрами — каждый раз.
+          */}
+          {preparing && searchOpen ? (
             <input
               type="search"
+              autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               aria-label="Поиск по названию"

@@ -296,13 +296,13 @@ test("reactions in one tap", async ({ page }) => {
 test("book mode prepares spells", async ({ page }) => {
   await switchMode(page, /^Книга/);
   // Стартовый набор занимает лимит целиком, и двенадцатое заклинание в него не влезает (FR-101).
-  await expect(page.getByText("Подготовлено 11 из 11")).toBeVisible();
+  await expect(page.getByLabel("Подготовлено 11 из 11")).toBeVisible();
 
   await page.getByRole("button", { name: "Снять подготовку: Отражения" }).click();
-  await expect(page.getByText("Подготовлено 10 из 11")).toBeVisible();
+  await expect(page.getByLabel("Подготовлено 10 из 11")).toBeVisible();
 
   await page.getByRole("button", { name: "Подготовить: Обнаружение магии" }).click();
-  await expect(page.getByText("Подготовлено 11 из 11")).toBeVisible();
+  await expect(page.getByLabel("Подготовлено 11 из 11")).toBeVisible();
 
   // Подготовка определяет состав боевого списка (FR-209).
   await switchMode(page, /^Бой/);

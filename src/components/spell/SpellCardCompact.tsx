@@ -71,17 +71,18 @@ export function SpellCardCompact({
   // В бою значков подготовки нет: неподготовленного в списке уже нет, и значок сообщал бы то, что
   // и так верно про каждую строку (FR-209, FR-211). Вне боя остаются только те, что говорят о цене
   // и о ритуале, — про саму подготовку отвечает кнопка рядом (FR-219).
-  const inCombat = character.screenMode === "combat";
+  // Карточка одна на все режимы: «в книге она выглядит иначе — это плохо», сказал игрок, и он прав.
+  // Роль красит рамку и стоит в углу везде, цена ячейки называется везде, значок подготовки — только
+  // там, где подготовку меняют (FR-219).
+  const inBook = character.screenMode === "book";
   // Эффект уже висит — строка перестаёт претендовать на внимание, но из списка не уходит: повторное
   // применение бывает нужно (FR-210).
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
-  const preparation = inCombat ? null : preparationBadge(spell, character.preparedSpellIds);
+  const preparation = inBook ? preparationBadge(spell, character.preparedSpellIds) : null;
   const resolution = resolutionBadge(spell.resolution, character);
   const damage = damageLabel(spell, spell.level, character.level);
-  // Вне боя «Без ячейки» не пишется: рядом стоит значок «Заговор» и говорит то же самое (FR-010).
-  // В бою значка подготовки нет, и цену сказать больше нечем — иначе строка молчит о стоимости.
-  const slotCost = slotCostLabel(spell) ?? (inCombat ? "Без ячейки" : null);
+  const slotCost = slotCostLabel(spell) ?? "Без ячейки";
 
   /**
    * Роль красит рамку, а не занимает отдельный значок (FR-211). Цвет один ничего не сообщает
@@ -89,7 +90,7 @@ export function SpellCardCompact({
    * занято, и подпись достаётся списку бесплатно.
    */
   const role = combatRoleOf(spell);
-  const frame = inCombat ? ROLE_FRAME[role] : ROLE_FRAME.other;
+  const frame = ROLE_FRAME[role];
 
   const facts = [
     ...(slotCost === null ? [] : [slotCost]),
@@ -116,10 +117,8 @@ export function SpellCardCompact({
             Английское название нужно, чтобы найти заклинание в чужой книге, — а в бою по книгам не
             ищут. В «Бою» тот же угол занимает роль, и строка не становится выше (FR-211).
           */}
-          <span
-            className={`shrink-0 text-[0.625rem] ${inCombat ? ROLE_WORD[role] : "text-slate-500"}`}
-          >
-            {inCombat ? COMBAT_ROLE[role].label : spell.nameEn}
+          <span className={`shrink-0 text-[0.625rem] ${ROLE_WORD[role]}`}>
+            {COMBAT_ROLE[role].label}
           </span>
         </span>
 

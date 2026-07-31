@@ -85,11 +85,12 @@ describe("состав фильтров зависит от книги (FR-002)"
     expect(screen.getByRole("button", { name: "Реакция" })).toBeDefined();
   });
 
-  it("вне боя времени накладывания среди фильтров нет: там нет и ходов (FR-202)", () => {
+  it("вне боя время накладывания предлагается наравне с боем (FR-212)", () => {
     renderFilters(EVERYTHING, { mode: "camp" });
 
-    expect(screen.queryByRole("button", { name: "Действие" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Реакция" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Реакция" })).toBeDefined();
+    // И сверх боевого набора — то, что спрашивают только вне боя.
     expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
   });
 
@@ -126,10 +127,10 @@ describe("фильтры боя (FR-212)", () => {
     expect(screen.queryByRole("button", { name: "Боевое" })).toBeNull();
   });
 
-  it("вне боя роли не предлагаются: там спрашивают про уровень", () => {
+  it("вне боя роли предлагаются так же, как в бою (FR-212)", () => {
     renderFilters(EVERYTHING, { mode: "camp" });
 
-    expect(screen.queryByRole("button", { name: "Боевое" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Заговор" })).toBeDefined();
   });
 });

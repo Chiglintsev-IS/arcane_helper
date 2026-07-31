@@ -5,9 +5,9 @@
  * объявлено через `aria-pressed`: нажатость не должна читаться только по цвету
  * (ux.md#доступность).
  *
- * Набор зависит от режима. В бою спрашивают три вещи — чем это тратится, зачем это нужно и занимает
- * ли концентрацию; уровень, ритуальность и подготовка в бою не отвечают ни на один вопрос (FR-212).
- * Вне боя список длинный, и отбор по уровню там главный (FR-214).
+ * Набор один на все режимы и растёт от состава списка, а не от режима: время накладывания, роль и
+ * концентрация есть везде, где есть чем их наполнить. Вне боя к ним добавляются уровень,
+ * ритуальность и подготовка — вопросы, которых в бою не задают (FR-212).
  */
 
 import {
@@ -86,12 +86,10 @@ export function SpellFilters({
   onReset: () => void;
 }) {
   const inCombat = mode === "combat";
-  // Время накладывания спрашивают только в бою: вне боя ходов нет (FR-202), и «Действие» отбирало
-  // бы по ресурсу, которого в этом режиме не существует, — той же неправдой, что и зелёный значок
-  // потраченного действия на привале.
-  const castingTimes = inCombat
-    ? CASTING_TIME_FILTERS.filter((value) => available.castingTimes.has(value))
-    : [];
+  // Набор один на все режимы: переключатель показывается, если в списке есть чем его наполнить, и
+  // ничем больше не ограничен (FR-212). Разные наборы читались как две разные программы — замечание
+  // игрока о том же, о чём и одинаковая карточка.
+  const castingTimes = CASTING_TIME_FILTERS.filter((value) => available.castingTimes.has(value));
   const roles = ROLE_FILTERS.filter((value) => available.roles.has(value));
   // «Сбросить» появляется, когда есть что сбрасывать: кнопка, которая ничего не делает, занимает
   // место в полосе и обещает действие (FR-002).
@@ -125,21 +123,17 @@ export function SpellFilters({
             {CASTING_TIME[value].label}
           </Toggle>
         ))}
-        {inCombat
-          ? roles.map((value) => (
-              <Toggle
-                key={value}
-                pressed={filters.roles.includes(value)}
-                tone={COMBAT_ROLE[value].tone}
-                {...(COMBAT_ROLE[value].icon === undefined
-                  ? {}
-                  : { icon: COMBAT_ROLE[value].icon })}
-                onClick={() => onChange({ ...filters, roles: toggleValue(filters.roles, value) })}
-              >
-                {COMBAT_ROLE[value].label}
-              </Toggle>
-            ))
-          : null}
+        {roles.map((value) => (
+          <Toggle
+            key={value}
+            pressed={filters.roles.includes(value)}
+            tone={COMBAT_ROLE[value].tone}
+            {...(COMBAT_ROLE[value].icon === undefined ? {} : { icon: COMBAT_ROLE[value].icon })}
+            onClick={() => onChange({ ...filters, roles: toggleValue(filters.roles, value) })}
+          >
+            {COMBAT_ROLE[value].label}
+          </Toggle>
+        ))}
         {available.concentration ? (
           <Toggle
             pressed={filters.concentration}
@@ -151,10 +145,9 @@ export function SpellFilters({
           </Toggle>
         ) : null}
         {/*
-          Ритуальность, уровень, подготовка и «доступно сейчас» — вопросы вне боя. В бою ритуал
-          творится за ячейку и от обычного заклинания неотличим (FR-208), неподготовленного в
-          списке нет (FR-209), а «доступно сейчас» прячет строку ровно тогда, когда игрок выясняет,
-          чего ему не хватает: причина написана на самой строке словами (FR-212).
+          Ритуальность, уровень и подготовка добавляются к общему набору там, где они отвечают на
+          вопрос: в бою ритуал творится за ячейку и от обычного заклинания неотличим (FR-208), а
+          неподготовленного в списке нет вовсе (FR-209) — переключатели нашли бы весь список.
         */}
         {inCombat ? null : (
           <>

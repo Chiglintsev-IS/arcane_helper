@@ -205,9 +205,9 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
-    // В книге ритуалы есть, а «Действия» нет: время накладывания спрашивают только в бою (FR-212).
+    // В книге есть и ритуалы, и время накладывания: набор один на оба режима (FR-212).
     expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Действие" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
   });
 
   it("в «Книге» шапка показывает ячейки и только их (FR-217)", async () => {
@@ -513,6 +513,7 @@ describe("поиск и запреты (FR-160, FR-161, FR-162)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />, inBookMode());
 
+    await user.click(screen.getByRole("button", { name: "Поиск" }));
     await user.type(screen.getByLabelText("Поиск по названию"), "туман");
 
     const list = within(screen.getByLabelText(/^Заклинания/));
@@ -524,6 +525,7 @@ describe("поиск и запреты (FR-160, FR-161, FR-162)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />, inBookMode());
 
+    await user.click(screen.getByRole("button", { name: "Поиск" }));
     await user.type(screen.getByLabelText("Поиск по названию"), "понимание языков");
 
     expect(screen.getByRole("status").textContent).toContain("Запрещено мастером");
@@ -534,6 +536,7 @@ describe("поиск и запреты (FR-160, FR-161, FR-162)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />, inBookMode());
 
+    await user.click(screen.getByRole("button", { name: "Поиск" }));
     await user.type(screen.getByLabelText("Поиск по названию"), "дракон");
 
     expect(screen.getByText(/По запросу «дракон» ничего не найдено/)).toBeDefined();
@@ -661,7 +664,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     await renderWithStores(<CombatScreen />, inBookMode());
 
     // Стартовый набор Торна занимает лимит целиком; четыре заговора в него не входят.
-    expect(screen.getByText(/Подготовлено 11 из 11/)).toBeDefined();
+    expect(screen.getByLabelText("Подготовлено 11 из 11")).toBeDefined();
     expect(screen.queryByRole("button", { name: /Подготовить: Луч холода/ })).toBeNull();
   });
 
@@ -674,7 +677,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     full.preparedSpellIds = [...full.spellbookSpellIds].slice(0, 6);
     await renderWithStores(<CombatScreen />, full);
 
-    expect(screen.getByText(/Подготовлено 6 из 6/)).toBeDefined();
+    expect(screen.getByLabelText("Подготовлено 6 из 6")).toBeDefined();
     // Седьмое: подготовки нет ровно у двух записей книги, берём первую попавшуюся.
     await user.click(screen.getAllByRole("button", { name: /^Подготовить: / })[0]!);
 
@@ -822,20 +825,18 @@ describe("краткая карточка (FR-010)", () => {
     expect(within(row).getByText(spell("ray-of-frost").shortRulesRu)).toBeDefined();
   });
 
-  it("английское название есть вне боя и уступает место роли в бою (FR-211)", async () => {
+  it("угол карточки занимает роль во всех режимах (FR-211)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
-    // В бою по чужим книгам не ищут — угол занимает роль, и строка не становится выше.
     const inFight = within(screen.getByRole("button", { name: /Луч холода/ }));
     expect(inFight.getByText("Боевое")).toBeDefined();
-    expect(inFight.queryByText("Ray of Frost")).toBeNull();
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 
+    // Карточка одна на все режимы: разный вид читался как две разные программы.
     const inBook = within(screen.getByRole("button", { name: /Луч холода/ }));
-    expect(inBook.getByText("Ray of Frost")).toBeDefined();
-    expect(inBook.queryByText("Боевое")).toBeNull();
+    expect(inBook.getByText("Боевое")).toBeDefined();
   });
 
   it("разрешение называет число, а не вид броска (FR-211)", async () => {
@@ -875,13 +876,12 @@ describe("краткая карточка (FR-010)", () => {
     expect(row.queryByText("Ячейка от 1 ур.")).toBeNull();
   });
 
-  it("вне боя у заговора стоимость не повторяет значок «Заговор» (FR-010)", async () => {
-    // «Заговор» и «Без ячейки» — одно и то же утверждение: заговор ячейку не тратит по определению.
+  it("у заговора цена названа во всех режимах: строка не молчит о стоимости (FR-010)", async () => {
     await renderWithStores(<CombatScreen />, inBookMode());
 
     const row = within(screen.getByRole("button", { name: /Луч холода/ }));
     expect(row.getByText("Заговор")).toBeDefined();
-    expect(row.queryByText("Без ячейки")).toBeNull();
+    expect(row.getByText(/Без ячейки/)).toBeDefined();
     expect(row.queryByText(/Ячейка от/)).toBeNull();
   });
 
