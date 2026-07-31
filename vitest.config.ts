@@ -10,7 +10,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/rules/**", "src/data/schemas/**"],
+      include: ["src/rules/**", "src/data/schemas/**", "src/store/**", "src/data/content/**"],
       // Движок правил покрывается полностью: ошибка здесь не выглядит как сбой,
       // а проявляется как неверно проведённая игра. См. docs/quality.md.
       thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },

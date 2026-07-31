@@ -58,6 +58,11 @@ function thorne(): unknown {
     },
     turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: true },
     arcaneRecoveryAvailable: true,
+    hitPoints: { current: 51, maximum: 51, maximumReduction: 9 },
+    armorClass: { base: 10, dexterityModifier: 2, itemBonus: 2 },
+    runes: { maximum: 3, remaining: 2 },
+    spellPoints: { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" },
+    suppression: { firedUpon: false, underDirectSunlight: false },
     spellNotes: { web: "Мастер считает, что паутина не горит." },
     roleplayPreferences: {
       web: {

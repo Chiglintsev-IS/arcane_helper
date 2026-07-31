@@ -44,14 +44,17 @@ export class ContentError extends Error {
 }
 
 /**
- * Разбирает и проверяет все карточки. Ошибка в одной карточке — ошибка всего контента:
- * частично загруженная книга заклинаний хуже, чем явный отказ.
+ * Разбирает и проверяет карточки. Ошибка в одной — ошибка всего контента: частично загруженная
+ * книга заклинаний хуже, чем явный отказ.
+ *
+ * Список принимается параметром, чтобы проверки отказа можно было испытать на битых данных:
+ * иначе защитные ветви существуют, но никогда не исполняются, и их поведение неизвестно.
  */
-export function loadThorneSpells(): Spell[] {
+export function parseSpells(rawSpells: readonly unknown[]): Spell[] {
   const spells: Spell[] = [];
   const seen = new Set<string>();
 
-  for (const [index, raw] of RAW_SPELLS.entries()) {
+  for (const [index, raw] of rawSpells.entries()) {
     const result = spellSchema.safeParse(raw);
     if (!result.success) {
       const where = result.error.issues
@@ -67,6 +70,11 @@ export function loadThorneSpells(): Spell[] {
   }
 
   return spells;
+}
+
+/** Контент Торна целиком. */
+export function loadThorneSpells(): Spell[] {
+  return parseSpells(RAW_SPELLS);
 }
 
 /** Причина, по которой заклинание недоступно Торну (F-14). */

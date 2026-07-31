@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BANNED_SPELLS, HARMFUL_DAMAGE_TYPES, loadThorneSpells } from ".";
+import { BANNED_SPELLS, ContentError, HARMFUL_DAMAGE_TYPES, loadThorneSpells, parseSpells } from ".";
 import { CANTRIP_LEVEL, MINIMUM_COMPLETE_VARIANTS } from "@/data/schemas/spell";
 
 const spells = loadThorneSpells();
@@ -148,5 +148,27 @@ describe("объявления мастеру", () => {
     // Валидацию делает схема; тест фиксирует, что подстановки вообще применяются.
     const withPlaceholders = spells.filter((spell) => spell.announcementTemplate.includes("{"));
     expect(withPlaceholders.length).toBeGreaterThan(spells.length / 2);
+  });
+});
+
+describe("загрузчик контента отказывает целиком, а не частично", () => {
+  it("отклоняет битую карточку с указанием места ошибки", () => {
+    const broken = { ...structuredClone(spells[0]), level: 99 };
+    expect(() => parseSpells([broken])).toThrow(ContentError);
+    expect(() => parseSpells([broken])).toThrow(/Карточка №1 не прошла проверку/);
+  });
+
+  it("отклоняет повтор идентификатора", () => {
+    const card = structuredClone(spells[0]);
+    expect(() => parseSpells([card, card])).toThrow(/встречается дважды/);
+  });
+
+  it("на пустом списке возвращает пустой результат", () => {
+    expect(parseSpells([])).toEqual([]);
+  });
+
+  it("сообщает об ошибке и когда поле указать нельзя", () => {
+    // Не объект вовсе: ошибка относится к карточке целиком, а не к полю внутри неё.
+    expect(() => parseSpells(["это не карточка"])).toThrow(/Карточка №1 не прошла проверку — —/);
   });
 });

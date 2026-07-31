@@ -149,6 +149,40 @@ type CharacterState = {
 
   arcaneRecoveryAvailable: boolean;
 
+  // Хиты — см. F-15. Нужны потому, что кровавое колдовство покупает магию здоровьем.
+  hitPoints: {
+    current: number;
+    maximum: number;          // уже с учётом снижения
+    maximumReduction: number; // сколько срезано кровавым колдовством
+  };
+
+  // Класс Доспеха — см. OQ-02. Слагаемые хранятся раздельно, потому что «Доспехи мага»
+  // заменяют базу, а не прибавляют к итогу.
+  armorClass: {
+    base: number;              // 10 без доспехов
+    dexterityModifier: number;
+    itemBonus: number;
+  };
+
+  // Руны подкласса — см. F-13.
+  runes: {
+    maximum: number;
+    remaining: number;
+  };
+
+  // Очки заклинаний от кровавого колдовства — см. F-15.
+  // Исчезают через час после создания; приложение показывает время, но не отсчитывает его.
+  spellPoints: {
+    remaining: number;
+    createdAt: string | null;  // ISO 8601
+  };
+
+  // Подавление расовых особенностей — см. F-16.
+  suppression: {
+    firedUpon: boolean;
+    underDirectSunlight: boolean;
+  };
+
   // Пользовательские дополнения — см. F-02, F-04
   spellNotes: Record<string, string>;                  // spellId → заметка
   roleplayPreferences: Record<string, {                // spellId → предпочтения
@@ -174,6 +208,11 @@ type CharacterState = {
 - `preparedSpellIds.length ≤ preparedLimit`, где лимит вычисляется движком.
 - `preparedSpellIds ⊆ spellbookSpellIds`; `cantripIds` не пересекается с `spellbookSpellIds`.
 - Заговоры не входят в `preparedSpellIds`.
+- `0 ≤ runes.remaining ≤ runes.maximum`.
+- `hitPoints.current ≤ hitPoints.maximum`; `maximumReduction ≥ 0`.
+- `spellPoints.remaining > 0 → createdAt` задан: очки без времени создания невозможно погасить через час.
+- `armorClass` хранит слагаемые, а не итог: итог вычисляется движком с учётом активных «Доспехов мага»,
+  иначе одно и то же число пришлось бы поддерживать в двух местах.
 
 ## Активный эффект
 
@@ -264,7 +303,13 @@ type JournalEntry = {
     | "short_rest"
     | "arcane_recovery"
     | "turn_started"
-    | "manual_adjustment";
+    | "manual_adjustment"
+    // Добавлено вместе с F-13 и F-15: у этих ресурсов свои события,
+    // иначе отмена не отличит трату руны от трат ячейки.
+    | "blood_exchange"
+    | "rune_spent"
+    | "hit_points_changed"
+    | "suppression_changed";
 
   summaryRu: string;                   // «Паутина, ячейка 2 уровня»
 
@@ -274,6 +319,10 @@ type JournalEntry = {
   spellId?: string;
   slotLevel?: number;
   targetLabel?: string;
+
+  // Что именно потрачено внутри хода. Без этого поля доступность действия и реакции
+  // невозможно вывести из журнала (ADR-0008).
+  actionUsed?: "action" | "bonus_action" | "reaction";
 };
 ```
 

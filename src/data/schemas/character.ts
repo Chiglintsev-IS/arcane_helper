@@ -115,6 +115,50 @@ export const characterStateSchema = z
 
     arcaneRecoveryAvailable: z.boolean(),
 
+    // Хиты нужны потому, что кровавое колдовство покупает магию здоровьем (F-15).
+    hitPoints: z
+      .object({
+        current: z.number().int(),
+        maximum: z.number().int().positive(),
+        maximumReduction: z.number().int().nonnegative(),
+      })
+      .refine((value) => value.current <= value.maximum, {
+        message: "Текущее здоровье не может превышать максимум",
+        path: ["current"],
+      }),
+
+    // Слагаемые КД раздельно: «Доспехи мага» заменяют базу, а не прибавляют к итогу (OQ-02).
+    armorClass: z.object({
+      base: z.number().int().positive(),
+      dexterityModifier: z.number().int(),
+      itemBonus: z.number().int(),
+    }),
+
+    runes: z
+      .object({
+        maximum: z.number().int().nonnegative(),
+        remaining: z.number().int().nonnegative(),
+      })
+      .refine((value) => value.remaining <= value.maximum, {
+        message: "Рун не может остаться больше максимума",
+        path: ["remaining"],
+      }),
+
+    spellPoints: z
+      .object({
+        remaining: z.number().int().nonnegative(),
+        createdAt: isoDateTime.nullable(),
+      })
+      .refine((value) => value.remaining === 0 || value.createdAt !== null, {
+        message: "У очков заклинаний должно быть время создания: иначе их нечем погасить через час",
+        path: ["createdAt"],
+      }),
+
+    suppression: z.object({
+      firedUpon: z.boolean(),
+      underDirectSunlight: z.boolean(),
+    }),
+
     spellNotes: z.record(nonEmpty, nonEmpty),
     roleplayPreferences: z.record(nonEmpty, roleplayPreferenceSchema),
   })
