@@ -264,7 +264,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />, character);
 
-    await user.click(screen.getByRole("button", { name: "Доступно сейчас" }));
+    await user.click(screen.getByRole("button", { name: "Доступно" }));
 
     const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).queryByText("Щит")).toBeNull();
@@ -359,6 +359,63 @@ describe("операции привала (FR-202, FR-215)", () => {
   it("в книге операций привала нет: там читают, а не отдыхают", async () => {
     await renderWithStores(<CombatScreen />, inBookMode());
     expect(screen.queryByRole("button", { name: /Долгий отдых/ })).toBeNull();
+  });
+});
+
+describe("подготовка в «Книге» (FR-214, FR-101)", () => {
+  it("отмечает и снимает подготовку прямо в списке", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
+    expect(stores.session.getState().session?.character.preparedSpellIds).toContain("detect-magic");
+
+    await user.click(screen.getByRole("button", { name: "Снять подготовку: Обнаружение магии" }));
+    expect(stores.session.getState().session?.character.preparedSpellIds).not.toContain(
+      "detect-magic",
+    );
+  });
+
+  it("подготовленное появляется в боевом списке (FR-209)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
+    await user.click(screen.getByRole("radio", { name: /^Бой/ }));
+
+    expect(
+      within(screen.getByLabelText(/^Заклинания/)).getByText("Обнаружение магии"),
+    ).toBeDefined();
+  });
+
+  it("считает подготовленное и не считает заговоры (FR-102)", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    // У Торна подготовлено четыре из одиннадцати; четыре заговора в лимит не входят.
+    expect(screen.getByText(/Подготовлено 4 из 11/)).toBeDefined();
+    expect(screen.queryByRole("button", { name: /Подготовить: Луч холода/ })).toBeNull();
+  });
+
+  it("двенадцатое заклинание упирается в лимит и объясняет причину (FR-101)", async () => {
+    const user = userEvent.setup();
+    const full = inBookMode();
+    // В книге Торна восемь записей, а лимит 11 — до края не дотянуться. Понижаем Интеллект до 8:
+    // лимит становится 6 (модификатор −1 плюс уровень 7), и шесть подготовленных его исчерпывают.
+    full.intelligence = 8;
+    full.preparedSpellIds = [...full.spellbookSpellIds].slice(0, 6);
+    await renderWithStores(<CombatScreen />, full);
+
+    expect(screen.getByText(/Подготовлено 6 из 6/)).toBeDefined();
+    // Седьмое: подготовки нет ровно у двух записей книги, берём первую попавшуюся.
+    await user.click(screen.getAllByRole("button", { name: /^Подготовить: / })[0]!);
+
+    expect(screen.getByRole("alert").textContent).toContain("Подготовлено 6 из 6");
+  });
+
+  it("в бою подготовку не меняют: состав уже определён", async () => {
+    await renderWithStores(<CombatScreen />);
+    expect(screen.queryByRole("button", { name: /^Подготовить: / })).toBeNull();
+    expect(screen.queryByText(/Подготовлено \d+ из/)).toBeNull();
   });
 });
 
@@ -545,7 +602,7 @@ describe("краткая карточка (FR-010)", () => {
 
     // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием (FR-084).
     const row = within(screen.getByLabelText(/^Заклинания/)).getByRole("button", {
-      name: /Обнаружение магии/,
+      name: /^Обнаружение магии/,
     });
     expect(within(row).queryByText(/Заклинание не подготовлено/)).toBeNull();
     expect(within(row).getByText(/Уже идёт концентрация/)).toBeDefined();
@@ -622,7 +679,7 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     // Неподготовленные ритуалы в списке скрыты: показываем их фильтром (F-09).
     await renderWithStores(<CombatScreen />, inBookMode());
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /Опознание/ }));
+    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
 
     const card = screen.getByRole("dialog", { name: /Опознание/ });
     expect(within(card).getByText(/Прорицание/)).toBeDefined();
@@ -675,7 +732,7 @@ describe("схема ритуала (FR-192)", () => {
     await renderWithStores(<CombatScreen />, inBookMode());
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(
-      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /Опознание/ }),
+      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /^Опознание/ }),
     );
     await user.click(screen.getByRole("button", { name: "Схема ритуала" }));
 

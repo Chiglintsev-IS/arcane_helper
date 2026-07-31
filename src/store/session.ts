@@ -991,6 +991,58 @@ export function setScreenMode(session: Session, mode: ScreenMode): Session {
 }
 
 
+// —————————————————————————— Подготовка ——————————————————————————
+
+/**
+ * Переключение подготовки заклинания (FR-100, FR-214).
+ *
+ * Лимит — единственное жёсткое ограничение приложения: двенадцатого заклинания нет в правилах
+ * подготовки, и мастер здесь исключений не делает ([F-09](../../docs/features/F-09-preparation.md)).
+ * Везде остальное работает принцип «предупредить, но пустить» (FR-031).
+ *
+ * Заговоры не готовятся вовсе: они вне лимита и доступны всегда (FR-102). Ритуалы готовятся как
+ * обычные заклинания — FR-103 говорит, что ритуалом их можно творить и без подготовки, а не что
+ * подготовить их нельзя.
+ */
+export function togglePreparation(
+  session: Session,
+  spell: Spell,
+  limit: number,
+  clock: Clock,
+): Session {
+  const { character } = session;
+  if (spell.level === CANTRIP_LEVEL) {
+    throw new SessionError("Заговор не готовится: он доступен всегда");
+  }
+  if (!character.spellbookSpellIds.includes(spell.id)) {
+    throw new SessionError(`«${spell.nameRu}» нет в книге заклинаний`);
+  }
+
+  const prepared = character.preparedSpellIds.includes(spell.id);
+  if (!prepared && character.preparedSpellIds.length >= limit) {
+    throw new SessionError(
+      `Подготовлено ${character.preparedSpellIds.length} из ${limit}: сначала снимите другое заклинание`,
+    );
+  }
+
+  const after: CharacterState = {
+    ...character,
+    preparedSpellIds: prepared
+      ? character.preparedSpellIds.filter((id) => id !== spell.id)
+      : [...character.preparedSpellIds, spell.id],
+  };
+  return commit(
+    session,
+    after,
+    {
+      kind: "manual_adjustment",
+      summaryRu: prepared ? `Снята подготовка: ${spell.nameRu}` : `Подготовлено: ${spell.nameRu}`,
+      spellId: spell.id,
+    },
+    clock,
+  );
+}
+
 // —————————————————————————— Заметки ——————————————————————————
 
 /**

@@ -30,6 +30,7 @@ import {
   shortRest,
   spendRuneOnWardingSigil,
   takeDamage,
+  togglePreparation,
   undoLast,
   useArcaneRecovery,
   wardingSigilAvailable,
@@ -1272,6 +1273,73 @@ describe("заметка к заклинанию (FR-012)", () => {
   });
 })
 
+
+describe("подготовка заклинаний (FR-100, FR-101, FR-214)", () => {
+  const LIMIT = 11;
+
+  it("готовит и снимает подготовку, записывая каждое действие в журнал", () => {
+    const prepared = togglePreparation(session, spell("detect-magic"), LIMIT, clock);
+    expect(prepared.character.preparedSpellIds).toContain("detect-magic");
+    expect(prepared.journal.at(-1)?.summaryRu).toBe("Подготовлено: Обнаружение магии");
+
+    const dropped = togglePreparation(prepared, spell("detect-magic"), LIMIT, clock);
+    expect(dropped.character.preparedSpellIds).not.toContain("detect-magic");
+    expect(dropped.journal.at(-1)?.summaryRu).toBe("Снята подготовка: Обнаружение магии");
+  });
+
+  it("подготовка обратима (FR-111)", () => {
+    const prepared = togglePreparation(session, spell("detect-magic"), LIMIT, clock);
+    expect(undoLast(prepared).character.preparedSpellIds).toEqual(
+      session.character.preparedSpellIds,
+    );
+  });
+
+  it("лимит — жёсткое ограничение, а не предупреждение (FR-101)", () => {
+    // Единственное место, где приложение отказывает без «всё равно»: это правило подготовки, и
+    // мастер здесь исключений не делает (F-09).
+    const full: Session = {
+      ...session,
+      character: {
+        ...session.character,
+        preparedSpellIds: session.character.spellbookSpellIds.slice(0, 3),
+      },
+    };
+    expect(() => togglePreparation(full, spell("identify"), 3, clock)).toThrow(
+      /Подготовлено 3 из 3/,
+    );
+  });
+
+  it("снять подготовку на пределе можно: иначе набор было бы не пересобрать", () => {
+    const full: Session = {
+      ...session,
+      character: {
+        ...session.character,
+        preparedSpellIds: session.character.spellbookSpellIds.slice(0, 3),
+      },
+    };
+    const first = full.character.preparedSpellIds[0]!;
+    const after = togglePreparation(full, spell(first), 3, clock);
+    expect(after.character.preparedSpellIds).toHaveLength(2);
+  });
+
+  it("заговор не готовится: он вне лимита и доступен всегда (FR-102)", () => {
+    expect(() => togglePreparation(session, spell("ray-of-frost"), LIMIT, clock)).toThrow(
+      /Заговор не готовится/,
+    );
+  });
+
+  it("заклинания вне книги подготовить нельзя (FR-100)", () => {
+    const foreign: Spell = { ...spell("mage-armor"), id: "fireball", nameRu: "Огненный шар" };
+    expect(() => togglePreparation(session, foreign, LIMIT, clock)).toThrow(/нет в книге/);
+  });
+
+  it("ритуал готовится как обычное заклинание (FR-103)", () => {
+    // FR-103 говорит, что ритуалом его можно творить и без подготовки, а не что готовить нельзя:
+    // подготовленный ритуал в бою творится за ячейку обычным временем (FR-208).
+    const after = togglePreparation(session, spell("identify"), LIMIT, clock);
+    expect(after.character.preparedSpellIds).toContain("identify");
+  });
+});
 
 describe("конец боя (FR-216)", () => {
   function wounded(current: number): Session {

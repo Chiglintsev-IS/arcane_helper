@@ -34,6 +34,7 @@ import {
   type ConcentrationCheck,
 } from "@/rules/concentration";
 import { BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
+import { preparedLimit } from "@/rules/abilities";
 import { rolesPresent } from "@/rules/combatRole";
 import {
   bestCastPlan,
@@ -64,6 +65,7 @@ import {
   shortRest,
   spendRuneOnWardingSigil,
   takeDamage,
+  togglePreparation,
   undoLast,
   useArcaneRecovery,
   wardingSigilAvailable,
@@ -155,6 +157,7 @@ export function CombatScreen() {
 
   const { character } = session;
   const context = { character, turn: economy };
+  const apply = sessionStore.getState().apply;
   // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список
   // (FR-200). Карточка открывается из всей книги — режим не должен закрывать уже открытое.
   const inMode = spellsForScreen(SPELLS, character);
@@ -169,6 +172,11 @@ export function CombatScreen() {
    * стоит там же, где заговоры, и идёт сразу за ними. Отдельным списком он оказывался бы или выше
    * реакций, или ниже всего — в обоих случаях не на своём месте, а порядок здесь и есть подсказка.
    */
+  // Подготовка живёт в «Книге» (FR-214): в бою состав уже определён, и менять его под чужой ход
+  // приложение предлагать не должно.
+  const preparing = character.screenMode === "book";
+  const limit = preparedLimit(character.intelligence, character.level);
+
   const rows = shown.map((spell) => (
     <SpellCardCompact
       key={spell.id}
@@ -176,6 +184,11 @@ export function CombatScreen() {
       character={character}
       unavailableReason={firstReason(spell, character, economy)}
       onOpen={() => setOpenSpellId(spell.id)}
+      onTogglePrepared={
+        preparing
+          ? () => apply((current) => togglePreparation(current, spell, limit, clock))
+          : undefined
+      }
     />
   ));
   if (bloodShown) {
@@ -195,8 +208,6 @@ export function CombatScreen() {
   const listLabel = bloodShown ? "Заклинания и действия" : "Заклинания";
   const openSpell = SPELLS.find((spell) => spell.id === openSpellId) ?? null;
   const lastEntry = session.journal.at(-1);
-
-  const apply = sessionStore.getState().apply;
 
   /**
    * Урон из любой точки ввода: хиты списываются, и при активной концентрации сразу предлагается
@@ -272,6 +283,23 @@ export function CombatScreen() {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
+          {/*
+            Счётчик подготовки (FR-101): лимит — единственное жёсткое ограничение приложения, и
+            двенадцатое заклинание обязано упираться в видимое число, а не во внезапный отказ.
+            Стоит в ряду кнопок, а не отдельной строкой: отдельная строка стоила ряда, а на iPhone SE
+            ряд — это пятая часть карточки.
+          */}
+          {preparing ? (
+            <p
+              className={`flex-1 text-xs tabular-nums ${
+                character.preparedSpellIds.length >= limit
+                  ? "font-medium text-reaction-strong dark:text-reaction"
+                  : "text-slate-600 dark:text-slate-400"
+              }`}
+            >
+              Подготовлено {character.preparedSpellIds.length} из {limit}
+            </p>
+          ) : null}
           {/* Ход начинается только в бою: вне боя ходов нет, и кнопка звала бы начать то, чего не происходит (FR-202). */}
           {character.screenMode === "combat" ? (
             <button
@@ -290,7 +318,9 @@ export function CombatScreen() {
             aria-label={
               lastEntry === undefined ? "Отменить" : `Отменить: ${lastEntry.summaryRu}`
             }
-            className="min-h-11 grow rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-800"
+            className={`min-h-11 rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-800 ${
+              preparing ? "shrink-0" : "grow"
+            }`}
           >
             Отменить
           </button>

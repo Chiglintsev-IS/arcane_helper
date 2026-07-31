@@ -30,7 +30,7 @@ import {
 } from "@/components/spell/format";
 import { Badge } from "@/components/ui/Badge";
 import type { CharacterState } from "@/data/schemas/character";
-import type { Spell } from "@/data/schemas/spell";
+import { CANTRIP_LEVEL, type Spell } from "@/data/schemas/spell";
 import { combatRoleOf } from "@/rules/combatRole";
 
 /** Цвет рамки по роли. «Другое» цвета не получает: серое и означает «ни то, ни другое». */
@@ -55,12 +55,18 @@ export function SpellCardCompact({
   character,
   unavailableReason,
   onOpen,
+  onTogglePrepared,
 }: {
   spell: Spell;
   character: CharacterState;
   /** Первая причина недоступности или `null`, если применить можно. */
   unavailableReason: string | null;
   onOpen: () => void;
+  /**
+   * Переключение подготовки (FR-214). Передаётся только там, где подготовка уместна, — в «Книге»:
+   * в бою состав уже определён, и кнопка предлагала бы менять его под чужой ход.
+   */
+  onTogglePrepared?: (() => void) | undefined;
 }) {
   // В бою значка подготовки нет: неподготовленного в списке уже нет, и значок сообщал бы то, что
   // и так верно про каждую строку (FR-209, FR-211).
@@ -91,12 +97,15 @@ export function SpellCardCompact({
     ...(damage === null ? [] : [`Урон ${damage}`]),
   ];
 
+  const preparable = onTogglePrepared !== undefined && spell.level !== CANTRIP_LEVEL;
+  const isPrepared = character.preparedSpellIds.includes(spell.id);
+
   return (
-    <li>
+    <li className="flex items-stretch gap-1">
       <button
         type="button"
         onClick={onOpen}
-        className={`flex w-full flex-col items-start gap-1 rounded-lg border p-2 text-left ${frame} ${
+        className={`flex flex-1 flex-col items-start gap-1 rounded-lg border p-2 text-left ${frame} ${
           unavailableReason === null && !active ? "" : "opacity-60"
         }`}
       >
@@ -160,6 +169,27 @@ export function SpellCardCompact({
           <span className="text-xs font-medium text-reaction-strong dark:text-reaction">Недоступно: {unavailableReason}</span>
         )}
       </button>
+
+      {/*
+        Подготовка — отдельная кнопка рядом со строкой, а не внутри карточки заклинания (FR-214):
+        собрать одиннадцать заклинаний открытием и закрытием одиннадцати карточек значит превратить
+        подготовку после каждого отдыха в упражнение. Заговор кнопки не получает: он вне лимита.
+      */}
+      {preparable ? (
+        <button
+          type="button"
+          aria-pressed={isPrepared}
+          onClick={onTogglePrepared}
+          aria-label={`${isPrepared ? "Снять подготовку" : "Подготовить"}: ${spell.nameRu}`}
+          className={`w-11 shrink-0 rounded-lg border text-lg ${
+            isPrepared
+              ? "border-ritual bg-ritual/10 text-ritual-strong dark:text-ritual"
+              : "border-slate-200 text-slate-400 dark:border-slate-800"
+          }`}
+        >
+          <span aria-hidden="true">{isPrepared ? "✓" : "+"}</span>
+        </button>
+      ) : null}
     </li>
   );
 }

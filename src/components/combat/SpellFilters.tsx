@@ -57,7 +57,7 @@ function Toggle({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2 text-xs font-medium ${
+      className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2 text-[0.6875rem] font-medium ${
         pressed ? TONE_CLASS[tone] : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
       }`}
     >
@@ -186,13 +186,15 @@ export function SpellFilters({
             >
               Подготовлено
             </Toggle>
+            {/* «Доступно», а не «Доступно сейчас»: вне боя «сейчас» ничего не уточняет — время
+                там не идёт, — а слово стоило полосе целого ряда. */}
             <Toggle
               pressed={filters.availableNow}
               tone="action"
               icon="⚡"
               onClick={() => onChange({ ...filters, availableNow: !filters.availableNow })}
             >
-              Доступно сейчас
+              Доступно
             </Toggle>
           </>
         )}

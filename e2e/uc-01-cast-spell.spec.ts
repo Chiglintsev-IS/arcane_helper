@@ -64,26 +64,32 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
   await expect(page.getByLabel("Заклинания")).toBeVisible();
 });
 
-test("first combat card fits without scrolling", async ({ page }) => {
+test("first card fits without scrolling in every mode", async ({ page }) => {
   // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
   // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18, ux.md#общие-правила).
-  const fit = await page.evaluate(() => {
-    const first = document.querySelector('[aria-label^="Заклинания"] li');
-    if (first === null) return null;
-    const box = first.getBoundingClientRect();
-    return { bottom: Math.round(box.bottom), viewport: window.innerHeight };
-  });
+  const firstCardBottom = async (): Promise<number> =>
+    page.evaluate(() => {
+      const first = document.querySelector('[aria-label^="Заклинания"] li');
+      if (first === null) throw new Error("список пуст");
+      return Math.round(first.getBoundingClientRect().bottom);
+    });
 
-  expect(fit).not.toBeNull();
-  expect(fit!.bottom).toBeLessThanOrEqual(fit!.viewport);
+  const viewport = page.viewportSize()?.height ?? 0;
+  expect(viewport).toBeGreaterThan(0);
+
+  expect(await firstCardBottom(), "бой").toBeLessThanOrEqual(viewport);
 
   // Полоса фильтров тоже вся на экране: переключатель за краем — переключатель, которого нет.
-  const filters = page.getByLabel("Фильтры");
-  const strip = await filters.evaluate((node) => ({
+  const strip = await page.getByLabel("Фильтры").evaluate((node) => ({
     scrollWidth: node.firstElementChild?.scrollWidth ?? 0,
     clientWidth: node.firstElementChild?.clientWidth ?? 0,
   }));
   expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+
+  for (const mode of ["Привал", "Книга"]) {
+    await page.getByRole("radio", { name: new RegExp(`^${mode}`) }).click();
+    expect(await firstCardBottom(), mode).toBeLessThanOrEqual(viewport);
+  }
 });
 
 test("filter by casting time", async ({ page }) => {
@@ -162,7 +168,7 @@ test("concentration block explains the effect", async ({ page }) => {
   // ячейкой, а не ритуалом.
   await page.getByRole("radio", { name: /^Книга/ }).click();
   await page.getByRole("button", { name: "Ритуал", exact: true }).click();
-  await page.getByRole("button", { name: /Обнаружение магии/ }).click();
+  await page.getByRole("button", { name: /^Обнаружение магии/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: /Ячейка 1 уровня/ }).click();
   await page.getByRole("button", { name: "Далее" }).click();
@@ -226,6 +232,18 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await page.getByRole("button", { name: /Магическое восстановление/ }).click();
   await expect(page.getByRole("dialog", { name: "Магическое восстановление" })).toBeVisible();
   await scan("магическое восстановление");
+});
+
+test("book mode prepares spells", async ({ page }) => {
+  await page.getByRole("radio", { name: /^Книга/ }).click();
+  await expect(page.getByText("Подготовлено 4 из 11")).toBeVisible();
+
+  await page.getByRole("button", { name: "Подготовить: Обнаружение магии" }).click();
+  await expect(page.getByText("Подготовлено 5 из 11")).toBeVisible();
+
+  // Подготовка определяет состав боевого списка (FR-209).
+  await page.getByRole("radio", { name: /^Бой/ }).click();
+  await expect(page.getByLabel(/^Заклинания/)).toContainText("Обнаружение магии");
 });
 
 test("camp mode reaches rest and recovery", async ({ page }) => {

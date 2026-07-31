@@ -256,7 +256,7 @@ describe("шаг компонентов", () => {
     await renderWithStores(<CombatScreen />, { ...createThorne(), screenMode: "book" });
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /Опознание/ }));
+    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     // Чем сотворить → компоненты → объявление: жемчужина требует отдельного шага.
     await user.click(screen.getByRole("button", { name: "Далее" }));
