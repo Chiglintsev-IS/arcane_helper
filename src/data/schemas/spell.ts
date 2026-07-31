@@ -14,6 +14,22 @@ export const MAXIMUM_CHARACTER_LEVEL = 20;
 /** Минимум художественного контента на заклинание (FR-050). */
 export const MINIMUM_COMPLETE_VARIANTS = 3;
 
+/**
+ * Закрытый словарь подстановок объявления мастеру (FR-041).
+ * Подстановка вне списка — ошибка контента: заполнить её приложению нечем.
+ */
+export const ANNOUNCEMENT_PLACEHOLDERS = [
+  "slotLevel",
+  "spellSaveDc",
+  "spellAttackModifier",
+  "damage",
+  "target",
+  "range",
+  "armorClass",
+] as const;
+
+const PLACEHOLDER_PATTERN = /\{[^}]*\}/g;
+
 const nonEmpty = z.string().trim().min(1);
 
 const castingTimeSchema = z
@@ -61,7 +77,8 @@ const durationSchema = z.object({
 });
 
 const targetingSchema = z.object({
-  type: z.enum(["self", "creature", "creatures", "point", "area"]),
+  // "object" добавлен вместе с первой партией контента: «Починка» и «Опознание» целятся в предмет.
+  type: z.enum(["self", "creature", "creatures", "object", "point", "area"]),
   maximumTargets: z.number().int().positive().optional(),
 });
 
@@ -166,6 +183,19 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
       path: ["roleplay", "completeVariants"],
       message: `Нужно минимум ${MINIMUM_COMPLETE_VARIANTS} варианта отыгрыша, найдено ${countCompleteVariants(spell.roleplay)}`,
     });
+  }
+
+  // FR-041: подстановки только из закрытого словаря — остальное приложению нечем заполнить.
+  const allowed = new Set<string>(ANNOUNCEMENT_PLACEHOLDERS);
+  for (const token of spell.announcementTemplate.match(PLACEHOLDER_PATTERN) ?? []) {
+    const placeholder = token.slice(1, -1);
+    if (!allowed.has(placeholder)) {
+      context.addIssue({
+        code: "custom",
+        path: ["announcementTemplate"],
+        message: `Неизвестная подстановка «{${placeholder}}»: допустимы ${ANNOUNCEMENT_PLACEHOLDERS.join(", ")}`,
+      });
+    }
   }
 
   // FR-042: техническая формулировка не содержит художественного текста.

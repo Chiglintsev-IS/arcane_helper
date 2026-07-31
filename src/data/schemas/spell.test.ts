@@ -201,6 +201,25 @@ describe("минимум художественного контента (FR-050
   });
 });
 
+describe("подстановки объявления (FR-041)", () => {
+  it("отклоняет подстановку вне закрытого словаря", () => {
+    expect(
+      firstError(
+        mutate(web(), (draft) => {
+          draft.announcementTemplate = "Сотворяю «Паутину» ячейкой {slotLevel}, урон {fireDamage}.";
+        }),
+      ),
+    ).toContain("Неизвестная подстановка «{fireDamage}»");
+  });
+
+  it("принимает шаблон вовсе без подстановок", () => {
+    const plain = mutate(web(), (draft) => {
+      draft.announcementTemplate = "Сотворяю «Паутину» и выбираю точку в пределах дальности.";
+    });
+    expect(spellSchema.safeParse(plain).success).toBe(true);
+  });
+});
+
 describe("чистота технической формулировки (FR-042)", () => {
   it("отклоняет объявление с художественным текстом", () => {
     expect(

@@ -54,7 +54,9 @@ type Spell = {
   ritual: boolean;
 
   targeting: {
-    type: "self" | "creature" | "creatures" | "point" | "area";
+    // "object" добавлен при внесении первой партии контента: «Починка» и «Опознание»
+    // целятся в предмет, а не в существо или точку.
+    type: "self" | "creature" | "creatures" | "object" | "point" | "area";
     maximumTargets?: number;
   };
 
