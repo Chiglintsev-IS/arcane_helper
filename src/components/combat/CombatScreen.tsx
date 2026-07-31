@@ -15,6 +15,7 @@ import { useMemo, useState } from "react";
 
 import { BloodMagicPanel } from "@/components/combat/BloodMagicPanel";
 import { CastWizard } from "@/components/cast/CastWizard";
+import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
 import { SpellFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
@@ -28,6 +29,7 @@ import {
   beginTurn,
   castSpell,
   deriveTurnEconomy,
+  endConcentration,
   exchangeBlood,
   recoverHitPointMaximum,
   setSpellNote,
@@ -252,16 +254,20 @@ export function CombatScreen() {
       ) : null}
 
       {panelOpen && concentrationSummary !== null ? (
-        <section
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Концентрация: ${concentrationSummary.nameRu}`}
-          className="fixed inset-0 z-10 flex flex-col bg-slate-50 p-3 dark:bg-slate-950"
-        >
-          <button type="button" onClick={() => setPanelOpen(false)} className="min-h-11 self-end px-2 underline">
-            Закрыть
-          </button>
-        </section>
+        <ConcentrationPanel
+          summary={concentrationSummary}
+          onOpenSpell={() => {
+            setPanelOpen(false);
+            setOpenSpellId(concentrationSummary.spellId);
+          }}
+          onDrop={() => {
+            // Подтверждения нет: ошибка отменяется журналом (FR-111, ux.md).
+            if (apply((current) => endConcentration(current, "manual", clock)) === null) {
+              setPanelOpen(false);
+            }
+          }}
+          onClose={() => setPanelOpen(false)}
+        />
       ) : null}
 
       <CastWizard character={character} economy={economy} onConfirm={confirm} error={error} />

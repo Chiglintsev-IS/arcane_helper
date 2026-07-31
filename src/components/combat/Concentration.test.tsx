@@ -59,3 +59,43 @@ describe("карточка концентрации в шапке (FR-082, FR-08
     expect(screen.getByRole("dialog", { name: /Концентрация/ })).toBeDefined();
   });
 });
+
+describe("лист концентрации (FR-084, FR-091)", () => {
+  async function openPanel(): Promise<void> {
+    await renderWithStores(<CombatScreen />, concentrating());
+    await userEvent.click(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ }));
+  }
+
+  it("объясняет, как работает и чем прерывается", async () => {
+    await openPanel();
+
+    const panel = screen.getByRole("dialog", { name: /Концентрация/ });
+    expect(within(panel).getByText(/до 10 минут \(100 раундов\)/)).toBeDefined();
+    expect(within(panel).getByText(/чувствует магию/)).toBeDefined();
+
+    const breakers = within(panel).getByLabelText("Чем прерывается");
+    expect(within(breakers).getAllByRole("listitem")).toHaveLength(6);
+    expect(within(breakers).getByText(/Недееспособность или смерть/)).toBeDefined();
+    expect(within(breakers).getByText(/На усмотрение мастера/)).toBeDefined();
+  });
+
+  it("ведёт к полной карточке заклинания", async () => {
+    await openPanel();
+
+    await userEvent.click(screen.getByRole("button", { name: /Полные правила/ }));
+
+    expect(screen.getByRole("dialog", { name: /Заклинание «Обнаружение магии»/ })).toBeDefined();
+  });
+
+  it("снимает концентрацию вручную и пишет это в журнал", async () => {
+    await openPanel();
+
+    await userEvent.click(screen.getByRole("button", { name: "Снять концентрацию" }));
+
+    expect(screen.getByText(/Концентрации нет/)).toBeDefined();
+    expect(screen.queryByRole("dialog", { name: /Концентрация/ })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /Отменить: Концентрация завершена: снята вручную/ }),
+    ).toBeDefined();
+  });
+});
