@@ -301,6 +301,73 @@ describe("экономия действий (FR-141)", () => {
   });
 });
 
+describe("истечение эффекта в раундах (FR-094)", () => {
+  const castShield = (base: Session): Session =>
+    castSpell(
+      base,
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+
+  it("начало хода снимает истёкшее: «Щит» держится один раунд", () => {
+    const shielded = castShield(withTurnTracking(session));
+    expect(shielded.character.activeEffects).toHaveLength(1);
+
+    const next = beginTurn(shielded, clock);
+    expect(next.character.activeEffects).toEqual([]);
+    expect(next.journal.at(-1)?.summaryRu).toContain("«Щит» истёк");
+  });
+
+  it("снятие обратимо: ошибка возвращается отменой (FR-111)", () => {
+    const next = beginTurn(castShield(withTurnTracking(session)), clock);
+    expect(undoLast(next).character.activeEffects).toHaveLength(1);
+  });
+
+  it("эффект в минутах начало хода не трогает: часов приложение не считает", () => {
+    // «Обнаружение магии» — 10 минут: сколько времени прошло между ходами, приложение не знает.
+    const casting = castSpell(
+      withTurnTracking(session),
+      { spell: spell("detect-magic"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    expect(beginTurn(casting, clock).character.activeEffects).toHaveLength(1);
+  });
+
+  it("эффект на несколько раундов переживает свой первый ход", () => {
+    const shield = spell("shield");
+    const threeRounds: Spell = { ...shield, duration: { type: "rounds", value: 3 } };
+    let current = castSpell(
+      withTurnTracking(session),
+      { spell: threeRounds, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+
+    current = beginTurn(current, clock);
+    expect(current.character.activeEffects).toHaveLength(1);
+    current = beginTurn(current, clock);
+    expect(current.character.activeEffects).toHaveLength(1);
+    current = beginTurn(current, clock);
+    expect(current.character.activeEffects).toEqual([]);
+  });
+
+  it("истёкшая концентрация заканчивается вместе с эффектом (FR-083)", () => {
+    // Концентрация и эффект разойтись не могут: схема состояния такого и не пропустит.
+    const detectMagic = spell("detect-magic");
+    const brief: Spell = { ...detectMagic, duration: { type: "rounds", value: 1 } };
+    const casting = castSpell(
+      withTurnTracking(session),
+      { spell: brief, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    expect(casting.character.concentration).toBeDefined();
+
+    const next = beginTurn(casting, clock);
+    expect(next.character.activeEffects).toEqual([]);
+    expect(next.character.concentration).toBeUndefined();
+    expect(characterStateSchema.safeParse(next.character).success).toBe(true);
+  });
+});
+
 describe("концентрация (FR-080, FR-081)", () => {
   const concentrating = () => spell("detect-magic");
 

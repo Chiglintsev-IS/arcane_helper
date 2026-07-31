@@ -418,6 +418,25 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     expect(stores.session.getState().session?.character.turnTracking.actionAvailable).toBe(true);
   });
 
+  it("«Щит» сам исчезает с началом следующего хода, КД возвращается к 14 (FR-094)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+
+    await user.click(screen.getByRole("button", { name: /Щит/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const numbers = screen.getByLabelText("Ресурсы");
+    expect(within(numbers).getByText("19")).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: "Мой ход начался" }));
+
+    // Пока строка эффекта висит, шапка показывает КД 19 — число, которое игрок называет мастеру.
+    expect(screen.queryByText(/Щит · КД 19/)).toBeNull();
+    expect(within(numbers).getByText("14")).toBeDefined();
+  });
+
   it("отмена возвращает потраченную ячейку", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<CombatScreen />);

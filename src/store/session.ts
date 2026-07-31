@@ -261,9 +261,14 @@ export function deriveTurnEconomy(session: Session): TurnEconomy {
 export function beginTurn(session: Session, clock: Clock): Session {
   const { character } = session;
   const healed = regenerationDue(character);
+  const { kept, expired } = expireRoundEffects(session);
+
+  const withoutConcentration = expired.some((effect) => effect.isConcentration)
+    ? (({ concentration: _dropped, ...rest }) => rest)(character)
+    : character;
 
   const after: CharacterState = {
-    ...character,
+    ...withoutConcentration,
     reactionAvailable: true,
     turnTracking: {
       ...character.turnTracking,
@@ -276,11 +281,48 @@ export function beginTurn(session: Session, clock: Clock): Session {
       ...character.hitPoints,
       current: Math.min(character.hitPoints.maximum, character.hitPoints.current + healed),
     },
+    activeEffects: kept,
   };
 
-  const summaryRu =
-    healed > 0 ? `Начало хода · регенерация +${healed}` : "Начало хода";
+  const notes = [
+    ...(healed > 0 ? [`регенерация +${healed}`] : []),
+    ...expired.map((effect) => `«${effect.nameRu}» истёк`),
+  ];
+  const summaryRu = notes.length === 0 ? "Начало хода" : `Начало хода · ${notes.join(", ")}`;
   return commit(session, after, { kind: "turn_started", summaryRu }, clock);
+}
+
+/**
+ * Эффекты, чьи раунды кончились к началу нового хода (FR-094).
+ *
+ * Раунды считаются по журналу, как и вся экономия хода (ADR-0008): эффект живёт столько отметок
+ * «начало хода», сколько в нём раундов. Отметка, ради которой вызвана эта функция, ещё не записана,
+ * поэтому она добавляется единицей — иначе «Щит» на один раунд пережил бы свой раунд.
+ *
+ * Минуты, часы и особая длительность не трогаются: приложение не знает, сколько прошло времени, и
+ * отсчёт был бы выдуманным.
+ */
+function expireRoundEffects(session: Session): {
+  kept: ActiveEffect[];
+  expired: ActiveEffect[];
+} {
+  const kept: ActiveEffect[] = [];
+  const expired: ActiveEffect[] = [];
+
+  for (const effect of session.character.activeEffects) {
+    const rounds = effect.duration.type === "rounds" ? effect.duration.value : undefined;
+    if (rounds === undefined) {
+      kept.push(effect);
+      continue;
+    }
+    const elapsed =
+      session.journal.filter(
+        (entry) => entry.kind === "turn_started" && entry.at > effect.startedAt,
+      ).length + 1;
+    (elapsed >= rounds ? expired : kept).push(effect);
+  }
+
+  return { kept, expired };
 }
 
 /** Действует ли регенерация прямо сейчас и на сколько (FR-182). */
