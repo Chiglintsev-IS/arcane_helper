@@ -31,7 +31,7 @@ import {
   type ConcentrationCheck,
 } from "@/rules/concentration";
 import { bestCastPlan, countHiddenRituals, filterSpells, NO_FILTERS } from "@/rules/filters";
-import { spellsForMode } from "@/rules/modes";
+import { spellsForScreen } from "@/rules/modes";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
 import {
@@ -137,7 +137,7 @@ export function CombatScreen() {
   const context = { character, turn: economy };
   // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список
   // (FR-200). Карточка открывается из всей книги — режим не должен закрывать уже открытое.
-  const inMode = spellsForMode(SPELLS, character.screenMode);
+  const inMode = spellsForScreen(SPELLS, character);
   const shown = filterSpells(inMode, filters, context);
   const hiddenRituals = countHiddenRituals(inMode, filters, context);
   const available = availableFilters(inMode);

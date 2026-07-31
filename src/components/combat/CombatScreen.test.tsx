@@ -189,11 +189,12 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
-    // В бою ритуалы есть («Обнаружение магии» действием), поэтому переключатель на месте.
-    expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
+    // Ритуалы Торна не подготовлены, значит в бою их нет — и переключателя тоже (FR-002, FR-209).
+    expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
 
     await user.click(screen.getByRole("radio", { name: /^Привал/ }));
-    // На привале нет реакций — переключателя «Реакция» тоже нет (FR-002).
+    // На привале ритуалы есть, а реакций нет — набор переключателей меняется вместе со списком.
+    expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Реакция" })).toBeNull();
   });
 });
@@ -232,8 +233,8 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     await user.click(screen.getByRole("button", { name: "Заговор" }));
 
     expect(screen.getByText(/не подходит ни одно заклинание/)).toBeDefined();
-    // Двух, а не четырёх: в режиме «Бой» из ритуалов есть только те, что творятся действием.
-    expect(screen.getByText(/2 ритуалов скрыты как неподготовленные/)).toBeDefined();
+    // Про скрытые ритуалы речи нет: в боевой список неподготовленное не попадает вовсе (FR-209).
+    expect(screen.queryByText(/ритуалов скрыты/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
     expect(screen.getByLabelText("Заклинания")).toBeDefined();
@@ -264,7 +265,8 @@ describe("краткая карточка (FR-010)", () => {
     const row = screen.getByRole("button", { name: /Луч холода/ });
 
     expect(within(row).getByText("Ray of Frost")).toBeDefined();
-    expect(within(row).getByText("Заговор")).toBeDefined();
+    // В бою значка подготовки нет, цену говорит стоимость: «Заговор» уступил место «Без ячейки».
+    expect(within(row).getByText("Без ячейки")).toBeDefined();
     expect(within(row).getByText("Действие")).toBeDefined();
     expect(within(row).getByText("60 футов")).toBeDefined();
     expect(within(row).getByText(spell("ray-of-frost").shortRulesRu)).toBeDefined();
@@ -298,9 +300,9 @@ describe("краткая карточка (FR-010)", () => {
     expect(row.queryByText("Ячейка от 1 ур.")).toBeNull();
   });
 
-  it("у заговора стоимость не повторяет значок «Заговор» (FR-010)", async () => {
+  it("вне боя у заговора стоимость не повторяет значок «Заговор» (FR-010)", async () => {
     // «Заговор» и «Без ячейки» — одно и то же утверждение: заговор ячейку не тратит по определению.
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<CombatScreen />, inBookMode());
 
     const row = within(screen.getByRole("button", { name: /Луч холода/ }));
     expect(row.getByText("Заговор")).toBeDefined();
@@ -328,7 +330,8 @@ describe("краткая карточка (FR-010)", () => {
     // Ритуалу подготовка не нужна, и мастер применения предложит именно ритуал. Строка списка
     // обязана назвать ту же причину, иначе она отговаривает от способа, который работает.
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, concentrating());
+    // Ритуал в бою не показывается, пока не подготовлен (FR-209): сверяем причину в книге.
+    await renderWithStores(<CombatScreen />, { ...concentrating(), screenMode: "book" });
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
 

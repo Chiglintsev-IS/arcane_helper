@@ -133,8 +133,10 @@ test("reaction shows when it returns", async ({ page }) => {
 });
 
 test("concentration block explains the effect", async ({ page }) => {
-  // «Обнаружение магии» — неподготовленный ритуал, поэтому в списке по умолчанию его нет (F-09).
-  // Концентрацию оно требует в любом режиме, а проверять надо тот, которым творят в бою: ячейкой.
+  // «Обнаружение магии» не подготовлено, поэтому в боевом списке его нет вовсе (FR-209): идём в
+  // книгу. Концентрацию оно требует в любом режиме, а творить надо тем способом, что и в бою, —
+  // ячейкой, а не ритуалом.
+  await page.getByRole("radio", { name: /^Книга/ }).click();
   await page.getByRole("button", { name: "Ритуал", exact: true }).click();
   await page.getByRole("button", { name: /Обнаружение магии/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();

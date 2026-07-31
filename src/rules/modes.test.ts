@@ -2,7 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/data/content/thorne";
 
-import { belongsToMode, castableWithinTurn, spellsForMode, SCREEN_MODES } from "./modes";
+import { createThorne } from "@/data/content/thorne/character";
+
+import {
+  belongsToMode,
+  castableWithinTurn,
+  orderForCombat,
+  preparedForCombat,
+  spellsForMode,
+  spellsForScreen,
+  SCREEN_MODES,
+} from "./modes";
 
 const SPELLS = loadThorneSpells();
 
@@ -72,5 +82,45 @@ describe("отбор по режиму (FR-201, FR-202, FR-203)", () => {
       const found = belongsToMode(spell, "combat") || belongsToMode(spell, "camp");
       expect(found, `${spell.nameRu} не попал никуда`).toBe(true);
     }
+  });
+});
+
+describe("боевой список: состав и порядок (FR-209, FR-210)", () => {
+  it("содержит заговоры и подготовленные, но не остальное", () => {
+    const shown = spellsForScreen(SPELLS, createThorne()).map((spell) => spell.id);
+
+    // Заговоры входят вне лимита подготовки; «Обнаружение магии» подготовлено не было.
+    expect(shown).toContain("ray-of-frost");
+    expect(shown).toContain("mage-armor");
+    expect(shown).not.toContain("detect-magic");
+    expect(shown).not.toContain("unseen-servant");
+  });
+
+  it("реакции идут первыми, дальше по возрастанию цены", () => {
+    const shown = spellsForScreen(SPELLS, createThorne()).map((spell) => spell.id);
+
+    expect(shown.slice(0, 2).sort()).toEqual(["absorb-elements", "shield"]);
+    // За реакциями — заговоры, и только потом заклинания первого уровня.
+    const levels = spellsForScreen(SPELLS, createThorne())
+      .filter((spell) => spell.castingTime.type !== "reaction")
+      .map((spell) => spell.level);
+    expect(levels).toEqual([...levels].sort((a, b) => a - b));
+  });
+
+  it("вне боя ни состав, ни порядок не трогаются", () => {
+    const character = { ...createThorne(), screenMode: "book" as const };
+    expect(spellsForScreen(SPELLS, character)).toEqual(SPELLS);
+  });
+
+  it("подготовка меняет состав, а не порядок", () => {
+    const character = createThorne();
+    const withRitual = { ...character, preparedSpellIds: [...character.preparedSpellIds, "detect-magic"] };
+    expect(preparedForCombat(SPELLS, withRitual).map((s) => s.id)).toContain("detect-magic");
+  });
+
+  it("сортировка не меняет исходный список", () => {
+    const before = SPELLS.map((spell) => spell.id);
+    orderForCombat(SPELLS);
+    expect(SPELLS.map((spell) => spell.id)).toEqual(before);
   });
 });

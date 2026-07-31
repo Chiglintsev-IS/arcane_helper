@@ -9,7 +9,8 @@
  * верить (FR-002).
  */
 
-import type { Spell } from "@/data/schemas/spell";
+import type { CharacterState } from "@/data/schemas/character";
+import { CANTRIP_LEVEL, type Spell } from "@/data/schemas/spell";
 
 export const SCREEN_MODES = ["combat", "camp", "book"] as const;
 
@@ -52,4 +53,35 @@ export function belongsToMode(spell: Spell, mode: ScreenMode): boolean {
 /** Заклинания режима в исходном порядке: сортировка — дело списка, не отбора. */
 export function spellsForMode(spells: readonly Spell[], mode: ScreenMode): Spell[] {
   return spells.filter((spell) => belongsToMode(spell, mode));
+}
+
+/**
+ * Заклинания, которые в бою вообще можно сотворить: заговоры и подготовленные (FR-209).
+ *
+ * Неподготовленное — не выбор, а лишняя строка в списке, который просматривают под чужой ход.
+ * Заговоры входят всегда: они вне лимита подготовки (FR-102).
+ */
+export function preparedForCombat(spells: readonly Spell[], character: CharacterState): Spell[] {
+  const prepared = new Set(character.preparedSpellIds);
+  return spells.filter((spell) => spell.level === CANTRIP_LEVEL || prepared.has(spell.id));
+}
+
+/**
+ * Порядок боевого списка (FR-210): сначала реакции, затем остальное по возрастанию цены.
+ *
+ * Реакции наверху потому, что триггер приходит в чужой ход и в любой момент, а собственное действие
+ * случается раз за круг. Внутри групп порядок исходный: он задан книгой и не должен прыгать от
+ * состояния к состоянию.
+ */
+export function orderForCombat(spells: readonly Spell[]): Spell[] {
+  const rank = (spell: Spell): number =>
+    spell.castingTime.type === "reaction" ? -1 : spell.level;
+  return [...spells].sort((left, right) => rank(left) - rank(right));
+}
+
+/** Что показывать на экране: отбор по режиму, состав по подготовке, порядок по срочности. */
+export function spellsForScreen(spells: readonly Spell[], character: CharacterState): Spell[] {
+  const inMode = spellsForMode(spells, character.screenMode);
+  if (character.screenMode !== "combat") return inMode;
+  return orderForCombat(preparedForCombat(inMode, character));
 }

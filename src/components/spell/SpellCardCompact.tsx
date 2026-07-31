@@ -35,22 +35,28 @@ export function SpellCardCompact({
   unavailableReason: string | null;
   onOpen: () => void;
 }) {
+  // В бою значка подготовки нет: неподготовленного в списке уже нет, и значок сообщал бы то, что
+  // и так верно про каждую строку (FR-209, FR-211).
+  const inCombat = character.screenMode === "combat";
+  // Эффект уже висит — строка перестаёт претендовать на внимание, но из списка не уходит: повторное
+  // применение бывает нужно (FR-210).
+  const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
   const preparation = preparationBadge(spell, character.preparedSpellIds);
   const resolution = resolutionBadge(spell.resolution);
   const duration = durationBadge(spell.duration);
   const damage = damageLabel(spell, spell.level, character.level);
-  const slotCost = slotCostLabel(spell);
+  // Вне боя «Без ячейки» не пишется: рядом стоит значок «Заговор» и говорит то же самое (FR-010).
+  // В бою значка подготовки нет, и цену сказать больше нечем — иначе строка молчит о стоимости.
+  const slotCost = slotCostLabel(spell) ?? (inCombat ? "Без ячейки" : null);
 
   return (
     <li>
       <button
         type="button"
         onClick={onOpen}
-        className={`flex w-full flex-col items-start gap-1 rounded-lg border p-2 text-left ${
-          unavailableReason === null
-            ? "border-slate-200 dark:border-slate-800"
-            : "border-slate-200 opacity-60 dark:border-slate-800"
+        className={`flex w-full flex-col items-start gap-1 rounded-lg border border-slate-200 p-2 text-left dark:border-slate-800 ${
+          unavailableReason === null && !active ? "" : "opacity-60"
         }`}
       >
         <span className="flex w-full items-baseline justify-between gap-2">
@@ -62,9 +68,16 @@ export function SpellCardCompact({
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
             {castingTimeLabel(spell.castingTime)}
           </Badge>
-          <Badge tone={preparation.tone} icon={preparation.icon}>
-            {preparation.label}
-          </Badge>
+          {inCombat ? null : (
+            <Badge tone={preparation.tone} icon={preparation.icon}>
+              {preparation.label}
+            </Badge>
+          )}
+          {active ? (
+            <Badge tone="ritual" icon="✦">
+              Уже действует
+            </Badge>
+          ) : null}
           {slotCost === null ? null : (
             <Badge tone="muted" icon="◎">
               {slotCost}
