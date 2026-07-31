@@ -4,6 +4,7 @@
   "nameEn": "Find Familiar",
   "level": 1,
   "school": "Вызов",
+  "combatRole": "other",
   "castingTime": { "type": "hour", "value": 1 },
   "range": { "type": "distance", "distanceFeet": 10 },
   "components": {

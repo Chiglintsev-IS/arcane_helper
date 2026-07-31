@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { GLYPH_IDS, SEAL_KINDS } from "@/diagram/glyphs";
 import { isRune } from "@/diagram/runes";
+import { COMBAT_ROLES } from "@/rules/combatRole";
 
 export const CANTRIP_LEVEL = 0;
 export const MAXIMUM_SPELL_LEVEL = 9;
@@ -291,6 +292,16 @@ const spellShape = z.object({
   level: z.number().int().min(CANTRIP_LEVEL).max(MAXIMUM_SPELL_LEVEL),
   school: nonEmpty,
   source: nonEmpty.optional(),
+
+  /**
+   * Роль в бою (FR-213). Необязательная здесь и обязательная для собственного контента — это
+   * проверяет `content.test.ts`.
+   *
+   * Обязательной в схеме её сделать нельзя: та же схема читает пользовательский импорт (ADR-0004,
+   * FR-120), и файл, выгруженный предыдущей версией, перестал бы открываться — обновление не имеет
+   * права терять данные (NFR-003).
+   */
+  combatRole: z.enum(COMBAT_ROLES).optional(),
 
   castingTime: castingTimeSchema,
   range: rangeSchema,

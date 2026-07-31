@@ -4,6 +4,7 @@
   "nameEn": "Ray of Frost",
   "level": 0,
   "school": "Воплощение",
+  "combatRole": "offense",
   "castingTime": { "type": "action" },
   "range": { "type": "distance", "distanceFeet": 60 },
   "components": { "verbal": true, "somatic": true, "material": false },

@@ -20,7 +20,7 @@ import { ConcentrationCheckCard } from "@/components/combat/ConcentrationCheckCa
 import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 import { ModeSwitcher } from "@/components/combat/ModeSwitcher";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
-import { SpellFilters } from "@/components/combat/SpellFilters";
+import { SpellFilters, type AvailableFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
 import { loadThorneSpells } from "@/data/content/thorne";
@@ -30,7 +30,15 @@ import {
   describeConcentrationCheck,
   type ConcentrationCheck,
 } from "@/rules/concentration";
-import { bestCastPlan, countHiddenRituals, filterSpells, NO_FILTERS } from "@/rules/filters";
+import { BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
+import { rolesPresent } from "@/rules/combatRole";
+import {
+  bestCastPlan,
+  countHiddenRituals,
+  filterSpells,
+  matchesTraits,
+  NO_FILTERS,
+} from "@/rules/filters";
 import { spellsForScreen } from "@/rules/modes";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
@@ -64,10 +72,11 @@ const SPELLS = loadThorneSpells();
  * режима, а не от всей книги, — иначе в бою предлагался бы фильтр «Ритуал», за которым в этом
  * режиме ничего не стоит.
  */
-function availableFilters(spells: readonly (typeof SPELLS)[number][]) {
+function availableFilters(spells: readonly (typeof SPELLS)[number][]): AvailableFilters {
   return {
     castingTimes: new Set(spells.map((spell) => spell.castingTime.type)),
     levels: [...new Set(spells.map((spell) => spell.level))].sort((a, b) => a - b),
+    roles: rolesPresent(spells),
     concentration: spells.some((spell) => spell.concentration),
     ritual: spells.some((spell) => spell.ritual),
   };
@@ -141,6 +150,9 @@ export function CombatScreen() {
   const shown = filterSpells(inMode, filters, context);
   const hiddenRituals = countHiddenRituals(inMode, filters, context);
   const available = availableFilters(inMode);
+  // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам (FR-207).
+  const bloodShown =
+    character.screenMode === "combat" && matchesTraits(BLOOD_MAGIC_TRAITS, filters);
   const openSpell = SPELLS.find((spell) => spell.id === openSpellId) ?? null;
   const lastEntry = session.journal.at(-1);
 
@@ -177,7 +189,13 @@ export function CombatScreen() {
       <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
         <ModeSwitcher
           mode={character.screenMode}
-          onChange={(mode) => apply((current) => setScreenMode(current, mode))}
+          onChange={(mode) => {
+            // Наборы фильтров у режимов разные, и выбранное в одном становится в другом невидимым:
+            // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым
+            // это снять, на экране уже нет (FR-212).
+            setFilters(NO_FILTERS);
+            apply((current) => setScreenMode(current, mode));
+          }}
         />
 
         <ResourceHeader
@@ -226,23 +244,40 @@ export function CombatScreen() {
         )}
       </div>
 
-      <div className="shrink-0 border-b border-slate-200 p-3 dark:border-slate-800">
+      {/* Полоса фильтров жмётся по вертикали: каждые 8 пикселей здесь — это восьмая часть карточки. */}
+      <div className="shrink-0 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
         <SpellFilters
           filters={filters}
           available={available}
+          mode={character.screenMode}
           onChange={setFilters}
           onReset={() => setFilters(NO_FILTERS)}
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
+        {shown.length > 0 ? (
+          <ul aria-label="Заклинания" className="flex flex-col gap-2">
+            {shown.map((spell) => (
+              <SpellCardCompact
+                key={spell.id}
+                spell={spell}
+                character={character}
+                unavailableReason={firstReason(spell, character, economy)}
+                onOpen={() => setOpenSpellId(spell.id)}
+              />
+            ))}
+          </ul>
+        ) : null}
+
         {/*
           Магия крови — не заклинание, поэтому живёт своим списком, но стоит вплотную к
           заклинаниям: это конкурент за то же действие, и выбор между ними делается глазами
-          (FR-207).
+          (FR-207). Снизу, а не сверху: наверху боевого списка стоят реакции, потому что триггер
+          приходит в чужой ход, а обмен хитов на очки — самое неспешное решение в списке (FR-210).
         */}
-        {character.screenMode === "combat" ? (
-          <ul aria-label="Действия" className="mb-2 flex flex-col gap-2">
+        {bloodShown ? (
+          <ul aria-label="Действия" className="mt-2 flex flex-col gap-2">
             <BloodMagicRow
               character={character}
               economy={economy}
@@ -251,7 +286,8 @@ export function CombatScreen() {
           </ul>
         ) : null}
 
-        {shown.length === 0 ? (
+        {/* Пусто — только когда не подошло вообще ничего, включая «Магию крови». */}
+        {shown.length === 0 && !bloodShown ? (
           <div className="flex flex-col items-start gap-2 text-sm">
             <p>
               Под выбранные фильтры не подходит ни одно заклинание
@@ -268,19 +304,7 @@ export function CombatScreen() {
               Сбросить фильтры
             </button>
           </div>
-        ) : (
-          <ul aria-label="Заклинания" className="flex flex-col gap-2">
-            {shown.map((spell) => (
-              <SpellCardCompact
-                key={spell.id}
-                spell={spell}
-                character={character}
-                unavailableReason={firstReason(spell, character, economy)}
-                onOpen={() => setOpenSpellId(spell.id)}
-              />
-            ))}
-          </ul>
-        )}
+        ) : null}
       </div>
 
       {openSpell === null || draft !== null ? null : (

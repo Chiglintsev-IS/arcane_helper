@@ -4,14 +4,17 @@ import { createThorne } from "@/data/content/thorne/character";
 import { loadThorneSpells } from "@/data/content/thorne";
 import type { CharacterState } from "@/data/schemas/character";
 import { ALL_TURN_RESOURCES, checkAvailability, type TurnResources } from "./availability";
+import { BLOOD_MAGIC_TRAITS } from "./bloodMagic";
 import {
   bestCastPlan,
   canCastNow,
   castOptions,
   countHiddenRituals,
   filterSpells,
+  matchesTraits,
   NO_FILTERS,
   toggleValue,
+  traitsOf,
   type SpellFilters,
 } from "./filters";
 
@@ -182,6 +185,64 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
         expect(availability.available).toBe(false);
       }
     }
+  });
+});
+
+describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
+  it("«Защита» оставляет защитные, включая несущее урон «Поглощение стихий»", () => {
+    expect(ids(filterSpells(allSpells, filters({ roles: ["defense"] }), context()))).toEqual([
+      "shield",
+      "absorb-elements",
+      "mage-armor",
+    ]);
+  });
+
+  it("«Боевое» оставляет боевые", () => {
+    expect(ids(filterSpells(allSpells, filters({ roles: ["offense"] }), context()))).toEqual([
+      "shocking-grasp",
+      "ray-of-frost",
+    ]);
+  });
+
+  it("две роли соединяются «или», как и любые значения одной категории (FR-003)", () => {
+    const shown = ids(filterSpells(allSpells, filters({ roles: ["offense", "defense"] }), context()));
+    expect(shown).toContain("ray-of-frost");
+    expect(shown).toContain("shield");
+    expect(shown).not.toContain("message");
+  });
+
+  it("роль соединяется с временем накладывания через «и»", () => {
+    const both = filters({ roles: ["defense"], castingTimes: ["reaction"] });
+    expect(ids(filterSpells(allSpells, both, context()))).toEqual(["shield", "absorb-elements"]);
+  });
+});
+
+describe("matchesTraits: строка, не являющаяся заклинанием (FR-207)", () => {
+  it("«Магия крови» проходит фильтр действия и отсеивается фильтром реакции", () => {
+    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(true);
+    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["reaction"] }))).toBe(false);
+  });
+
+  it("её роль — «другое»: под «Боевое» и «Защиту» она не подходит", () => {
+    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
+    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ roles: ["other"] }))).toBe(true);
+  });
+
+  it("концентрации она не держит", () => {
+    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ concentration: true }))).toBe(false);
+  });
+
+  it("без фильтров проходит", () => {
+    expect(matchesTraits(BLOOD_MAGIC_TRAITS, NO_FILTERS)).toBe(true);
+  });
+
+  it("признаки заклинания собираются той же функцией, что и признаки действия", () => {
+    const shield = allSpells.find((spell) => spell.id === "shield");
+    expect(traitsOf(shield!)).toEqual({
+      castingTime: "reaction",
+      concentration: false,
+      role: "defense",
+    });
   });
 });
 

@@ -4,6 +4,7 @@
   "nameEn": "Message",
   "level": 0,
   "school": "Прорицание",
+  "combatRole": "other",
   "castingTime": { "type": "action" },
   "range": { "type": "distance", "distanceFeet": 120 },
   "components": {

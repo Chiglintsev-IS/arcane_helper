@@ -4,6 +4,7 @@
   "nameEn": "Disguise Self",
   "level": 1,
   "school": "Иллюзия",
+  "combatRole": "other",
   "castingTime": { "type": "action" },
   "range": { "type": "self" },
   "components": { "verbal": true, "somatic": true, "material": false },

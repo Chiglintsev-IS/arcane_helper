@@ -229,8 +229,9 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
+    // Реакций, которые при этом боевые, у Торна нет: обе его реакции — защитные.
     await user.click(screen.getByRole("button", { name: "Реакция" }));
-    await user.click(screen.getByRole("button", { name: "Заговор" }));
+    await user.click(screen.getByRole("button", { name: "Боевое" }));
 
     expect(screen.getByText(/не подходит ни одно заклинание/)).toBeDefined();
     // Про скрытые ритуалы речи нет: в боевой список неподготовленное не попадает вовсе (FR-209).
@@ -241,7 +242,9 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
   });
 
   it("«доступно сейчас» согласовано с проверкой доступности мастера", async () => {
-    const character = withTurnTracking();
+    // Переключатель живёт вне боя: в бою он прячет строку ровно тогда, когда игрок выясняет, чего
+    // ему не хватает, — а причина написана на самой строке словами (FR-212).
+    const character = inBookMode();
     character.spellSlots = {
       1: { maximum: 4, remaining: 0 },
       2: { maximum: 3, remaining: 0 },
@@ -259,17 +262,72 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
   });
 });
 
+describe("магия крови в списке действий (FR-207)", () => {
+  it("стоит в бою среди заклинаний и подчиняется тем же фильтрам", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
+
+    // Она тратит действие, значит фильтр действия её оставляет…
+    await user.click(screen.getByRole("button", { name: "Действие" }));
+    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
+
+    // …а фильтр реакции убирает: строка, остающаяся при любом фильтре, делает список лживым.
+    await user.click(screen.getByRole("button", { name: "Действие" }));
+    await user.click(screen.getByRole("button", { name: "Реакция" }));
+    expect(screen.queryByRole("button", { name: /Магия крови/ })).toBeNull();
+  });
+
+  it("её роль — «другое», и фильтр «Боевое» её тоже убирает", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Боевое" }));
+    expect(screen.queryByRole("button", { name: /Магия крови/ })).toBeNull();
+  });
+
+  // Случай «строка крови осталась, а заклинаний не осталось» на нынешнем контенте недостижим:
+  // «Сообщение» — заговор, и его признаки (действие, роль «другое», без концентрации) совпадают с
+  // признаками обмена в точности. Экран этот случай всё равно различает: пустое сообщение
+  // появляется, только когда не подошло вообще ничего.
+});
+
 describe("краткая карточка (FR-010)", () => {
-  it("показывает оба названия, уровень, время, дальность и пересказ эффекта", async () => {
+  it("показывает время, цену, дальность и пересказ эффекта", async () => {
     await renderWithStores(<CombatScreen />);
     const row = screen.getByRole("button", { name: /Луч холода/ });
 
-    expect(within(row).getByText("Ray of Frost")).toBeDefined();
     // В бою значка подготовки нет, цену говорит стоимость: «Заговор» уступил место «Без ячейки».
     expect(within(row).getByText("Без ячейки")).toBeDefined();
     expect(within(row).getByText("Действие")).toBeDefined();
     expect(within(row).getByText("60 футов")).toBeDefined();
     expect(within(row).getByText(spell("ray-of-frost").shortRulesRu)).toBeDefined();
+  });
+
+  it("английское название есть вне боя и уступает место роли в бою (FR-211)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    // В бою по чужим книгам не ищут — угол занимает роль, и строка не становится выше.
+    const inFight = within(screen.getByRole("button", { name: /Луч холода/ }));
+    expect(inFight.getByText("Боевое")).toBeDefined();
+    expect(inFight.queryByText("Ray of Frost")).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+
+    const inBook = within(screen.getByRole("button", { name: /Луч холода/ }));
+    expect(inBook.getByText("Ray of Frost")).toBeDefined();
+    expect(inBook.queryByText("Боевое")).toBeNull();
+  });
+
+  it("разрешение называет число, а не вид броска (FR-211)", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    // «Атака» — половина ответа: следом игрок спрашивает, какое число называть мастеру.
+    const row = within(screen.getByRole("button", { name: /Луч холода/ }));
+    expect(row.getByText("d20+8")).toBeDefined();
+    expect(row.queryByText("Атака")).toBeNull();
   });
 
   it("накладывание дольше хода называет точное время, а не категорию (FR-033)", async () => {

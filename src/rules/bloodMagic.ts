@@ -7,6 +7,20 @@
  */
 
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL, RulesError } from "./abilities";
+import type { ActionTraits } from "./filters";
+
+/**
+ * Признаки «Магии крови» как строки боевого списка (FR-207).
+ *
+ * Она не заклинание, но занимает то же действие и стоит среди заклинаний, а значит обязана
+ * отзываться на те же переключатели. Роль — «другое»: обмен хитов на очки ничего не атакует и ни от
+ * чего не защищает, он покупает возможность сделать что-то ещё.
+ */
+export const BLOOD_MAGIC_TRAITS: ActionTraits = {
+  castingTime: "action",
+  concentration: false,
+  role: "other",
+};
 
 /** Ступени возвышения: сколько хитов отдаётся за одно очко заклинаний. */
 const ASCENSION_TIERS: readonly { readonly upToLevel: number; readonly hitPointsPerPoint: number }[] = [

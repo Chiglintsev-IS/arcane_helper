@@ -4,6 +4,7 @@
   "nameEn": "Detect Magic",
   "level": 1,
   "school": "Прорицание",
+  "combatRole": "other",
   "castingTime": { "type": "action" },
   "range": { "type": "self" },
   "area": { "shape": "sphere", "sizeFeet": 30 },

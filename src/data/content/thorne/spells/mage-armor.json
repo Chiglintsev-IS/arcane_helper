@@ -4,6 +4,7 @@
   "nameEn": "Mage Armor",
   "level": 1,
   "school": "Ограждение",
+  "combatRole": "defense",
   "castingTime": { "type": "action" },
   "range": { "type": "touch" },
   "components": {

@@ -4,6 +4,7 @@
   "nameEn": "Shield",
   "level": 1,
   "school": "Ограждение",
+  "combatRole": "defense",
   "castingTime": {
     "type": "reaction",
     "reactionTrigger": "в вас попали атакой или вы стали целью «Волшебной стрелы»"

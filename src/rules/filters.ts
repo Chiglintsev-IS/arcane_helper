@@ -19,6 +19,7 @@ import {
   type TurnResource,
 } from "./availability";
 import { MAXIMUM_PAYABLE_SPELL_LEVEL } from "./bloodMagic";
+import { combatRoleOf, type CombatRole } from "./combatRole";
 import { castableSlotLevels, CANTRIP_LEVEL, type CastMode } from "./slots";
 
 /** Время накладывания как фильтр: минуты и часы в бою не выбирают. */
@@ -29,6 +30,8 @@ export type SpellFilters = {
   castingTimes: CastingTimeFilter[];
   /** Категория «уровень»: 0 — заговоры, далее уровни заклинаний. */
   levels: number[];
+  /** Категория «роль в бою»: боевое, защита, другое (FR-212, FR-213). */
+  roles: CombatRole[];
   concentration: boolean;
   ritual: boolean;
   prepared: boolean;
@@ -39,6 +42,7 @@ export type SpellFilters = {
 export const NO_FILTERS: SpellFilters = {
   castingTimes: [],
   levels: [],
+  roles: [],
   concentration: false,
   ritual: false,
   prepared: false,
@@ -118,9 +122,36 @@ export function canCastNow(spell: Spell, character: CharacterState, turn: TurnRe
   return bestCastPlan(spell, character, turn)?.availability.available === true;
 }
 
-function matchesCastingTime(spell: Spell, filters: SpellFilters): boolean {
-  if (filters.castingTimes.length === 0) return true;
-  return filters.castingTimes.some((value) => value === spell.castingTime.type);
+/**
+ * Признаки строки списка, общие для заклинания и для действия, заклинанием не являющегося.
+ *
+ * Существует ради «Магии крови» ([FR-207](../../docs/features/F-18-screen-modes.md#fr-207)): она
+ * стоит в том же списке, тратит то же действие и обязана отзываться на те же переключатели. Пока
+ * фильтры принимали только `Spell`, строка молча оставалась на экране при любом фильтре — список
+ * говорил «вот всё, что подходит», и врал.
+ */
+export type ActionTraits = {
+  castingTime: Spell["castingTime"]["type"];
+  concentration: boolean;
+  role: CombatRole;
+};
+
+export function traitsOf(spell: Spell): ActionTraits {
+  return {
+    castingTime: spell.castingTime.type,
+    concentration: spell.concentration,
+    role: combatRoleOf(spell),
+  };
+}
+
+/** Часть отбора, не требующая знать, что строка — заклинание: время, роль, концентрация. */
+export function matchesTraits(traits: ActionTraits, filters: SpellFilters): boolean {
+  if (filters.castingTimes.length > 0 && !filters.castingTimes.some((v) => v === traits.castingTime)) {
+    return false;
+  }
+  if (filters.roles.length > 0 && !filters.roles.includes(traits.role)) return false;
+  if (filters.concentration && !traits.concentration) return false;
+  return true;
 }
 
 function matchesLevel(spell: Spell, filters: SpellFilters): boolean {
@@ -138,9 +169,8 @@ function hiddenAsRitual(spell: Spell, filters: SpellFilters, context: FilterCont
 
 function matches(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
   if (hiddenAsRitual(spell, filters, context)) return false;
-  if (!matchesCastingTime(spell, filters)) return false;
+  if (!matchesTraits(traitsOf(spell), filters)) return false;
   if (!matchesLevel(spell, filters)) return false;
-  if (filters.concentration && !spell.concentration) return false;
   if (filters.ritual && !spell.ritual) return false;
   // «Подготовлено» не скрывает заговоры: они не готовятся, но доступны всегда (AC-05).
   if (filters.prepared && !isReady(spell, context.character)) return false;

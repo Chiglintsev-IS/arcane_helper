@@ -64,12 +64,35 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
   await expect(page.getByLabel("Заклинания")).toBeVisible();
 });
 
+test("first combat card fits without scrolling", async ({ page }) => {
+  // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
+  // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18, ux.md#общие-правила).
+  const fit = await page.evaluate(() => {
+    const first = document.querySelector('[aria-label="Заклинания"] li');
+    if (first === null) return null;
+    const box = first.getBoundingClientRect();
+    return { bottom: Math.round(box.bottom), viewport: window.innerHeight };
+  });
+
+  expect(fit).not.toBeNull();
+  expect(fit!.bottom).toBeLessThanOrEqual(fit!.viewport);
+
+  // Полоса фильтров тоже вся на экране: переключатель за краем — переключатель, которого нет.
+  const filters = page.getByLabel("Фильтры");
+  const strip = await filters.evaluate((node) => ({
+    scrollWidth: node.firstElementChild?.scrollWidth ?? 0,
+    clientWidth: node.firstElementChild?.clientWidth ?? 0,
+  }));
+  expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+});
+
 test("filter by casting time", async ({ page }) => {
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
 
   const list = page.getByLabel("Заклинания");
   await expect(list.getByRole("listitem")).toHaveCount(2);
-  await expect(list.getByText("Щит")).toBeVisible();
+  // Точное совпадение: подстрока «щит» есть и в подписи роли «Защита» (FR-211).
+  await expect(list.getByText("Щит", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Сбросить" }).click();
   // Семь: девять карточек режима «Бой» минус два неподготовленных ритуала (FR-103, FR-201).

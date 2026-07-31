@@ -31,6 +31,26 @@ describe("первая партия контента", () => {
     expect(new Set(spells.map((spell) => spell.id)).size).toBe(spells.length);
   });
 
+  it("у каждой карточки указана роль в бою (FR-213)", () => {
+    // В схеме поле необязательное: та же схема читает чужие выгрузки, и файл без роли обязан
+    // открыться (NFR-003). Полноту собственного контента держит этот тест, а не схема.
+    for (const spell of spells) {
+      expect(spell.combatRole, `${spell.nameRu} без роли в бою`).toBeDefined();
+    }
+  });
+
+  it("роли расставлены по смыслу, а не по наличию урона (FR-213)", () => {
+    // «Поглощение стихий» несёт урон в данных и при этом чисто защитное — ровно тот случай,
+    // из-за которого роль хранится, а не выводится.
+    const byId = new Map(spells.map((spell) => [spell.id, spell.combatRole]));
+    expect(byId.get("absorb-elements")).toBe("defense");
+    expect(byId.get("shield")).toBe("defense");
+    expect(byId.get("mage-armor")).toBe("defense");
+    expect(byId.get("ray-of-frost")).toBe("offense");
+    expect(byId.get("shocking-grasp")).toBe("offense");
+    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(7);
+  });
+
   it("не содержит запрещённых мастером заклинаний", () => {
     const bannedNames = new Set(BANNED_SPELLS.map((banned) => banned.nameEn));
     for (const spell of spells) {

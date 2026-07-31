@@ -4,6 +4,7 @@
   "nameEn": "Shocking Grasp",
   "level": 0,
   "school": "Воплощение",
+  "combatRole": "offense",
   "castingTime": { "type": "action" },
   "range": { "type": "touch" },
   "components": { "verbal": true, "somatic": true, "material": false },

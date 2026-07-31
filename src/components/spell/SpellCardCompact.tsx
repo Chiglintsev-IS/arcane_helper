@@ -1,16 +1,25 @@
 /**
- * Краткая карточка — строка боевого списка (FR-010).
+ * Краткая карточка — строка боевого списка (FR-010, FR-211).
  *
- * Задача строки — ответить на вопрос «что это для меня» без чтения: чем тратится, готово ли к
- * применению, кто бросает, сколько урона и кончается ли эффект сразу. Числа подставлены под этого
- * персонажа, а не взяты из книги: 2d8 у заговора — это его уровень, а не общий случай.
+ * Задача строки — ответить на вопрос «что это для меня» без чтения: чем тратится, зачем нужно, кто
+ * бросает, сколько урона и кончается ли эффект сразу. Числа подставлены под этого персонажа, а не
+ * взяты из книги: 2d8 у заговора — это его уровень, а не общий случай.
+ *
+ * Три уровня подачи вместо одной россыпи значков:
+ *   роль    — цветом самой карточки: место, которое уже занято рамкой, ничего не стоит списку;
+ *   срочное — цветными значками: чем тратится ход, какое число называть, держит ли концентрацию;
+ *   прочее  — простым текстом через точку: цена, дальность, длительность, урон читают уже после
+ *             того, как строку нашли, и рамка вокруг каждого была бы шумом.
  *
  * Причина недоступности пишется словами: серый цвет без объяснения оставляет игрока в тупике
  * (ux.md#цветовая-система).
  */
 
+import { Fragment } from "react";
+
 import {
   CASTING_TIME,
+  COMBAT_ROLE,
   castingTimeLabel,
   damageLabel,
   durationBadge,
@@ -22,6 +31,24 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
+import { combatRoleOf } from "@/rules/combatRole";
+
+/** Цвет рамки по роли. «Другое» цвета не получает: серое и означает «ни то, ни другое». */
+const ROLE_FRAME = {
+  offense: "border-offense/60 bg-offense/5",
+  defense: "border-defense/60 bg-defense/5",
+  other: "border-slate-200 dark:border-slate-800",
+} as const;
+
+/**
+ * Цвет подписи роли. Тёмные варианты — не украшение: на подкрашенной подложке серый слишком светлый
+ * и даёт 4.31 вместо требуемых WCAG 4.5 (ux.md#доступность, проверка axe-core).
+ */
+const ROLE_WORD = {
+  offense: "text-offense-strong dark:text-offense",
+  defense: "text-defense-strong dark:text-defense",
+  other: "text-slate-600 dark:text-slate-400",
+} as const;
 
 export function SpellCardCompact({
   spell,
@@ -43,25 +70,47 @@ export function SpellCardCompact({
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
   const preparation = preparationBadge(spell, character.preparedSpellIds);
-  const resolution = resolutionBadge(spell.resolution);
-  const duration = durationBadge(spell.duration);
+  const resolution = resolutionBadge(spell.resolution, character);
   const damage = damageLabel(spell, spell.level, character.level);
   // Вне боя «Без ячейки» не пишется: рядом стоит значок «Заговор» и говорит то же самое (FR-010).
   // В бою значка подготовки нет, и цену сказать больше нечем — иначе строка молчит о стоимости.
   const slotCost = slotCostLabel(spell) ?? (inCombat ? "Без ячейки" : null);
+
+  /**
+   * Роль красит рамку, а не занимает отдельный значок (FR-211). Цвет один ничего не сообщает
+   * (ux.md#доступность), поэтому слово стоит там, где вне боя стоит английское название: место уже
+   * занято, и подпись достаётся списку бесплатно.
+   */
+  const role = combatRoleOf(spell);
+  const frame = inCombat ? ROLE_FRAME[role] : ROLE_FRAME.other;
+
+  const facts = [
+    ...(slotCost === null ? [] : [slotCost]),
+    rangeLabel(spell.range),
+    durationBadge(spell.duration).label,
+    ...(damage === null ? [] : [`Урон ${damage}`]),
+  ];
 
   return (
     <li>
       <button
         type="button"
         onClick={onOpen}
-        className={`flex w-full flex-col items-start gap-1 rounded-lg border border-slate-200 p-2 text-left dark:border-slate-800 ${
+        className={`flex w-full flex-col items-start gap-1 rounded-lg border p-2 text-left ${frame} ${
           unavailableReason === null && !active ? "" : "opacity-60"
         }`}
       >
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">{spell.nameRu}</span>
-          <span className="text-[0.625rem] text-slate-500">{spell.nameEn}</span>
+          {/*
+            Английское название нужно, чтобы найти заклинание в чужой книге, — а в бою по книгам не
+            ищут. В «Бою» тот же угол занимает роль, и строка не становится выше (FR-211).
+          */}
+          <span
+            className={`shrink-0 text-[0.625rem] ${inCombat ? ROLE_WORD[role] : "text-slate-500"}`}
+          >
+            {inCombat ? COMBAT_ROLE[role].label : spell.nameEn}
+          </span>
         </span>
 
         <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
@@ -78,24 +127,28 @@ export function SpellCardCompact({
               Уже действует
             </Badge>
           ) : null}
-          {slotCost === null ? null : (
-            <Badge tone="muted" icon="◎">
-              {slotCost}
-            </Badge>
-          )}
           <Badge tone={resolution.tone} icon={resolution.icon}>
             {resolution.label}
           </Badge>
-          {damage === null ? null : <Badge tone="muted">Урон {damage}</Badge>}
-          <Badge tone="muted" icon={duration.icon}>
-            {duration.label}
-          </Badge>
-          <Badge tone="muted">{rangeLabel(spell.range)}</Badge>
           {spell.concentration ? (
             <Badge tone="concentration" icon="✦">
               Концентрация
             </Badge>
           ) : null}
+        </span>
+
+        {/* Нейтральные сведения — текстом через точку: рамка вокруг каждого не добавляла смысла. */}
+        <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-slate-600 dark:text-slate-400">
+          {facts.map((fact, index) => (
+            <Fragment key={fact}>
+              {index === 0 ? null : (
+                <span aria-hidden="true" className="text-slate-400">
+                  ·
+                </span>
+              )}
+              <span>{fact}</span>
+            </Fragment>
+          ))}
         </span>
 
         {/* Две строки: список должен оставаться просматриваемым, полный пересказ — в карточке. */}

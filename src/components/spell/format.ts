@@ -5,13 +5,23 @@
  * выбирает слово и падеж. Аббревиатуры русские — «КС», «КД», а не DC и AC (ux.md#текст-в-интерфейсе).
  */
 
+import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
+import type { CombatRole } from "@/rules/combatRole";
 import { longCastingTimeRu, plural, type LongCastingUnit } from "@/rules/language";
 import { effectiveDamage } from "@/rules/scaling";
 import { CANTRIP_LEVEL } from "@/rules/slots";
 
 /** Смысловые роли цвета из ux.md#цветовая-система. Цвет всегда с иконкой и подписью. */
-export type Tone = "action" | "bonus" | "reaction" | "concentration" | "ritual" | "muted";
+export type Tone =
+  | "action"
+  | "bonus"
+  | "reaction"
+  | "concentration"
+  | "ritual"
+  | "offense"
+  | "defense"
+  | "muted";
 
 export const TONE_CLASS: Record<Tone, string> = {
   action: "border-action/50 bg-action/10 text-action-strong dark:text-action",
@@ -20,7 +30,25 @@ export const TONE_CLASS: Record<Tone, string> = {
   concentration:
     "border-concentration/50 bg-concentration/10 text-concentration-strong dark:text-concentration",
   ritual: "border-ritual/50 bg-ritual/10 text-ritual-strong dark:text-ritual",
+  offense: "border-offense/50 bg-offense/10 text-offense-strong dark:text-offense",
+  defense: "border-defense/50 bg-defense/10 text-defense-strong dark:text-defense",
   muted: "border-slate-400/50 bg-slate-400/10 text-slate-700 dark:text-slate-300",
+};
+
+/**
+ * Подпись, иконка и цвет роли в бою (FR-211, FR-213).
+ *
+ * «Боевое», а не «Атака»: слово «Атака» на той же строке уже занято способом разрешения — броском
+ * d20 против КД. Два смысла под одним словом в соседних значках сделали бы и значок, и фильтр
+ * непредсказуемыми ([глоссарий](../../../docs/glossary.md)).
+ *
+ * У роли «другое» цвета нет: серый и означает «ни то, ни другое», а третий оттенок превратил бы
+ * шкалу в радугу, в которой не выделяется ничего ([ux.md](../../../docs/ux.md#цветовая-система)).
+ */
+export const COMBAT_ROLE: Record<CombatRole, { label: string; icon?: string; tone: Tone }> = {
+  offense: { label: "Боевое", icon: "⚔", tone: "offense" },
+  defense: { label: "Защита", icon: "⛊", tone: "defense" },
+  other: { label: "Другое", tone: "muted" },
 };
 
 export type CastingTimeType = Spell["castingTime"]["type"];
@@ -158,33 +186,36 @@ export function resolutionLabel(resolution: Spell["resolution"], spellSaveDc: nu
   }
 }
 
-const ABILITY_SHORT: Record<string, string> = {
-  STR: "Силы",
-  DEX: "Ловкости",
-  CON: "Телосложения",
-  INT: "Интеллекта",
-  WIS: "Мудрости",
-  CHA: "Харизмы",
-};
+// Падеж один и тот же, что в подробной карточке: «Спасбросок Ловкости». Второго словаря
+// сокращений здесь не заводится — расхождение между строкой и карточкой читалось бы как разные
+// заклинания.
+
+/** Знак перед модификатором пишется всегда: «d20+8» произносят вслух именно так. */
+export function signed(modifier: number): string {
+  return modifier < 0 ? `−${Math.abs(modifier)}` : `+${modifier}`;
+}
+
+/** Числа персонажа, из которых собирается значок разрешения. Хранимые, а не выведенные (OQ-11). */
+export type ResolutionNumbers = Pick<CharacterState, "spellSaveDc" | "spellAttackModifier">;
 
 /**
- * Как заклинание разрешается — коротко, для строки списка (FR-010).
+ * Как заклинание разрешается — числом, а не видом броска (FR-010, FR-211).
  *
- * Атакующие отделены от прочих намеренно: за столом первым делом нужно понять, бросать ли атаку,
- * ждать ли спасброска цели или эффект применяется без броска
+ * «Атака» и «Спасбросок Ловкости» отвечают на половину вопроса: следом игрок спрашивает, какое
+ * число называть мастеру. Значок отвечает сразу и тем, что произносят вслух, — «d20+8», «КС 16».
+ * Числа берутся из состояния персонажа: у Торна оба включают +1 от предмета, и книга их не знает
  * ([rules-engine.md](../../../docs/rules-engine.md#разрешение-заклинания)).
  */
-export function resolutionBadge(resolution: Spell["resolution"]): {
-  label: string;
-  icon: string;
-  tone: Tone;
-} {
+export function resolutionBadge(
+  resolution: Spell["resolution"],
+  numbers: ResolutionNumbers,
+): { label: string; icon: string; tone: Tone } {
   switch (resolution.type) {
     case "spell_attack":
-      return { label: "Атака", icon: "✶", tone: "action" };
+      return { label: `d20${signed(numbers.spellAttackModifier)}`, icon: "✶", tone: "action" };
     case "saving_throw":
       return {
-        label: `Спасбросок ${ABILITY_SHORT[resolution.savingThrow ?? ""] ?? ""}`.trim(),
+        label: `Спасбросок ${ABILITY_NAMES[resolution.savingThrow ?? ""] ?? ""} КС ${numbers.spellSaveDc}`,
         icon: "◇",
         tone: "bonus",
       };

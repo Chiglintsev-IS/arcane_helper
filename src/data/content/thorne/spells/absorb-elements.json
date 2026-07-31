@@ -5,6 +5,7 @@
   "level": 1,
   "school": "Ограждение",
   "source": "не входит в SRD",
+  "combatRole": "defense",
   "castingTime": {
     "type": "reaction",
     "reactionTrigger": "вы получаете урон кислотой, холодом, огнём, электричеством или звуком"
