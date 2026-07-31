@@ -55,30 +55,29 @@ describe("отбор по режиму (FR-201, FR-202, FR-203)", () => {
     }
   });
 
-  it("привал — долгое накладывание и ритуалы", () => {
-    expect(idsFor("camp")).toEqual([
-      "detect-magic",
-      "find-familiar",
-      "identify",
-      "mending",
-      "unseen-servant",
-    ]);
+  it("вне боя список пуст: там отдыхают, а не выбирают заклинание (FR-202)", () => {
+    expect(spellsForMode(SPELLS, "camp")).toEqual([]);
+    // Ни долгое накладывание, ни ритуал исключения не получают: пуст — значит пуст.
+    for (const id of ["mending", "find-familiar", "detect-magic"]) {
+      expect(belongsToMode(SPELLS.find((spell) => spell.id === id)!, "camp"), id).toBe(false);
+    }
   });
 
-  it("ритуал действием попадает в оба режима: способы разные, заклинание одно", () => {
-    // «Обнаружение магии» в бою идёт за ячейку, на привале — ритуалом за лишние 10 минут (FR-208).
+  it("ритуал действием остаётся в бою и в книге: способы разные, заклинание одно", () => {
+    // «Обнаружение магии» в бою идёт за ячейку, в книге — ритуалом за лишние 10 минут (FR-208).
     expect(belongsToMode(SPELLS.find((s) => s.id === "detect-magic")!, "combat")).toBe(true);
-    expect(belongsToMode(SPELLS.find((s) => s.id === "detect-magic")!, "camp")).toBe(true);
+    expect(belongsToMode(SPELLS.find((s) => s.id === "detect-magic")!, "book")).toBe(true);
   });
 
   it("книга не отбирает ничего", () => {
     expect(spellsForMode(SPELLS, "book")).toHaveLength(SPELLS.length);
   });
 
-  it("каждое заклинание попадает хотя бы в один режим кроме книги", () => {
+  it("ушедшее из боя не пропадает: оно в книге (FR-203)", () => {
+    // Единственный вход к «Починке» и «Поиску фамильяра» — «Книга», и он обязан быть полным.
+    const book = new Set(idsFor("book"));
     for (const spell of SPELLS) {
-      const found = belongsToMode(spell, "combat") || belongsToMode(spell, "camp");
-      expect(found, `${spell.nameRu} не попал никуда`).toBe(true);
+      expect(book.has(spell.id), `${spell.nameRu} не попал никуда`).toBe(true);
     }
   });
 });

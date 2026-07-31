@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { castingTimeLabel, resolutionBadge, signed } from "./format";
+import { loadThorneSpells } from "@/data/content/thorne";
+
+import { castingTimeLabel, preparationBadge, resolutionBadge, signed } from "./format";
 
 /** Числа Торна: оба включают +1 от предмета, и книга их не знает (OQ-11). */
 const THORNE = { spellSaveDc: 16, spellAttackModifier: 8 };
@@ -57,5 +59,31 @@ describe("resolutionBadge (FR-211)", () => {
 
   it("без броска остаётся «Без броска»: числа тут нет и выдумывать его нечем", () => {
     expect(resolutionBadge({ type: "automatic" }, THORNE).label).toBe("Без броска");
+  });
+});
+
+describe("preparationBadge (FR-219)", () => {
+  const SPELLS = loadThorneSpells();
+  const spell = (id: string) => SPELLS.find((candidate) => candidate.id === id)!;
+
+  it("подготовленное значка не получает: рядом нажатая кнопка подготовки", () => {
+    expect(preparationBadge(spell("mage-armor"), ["mage-armor"])).toBeNull();
+  });
+
+  it("неподготовленное — тоже: причину скажет строка недоступности словами", () => {
+    expect(preparationBadge(spell("blink"), [])).toBeNull();
+  });
+
+  it("заговор остаётся: значок говорит о цене, а кнопки подготовки у него нет", () => {
+    expect(preparationBadge(spell("ray-of-frost"), [])?.label).toBe("Заговор");
+  });
+
+  it("неподготовленный ритуал остаётся: без подписи цена обещала бы ячейку", () => {
+    // «Обнаружение магии» стоит «Ячейка 1 ур. или ритуал», но без подготовки способ один.
+    expect(preparationBadge(spell("detect-magic"), [])?.label).toBe("Только ритуалом");
+  });
+
+  it("подготовленный ритуал молчит: ячейка ему доступна наравне с ритуалом", () => {
+    expect(preparationBadge(spell("detect-magic"), ["detect-magic"])).toBeNull();
   });
 });
