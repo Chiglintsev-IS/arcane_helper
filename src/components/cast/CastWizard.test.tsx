@@ -66,7 +66,7 @@ function concentrating(): CharacterState {
 async function openWizard(name: RegExp) {
   const user = userEvent.setup();
   // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием (FR-084).
-  await user.click(within(screen.getByLabelText("Заклинания")).getByRole("button", { name }));
+  await user.click(within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name }));
   await user.click(screen.getByRole("button", { name: "Сотворить" }));
   return user;
 }

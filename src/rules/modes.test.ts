@@ -4,9 +4,13 @@ import { loadThorneSpells } from "@/data/content/thorne";
 
 import { createThorne } from "@/data/content/thorne/character";
 
+import { BLOOD_MAGIC_TRAITS } from "./bloodMagic";
+import { traitsOf } from "./filters";
 import {
   belongsToMode,
   castableWithinTurn,
+  combatOrderKey,
+  compareCombatTraits,
   orderForCombat,
   preparedForCombat,
   spellsForMode,
@@ -96,15 +100,48 @@ describe("боевой список: состав и порядок (FR-209, FR-
     expect(shown).not.toContain("unseen-servant");
   });
 
-  it("реакции идут первыми, дальше по возрастанию цены", () => {
-    const shown = spellsForScreen(SPELLS, createThorne()).map((spell) => spell.id);
+  it("реакции, затем цена, затем роль (FR-210)", () => {
+    // Реакции наверху; дальше бесплатное — заговоры, сначала боевые; потом ячейки по возрастанию.
+    expect(spellsForScreen(SPELLS, createThorne()).map((spell) => spell.id)).toEqual([
+      "shield",
+      "absorb-elements",
+      "shocking-grasp",
+      "ray-of-frost",
+      "message",
+      "mage-armor",
+      "disguise-self",
+    ]);
+  });
 
-    expect(shown.slice(0, 2).sort()).toEqual(["absorb-elements", "shield"]);
-    // За реакциями — заговоры, и только потом заклинания первого уровня.
-    const levels = spellsForScreen(SPELLS, createThorne())
-      .filter((spell) => spell.castingTime.type !== "reaction")
-      .map((spell) => spell.level);
-    expect(levels).toEqual([...levels].sort((a, b) => a - b));
+  it("«Магия крови» встаёт сразу за заговорами: ячейку она не тратит (FR-207, FR-210)", () => {
+    // Так её место и находит экран: первая строка, которая по ключу строго дальше.
+    const combat = spellsForScreen(SPELLS, createThorne());
+    const at = combat.findIndex(
+      (spell) => compareCombatTraits(traitsOf(spell), BLOOD_MAGIC_TRAITS) > 0,
+    );
+    const rows = combat.map((spell) => spell.id);
+    rows.splice(at, 0, "магия-крови");
+
+    expect(rows).toEqual([
+      "shield",
+      "absorb-elements",
+      "shocking-grasp",
+      "ray-of-frost",
+      "message",
+      "магия-крови",
+      "mage-armor",
+      "disguise-self",
+    ]);
+  });
+
+  it("порядок ключа: сначала реакция, потом цена, потом роль", () => {
+    const key = (traits: Parameters<typeof combatOrderKey>[0]) => combatOrderKey(traits);
+    const reaction = { castingTime: "reaction", level: 4, concentration: false, role: "other" } as const;
+    const action = { castingTime: "action", level: 0, concentration: false, role: "offense" } as const;
+
+    // Реакция четвёртого уровня всё равно выше заговора: триггер приходит в чужой ход.
+    expect(compareCombatTraits(reaction, action)).toBeLessThan(0);
+    expect(key(action)).toEqual([1, 0, 0]);
   });
 
   it("вне боя ни состав, ни порядок не трогаются", () => {

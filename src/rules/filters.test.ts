@@ -35,6 +35,14 @@ function context(overrides: { character?: CharacterState; turn?: TurnResources }
   };
 }
 
+/**
+ * Торн вне боя. Ритуальный способ существует только здесь: в бою он убран, потому что занимает на
+ * 10 минут больше обычного (FR-208), а начальный режим персонажа — «Бой».
+ */
+function outsideCombat(): CharacterState {
+  return { ...createThorne(), screenMode: "camp" };
+}
+
 function withoutSlots(): CharacterState {
   const character = createThorne();
   const empty: CharacterState["spellSlots"] = {};
@@ -240,6 +248,7 @@ describe("matchesTraits: строка, не являющаяся заклина�
     const shield = allSpells.find((spell) => spell.id === "shield");
     expect(traitsOf(shield!)).toEqual({
       castingTime: "reaction",
+      level: 1,
       concentration: false,
       role: "defense",
     });
@@ -278,10 +287,19 @@ describe("castOptions", () => {
 
   it("для ритуального заклинания добавляет ритуальный режим", () => {
     const identify = allSpells.find((spell) => spell.id === "identify")!;
-    expect(castOptions(identify, createThorne())).toContainEqual({
+    expect(castOptions(identify, outsideCombat())).toContainEqual({
       mode: "ritual",
       payment: { kind: "none" },
     });
+  });
+
+  it("в бою ритуального способа нет: +10 минут в раунд не помещаются (FR-208)", () => {
+    const detectMagic = allSpells.find((spell) => spell.id === "detect-magic")!;
+    const inCombat = castOptions(detectMagic, createThorne());
+
+    expect(inCombat).not.toContainEqual({ mode: "ritual", payment: { kind: "none" } });
+    // Ячейкой заклинание при этом остаётся доступно: убран способ, а не заклинание.
+    expect(inCombat).toContainEqual({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
   });
 });
 
@@ -290,16 +308,24 @@ describe("bestCastPlan", () => {
   const mageArmor = allSpells.find((spell) => spell.id === "mage-armor")!;
 
   it("для неподготовленного ритуала выбирает ритуал, а не ячейку (FR-103)", () => {
-    const plan = bestCastPlan(detectMagic, createThorne(), ALL_TURN_RESOURCES);
+    const plan = bestCastPlan(detectMagic, outsideCombat(), ALL_TURN_RESOURCES);
 
     expect(plan?.option).toEqual({ mode: "ritual", payment: { kind: "none" } });
     expect(plan?.availability.available).toBe(true);
   });
 
+  it("в бою тот же ритуал разрешается ячейкой (FR-208)", () => {
+    // Способ, которого нет, не может оказаться лучшим: в бою остаётся оплата ячейкой, и она же
+    // объясняет доступность.
+    const plan = bestCastPlan(detectMagic, createThorne(), ALL_TURN_RESOURCES);
+
+    expect(plan?.option).toEqual({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
+  });
+
   it("объясняет недоступность причиной лучшего способа, а не первого попавшегося", () => {
     // Ритуалу подготовка не нужна, поэтому мешает ему только занятая концентрация. Причина
     // «не подготовлено» пришла бы от ячейки — способа, которым это заклинание и не творят.
-    const character = createThorne();
+    const character = outsideCombat();
     character.concentration = { spellId: "web", startedAt: "2026-07-31T18:00:00.000Z" };
 
     const plan = bestCastPlan(detectMagic, character, ALL_TURN_RESOURCES);

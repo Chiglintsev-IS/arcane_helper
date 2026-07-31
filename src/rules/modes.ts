@@ -11,6 +11,8 @@
 
 import type { CharacterState } from "@/data/schemas/character";
 import { CANTRIP_LEVEL, type Spell } from "@/data/schemas/spell";
+import type { CombatRole } from "./combatRole";
+import { traitsOf, type ActionTraits } from "./filters";
 
 export const SCREEN_MODES = ["combat", "camp", "book"] as const;
 
@@ -66,17 +68,39 @@ export function preparedForCombat(spells: readonly Spell[], character: Character
   return spells.filter((spell) => spell.level === CANTRIP_LEVEL || prepared.has(spell.id));
 }
 
+/** Порядок ролей внутри одной цены: сначала чем бить, потом чем закрыться, потом всё прочее. */
+const ROLE_ORDER: Record<CombatRole, number> = { offense: 0, defense: 1, other: 2 };
+
 /**
- * Порядок боевого списка (FR-210): сначала реакции, затем остальное по возрастанию цены.
+ * Место строки в боевом порядке (FR-210): реакции, затем цена, затем роль.
  *
  * Реакции наверху потому, что триггер приходит в чужой ход и в любой момент, а собственное действие
- * случается раз за круг. Внутри групп порядок исходный: он задан книгой и не должен прыгать от
- * состояния к состоянию.
+ * случается раз за круг. Дальше решает цена: сначала бесплатное — заговоры и то, что ячейки не
+ * тратит, — потом ячейки по возрастанию. Внутри одной цены впереди то, чем бьют.
+ *
+ * Ключ считается по признакам строки, а не по заклинанию: в списке стоит и «Магия крови», и её
+ * место определяется теми же тремя вопросами.
  */
+export function combatOrderKey(traits: ActionTraits): [number, number, number] {
+  return [traits.castingTime === "reaction" ? 0 : 1, traits.level, ROLE_ORDER[traits.role]];
+}
+
+/**
+ * Сравнение ключей по составляющим, а не перебором с индексом: индексация потребовала бы `?? 0` на
+ * элемент, который у кортежа фиксированной длины отсутствовать не может, и завела бы ветку,
+ * недостижимую для теста.
+ */
+export function compareCombatTraits(left: ActionTraits, right: ActionTraits): number {
+  const [leftGroup, leftLevel, leftRole] = combatOrderKey(left);
+  const [rightGroup, rightLevel, rightRole] = combatOrderKey(right);
+  return leftGroup - rightGroup || leftLevel - rightLevel || leftRole - rightRole;
+}
+
+/** Боевой порядок заклинаний. Внутри равных ключей порядок исходный: он задан книгой. */
 export function orderForCombat(spells: readonly Spell[]): Spell[] {
-  const rank = (spell: Spell): number =>
-    spell.castingTime.type === "reaction" ? -1 : spell.level;
-  return [...spells].sort((left, right) => rank(left) - rank(right));
+  return [...spells].sort((left, right) =>
+    compareCombatTraits(traitsOf(left), traitsOf(right)),
+  );
 }
 
 /** Что показывать на экране: отбор по режиму, состав по подготовке, порядок по срочности. */

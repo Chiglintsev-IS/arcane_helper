@@ -37,9 +37,10 @@ import {
   countHiddenRituals,
   filterSpells,
   matchesTraits,
+  traitsOf,
   NO_FILTERS,
 } from "@/rules/filters";
-import { spellsForScreen } from "@/rules/modes";
+import { compareCombatTraits, spellsForScreen } from "@/rules/modes";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
 import {
@@ -153,6 +154,36 @@ export function CombatScreen() {
   // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам (FR-207).
   const bloodShown =
     character.screenMode === "combat" && matchesTraits(BLOOD_MAGIC_TRAITS, filters);
+
+  /**
+   * Один список, а не два (FR-207, FR-210). Обмен хитов на очки ячейку не тратит, значит по цене он
+   * стоит там же, где заговоры, и идёт сразу за ними. Отдельным списком он оказывался бы или выше
+   * реакций, или ниже всего — в обоих случаях не на своём месте, а порядок здесь и есть подсказка.
+   */
+  const rows = shown.map((spell) => (
+    <SpellCardCompact
+      key={spell.id}
+      spell={spell}
+      character={character}
+      unavailableReason={firstReason(spell, character, economy)}
+      onOpen={() => setOpenSpellId(spell.id)}
+    />
+  ));
+  if (bloodShown) {
+    const after = shown.findIndex(
+      (spell) => compareCombatTraits(traitsOf(spell), BLOOD_MAGIC_TRAITS) > 0,
+    );
+    rows.splice(after === -1 ? rows.length : after, 0, (
+      <BloodMagicRow
+        key="blood-magic"
+        character={character}
+        economy={economy}
+        onOpen={() => setBloodOpen(true)}
+      />
+    ));
+  }
+  // Имя списка называет то, что в нём есть: вне боя — только заклинания, в бою ещё и «Магия крови».
+  const listLabel = bloodShown ? "Заклинания и действия" : "Заклинания";
   const openSpell = SPELLS.find((spell) => spell.id === openSpellId) ?? null;
   const lastEntry = session.journal.at(-1);
 
@@ -256,38 +287,14 @@ export function CombatScreen() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-        {shown.length > 0 ? (
-          <ul aria-label="Заклинания" className="flex flex-col gap-2">
-            {shown.map((spell) => (
-              <SpellCardCompact
-                key={spell.id}
-                spell={spell}
-                character={character}
-                unavailableReason={firstReason(spell, character, economy)}
-                onOpen={() => setOpenSpellId(spell.id)}
-              />
-            ))}
-          </ul>
-        ) : null}
-
-        {/*
-          Магия крови — не заклинание, поэтому живёт своим списком, но стоит вплотную к
-          заклинаниям: это конкурент за то же действие, и выбор между ними делается глазами
-          (FR-207). Снизу, а не сверху: наверху боевого списка стоят реакции, потому что триггер
-          приходит в чужой ход, а обмен хитов на очки — самое неспешное решение в списке (FR-210).
-        */}
-        {bloodShown ? (
-          <ul aria-label="Действия" className="mt-2 flex flex-col gap-2">
-            <BloodMagicRow
-              character={character}
-              economy={economy}
-              onOpen={() => setBloodOpen(true)}
-            />
+        {rows.length > 0 ? (
+          <ul aria-label={listLabel} className="flex flex-col gap-2">
+            {rows}
           </ul>
         ) : null}
 
         {/* Пусто — только когда не подошло вообще ничего, включая «Магию крови». */}
-        {shown.length === 0 && !bloodShown ? (
+        {rows.length === 0 ? (
           <div className="flex flex-col items-start gap-2 text-sm">
             <p>
               Под выбранные фильтры не подходит ни одно заклинание

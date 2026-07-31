@@ -68,7 +68,7 @@ test("first combat card fits without scrolling", async ({ page }) => {
   // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
   // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18, ux.md#общие-правила).
   const fit = await page.evaluate(() => {
-    const first = document.querySelector('[aria-label="Заклинания"] li');
+    const first = document.querySelector('[aria-label^="Заклинания"] li');
     if (first === null) return null;
     const box = first.getBoundingClientRect();
     return { bottom: Math.round(box.bottom), viewport: window.innerHeight };
@@ -95,8 +95,9 @@ test("filter by casting time", async ({ page }) => {
   await expect(list.getByText("Щит", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Сбросить" }).click();
-  // Семь: девять карточек режима «Бой» минус два неподготовленных ритуала (FR-103, FR-201).
-  await expect(list.getByRole("listitem")).toHaveCount(7);
+  // Восемь: семь карточек боя — девять режима минус два неподготовленных ритуала (FR-103, FR-201) —
+  // и строка «Магия крови», которая стоит в том же списке и тратит то же действие (FR-207).
+  await expect(list.getByRole("listitem")).toHaveCount(8);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {

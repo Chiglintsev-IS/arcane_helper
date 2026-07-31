@@ -68,6 +68,10 @@ function isReady(spell: Spell, character: CharacterState): boolean {
 /**
  * Все способы сотворить заклинание: ячейки от собственного уровня и выше, оплата очками и
  * ритуальный режим. Наличие свободной ячейки здесь не проверяется — это дело `checkAvailability`.
+ *
+ * В режиме «Бой» ритуального способа среди них нет ([FR-208](../../docs/features/F-18-screen-modes.md#fr-208)):
+ * ритуал занимает на 10 минут больше обычного, а раунд длится шесть секунд. Предлагать его в бою
+ * значит предлагать выбор, который нельзя сделать, — и прятать за ним ячейку, которой всё решается.
  */
 export function castOptions(spell: Spell, character: CharacterState): CastOption[] {
   if (spell.level === CANTRIP_LEVEL) {
@@ -83,7 +87,7 @@ export function castOptions(spell: Spell, character: CharacterState): CastOption
   if (spell.level <= MAXIMUM_PAYABLE_SPELL_LEVEL) {
     options.push({ mode: "normal", payment: { kind: "spell_points" } });
   }
-  if (spell.ritual) {
+  if (spell.ritual && character.screenMode !== "combat") {
     options.push({ mode: "ritual", payment: { kind: "none" } });
   }
   return options;
@@ -132,6 +136,8 @@ export function canCastNow(spell: Spell, character: CharacterState, turn: TurnRe
  */
 export type ActionTraits = {
   castingTime: Spell["castingTime"]["type"];
+  /** Цена в ячейках: 0 — не расходует ячейку. По ней строится порядок боевого списка (FR-210). */
+  level: number;
   concentration: boolean;
   role: CombatRole;
 };
@@ -139,6 +145,7 @@ export type ActionTraits = {
 export function traitsOf(spell: Spell): ActionTraits {
   return {
     castingTime: spell.castingTime.type,
+    level: spell.level,
     concentration: spell.concentration,
     role: combatRoleOf(spell),
   };

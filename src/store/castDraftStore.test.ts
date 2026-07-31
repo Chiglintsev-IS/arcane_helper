@@ -69,8 +69,14 @@ describe("начало применения", () => {
   });
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
-    store.getState().start(identify, context());
+    // Вне боя: в бою ритуального способа нет вовсе, +10 минут в раунд не помещаются (FR-208).
+    store.getState().start(identify, context({ ...createThorne(), screenMode: "camp" }));
     expect(draftOf()).toMatchObject({ mode: "ritual", payment: { kind: "none" } });
+  });
+
+  it("в бою тот же ритуал начинается ячейкой (FR-208)", () => {
+    store.getState().start(detectMagic, context());
+    expect(draftOf()).toMatchObject({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
   });
 
   it("отмена стирает черновик", () => {

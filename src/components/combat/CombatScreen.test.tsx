@@ -146,7 +146,7 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     await renderWithStores(<CombatScreen />);
 
     expect(screen.getByRole("radio", { name: /^Бой/ })).toHaveProperty("ariaChecked", "true");
-    const list = within(screen.getByLabelText("Заклинания"));
+    const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Луч холода")).toBeDefined();
     expect(list.queryByText("Починка")).toBeNull();
     expect(list.queryByText("Поиск фамильяра")).toBeNull();
@@ -158,7 +158,7 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
     await user.click(screen.getByRole("radio", { name: /^Привал/ }));
 
-    const list = within(screen.getByLabelText("Заклинания"));
+    const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Починка")).toBeDefined();
     expect(list.queryByText("Щит")).toBeNull();
   });
@@ -169,7 +169,7 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 
-    const list = within(screen.getByLabelText("Заклинания"));
+    const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Щит")).toBeDefined();
     expect(list.getByText("Починка")).toBeDefined();
   });
@@ -206,7 +206,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 
     await user.click(screen.getByRole("button", { name: "Реакция" }));
 
-    const list = screen.getByLabelText("Заклинания");
+    const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
     expect(within(list).getByText("Щит")).toBeDefined();
     expect(within(list).getByText("Поглощение стихий")).toBeDefined();
@@ -219,7 +219,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     await user.click(screen.getByRole("button", { name: "Реакция" }));
     await user.click(screen.getByRole("button", { name: "Действие" }));
 
-    const list = screen.getByLabelText("Заклинания");
+    const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).getAllByRole("listitem").length).toBeGreaterThan(2);
     expect(within(list).getByText("Щит")).toBeDefined();
     expect(within(list).getByText("Луч холода")).toBeDefined();
@@ -238,7 +238,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     expect(screen.queryByText(/ритуалов скрыты/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
-    expect(screen.getByLabelText("Заклинания")).toBeDefined();
+    expect(screen.getByLabelText(/^Заклинания/)).toBeDefined();
   });
 
   it("«доступно сейчас» согласовано с проверкой доступности мастера", async () => {
@@ -256,7 +256,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 
     await user.click(screen.getByRole("button", { name: "Доступно сейчас" }));
 
-    const list = screen.getByLabelText("Заклинания");
+    const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).queryByText("Щит")).toBeNull();
     expect(within(list).getByText("Луч холода")).toBeDefined();
   });
@@ -394,7 +394,7 @@ describe("краткая карточка (FR-010)", () => {
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
 
     // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием (FR-084).
-    const row = within(screen.getByLabelText("Заклинания")).getByRole("button", {
+    const row = within(screen.getByLabelText(/^Заклинания/)).getByRole("button", {
       name: /Обнаружение магии/,
     });
     expect(within(row).queryByText(/Заклинание не подготовлено/)).toBeNull();
@@ -506,7 +506,7 @@ describe("схема ритуала (FR-192)", () => {
     await renderWithStores(<CombatScreen />, inBookMode());
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(
-      within(screen.getByLabelText("Заклинания")).getByRole("button", { name: /Опознание/ }),
+      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /Опознание/ }),
     );
     await user.click(screen.getByRole("button", { name: "Схема ритуала" }));
 
@@ -518,7 +518,7 @@ describe("схема ритуала (FR-192)", () => {
     await renderWithStores(<CombatScreen />);
 
     await user.click(
-      within(screen.getByLabelText("Заклинания")).getByRole("button", { name: /Луч холода/ }),
+      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /Луч холода/ }),
     );
 
     expect(screen.queryByRole("button", { name: "Схема ритуала" })).toBeNull();

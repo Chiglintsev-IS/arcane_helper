@@ -18,6 +18,9 @@ import type { ActionTraits } from "./filters";
  */
 export const BLOOD_MAGIC_TRAITS: ActionTraits = {
   castingTime: "action",
+  // Ячейку обмен не тратит — он их и покупает. По цене строка стоит там же, где заговоры, и
+  // потому идёт сразу за ними (FR-210).
+  level: 0,
   concentration: false,
   role: "other",
 };
