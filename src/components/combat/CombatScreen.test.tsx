@@ -214,9 +214,16 @@ describe("краткая карточка (FR-010)", () => {
     expect(
       within(screen.getByRole("button", { name: /Доспехи мага/ })).getByText("Ячейка от 1 ур."),
     ).toBeDefined();
-    expect(
-      within(screen.getByRole("button", { name: /Луч холода/ })).getByText("Без ячейки"),
-    ).toBeDefined();
+  });
+
+  it("у заговора стоимость не повторяет значок «Заговор» (FR-010)", async () => {
+    // «Заговор» и «Без ячейки» — одно и то же утверждение: заговор ячейку не тратит по определению.
+    await renderWithStores(<CombatScreen />);
+
+    const row = within(screen.getByRole("button", { name: /Луч холода/ }));
+    expect(row.getByText("Заговор")).toBeDefined();
+    expect(row.queryByText("Без ячейки")).toBeNull();
+    expect(row.queryByText(/Ячейка от/)).toBeNull();
   });
 
   it("недоступное заклинание объясняет причину словами", async () => {

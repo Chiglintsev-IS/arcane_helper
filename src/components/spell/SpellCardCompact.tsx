@@ -40,6 +40,7 @@ export function SpellCardCompact({
   const resolution = resolutionBadge(spell.resolution);
   const duration = durationBadge(spell.duration);
   const damage = damageLabel(spell, spell.level, character.level);
+  const slotCost = slotCostLabel(spell);
 
   return (
     <li>
@@ -64,9 +65,11 @@ export function SpellCardCompact({
           <Badge tone={preparation.tone} icon={preparation.icon}>
             {preparation.label}
           </Badge>
-          <Badge tone="muted" icon="◎">
-            {slotCostLabel(spell)}
-          </Badge>
+          {slotCost === null ? null : (
+            <Badge tone="muted" icon="◎">
+              {slotCost}
+            </Badge>
+          )}
           <Badge tone={resolution.tone} icon={resolution.icon}>
             {resolution.label}
           </Badge>

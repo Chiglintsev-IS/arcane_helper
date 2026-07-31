@@ -73,9 +73,12 @@ export function levelLabel(level: number): string {
  *
  * Показывается рядом с названием, потому что уровень заклинания и цена применения — разные вопросы:
  * «1 уровень» ничего не говорит о том, хватит ли ресурсов, а «ячейка от 1 ур.» говорит.
+ *
+ * У заговора стоимости нет: `null`, а не «Без ячейки». Рядом уже стоит значок «Заговор», и два
+ * значка говорили одно и то же — заговор ячейку не тратит по определению (FR-010).
  */
-export function slotCostLabel(spell: Spell): string {
-  if (spell.level === CANTRIP_LEVEL) return "Без ячейки";
+export function slotCostLabel(spell: Spell): string | null {
+  if (spell.level === CANTRIP_LEVEL) return null;
   return spell.ritual ? `Ячейка от ${spell.level} ур. или ритуал` : `Ячейка от ${spell.level} ур.`;
 }
 

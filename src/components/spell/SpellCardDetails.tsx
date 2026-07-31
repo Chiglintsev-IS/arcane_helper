@@ -59,6 +59,7 @@ export function SpellCardDetails({
 }) {
   const [diagramOpen, setDiagramOpen] = useState(false);
   const castingTime = CASTING_TIME[spell.castingTime.type];
+  const slotCost = slotCostLabel(spell);
   const mode: CastMode = spell.level === CANTRIP_LEVEL ? "cantrip" : spell.ritual ? "ritual" : "normal";
   const announcementContext = {
     character,
@@ -142,7 +143,7 @@ export function SpellCardDetails({
         </section>
 
         <dl aria-label="Механика" className="text-xs">
-          <Row label="Стоимость">{slotCostLabel(spell)}</Row>
+          {slotCost === null ? null : <Row label="Стоимость">{slotCost}</Row>}
           <Row label="Дальность">{rangeLabel(spell.range)}</Row>
           <Row label="Длительность">{durationLabel(spell.duration)}</Row>
           <Row label="Цель">{targetingLabel(spell.targeting)}</Row>
