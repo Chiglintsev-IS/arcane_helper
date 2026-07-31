@@ -44,7 +44,7 @@
 - Consumes: ничего.
 - Produces: идентификатор `FR-084`, на который ссылаются комментарии в коде задач 3, 5 и 6; раздел `rules-engine.md#что-прерывает-концентрацию`, на который ссылается комментарий в `src/rules/concentration.ts`.
 
-- [ ] **Step 1: Добавить FR-084 в F-07**
+- [x] **Step 1: Добавить FR-084 в F-07**
 
 В `docs/features/F-07-concentration.md` после блока `FR-083` (перед разделом «## Поведение и крайние случаи») вставить:
 
@@ -70,7 +70,7 @@
 [rules-engine.md](../rules-engine.md#что-прерывает-концентрацию).
 ```
 
-- [ ] **Step 2: Добавить крайние случаи в F-07**
+- [x] **Step 2: Добавить крайние случаи в F-07**
 
 В том же файле в раздел «## Поведение и крайние случаи» добавить четыре абзаца перед абзацем «**Незаметная потеря невозможна.**»:
 
@@ -93,11 +93,11 @@
 огненного урона ([FR-180](F-16-troll-states.md#fr-180)).
 ```
 
-- [ ] **Step 3: Расширить диапазон F-07 в реестре**
+- [x] **Step 3: Расширить диапазон F-07 в реестре**
 
 В `docs/features/README.md` в строке F-07 заменить `FR-080…083` на `FR-080…084`.
 
-- [ ] **Step 4: Добавить правила прерывания в rules-engine.md**
+- [x] **Step 4: Добавить правила прерывания в rules-engine.md**
 
 В `docs/rules-engine.md` в раздел «## Концентрация» после подраздела «### КС проверки концентрации» (после абзаца «Каждый экземпляр урона требует отдельной проверки; урон за раунд не суммируется.») добавить:
 
@@ -119,12 +119,12 @@
 — 600. Это перевод единиц, а не новая механика.
 ```
 
-- [ ] **Step 5: Проверить целостность спеки**
+- [x] **Step 5: Проверить целостность спеки**
 
 Run: `npm run check:docs`
 Expected: `спецификация целостна`, требований определено 82.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/features/F-07-concentration.md docs/features/README.md docs/rules-engine.md
@@ -150,7 +150,7 @@ git commit -m "Specify the concentration block and what breaks concentration"
   - `export function durationWithRoundsRu(duration: ActiveEffect["duration"]): string`
   - `export const ROUNDS_PER_MINUTE = 10`, `export const ROUNDS_PER_HOUR = 600`
 
-- [ ] **Step 1: Написать падающие тесты**
+- [x] **Step 1: Написать падающие тесты**
 
 В конец `src/rules/concentration.test.ts` добавить:
 
@@ -217,12 +217,12 @@ describe("durationWithRoundsRu", () => {
 import { concentrationCheckDc, describeConcentrationCheck, durationWithRoundsRu, startRound } from "./concentration";
 ```
 
-- [ ] **Step 2: Убедиться, что тесты падают**
+- [x] **Step 2: Убедиться, что тесты падают**
 
 Run: `npx vitest run src/rules/concentration.test.ts`
 Expected: FAIL — `startRound is not a function`, `durationWithRoundsRu is not a function`.
 
-- [ ] **Step 3: Реализовать**
+- [x] **Step 3: Реализовать**
 
 В `src/rules/concentration.ts` добавить импорты и код:
 
@@ -286,17 +286,17 @@ export function durationWithRoundsRu(duration: ActiveEffect["duration"]): string
 }
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [x] **Step 4: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/rules/concentration.test.ts`
 Expected: PASS, все `describe` зелёные.
 
-- [ ] **Step 5: Проверить покрытие и типы**
+- [x] **Step 5: Проверить покрытие и типы**
 
 Run: `npm run typecheck && npm run test:coverage`
 Expected: типы без ошибок; покрытие `src/rules/` — 100 % по всем четырём метрикам.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/rules/concentration.ts src/rules/concentration.test.ts
@@ -326,7 +326,7 @@ git commit -m "Derive the starting round and duration in rounds"
 
 `spell` допускает `null`: состояние могло прийти импортом из другой сборки контента, и тогда карточки заклинания в приложении нет. Показать «Концентрации нет» в этом случае нельзя — незаметная потеря концентрации запрещена ([F-07](../../features/F-07-concentration.md)), поэтому описание деградирует до того, что лежит в самом эффекте.
 
-- [ ] **Step 1: Написать падающий тест на словарь спасбросков**
+- [x] **Step 1: Написать падающий тест на словарь спасбросков**
 
 В конец `src/rules/language.test.ts` добавить:
 
@@ -341,12 +341,12 @@ describe("SAVING_THROW_NAMES", () => {
 
 Дописать `SAVING_THROW_NAMES` в существующий импорт из `./language` в этом файле.
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [x] **Step 2: Убедиться, что тест падает**
 
 Run: `npx vitest run src/rules/language.test.ts`
 Expected: FAIL — `SAVING_THROW_NAMES` не экспортируется.
 
-- [ ] **Step 3: Перенести словарь в language.ts**
+- [x] **Step 3: Перенести словарь в language.ts**
 
 В `src/rules/language.ts` добавить:
 
@@ -374,12 +374,12 @@ export const SAVING_THROW_NAMES = {
 import { SAVING_THROW_NAMES, withPlural } from "./language";
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [x] **Step 4: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/rules/language.test.ts src/rules/announcement.test.ts`
 Expected: PASS — объявление мастеру продолжает работать на общем словаре.
 
-- [ ] **Step 5: Написать падающий тест на describeConcentration**
+- [x] **Step 5: Написать падающий тест на describeConcentration**
 
 В конец `src/rules/concentration.test.ts` добавить:
 
@@ -572,12 +572,12 @@ function withoutArea(id: string): Omit<Spell, "area"> {
   return rest;
 }
 
-- [ ] **Step 6: Убедиться, что тесты падают**
+- [x] **Step 6: Убедиться, что тесты падают**
 
 Run: `npx vitest run src/rules/concentration.test.ts`
 Expected: FAIL — `describeConcentration is not a function`.
 
-- [ ] **Step 7: Реализовать**
+- [x] **Step 7: Реализовать**
 
 В `src/rules/concentration.ts` добавить импорты и код:
 
@@ -727,17 +727,17 @@ export function describeConcentration(input: {
 }
 ```
 
-- [ ] **Step 8: Убедиться, что тесты проходят**
+- [x] **Step 8: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/rules/concentration.test.ts src/rules/language.test.ts src/rules/announcement.test.ts`
 Expected: PASS.
 
-- [ ] **Step 9: Проверить покрытие и типы**
+- [x] **Step 9: Проверить покрытие и типы**
 
 Run: `npm run typecheck && npm run test:coverage`
 Expected: типы чистые; покрытие `src/rules/` — 100 % по строкам, функциям, ветвям и операторам. Непокрытая ветвь здесь означает недописанный тест из шага 5, а не «допустимый пробел».
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add src/rules/concentration.ts src/rules/concentration.test.ts src/rules/language.ts src/rules/language.test.ts src/rules/announcement.ts
@@ -758,7 +758,7 @@ git commit -m "Describe active concentration from spell data"
 - Consumes: существующий `describeConcentrationCheck`.
 - Produces: поле `minimumRoll: number` в `ConcentrationCheck`; `export function checkGuidanceRu(check: ConcentrationCheck): string`.
 
-- [ ] **Step 1: Написать падающие тесты**
+- [x] **Step 1: Написать падающие тесты**
 
 В `src/rules/concentration.test.ts` в существующий `describe("describeConcentrationCheck")` дописать `minimumRoll` в оба вызова `toEqual` (иначе они упадут на лишнем поле) и добавить:
 
@@ -794,12 +794,12 @@ describe("checkGuidanceRu", () => {
 
 Дописать `checkGuidanceRu` в импорт из `./concentration`.
 
-- [ ] **Step 2: Убедиться, что тесты падают**
+- [x] **Step 2: Убедиться, что тесты падают**
 
 Run: `npx vitest run src/rules/concentration.test.ts`
 Expected: FAIL — `checkGuidanceRu is not a function`, плюс несовпадение объекта без `minimumRoll`.
 
-- [ ] **Step 3: Реализовать**
+- [x] **Step 3: Реализовать**
 
 В `src/rules/concentration.ts` в тип `ConcentrationCheck` добавить поле, в `describeConcentrationCheck` — его вычисление, и добавить функцию подсказки:
 
@@ -834,12 +834,12 @@ export function checkGuidanceRu(check: ConcentrationCheck): string {
 }
 ```
 
-- [ ] **Step 4: Убедиться, что тесты проходят**
+- [x] **Step 4: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/rules/concentration.test.ts && npm run test:coverage`
 Expected: PASS; покрытие 100 %.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/rules/concentration.ts src/rules/concentration.test.ts
@@ -865,7 +865,7 @@ git commit -m "Tell which d20 result passes the concentration check"
   - у `ResourceHeader` появляются параметры `concentration: ConcentrationSummary | null` и `onOpenConcentration: () => void`
   - в `CombatScreen` появляется `concentrationSummary` и состояние `panelOpen` (лист подключается в задаче 6)
 
-- [ ] **Step 1: Написать падающий тест**
+- [x] **Step 1: Написать падающий тест**
 
 Создать `src/components/combat/Concentration.test.tsx`:
 
@@ -933,12 +933,12 @@ describe("карточка концентрации в шапке (FR-082, FR-08
 });
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [x] **Step 2: Убедиться, что тест падает**
 
 Run: `npx vitest run src/components/combat/Concentration.test.tsx`
 Expected: FAIL — «Обнаружение магии» в блоке не найдено, роли `button` с таким именем нет.
 
-- [ ] **Step 3: Создать компонент карточки**
+- [x] **Step 3: Создать компонент карточки**
 
 Создать `src/components/combat/ConcentrationCard.tsx`:
 
@@ -995,7 +995,7 @@ export function ConcentrationCard({
 }
 ```
 
-- [ ] **Step 4: Подключить карточку в шапку**
+- [x] **Step 4: Подключить карточку в шапку**
 
 В `src/components/combat/ResourceHeader.tsx`:
 
@@ -1036,7 +1036,7 @@ export function ResourceHeader({
 
 Строку `const otherEffects = …` оставить как есть.
 
-- [ ] **Step 5: Считать описание в экране боя**
+- [x] **Step 5: Считать описание в экране боя**
 
 В `src/components/combat/CombatScreen.tsx`:
 
@@ -1091,17 +1091,17 @@ export function ResourceHeader({
       ) : null}
 ```
 
-- [ ] **Step 6: Убедиться, что тесты проходят**
+- [x] **Step 6: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/components/combat/`
 Expected: PASS — новый файл зелёный, `CombatScreen.test.tsx` тоже: старая проверка `screen.getByText(/Концентрации нет/)` продолжает работать.
 
-- [ ] **Step 7: Проверить типы и полный прогон**
+- [x] **Step 7: Проверить типы и полный прогон**
 
 Run: `npm run typecheck && npm run test:coverage`
 Expected: без ошибок, покрытие 100 %.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/components/combat/ConcentrationCard.tsx src/components/combat/ResourceHeader.tsx src/components/combat/CombatScreen.tsx src/components/combat/Concentration.test.tsx
@@ -1123,7 +1123,7 @@ git commit -m "Show what concentration is holding in the combat header"
 - Consumes: `ConcentrationSummary` (задача 3); `endConcentration` из `src/store/session.ts`.
 - Produces: `export function ConcentrationPanel({ summary, onOpenSpell, onDrop, onClose }: { summary: ConcentrationSummary; onOpenSpell: () => void; onDrop: () => void; onClose: () => void })`. Кнопка «Получил урон» добавляется в подвал листа задачей 7 — вместе с самим вводом урона, чтобы здесь не появлялось состояния без потребителя.
 
-- [ ] **Step 1: Написать падающие тесты**
+- [x] **Step 1: Написать падающие тесты**
 
 В `src/components/combat/Concentration.test.tsx` добавить:
 
@@ -1169,12 +1169,12 @@ describe("лист концентрации (FR-084, FR-091)", () => {
 });
 ```
 
-- [ ] **Step 2: Убедиться, что тесты падают**
+- [x] **Step 2: Убедиться, что тесты падают**
 
 Run: `npx vitest run src/components/combat/Concentration.test.tsx`
 Expected: FAIL — в заглушке нет ни текста правил, ни кнопок.
 
-- [ ] **Step 3: Создать лист**
+- [x] **Step 3: Создать лист**
 
 Создать `src/components/combat/ConcentrationPanel.tsx`:
 
@@ -1272,7 +1272,7 @@ export function ConcentrationPanel({
 }
 ```
 
-- [ ] **Step 4: Заменить заглушку в экране боя**
+- [x] **Step 4: Заменить заглушку в экране боя**
 
 В `src/components/combat/CombatScreen.tsx`:
 
@@ -1307,17 +1307,17 @@ import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 
 Лист закрывается сам, когда концентрация кончилась: условие рендера требует непустого `concentrationSummary`, поэтому отдельного эффекта на закрытие не нужно.
 
-- [ ] **Step 5: Убедиться, что тесты проходят**
+- [x] **Step 5: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/components/combat/`
 Expected: PASS.
 
-- [ ] **Step 6: Проверить типы и покрытие**
+- [x] **Step 6: Проверить типы и покрытие**
 
 Run: `npm run typecheck && npm run test:coverage`
 Expected: без ошибок, 100 %.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/components/combat/ConcentrationPanel.tsx src/components/combat/CombatScreen.tsx src/components/combat/Concentration.test.tsx
@@ -1341,7 +1341,7 @@ git commit -m "Explain and drop concentration from a detail sheet"
 - Consumes: `takeDamage` из `src/store/session.ts`; `ConcentrationPanel` (задача 6).
 - Produces: `export function DamagePrompt({ onSubmit, onCancel }: { onSubmit: (damage: number, fire: boolean) => void; onCancel: () => void })`; у `ConcentrationPanel` появляется параметр `onTakeDamage: () => void`; в `CombatScreen` — вызов `takeDamage` и состояния `damageOpen`, `pendingCheck` (карточка проверки появляется в задаче 8).
 
-- [ ] **Step 1: Написать падающие тесты**
+- [x] **Step 1: Написать падающие тесты**
 
 В `src/components/combat/Concentration.test.tsx` добавить:
 
@@ -1392,12 +1392,12 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
 });
 ```
 
-- [ ] **Step 2: Убедиться, что тесты падают**
+- [x] **Step 2: Убедиться, что тесты падают**
 
 Run: `npx vitest run src/components/combat/Concentration.test.tsx`
 Expected: FAIL — кнопки «Получил урон» в шапке нет.
 
-- [ ] **Step 3: Создать форму ввода**
+- [x] **Step 3: Создать форму ввода**
 
 Создать `src/components/combat/DamagePrompt.tsx`:
 
@@ -1479,7 +1479,7 @@ export function DamagePrompt({
 
 > `bg-reaction-strong` в теме есть: `--color-reaction-strong` объявлен в [globals.css](../../../src/app/globals.css). Подмена класса не требуется.
 
-- [ ] **Step 4: Добавить кнопку и значок подавления в шапку**
+- [x] **Step 4: Добавить кнопку и значок подавления в шапку**
 
 В `src/components/combat/ResourceHeader.tsx` в список «Прочие ресурсы» после `<li>` с максимумом хитов добавить:
 
@@ -1493,7 +1493,7 @@ export function DamagePrompt({
         ) : null}
 ```
 
-- [ ] **Step 5: Подключить ввод урона в экране боя**
+- [x] **Step 5: Подключить ввод урона в экране боя**
 
 В `src/components/combat/CombatScreen.tsx`:
 
@@ -1566,17 +1566,17 @@ export function DamagePrompt({
       )}
 ```
 
-- [ ] **Step 6: Убедиться, что тесты проходят**
+- [x] **Step 6: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/components/combat/`
 Expected: PASS.
 
-- [ ] **Step 7: Проверить типы и покрытие**
+- [x] **Step 7: Проверить типы и покрытие**
 
 Run: `npm run typecheck && npm run test:coverage`
 Expected: без ошибок, 100 %.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/components/combat/DamagePrompt.tsx src/components/combat/ResourceHeader.tsx src/components/combat/CombatScreen.tsx src/components/combat/Concentration.test.tsx
@@ -1598,7 +1598,7 @@ git commit -m "Enter damage and mark fire suppression from the header"
 - Consumes: `ConcentrationCheck`, `checkGuidanceRu` (задача 4); `endConcentration`, `spendRuneOnWardingSigil`, `wardingSigilAvailable` из `src/store/session.ts`.
 - Produces: `export function ConcentrationCheckCard({ check, spellNameRu, runeAvailable, onSuccess, onSpendRune, onFail }: { check: ConcentrationCheck; spellNameRu: string; runeAvailable: boolean; onSuccess: () => void; onSpendRune: () => void; onFail: () => void })`.
 
-- [ ] **Step 1: Написать падающие тесты**
+- [x] **Step 1: Написать падающие тесты**
 
 В `src/components/combat/Concentration.test.tsx` добавить:
 
@@ -1671,12 +1671,12 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
 > Числа рун сверены с [character.ts](../../../src/data/content/thorne/character.ts): у Торна `runes: { maximum: 3, remaining: 3 }`, поэтому после траты одной шапка показывает «Руны 2/3».
 
-- [ ] **Step 2: Убедиться, что тесты падают**
+- [x] **Step 2: Убедиться, что тесты падают**
 
 Run: `npx vitest run src/components/combat/Concentration.test.tsx`
 Expected: FAIL — кнопок «Успех», «Провал» в заглушке нет.
 
-- [ ] **Step 3: Создать карточку проверки**
+- [x] **Step 3: Создать карточку проверки**
 
 Создать `src/components/combat/ConcentrationCheckCard.tsx`:
 
@@ -1775,7 +1775,7 @@ export function ConcentrationCheckCard({
 }
 ```
 
-- [ ] **Step 4: Заменить заглушку в экране боя**
+- [x] **Step 4: Заменить заглушку в экране боя**
 
 В `src/components/combat/CombatScreen.tsx`:
 
@@ -1803,17 +1803,17 @@ export function ConcentrationCheckCard({
       )}
 ```
 
-- [ ] **Step 5: Убедиться, что тесты проходят**
+- [x] **Step 5: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/components/combat/`
 Expected: PASS.
 
-- [ ] **Step 6: Проверить типы и покрытие**
+- [x] **Step 6: Проверить типы и покрытие**
 
 Run: `npm run typecheck && npm run test:coverage`
 Expected: без ошибок, 100 %.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/components/combat/ConcentrationCheckCard.tsx src/components/combat/CombatScreen.tsx src/components/combat/Concentration.test.tsx
@@ -1835,7 +1835,7 @@ git commit -m "Run the concentration check and offer the warding rune"
 - Consumes: `endEffect` из `src/store/session.ts`.
 - Produces: у `ResourceHeader` появляется параметр `onEndEffect: (effectId: string) => void`.
 
-- [ ] **Step 1: Написать падающий тест**
+- [x] **Step 1: Написать падающий тест**
 
 В `src/components/combat/Concentration.test.tsx` добавить:
 
@@ -1868,12 +1868,12 @@ describe("завершение активного эффекта (FR-091)", () =
 });
 ```
 
-- [ ] **Step 2: Убедиться, что тест падает**
+- [x] **Step 2: Убедиться, что тест падает**
 
 Run: `npx vitest run src/components/combat/Concentration.test.tsx`
 Expected: FAIL — кнопки «Завершить: Доспехи мага» нет.
 
-- [ ] **Step 3: Добавить кнопку в список эффектов**
+- [x] **Step 3: Добавить кнопку в список эффектов**
 
 В `src/components/combat/ResourceHeader.tsx` заменить блок `otherEffects` на:
 
@@ -1908,7 +1908,7 @@ Expected: FAIL — кнопки «Завершить: Доспехи мага» 
 Подпись `armorClassNote(effect, armorClass)` сохраняется дословно: она отвечает на «почему КД 17»
 (FR-093), и это уже готовое требование.
 
-- [ ] **Step 4: Подключить операцию**
+- [x] **Step 4: Подключить операцию**
 
 В `src/components/combat/CombatScreen.tsx` добавить `endEffect` в импорт из `@/store/session` и передать в шапку:
 
@@ -1916,12 +1916,12 @@ Expected: FAIL — кнопки «Завершить: Доспехи мага» 
           onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
 ```
 
-- [ ] **Step 5: Убедиться, что тесты проходят**
+- [x] **Step 5: Убедиться, что тесты проходят**
 
 Run: `npx vitest run src/components/combat/ && npm run typecheck && npm run test:coverage`
 Expected: PASS, типы чистые, покрытие 100 %.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/combat/ResourceHeader.tsx src/components/combat/CombatScreen.tsx src/components/combat/Concentration.test.tsx
@@ -1947,12 +1947,12 @@ git commit -m "End an active effect from the header"
 - Consumes: всё поведение задач 1–9.
 - Produces: ничего для кода — это закрывающая задача.
 
-- [ ] **Step 1: Проверить незакоммиченную работу**
+- [x] **Step 1: Проверить незакоммиченную работу**
 
 Run: `git status --short e2e playwright.config.ts`
 Если файлы не отслеживаются — **спросить владельца репозитория**, включать ли их в коммит вместе с новым тестом, и дальше действовать по ответу.
 
-- [ ] **Step 2: Написать E2E-тест**
+- [x] **Step 2: Написать E2E-тест**
 
 В `e2e/uc-01-cast-spell.spec.ts` добавить перед тестом axe-core:
 
@@ -1992,12 +1992,12 @@ test("concentration block explains the effect", async ({ page }) => {
 
 > Подписи сверены с кодом. «Обнаружение магии» — ритуал ([detect-magic.json](../../../src/data/content/thorne/spells/detect-magic.json)), поэтому шаг «Чем сотворить» предлагает и «Ячейка 1 уровня · осталось 4 из 4», и «Ритуалом · +10 минут, ячейка не расходуется» ([CastWizard.tsx:42-49](../../../src/components/cast/CastWizard.tsx#L42-L49)). Нажатие по регулярному выражению `/Ячейка 1 уровня/` выбирает обычный режим — он и нужен: концентрацию ритуал требует тоже, но проверять надо тот путь, которым заклинание творят в бою.
 
-- [ ] **Step 3: Прогнать E2E**
+- [x] **Step 3: Прогнать E2E**
 
 Run: `npm run test:e2e`
 Expected: PASS, включая существующие тесты и проверку axe-core.
 
-- [ ] **Step 4: Перевести статусы требований**
+- [x] **Step 4: Перевести статусы требований**
 
 - `docs/features/F-07-concentration.md`: у `FR-084` статус `В работе` → `Готово`; в шапке файла обновить дату; в разделе «Проверка» добавить строки: «Блок объясняет механику и способы прерывания — E2E `concentration block explains the effect`» и «Провал при доступной руне предлагает её раньше завершения — компонентный».
 - `docs/features/F-08-active-effects.md`: у `FR-091` в «Проверку» добавить компонентный `завершение активного эффекта`.
@@ -2005,7 +2005,7 @@ Expected: PASS, включая существующие тесты и прове
 - `docs/features/F-01-combat-screen.md`: в `FR-001` пункт «текущую концентрацию» дополнить ссылкой «состав — [FR-084](F-07-concentration.md#fr-084)»; в «Поведение и крайние случаи» добавить абзац о кнопке «Получил урон» как единственной точке ввода урона.
 - `docs/quality.md`: `AC-15` — `План` → `Проверено`, в третьей колонке добавить ссылку на `FR-084`; в матрице трассировки заполнить строку `FR-083` колонкой E2E `concentration block explains the effect` и добавить строку `FR-084`.
 
-- [ ] **Step 5: Обновить роадмап**
+- [x] **Step 5: Обновить роадмап**
 
 В `docs/roadmap.md`:
 - из таблицы «Чего не хватает в логике» удалить строки `FR-091` и `FR-154`;
@@ -2013,12 +2013,12 @@ Expected: PASS, включая существующие тесты и прове
 - в «Текущем состоянии» в строку таблицы «Интерфейс» добавить «блок концентрации с проверкой после урона»;
 - обновить дату в шапке файла.
 
-- [ ] **Step 6: Полная проверка**
+- [x] **Step 6: Полная проверка**
 
 Run: `npm run check:docs && npm run typecheck && npm run test:coverage && npm run build`
 Expected: спецификация целостна; типы чистые; тесты зелёные, покрытие 100 %; статический экспорт собирается.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs e2e/uc-01-cast-spell.spec.ts
