@@ -61,12 +61,15 @@ export function ResourcesSheet({
   onSpendSlot,
   onRefundSlot,
   onAdjustRunes,
+  onSunlight,
   onClose,
 }: {
   character: CharacterState;
   onSpendSlot: (level: number) => void;
   onRefundSlot: (level: number) => void;
   onAdjustRunes: (delta: number) => void;
+  /** Признак «под прямым солнечным светом» (FR-181): приложение его не знает, говорит игрок. */
+  onSunlight: (under: boolean) => void;
   onClose: () => void;
 }) {
   const slots = Object.entries(character.spellSlots)
@@ -109,6 +112,30 @@ export function ResourcesSheet({
           plusDisabled={character.runes.remaining >= character.runes.maximum}
         />
       </ul>
+
+      {/*
+        Солнце стоит здесь по той же причине, что и ручные правки: приложение не может узнать, где
+        персонаж, — это говорит игрок. Значок ряда ресурсов только показывает признак; места под
+        кнопку в 44 пикселя там нет, а ряд значков и так занимает пятую часть карточки (FR-183).
+      */}
+      <section aria-label="Состояния" className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Состояния</h3>
+        <button
+          type="button"
+          aria-pressed={character.suppression.underDirectSunlight}
+          onClick={() => onSunlight(!character.suppression.underDirectSunlight)}
+          className={`min-h-11 rounded-xl border px-3 text-sm ${
+            character.suppression.underDirectSunlight
+              ? "border-reaction bg-reaction/10 font-medium text-reaction-strong dark:text-reaction"
+              : "border-slate-200 dark:border-slate-800"
+          }`}
+        >
+          Под прямым солнечным светом
+        </button>
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Под солнцем не работают ни регенерация, ни магия крови, ни возврат максимума.
+        </p>
+      </section>
 
       <button
         type="button"

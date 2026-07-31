@@ -14,7 +14,7 @@
 import { useMemo, useState } from "react";
 
 import { ArcaneRecoverySheet } from "@/components/combat/ArcaneRecoverySheet";
-import { BloodMagicPanel } from "@/components/combat/BloodMagicPanel";
+import { BloodMagicWizard } from "@/components/cast/BloodMagicWizard";
 import { BloodMagicRow } from "@/components/combat/BloodMagicRow";
 import { CampActions } from "@/components/combat/CampActions";
 import { CastWizard } from "@/components/cast/CastWizard";
@@ -36,7 +36,7 @@ import {
   describeConcentrationCheck,
   type ConcentrationCheck,
 } from "@/rules/concentration";
-import { BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
+import { ascensionTierRate, BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
 import { preparedLimit } from "@/rules/abilities";
 import { rolesPresent } from "@/rules/combatRole";
 import { applyImport, exportFileName, exportSnapshot, parseImport } from "@/rules/dataIo";
@@ -465,15 +465,22 @@ export function CombatScreen() {
         />
       )}
 
+      {/*
+        Обмен идёт тем же мастером, что и заклинания (FR-177). Хиты считаются здесь, а не в
+        компоненте: цена — правило ступени возвышения, и компонент её не выдумывает.
+      */}
       {bloodOpen ? (
-        <BloodMagicPanel
+        <BloodMagicWizard
           character={character}
-          actions={{
-            onExchange: (hitPoints) => apply((current) => exchangeBlood(current, hitPoints, clock)),
-            onDamage: recordDamage,
-            onRecoverMaximum: () => apply((current) => recoverHitPointMaximum(current, clock)),
-            onSunlight: (under) => apply((current) => setSunlight(current, under, clock)),
-            onClose: () => setBloodOpen(false),
+          economy={economy}
+          error={error}
+          onCancel={() => setBloodOpen(false)}
+          onConfirm={(points, allowAnyway) => {
+            const spent = points * ascensionTierRate(character.level);
+            const failure = apply((current) =>
+              exchangeBlood(current, spent, clock, { allowAnyway }),
+            );
+            if (failure === null) setBloodOpen(false);
           }}
         />
       ) : null}
@@ -570,6 +577,7 @@ export function CombatScreen() {
           onSpendSlot={(level) => apply((current) => spendSpellSlot(current, level, clock))}
           onRefundSlot={(level) => apply((current) => refundSpellSlot(current, level, clock))}
           onAdjustRunes={(delta) => apply((current) => adjustRunes(current, delta, clock))}
+          onSunlight={(under) => apply((current) => setSunlight(current, under, clock))}
           onClose={() => setResourcesOpen(false)}
         />
       ) : null}

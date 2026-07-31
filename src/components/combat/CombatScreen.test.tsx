@@ -996,3 +996,40 @@ describe("схема ритуала (FR-192)", () => {
     expect(screen.queryByRole("button", { name: "Схема ритуала" })).toBeNull();
   });
 });
+
+describe("признак «под солнцем» (FR-181, FR-183)", () => {
+  it("переключается из правки ресурсов и подавляет особенности", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
+    await user.click(screen.getByRole("button", { name: "Под прямым солнечным светом" }));
+
+    expect(stores.session.getState().session?.character.suppression.underDirectSunlight).toBe(true);
+  });
+
+  it("включённый признак виден значком в шапке, а не только внутри листа", async () => {
+    const sunlit = createThorne();
+    sunlit.suppression = { firedUpon: false, underDirectSunlight: true };
+    await renderWithStores(<CombatScreen />, sunlit);
+
+    const resources = screen.getByLabelText("Прочие ресурсы");
+    expect(
+      within(resources).getByText("Особенности подавлены: солнечный свет"),
+    ).toBeDefined();
+  });
+
+  it("выключается тем же переключателем", async () => {
+    const user = userEvent.setup();
+    const sunlit = createThorne();
+    sunlit.suppression = { firedUpon: false, underDirectSunlight: true };
+    const { stores } = await renderWithStores(<CombatScreen />, sunlit);
+
+    await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
+    await user.click(screen.getByRole("button", { name: "Под прямым солнечным светом" }));
+
+    expect(stores.session.getState().session?.character.suppression.underDirectSunlight).toBe(
+      false,
+    );
+  });
+});
