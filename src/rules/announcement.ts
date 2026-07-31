@@ -12,8 +12,10 @@
 import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/data/schemas/spell";
-import type { PaymentChoice } from "./availability";
-import { spellPointCost } from "./bloodMagic";
+import { componentRequirements, type PaymentChoice } from "./availability";
+import { withPlural } from "./language";
+import { hitPointCost, spellPointCost } from "./bloodMagic";
+import { MINIMUM_CONCENTRATION_DC } from "./concentration";
 import { effectiveDamage } from "./scaling";
 import type { CastMode } from "./slots";
 
@@ -156,4 +158,91 @@ export function renderAnnouncement(spell: Spell, context: AnnouncementContext): 
   text = `${text.replace(/ {2,}/g, " ").trim()}${paymentSentence(spell, context.payment)}`;
 
   return { text, gaps: [...gaps, ...modeGap(spell, context.mode)] };
+}
+
+type SavingThrowAbility = NonNullable<Spell["resolution"]["savingThrow"]>;
+
+const SAVING_THROW_NAMES: Record<SavingThrowAbility, string> = {
+  STR: "Силы",
+  DEX: "Ловкости",
+  CON: "Телосложения",
+  INT: "Интеллекта",
+  WIS: "Мудрости",
+  CHA: "Харизмы",
+};
+
+/**
+ * Что игрок должен сделать — числами этого персонажа (FR-032).
+ *
+ * Приложение существует не для того, чтобы пересказать правила, а чтобы игрок за столом не вдавался
+ * в подробности: вместо «атака заклинанием, модификатор +8» — «бросьте d20 + 8 против КД цели».
+ * Все числа берутся из состояния персонажа и движка правил, поэтому инструкция остаётся верной и
+ * после смены предмета, и после повышения уровня.
+ */
+export function castInstructions(spell: Spell, context: AnnouncementContext): string[] {
+  const { character } = context;
+  const level = castLevel(spell, context.payment);
+  const steps: string[] = [...componentRequirements(spell.components)];
+
+  if (context.payment.kind === "slot") {
+    steps.push(`Спишется ячейка ${level} уровня`);
+  } else if (context.payment.kind === "spell_points") {
+    steps.push(
+      `Спишется ${withPlural(spellPointCost(spell.level), ["очко", "очка", "очков"])}` +
+        ` заклинаний — это ${withPlural(hitPointCost(spell.level, character.level), ["хит", "хита", "хитов"])}` +
+        " и столько же максимума",
+    );
+  } else if (context.mode === "ritual") {
+    steps.push("Ячейка не расходуется, накладывание дольше на 10 минут");
+  }
+
+  switch (spell.resolution.type) {
+    case "spell_attack":
+      steps.push(
+        `Бросьте d20 ${signed(character.spellAttackModifier)} и сравните с КД цели`,
+      );
+      break;
+    case "saving_throw": {
+      // Схема требует характеристику при спасброске; если её нет — состояние испорчено, и лучше
+      // сказать хотя бы КС, чем показать пустое место в инструкции.
+      const ability = spell.resolution.savingThrow;
+      const name = ability === undefined ? null : SAVING_THROW_NAMES[ability];
+      steps.push(
+        name === null
+          ? `Цель бросает спасбросок против вашей КС ${character.spellSaveDc}`
+          : `Цель бросает спасбросок ${name} против вашей КС ${character.spellSaveDc}`,
+      );
+      break;
+    }
+    default:
+      steps.push("Броска нет: эффект применяется сразу");
+  }
+
+  if (spell.damage !== undefined) {
+    const formula = effectiveDamage(spell.damage, {
+      spellLevel: spell.level,
+      slotLevel: level,
+      characterLevel: character.level,
+    });
+    // Модификатор к урону не добавляется — самая тихая ошибка заклинателя
+    // (rules-engine.md#модификатор-атаки-не-добавляется-к-урону).
+    steps.push(`Урон: ${formula} (${spell.damage.type}), модификатор к урону не добавляется`);
+  }
+
+  if (spell.resolution.successEffect !== undefined) {
+    steps.push(`При успехе цели: ${spell.resolution.successEffect}`);
+  }
+  if (spell.resolution.failureEffect !== undefined) {
+    steps.push(`При провале цели: ${spell.resolution.failureEffect}`);
+  }
+
+  if (spell.concentration) {
+    steps.push(
+      `Держите концентрацию: при получении урона спасбросок Телосложения` +
+        ` ${signed(character.constitutionSaveModifier)}, КС — ${MINIMUM_CONCENTRATION_DC}` +
+        ` или половина урона, что больше`,
+    );
+  }
+
+  return steps;
 }

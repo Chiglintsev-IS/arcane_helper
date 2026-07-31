@@ -52,7 +52,7 @@ describe("начало применения", () => {
     expect(draftOf()).toMatchObject({
       mode: "normal",
       payment: { kind: "slot", slotLevel: 1 },
-      step: "target",
+      step: "slot",
       allowAnyway: false,
       targetLabel: null,
     });
@@ -81,19 +81,20 @@ describe("начало применения", () => {
 });
 
 describe("шаги мастера (FR-021, M-03)", () => {
-  it("типовое боевое заклинание проходится за три шага", () => {
+  it("типовое боевое заклинание проходится за два шага", () => {
     store.getState().start(mageArmor, context());
-    expect(visibleSteps(draftOf(), context())).toEqual(["target", "slot", "summary"]);
+    expect(visibleSteps(draftOf(), context())).toEqual(["slot", "summary"]);
   });
 
-  it("заговор по цели: цель вместо ячейки, два шага", () => {
+  it("заговор применяется одним экраном: выбирать нечего", () => {
     store.getState().start(rayOfFrost, context());
-    expect(visibleSteps(draftOf(), context())).toEqual(["target", "summary"]);
+    expect(visibleSteps(draftOf(), context())).toEqual(["summary"]);
   });
 
-  it("заклинание на себя шаг цели пропускает (FR-021)", () => {
-    store.getState().start(shield, context());
-    expect(visibleSteps(draftOf(), context())).not.toContain("target");
+  it("цель мастер не спрашивает: ввод текста в бою слишком медленный (OQ-10)", () => {
+    store.getState().start(rayOfFrost, context());
+    const steps: string[] = [...visibleSteps(draftOf(), context())];
+    expect(steps).not.toContain("target");
   });
 
   it("нарушенное условие добавляет шаг проверки доступности первым", () => {
@@ -102,7 +103,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
 
     expect(
       visibleSteps(draftOf(), { ...spent, turn: { ...ALL_TURN_RESOURCES, actionAvailable: false } }),
-    ).toEqual(["availability", "target", "slot", "summary"]);
+    ).toEqual(["availability", "slot", "summary"]);
     expect(draftOf().step).toBe("availability");
   });
 
@@ -124,21 +125,21 @@ describe("шаги мастера (FR-021, M-03)", () => {
 
 describe("навигация по шагам", () => {
   it("вперёд и назад ходят только по видимым шагам", () => {
-    store.getState().start(rayOfFrost, context());
+    store.getState().start(mageArmor, context());
     const steps = visibleSteps(draftOf(), context());
 
     store.getState().next(steps);
     expect(draftOf().step).toBe("summary");
     store.getState().back(steps);
-    expect(draftOf().step).toBe("target");
+    expect(draftOf().step).toBe("slot");
   });
 
   it("на последнем шаге вперёд не уходит, на первом — назад", () => {
-    store.getState().start(rayOfFrost, context());
+    store.getState().start(mageArmor, context());
     const steps = visibleSteps(draftOf(), context());
 
     store.getState().back(steps);
-    expect(draftOf().step).toBe("target");
+    expect(draftOf().step).toBe("slot");
 
     for (const _ of steps) store.getState().next(steps);
     expect(draftOf().step).toBe("summary");

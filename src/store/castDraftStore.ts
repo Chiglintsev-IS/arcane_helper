@@ -28,7 +28,6 @@ import type { CastRequest } from "./session";
  */
 export const WIZARD_STEPS = [
   "availability",
-  "target",
   "slot",
   "components",
   "concentration",
@@ -120,6 +119,10 @@ function needsComponentStep(spell: Spell): boolean {
 /**
  * Видимые шаги. Шаг показывается, только если на нём есть что выбрать или о чём предупредить:
  * иначе мастер выходит за бюджет M-03 — не более четырёх основных шагов.
+ *
+ * Шага выбора цели среди них нет: ввод текста в бою — самая медленная операция, и решением игрока
+ * мастер цель не спрашивает ([OQ-10](../../docs/open-questions.md#oq-10)). Подстановка цели в
+ * объявлении осталась: она понадобится, если решение изменится после игровой сессии.
  */
 export function visibleSteps(
   draft: CastDraft,
@@ -142,8 +145,6 @@ export function visibleSteps(
     switch (step) {
       case "availability":
         return blocking.length > 0;
-      case "target":
-        return spell.targeting.type !== "self";
       case "slot":
         return spell.level !== CANTRIP_LEVEL;
       case "components":

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createThorne } from "@/data/content/thorne/character";
 import { loadThorneSpells } from "@/data/content/thorne";
 import type { Spell } from "@/data/schemas/spell";
-import { renderAnnouncement, type AnnouncementContext } from "./announcement";
+import { castInstructions, renderAnnouncement, type AnnouncementContext } from "./announcement";
 
 const allSpells = loadThorneSpells();
 const spells = new Map(allSpells.map((spell) => [spell.id, spell]));
@@ -216,3 +216,108 @@ describe("renderAnnouncement: чистота формулировки (FR-042)",
     }
   });
 });
+
+describe("castInstructions: что сделать этому персонажу (FR-032)", () => {
+  it("называет бросок атаки готовым числом, а не модификатором", () => {
+    const steps = castInstructions(
+      spell("ray-of-frost"),
+      context({ mode: "cantrip", targetLabel: "гоблин" }),
+    );
+
+    expect(steps).toContain("Бросьте d20 +8 и сравните с КД цели");
+    expect(steps).toContain("Урон: 2d8 (холод), модификатор к урону не добавляется");
+  });
+
+  it("для спасброска называет характеристику и КС персонажа", () => {
+    // В первой партии контента заклинаний со спасброском нет: они появятся на уровнях 2–4.
+    const withSave: Spell = {
+      ...spell("disguise-self"),
+      resolution: { type: "saving_throw", savingThrow: "DEX" },
+    };
+    const steps = castInstructions(
+      withSave,
+      context({ payment: { kind: "slot", slotLevel: 1 } }),
+    );
+    expect(steps).toContain("Цель бросает спасбросок Ловкости против вашей КС 16");
+  });
+
+  it("на испорченных данных без характеристики называет хотя бы КС", () => {
+    const broken: Spell = {
+      ...spell("disguise-self"),
+      resolution: { type: "saving_throw" },
+    };
+    expect(
+      castInstructions(broken, context({ payment: { kind: "slot", slotLevel: 1 } })),
+    ).toContain("Цель бросает спасбросок против вашей КС 16");
+  });
+
+  it("перечисляет компоненты действиями, а не буквами", () => {
+    const steps = castInstructions(
+      spell("mage-armor"),
+      context({ payment: { kind: "slot", slotLevel: 1 } }),
+    );
+
+    expect(steps[0]).toBe("Произнести вслух");
+    expect(steps[1]).toBe("Жест свободной рукой");
+    expect(steps[2]).toBe("Компонент: кусок обработанной кожи");
+  });
+
+  it("называет, что спишется: ячейка, кровь или ничего", () => {
+    const bySlot = castInstructions(
+      spell("mage-armor"),
+      context({ payment: { kind: "slot", slotLevel: 3 } }),
+    );
+    const byBlood = castInstructions(
+      spell("mage-armor"),
+      context({ payment: { kind: "spell_points" } }),
+    );
+    const byRitual = castInstructions(spell("identify"), context({ mode: "ritual" }));
+
+    expect(bySlot).toContain("Спишется ячейка 3 уровня");
+    expect(byBlood).toContain("Спишется 2 очка заклинаний — это 6 хитов и столько же максимума");
+    expect(byRitual).toContain("Ячейка не расходуется, накладывание дольше на 10 минут");
+  });
+
+  it("напоминает о проверке концентрации с модификатором персонажа", () => {
+    const steps = castInstructions(
+      spell("detect-magic"),
+      context({ mode: "ritual" }),
+    );
+    expect(steps).toContain(
+      "Держите концентрацию: при получении урона спасбросок Телосложения +4, КС — 10 или половина урона, что больше",
+    );
+  });
+
+  it("заклинание без броска говорит об этом прямо", () => {
+    const steps = castInstructions(spell("mending"), context({ mode: "cantrip" }));
+    expect(steps).toContain("Броска нет: эффект применяется сразу");
+  });
+
+  it("эффекты успеха и провала показываются, когда они заданы", () => {
+    const withEffects: Spell = {
+      ...spell("disguise-self"),
+      resolution: {
+        type: "saving_throw",
+        savingThrow: "DEX",
+        successEffect: "половина урона",
+        failureEffect: "полный урон и падение",
+      },
+    };
+    const steps = castInstructions(
+      withEffects,
+      context({ payment: { kind: "slot", slotLevel: 1 } }),
+    );
+
+    expect(steps).toContain("При успехе цели: половина урона");
+    expect(steps).toContain("При провале цели: полный урон и падение");
+  });
+
+  it("отрицательный модификатор атаки сохраняет знак", () => {
+    const cursed = { ...thorne, spellAttackModifier: -2 };
+    const steps = castInstructions(
+      spell("ray-of-frost"),
+      context({ character: cursed, mode: "cantrip" }),
+    );
+    expect(steps).toContain("Бросьте d20 -2 и сравните с КД цели");
+  });
+})

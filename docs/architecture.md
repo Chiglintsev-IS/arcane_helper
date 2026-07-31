@@ -105,6 +105,7 @@ src/
     availability.ts            проверка доступности (FR-030)
     announcement.ts            рендер объявления (FR-040, FR-041)
     filters.ts                 фильтрация боевого списка (FR-002, FR-003)
+    language.ts                склонение числительных для собираемых фраз
     scaling.ts                 повышение уровня
   data/
     schemas/                   Zod-схемы

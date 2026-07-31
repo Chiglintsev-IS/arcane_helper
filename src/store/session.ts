@@ -743,6 +743,56 @@ export function useArcaneRecovery(
   );
 }
 
+/**
+ * Включение и выключение учёта хода (FR-143).
+ *
+ * При выключенном учёте действие и реакция считаются доступными всегда: вне боя отслеживание ходов
+ * создаёт ложные предупреждения. Операция обратима, как и всё остальное (FR-111).
+ */
+export function setTurnTracking(session: Session, enabled: boolean, clock: Clock): Session {
+  const { character } = session;
+  if (character.turnTracking.enabled === enabled) {
+    throw new SessionError(enabled ? "Учёт хода уже включён" : "Учёт хода уже выключен");
+  }
+  const after: CharacterState = {
+    ...character,
+    turnTracking: { ...character.turnTracking, enabled },
+  };
+  return commit(
+    session,
+    after,
+    {
+      kind: "manual_adjustment",
+      summaryRu: enabled ? "Учёт хода включён" : "Учёт хода выключен",
+    },
+    clock,
+  );
+}
+
+// —————————————————————————— Заметки ——————————————————————————
+
+/**
+ * Заметка пользователя к заклинанию (FR-012): место для домашних правил мастера.
+ *
+ * Игрового состояния не меняет, поэтому записи журнала не создаёт и отмене не подлежит
+ * ([F-10](../../docs/features/F-10-journal-undo.md)): журнал — механизм обратимости ресурсов, а не
+ * история правок текста. Заметка из одних пробелов удаляется: пустая строка не проходит схему
+ * состояния.
+ *
+ * Сам текст сохраняется как введён. Обрезать его здесь нельзя: заметка пишется по одному символу, и
+ * обрезка на каждом нажатии съедала бы пробел, который пользователь только что поставил.
+ */
+export function setSpellNote(session: Session, spellId: string, note: string): Session {
+  const { [spellId]: _replaced, ...rest } = session.character.spellNotes;
+  return {
+    character: {
+      ...session.character,
+      spellNotes: note.trim() === "" ? rest : { ...rest, [spellId]: note },
+    },
+    journal: session.journal,
+  };
+}
+
 /** Возврат ошибочно потраченной ячейки (FR-071). */
 export function refundSpellSlot(session: Session, slotLevel: number, clock: Clock): Session {
   const after: CharacterState = {

@@ -235,27 +235,34 @@ function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
   ];
 }
 
-/** Компоненты списком (OQ-06): приложение не знает, что у персонажа с собой, и не притворяется. */
-function componentReminders(spell: Spell): string[] {
-  const { components } = spell;
-  const reminders: string[] = [];
+/**
+ * Что нужно сделать, чтобы сотворить заклинание — словами, а не аббревиатурами.
+ *
+ * «В, С, М» за столом не читается: игрок должен видеть действие, а не букву. Формулировка одна на
+ * весь проект, потому что она нужна и в проверке доступности, и в карточке, и в мастере применения.
+ *
+ * Наличия компонентов приложение не знает и не притворяется, что знает (OQ-06): это перечень
+ * требований, а не вердикт.
+ */
+export function componentRequirements(components: Spell["components"]): string[] {
+  const requirements: string[] = [];
 
-  if (components.verbal) reminders.push("Вербальный: нужно говорить");
-  if (components.somatic) reminders.push("Соматический: нужна свободная рука");
+  if (components.verbal) requirements.push("Произнести вслух");
+  if (components.somatic) requirements.push("Жест свободной рукой");
 
   if (components.material && components.materialText !== undefined) {
     const notes: string[] = [];
     // Фокусировка заменяет компоненты без стоимости; со стоимостью — нет, и это предупреждение
     // обязательно, даже если фокусировка есть (F-03, «Материальный компонент со стоимостью»).
     if (components.costGp !== undefined) {
-      notes.push(`стоимость ${components.costGp} зм, фокусировка не заменяет`);
+      notes.push(`${components.costGp} зм, фокусировка не заменяет`);
     }
     if (components.consumed === true) notes.push("расходуется");
     const suffix = notes.length === 0 ? "" : ` — ${notes.join(", ")}`;
-    reminders.push(`Материальный: ${components.materialText}${suffix}`);
+    requirements.push(`Компонент: ${components.materialText}${suffix}`);
   }
 
-  return reminders;
+  return requirements;
 }
 
 /** Все условия FR-030 за один проход. Порядок предупреждений — от подготовки к оплате. */
@@ -281,7 +288,7 @@ export function checkAvailability(input: AvailabilityInput): Availability {
     available: warnings.length === 0,
     overridable: warnings.every((warning) => warning.overridable),
     warnings,
-    componentReminders: componentReminders(input.spell),
+    componentReminders: componentRequirements(input.spell.components),
   };
 }
 

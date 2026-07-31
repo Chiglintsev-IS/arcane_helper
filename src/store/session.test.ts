@@ -19,7 +19,9 @@ import {
   refundSpellSlot,
   regenerationDue,
   SessionError,
+  setSpellNote,
   setSunlight,
+  setTurnTracking,
   shortRest,
   spendRuneOnWardingSigil,
   takeDamage,
@@ -1028,5 +1030,64 @@ describe("активный эффект без указанной длитель
       clock,
     );
     expect(after.character.activeEffects[0]?.type).toBe("buff");
+  });
+});
+
+describe("заметка к заклинанию (FR-012)", () => {
+  it("сохраняется в состоянии и не попадает в журнал", () => {
+    const after = setSpellNote(session, "shield", "мастер считает, что щит гасит и «Волшебную стрелу»");
+
+    expect(after.character.spellNotes.shield).toBe(
+      "мастер считает, что щит гасит и «Волшебную стрелу»",
+    );
+    // Заметка не меняет игровое состояние, поэтому журнал не засоряет (F-10).
+    expect(after.journal).toHaveLength(0);
+  });
+
+  it("заменяет прежнюю заметку того же заклинания", () => {
+    const once = setSpellNote(session, "shield", "первая");
+    expect(setSpellNote(once, "shield", "вторая").character.spellNotes.shield).toBe("вторая");
+  });
+
+  it("сохраняет пробелы внутри и в конце: заметка пишется посимвольно", () => {
+    const after = setSpellNote(session, "shield", "гасит ");
+    expect(after.character.spellNotes.shield).toBe("гасит ");
+  });
+
+  it("пустая заметка удаляет запись, а не хранит пустую строку", () => {
+    const once = setSpellNote(session, "shield", "первая");
+    const cleared = setSpellNote(once, "shield", "   ");
+
+    expect(cleared.character.spellNotes).toEqual({});
+    expect(characterStateSchema.safeParse(cleared.character).success).toBe(true);
+  });
+})
+
+describe("переключение учёта хода (FR-143)", () => {
+  it("включается и обратимо через журнал", () => {
+    const enabled = setTurnTracking(session, true, clock);
+
+    expect(enabled.character.turnTracking.enabled).toBe(true);
+    expect(enabled.journal.at(-1)?.summaryRu).toBe("Учёт хода включён");
+    expect(undoLast(enabled).character.turnTracking.enabled).toBe(false);
+  });
+
+  it("выключается и возвращает доступность всего (FR-143)", () => {
+    const enabled = setTurnTracking(session, true, clock);
+    const spent = castSpell(
+      enabled,
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    expect(deriveTurnEconomy(spent).actionAvailable).toBe(false);
+
+    const disabled = setTurnTracking(spent, false, clock);
+    expect(deriveTurnEconomy(disabled).actionAvailable).toBe(true);
+  });
+
+  it("повторное переключение в то же состояние — ошибка, а не пустая запись журнала", () => {
+    expect(() => setTurnTracking(session, false, clock)).toThrow("Учёт хода уже выключен");
+    const enabled = setTurnTracking(session, true, clock);
+    expect(() => setTurnTracking(enabled, true, clock)).toThrow("Учёт хода уже включён");
   });
 });
