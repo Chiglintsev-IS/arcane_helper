@@ -16,6 +16,7 @@ import {
   exchangeBlood,
   JOURNAL_LIMIT,
   longRest,
+  recoverHitPointMaximum,
   refundSpellSlot,
   regenerationDue,
   SessionError,
@@ -1091,3 +1092,48 @@ describe("переключение учёта хода (FR-143)", () => {
     expect(() => setTurnTracking(enabled, true, clock)).toThrow("Учёт хода уже включён");
   });
 });
+
+describe("почасовое восстановление максимума хитов (FR-173)", () => {
+  function afterExchange(): Session {
+    return exchangeBlood(session, 9, clock);
+  }
+
+  it("возвращает не больше, чем утрачено кровавым колдовством", () => {
+    const spent = afterExchange();
+    expect(spent.character.hitPoints).toEqual({ current: 51, maximum: 51, maximumReduction: 9 });
+
+    const recovered = recoverHitPointMaximum(spent, clock);
+    // На 7 уровне возвращается 3 за час (rules-engine.md#регенерация-и-восстановление).
+    expect(recovered.character.hitPoints).toEqual({
+      current: 51,
+      maximum: 54,
+      maximumReduction: 6,
+    });
+  });
+
+  it("последний час возвращает только остаток", () => {
+    let state = exchangeBlood(session, 6, clock);
+    state = recoverHitPointMaximum(state, clock);
+    expect(state.character.hitPoints).toEqual({ current: 54, maximum: 57, maximumReduction: 3 });
+
+    state = recoverHitPointMaximum(state, clock);
+    expect(state.character.hitPoints).toEqual({ current: 54, maximum: 60, maximumReduction: 0 });
+  });
+
+  it("без снижения максимума восстанавливать нечего", () => {
+    expect(() => recoverHitPointMaximum(session, clock)).toThrow(SessionError);
+  });
+
+  it("под подавлением не работает: ни солнце, ни огонь восстановления не дают", () => {
+    const spent = setSunlight(afterExchange(), true, clock);
+    expect(() => recoverHitPointMaximum(spent, clock)).toThrow(/солнеч/);
+
+    const burned = takeDamage(afterExchange(), 5, clock, { fire: true });
+    expect(() => recoverHitPointMaximum(burned, clock)).toThrow(/огн/);
+  });
+
+  it("обратимо через журнал", () => {
+    const recovered = recoverHitPointMaximum(afterExchange(), clock);
+    expect(undoLast(recovered).character.hitPoints.maximumReduction).toBe(9);
+  });
+})

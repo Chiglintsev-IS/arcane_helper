@@ -21,7 +21,12 @@ import {
   type PaymentChoice,
   type TurnResource,
 } from "@/rules/availability";
-import { exchangeHitPoints, regenerationPerTurn, traitsSuppressed } from "@/rules/bloodMagic";
+import {
+  exchangeHitPoints,
+  maximumRecoveryPerHour,
+  regenerationPerTurn,
+  traitsSuppressed,
+} from "@/rules/bloodMagic";
 import {
   applyArcaneRecovery,
   CANTRIP_LEVEL,
@@ -405,6 +410,8 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
       : { type: spell.duration.type, ...(spell.duration.value === undefined ? {} : { value: spell.duration.value }) },
     isConcentration: spell.concentration,
     slotLevelUsed: slotLevelUsed(request),
+    // Вклад в КД копируется из заклинания, чтобы итог считался из одного состояния (ADR-0013).
+    ...(spell.armorClassEffect === undefined ? {} : { armorClass: spell.armorClassEffect }),
     endConditionRu: spell.concentration
       ? "До конца концентрации или истечения длительности."
       : "До истечения длительности.",
@@ -617,6 +624,52 @@ export function exchangeBlood(
       kind: "blood_exchange",
       summaryRu: `Кровавое колдовство: ${exchange.hitPointsSpent} хитов → ${exchange.pointsCreated} очков`,
       actionUsed: "action",
+    },
+    clock,
+  );
+}
+
+/**
+ * Почасовое восстановление максимума хитов (FR-173).
+ *
+ * За полный час без солнечного света и без урона огнём возвращается столько же, сколько даёт
+ * регенерация за ход, но не больше утраченного кровавым колдовством
+ * (rules-engine.md#регенерация-и-восстановление). Час отмечает игрок: таймеров в MVP нет.
+ *
+ * Текущие хиты не растут — восстанавливается именно потолок. Лечение поднимает текущие хиты, но
+ * упереться им можно только в снижённый максимум, и это единственный способ его вернуть.
+ */
+export function recoverHitPointMaximum(session: Session, clock: Clock): Session {
+  const { character } = session;
+  if (character.hitPoints.maximumReduction <= 0) {
+    throw new SessionError("Максимум хитов не снижен: восстанавливать нечего");
+  }
+  if (traitsSuppressed(character.suppression)) {
+    throw new SessionError(
+      character.suppression.firedUpon
+        ? "Урон огнём подавил особенности: максимум пока не восстанавливается"
+        : "Под прямым солнечным светом особенности не действуют",
+    );
+  }
+
+  const returned = Math.min(
+    maximumRecoveryPerHour(character.level),
+    character.hitPoints.maximumReduction,
+  );
+  const after: CharacterState = {
+    ...character,
+    hitPoints: {
+      ...character.hitPoints,
+      maximum: character.hitPoints.maximum + returned,
+      maximumReduction: character.hitPoints.maximumReduction - returned,
+    },
+  };
+  return commit(
+    session,
+    after,
+    {
+      kind: "hit_points_changed",
+      summaryRu: `Прошёл час: максимум хитов восстановлен на ${returned}`,
     },
     clock,
   );

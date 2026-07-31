@@ -13,6 +13,7 @@
 
 import { useMemo, useState } from "react";
 
+import { BloodMagicPanel } from "@/components/combat/BloodMagicPanel";
 import { CastWizard } from "@/components/cast/CastWizard";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
 import { SpellFilters } from "@/components/combat/SpellFilters";
@@ -26,8 +27,12 @@ import {
   beginTurn,
   castSpell,
   deriveTurnEconomy,
+  exchangeBlood,
+  recoverHitPointMaximum,
   setSpellNote,
+  setSunlight,
   setTurnTracking,
+  takeDamage,
   undoLast,
 } from "@/store/session";
 
@@ -59,6 +64,7 @@ export function CombatScreen() {
 
   const [filters, setFilters] = useState(NO_FILTERS);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
+  const [bloodOpen, setBloodOpen] = useState(false);
 
   const economy = useMemo(
     () => (session === null ? null : deriveTurnEconomy(session)),
@@ -116,6 +122,13 @@ export function CombatScreen() {
             className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-800"
           >
             Отменить
+          </button>
+          <button
+            type="button"
+            onClick={() => setBloodOpen(true)}
+            className="min-h-11 shrink-0 whitespace-nowrap rounded-xl border border-slate-200 px-3 text-xs dark:border-slate-800"
+          >
+            Кровь и хиты
           </button>
           <button
             type="button"
@@ -199,6 +212,20 @@ export function CombatScreen() {
           onClose={() => setOpenSpellId(null)}
         />
       )}
+
+      {bloodOpen ? (
+        <BloodMagicPanel
+          character={character}
+          actions={{
+            onExchange: (hitPoints) => apply((current) => exchangeBlood(current, hitPoints, clock)),
+            onDamage: (value, fire) =>
+              apply((current) => takeDamage(current, value, clock, { fire })),
+            onRecoverMaximum: () => apply((current) => recoverHitPointMaximum(current, clock)),
+            onSunlight: (under) => apply((current) => setSunlight(current, under, clock)),
+            onClose: () => setBloodOpen(false),
+          }}
+        />
+      ) : null}
 
       <CastWizard character={character} economy={economy} onConfirm={confirm} error={error} />
     </main>
