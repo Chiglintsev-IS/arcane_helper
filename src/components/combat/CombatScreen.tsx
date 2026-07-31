@@ -13,9 +13,12 @@
 
 import { useMemo, useState } from "react";
 
+import { ArcaneRecoverySheet } from "@/components/combat/ArcaneRecoverySheet";
 import { BloodMagicPanel } from "@/components/combat/BloodMagicPanel";
 import { BloodMagicRow } from "@/components/combat/BloodMagicRow";
+import { CampActions } from "@/components/combat/CampActions";
 import { CastWizard } from "@/components/cast/CastWizard";
+import { ConfirmSheet } from "@/components/combat/ConfirmSheet";
 import { ConcentrationCheckCard } from "@/components/combat/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
 import { ModeSwitcher } from "@/components/combat/ModeSwitcher";
@@ -34,31 +37,35 @@ import { BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
 import { rolesPresent } from "@/rules/combatRole";
 import {
   bestCastPlan,
-  countHiddenRituals,
   filterSpells,
   matchesTraits,
   traitsOf,
   NO_FILTERS,
 } from "@/rules/filters";
-import { compareCombatTraits, spellsForScreen } from "@/rules/modes";
+import { compareCombatTraits, spellsForScreen, type ScreenMode } from "@/rules/modes";
 import { toCastRequest, type CastDraft } from "@/store/castDraftStore";
 import { useDraft, useSession, useStores } from "@/store/provider";
 import {
   beginTurn,
   castSpell,
+  combatEndRecovery,
   deriveTurnEconomy,
+  endCombat,
   endConcentration,
   endEffect,
   exchangeBlood,
   grantTemporaryHitPoints,
   heal,
+  longRest,
   recoverHitPointMaximum,
   setScreenMode,
   setSpellNote,
   setSunlight,
+  shortRest,
   spendRuneOnWardingSigil,
   takeDamage,
   undoLast,
+  useArcaneRecovery,
   wardingSigilAvailable,
 } from "@/store/session";
 
@@ -111,6 +118,9 @@ export function CombatScreen() {
   const [bloodOpen, setBloodOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [damageOpen, setDamageOpen] = useState(false);
+  const [longRestOpen, setLongRestOpen] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [fightOverOpen, setFightOverOpen] = useState(false);
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const economy = useMemo(
@@ -149,7 +159,6 @@ export function CombatScreen() {
   // (FR-200). Карточка открывается из всей книги — режим не должен закрывать уже открытое.
   const inMode = spellsForScreen(SPELLS, character);
   const shown = filterSpells(inMode, filters, context);
-  const hiddenRituals = countHiddenRituals(inMode, filters, context);
   const available = availableFilters(inMode);
   // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам (FR-207).
   const bloodShown =
@@ -206,6 +215,23 @@ export function CombatScreen() {
     }
   };
 
+  /**
+   * Смена режима (FR-204) и вопрос о конце боя (FR-216).
+   *
+   * Режим переключается сразу и без условий: игрок мог уйти в книгу за справкой посреди боя. Вопрос
+   * задаётся только на выходе из боя и только когда ответ «да» что-то изменит, — при полном
+   * здоровье он предлагал бы восстановить нечего.
+   */
+  const changeMode = (mode: ScreenMode): void => {
+    const leavingFight = character.screenMode === "combat" && mode !== "combat";
+    // Наборы фильтров у режимов разные, и выбранное в одном становится в другом невидимым:
+    // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым это
+    // снять, на экране уже нет (FR-212).
+    setFilters(NO_FILTERS);
+    apply((current) => setScreenMode(current, mode));
+    if (leavingFight && combatEndRecovery(character) > 0) setFightOverOpen(true);
+  };
+
   /** Подтверждение применения: одна транзакция, одна запись журнала (FR-023). */
   const confirm = (confirmed: CastDraft): void => {
     const failure = apply((current) => castSpell(current, toCastRequest(confirmed), clock));
@@ -218,16 +244,7 @@ export function CombatScreen() {
   return (
     <main className="flex h-dvh flex-col">
       <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
-        <ModeSwitcher
-          mode={character.screenMode}
-          onChange={(mode) => {
-            // Наборы фильтров у режимов разные, и выбранное в одном становится в другом невидимым:
-            // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым
-            // это снять, на экране уже нет (FR-212).
-            setFilters(NO_FILTERS);
-            apply((current) => setScreenMode(current, mode));
-          }}
-        />
+        <ModeSwitcher mode={character.screenMode} onChange={changeMode} />
 
         <ResourceHeader
           character={character}
@@ -239,14 +256,32 @@ export function CombatScreen() {
           onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
         />
 
+        {/*
+          Операции привала — только на привале (FR-202, FR-215). В книге их нет: там читают и
+          готовятся, а отдыхают на привале, и кнопка отдыха посреди чтения предлагала бы восемь
+          часов случайным нажатием.
+        */}
+        {character.screenMode === "camp" ? (
+          <CampActions
+            character={character}
+            onShortRest={() => apply((current) => shortRest(current, clock))}
+            onLongRest={() => setLongRestOpen(true)}
+            onArcaneRecovery={() => setRecoveryOpen(true)}
+            onRecoverMaximum={() => apply((current) => recoverHitPointMaximum(current, clock))}
+          />
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => apply((current) => beginTurn(current, clock))}
-            className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold leading-tight text-white"
-          >
-            Мой ход начался
-          </button>
+          {/* Ход начинается только в бою: вне боя ходов нет, и кнопка звала бы начать то, чего не происходит (FR-202). */}
+          {character.screenMode === "combat" ? (
+            <button
+              type="button"
+              onClick={() => apply((current) => beginTurn(current, clock))}
+              className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold leading-tight text-white"
+            >
+              Мой ход начался
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={lastEntry === undefined}
@@ -255,7 +290,7 @@ export function CombatScreen() {
             aria-label={
               lastEntry === undefined ? "Отменить" : `Отменить: ${lastEntry.summaryRu}`
             }
-            className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-800"
+            className="min-h-11 grow rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-800"
           >
             Отменить
           </button>
@@ -275,16 +310,22 @@ export function CombatScreen() {
         )}
       </div>
 
-      {/* Полоса фильтров жмётся по вертикали: каждые 8 пикселей здесь — это восьмая часть карточки. */}
-      <div className="shrink-0 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
-        <SpellFilters
-          filters={filters}
-          available={available}
-          mode={character.screenMode}
-          onChange={setFilters}
-          onReset={() => setFilters(NO_FILTERS)}
-        />
-      </div>
+      {/*
+        Полоса фильтров жмётся по вертикали: каждые 8 пикселей здесь — это восьмая часть карточки.
+        На привале её нет вовсе: список там из пяти строк, отобранных самим режимом, и полоса выше
+        карточки над таким списком — чистая потеря (FR-202).
+      */}
+      {character.screenMode === "camp" ? null : (
+        <div className="shrink-0 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+          <SpellFilters
+            filters={filters}
+            available={available}
+            mode={character.screenMode}
+            onChange={setFilters}
+            onReset={() => setFilters(NO_FILTERS)}
+          />
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
         {rows.length > 0 ? (
@@ -296,13 +337,7 @@ export function CombatScreen() {
         {/* Пусто — только когда не подошло вообще ничего, включая «Магию крови». */}
         {rows.length === 0 ? (
           <div className="flex flex-col items-start gap-2 text-sm">
-            <p>
-              Под выбранные фильтры не подходит ни одно заклинание
-              {hiddenRituals > 0
-                ? `, а ещё ${hiddenRituals} ритуалов скрыты как неподготовленные`
-                : ""}
-              .
-            </p>
+            <p>Под выбранные фильтры не подходит ни одно заклинание.</p>
             <button
               type="button"
               onClick={() => setFilters(NO_FILTERS)}
@@ -353,6 +388,49 @@ export function CombatScreen() {
             }
           }}
           onClose={() => setPanelOpen(false)}
+        />
+      ) : null}
+
+      {/* Долгий отдых уничтожает состояние боя, поэтому спрашивается один раз (FR-133). */}
+      {longRestOpen ? (
+        <ConfirmSheet
+          title="Долгий отдых?"
+          body="Вернутся все ячейки и руны, снимется концентрация, закроются эффекты короче отдыха, обнулятся очки заклинаний и временные хиты."
+          confirmLabel="Отдохнуть"
+          cancelLabel="Отмена"
+          onConfirm={() => {
+            if (apply((current) => longRest(current, clock)) === null) setLongRestOpen(false);
+          }}
+          onCancel={() => setLongRestOpen(false)}
+        />
+      ) : null}
+
+      {recoveryOpen ? (
+        <ArcaneRecoverySheet
+          character={character}
+          onConfirm={(plan) => {
+            if (apply((current) => useArcaneRecovery(current, plan, clock)) === null) {
+              setRecoveryOpen(false);
+            }
+          }}
+          onCancel={() => setRecoveryOpen(false)}
+        />
+      ) : null}
+
+      {/*
+        Восстановление предлагается, а не выполняется молча: половина максимума названа игроком, но
+        из документа расы не следует (OQ-15, пункт 6). Отказ ничего не меняет — бой продолжается.
+      */}
+      {fightOverOpen ? (
+        <ConfirmSheet
+          title="Бой закончен?"
+          body={`Регенерация вне боя идёт непрерывно: здоровье поднимется до половины максимума, это ${combatEndRecovery(character)} хитов.`}
+          confirmLabel="Да, бой закончен"
+          cancelLabel="Нет, продолжается"
+          onConfirm={() => {
+            if (apply((current) => endCombat(current, clock)) === null) setFightOverOpen(false);
+          }}
+          onCancel={() => setFightOverOpen(false)}
         />
       ) : null}
 

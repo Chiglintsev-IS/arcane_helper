@@ -192,10 +192,20 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     // Ритуалы Торна не подготовлены, значит в бою их нет — и переключателя тоже (FR-002, FR-209).
     expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
 
-    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
-    // На привале ритуалы есть, а реакций нет — набор переключателей меняется вместе со списком.
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+    // В книге ритуалы есть, а «Действия» нет: время накладывания спрашивают только в бою (FR-212).
     expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Реакция" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Действие" })).toBeNull();
+  });
+
+  it("на привале полосы фильтров нет: список короткий и отобран режимом (FR-202)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+
+    expect(screen.queryByLabelText("Фильтры")).toBeNull();
+    expect(within(screen.getByLabelText(/^Заклинания/)).getAllByRole("listitem")).toHaveLength(5);
   });
 });
 
@@ -259,6 +269,146 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).queryByText("Щит")).toBeNull();
     expect(within(list).getByText("Луч холода")).toBeDefined();
+  });
+});
+
+describe("операции привала (FR-202, FR-215)", () => {
+  /** Торн на привале, потративший ячейку первого уровня: восстанавливать есть что. */
+  async function atCamp(character: CharacterState = createThorne()) {
+    const spent = {
+      ...character,
+      screenMode: "camp" as const,
+      spellSlots: { ...character.spellSlots, 1: { maximum: 4, remaining: 2 } },
+    };
+    return renderWithStores(<CombatScreen />, spent);
+  }
+
+  it("короткий отдых доступен кнопкой и пишется в журнал", async () => {
+    const user = userEvent.setup();
+    const { stores } = await atCamp();
+
+    await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
+
+    expect(stores.session.getState().session?.journal.at(-1)?.kind).toBe("short_rest");
+  });
+
+  it("долгий отдых требует подтверждения и возвращает ячейки (FR-133)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await atCamp();
+
+    await user.click(screen.getByRole("button", { name: /Долгий отдых/ }));
+    // Случайное нажатие уничтожает состояние боя, поэтому между кнопкой и отдыхом стоит выбор.
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(2);
+
+    await user.click(screen.getByRole("button", { name: "Отдохнуть" }));
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
+  });
+
+  it("отмена подтверждения ничего не меняет", async () => {
+    const user = userEvent.setup();
+    const { stores } = await atCamp();
+
+    await user.click(screen.getByRole("button", { name: /Долгий отдых/ }));
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+    expect(stores.session.getState().session?.journal).toHaveLength(0);
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(2);
+  });
+
+  it("магическое восстановление возвращает выбранные ячейки (FR-131)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await atCamp();
+
+    await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
+    await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
+    await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
+
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
+    expect(stores.session.getState().session?.character.arcaneRecoveryAvailable).toBe(false);
+  });
+
+  it("израсходованное восстановление кнопки не получает (FR-002)", async () => {
+    await atCamp({ ...createThorne(), arcaneRecoveryAvailable: false });
+    expect(screen.queryByRole("button", { name: /Магическое восстановление/ })).toBeNull();
+  });
+
+  it("без снижения максимума «Прошёл час» не предлагается (FR-002)", async () => {
+    await atCamp();
+    expect(screen.queryByRole("button", { name: /Прошёл час/ })).toBeNull();
+  });
+
+  it("«Прошёл час» возвращает часть снижённого максимума (FR-173)", async () => {
+    const user = userEvent.setup();
+    const reduced = createThorne();
+    reduced.screenMode = "camp";
+    reduced.hitPoints = { current: 51, maximum: 51, maximumReduction: 9 };
+    await renderWithStores(<CombatScreen />, reduced);
+
+    await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
+    // На 7 уровне возвращается 3 за час: максимум 51 → 54, текущие не растут.
+    expect(screen.getByLabelText("Ресурсы").textContent).toContain("51/54");
+  });
+
+  it("вне боя нет ни кнопки хода, ни счётчика раундов (FR-202)", async () => {
+    await atCamp();
+
+    expect(screen.queryByRole("button", { name: "Мой ход начался" })).toBeNull();
+    expect(screen.getByLabelText("Ресурсы").textContent).not.toContain("раунд");
+  });
+
+  it("в книге операций привала нет: там читают, а не отдыхают", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByRole("button", { name: /Долгий отдых/ })).toBeNull();
+  });
+});
+
+describe("конец боя (FR-216)", () => {
+  function wounded(): CharacterState {
+    const character = createThorne();
+    character.hitPoints = { current: 12, maximum: 60, maximumReduction: 0 };
+    return character;
+  }
+
+  it("уход из боя с раной спрашивает и восстанавливает до половины максимума", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />, wounded());
+
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+
+    // Режим переключается сразу и без условий: игрок мог уйти за справкой посреди боя.
+    expect(stores.session.getState().session?.character.screenMode).toBe("camp");
+
+    await user.click(screen.getByRole("button", { name: "Да, бой закончен" }));
+    expect(stores.session.getState().session?.character.hitPoints.current).toBe(30);
+  });
+
+  it("«нет, продолжается» ничего не меняет", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />, wounded());
+
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+    await user.click(screen.getByRole("button", { name: "Нет, продолжается" }));
+
+    expect(stores.session.getState().session?.character.hitPoints.current).toBe(12);
+    expect(stores.session.getState().session?.journal).toHaveLength(0);
+  });
+
+  it("при здоровье выше половины вопрос не задаётся: отвечать «да» было бы не на что", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    expect(screen.queryByRole("dialog", { name: "Бой закончен?" })).toBeNull();
+  });
+
+  it("переход между привалом и книгой вопроса не задаёт: бой уже позади", async () => {
+    const user = userEvent.setup();
+    const character = wounded();
+    character.screenMode = "camp";
+    await renderWithStores(<CombatScreen />, character);
+
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+    expect(screen.queryByRole("dialog", { name: "Бой закончен?" })).toBeNull();
   });
 });
 

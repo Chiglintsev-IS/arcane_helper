@@ -166,16 +166,7 @@ function matchesLevel(spell: Spell, filters: SpellFilters): boolean {
   return filters.levels.includes(spell.level);
 }
 
-/**
- * Ритуал, который не подготовлен, в боевом списке скрыт: +10 минут накладывания делают его
- * бесполезным в бою (F-09). Показывается по фильтру «ритуал».
- */
-function hiddenAsRitual(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
-  return spell.ritual && !filters.ritual && !isReady(spell, context.character);
-}
-
 function matches(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
-  if (hiddenAsRitual(spell, filters, context)) return false;
   if (!matchesTraits(traitsOf(spell), filters)) return false;
   if (!matchesLevel(spell, filters)) return false;
   if (filters.ritual && !spell.ritual) return false;
@@ -192,18 +183,6 @@ export function filterSpells(
   context: FilterContext,
 ): Spell[] {
   return spells.filter((spell) => matches(spell, filters, context));
-}
-
-/**
- * Сколько ритуалов скрыто правилом боевого списка. Нужно, чтобы пустой результат объяснялся
- * причиной, а не выглядел поломкой приложения (F-01).
- */
-export function countHiddenRituals(
-  spells: readonly Spell[],
-  filters: SpellFilters,
-  context: FilterContext,
-): number {
-  return spells.filter((spell) => hiddenAsRitual(spell, filters, context)).length;
 }
 
 /** Переключение значения внутри категории фильтров. */

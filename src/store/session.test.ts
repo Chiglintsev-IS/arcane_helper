@@ -9,8 +9,10 @@ import {
   beginTurn,
   bloodCostFor,
   castSpell,
+  combatEndRecovery,
   createSession,
   deriveTurnEconomy,
+  endCombat,
   endConcentration,
   endEffect,
   exchangeBlood,
@@ -1144,10 +1146,12 @@ describe("правка хитов: лечение и временные (FR-205,
   });
 
   it("упирается в снижённый максимум, а не в исходный (FR-172)", () => {
-    const reduced: Session = {
-      ...session,
-      character: { ...session.character, hitPoints: { current: 40, maximum: 60, maximumReduction: 9 } },
-    };
+    // Состояние берётся у настоящей операции: обмен уменьшает сам максимум, а `maximumReduction`
+    // хранит только то, сколько предстоит вернуть по часу. Придуманная пара «максимум 60, снижение
+    // 9» в жизни не встречается, и тест на ней подтверждал бы вычитание снижения дважды.
+    const reduced = exchangeBlood(hurt(40), 9, clock);
+    expect(reduced.character.hitPoints).toEqual({ current: 31, maximum: 51, maximumReduction: 9 });
+
     expect(heal(reduced, 30, clock).character.hitPoints.current).toBe(51);
   });
 
@@ -1268,6 +1272,41 @@ describe("заметка к заклинанию (FR-012)", () => {
   });
 })
 
+
+describe("конец боя (FR-216)", () => {
+  function wounded(current: number): Session {
+    return {
+      ...session,
+      character: { ...session.character, hitPoints: { current, maximum: 60, maximumReduction: 0 } },
+    };
+  }
+
+  it("поднимает здоровье до половины максимума", () => {
+    const after = endCombat(wounded(12), clock);
+    expect(after.character.hitPoints.current).toBe(30);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен: восстановлено 18 до половины максимума");
+  });
+
+  it("выше половины не поднимает: до полного здоровья регенерация не доводит", () => {
+    expect(endCombat(wounded(29), clock).character.hitPoints.current).toBe(30);
+  });
+
+  it("на здоровье не ниже половины отказывает, а не пишет пустую запись", () => {
+    expect(() => endCombat(wounded(30), clock)).toThrow(SessionError);
+    expect(() => endCombat(session, clock)).toThrow(/восстанавливать нечего/);
+  });
+
+  it("считает половину от снижённого максимума, а не от исходного (FR-172)", () => {
+    // Обмен уменьшил максимум до 51 — половина от него 25, а не 30.
+    const spent = exchangeBlood(wounded(20), 9, clock);
+    expect(combatEndRecovery(spent.character)).toBe(14);
+    expect(endCombat(spent, clock).character.hitPoints.current).toBe(25);
+  });
+
+  it("восстановление обратимо (FR-111)", () => {
+    expect(undoLast(endCombat(wounded(12), clock)).character.hitPoints.current).toBe(12);
+  });
+});
 
 describe("почасовое восстановление максимума хитов (FR-173)", () => {
   function afterExchange(): Session {

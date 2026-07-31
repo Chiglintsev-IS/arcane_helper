@@ -798,16 +798,20 @@ export function takeDamage(
 /**
  * Лечение (FR-205).
  *
- * Выше максимума не поднимает, а максимум уже учитывает снижение от кровавого колдовства
- * ([FR-172](../../docs/features/F-15-blood-magic.md#fr-172)) — иначе зелье «долечивало» бы до числа,
- * которого у персонажа нет. Временные хиты лечением не восстанавливаются: это не хиты (FR-206).
+ * Потолок — `hitPoints.maximum`, и он уже снижен кровавым колдовством: `exchangeBlood` уменьшает сам
+ * максимум, а `maximumReduction` хранит лишь то, сколько его предстоит вернуть по часу
+ * ([FR-172](../../docs/features/F-15-blood-magic.md#fr-172)). Вычитать снижение ещё раз значило бы
+ * снизить максимум дважды: после обмена 9 хитов персонаж с максимумом 51 не смог бы вылечиться выше
+ * 42, и лечение молча упиралось бы в число, которого нет ни на одном экране.
+ *
+ * Временные хиты лечением не восстанавливаются: это не хиты (FR-206).
  */
 export function heal(session: Session, amount: number, clock: Clock): Session {
   const { character } = session;
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new SessionError(`Лечение должно быть целым положительным, получено: ${amount}`);
   }
-  const ceiling = character.hitPoints.maximum - character.hitPoints.maximumReduction;
+  const ceiling = character.hitPoints.maximum;
   const current = Math.min(ceiling, character.hitPoints.current + amount);
   const restored = current - character.hitPoints.current;
   if (restored === 0) {
@@ -844,6 +848,41 @@ export function grantTemporaryHitPoints(session: Session, amount: number, clock:
     session,
     { ...character, temporaryHitPoints: amount },
     { kind: "hit_points_changed", summaryRu: `Временные хиты: ${amount}` },
+    clock,
+  );
+}
+
+/**
+ * Сколько здоровья вернёт конец боя (FR-216). Ноль — восстанавливать нечего.
+ *
+ * Половина максимума — со слов игрока про регенерацию тролля. В документе расы регенерация описана
+ * иначе — 3 хита в начале своего хода, — и половина из неё не следует
+ * ([OQ-15](../../docs/open-questions.md#oq-15), пункт 6). Поэтому приложение считает это число, но
+ * не применяет само: восстановление предлагается кнопкой.
+ */
+export function combatEndRecovery(character: CharacterState): number {
+  const half = Math.floor(character.hitPoints.maximum / 2);
+  return Math.max(0, half - character.hitPoints.current);
+}
+
+/** Конец боя: здоровье поднимается до половины максимума, если оно ниже (FR-216). */
+export function endCombat(session: Session, clock: Clock): Session {
+  const { character } = session;
+  const restored = combatEndRecovery(character);
+  if (restored === 0) {
+    throw new SessionError("Здоровье не ниже половины максимума: восстанавливать нечего");
+  }
+  const after: CharacterState = {
+    ...character,
+    hitPoints: { ...character.hitPoints, current: character.hitPoints.current + restored },
+  };
+  return commit(
+    session,
+    after,
+    {
+      kind: "hit_points_changed",
+      summaryRu: `Бой закончен: восстановлено ${restored} до половины максимума`,
+    },
     clock,
   );
 }

@@ -216,4 +216,35 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await page.getByRole("button", { name: "Сотворить" }).click();
   await expect(page.getByRole("dialog", { name: /Применение/ })).toBeVisible();
   await scan("мастер применения");
+
+  // Привал — второй по времени экран после боя: там отдыхают и готовятся (FR-202).
+  await page.getByRole("button", { name: "Отмена" }).click();
+  await page.getByRole("button", { name: "Закрыть" }).click();
+  await page.getByRole("radio", { name: /^Привал/ }).click();
+  await scan("привал");
+
+  await page.getByRole("button", { name: /Магическое восстановление/ }).click();
+  await expect(page.getByRole("dialog", { name: "Магическое восстановление" })).toBeVisible();
+  await scan("магическое восстановление");
+});
+
+test("camp mode reaches rest and recovery", async ({ page }) => {
+  // Тратим ячейку в бою, чтобы на привале было что восстанавливать.
+  await page.getByRole("button", { name: /Доспехи мага/ }).click();
+  await page.getByRole("button", { name: "Сотворить" }).click();
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByRole("button", { name: "Подтвердить" }).click();
+  await expect(page.getByLabel("Ячейки заклинаний")).toContainText("3/4");
+
+  await page.getByRole("radio", { name: /^Привал/ }).click();
+
+  // Вне боя ходов нет: ни кнопки, ни счётчика раундов (FR-202).
+  await expect(page.getByRole("button", { name: "Мой ход начался" })).toBeHidden();
+  // Точное имя: подстрока «Ресурсы» есть и у списка «Прочие ресурсы».
+  await expect(page.getByLabel("Ресурсы", { exact: true })).not.toContainText("раунд");
+
+  // Долгий отдых уничтожает состояние боя, поэтому спрашивает (FR-133).
+  await page.getByRole("button", { name: /Долгий отдых/ }).click();
+  await page.getByRole("button", { name: "Отдохнуть" }).click();
+  await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
 });

@@ -9,7 +9,6 @@ import {
   bestCastPlan,
   canCastNow,
   castOptions,
-  countHiddenRituals,
   filterSpells,
   matchesTraits,
   NO_FILTERS,
@@ -54,22 +53,10 @@ function withoutSlots(): CharacterState {
 }
 
 describe("filterSpells: список без фильтров", () => {
-  it("показывает заговоры и подготовленные, скрывая неподготовленные ритуалы (F-09)", () => {
-    expect(ids(filterSpells(allSpells, NO_FILTERS, context()))).toEqual([
-      "shocking-grasp",
-      "ray-of-frost",
-      "message",
-      "mending",
-      "shield",
-      "absorb-elements",
-      "mage-armor",
-      "disguise-self",
-    ]);
-  });
-
-  it("сообщает, сколько ритуалов скрыто, чтобы пустой список можно было объяснить", () => {
-    expect(countHiddenRituals(allSpells, NO_FILTERS, context())).toBe(4);
-    expect(countHiddenRituals(allSpells, filters({ ritual: true }), context())).toBe(0);
+  it("ничего не скрывает: отбор по ситуации — дело режима, а не фильтров", () => {
+    // Неподготовленные ритуалы раньше пропадали из списка и доставались фильтром «Ритуал». Правило
+    // писалось для боя, где их и так нет (FR-209), а на привале прятало сам смысл режима (FR-202).
+    expect(ids(filterSpells(allSpells, NO_FILTERS, context()))).toEqual(ids(allSpells));
   });
 
   it("показывает ритуалы по фильтру «ритуал»", () => {
@@ -90,6 +77,8 @@ describe("filterSpells: значения одной категории соед�
       "message",
       "mage-armor",
       "disguise-self",
+      "detect-magic",
+      "unseen-servant",
     ]);
   });
 
@@ -108,7 +97,8 @@ describe("filterSpells: значения одной категории соед�
     const both = ids(filterSpells(allSpells, filters({ levels: [0, 1] }), context()));
 
     expect(onlyCantrips).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
-    expect(both).toHaveLength(8);
+    // Все двенадцать: четыре заговора и восемь заклинаний первого уровня.
+    expect(both).toHaveLength(12);
   });
 });
 
