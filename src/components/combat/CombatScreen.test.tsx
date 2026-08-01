@@ -1170,3 +1170,35 @@ describe("шапка «Книги»: очки видны, руны нет (FR-21
     expect(within(header).getByText(/Очки 0/)).toBeDefined();
   });
 });
+
+describe("«Знаки ограждения» вне боя (FR-153)", () => {
+  it("кнопка «Реакции» есть во всех трёх режимах", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();
+
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+    expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+    expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();
+  });
+
+  it("вне боя лист предлагает руну, хотя списка заклинаний в режиме нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+
+    const sheet = screen.getByRole("dialog", { name: "Реакции" });
+    await user.click(within(sheet).getByRole("radio", { name: /провалил спасбросок/i }));
+
+    await user.click(within(sheet).getByRole("button", { name: /Потратить руну/ }));
+
+    expect(screen.getByLabelText(/Ячейки заклинаний/).textContent).toBeDefined();
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).getByText(/Руны 2\/3/)).toBeDefined();
+  });
+});

@@ -387,20 +387,24 @@ export function CombatScreen() {
               >
                 {economy.inFight ? "Мой ход" : "Начать бой"}
               </button>
-              {/*
-                Реакции — отдельный вход, видимый независимо от фильтров и прокрутки списка
-                (FR-060): триггер приходит в чужой ход, и искать заклинание по списку в этот момент
-                некогда.
-              */}
-              <button
-                type="button"
-                onClick={() => setReactionsOpen(true)}
-                className="min-h-11 shrink-0 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
-              >
-                Реакции
-              </button>
             </>
           ) : null}
+          {/*
+            Реакции — отдельный вход, видимый независимо от фильтров и прокрутки списка (FR-060):
+            триггер приходит в чужой ход, и искать заклинание по списку в этот момент некогда.
+
+            Кнопка стоит во всех режимах, а не только в бою (FR-153): провалить спасбросок Ловкости
+            или Телосложения можно и от ловушки в коридоре, а руна превращает провал в успех
+            независимо от того, идёт ли бой. Состав листа при этом задаёт режим: во «Вне боя» списка
+            заклинаний нет, и в листе остаются одни «Знаки ограждения».
+          */}
+          <button
+            type="button"
+            onClick={() => setReactionsOpen(true)}
+            className="min-h-11 shrink-0 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
+          >
+            Реакции
+          </button>
           <button
             type="button"
             disabled={lastEntry === undefined}
