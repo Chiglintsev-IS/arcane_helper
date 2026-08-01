@@ -484,7 +484,8 @@ describe("«Магия крови» в «Книге» (FR-207)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />, inBookMode());
 
-    await user.click(screen.getByRole("button", { name: "✓Подготовлено" }));
+    // Имя доступное, а не текстовое: значок «✓» помечен `aria-hidden` и в имя не входит.
+    await user.click(screen.getByRole("button", { name: "Подготовлено" }));
 
     const list = screen.getByRole("list", { name: "Заклинания и действия" });
     const text = list.textContent ?? "";
