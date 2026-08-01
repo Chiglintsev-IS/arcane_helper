@@ -46,7 +46,7 @@ import { findBan, matchesQuery } from "@/rules/restrictions";
 import {
   bestCastPlan,
   filterSpells,
-  matchesTraits,
+  matchesActionRow,
   traitsOf,
   NO_FILTERS,
 } from "@/rules/filters";
@@ -185,8 +185,14 @@ export function CombatScreen() {
   const shown = filterSpells(searched, filters, context);
   const available = availableFilters(inMode);
   // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам (FR-207).
+  // Она стоит и в «Книге»: очки заклинаний покупают вне боя, а «Книга» — единственный вход к
+  // заклинаниям вне боя (FR-203). Во «Вне боя» её нет, потому что списка там нет вовсе (FR-202).
+  // Поиску она отвечает тоже (FR-162): иначе запрос «дракон» в «Книге» находил бы строку, которая
+  // явно не подходит, — то самое вранье, от которого список избавляют фильтры.
   const bloodShown =
-    character.screenMode === "combat" && matchesTraits(BLOOD_MAGIC_TRAITS, filters);
+    character.screenMode !== "camp" &&
+    matchesActionRow(BLOOD_MAGIC_TRAITS, filters) &&
+    matchesQuery({ nameRu: "Магия крови", nameEn: "" }, query);
 
   /**
    * Один список, а не два (FR-207, FR-210). Обмен хитов на очки ячейку не тратит, значит по цене он
@@ -214,9 +220,17 @@ export function CombatScreen() {
     />
   ));
   if (bloodShown) {
-    const after = shown.findIndex(
-      (spell) => compareCombatTraits(traitsOf(spell), BLOOD_MAGIC_TRAITS) > 0,
-    );
+    // Позиция ищется по-разному, потому что «Бой» и «Книга» сортированы по-разному. В «Бою» список
+    // уже переставлен `orderForCombat` по тому же ключу `compareCombatTraits` — реакции вынесены
+    // вперёд, — и искать по нему корректно: реакция уровня выше нуля всё равно упорядочена раньше
+    // «Магии крови». В «Книге» список идёт «уровень, затем алфавит» без такой перестановки, и та же
+    // проверка нашла бы «Щит» (реакция первого уровня) раньше заговоров только потому, что он
+    // реакция, — а этот список реакции вперёд не выносит. Проверка по одному уровню верна для обоих
+    // случаев здесь, потому что содержимое отсортировано по уровню в обоих списках.
+    const after =
+      character.screenMode === "combat"
+        ? shown.findIndex((spell) => compareCombatTraits(traitsOf(spell), BLOOD_MAGIC_TRAITS) > 0)
+        : shown.findIndex((spell) => traitsOf(spell).level > BLOOD_MAGIC_TRAITS.level);
     rows.splice(after === -1 ? rows.length : after, 0, (
       <BloodMagicRow
         key="blood-magic"

@@ -161,6 +161,25 @@ export function matchesTraits(traits: ActionTraits, filters: SpellFilters): bool
   return true;
 }
 
+/**
+ * Полный отбор строки, заклинанием не являющейся, — включая фильтры, которых в бою нет
+ * ([FR-207](../../docs/features/F-18-screen-modes.md#fr-207), FR-212).
+ *
+ * Отдельно от `matchesTraits`, потому что ту зовут и для заклинаний: поле `level` у заклинания
+ * означает его уровень, а у «Магии крови» — цену в ячейках, и отбор по уровню внутри общей функции
+ * отсёк бы заклинания их собственным фильтром.
+ *
+ * «Подготовлено» строку не прячет: подготовка к обмену не относится вовсе, а игрок ждёт в этом
+ * списке того же состава, что в бою. «Ритуал» и уровень прячут: обмен не ритуал, и уровня
+ * заклинания у него нет — под фильтром «1 ур.» строка обещала бы заклинание первого уровня.
+ */
+export function matchesActionRow(traits: ActionTraits, filters: SpellFilters): boolean {
+  if (!matchesTraits(traits, filters)) return false;
+  if (filters.ritual) return false;
+  if (filters.levels.length > 0) return false;
+  return true;
+}
+
 function matchesLevel(spell: Spell, filters: SpellFilters): boolean {
   if (filters.levels.length === 0) return true;
   return filters.levels.includes(spell.level);

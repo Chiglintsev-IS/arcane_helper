@@ -10,6 +10,7 @@ import {
   canCastNow,
   castOptions,
   filterSpells,
+  matchesActionRow,
   matchesTraits,
   NO_FILTERS,
   toggleValue,
@@ -253,6 +254,27 @@ describe("matchesTraits: строка, не являющаяся заклина�
       concentration: false,
       role: "defense",
     });
+  });
+});
+
+describe("matchesActionRow: книжные фильтры для строки-действия (FR-207, FR-212)", () => {
+  it("«Подготовлено» её не прячет: подготовка к обмену не относится", () => {
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ prepared: true }))).toBe(true);
+  });
+
+  it("«Ритуал» прячет: обмен ритуалом не творится", () => {
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ ritual: true }))).toBe(false);
+  });
+
+  it("любой уровень прячет: у обмена уровня заклинания нет вовсе", () => {
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ levels: [0] }))).toBe(false);
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ levels: [1] }))).toBe(false);
+  });
+
+  it("общие фильтры работают так же, как раньше", () => {
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(true);
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, NO_FILTERS)).toBe(true);
   });
 });
 

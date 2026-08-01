@@ -819,6 +819,45 @@ describe("магия крови в списке действий (FR-207)", () =
   // появляется, только когда не подошло вообще ничего.
 });
 
+describe("«Магия крови» в «Книге» (FR-207)", () => {
+  it("стоит в списке книги сразу за заговорами", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    const list = screen.getByRole("list", { name: "Заклинания и действия" });
+    const names = within(list)
+      .getAllByRole("listitem")
+      .map((row) => row.textContent ?? "");
+
+    const blood = names.findIndex((text) => text.startsWith("Магия крови"));
+    const firstLevelled = names.findIndex((text) => text.startsWith("Щит"));
+    expect(blood).toBeGreaterThan(-1);
+    expect(blood).toBeLessThan(firstLevelled);
+  });
+
+  it("«Подготовлено» оставляет тот же состав, что в бою: заговоры и магия крови на месте", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    // Имя доступное, а не текстовое: значок «✓» помечен `aria-hidden` и в имя не входит.
+    await user.click(screen.getByRole("button", { name: "Подготовлено" }));
+
+    const list = screen.getByRole("list", { name: "Заклинания и действия" });
+    const text = list.textContent ?? "";
+    expect(text).toContain("Магия крови");
+    expect(text).toContain("Электрошок");
+    expect(text).toContain("Молния");
+  });
+
+  it("фильтр уровня её прячет: уровня заклинания у обмена нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.click(screen.getByRole("button", { name: "1 ур." }));
+
+    expect(screen.queryByText("Магия крови")).toBeNull();
+  });
+});
+
 describe("краткая карточка (FR-010)", () => {
   it("показывает время, цену, дальность и пересказ эффекта", async () => {
     await renderWithStores(<CombatScreen />);
