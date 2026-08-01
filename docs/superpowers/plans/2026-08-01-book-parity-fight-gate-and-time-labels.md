@@ -1281,3 +1281,203 @@ git commit -m "Record the fourth fitting in the roadmap"
 **Слово «Каст» в план не попало намеренно.** Оно стояло в наброске варианта при выборе, но не в спеке: «каст» не входит в [глоссарий](../../glossary.md), а правило проекта — брать слова оттуда. И спека, и план говорят «Накладывать».
 
 **Согласованность имён.** `timeSpanAccusativeRu`, `TimeUnit`, `castingTimePhrase`, `durationPhrase`, `matchesActionRow`, `COMBAT_NOT_STARTED_MESSAGE`, `checkCombatStarted`, поле `inFight` в `TurnResources` — каждое объявлено ровно в одной задаче и используется под тем же именем в остальных.
+
+---
+
+### Task 7: FR-145, FR-095 — сотворённое вне боя не переносится в бой
+
+> Добавлено 2026-08-01 по замечанию игрока четвёртой примерки, уже после того как задачи 1-4 были сделаны. Задача независима от задачи 5 и делается после неё.
+
+**Files:**
+- Modify: `src/store/session.ts` (`castSpell` — запись `actionUsed`; `expireRoundEffects` или `castSpell` — немедленное истечение раундового эффекта вне боя)
+- Modify: `docs/features/F-06-resources.md` (новое FR-145), `docs/features/F-08-active-effects.md` (новое FR-095)
+- Modify: `docs/features/README.md` (диапазоны F-06 и F-08)
+- Test: `src/store/session.test.ts`
+
+**Interfaces:**
+- Consumes: `turnTracked(character)`, `actionUsedBy(spell)`, `expireRoundEffects`, `deriveTurnEconomy`.
+- Produces: ничего для других задач.
+
+**Что сломано.** Замечание игрока: «я не в бою использовал заклинания, а потом при переходе в бой у меня уже КД» и «заклинания из книги вне боя не должны тратить действия». Оба верны, и это два разных протекания:
+
+- **Действие.** `castSpell` пишет `actionUsed` в журнал всегда — с комментарием «записываем всегда, даже при выключенном учёте», который устарел: учёт хода был переключателем, а теперь выводится из режима ([FR-143](../../features/F-06-resources.md#fr-143)). `deriveTurnEconomy` складывает `actionUsed` всех записей после границы боя, а до первого «Начать бой» границы нет вовсе — значит каждое сотворение из «Книги» предъявляется как потраченное действие в тот момент, когда игрок переключается в «Бой».
+- **Раундовый эффект.** «Щит» держится 1 раунд, но вне боя раунды не идут, и `expireRoundEffects` вызывается только из `advanceTurn`. Эффект висит до следующего начала хода, и КД 19 входит в бой вместе с игроком.
+
+Оба состояния чистятся нажатием «Начать бой», но до нажатия шапка врёт, а «Щит» успевает войти в бой — то есть приложение врёт о числе, чего делать не должно никогда.
+
+**Решение игрока про «Щит»:** истекать сразу. «Щит я могу кастануть просто как реакция, и он сработает в моменте — это ок; да, он сразу исчезнет». Ячейка при этом тратится: игрок сам выбрал сотворить.
+
+- [ ] **Step 1: Написать падающие тесты**
+
+В `src/store/session.test.ts` дописать:
+
+```ts
+describe("сотворённое вне боя не переносится в бой (FR-145, FR-095)", () => {
+  it("вне боя действие не записывается: в бою оно остаётся целым", () => {
+    const clock = testClock();
+    const character = { ...createThorne(), screenMode: "book" as const };
+    const session = castSpell(
+      { character, journal: [] },
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.journal.at(-1)?.actionUsed).toBeUndefined();
+
+    const inCombat = { ...session, character: { ...session.character, screenMode: "combat" as const } };
+    expect(deriveTurnEconomy(inCombat).actionAvailable).toBe(true);
+  });
+
+  it("в бою действие записывается по-прежнему", () => {
+    const clock = testClock();
+    const session = castSpell(
+      { character: createThorne(), journal: [] },
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.journal.at(-1)?.actionUsed).toBe("action");
+    expect(deriveTurnEconomy(session).actionAvailable).toBe(false);
+  });
+
+  it("раундовый эффект вне боя истекает сразу: КД не входит в бой", () => {
+    const clock = testClock();
+    const character = { ...createThorne(), screenMode: "book" as const };
+    const session = castSpell(
+      { character, journal: [] },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.character.activeEffects).toEqual([]);
+    expect(session.journal.at(-1)?.summaryRu).toContain("вне боя раундов нет");
+  });
+
+  it("в бою раундовый эффект остаётся висеть", () => {
+    const clock = testClock();
+    const session = castSpell(
+      { character: createThorne(), journal: [] },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.character.activeEffects.map((effect) => effect.spellId)).toEqual(["shield"]);
+  });
+
+  it("ячейка тратится в обоих случаях: сотворить игрок выбрал сам", () => {
+    const clock = testClock();
+    const character = { ...createThorne(), screenMode: "book" as const };
+    const session = castSpell(
+      { character, journal: [] },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.character.spellSlots[1]?.remaining).toBe(3);
+  });
+});
+```
+
+Помощники `testClock`, `spell`, `createThorne` уже используются в этом файле — сверить фактические имена импортов перед запуском и взять существующие.
+
+- [ ] **Step 2: Убедиться, что тесты падают**
+
+Run: `npx vitest run src/store/session.test.ts -t "сотворённое вне боя"`
+Expected: FAIL — `actionUsed` записан, эффект «Щита» висит.
+
+- [ ] **Step 3: Не записывать действие вне боя**
+
+В `src/store/session.ts`, в `castSpell`, заменить запись `actionUsed` и её устаревший комментарий на:
+
+```ts
+      // Вне боя ход не отслеживается (FR-143), значит и тратить в нём нечего: записанное здесь
+      // действие предъявлялось бы игроку в бою, потому что до первой отметки «Начать бой» границы
+      // в журнале нет и `deriveTurnEconomy` складывает всё подряд (FR-145). Прежний комментарий
+      // ссылался на переключатель учёта хода, которого больше нет.
+      ...(used === undefined || !turnTracked(session.character) ? {} : { actionUsed: used }),
+```
+
+- [ ] **Step 4: Истекать раундовый эффект вне боя сразу**
+
+В `castSpell`, там где собирается `effect`, раундовый эффект вне боя не заводится вовсе. Найти место, где эффект добавляется в `activeEffects`, и провести его через проверку: если `!turnTracked(session.character)` и длительность эффекта — раунды, эффект не добавляется, а в `summaryRu` дописывается `«<имя>» истёк сразу: вне боя раундов нет`.
+
+Концентрацию такой эффект тоже не занимает: он не начался. Если у заклинания `concentration === true` и эффект истёк сразу, поле `concentration` персонажа не выставляется.
+
+Формулировку взять ту же, что в тесте шага 1. Реализацию держать в `castSpell`, а не в `expireRoundEffects`: та отвечает на вопрос «какие раунды кончились к началу хода», а здесь раундов не было вовсе — это другое условие, и складывать их в одну функцию значит запутать обе.
+
+- [ ] **Step 5: Убедиться, что тесты проходят**
+
+Run: `npx vitest run src/store/session.test.ts`
+Expected: PASS.
+
+- [ ] **Step 6: Прогнать весь набор**
+
+Run: `npm run test`
+Expected: PASS. Если падает что-то ещё — это сценарии, которые творили вне боя и ожидали потраченного действия или висящего эффекта. Ожидание поправить, поведение не менять.
+
+- [ ] **Step 7: Записать требования в спеку**
+
+В `docs/features/F-06-resources.md` дописать после FR-144:
+
+```markdown
+<a id="fr-145"></a>
+### FR-145 — Сотворённое вне боя не тратит действия
+
+**Статус:** Готово · **Проверка:** unit `сотворённое вне боя не переносится в бой (FR-145, FR-095)`
+
+Сотворение вне режима «Бой» не должно записывать в журнал потраченное действие.
+
+Замечание игрока: «заклинания из книги вне боя не должны тратить действия — не должно быть такого,
+что я не в бою использовал заклинания, а потом при переходе в бой у меня уже потрачено». Так и было:
+запись о действии делалась всегда, а `deriveTurnEconomy` складывает все такие записи после последней
+границы боя — и до первого «Начать бой» границы в журнале нет вовсе. Три заклинания, сотворённые в
+«Книге», предъявлялись игроку потраченным ходом в тот момент, когда он переключался в «Бой».
+
+Это следствие [FR-143](#fr-143), а не отдельное правило: вне боя ход не отслеживается, значит его и
+нечего тратить. Прежнее поведение опиралось на переключатель учёта хода, которого больше нет.
+
+Отсутствие лимита вне боя при этом остаётся: вне боя спешить некуда, и число заклинаний за раз
+ничем не ограничено.
+```
+
+В `docs/features/F-08-active-effects.md` дописать после FR-094:
+
+```markdown
+<a id="fr-095"></a>
+### FR-095 — Раундовый эффект вне боя истекает сразу
+
+**Статус:** Готово · **Проверка:** unit `сотворённое вне боя не переносится в бой (FR-145, FR-095)`
+
+Эффект, длительность которого измеряется раундами, при сотворении вне режима «Бой» должен истекать в
+тот же миг, а не оставаться висеть.
+
+Замечание игрока: «не должно быть такого, что я не в бою использовал заклинания, а потом при переходе
+в бой у меня уже КД». «Щит» держится один раунд, но вне боя раунды не идут, а истечение раундовых
+эффектов происходит только с началом хода ([FR-094](#fr-094)) — значит КД 19 входило в бой вместе с
+игроком, и заряжать «Щит» заранее становилось выгодной тактикой, которой в правилах нет.
+
+Решение игрока: «Щит я могу кастануть просто как реакция, и он сработает в моменте — это ок; да, он
+сразу исчезнет». Раунд вне боя и есть ноль времени: эффект случился и кончился.
+
+**Ячейка при этом тратится,** и запись журнала называет причину — «"Щит" истёк сразу: вне боя раундов
+нет». Сотворить игрок выбрал сам, а отмена доступна журналом
+([FR-111](F-10-journal-undo.md#fr-111)); молча вернуть ячейку значило бы решать за него, что он
+ошибся.
+
+**Концентрацию такой эффект не занимает:** он не начался (FR-080).
+```
+
+В `docs/features/README.md` привести строку F-06 к `FR-070…073, 130…134, 140…145` и строку F-08 к `FR-090…095`.
+
+- [ ] **Step 8: Проверить целостность спеки**
+
+Run: `npm run check:docs`
+Expected: `спецификация целостна`.
+
+- [ ] **Step 9: Коммит**
+
+```bash
+git add src/store/session.ts src/store/session.test.ts \
+        docs/features/F-06-resources.md docs/features/F-08-active-effects.md docs/features/README.md
+git commit -m "Stop out-of-combat casting from leaking into combat (FR-145, FR-095)"
+```
