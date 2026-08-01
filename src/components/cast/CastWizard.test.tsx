@@ -342,3 +342,92 @@ describe("недоступность руны названа причиной (F
     expect(screen.queryByLabelText("Руна")).toBeNull();
   });
 });
+
+describe("шаг костей хитов (FR-135)", () => {
+  /**
+   * Раненый Торн с подготовленной «Мистической бодростью».
+   *
+   * Ранение — чтобы лечение не упёрлось в максимум. Подготовка — потому что в боевом списке только
+   * заговоры и подготовленное (FR-201), а в книге Торна это заклинание по умолчанию не подготовлено.
+   */
+  function woundedThorne(): CharacterState {
+    const character = withTurnTracking();
+    character.hitPoints.current = 30;
+    character.preparedSpellIds = [...character.preparedSpellIds, "arcane-vigor"];
+    return character;
+  }
+
+  /** До костей мастер проходит через выбор ячейки: он идёт первым и от него зависит максимум. */
+  async function openHitDiceStep() {
+    const user = await openWizard(/Мистическая бодрость/);
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    return user;
+  }
+
+  it("шаг есть у заклинания с расходом костей", async () => {
+    await renderWithStores(<CombatScreen />, woundedThorne());
+    await openHitDiceStep();
+    expect(screen.getByText("Сколько костей бросить")).toBeTruthy();
+  });
+
+  it("шага нет у заклинания без расхода", async () => {
+    await renderWithStores(<CombatScreen />, woundedThorne());
+    await openWizard(/Молния/);
+    expect(screen.queryByText("Сколько костей бросить")).toBeNull();
+  });
+
+  it("ячейка 2 уровня даёт выбрать до двух костей", async () => {
+    await renderWithStores(<CombatScreen />, woundedThorne());
+    await openHitDiceStep();
+    expect(screen.getByRole("button", { name: "1d6" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "2d6" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "3d6" })).toBeNull();
+  });
+
+  it("без выбранного числа костей дальше не пускает", async () => {
+    await renderWithStores(<CombatScreen />, woundedThorne());
+    await openHitDiceStep();
+    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("выпавшее вне возможного отвергается с причиной", async () => {
+    await renderWithStores(<CombatScreen />, woundedThorne());
+    const user = await openHitDiceStep();
+    await user.click(screen.getByRole("button", { name: "2d6" }));
+    await user.type(screen.getByLabelText("Что выпало на 2d6"), "13");
+    expect(screen.getByText("На 2d6 может выпасть от 2 до 12")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("возможное выпавшее показывает итог с модификатором", async () => {
+    await renderWithStores(<CombatScreen />, woundedThorne());
+    const user = await openHitDiceStep();
+    await user.click(screen.getByRole("button", { name: "2d6" }));
+    await user.type(screen.getByLabelText("Что выпало на 2d6"), "9");
+    expect(screen.getByText("9 + 4 — вернётся 13 хитов")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("подтверждение списывает кости и лечит", async () => {
+    const { stores } = await renderWithStores(<CombatScreen />, woundedThorne());
+    const user = await openHitDiceStep();
+    await user.click(screen.getByRole("button", { name: "2d6" }));
+    await user.type(screen.getByLabelText("Что выпало на 2d6"), "9");
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const after = stores.session.getState().session?.character;
+    expect(after?.hitDice?.remaining).toBe(5);
+    expect(after?.hitPoints.current).toBe(43);
+  });
+
+  it("без костей шаг объясняет, а не прячется", async () => {
+    const spent = woundedThorne();
+    spent.hitDice = { total: 7, size: 6, remaining: 0 };
+    await renderWithStores(<CombatScreen />, spent);
+    await openHitDiceStep();
+    expect(screen.getByText(/бросать нечего/)).toBeTruthy();
+    // Предупреждение, а не запрет: ячейку игрок вправе потратить впустую (FR-034).
+    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(false);
+  });
+});

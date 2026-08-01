@@ -24,6 +24,8 @@ import { castOptions, type CastOption } from "@/rules/filters";
 import { castInstructions, renderAnnouncement } from "@/rules/announcement";
 import { effectiveDamage } from "@/rules/scaling";
 import { hitPointCost, spellPointCost } from "@/rules/bloodMagic";
+import { abilityModifier } from "@/rules/abilities";
+import { maximumHitDiceForCast } from "@/rules/hitDice";
 import { CANTRIP_LEVEL } from "@/rules/slots";
 import {
   visibleSteps,
@@ -38,6 +40,7 @@ import type { TurnEconomy } from "@/store/session";
 const STEP_TITLES: Record<WizardStep, string> = {
   availability: "Проверьте условия",
   slot: "Чем сотворить",
+  hitDice: "Кости хитов",
   components: "Компоненты",
   concentration: "Концентрация",
   summary: "Объявление и подтверждение",
@@ -234,6 +237,116 @@ function SlotStep({
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * Сколько костей бросить и что выпало (FR-135).
+ *
+ * Кубик бросает игрок, приложение принимает результат и складывает (ADR-0021). Выпавшее проверяется
+ * диапазоном возможного: опечатку от броска приложение отличать обязано, а оспаривать возможный
+ * результат не вправе.
+ */
+function HitDiceStep({
+  draft,
+  character,
+  onCount,
+  onRolled,
+}: {
+  draft: CastDraft;
+  character: CharacterState;
+  onCount: (count: number) => void;
+  onRolled: (rolled: number | null) => void;
+}) {
+  const cost = draft.spell.hitDiceCost;
+  const pool = character.hitDice;
+  if (cost === undefined) return null;
+
+  const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
+  const maximum = maximumHitDiceForCast(cost, draft.spell.level, slotLevel, pool?.remaining ?? 0);
+
+  if (maximum === 0) {
+    // Шаг не прячется, а объясняет: правило запрещает бросать несуществующие кости, но не
+    // запрещает потратить ячейку зря, и решение остаётся за игроком (FR-034, FR-135).
+    return (
+      <p className="text-sm opacity-80">
+        Неистраченных Костей хитов не осталось — бросать нечего, и ячейка уйдёт впустую. Сотворить
+        всё равно можно.
+      </p>
+    );
+  }
+
+  const count = draft.hitDiceCount;
+  const size = pool?.size ?? 0;
+  const modifier = cost.addsSpellcastingModifier ? abilityModifier(character.intelligence) : 0;
+  const rolled = draft.hitDiceRolled;
+  const outOfRange =
+    count !== null && rolled !== null && (rolled < count || rolled > count * size);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-sm">Сколько костей бросить</span>
+        <ul className="flex flex-wrap gap-1">
+          {Array.from({ length: maximum }, (_, index) => index + 1).map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                aria-pressed={count === option}
+                onClick={() => onCount(option)}
+                className={`min-h-11 min-w-11 rounded-lg border px-3 text-sm ${
+                  count === option
+                    ? "border-action bg-action/10 text-action-strong dark:text-action"
+                    : "border-slate-200 dark:border-slate-800"
+                }`}
+              >
+                {option}d{size}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <span className="text-xs opacity-80">
+          Осталось {pool?.remaining ?? 0} из {pool?.total ?? 0}
+        </span>
+      </div>
+
+      {count === null ? null : (
+        // Подсказка вынесена из метки намеренно: внутри неё она попадала бы в доступное имя поля,
+        // и вместо «Что выпало на 2d6» экранный диктор читал бы имя, склеенное с подсказкой.
+        <div className="flex flex-col gap-1">
+          <label className="text-sm" htmlFor="hit-dice-rolled">
+            Что выпало на {count}d{size}
+          </label>
+          <input
+            id="hit-dice-rolled"
+            aria-describedby="hit-dice-rolled-hint"
+            type="number"
+            inputMode="numeric"
+            min={count}
+            max={count * size}
+            value={rolled ?? ""}
+            onChange={(event) =>
+              onRolled(event.target.value === "" ? null : Number(event.target.value))
+            }
+            className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+          />
+          {outOfRange ? (
+            <span id="hit-dice-rolled-hint" className="text-xs text-danger">
+              На {count}d{size} может выпасть от {count} до {count * size}
+            </span>
+          ) : rolled === null ? (
+            <span id="hit-dice-rolled-hint" className="text-xs opacity-80">
+              Бросьте кости и введите сумму
+            </span>
+          ) : (
+            <span id="hit-dice-rolled-hint" className="text-xs opacity-80">
+              {rolled}
+              {modifier === 0 ? "" : ` + ${modifier}`} — вернётся {rolled + modifier} хитов
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -448,6 +561,25 @@ export function CastWizard({
     character.concentration !== undefined &&
     !draft.allowAnyway;
   const availabilityBlocked = draft.step === "availability" && !draft.allowAnyway;
+  // Кости: пока число не выбрано или выпавшее вне возможного, дальше не пускаем. Костей может не
+  // остаться вовсе — тогда выбирать нечего, и шаг не задерживает (FR-135).
+  const hitDiceBlocked = ((): boolean => {
+    if (draft.step !== "hitDice") return false;
+    const cost = draft.spell.hitDiceCost;
+    if (cost === undefined) return false;
+    const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
+    const maximum = maximumHitDiceForCast(
+      cost,
+      draft.spell.level,
+      slotLevel,
+      character.hitDice?.remaining ?? 0,
+    );
+    if (maximum === 0) return false;
+    const { hitDiceCount: count, hitDiceRolled: rolled } = draft;
+    if (count === null || rolled === null) return true;
+    const size = character.hitDice?.size ?? 0;
+    return rolled < count || rolled > count * size;
+  })();
 
   const back = index > 0 ? { onBack: () => actions.back(steps) } : {};
 
@@ -470,7 +602,7 @@ export function CastWizard({
               ...back,
               primaryLabel: "Далее",
               onPrimary: () => actions.next(steps),
-              primaryDisabled: availabilityBlocked || concentrationBlocked,
+              primaryDisabled: availabilityBlocked || concentrationBlocked || hitDiceBlocked,
             }
       }
     >
@@ -501,6 +633,14 @@ export function CastWizard({
             />
           )}
         </>
+      ) : null}
+      {draft.step === "hitDice" ? (
+        <HitDiceStep
+          draft={draft}
+          character={character}
+          onCount={(count) => actions.setHitDiceCount(count)}
+          onRolled={(rolled) => actions.setHitDiceRolled(rolled)}
+        />
       ) : null}
       {draft.step === "components" ? <ComponentsStep availability={availability} /> : null}
       {draft.step === "concentration" ? (

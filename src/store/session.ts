@@ -45,7 +45,8 @@ import {
   type SlotRecoveryPlan,
 } from "@/rules/slots";
 import { hitPointCost, spellPointCost } from "@/rules/bloodMagic";
-import { hitDiceRegainedOnLongRest } from "@/rules/hitDice";
+import { abilityModifier } from "@/rules/abilities";
+import { hitDiceHealing, hitDiceRegainedOnLongRest } from "@/rules/hitDice";
 import { durationWithRoundsRu } from "@/rules/concentration";
 import type { ScreenMode } from "@/rules/modes";
 import { lifeRuneTemporaryHitPoints, RUNE_LABEL } from "@/rules/runes";
@@ -121,6 +122,10 @@ const STATE_KEYS = [
   "activeEffects",
   "turnTracking",
   "arcaneRecoveryAvailable",
+  // Отметка короткого отдыха — не ресурс, но состояние, которое меняет отдых (FR-131). Без неё в
+  // снимке отмена отдыха вернула бы ячейки и хиты, а отметку оставила, и магическое восстановление
+  // осталось бы разрешённым отдыхом, которого больше нет.
+  "shortRestSinceLongRest",
   "hitPoints",
   // Временные хиты — такой же расходуемый ресурс, как и остальные: их снимает урон, их даёт руна
   // жизни. Без них в снимке отмена возвращала бы хиты, но не поглощённый ими урон (FR-111).
@@ -403,6 +408,13 @@ export type CastRequest = {
   rune?: "life" | "war" | "wind";
   /** Мастер разрешил исключение — предупреждения не блокируют (FR-031). */
   allowAnyway?: boolean;
+  /**
+   * Потраченные Кости хитов и выпавшее на них (FR-135). Есть только у заклинания с `hitDiceCost`.
+   *
+   * Выпавшее приходит от игрока: кубик бросает он, приложение принимает результат и складывает
+   * (ADR-0021).
+   */
+  hitDice?: { count: number; rolled: number };
 };
 
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
@@ -628,6 +640,31 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
       : {}),
   };
 
+  // Кости хитов и лечение по ним — часть того же сотворения (FR-135), а не отдельная операция.
+  // `heal` здесь не годится: она пишет собственную запись журнала и отказывает при полных хитах, а
+  // «Мистическая бодрость» на полных хитах обязана проходить — просто впустую. Одна операция нужна
+  // ещё и для отмены: игрок должен вернуть ячейку, кости и хиты одним нажатием (FR-111).
+  const hitDiceNote = ((): string => {
+    if (request.hitDice === undefined || spell.hitDiceCost === undefined) return "";
+    const { count, rolled } = request.hitDice;
+    const pool = after.hitDice;
+    if (pool === undefined || pool.remaining < count) {
+      throw new SessionError(
+        `Неистраченных Костей хитов ${pool?.remaining ?? 0}, а брошено ${count}`,
+      );
+    }
+    const healed = hitDiceHealing(spell.hitDiceCost, rolled, abilityModifier(after.intelligence));
+    const restored = Math.min(after.hitPoints.maximum - after.hitPoints.current, healed);
+    after = {
+      ...after,
+      hitDice: { ...pool, remaining: pool.remaining - count },
+      hitPoints: { ...after.hitPoints, current: after.hitPoints.current + restored },
+    };
+    const spent = ` · ${count} ${count === 1 ? "кость" : "кости"} хитов`;
+    // Молчание про нулевое лечение читалось бы как ошибка приложения, а это выбор игрока.
+    return restored === 0 ? `${spent}, хиты уже на максимуме` : `${spent}, вылечено ${restored}`;
+  })();
+
   const level = slotLevelUsed(request);
   const used = actionUsedBy(spell);
   const how =
@@ -644,7 +681,7 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
     after,
     {
       kind: spell.castingTime.type === "reaction" ? "reaction_cast" : "spell_cast",
-      summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}${expiredNote}`,
+      summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}${hitDiceNote}${expiredNote}`,
       spellId: spell.id,
       slotLevel: level,
       // Вне боя ход не отслеживается (FR-143), значит и тратить в нём нечего: записанное здесь
@@ -1071,6 +1108,8 @@ export function longRest(session: Session, clock: Clock): Session {
     runes: { ...character.runes, remaining: character.runes.maximum },
     reactionAvailable: true,
     arcaneRecoveryAvailable: true,
+    // Долгий отдых обнуляет и отметку: следующее восстановление снова ждёт короткого (FR-131).
+    shortRestSinceLongRest: false,
     turnTracking: { actionAvailable: true, bonusActionAvailable: true },
     // Эффекты короче отдыха закрываются; «до рассеивания» и подобные — нет.
     activeEffects: character.activeEffects.filter((effect) => effect.duration.type === "special"),
@@ -1113,6 +1152,9 @@ export function shortRest(session: Session, clock: Clock): Session {
   const after: CharacterState = {
     ...character,
     reactionAvailable: true,
+    // Магическое восстановление берётся после короткого отдыха (FR-131). Отметка нужна интерфейсу:
+    // сама операция восстановления её не проверяет — отдых мог случиться за столом без кнопки.
+    shortRestSinceLongRest: true,
     turnTracking: { actionAvailable: true, bonusActionAvailable: true },
     hitPoints: {
       ...character.hitPoints,
@@ -1504,8 +1546,12 @@ export function useRoleplayVariant(session: Session, spellId: string, variantId:
 /**
  * Ручной учёт костей хитов (FR-134).
  *
- * Приложение их не бросает и лечение по ним не считает — бросок и сложение остаются за столом
- * (ADR-0007). Его дело — помнить остаток, поэтому операция одна: изменить его на единицу.
+ * Приложение их не бросает: бросок остаётся за столом (OQ-09). Здесь оно и не считает по ним лечение —
+ * операция одна, изменить остаток на единицу.
+ *
+ * Считает лечение другой путь: заклинание с полем `hitDiceCost` тратит кости своим мастером
+ * применения и лечит по введённому результату (FR-135, ADR-0021). Ручная правка остаётся для всего
+ * остального — прежде всего для костей, потраченных коротким отдыхом.
  */
 export function adjustHitDice(session: Session, delta: number, clock: Clock): Session {
   const { character } = session;

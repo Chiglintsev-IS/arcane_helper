@@ -425,3 +425,54 @@ describe("схема ритуала (FR-190, FR-191)", () => {
     ).toBe(false);
   });
 });
+
+describe("расход костей хитов (FR-135)", () => {
+  it("заклинание с расходом костей принимается", () => {
+    const result = spellSchema.safeParse(
+      mutate(web(), (draft) => {
+        draft.hitDiceCost = {
+          maximumDice: 2,
+          extraDicePerSlotLevel: 2,
+          addsSpellcastingModifier: true,
+        };
+      }),
+    );
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const parsed: Spell = result.data;
+      expect(parsed.hitDiceCost?.maximumDice).toBe(2);
+    }
+  });
+
+  it("заклинание без поля остаётся корректным: поле необязательное ради импорта (ADR-0004)", () => {
+    expect(spellSchema.safeParse(web()).success).toBe(true);
+  });
+
+  it("ноль костей отклоняется: расход, ничего не расходующий, — ошибка контента", () => {
+    expect(
+      firstError(
+        mutate(web(), (draft) => {
+          draft.hitDiceCost = {
+            maximumDice: 0,
+            extraDicePerSlotLevel: 0,
+            addsSpellcastingModifier: false,
+          };
+        }),
+      ),
+    ).toBeTruthy();
+  });
+
+  it("отрицательный рост от ячейки отклоняется", () => {
+    expect(
+      firstError(
+        mutate(web(), (draft) => {
+          draft.hitDiceCost = {
+            maximumDice: 2,
+            extraDicePerSlotLevel: -1,
+            addsSpellcastingModifier: true,
+          };
+        }),
+      ),
+    ).toBeTruthy();
+  });
+});

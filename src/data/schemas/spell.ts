@@ -152,6 +152,22 @@ export const armorClassEffectSchema = z.object({
   value: z.number().int().positive(),
 });
 
+/**
+ * Расход Костей хитов заклинанием (FR-135, ADR-0013).
+ *
+ * Отсутствие поля означает «костей не тратит», а не ноль: различие видно в данных, и движку не нужен
+ * список заклинаний, которые их тратят. Тем же приёмом сделан вклад в Класс Доспеха.
+ *
+ * `maximumDice` — сколько костей даёт бросить ячейка уровня самого заклинания, `extraDicePerSlotLevel`
+ * — прибавка за каждый уровень ячейки выше. Модификатор заклинательной характеристики прибавляется
+ * один раз на всё сотворение, а не на кость, поэтому это флаг, а не число.
+ */
+export const hitDiceCostSchema = z.object({
+  maximumDice: z.number().int().positive(),
+  extraDicePerSlotLevel: z.number().int().nonnegative(),
+  addsSpellcastingModifier: z.boolean(),
+});
+
 const roleplaySchema = z.object({
   // Ровно одна реплика, один жест, один эффект (FR-050): список из двух склеивался в карточке
   // через « · » и читался обрывками. Разнообразие живёт в completeVariants, где оно и задумано.
@@ -327,6 +343,7 @@ const spellShape = z.object({
   resolution: resolutionSchema,
   damage: damageSchema.optional(),
   armorClassEffect: armorClassEffectSchema.optional(),
+  hitDiceCost: hitDiceCostSchema.optional(),
 
   /**
    * Что придётся делать каждый ход, пока эффект держится (FR-092).
@@ -466,3 +483,4 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
 export type Spell = z.infer<typeof spellSchema>;
 export type SpellRoleplay = z.infer<typeof roleplaySchema>;
 export type ArmorClassEffect = z.infer<typeof armorClassEffectSchema>;
+export type HitDiceCost = z.infer<typeof hitDiceCostSchema>;

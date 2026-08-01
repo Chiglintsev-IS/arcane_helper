@@ -319,3 +319,23 @@ describe("схемы ритуалов (FR-190)", () => {
     expect(new Set(shapes).size).toBe(4);
   });
 });
+
+describe("расход костей хитов (FR-135)", () => {
+  it("поле есть ровно у «Мистической бодрости»", () => {
+    // Не догма, а защита от копипасты: если поле появится у нового заклинания, тест меняют
+    // осознанно, а не обнаруживают расход у того, кто его не тратит.
+    const withCost = spells.filter((spell) => spell.hitDiceCost !== undefined);
+    expect(withCost.map((spell) => spell.nameRu)).toEqual(["Мистическая бодрость"]);
+  });
+
+  it("числа совпадают с тем, что карточка обещает игроку", () => {
+    const [vigor] = spells.filter((spell) => spell.hitDiceCost !== undefined);
+    // «до четырёх ячейкой 3 уровня и до шести ячейкой 4» — из higherLevelsRu той же карточки.
+    expect(vigor?.hitDiceCost).toEqual({
+      maximumDice: 2,
+      extraDicePerSlotLevel: 2,
+      addsSpellcastingModifier: true,
+    });
+    expect(vigor?.higherLevelsRu).toContain("до шести ячейкой 4");
+  });
+});

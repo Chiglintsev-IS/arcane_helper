@@ -2,7 +2,7 @@
  * Кости хитов ([FR-134](../../docs/features/F-06-resources.md#fr-134)).
  *
  * Ресурс лечения вне боя: их тратят коротким отдыхом и ими же платит «Мистическая бодрость».
- * Приложение их не бросает — бросок остаётся за столом (ADR-0007), — но обязано знать, сколько
+ * Приложение их не бросает — бросок остаётся за столом (OQ-09), — но обязано знать, сколько
  * осталось: иначе игрок ведёт их на бумаге, а приложение говорит об отдыхе, ничего о нём не зная.
  *
  * Число костей выведено из правил, а не из документа расы: одна кость за уровень, размер задаёт
@@ -12,6 +12,7 @@
  */
 
 import type { HitDice } from "@/data/schemas/character";
+import type { HitDiceCost } from "@/data/schemas/spell";
 
 import { RulesError } from "./abilities";
 
@@ -38,4 +39,39 @@ export function hitDiceLabel(dice: HitDice | undefined): string {
   if (dice === undefined) return "не заведены";
   if (dice.remaining === dice.total) return `${dice.total}d${dice.size}`;
   return `${dice.remaining}d${dice.size} из ${dice.total}`;
+}
+
+/**
+ * Сколько костей позволяет бросить заклинание (FR-135).
+ *
+ * Максимум задаёт само заклинание полем `hitDiceCost`, а не движок: список заклинаний, тратящих
+ * кости, ему не нужен (ADR-0013). Остаток режет сверху — бросить больше, чем есть, нельзя.
+ *
+ * `Math.max(0, …)` не декоративен. В интерфейсе ячейку ниже уровня заклинания не выбрать, но схема
+ * пользовательского импорта её не запрещает (ADR-0004), а отрицательный множитель дал бы максимум
+ * меньше базового.
+ */
+export function maximumHitDiceForCast(
+  cost: HitDiceCost,
+  spellLevel: number,
+  slotLevel: number,
+  remaining: number,
+): number {
+  const allowed =
+    cost.maximumDice + cost.extraDicePerSlotLevel * Math.max(0, slotLevel - spellLevel);
+  return Math.min(allowed, remaining);
+}
+
+/**
+ * Сколько хитов вернёт бросок (FR-135, ADR-0021).
+ *
+ * Выпавшее приходит от игрока — приложение кубик не бросает (OQ-09), — а модификатор прибавляет
+ * само и ровно один раз, сколько бы костей ни было брошено.
+ */
+export function hitDiceHealing(
+  cost: HitDiceCost,
+  rolled: number,
+  spellcastingModifier: number,
+): number {
+  return rolled + (cost.addsSpellcastingModifier ? spellcastingModifier : 0);
 }

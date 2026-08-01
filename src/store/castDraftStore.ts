@@ -30,6 +30,7 @@ import type { CastRequest } from "./session";
 export const WIZARD_STEPS = [
   "availability",
   "slot",
+  "hitDice",
   "components",
   "concentration",
   "summary",
@@ -62,6 +63,14 @@ export type CastDraft = {
   allowAnyway: boolean;
   /** Приложенная руна или `null`. Не более одной на заклинание (FR-151). */
   rune: Rune | null;
+  /**
+   * Сколько Костей хитов бросить и что на них выпало (FR-135). Оба `null`, пока игрок не выбрал.
+   *
+   * Умолчания нет намеренно: максимум зависит от уровня ячейки, и подставленное число молча
+   * устарело бы при её смене. Смена оплаты обнуляет оба поля по той же причине.
+   */
+  hitDiceCount: number | null;
+  hitDiceRolled: number | null;
   step: WizardStep;
 };
 
@@ -152,6 +161,9 @@ export function visibleSteps(
         return blocking.length > 0;
       case "slot":
         return spell.level !== CANTRIP_LEVEL;
+      case "hitDice":
+        // Заклинание объявляет расход само (FR-135): списка тратящих кости движку не нужно.
+        return spell.hitDiceCost !== undefined;
       case "components":
         return needsComponentStep(spell);
       case "concentration":
@@ -171,6 +183,9 @@ export function toCastRequest(draft: CastDraft): CastRequest {
     payment: draft.payment,
     ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
     ...(draft.rune === null ? {} : { rune: draft.rune }),
+    ...(draft.hitDiceCount === null || draft.hitDiceRolled === null
+      ? {}
+      : { hitDice: { count: draft.hitDiceCount, rolled: draft.hitDiceRolled } }),
     allowAnyway: draft.allowAnyway,
   };
 }
@@ -184,6 +199,10 @@ export type CastDraftState = {
   chooseCastOption: (option: CastOption) => void;
   /** Приложить руну или снять её. Не более одной на заклинание (FR-151). */
   chooseRune: (rune: Rune) => void;
+  /** Сколько костей бросить (FR-135). Смена числа обнуляет выпавшее: оно относилось к прежнему. */
+  setHitDiceCount: (count: number) => void;
+  /** Что выпало на брошенных костях (FR-135, ADR-0021). */
+  setHitDiceRolled: (rolled: number | null) => void;
   setTarget: (label: string) => void;
   setRoleplayCategory: (category: RoleplayCategory) => void;
   /** «Применить всё равно»: предупреждения перестают мешать (FR-031). */
@@ -228,6 +247,8 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           roleplayCategory: remembered.roleplay[spell.id] ?? DEFAULT_ROLEPLAY_CATEGORY,
           allowAnyway: false,
           rune: null,
+          hitDiceCount: null,
+          hitDiceRolled: null,
           step: "summary",
         };
         // Первый видимый шаг: у списка всегда есть хотя бы итоговый экран.
@@ -240,13 +261,22 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
         edit((draft) => ({ ...draft, rune: draft.rune === rune ? null : rune }));
       },
 
+      setHitDiceCount(count) {
+        edit((draft) => ({ ...draft, hitDiceCount: count, hitDiceRolled: null }));
+      },
+
+      setHitDiceRolled(rolled) {
+        edit((draft) => ({ ...draft, hitDiceRolled: rolled }));
+      },
+
       chooseCastOption(option) {
         edit((draft) => {
           remembered.payment[draft.spell.id] = option.payment;
           // Ритуал и заговор руну не принимают: выбранная до смены оплаты, она молча пропала бы
           // при подтверждении (FR-151).
-          if (option.payment.kind !== "slot") return { ...draft, ...option, rune: null };
-          return { ...draft, mode: option.mode, payment: option.payment };
+          const reset = { hitDiceCount: null, hitDiceRolled: null };
+          if (option.payment.kind !== "slot") return { ...draft, ...option, rune: null, ...reset };
+          return { ...draft, mode: option.mode, payment: option.payment, ...reset };
         });
       },
 

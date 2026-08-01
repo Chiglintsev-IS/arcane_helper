@@ -147,6 +147,14 @@ export const characterStateSchema = z
     temporaryHitPoints: z.number().int().nonnegative().default(0),
 
     arcaneRecoveryAvailable: z.boolean(),
+    /**
+     * Был ли короткий отдых с последнего долгого (FR-131).
+     *
+     * Необязательное намеренно: обязательное отвергло бы сохранения прежних версий, а обновление не
+     * имеет права терять данные (NFR-003). `undefined` читается как «отдыха не было» — это честнее
+     * молчаливого разрешения, а цена ошибки всего одно лишнее предупреждение.
+     */
+    shortRestSinceLongRest: z.boolean().optional(),
 
     // Хиты нужны потому, что кровавое колдовство покупает магию здоровьем (F-15).
     hitPoints: z

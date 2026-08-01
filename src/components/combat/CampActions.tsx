@@ -50,9 +50,18 @@ export function CampActions({
       {inFight ? <Action onClick={onFightOver} name="Бой закончен" tone="strong" /> : null}
       <Action onClick={onShortRest} name="Короткий отдых · час" />
       <Action onClick={onLongRest} name="Долгий отдых" />
-      {character.arcaneRecoveryAvailable ? (
-        <Action onClick={onArcaneRecovery} name="Магическое восстановление" />
-      ) : null}
+      {/*
+        Кнопка не исчезает израсходованной: пропавшая кнопка не отвечает на вопрос «почему нельзя», а
+        за столом этот вопрос возникает раньше, чем игрок вспомнит правило (FR-131). Недоступность
+        называется причиной, как у заклинания в списке.
+      */}
+      <Action
+        onClick={onArcaneRecovery}
+        name="Магическое восстановление"
+        {...(character.arcaneRecoveryAvailable
+          ? {}
+          : { disabledReason: "Уже использовано до следующего долгого отдыха" })}
+      />
       {character.hitPoints.maximumReduction > 0 ? (
         <Action onClick={onRecoverMaximum} name={`Прошёл час · максимум +${hourReturns}`} />
       ) : null}
@@ -72,16 +81,22 @@ function Action({
   onClick,
   name,
   tone,
+  disabledReason,
 }: {
   onClick: () => void;
   name: string;
   tone?: "strong";
+  /** Причина недоступности словами. Кнопка гаснет, но остаётся видимой и объясняет себя. */
+  disabledReason?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-11 grow whitespace-nowrap rounded-xl border px-3 text-sm font-medium ${
+      disabled={disabledReason !== undefined}
+      {...(disabledReason === undefined ? {} : { title: disabledReason })}
+      aria-label={disabledReason === undefined ? undefined : `${name} — ${disabledReason}`}
+      className={`min-h-11 grow whitespace-nowrap rounded-xl border px-3 text-sm font-medium disabled:opacity-50 ${
         tone === "strong"
           ? "border-action bg-action/10 text-action-strong dark:text-action"
           : "border-slate-200 dark:border-slate-800"

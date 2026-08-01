@@ -369,9 +369,31 @@ describe("операции привала (FR-202, FR-215)", () => {
     expect(stores.session.getState().session?.character.arcaneRecoveryAvailable).toBe(false);
   });
 
-  it("израсходованное восстановление кнопки не получает (FR-002)", async () => {
+  it("израсходованное восстановление гаснет, но остаётся с причиной (FR-131)", async () => {
+    // Раньше кнопка исчезала. Пропавшая кнопка не отвечает на вопрос «почему нельзя», а за столом
+    // он возникает раньше, чем игрок вспомнит правило, — требование это изменило.
     await atCamp({ ...createThorne(), arcaneRecoveryAvailable: false });
-    expect(screen.queryByRole("button", { name: /Магическое восстановление/ })).toBeNull();
+    const button = screen.getByRole("button", {
+      name: "Магическое восстановление — Уже использовано до следующего долгого отдыха",
+    });
+    expect(button.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("без короткого отдыха восстановление предупреждает, но пускает (FR-131)", async () => {
+    const user = userEvent.setup();
+    const spent = createThorne();
+    spent.spellSlots[1] = { maximum: 4, remaining: 3 };
+    await atCamp(spent);
+    await user.click(screen.getByRole("button", { name: "Магическое восстановление" }));
+    expect(
+      screen.getByText("Магическое восстановление берётся после короткого отдыха, а его не было."),
+    ).toBeTruthy();
+
+    // Предупреждение, а не запрет: выбранный план подтверждается несмотря на него.
+    await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
+    expect(
+      screen.getByRole("button", { name: "Вернуть ячейки" }).hasAttribute("disabled"),
+    ).toBe(false);
   });
 
   it("без снижения максимума «Прошёл час» не предлагается (FR-002)", async () => {

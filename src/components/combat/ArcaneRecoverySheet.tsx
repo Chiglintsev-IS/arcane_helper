@@ -64,6 +64,14 @@ export function ArcaneRecoverySheet({
       aria-label="Магическое восстановление"
       className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
+      {character.shortRestSinceLongRest === true ? null : (
+        // Предупреждение, а не запрет (FR-131): израсходованность приложение знает наверняка, а
+        // короткий отдых мог случиться за столом без нажатия кнопки. Подтвердить всё равно можно.
+        <p className="rounded-lg border border-reaction/50 bg-reaction/10 p-2 text-sm">
+          Магическое восстановление берётся после короткого отдыха, а его не было.
+        </p>
+      )}
+
       <p className="text-sm">
         Суммарный уровень возвращаемых ячеек:{" "}
         <span className="font-semibold tabular-nums">

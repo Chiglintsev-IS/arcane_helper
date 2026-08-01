@@ -1978,3 +1978,142 @@ describe("сотворённое вне боя не переносится в б
     expect(session.character.spellSlots[1]?.remaining).toBe(3);
   });
 });
+
+describe("расход костей хитов заклинанием (FR-135)", () => {
+  /** Раненый Торн: 30 из 60, все семь костей целы. */
+  function wounded() {
+    const character = createThorne();
+    character.hitPoints.current = 30;
+    return createSession(character);
+  }
+
+  it("сотворение тратит кости хитов и лечит", () => {
+    const after = castSpell(
+      wounded(),
+      {
+        spell: spell("arcane-vigor"),
+        mode: "normal",
+        payment: { kind: "slot", slotLevel: 2 },
+        hitDice: { count: 2, rolled: 9 },
+      },
+      clock,
+    );
+    expect(after.character.hitDice?.remaining).toBe(5);
+    // 30 + выпавшие 9 + модификатор Интеллекта 4.
+    expect(after.character.hitPoints.current).toBe(43);
+    expect(after.character.spellSlots[2]?.remaining).toBe(2);
+  });
+
+  it("одна запись журнала называет и кости, и восстановленное", () => {
+    const after = castSpell(
+      wounded(),
+      {
+        spell: spell("arcane-vigor"),
+        mode: "normal",
+        payment: { kind: "slot", slotLevel: 2 },
+        hitDice: { count: 2, rolled: 9 },
+      },
+      clock,
+    );
+    expect(after.journal).toHaveLength(1);
+    expect(after.journal[0]?.summaryRu).toContain("2 кости");
+    expect(after.journal[0]?.summaryRu).toContain("13");
+  });
+
+  it("отмена возвращает ячейку, кости и хиты разом (FR-111)", () => {
+    const before = wounded();
+    const after = castSpell(
+      before,
+      {
+        spell: spell("arcane-vigor"),
+        mode: "normal",
+        payment: { kind: "slot", slotLevel: 2 },
+        hitDice: { count: 2, rolled: 9 },
+      },
+      clock,
+    );
+    const undone = undoLast(after);
+    expect(undone.character.hitDice?.remaining).toBe(7);
+    expect(undone.character.hitPoints.current).toBe(30);
+    expect(undone.character.spellSlots[2]?.remaining).toBe(3);
+  });
+
+  it("на полных хитах сотворение проходит, но не лечит", () => {
+    const after = castSpell(
+      session,
+      {
+        spell: spell("arcane-vigor"),
+        mode: "normal",
+        payment: { kind: "slot", slotLevel: 2 },
+        hitDice: { count: 1, rolled: 6 },
+      },
+      clock,
+    );
+    expect(after.character.hitPoints.current).toBe(60);
+    expect(after.character.hitDice?.remaining).toBe(6);
+    expect(after.journal[0]?.summaryRu).toContain("хиты уже на максимуме");
+  });
+
+  it("у персонажа без костей вовсе — отказ с нулём: поле необязательное ради чужих выгрузок", () => {
+    const { hitDice: _absent, ...withoutDice } = createThorne();
+    expect(() =>
+      castSpell(
+        createSession(withoutDice),
+        {
+          spell: spell("arcane-vigor"),
+          mode: "normal",
+          payment: { kind: "slot", slotLevel: 2 },
+          hitDice: { count: 1, rolled: 4 },
+        },
+        clock,
+      ),
+    ).toThrow("Неистраченных Костей хитов 0, а брошено 1");
+  });
+
+  it("костей меньше запрошенного — отказ, это несогласованность, а не выбор игрока", () => {
+    const character = createThorne();
+    character.hitDice = { total: 7, size: 6, remaining: 1 };
+    expect(() =>
+      castSpell(
+        createSession(character),
+        {
+          spell: spell("arcane-vigor"),
+          mode: "normal",
+          payment: { kind: "slot", slotLevel: 2 },
+          hitDice: { count: 2, rolled: 7 },
+        },
+        clock,
+      ),
+    ).toThrow(SessionError);
+  });
+});
+
+describe("отметка короткого отдыха (FR-131)", () => {
+  it("короткий отдых её ставит", () => {
+    expect(shortRest(session, clock).character.shortRestSinceLongRest).toBe(true);
+  });
+
+  it("долгий отдых её снимает: восстановление снова ждёт короткого", () => {
+    const rested = shortRest(session, clock);
+    expect(longRest(rested, clock).character.shortRestSinceLongRest).toBe(false);
+  });
+
+  it("свежий персонаж отдыха ещё не знал", () => {
+    expect(session.character.shortRestSinceLongRest ?? false).toBe(false);
+  });
+
+  it("сохранение прежней версии открывается без поля (NFR-003)", () => {
+    const { shortRestSinceLongRest: _omitted, ...withoutFlag } = createThorne();
+    expect(characterStateSchema.safeParse(withoutFlag).success).toBe(true);
+  });
+
+  it("магическое восстановление без отдыха проходит: это предупреждение, а не запрет", () => {
+    const spent = spendSpellSlot(session, 1, clock);
+    expect(spent.character.spellSlots[1]?.remaining).toBe(3);
+    const after = useArcaneRecovery(spent, { 1: 1 }, clock);
+    expect(after.character.spellSlots[1]?.remaining).toBe(4);
+    expect(after.character.arcaneRecoveryAvailable).toBe(false);
+    // Отметки отдыха не было, и операция всё равно отработала: запрет живёт только в интерфейсе.
+    expect(after.character.shortRestSinceLongRest ?? false).toBe(false);
+  });
+});
