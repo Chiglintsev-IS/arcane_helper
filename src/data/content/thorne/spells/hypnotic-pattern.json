@@ -4,21 +4,34 @@
   "nameEn": "Hypnotic Pattern",
   "level": 3,
   "school": "Иллюзия",
-  "source": "Player's Handbook (2024)",
+  "source": "Player's Handbook (2014)",
   "combatRole": "offense",
-  "castingTime": { "type": "action" },
-  "range": { "type": "distance", "distanceFeet": 120 },
-  "area": { "shape": "cube", "sizeFeet": 30 },
+  "castingTime": {
+    "type": "action"
+  },
+  "range": {
+    "type": "distance",
+    "distanceFeet": 120
+  },
+  "area": {
+    "shape": "cube",
+    "sizeFeet": 30
+  },
   "components": {
     "verbal": false,
     "somatic": true,
     "material": true,
-    "materialText": "щепоть конфетти"
+    "materialText": "зажжённая палочка благовоний или хрустальный сосуд, заполненный фосфоресцирующим материалом"
   },
-  "duration": { "type": "minutes", "value": 1 },
+  "duration": {
+    "type": "minutes",
+    "value": 1
+  },
   "concentration": true,
   "ritual": false,
-  "targeting": { "type": "area" },
+  "targeting": {
+    "type": "area"
+  },
   "resolution": {
     "type": "saving_throw",
     "savingThrow": "WIS",
@@ -33,11 +46,15 @@
     "gesture": "Подбрасывает щепоть конфетти и ведёт за ней пальцем, вычерчивая петлю.",
     "visualEffect": "Обрывки бумаги замирают в воздухе и складываются в медленно вращающийся многоцветный узел.",
     "completeVariants": {
-      "short": ["Подбрасывает конфетти — и оно повисает в воздухе спиралью, из которой не выйти взглядом."],
+      "short": [
+        "Подбрасывает конфетти — и оно повисает в воздухе спиралью, из которой не выйти взглядом."
+      ],
       "atmospheric": [
         "Щепоть цветной бумаги уходит вверх и не падает: обрывки замирают, складываются в медленно поворачивающийся узел, и половина зала забывает, что держит оружие."
       ],
-      "sarcastic": ["«Щепоти конфетти хватило», — замечает Торн, проходя между застывшими."]
+      "sarcastic": [
+        "«Щепоти конфетти хватило», — замечает Торн, проходя между застывшими."
+      ]
     }
   },
   "announcementTemplate": "Использую действие и сотворяю «Гипнотический узор» ячейкой {slotLevel} уровня в точку в пределах {range}. Куб 30 футов. Спасбросок Мудрости против КС {spellSaveDc}: при провале существо очаровано и недееспособно, скорость 0. Концентрация, вплоть до 1 минуты; эффект снимается уроном."
