@@ -20,9 +20,9 @@ import { Fragment } from "react";
 import {
   CASTING_TIME,
   COMBAT_ROLE,
-  castingTimeLabel,
+  castingTimePhrase,
   damageLabel,
-  durationBadge,
+  durationPhrase,
   preparationBadge,
   rangeLabel,
   resolutionBadge,
@@ -92,11 +92,19 @@ export function SpellCardCompact({
   const role = combatRoleOf(spell);
   const frame = ROLE_FRAME[role];
 
-  const facts = [
-    ...(slotCost === null ? [] : [slotCost]),
-    rangeLabel(spell.range),
-    durationBadge(spell.duration).label,
-    ...(damage === null ? [] : [`Урон ${damage}`]),
+  /**
+   * Нейтральные сведения строки. Длительность выделена контрастом: рядом с ней в значке стоит время
+   * накладывания, и два времени на одной строке обязаны отличаться не только словом (FR-014).
+   *
+   * Девятого смыслового цвета для неё не заводится: все восемь заняты, и девятый превратил бы шкалу
+   * в радугу, в которой не выделяется ничего (ux.md#цветовая-система). Контраст внутри нейтрального
+   * такого запрета не нарушает — он не обещает нового смысла.
+   */
+  const facts: { text: string; strong: boolean }[] = [
+    { text: slotCost, strong: false },
+    { text: rangeLabel(spell.range), strong: false },
+    { text: durationPhrase(spell.duration), strong: true },
+    ...(damage === null ? [] : [{ text: `Урон ${damage}`, strong: false }]),
   ];
 
   const preparable = onTogglePrepared !== undefined && spell.level !== CANTRIP_LEVEL;
@@ -124,7 +132,7 @@ export function SpellCardCompact({
 
         <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
-            {castingTimeLabel(spell.castingTime)}
+            {castingTimePhrase(spell.castingTime)}
           </Badge>
           {preparation === null ? null : (
             <Badge tone={preparation.tone} icon={preparation.icon}>
@@ -149,13 +157,15 @@ export function SpellCardCompact({
         {/* Нейтральные сведения — текстом через точку: рамка вокруг каждого не добавляла смысла. */}
         <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-slate-600 dark:text-slate-400">
           {facts.map((fact, index) => (
-            <Fragment key={fact}>
+            <Fragment key={fact.text}>
               {index === 0 ? null : (
                 <span aria-hidden="true" className="text-slate-400">
                   ·
                 </span>
               )}
-              <span>{fact}</span>
+              <span className={fact.strong ? "font-medium text-slate-800 dark:text-slate-200" : ""}>
+                {fact.text}
+              </span>
             </Fragment>
           ))}
         </span>

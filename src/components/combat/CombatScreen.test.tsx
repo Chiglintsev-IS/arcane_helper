@@ -858,7 +858,7 @@ describe("краткая карточка (FR-010)", () => {
     await renderWithStores(<CombatScreen />, inBookMode());
     const row = screen.getByRole("button", { name: /Починка/ });
 
-    expect(within(row).getByText("1 минута")).toBeDefined();
+    expect(within(row).getByText("Накладывать 1 минуту")).toBeDefined();
     expect(within(row).queryByText("Минуты")).toBeNull();
   });
 
