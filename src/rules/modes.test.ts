@@ -64,9 +64,7 @@ describe("отбор по режиму (FR-201, FR-202, FR-203)", () => {
   });
 
   it("журнал — списка заклинаний нет (FR-220)", () => {
-    const spells = loadThorneSpells();
-
-    expect(spellsForMode(spells, "journal")).toEqual([]);
+    expect(spellsForMode(SPELLS, "journal")).toEqual([]);
   });
 
   it("ритуал действием остаётся в бою и в книге: способы разные, заклинание одно", () => {
