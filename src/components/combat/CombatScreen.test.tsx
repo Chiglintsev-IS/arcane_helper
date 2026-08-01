@@ -224,10 +224,10 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const inBook = within(screen.getByLabelText("Ресурсы"));
     expect(inBook.getByLabelText("Ячейки заклинаний")).toBeDefined();
     expect(inBook.getByLabelText(/Ячейки 1 уровня/)).toBeDefined();
-    // Числа боя отсюда уходят: они не отвечают ни на один вопрос подготовки.
+    // Числа боя отсюда уходят: они не отвечают ни на один вопрос подготовки. Ряд «Прочие ресурсы»
+    // остаётся — что именно в нём осталось, проверяет отдельный набор тестов ниже (FR-217).
     expect(inBook.queryByText("КС закл.")).toBeNull();
     expect(inBook.queryByText("КД")).toBeNull();
-    expect(inBook.queryByLabelText("Прочие ресурсы")).toBeNull();
   });
 
   it("вне боя шапка называет кости хитов (FR-134)", async () => {
@@ -1142,5 +1142,31 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
     expect(stores.session.getState().session?.character.suppression.underDirectSunlight).toBe(
       false,
     );
+  });
+});
+
+describe("шапка «Книги»: очки видны, руны нет (FR-217)", () => {
+  it("показывает счётчик очков — ими в книге платят и их же в книге покупают", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).getByText(/Очки 0/)).toBeDefined();
+  });
+
+  it("не показывает рун, костей хитов и чисел боя", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).queryByText(/Руны/)).toBeNull();
+    expect(within(header).queryByText(/Кости хитов/)).toBeNull();
+    expect(within(header).queryByText("КС закл.")).toBeNull();
+  });
+
+  it("в бою состав ряда прежний: и руны, и очки", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).getByText(/Руны 3\/3/)).toBeDefined();
+    expect(within(header).getByText(/Очки 0/)).toBeDefined();
   });
 });
