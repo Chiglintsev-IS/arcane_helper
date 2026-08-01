@@ -77,6 +77,10 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
 });
 
 test("combat keeps the first card whole, the book keeps the header", async ({ page }) => {
+  // Бой начат: причина FR-034 добавляет строке ещё одну строку текста, а бюджет здесь меряет
+  // обычную игру — после «Начать бой», а не до него.
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+
   // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
   // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18, ux.md#общие-правила).
   const firstCardBottom = async (): Promise<number> =>
@@ -156,6 +160,8 @@ test("technical instruction is two taps away", async ({ page }) => {
 });
 
 test("wizard steps order and cast spends the slot", async ({ page }) => {
+  // Бой начат: иначе FR-034 добавила бы шаг «Бой не начат» перед тем, что здесь считается (M-03).
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
 
@@ -178,6 +184,8 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
 });
 
 test("state survives a reload", async ({ page }) => {
+  // Бой начат: иначе FR-034 добавила бы шаг «Бой не начат» перед подтверждением.
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await page.getByRole("button", { name: /Луч холода/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
@@ -185,7 +193,9 @@ test("state survives a reload", async ({ page }) => {
   await switchMode(page, /^Книга/);
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Торн" })).toBeVisible();
+  // После перезапуска экран снова «Книга»: заголовка с именем там больше нет (FR-217), поэтому
+  // признак загрузки — плитки ячеек, которые в «Книге» как раз и остаются.
+  await expect(page.getByLabel("Ячейки заклинаний")).toBeVisible();
   await expect(page.getByRole("radio", { name: /^Книга/ })).toHaveAttribute(
     "aria-checked",
     "true",
@@ -193,15 +203,19 @@ test("state survives a reload", async ({ page }) => {
 });
 
 test("reaction shows when it returns", async ({ page }) => {
-  // Учёт хода в бою ведётся всегда — включать нечего (FR-143).
+  // Учёт хода в бою ведётся всегда — включать нечего (FR-143). Бой нарочно не начат здесь: тест
+  // проверяет, что «Начать бой» возвращает реакцию как первый ход, а начатый заранее бой этого
+  // не показал бы. Причину FR-034 проходим «Применить всё равно».
   await page.getByRole("button", { name: /Щит/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
+  await page.getByRole("button", { name: "Применить всё равно" }).click();
+  await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   await expect(page.getByText(/Реакция израсходована, вернётся в начале вашего хода/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Начать бой" }).click();
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
 });
 
@@ -256,6 +270,9 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
     );
   };
 
+  // Бой начат: иначе причина FR-034 держала бы каждую строку списка притушенной, а мастер
+  // применения открывался бы на шаге «Бой не начат» вместо обычного первого шага.
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await scan("экран боя");
 
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
@@ -348,6 +365,8 @@ test("serves the app from cache when the network is gone", async ({ page, contex
 });
 
 test("camp mode reaches rest and recovery", async ({ page }) => {
+  // Бой начат: иначе FR-034 добавила бы шаг «Бой не начат» перед тратой ячейки.
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   // Тратим ячейку в бою, чтобы на привале было что восстанавливать.
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
@@ -369,6 +388,9 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
 });
 
 test("blood exchange goes through the wizard, not one tap", async ({ page }) => {
+  // Бой начат: иначе обмен предупреждал бы ещё и о том, что бой не начат (FR-034) — тот же текст,
+  // что у заклинания, но не то, что здесь проверяется.
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await page.getByRole("button", { name: /Магия крови/ }).click();
 
   // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется (FR-177).

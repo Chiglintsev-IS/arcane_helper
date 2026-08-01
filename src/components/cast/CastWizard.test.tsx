@@ -63,8 +63,22 @@ function concentrating(): CharacterState {
   return character;
 }
 
-async function openWizard(name: RegExp) {
-  const user = userEvent.setup();
+/**
+ * Открывает мастер применения: «Начать бой», затем строка списка и «Сотворить».
+ *
+ * Бой начинается по умолчанию: иначе перед тем, что проверяет тест, вставал бы лишний шаг «Бой не
+ * начат» (FR-034) — во всех сценариях этого файла применение происходит в режиме «Бой». Тесты,
+ * которым нужно снять слепок состояния до открытия мастера, но после начала боя, передают свой
+ * `user` и `startCombat: false`, начиная бой отдельным вызовом заранее.
+ */
+async function openWizard(
+  name: RegExp,
+  options: { user?: ReturnType<typeof userEvent.setup>; startCombat?: boolean } = {},
+) {
+  const user = options.user ?? userEvent.setup();
+  if (options.startCombat !== false) {
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+  }
   // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием (FR-084).
   await user.click(within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name }));
   await user.click(screen.getByRole("button", { name: "Сотворить" }));
@@ -98,9 +112,13 @@ describe("вход в мастер (FR-020)", () => {
 describe("инвариант FR-022: до подтверждения ресурсы не тронуты", () => {
   it("полный проход мастера и отмена оставляют состояние прежним", async () => {
     const { stores } = await renderWithStores(<CombatScreen />);
+    // Бой начат заранее: снимок «до» должен отражать состояние прямо перед открытием мастера,
+    // а не более раннее — иначе он не сойдётся с тем, что тест сравнивает после отмены.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     const before = structuredClone(stores.session.getState().session);
 
-    const user = await openWizard(/Доспехи мага/);
+    await openWizard(/Доспехи мага/, { user, startCombat: false });
     await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     expect(screen.getByRole("button", { name: "Подтвердить" })).toBeDefined();
@@ -125,8 +143,9 @@ describe("подтверждение (FR-023, AC-11)", () => {
     expect(session?.character.spellSlots[2]?.remaining).toBe(2);
     expect(session?.character.spellSlots[1]?.remaining).toBe(4);
     expect(session?.character.activeEffects).toHaveLength(1);
-    expect(session?.journal).toHaveLength(1);
-    expect(session?.journal[0]?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
+    // Две записи: «Бой начался» из `openWizard`, затем само применение.
+    expect(session?.journal).toHaveLength(2);
+    expect(session?.journal.at(-1)?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
     expect(session?.character.turnTracking.actionAvailable).toBe(false);
   });
 
@@ -237,8 +256,11 @@ describe("замена концентрации (FR-081, AC-13)", () => {
 
   it("отмена на шаге концентрации оставляет прежний эффект", async () => {
     const { stores } = await renderWithStores(<CombatScreen />, concentrating());
+    // Бой начат заранее — по той же причине, что и в тесте FR-022 выше.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     const before = structuredClone(stores.session.getState().session);
-    const user = await openWizard(/^Обнаружение магии/);
+    await openWizard(/^Обнаружение магии/, { user, startCombat: false });
 
     await user.click(screen.getByRole("button", { name: "Далее" }));
     // На шаге концентрации две кнопки: «Отмена» рядом с «Заменить концентрацию».

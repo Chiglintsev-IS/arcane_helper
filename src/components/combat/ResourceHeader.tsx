@@ -148,19 +148,25 @@ export function ResourceHeader({
   /**
    * Числа боя — везде, кроме «Книги»: там выбирают состав на день, и КС спасброска, модификатор
    * атаки, КД и остаток хитов на вопрос «чем сегодня платить» не отвечают (FR-217).
+   *
+   * Тем же доводом в «Книге» скрыта и строка с именем, классом и уровнем персонажа (ниже): игрок
+   * назвал её лишней для книги, «чтобы читать её, подготавливать заклинания и применять их вне боя»,
+   * а имя на вопрос «чем сегодня платить» отвечает не больше, чем КС или КД.
    */
   const combatNumbers = !inBook;
 
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
-      <header className="flex items-baseline justify-between gap-2">
-        <h1 className="text-lg font-semibold leading-tight">{character.name}</h1>
-        {/* Счётчик раундов — только в бою: вне боя раундов не идёт, и число застыло бы (FR-202). */}
-        <p className="text-xs text-slate-600 dark:text-slate-400">
-          {character.className}, {character.level} уровень
-          {turnTracked(character) ? ` · раунд ${economy.round}` : ""}
-        </p>
-      </header>
+      {combatNumbers ? (
+        <header className="flex items-baseline justify-between gap-2">
+          <h1 className="text-lg font-semibold leading-tight">{character.name}</h1>
+          {/* Счётчик раундов — только в бою: вне боя раундов не идёт, и число застыло бы (FR-202). */}
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            {character.className}, {character.level} уровень
+            {turnTracked(character) ? ` · раунд ${economy.round}` : ""}
+          </p>
+        </header>
+      ) : null}
 
       {combatNumbers ? (
         <dl className="grid grid-cols-4 gap-1">

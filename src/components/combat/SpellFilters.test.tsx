@@ -9,7 +9,7 @@
  * состав подаётся параметром, и обе стороны видны сразу.
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { SpellFilters } from "@/components/combat/SpellFilters";
@@ -132,6 +132,34 @@ describe("фильтры боя (FR-212)", () => {
 
     expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Заговор" })).toBeDefined();
+  });
+});
+
+describe("уровни — отдельная прокручиваемая строка (FR-212)", () => {
+  it("переключатели уровня стоят в своём контейнере «Уровень», а не в общей полосе", () => {
+    renderFilters(EVERYTHING);
+
+    const levels = within(screen.getByRole("group", { name: "Уровень" }));
+    expect(levels.getByRole("button", { name: "Заговор" })).toBeDefined();
+    expect(levels.getByRole("button", { name: "1 ур." })).toBeDefined();
+    expect(levels.getByRole("button", { name: "2 ур." })).toBeDefined();
+
+    // Остальные переключатели — не в контейнере уровней: он не поглощает общую полосу.
+    expect(levels.queryByRole("button", { name: "Ритуал" })).toBeNull();
+    expect(levels.queryByRole("button", { name: "Подготовлено" })).toBeNull();
+    // А снаружи они по-прежнему есть — полоса их не потеряла.
+    expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Подготовлено" })).toBeDefined();
+  });
+
+  it("в бою контейнера уровней нет вовсе: фильтра по уровню в бою нет (FR-212)", () => {
+    renderFilters(EVERYTHING, { mode: "combat" });
+    expect(screen.queryByRole("group", { name: "Уровень" })).toBeNull();
+  });
+
+  it("без уровней в книге контейнера тоже нет: показывать нечего (FR-002)", () => {
+    renderFilters({ ...EVERYTHING, levels: [] });
+    expect(screen.queryByRole("group", { name: "Уровень" })).toBeNull();
   });
 });
 

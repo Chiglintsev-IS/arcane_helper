@@ -7,7 +7,8 @@
  *
  * Набор один на все режимы и растёт от состава списка, а не от режима: время накладывания, роль и
  * концентрация есть везде, где есть чем их наполнить. Вне боя к ним добавляются уровень,
- * ритуальность и подготовка — вопросы, которых в бою не задают (FR-212).
+ * ритуальность и подготовка — вопросы, которых в бою не задают (FR-212). Уровень при этом стоит не
+ * в общей полосе, а в своей прокручиваемой строке — читается шкалой чисел, а не набором вопросов.
  */
 
 import {
@@ -161,16 +162,6 @@ export function SpellFilters({
                 Ритуал
               </Toggle>
             ) : null}
-            {available.levels.map((level) => (
-              <Toggle
-                key={level}
-                pressed={filters.levels.includes(level)}
-                tone="muted"
-                onClick={() => onChange({ ...filters, levels: toggleValue(filters.levels, level) })}
-              >
-                {levelChipLabel(level)}
-              </Toggle>
-            ))}
             <Toggle
               pressed={filters.prepared}
               tone="muted"
@@ -197,6 +188,31 @@ export function SpellFilters({
           </button>
         ) : null}
       </div>
+
+      {/*
+        Уровень — единственный переключатель, вынесенный в свою прокручиваемую строку, а не в
+        переносящуюся полосу выше (FR-212). Довод у переноса там другой: переключатель за краем
+        экрана — переключатель, которого для игрока нет, и в бою полосу не пролистывают, а
+        оглядывают (см. выше). У уровня причина обратная. Уровней пять, они идут подряд одним рядом
+        чисел и читаются как шкала, а не как набор вопросов вроде «Ритуал» или «Подготовлено»; в
+        «Книге» их к тому же оглядывают не под чужой ход, а прокрутка — обычный способ работы со
+        списком в этом режиме (FR-218). Правило боя при этом не меняется: фильтра по уровню в бою
+        нет вовсе, и строки этой там тоже нет.
+      */}
+      {inCombat || available.levels.length === 0 ? null : (
+        <div role="group" aria-label="Уровень" className="flex flex-nowrap gap-1 overflow-x-auto">
+          {available.levels.map((level) => (
+            <Toggle
+              key={level}
+              pressed={filters.levels.includes(level)}
+              tone="muted"
+              onClick={() => onChange({ ...filters, levels: toggleValue(filters.levels, level) })}
+            >
+              {levelChipLabel(level)}
+            </Toggle>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

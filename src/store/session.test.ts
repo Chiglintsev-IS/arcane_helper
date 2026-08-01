@@ -1913,3 +1913,68 @@ describe("схема ритуала не влияет на механику (FR-
     );
   });
 });
+
+describe("сотворённое вне боя не переносится в бой (FR-145, FR-095)", () => {
+  it("вне боя действие не записывается: в бою оно остаётся целым", () => {
+    const clock = testClock();
+    const character = { ...createThorne(), screenMode: "book" as const };
+    const session = castSpell(
+      { character, journal: [] },
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.journal.at(-1)?.actionUsed).toBeUndefined();
+
+    const inCombat = { ...session, character: { ...session.character, screenMode: "combat" as const } };
+    expect(deriveTurnEconomy(inCombat).actionAvailable).toBe(true);
+  });
+
+  it("в бою действие записывается по-прежнему", () => {
+    const clock = testClock();
+    const session = castSpell(
+      { character: createThorne(), journal: [] },
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.journal.at(-1)?.actionUsed).toBe("action");
+    expect(deriveTurnEconomy(session).actionAvailable).toBe(false);
+  });
+
+  it("раундовый эффект вне боя истекает сразу: КД не входит в бой", () => {
+    const clock = testClock();
+    const character = { ...createThorne(), screenMode: "book" as const };
+    const session = castSpell(
+      { character, journal: [] },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.character.activeEffects).toEqual([]);
+    expect(session.journal.at(-1)?.summaryRu).toContain("вне боя раундов нет");
+  });
+
+  it("в бою раундовый эффект остаётся висеть", () => {
+    const clock = testClock();
+    const session = castSpell(
+      { character: createThorne(), journal: [] },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.character.activeEffects.map((effect) => effect.spellId)).toEqual(["shield"]);
+  });
+
+  it("ячейка тратится в обоих случаях: сотворить игрок выбрал сам", () => {
+    const clock = testClock();
+    const character = { ...createThorne(), screenMode: "book" as const };
+    const session = castSpell(
+      { character, journal: [] },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
+      clock,
+    );
+
+    expect(session.character.spellSlots[1]?.remaining).toBe(3);
+  });
+});

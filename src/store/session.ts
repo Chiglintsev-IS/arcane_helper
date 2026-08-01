@@ -606,6 +606,14 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
   after = applyRune(after, request);
 
   const effect = buildEffect(request, clock);
+  // Раундовый эффект вне боя не успевает начаться: раунды не идут, значит эффект истёк бы в тот же
+  // миг, в который родился (FR-095). Ячейка при этом уже потрачена выше — сотворить игрок выбрал
+  // сам, а отмена доступна журналом (FR-111); молча вернуть её значило бы решать за него, что он
+  // ошибся.
+  const expiresImmediately =
+    effect !== null && effect.duration.type === "rounds" && !turnTracked(session.character);
+  const expiredNote = expiresImmediately ? ` · «${spell.nameRu}» истёк сразу: вне боя раундов нет` : "";
+
   // Заменяя концентрацию, закрываем прежний концентрационный эффект (UC-03).
   const keptEffects = spell.concentration
     ? after.activeEffects.filter((existing) => !existing.isConcentration)
@@ -613,8 +621,9 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
 
   after = {
     ...after,
-    activeEffects: effect === null ? keptEffects : [...keptEffects, effect],
-    ...(spell.concentration
+    activeEffects: effect === null || expiresImmediately ? keptEffects : [...keptEffects, effect],
+    // Эффект, истёкший сразу, концентрацию не занимает: он не начался.
+    ...(spell.concentration && !expiresImmediately
       ? { concentration: { spellId: spell.id, startedAt: clock.now() } }
       : {}),
   };
@@ -635,12 +644,14 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
     after,
     {
       kind: spell.castingTime.type === "reaction" ? "reaction_cast" : "spell_cast",
-      summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}`,
+      summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}${expiredNote}`,
       spellId: spell.id,
       slotLevel: level,
-      // Записываем всегда, даже при выключенном учёте: журнал фиксирует факт,
-      // а настройка влияет только на то, запрещать ли повторную трату.
-      ...(used === undefined ? {} : { actionUsed: used }),
+      // Вне боя ход не отслеживается (FR-143), значит и тратить в нём нечего: записанное здесь
+      // действие предъявлялось бы игроку в бою, потому что до первой отметки «Начать бой» границы
+      // в журнале нет и `deriveTurnEconomy` складывает всё подряд (FR-145). Прежний комментарий
+      // ссылался на переключатель учёта хода, которого больше нет.
+      ...(used === undefined || !turnTracked(session.character) ? {} : { actionUsed: used }),
     },
     clock,
   );

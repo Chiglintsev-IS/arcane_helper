@@ -28,26 +28,6 @@ function normalize(text: string): string {
 }
 
 /**
- * Запрет, подходящий под поисковый запрос, — по русскому или английскому названию (FR-162).
- *
- * Совпадение по подстроке, а не точное: игрок ищет «понимание», а не «Понимание языков». Пустой
- * запрос не находит ничего: иначе причина запрета всплывала бы на пустом поле.
- */
-export function findBan(
-  query: string,
-  banned: readonly BannedSpell[],
-): BannedSpell | null {
-  const needle = normalize(query);
-  if (needle === "") return null;
-  return (
-    banned.find(
-      (ban) =>
-        normalize(ban.nameRu).includes(needle) || normalize(ban.nameEn).includes(needle),
-    ) ?? null
-  );
-}
-
-/**
  * Подходит ли строка под поиск по названию: русскому или английскому.
  *
  * Принимает не только заклинание, а любую именованную строку: «Магия крови» в списке «Книги» —

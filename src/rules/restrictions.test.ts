@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { BANNED_SPELLS, loadThorneSpells, HARMFUL_DAMAGE_TYPES } from "@/data/content/thorne";
 
-import { findBan, matchesQuery } from "./restrictions";
+import { matchesQuery } from "./restrictions";
 
 const SPELLS = loadThorneSpells();
 
@@ -12,34 +12,9 @@ function byId(id: string) {
   return spell!;
 }
 
-describe("findBan (FR-162)", () => {
-  it("находит запрет по части русского названия", () => {
-    expect(findBan("понимание", BANNED_SPELLS)?.nameEn).toBe("Comprehend Languages");
-  });
-
-  it("находит по английскому названию и не смотрит на регистр", () => {
-    expect(findBan("COMPREHEND", BANNED_SPELLS)?.nameRu).toBe("Понимание языков");
-  });
-
-  it("«ё» и «е» за столом набирают как придётся", () => {
-    const banned = [
-      { nameRu: "Огненный ёж", nameEn: "Fire Hedgehog", reason: "dungeon_master" as const, explanationRu: "нет" },
-    ];
-    expect(findBan("ежик", banned)).toBeNull();
-    expect(findBan("огненный еж", banned)?.nameEn).toBe("Fire Hedgehog");
-  });
-
-  it("на пустом запросе молчит: иначе причина всплывала бы на пустом поле", () => {
-    expect(findBan("", BANNED_SPELLS)).toBeNull();
-    expect(findBan("   ", BANNED_SPELLS)).toBeNull();
-  });
-
-  it("на разрешённое заклинание запрета не находит", () => {
-    expect(findBan("Опознание", BANNED_SPELLS)).toBeNull();
-  });
-});
-
-describe("matchesQuery (FR-162)", () => {
+// matchesQuery служит поиску по книге и строке «Магия крови» (FR-207), а не запретам кампании:
+// findBan, отвечавший на поиск запрещённого (FR-162), удалён вместе с требованием — см. OQ-34.
+describe("matchesQuery (FR-207)", () => {
   it("ищет по обоим названиям", () => {
     expect(matchesQuery(byId("misty-step"), "туман")).toBe(true);
     expect(matchesQuery(byId("misty-step"), "misty")).toBe(true);

@@ -31,7 +31,9 @@ const identify = spell("identify");
 const shield = spell("shield");
 
 function context(character: CharacterState = createThorne()): DraftContext {
-  return { character, turn: ALL_TURN_RESOURCES };
+  // Бой уже начат: этот файл проверяет черновик мастера, а не сам факт начала боя (FR-034 — в
+  // availability.test.ts).
+  return { character, turn: { ...ALL_TURN_RESOURCES, inFight: true } };
 }
 
 /**

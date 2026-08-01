@@ -110,6 +110,9 @@ describe("состав экрана (FR-001, AC-14)", () => {
     const numbers = screen.getByLabelText("Ресурсы");
     expect(within(numbers).getByText("14")).toBeDefined();
 
+    // Применение проверяется в начатом бою: до «Начать бой» причина FR-034 добавила бы лишний
+    // шаг мастера, а этот тест — про КД, а не про сам факт начала боя.
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -124,6 +127,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -143,6 +147,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
 
     // Реакция считается потраченной по журналу: отмечаем её расход применением «Щита».
     const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: /Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -404,6 +409,7 @@ describe("повторяемое действие эффекта (FR-092)", () =
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: /^Отражения/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -417,6 +423,7 @@ describe("повторяемое действие эффекта (FR-092)", () =
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: /^Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -514,46 +521,6 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
   });
 });
 
-describe("поиск и запреты (FR-160, FR-161, FR-162)", () => {
-  it("ищет по названию в «Книге»", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, inBookMode());
-
-    await user.click(screen.getByRole("button", { name: "Поиск" }));
-    await user.type(screen.getByLabelText("Поиск по названию"), "туман");
-
-    const list = within(screen.getByLabelText(/^Заклинания/));
-    expect(list.getByText("Туманный шаг")).toBeDefined();
-    expect(list.queryByText("Паутина")).toBeNull();
-  });
-
-  it("на запрещённое отвечает причиной, а не пустым экраном (FR-162)", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, inBookMode());
-
-    await user.click(screen.getByRole("button", { name: "Поиск" }));
-    await user.type(screen.getByLabelText("Поиск по названию"), "понимание языков");
-
-    expect(screen.getByRole("status").textContent).toContain("Запрещено мастером");
-    expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
-  });
-
-  it("на просто ненайденное отвечает запросом, а не запретом", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, inBookMode());
-
-    await user.click(screen.getByRole("button", { name: "Поиск" }));
-    await user.type(screen.getByLabelText("Поиск по названию"), "дракон");
-
-    expect(screen.getByText(/По запросу «дракон» ничего не найдено/)).toBeDefined();
-  });
-
-  it("в бою поля поиска нет: там список короткий", async () => {
-    await renderWithStores(<CombatScreen />);
-    expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
-  });
-});
-
 describe("реакции (FR-060, FR-061, FR-062)", () => {
   it("вход одним нажатием, вопрос о событии первым", async () => {
     const user = userEvent.setup();
@@ -612,6 +579,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     await renderWithStores(<CombatScreen />);
 
     // Тратим реакцию «Щитом», затем открываем экран реакций снова.
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: /^Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -940,7 +908,11 @@ describe("краткая карточка (FR-010)", () => {
       3: { maximum: 3, remaining: 0 },
       4: { maximum: 1, remaining: 0 },
     };
+    const user = userEvent.setup();
     await renderWithStores(<CombatScreen />, character);
+    // Бой начат: тест проверяет причину нехватки ячеек, а не причину FR-034 — иначе она заслонила
+    // бы собой то, ради чего написан этот тест.
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
 
     const row = screen.getByRole("button", { name: /Доспехи мага/ });
     expect(within(row).getByText(/Нет свободной ячейки 1 уровня/)).toBeDefined();
@@ -1005,6 +977,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<CombatScreen />);
 
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -1013,7 +986,8 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 
     await user.click(screen.getByRole("button", { name: /^Отменить/ }));
     expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
-    expect(stores.session.getState().session?.journal).toHaveLength(0);
+    // Одна запись остаётся — «Бой начался»: отмена стирает только само применение (FR-111).
+    expect(stores.session.getState().session?.journal).toHaveLength(1);
   });
 
   it("учёт хода следует из режима, а не из переключателя (FR-143)", async () => {
@@ -1168,5 +1142,130 @@ describe("шапка «Книги»: очки видны, руны нет (FR-21
     const header = screen.getByRole("region", { name: "Ресурсы" });
     expect(within(header).getByText(/Руны 3\/3/)).toBeDefined();
     expect(within(header).getByText(/Очки 0/)).toBeDefined();
+  });
+});
+
+describe("шапка «Книги» без лишнего (FR-217)", () => {
+  it("нет заголовка с именем персонажа", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByRole("heading", { name: "Торн" })).toBeNull();
+  });
+
+  it("нет текста класса и уровня", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByText(/Волшебник, 7 уровень/)).toBeNull();
+  });
+
+  it("нет кнопки «Поиск»", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByRole("button", { name: "Поиск" })).toBeNull();
+  });
+
+  it("нет поля ввода поиска", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
+  });
+
+  it("нет кнопки «Реакции»", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
+  });
+
+  it("значок очков и кнопка отмены остаются: обе — решение игрока, а не недоделка", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    expect(
+      within(screen.getByRole("region", { name: "Ресурсы" })).getByText(/Очки 0/),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /Отменить/ })).toBeDefined();
+  });
+
+  it("счётчик подготовки остаётся: он отвечает на вопрос «сколько ещё можно» (FR-214)", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/)).toBeDefined();
+  });
+
+  it("в «Бою» и «Вне боя» имя, класс и уровень остаются", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.getByRole("heading", { name: "Торн" })).toBeDefined();
+    expect(screen.getByText(/Волшебник, 7 уровень/)).toBeDefined();
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+    expect(screen.getByRole("heading", { name: "Торн" })).toBeDefined();
+    expect(screen.getByText(/Волшебник, 7 уровень/)).toBeDefined();
+  });
+});
+
+describe("«Знаки ограждения» вне боя (FR-153)", () => {
+  it("кнопка «Реакции» есть в «Бою» и «Вне боя», но не в «Книге» (FR-217)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();
+
+    // «Книга» — не место для реакции: её открывают заранее, а не в чужой ход (FR-217).
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+    expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+    expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();
+  });
+
+  it("вне боя лист предлагает руну, хотя списка заклинаний в режиме нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+    await user.click(screen.getByRole("button", { name: "Реакции" }));
+
+    const sheet = screen.getByRole("dialog", { name: "Реакции" });
+    await user.click(within(sheet).getByRole("radio", { name: /провалил спасбросок/i }));
+
+    await user.click(within(sheet).getByRole("button", { name: /Потратить руну/ }));
+
+    expect(screen.getByLabelText(/Ячейки заклинаний/).textContent).toBeDefined();
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).getByText(/Руны 2\/3/)).toBeDefined();
+  });
+});
+
+describe("применение до начала боя (FR-034)", () => {
+  it("строка списка называет причину", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    const row = screen.getByRole("button", { name: /Луч холода/ });
+    expect(within(row).getByText(/Недоступно: Бой не начат/)).toBeDefined();
+  });
+
+  it("причина проходится «Применить всё равно» и ячейка списывается", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+
+    // Уточнено диалогом: «Бой не начат» видна и здесь, и на каждой строке списка позади него.
+    const dialog = screen.getByRole("dialog", { name: /Применение/ });
+    expect(within(dialog).getByText(/Бой не начат/)).toBeDefined();
+    await user.click(screen.getByRole("button", { name: /Применить всё равно/ }));
+    // Доступность → ячейка → итог: у заклинания с ячейкой шаг выбора ячейки не пропадает из-за
+    // FR-034, поэтому «Далее» нажимается дважды.
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(screen.getByLabelText(/Ячейки 1 уровня/).textContent).toContain("3/4");
+  });
+
+  it("после «Начать бой» причина уходит", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+
+    const row = screen.getByRole("button", { name: /Луч холода/ });
+    expect(within(row).queryByText(/Бой не начат/)).toBeNull();
   });
 });
