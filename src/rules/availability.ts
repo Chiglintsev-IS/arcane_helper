@@ -28,13 +28,24 @@ export type TurnResources = {
   actionAvailable: boolean;
   bonusActionAvailable: boolean;
   reactionAvailable: boolean;
+  /**
+   * Отмечен ли бой начатым (FR-034, FR-140). Выводится из журнала, а не хранится, — поэтому
+   * приходит параметром, как и остальные три признака (ADR-0008).
+   */
+  inFight: boolean;
 };
 
-/** Всё доступно: начало хода и выключенный учёт хода (FR-143) выглядят одинаково. */
+/**
+ * Всё доступно: начало хода и выключенный учёт хода (FR-143) выглядят одинаково.
+ *
+ * `inFight: false` здесь безопасно: проверка начала боя сначала смотрит на режим и вне «Боя» молчит
+ * вовсе — так же устроен `checkCastingTime`.
+ */
 export const ALL_TURN_RESOURCES: TurnResources = {
   actionAvailable: true,
   bonusActionAvailable: true,
   reactionAvailable: true,
+  inFight: false,
 };
 
 /** Фразы целиком: род в русском не выводится из названия, «Реакция израсходовано» недопустимо. */
@@ -43,6 +54,9 @@ export const ACTION_SPENT_MESSAGES: Record<TurnResource, string> = {
   bonus_action: "Бонусное действие уже израсходовано",
   reaction: "Реакция уже израсходована",
 };
+
+/** Одна формулировка на оба мастера: у заклинания и у обмена причина буквально одна (FR-034). */
+export const COMBAT_NOT_STARTED_MESSAGE = "Бой не начат — сначала «Начать бой»";
 
 /** Способ оплаты сотворения: ячейка, очки заклинаний (F-15) или ничего — заговор и ритуал. */
 export type PaymentChoice =
@@ -58,6 +72,7 @@ export type AvailabilityCode =
   | "bonus_action_spent"
   | "reaction_spent"
   | "long_casting_time"
+  | "combat_not_started"
   | "no_payment"
   | "no_slot"
   | "slot_too_low"
@@ -134,6 +149,31 @@ function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
       reasonRu:
         `Не уложится в один ход — ${longCastingTimeRu(unit, castingTime.value)},` +
         " действие каждый ход и концентрация",
+      overridable: true,
+    },
+  ];
+}
+
+/**
+ * Применение до начала боя ([FR-034](../../docs/features/F-03-cast-wizard.md#fr-034)).
+ *
+ * Пока бой не отмечен начатым, счёт раундов и экономия действий ни на чём не основаны: приложение
+ * показывает «раунд 1» и три целых ресурса, потому что журналу не от чего считать, а не потому, что
+ * так обстоят дела. Заклинание при этом творится, ячейка списывается, и игрок узнаёт о расхождении
+ * позже — когда числа перестанут сходиться с тем, что называет мастер.
+ *
+ * Причина, а не запрет (FR-031): бой мог начаться до того, как игрок взял телефон, и тупик здесь
+ * дороже лишнего нажатия.
+ *
+ * Молчит вне режима «Бой»: там ходов не идёт (FR-143), начинать нечего, и предупреждение стояло бы
+ * на каждой строке «Книги».
+ */
+function checkCombatStarted(input: AvailabilityInput): AvailabilityWarning[] {
+  if (input.character.screenMode !== "combat" || input.turn.inFight) return [];
+  return [
+    {
+      code: "combat_not_started",
+      reasonRu: COMBAT_NOT_STARTED_MESSAGE,
       overridable: true,
     },
   ];
@@ -357,6 +397,7 @@ export function checkAvailability(input: AvailabilityInput): Availability {
         ]
       : []),
     ...checkCastingTime(input),
+    ...checkCombatStarted(input),
     ...checkPayment(input),
     ...checkComponents(input),
     ...checkConcentration(input),

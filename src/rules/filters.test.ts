@@ -31,7 +31,9 @@ function filters(overrides: Partial<SpellFilters> = {}): SpellFilters {
 function context(overrides: { character?: CharacterState; turn?: TurnResources } = {}) {
   return {
     character: overrides.character ?? createThorne(),
-    turn: overrides.turn ?? ALL_TURN_RESOURCES,
+    // Бой уже начат: этот файл проверяет фильтры, а не сам факт начала боя (FR-034 — в
+    // availability.test.ts).
+    turn: overrides.turn ?? { ...ALL_TURN_RESOURCES, inFight: true },
   };
 }
 
@@ -144,7 +146,7 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
   });
 
   it("израсходованное действие скрывает заклинания действием, но не реакции", () => {
-    const turn = { ...ALL_TURN_RESOURCES, actionAvailable: false };
+    const turn = { ...ALL_TURN_RESOURCES, inFight: true, actionAvailable: false };
     const shown = ids(filterSpells(allSpells, filters({ availableNow: true }), context({ turn })));
 
     expect(shown).not.toContain("ray-of-frost");

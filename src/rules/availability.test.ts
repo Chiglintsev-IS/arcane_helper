@@ -31,7 +31,9 @@ const findFamiliar = spell("find-familiar");
 function check(overrides: Partial<AvailabilityInput> & { spell: Spell }) {
   const input: AvailabilityInput = {
     character: createThorne(),
-    turn: ALL_TURN_RESOURCES,
+    // Бой уже начат: этот помощник проверяет прочие условия FR-030, а не сам факт начала боя —
+    // тот проверяется отдельно в «бой не начат (FR-034)» с явным `inFight: false`.
+    turn: { ...ALL_TURN_RESOURCES, inFight: true },
     mode: overrides.spell.level === 0 ? "cantrip" : "normal",
     payment:
       overrides.spell.level === 0
@@ -127,7 +129,12 @@ describe("checkAvailability: экономия хода (FR-030, FR-141)", () => 
       spell: identify,
       mode: "ritual",
       payment: { kind: "none" },
-      turn: { actionAvailable: false, bonusActionAvailable: false, reactionAvailable: false },
+      turn: {
+        actionAvailable: false,
+        bonusActionAvailable: false,
+        reactionAvailable: false,
+        inFight: true,
+      },
     });
     expect(reasonsOf(availability, "action_spent")).toEqual([]);
     expect(reasonsOf(availability, "bonus_action_spent")).toEqual([]);
@@ -367,7 +374,7 @@ describe("checkAvailability: несколько нарушений сразу", 
     const availability = check({
       spell: detectMagic,
       mode: "normal",
-      turn: { ...ALL_TURN_RESOURCES, actionAvailable: false },
+      turn: { ...ALL_TURN_RESOURCES, inFight: true, actionAvailable: false },
     });
     expect(availability.warnings.map((warning) => warning.code)).toEqual([
       "not_prepared",
@@ -380,7 +387,7 @@ describe("checkAvailability: несколько нарушений сразу", 
     const availability = check({
       spell: detectMagic,
       mode: "normal",
-      turn: { ...ALL_TURN_RESOURCES, actionAvailable: false },
+      turn: { ...ALL_TURN_RESOURCES, inFight: true, actionAvailable: false },
     });
     expect(availability.overridable).toBe(true);
   });
@@ -505,5 +512,48 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
     }).warnings;
 
     expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
+  });
+});
+
+describe("бой не начат (FR-034)", () => {
+  it("в режиме «Бой» до начала боя причина названа и проходима", () => {
+    const character = createThorne();
+    const availability = checkAvailability({
+      spell: shield,
+      character,
+      turn: { ...ALL_TURN_RESOURCES, inFight: false },
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    });
+
+    expect(reasonsOf(availability, "combat_not_started")).toEqual([
+      "Бой не начат — сначала «Начать бой»",
+    ]);
+    expect(availability.available).toBe(false);
+    expect(availability.overridable).toBe(true);
+  });
+
+  it("после начала боя причины нет", () => {
+    const availability = checkAvailability({
+      spell: shield,
+      character: createThorne(),
+      turn: { ...ALL_TURN_RESOURCES, inFight: true },
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    });
+
+    expect(reasonsOf(availability, "combat_not_started")).toEqual([]);
+  });
+
+  it("вне режима «Бой» проверка молчит: ходов там не идёт и начинать нечего", () => {
+    const availability = checkAvailability({
+      spell: shield,
+      character: { ...createThorne(), screenMode: "book" },
+      turn: { ...ALL_TURN_RESOURCES, inFight: false },
+      mode: "normal",
+      payment: { kind: "slot", slotLevel: 1 },
+    });
+
+    expect(reasonsOf(availability, "combat_not_started")).toEqual([]);
   });
 });
