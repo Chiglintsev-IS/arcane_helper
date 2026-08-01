@@ -54,6 +54,10 @@ STATUSES = {"План", "В работе", "Готово", "Проверено",
 QUESTION_STATUSES = {"Открыт", "Закрыт", "Частично закрыт"}
 QUESTION_STATUS_PREFIX = "Решено"
 
+# У решений тоже свой: отменить решение можно, а вот заменить его новым — отдельный исход, и он
+# называет замену по номеру. Словарь объявлен в шапке decisions.md, здесь он только проверяется.
+DECISION_STATUS_PREFIX = "Заменено ADR-"
+
 REQ_ID = re.compile(r"\b(?:FR|NFR)-\d{3}\b")
 REQ_HEADING = re.compile(r"^#{3,4}\s+((?:FR|NFR)-\d{3})\b")
 HEADING = re.compile(r"^#{1,6}\s+(.*)$")
@@ -214,6 +218,7 @@ def main():
 
     # 6. Статусы из словаря.
     questions = os.path.join(DOCS, "open-questions.md")
+    decisions = os.path.join(DOCS, "decisions.md")
     for path in files:
         for status in STATUS_LINE.findall(read_text(path)):
             value = status.strip()
@@ -221,6 +226,9 @@ def main():
                 continue
             if os.path.normpath(path) == os.path.normpath(questions):
                 if value in QUESTION_STATUSES or value.startswith(QUESTION_STATUS_PREFIX):
+                    continue
+            elif os.path.normpath(path) == os.path.normpath(decisions):
+                if value in STATUSES or value.startswith(DECISION_STATUS_PREFIX):
                     continue
             elif value in STATUSES:
                 continue
