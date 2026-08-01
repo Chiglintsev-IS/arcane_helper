@@ -63,6 +63,12 @@ describe("отбор по режиму (FR-201, FR-202, FR-203)", () => {
     }
   });
 
+  it("журнал — списка заклинаний нет (FR-220)", () => {
+    const spells = loadThorneSpells();
+
+    expect(spellsForMode(spells, "journal")).toEqual([]);
+  });
+
   it("ритуал действием остаётся в бою и в книге: способы разные, заклинание одно", () => {
     // «Обнаружение магии» в бою идёт за ячейку, в книге — ритуалом за лишние 10 минут (FR-208).
     expect(belongsToMode(SPELLS.find((s) => s.id === "detect-magic")!, "combat")).toBe(true);

@@ -1,9 +1,9 @@
 /**
  * Режимы экрана (F-18).
  *
- * Экран один, а ситуаций три, и они хотят разного: в бою — то, что творится внутри хода; вне боя —
- * отдых и восстановление без единого заклинания; в книге — всё подряд, для чтения, сверки и
- * применения не под таймер.
+ * Экран один, а ситуаций четыре, и они хотят разного: в бою — то, что творится внутри хода; вне боя
+ * — отдых и восстановление без единого заклинания; в книге — всё подряд, для чтения, сверки и
+ * применения не под таймер; в журнале — случившееся и отмена лишнего.
  *
  * Значение `camp` осталось от прежнего названия режима — «Привал». В интерфейсе он называется «Вне
  * боя» (FR-202): привал — лишь одна из ситуаций, где бой не идёт. Переименование самого значения
@@ -20,7 +20,7 @@ import { CANTRIP_LEVEL, type Spell } from "@/data/schemas/spell";
 import type { CombatRole } from "./combatRole";
 import { traitsOf, type ActionTraits } from "./filters";
 
-export const SCREEN_MODES = ["combat", "camp", "book"] as const;
+export const SCREEN_MODES = ["combat", "camp", "book", "journal"] as const;
 
 export type ScreenMode = (typeof SCREEN_MODES)[number];
 
@@ -52,7 +52,9 @@ export function belongsToMode(spell: Spell, mode: ScreenMode): boolean {
   switch (mode) {
     case "combat":
       return castableWithinTurn(spell);
+    // Вне боя и в журнале списка нет вовсе: там отдыхают и разбирают случившееся (FR-202, FR-220).
     case "camp":
+    case "journal":
       return false;
     default:
       return true;

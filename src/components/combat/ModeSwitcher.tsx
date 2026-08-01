@@ -6,6 +6,10 @@
  * одним пальцем.
  *
  * Компонент презентационный: режим приходит параметром, смена — обратным вызовом.
+ *
+ * Кнопок четыре, и ряд прокручивается по горизонтали (FR-220): равная ширина на четверых сжала бы
+ * «Вне боя» до переноса. Кнопки растут по содержимому и не сжимаются — на iPhone SE четыре коротких
+ * слова помещаются целиком, а прокрутка остаётся запасом.
  */
 
 import { SCREEN_MODES, type ScreenMode } from "@/rules/modes";
@@ -22,6 +26,7 @@ const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   combat: { title: "Бой", hint: "то, что творится внутри хода" },
   camp: { title: "Вне боя", hint: "отдых и восстановление — привал, город, дорога" },
   book: { title: "Книга", hint: "весь состав целиком, для чтения и сверки" },
+  journal: { title: "Журнал", hint: "что случилось и что можно отменить" },
 };
 
 export function ModeSwitcher({
@@ -35,7 +40,7 @@ export function ModeSwitcher({
     <div
       role="radiogroup"
       aria-label="Режим экрана"
-      className="flex gap-1 rounded-xl bg-slate-100 p-0.5 dark:bg-slate-900"
+      className="flex flex-nowrap gap-1 overflow-x-auto rounded-xl bg-slate-100 p-0.5 dark:bg-slate-900"
     >
       {SCREEN_MODES.map((value) => {
         const selected = value === mode;
@@ -47,7 +52,7 @@ export function ModeSwitcher({
             aria-checked={selected}
             aria-label={`${LABELS[value].title}: ${LABELS[value].hint}`}
             onClick={() => onChange(value)}
-            className={`min-h-11 flex-1 rounded-lg px-2 text-sm font-medium ${
+            className={`min-h-11 shrink-0 grow basis-auto rounded-lg px-2 text-sm font-medium ${
               selected
                 ? "bg-white text-action-strong shadow-sm dark:bg-slate-800 dark:text-action"
                 : "text-slate-600 dark:text-slate-400"
