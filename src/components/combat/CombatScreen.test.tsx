@@ -136,7 +136,10 @@ describe("состав экрана (FR-001, AC-14)", () => {
     const numbers = screen.getByLabelText("Ресурсы");
     expect(within(numbers).getByText("17")).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: /Отменить/ }));
+    // Отменяют только в журнале (FR-114). Возвращаться в бой не нужно: КД стоит в шапке обоих
+    // режимов, и результат отмены виден там же, где её нажали (FR-220).
+    await user.click(screen.getByRole("radio", { name: /^Журнал/ }));
+    await user.click(screen.getByRole("button", { name: /^Отменить/ }));
     expect(within(numbers).getByText("14")).toBeDefined();
   });
 
@@ -479,6 +482,8 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
     expect(stores.session.getState().session?.character.runes.remaining).toBe(2);
 
     await user.click(screen.getByRole("button", { name: "Закрыть" }));
+    // Кнопка отмены живёт только в журнале (FR-114) — путь к ней длиннее на одно нажатие.
+    await user.click(screen.getByRole("radio", { name: /^Журнал/ }));
     await user.click(screen.getByRole("button", { name: /^Отменить/ }));
     expect(stores.session.getState().session?.character.runes.remaining).toBe(3);
   });
@@ -995,22 +1000,10 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     expect(within(numbers).getByText("14")).toBeDefined();
   });
 
-  it("отмена возвращает потраченную ячейку", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<CombatScreen />);
-
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
-    await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
-    await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
-    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
-
-    await user.click(screen.getByRole("button", { name: /^Отменить/ }));
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
-    // Одна запись остаётся — «Бой начался»: отмена стирает только само применение (FR-111).
-    expect(stores.session.getState().session?.journal).toHaveLength(1);
-  });
+  // Прогон «отмена возвращает потраченную ячейку» переехал в блок «режим „Журнал“» под именем
+  // «отмена из журнала возвращает потраченную ячейку»: путь к кнопке идёт через него (FR-114), и
+  // проверять то же самое дважды незачем. Прежнее имя названо здесь дословно намеренно — на него
+  // ссылается «Проверка» у FR-111, и ссылку предстоит перенаправить вместе со статусами требований.
 
   it("учёт хода следует из режима, а не из переключателя (FR-143)", async () => {
     const user = userEvent.setup();
@@ -1193,13 +1186,14 @@ describe("шапка «Книги» без лишнего (FR-217)", () => {
     expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
   });
 
-  it("значок очков и кнопка отмены остаются: обе — решение игрока, а не недоделка", async () => {
+  it("значок очков остаётся: это решение игрока, а не недоделка", async () => {
     await renderWithStores(<CombatScreen />, inBookMode());
 
     expect(
       within(screen.getByRole("region", { name: "Ресурсы" })).getByText(/Очки 0/),
     ).toBeDefined();
-    expect(screen.getByRole("button", { name: /Отменить/ })).toBeDefined();
+    // Кнопки отмены здесь больше нет: отменяют только в журнале (FR-114).
+    expect(screen.queryByRole("button", { name: /^Отменить/ })).toBeNull();
   });
 
   it("счётчик подготовки остаётся: он отвечает на вопрос «сколько ещё можно» (FR-214)", async () => {
@@ -1289,5 +1283,92 @@ describe("применение до начала боя (FR-034)", () => {
 
     const row = screen.getByRole("button", { name: /Луч холода/ });
     expect(within(row).queryByText(/Бой не начат/)).toBeNull();
+  });
+});
+
+describe("режим «Журнал» (FR-114, FR-220)", () => {
+  /** Уйти в журнал: кнопка переключателя названа по режиму и подсказке. */
+  async function openJournal(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+    await user.click(screen.getByRole("radio", { name: /^Журнал/ }));
+  }
+
+  it("в «Бою», «Вне боя» и «Книге» кнопки отмены нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+    expect(screen.queryByRole("button", { name: /^Отменить/ })).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+    expect(screen.queryByRole("button", { name: /^Отменить/ })).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+    expect(screen.queryByRole("button", { name: /^Отменить/ })).toBeNull();
+  });
+
+  it("переключение в «Журнал» показывает записи", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await openJournal(user);
+
+    expect(
+      within(screen.getByRole("list", { name: "Журнал событий" })).getByText(/Бой начался/),
+    ).toBeDefined();
+  });
+
+  it("отмена из журнала возвращает потраченную ячейку", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />, withTurnTracking());
+
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
+
+    await openJournal(user);
+    await user.click(screen.getByRole("button", { name: /^Отменить/ }));
+
+    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
+    // Экран не закрылся: кнопка переехала на запись «Бой начался», и её тоже можно отменить.
+    expect(screen.getByRole("button", { name: "Отменить: Бой начался" })).toBeDefined();
+  });
+
+  it("списка, фильтров и кнопок хода в журнале нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+
+    await openJournal(user);
+
+    expect(screen.queryByLabelText("Фильтры")).toBeNull();
+    expect(screen.queryByRole("list", { name: /Заклинания/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Мой ход" })).toBeNull();
+  });
+
+  it("шапка журнала показывает ячейки и не показывает экономию хода (FR-220)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+
+    await openJournal(user);
+
+    expect(within(screen.getByLabelText("Ячейки заклинаний")).getByText("4/4")).toBeDefined();
+    expect(screen.queryByLabelText("Действие доступно")).toBeNull();
+  });
+
+  it("номер раунда виден в журнале, пока бой идёт (FR-220)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+
+    // Бой не начат — раунда нет: считать не от чего, и число было бы выдумкой.
+    await openJournal(user);
+    expect(screen.queryByText(/раунд/)).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /^Бой/ }));
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await openJournal(user);
+
+    expect(screen.getByText(/раунд 1/)).toBeDefined();
   });
 });

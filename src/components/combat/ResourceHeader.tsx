@@ -145,6 +145,7 @@ export function ResourceHeader({
   // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок (FR-093).
   const armorClass = effectiveArmorClass(character);
   const inBook = character.screenMode === "book";
+  const inJournal = character.screenMode === "journal";
   /**
    * Числа боя — везде, кроме «Книги»: там выбирают состав на день, и КС спасброска, модификатор
    * атаки, КД и остаток хитов на вопрос «чем сегодня платить» не отвечают (FR-217).
@@ -160,10 +161,16 @@ export function ResourceHeader({
       {combatNumbers ? (
         <header className="flex items-baseline justify-between gap-2">
           <h1 className="text-lg font-semibold leading-tight">{character.name}</h1>
-          {/* Счётчик раундов — только в бою: вне боя раундов не идёт, и число застыло бы (FR-202). */}
+          {/*
+            Счётчик раундов — в бою и в журнале, пока бой идёт (FR-220). Вне боя раундов не идёт, и
+            число застыло бы; журнал же открывают посреди боя, и «какой сейчас раунд» — тот же
+            вопрос, ради которого туда пришли.
+          */}
           <p className="text-xs text-slate-600 dark:text-slate-400">
             {character.className}, {character.level} уровень
-            {turnTracked(character) ? ` · раунд ${economy.round}` : ""}
+            {turnTracked(character) || (inJournal && economy.inFight)
+              ? ` · раунд ${economy.round}`
+              : ""}
           </p>
         </header>
       ) : null}

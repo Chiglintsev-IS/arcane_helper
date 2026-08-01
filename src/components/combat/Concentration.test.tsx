@@ -2,6 +2,9 @@
 
 /**
  * Блок концентрации (FR-084) на настоящем состоянии и настоящих операциях: моков нет.
+ *
+ * Записи журнала проверяются через экран журнала: отмена живёт только там (FR-114), и доступное имя
+ * кнопки — то же самое «Отменить: <событие>».
  */
 
 import { screen, within } from "@testing-library/react";
@@ -97,6 +100,8 @@ describe("лист концентрации (FR-084, FR-091)", () => {
 
     expect(screen.queryByLabelText("Концентрация")).toBeNull();
     expect(screen.queryByRole("dialog", { name: /Концентрация/ })).toBeNull();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     expect(
       screen.getByRole("button", { name: /Отменить: Концентрация завершена: снята вручную/ }),
     ).toBeDefined();
@@ -163,7 +168,9 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
     expect(screen.queryByRole("dialog", { name: "Проверка концентрации" })).toBeNull();
+
     // Последняя запись журнала — урон, а не результат проверки.
+    await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     expect(screen.getByRole("button", { name: /Отменить: Получено урона: 24/ })).toBeDefined();
   });
 
@@ -187,7 +194,10 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
     expect(screen.getByText(/Руны 2\/3/)).toBeDefined();
+    // Значок траты реакции есть только в «Бою» (FR-143) — он проверяется до ухода в журнал.
     expect(screen.getByLabelText(/Реакция израсходована/)).toBeDefined();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     expect(
       screen.getByRole("button", { name: /Отменить: Знаки ограждения/ }),
     ).toBeDefined();
@@ -200,6 +210,8 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Всё равно провал" }));
 
     expect(screen.queryByLabelText("Концентрация")).toBeNull();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     expect(
       screen.getByRole("button", {
         name: /Отменить: Концентрация завершена: провалена проверка концентрации/,
@@ -239,6 +251,8 @@ describe("завершение активного эффекта (FR-091)", () =
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Доспехи мага" }));
 
     expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     expect(
       screen.getByRole("button", { name: /Отменить: Эффект завершён: Доспехи мага/ }),
     ).toBeDefined();

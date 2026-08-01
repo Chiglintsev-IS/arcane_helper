@@ -7,6 +7,9 @@
  *
  * Единственная точка изменения состояния персонажа — `apply` (ADR-0003, ADR-0006). Компоненты списка
  * и карточки состояние не трогают: они сообщают о нажатии, а операцию выбирает этот экран.
+ *
+ * Отмены на этом экране нет: она живёт в режиме «Журнал» и только там (FR-114, ADR-0022). Прежняя
+ * кнопка в шапке отменяла вслепую — что вернётся, было написано только в доступном имени.
  */
 
 "use client";
@@ -23,6 +26,7 @@ import { ConfirmSheet } from "@/components/combat/ConfirmSheet";
 import { DataSheet } from "@/components/combat/DataSheet";
 import { ConcentrationCheckCard } from "@/components/combat/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/components/combat/ConcentrationPanel";
+import { JournalScreen } from "@/components/combat/JournalScreen";
 import { ModeSwitcher } from "@/components/combat/ModeSwitcher";
 import { ReactionsSheet } from "@/components/combat/ReactionsSheet";
 import { ResourceHeader } from "@/components/combat/ResourceHeader";
@@ -184,14 +188,17 @@ export function CombatScreen() {
   // [OQ-34](../../docs/open-questions.md#oq-34) закрыт тем же решением.
   const shown = filterSpells(inMode, filters, context);
   const available = availableFilters(inMode);
+  // Журнал — экран одной задачи (FR-220): ни списка, ни фильтров, ни кнопок хода. Список есть ровно
+  // там, где есть что выбирать, — в «Бою» и в «Книге».
+  const showsSpellList = character.screenMode === "combat" || character.screenMode === "book";
   // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам (FR-207).
   // Она стоит и в «Книге»: очки заклинаний покупают вне боя, а «Книга» — единственный вход к
-  // заклинаниям вне боя (FR-203). Во «Вне боя» её нет, потому что списка там нет вовсе (FR-202).
+  // заклинаниям вне боя (FR-203). Во «Вне боя» её нет, потому что списка там нет вовсе (FR-202);
+  // в «Журнале» — по той же причине (FR-220).
   // Поиску она раньше отвечала тоже (FR-162): запрос «дракон» в «Книге» не находил бы строку,
   // которая явно не подходит. С уходом поля поиска (FR-217) отбирать по названию стало нечем —
   // проверка снята как недостижимая, а не забыта.
-  const bloodShown =
-    character.screenMode !== "camp" && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
+  const bloodShown = showsSpellList && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
 
   /**
    * Один список, а не два (FR-207, FR-210). Обмен хитов на очки ячейку не тратит, значит по цене он
@@ -241,7 +248,6 @@ export function CombatScreen() {
   // Имя списка называет то, что в нём есть: вне боя — только заклинания, в бою ещё и «Магия крови».
   const listLabel = bloodShown ? "Заклинания и действия" : "Заклинания";
   const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
-  const lastEntry = session.journal.at(-1);
 
   /**
    * Урон из любой точки ввода: хиты списываются, и при активной концентрации сразу предлагается
@@ -379,9 +385,10 @@ export function CombatScreen() {
             стоит по нему же, — но «Книгу» открывают заранее, готовясь или читая, а не в чужой ход:
             там кнопка только забирала ряд у того, чем в книге пользуются (FR-217). Состав листа
             по-прежнему задаёт режим: во «Вне боя» списка заклинаний нет, и в листе остаются одни
-            «Знаки ограждения».
+            «Знаки ограждения». В «Журнале» кнопки нет по тому же доводу, что и в «Книге» (FR-220):
+            журнал открывают намеренно и ненадолго, а не держат открытым в чужой ход.
           */}
-          {character.screenMode !== "book" ? (
+          {character.screenMode === "combat" || character.screenMode === "camp" ? (
             <button
               type="button"
               onClick={() => setReactionsOpen(true)}
@@ -390,20 +397,6 @@ export function CombatScreen() {
               Реакции
             </button>
           ) : null}
-          <button
-            type="button"
-            disabled={lastEntry === undefined}
-            onClick={() => apply(undoLast)}
-            title={lastEntry?.summaryRu}
-            aria-label={
-              lastEntry === undefined ? "Отменить" : `Отменить: ${lastEntry.summaryRu}`
-            }
-            className={`min-h-11 rounded-xl border border-slate-200 px-3 text-sm disabled:opacity-50 dark:border-slate-800 ${
-              preparing ? "shrink-0" : "grow"
-            }`}
-          >
-            Отменить
-          </button>
         </div>
 
         {error === null ? null : (
@@ -423,9 +416,10 @@ export function CombatScreen() {
       {/*
         Полоса фильтров жмётся по вертикали: каждые 8 пикселей здесь — это восьмая часть карточки.
         В «Бою» она закреплена: список просматривают под чужой ход, и уехавший за край переключатель —
-        переключатель, которого нет. Вне боя её нет вовсе: списка там тоже нет (FR-202).
+        переключатель, которого нет. Вне боя и в «Журнале» её нет вовсе: списка там тоже нет
+        (FR-202, FR-220).
       */}
-      {character.screenMode === "camp" ? null : (
+      {showsSpellList ? (
         <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
           <SpellFilters
             filters={filters}
@@ -435,9 +429,16 @@ export function CombatScreen() {
             onReset={() => setFilters(NO_FILTERS)}
           />
         </div>
-      )}
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
+        {/*
+          Журнал занимает то же место, что и список: это и есть содержимое режима (FR-113, FR-220).
+          Записи отдаются в порядке хранения — переворачивает их сам компонент.
+        */}
+        {character.screenMode === "journal" ? (
+          <JournalScreen entries={session.journal} onUndo={() => apply(undoLast)} />
+        ) : null}
 
         {/*
           «Вне боя» списка заклинаний не показывает вовсе (FR-202): читать книгу игрок идёт в
@@ -445,7 +446,7 @@ export function CombatScreen() {
           отвечал бы «под выбранные фильтры не подходит ни одно заклинание» — сообщением о пустом
           результате там, где искать никто не начинал.
         */}
-        {character.screenMode === "camp" ? null : (
+        {showsSpellList ? (
           <>
             {rows.length > 0 ? (
               <ul aria-label={listLabel} className="flex flex-col gap-2">
@@ -467,7 +468,7 @@ export function CombatScreen() {
               </div>
             ) : null}
           </>
-        )}
+        ) : null}
       </div>
 
       {openSpell === null || draft !== null ? null : (
