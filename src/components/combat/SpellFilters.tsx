@@ -92,16 +92,19 @@ export function SpellFilters({
   // игрока о том же, о чём и одинаковая карточка.
   const castingTimes = CASTING_TIME_FILTERS.filter((value) => available.castingTimes.has(value));
   const roles = ROLE_FILTERS.filter((value) => available.roles.has(value));
-  // «Сбросить» появляется, когда есть что сбрасывать: кнопка, которая ничего не делает, занимает
-  // место в полосе и обещает действие (FR-002).
-  const anySelected =
-    filters.castingTimes.length > 0 ||
+  // «Сбросить» живёт только в бою (FR-212): там полосу оглядывают под чужой ход, и снимать
+  // переключатели по одному в этот момент некогда. В «Книге» их немного и время есть — кнопка
+  // забирала бы место в полосе ради редкого случая. Появляется она по-прежнему, только когда есть
+  // что сбрасывать: кнопка, которая ничего не делает, обещает действие (FR-002).
+  const resettable =
+    inCombat &&
+    (filters.castingTimes.length > 0 ||
     filters.levels.length > 0 ||
     filters.roles.length > 0 ||
     filters.concentration ||
     filters.ritual ||
     filters.prepared ||
-    filters.availableNow;
+    filters.availableNow);
 
   return (
     <section aria-label="Фильтры">
@@ -178,7 +181,7 @@ export function SpellFilters({
             */}
           </>
         )}
-        {anySelected ? (
+        {resettable ? (
           <button
             type="button"
             onClick={onReset}

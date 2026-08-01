@@ -163,17 +163,23 @@ describe("уровни — отдельная прокручиваемая ст�
   });
 });
 
-describe("«Сбросить» появляется, когда есть что сбрасывать", () => {
-  it("без выбранных фильтров кнопки нет", () => {
+describe("«Сбросить» — только в бою (FR-212)", () => {
+  it("без выбранного фильтра кнопки нет и в бою", () => {
     renderFilters(EVERYTHING, { mode: "combat" });
+
     expect(screen.queryByRole("button", { name: "Сбросить" })).toBeNull();
   });
 
-  it("с выбранным фильтром кнопка появляется", () => {
-    renderFilters(EVERYTHING, {
-      mode: "combat",
-      filters: { ...NO_FILTERS, roles: ["defense"] },
-    });
+  it("в бою с выбранным фильтром кнопка есть", () => {
+    renderFilters(EVERYTHING, { mode: "combat", filters: { ...NO_FILTERS, concentration: true } });
+
     expect(screen.getByRole("button", { name: "Сбросить" })).toBeDefined();
+  });
+
+  it("в «Книге» кнопки нет даже с выбранным фильтром", () => {
+    // Решение игрока: переключателей немного, и снять их проще повторным нажатием.
+    renderFilters(EVERYTHING, { mode: "book", filters: { ...NO_FILTERS, concentration: true } });
+
+    expect(screen.queryByRole("button", { name: "Сбросить" })).toBeNull();
   });
 });
