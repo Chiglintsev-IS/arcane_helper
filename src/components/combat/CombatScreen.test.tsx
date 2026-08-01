@@ -521,46 +521,6 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
   });
 });
 
-describe("поиск и запреты (FR-160, FR-161, FR-162)", () => {
-  it("ищет по названию в «Книге»", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, inBookMode());
-
-    await user.click(screen.getByRole("button", { name: "Поиск" }));
-    await user.type(screen.getByLabelText("Поиск по названию"), "туман");
-
-    const list = within(screen.getByLabelText(/^Заклинания/));
-    expect(list.getByText("Туманный шаг")).toBeDefined();
-    expect(list.queryByText("Паутина")).toBeNull();
-  });
-
-  it("на запрещённое отвечает причиной, а не пустым экраном (FR-162)", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, inBookMode());
-
-    await user.click(screen.getByRole("button", { name: "Поиск" }));
-    await user.type(screen.getByLabelText("Поиск по названию"), "понимание языков");
-
-    expect(screen.getByRole("status").textContent).toContain("Запрещено мастером");
-    expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
-  });
-
-  it("на просто ненайденное отвечает запросом, а не запретом", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, inBookMode());
-
-    await user.click(screen.getByRole("button", { name: "Поиск" }));
-    await user.type(screen.getByLabelText("Поиск по названию"), "дракон");
-
-    expect(screen.getByText(/По запросу «дракон» ничего не найдено/)).toBeDefined();
-  });
-
-  it("в бою поля поиска нет: там список короткий", async () => {
-    await renderWithStores(<CombatScreen />);
-    expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
-  });
-});
-
 describe("реакции (FR-060, FR-061, FR-062)", () => {
   it("вход одним нажатием, вопрос о событии первым", async () => {
     const user = userEvent.setup();
@@ -1185,15 +1145,69 @@ describe("шапка «Книги»: очки видны, руны нет (FR-21
   });
 });
 
+describe("шапка «Книги» без лишнего (FR-217)", () => {
+  it("нет заголовка с именем персонажа", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByRole("heading", { name: "Торн" })).toBeNull();
+  });
+
+  it("нет текста класса и уровня", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByText(/Волшебник, 7 уровень/)).toBeNull();
+  });
+
+  it("нет кнопки «Поиск»", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByRole("button", { name: "Поиск" })).toBeNull();
+  });
+
+  it("нет поля ввода поиска", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
+  });
+
+  it("нет кнопки «Реакции»", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
+  });
+
+  it("значок очков и кнопка отмены остаются: обе — решение игрока, а не недоделка", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    expect(
+      within(screen.getByRole("region", { name: "Ресурсы" })).getByText(/Очки 0/),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /Отменить/ })).toBeDefined();
+  });
+
+  it("счётчик подготовки остаётся: он отвечает на вопрос «сколько ещё можно» (FR-214)", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+    expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/)).toBeDefined();
+  });
+
+  it("в «Бою» и «Вне боя» имя, класс и уровень остаются", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.getByRole("heading", { name: "Торн" })).toBeDefined();
+    expect(screen.getByText(/Волшебник, 7 уровень/)).toBeDefined();
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+    expect(screen.getByRole("heading", { name: "Торн" })).toBeDefined();
+    expect(screen.getByText(/Волшебник, 7 уровень/)).toBeDefined();
+  });
+});
+
 describe("«Знаки ограждения» вне боя (FR-153)", () => {
-  it("кнопка «Реакции» есть во всех трёх режимах", async () => {
+  it("кнопка «Реакции» есть в «Бою» и «Вне боя», но не в «Книге» (FR-217)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<CombatScreen />);
 
     expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();
 
+    // «Книга» — не место для реакции: её открывают заранее, а не в чужой ход (FR-217).
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
-    expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
 
     await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
     expect(screen.getByRole("button", { name: "Реакции" })).toBeDefined();

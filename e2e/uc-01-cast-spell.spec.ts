@@ -193,7 +193,9 @@ test("state survives a reload", async ({ page }) => {
   await switchMode(page, /^Книга/);
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Торн" })).toBeVisible();
+  // После перезапуска экран снова «Книга»: заголовка с именем там больше нет (FR-217), поэтому
+  // признак загрузки — плитки ячеек, которые в «Книге» как раз и остаются.
+  await expect(page.getByLabel("Ячейки заклинаний")).toBeVisible();
   await expect(page.getByRole("radio", { name: /^Книга/ })).toHaveAttribute(
     "aria-checked",
     "true",

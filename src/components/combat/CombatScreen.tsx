@@ -30,7 +30,6 @@ import { ResourcesSheet } from "@/components/combat/ResourcesSheet";
 import { SpellFilters, type AvailableFilters } from "@/components/combat/SpellFilters";
 import { SpellCardCompact } from "@/components/spell/SpellCardCompact";
 import { SpellCardDetails } from "@/components/spell/SpellCardDetails";
-import { BANNED_SPELLS } from "@/data/content/thorne";
 import type { Spell } from "@/data/schemas/spell";
 import { HitPointsSheet } from "@/components/combat/HitPointsSheet";
 import {
@@ -42,7 +41,6 @@ import { ascensionTierRate, BLOOD_MAGIC_TRAITS } from "@/rules/bloodMagic";
 import { preparedLimit } from "@/rules/abilities";
 import { rolesPresent } from "@/rules/combatRole";
 import { exportFileName, exportSnapshot, parseImport } from "@/rules/dataIo";
-import { findBan, matchesQuery } from "@/rules/restrictions";
 import {
   bestCastPlan,
   filterSpells,
@@ -136,8 +134,6 @@ export function CombatScreen() {
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -179,20 +175,21 @@ export function CombatScreen() {
   // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список
   // (FR-200). Карточка открывается из всей книги — режим не должен закрывать уже открытое.
   const inMode = spellsForScreen(spells, character);
-  // Поиск живёт в «Книге»: там 29 карточек и вопрос «где оно» настоящий. В бою и на привале список
-  // короткий, и поле ввода забрало бы ряд ради задачи, которой нет (FR-162).
-  const searched = inMode.filter((spell) => matchesQuery(spell, query));
-  const shown = filterSpells(searched, filters, context);
+  // Поиск раньше жил в «Книге»: там 29 карточек и вопрос «где оно» настоящий. Игрок назвал поле
+  // лишним для чтения и подготовки, и кнопку с полем убрали вовсе (FR-217) — список теперь строится
+  // прямо из `inMode`, без промежуточного отбора по названию. Вместе с полем ушёл и единственный
+  // вход к объяснению запрета мастера ([FR-162](../../docs/features/F-14-campaign-restrictions.md#fr-162));
+  // куда оно переезжает — открытый вопрос ([OQ-34](../../docs/open-questions.md#oq-34)).
+  const shown = filterSpells(inMode, filters, context);
   const available = availableFilters(inMode);
   // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам (FR-207).
   // Она стоит и в «Книге»: очки заклинаний покупают вне боя, а «Книга» — единственный вход к
   // заклинаниям вне боя (FR-203). Во «Вне боя» её нет, потому что списка там нет вовсе (FR-202).
-  // Поиску она отвечает тоже (FR-162): иначе запрос «дракон» в «Книге» находил бы строку, которая
-  // явно не подходит, — то самое вранье, от которого список избавляют фильтры.
+  // Поиску она раньше отвечала тоже (FR-162): запрос «дракон» в «Книге» не находил бы строку,
+  // которая явно не подходит. С уходом поля поиска (FR-217) отбирать по названию стало нечем —
+  // проверка снята как недостижимая, а не забыта.
   const bloodShown =
-    character.screenMode !== "camp" &&
-    matchesActionRow(BLOOD_MAGIC_TRAITS, filters) &&
-    matchesQuery({ nameRu: "Магия крови", nameEn: "" }, query);
+    character.screenMode !== "camp" && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
 
   /**
    * Один список, а не два (FR-207, FR-210). Обмен хитов на очки ячейку не тратит, значит по цене он
@@ -203,7 +200,6 @@ export function CombatScreen() {
   // приложение предлагать не должно.
   const preparing = character.screenMode === "book";
   const limit = preparedLimit(character.intelligence, character.level);
-  const ban = findBan(query, BANNED_SPELLS);
 
   const rows = shown.map((spell) => (
     <SpellCardCompact
@@ -274,7 +270,6 @@ export function CombatScreen() {
     // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым это
     // снять, на экране уже нет (FR-212).
     setFilters(NO_FILTERS);
-    setQuery("");
     apply((current) => setScreenMode(current, mode));
   };
 
@@ -339,22 +334,6 @@ export function CombatScreen() {
             ряд — это пятая часть карточки.
           */}
           {preparing ? (
-            <>
-            <button
-              type="button"
-              aria-pressed={searchOpen}
-              onClick={() => {
-                setSearchOpen((open) => !open);
-                if (searchOpen) setQuery("");
-              }}
-              className={`min-h-11 shrink-0 rounded-xl border px-3 text-sm ${
-                searchOpen
-                  ? "border-action text-action-strong dark:text-action"
-                  : "border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              Поиск
-            </button>
             <p
               aria-label={`Подготовлено ${character.preparedSpellIds.length} из ${limit}`}
               className={`flex-1 text-xs tabular-nums ${
@@ -365,7 +344,6 @@ export function CombatScreen() {
             >
               {character.preparedSpellIds.length} из {limit}
             </p>
-            </>
           ) : null}
           {/* Ход начинается только в бою: вне боя ходов нет, и кнопка звала бы начать то, чего не происходит (FR-202). */}
           {character.screenMode === "combat" ? (
@@ -393,18 +371,23 @@ export function CombatScreen() {
             Реакции — отдельный вход, видимый независимо от фильтров и прокрутки списка (FR-060):
             триггер приходит в чужой ход, и искать заклинание по списку в этот момент некогда.
 
-            Кнопка стоит во всех режимах, а не только в бою (FR-153): провалить спасбросок Ловкости
-            или Телосложения можно и от ловушки в коридоре, а руна превращает провал в успех
-            независимо от того, идёт ли бой. Состав листа при этом задаёт режим: во «Вне боя» списка
-            заклинаний нет, и в листе остаются одни «Знаки ограждения».
+            Кнопка стояла во всех трёх режимах, включая «Книгу» (FR-153): провалить спасбросок
+            Ловкости или Телосложения можно и от ловушки в коридоре, а руна превращает провал в
+            успех независимо от того, идёт ли бой. Довод не отменяется — в «Бою» и «Вне боя» кнопка
+            стоит по нему же, — но «Книгу» открывают заранее, готовясь или читая, а не в чужой ход:
+            там кнопка только забирала ряд у того, чем в книге пользуются (FR-217). Состав листа
+            по-прежнему задаёт режим: во «Вне боя» списка заклинаний нет, и в листе остаются одни
+            «Знаки ограждения».
           */}
-          <button
-            type="button"
-            onClick={() => setReactionsOpen(true)}
-            className="min-h-11 shrink-0 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
-          >
-            Реакции
-          </button>
+          {character.screenMode !== "book" ? (
+            <button
+              type="button"
+              onClick={() => setReactionsOpen(true)}
+              className="min-h-11 shrink-0 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
+            >
+              Реакции
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={lastEntry === undefined}
@@ -442,23 +425,6 @@ export function CombatScreen() {
       */}
       {character.screenMode === "camp" ? null : (
         <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
-          {/*
-            Поле поиска открывается кнопкой, а не стоит всегда (FR-218): полоса фильтров в «Книге»
-            повторяет боевой набор и занимает на ряд больше, а вместе с полем страница переставала
-            помещаться в 568 пикселей. Порядок уступок назван в самом требовании, и поиск в нём
-            первый: им пользуются раз за сессию, а фильтрами — каждый раз.
-          */}
-          {preparing && searchOpen ? (
-            <input
-              type="search"
-              autoFocus
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              aria-label="Поиск по названию"
-              placeholder="Поиск по названию"
-              className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800 dark:bg-slate-900"
-            />
-          ) : null}
           <SpellFilters
             filters={filters}
             available={available}
@@ -489,22 +455,14 @@ export function CombatScreen() {
             {rows.length === 0 ? (
               <div className="flex flex-col items-start gap-2 text-sm">
                 {/*
-                  Пустой результат поиска читается как потеря данных или поломка. Если искали
-                  запрещённое, приложение отвечает причиной — «Понимание языков запрещено
-                  мастером», — а не молчанием (FR-162).
+                  Раньше здесь же отвечали на пустой результат поиска запрещённого — причиной
+                  вместо молчания, беря её из `findBan(query, BANNED_SPELLS)` (FR-162). С уходом
+                  поля поиска (FR-217) `query` всегда пуст, `findBan` на нём всегда молчит, и эта
+                  ветка стала недостижима — снята вместе с полем, а не оставлена мёртвой. Куда
+                  переезжает объяснение запрета — открытый вопрос (OQ-34); сама функция `findBan` не
+                  удалена и ждёт нового входа.
                 */}
-                {ban === null ? (
-                  <p>
-                    {query.trim() === ""
-                      ? "Под выбранные фильтры не подходит ни одно заклинание."
-                      : `По запросу «${query.trim()}» ничего не найдено.`}
-                  </p>
-                ) : (
-                  <p role="status">
-                    <span className="font-medium">{ban.nameRu}</span> ({ban.nameEn}) —{" "}
-                    {ban.explanationRu}
-                  </p>
-                )}
+                <p>Под выбранные фильтры не подходит ни одно заклинание.</p>
                 <button
                   type="button"
                   onClick={() => setFilters(NO_FILTERS)}
