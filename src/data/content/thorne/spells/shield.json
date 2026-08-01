@@ -4,7 +4,7 @@
   "nameEn": "Shield",
   "level": 1,
   "school": "Ограждение",
-  "source": "Player's Handbook (2024)",
+  "source": "Player's Handbook (2014)",
   "combatRole": "defense",
   "castingTime": {
     "type": "reaction",

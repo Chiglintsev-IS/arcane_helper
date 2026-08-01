@@ -4,7 +4,7 @@
   "nameEn": "Ray of Frost",
   "level": 0,
   "school": "Воплощение",
-  "source": "Player's Handbook (2024)",
+  "source": "Player's Handbook (2014)",
   "combatRole": "offense",
   "castingTime": {
     "type": "action"
