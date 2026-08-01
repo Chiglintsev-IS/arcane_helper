@@ -125,7 +125,12 @@ test("book mode shows slots", async ({ page }) => {
   await expect(header.getByLabel(/Ячейки 1 уровня/)).toBeVisible();
   // И только они: числа боя на вопрос «чем сегодня платить» не отвечают (FR-217).
   await expect(header.getByText("КС закл.")).toHaveCount(0);
-  await expect(header.getByLabel("Прочие ресурсы")).toHaveCount(0);
+
+  // Ряд прочих ресурсов в «Книге» состоит из одного значка: очки — способ оплаты, и их же здесь
+  // покупают строкой «Магия крови» (FR-207, FR-217). Рун и чисел боя в нём нет.
+  const other = header.getByLabel("Прочие ресурсы");
+  await expect(other).toContainText("Очки");
+  await expect(other).not.toContainText("Руны");
 });
 
 test("filter by casting time", async ({ page }) => {

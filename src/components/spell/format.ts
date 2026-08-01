@@ -8,7 +8,13 @@
 import type { CharacterState } from "@/data/schemas/character";
 import type { Spell } from "@/data/schemas/spell";
 import type { CombatRole } from "@/rules/combatRole";
-import { longCastingTimeRu, plural, type LongCastingUnit } from "@/rules/language";
+import {
+  longCastingTimeRu,
+  plural,
+  timeSpanAccusativeRu,
+  type LongCastingUnit,
+  type TimeUnit,
+} from "@/rules/language";
 import { effectiveDamage } from "@/rules/scaling";
 import { CANTRIP_LEVEL } from "@/rules/slots";
 
@@ -81,6 +87,22 @@ export function castingTimeLabel(castingTime: Spell["castingTime"]): string {
     return CASTING_TIME[castingTime.type].label;
   }
   return longCastingTimeRu(unit, castingTime.value);
+}
+
+/**
+ * Время накладывания там, где подписи рядом нет: в значке строки списка и в мастере (FR-014).
+ *
+ * «Действие», «Бонусное» и «Реакция» остаются одним словом — они называют ресурс хода, и спутать их
+ * с длительностью нельзя. Минуты и часы — единственный случай, где значок и текст на одной строке
+ * оба означали время и ни один не говорил какое: «Починка» показывала «1 минута» рядом с
+ * «Мгновенно». Глагол отвечает на вопрос сразу.
+ */
+export function castingTimePhrase(castingTime: Spell["castingTime"]): string {
+  const unit = LONG_CASTING_UNITS[castingTime.type];
+  if (unit === undefined || castingTime.value === undefined) {
+    return castingTimeLabel(castingTime);
+  }
+  return `Накладывать ${timeSpanAccusativeRu(unit, castingTime.value)}`;
 }
 
 const ABILITY_NAMES: Record<string, string> = {
@@ -235,11 +257,28 @@ export function resolutionBadge(
   }
 }
 
-/** Мгновенное или длящееся — второе требует внимания после применения (F-08). */
-export function durationBadge(duration: Spell["duration"]): { label: string; icon: string } {
-  return duration.type === "instant"
-    ? { label: "Мгновенно", icon: "⚡" }
-    : { label: durationLabel(duration), icon: "◷" };
+/** Единицы длительности в терминах морфологии. `instant` и `special` числа не несут. */
+const DURATION_UNITS: Partial<Record<Spell["duration"]["type"], TimeUnit>> = {
+  rounds: "round",
+  minutes: "minute",
+  hours: "hour",
+};
+
+/**
+ * Длительность там, где подписи рядом нет: строка фактов краткой карточки (FR-014).
+ *
+ * Парная к `castingTimePhrase`: одна говорит, сколько заклинание накладывают, вторая — сколько оно
+ * держится. До FR-014 обе печатались голым числом, и «Паутина» показывала «Действие» рядом с «1 час»
+ * — второе читалось как время накладывания.
+ *
+ * «Мгновенный эффект», а не «Мгновенно»: наречие отвечает на вопрос «как быстро творится», то есть
+ * ровно на тот вопрос, от которого длительность и нужно отличить.
+ */
+export function durationPhrase(duration: Spell["duration"]): string {
+  if (duration.type === "instant") return "Мгновенный эффект";
+  const unit = DURATION_UNITS[duration.type];
+  if (unit === undefined || duration.value === undefined) return "Длительность особая";
+  return `Держится ${timeSpanAccusativeRu(unit, duration.value)}`;
 }
 
 /** Формула урона с учётом уровня ячейки и уровня персонажа: заговоры растут от уровня. */

@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/data/content/thorne";
 
-import { castingTimeLabel, preparationBadge, resolutionBadge, signed } from "./format";
+import {
+  castingTimeLabel,
+  castingTimePhrase,
+  durationPhrase,
+  preparationBadge,
+  resolutionBadge,
+  signed,
+} from "./format";
 
 /** Числа Торна: оба включают +1 от предмета, и книга их не знает (OQ-11). */
 const THORNE = { spellSaveDc: 16, spellAttackModifier: 8 };
@@ -22,6 +29,42 @@ describe("castingTimeLabel (FR-033)", () => {
 
   it("без числа остаётся категория: врать о времени хуже, чем назвать его приблизительно", () => {
     expect(castingTimeLabel({ type: "minute" })).toBe("Минуты");
+  });
+});
+
+describe("castingTimePhrase (FR-014)", () => {
+  it("действие, бонусное и реакция остаются одним словом: их не с чем спутать", () => {
+    expect(castingTimePhrase({ type: "action" })).toBe("Действие");
+    expect(castingTimePhrase({ type: "bonus_action" })).toBe("Бонусное");
+    expect(castingTimePhrase({ type: "reaction", reactionTrigger: "в вас попали" })).toBe("Реакция");
+  });
+
+  it("минуты и часы называют себя глаголом: «Накладывать», а не голое число", () => {
+    expect(castingTimePhrase({ type: "minute", value: 1 })).toBe("Накладывать 1 минуту");
+    expect(castingTimePhrase({ type: "minute", value: 10 })).toBe("Накладывать 10 минут");
+    expect(castingTimePhrase({ type: "hour", value: 1 })).toBe("Накладывать 1 час");
+  });
+
+  it("без числа остаётся категория: врать о времени хуже, чем назвать приблизительно", () => {
+    expect(castingTimePhrase({ type: "minute" })).toBe("Минуты");
+  });
+});
+
+describe("durationPhrase (FR-014)", () => {
+  it("мгновенная длительность названа эффектом, а не временем", () => {
+    expect(durationPhrase({ type: "instant" })).toBe("Мгновенный эффект");
+  });
+
+  it("длящаяся называет себя глаголом и склоняется", () => {
+    expect(durationPhrase({ type: "minutes", value: 1 })).toBe("Держится 1 минуту");
+    expect(durationPhrase({ type: "minutes", value: 10 })).toBe("Держится 10 минут");
+    expect(durationPhrase({ type: "hours", value: 1 })).toBe("Держится 1 час");
+    expect(durationPhrase({ type: "rounds", value: 1 })).toBe("Держится 1 раунд");
+  });
+
+  it("особая длительность и длительность без числа названы особой", () => {
+    expect(durationPhrase({ type: "special" })).toBe("Длительность особая");
+    expect(durationPhrase({ type: "minutes" })).toBe("Длительность особая");
   });
 });
 

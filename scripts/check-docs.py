@@ -67,8 +67,13 @@ def markdown_files():
     for dirpath, dirnames, filenames in os.walk("."):
         # `.worktrees` — рабочие копии других веток: их спека проверяется своим прогоном в них же,
         # а отсюда выглядит как второй набор требований с теми же номерами.
+        # `.superpowers` — черновики агента: выписки из плана, отчёты и пакеты обзора. Они цитируют
+        # спеку кусками, и висячей ссылкой оттуда оказывается любая ссылка, относительная не к тому
+        # каталогу. Каталог не под версией — проверять в нём нечего.
         dirnames[:] = [
-            d for d in dirnames if d not in {".git", ".worktrees", "node_modules", ".next"}
+            d
+            for d in dirnames
+            if d not in {".git", ".worktrees", ".superpowers", "node_modules", ".next"}
         ]
         if os.path.normpath(dirpath).startswith(DRAFTS):
             continue

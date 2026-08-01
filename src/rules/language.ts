@@ -54,3 +54,28 @@ const LONG_CASTING_FORMS: Record<LongCastingUnit, [string, string, string]> = {
 export function longCastingTimeRu(unit: LongCastingUnit, value: number): string {
   return withPlural(value, LONG_CASTING_FORMS[unit]);
 }
+
+/**
+ * Единица отрезка времени: раунд, минута, час.
+ *
+ * Шире `LongCastingUnit`: раунды бывают у длительности, но не у накладывания.
+ */
+export type TimeUnit = "round" | "minute" | "hour";
+
+/**
+ * Винительный падеж: «держится 1 минуту», «накладывать 1 минуту».
+ *
+ * Отдельно от `LONG_CASTING_FORMS` (именительный), потому что после глагола падеж другой ровно у
+ * одного слова из трёх: «1 минута» → «1 минуту», а «1 час» и «1 раунд» не меняются. Одна таблица на
+ * оба падежа означала бы «держится 1 минута» — за столом это читается как ошибка приложения, а
+ * значит и как повод сомневаться в его числах (FR-014).
+ */
+const TIME_FORMS_ACCUSATIVE: Record<TimeUnit, [string, string, string]> = {
+  round: ["раунд", "раунда", "раундов"],
+  minute: ["минуту", "минуты", "минут"],
+  hour: ["час", "часа", "часов"],
+};
+
+export function timeSpanAccusativeRu(unit: TimeUnit, value: number): string {
+  return withPlural(value, TIME_FORMS_ACCUSATIVE[unit]);
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { longCastingTimeRu, plural, SAVING_THROW_NAMES, withPlural } from "./language";
+import { longCastingTimeRu, plural, SAVING_THROW_NAMES, timeSpanAccusativeRu, withPlural } from "./language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -46,5 +46,20 @@ describe("SAVING_THROW_NAMES", () => {
   it("называет характеристику в родительном падеже полным словом", () => {
     expect(SAVING_THROW_NAMES.CON).toBe("Телосложения");
     expect(SAVING_THROW_NAMES.DEX).toBe("Ловкости");
+  });
+});
+
+describe("timeSpanAccusativeRu: винительный падеж (FR-014)", () => {
+  it("минута склоняется: «держится 1 минуту», а не «1 минута»", () => {
+    expect(timeSpanAccusativeRu("minute", 1)).toBe("1 минуту");
+    expect(timeSpanAccusativeRu("minute", 2)).toBe("2 минуты");
+    expect(timeSpanAccusativeRu("minute", 10)).toBe("10 минут");
+  });
+
+  it("час и раунд в винительном совпадают с именительным", () => {
+    expect(timeSpanAccusativeRu("hour", 1)).toBe("1 час");
+    expect(timeSpanAccusativeRu("hour", 8)).toBe("8 часов");
+    expect(timeSpanAccusativeRu("round", 1)).toBe("1 раунд");
+    expect(timeSpanAccusativeRu("round", 3)).toBe("3 раунда");
   });
 });

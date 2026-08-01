@@ -18,6 +18,7 @@ import {
   CASTING_TIME,
   areaLabel,
   castingTimeLabel,
+  castingTimePhrase,
   durationLabel,
   levelLabel,
   rangeLabel,
@@ -104,7 +105,7 @@ export function SpellCardDetails({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 text-sm">
         <div className="flex flex-wrap gap-1">
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
-            {castingTimeLabel(spell.castingTime)}
+            {castingTimePhrase(spell.castingTime)}
           </Badge>
           {spell.concentration ? (
             <Badge tone="concentration" icon="✦">
@@ -145,6 +146,8 @@ export function SpellCardDetails({
         <dl aria-label="Механика" className="text-xs">
           {slotCost === null ? null : <Row label="Стоимость">{slotCost}</Row>}
           <Row label="Дальность">{rangeLabel(spell.range)}</Row>
+          {/* Пара строк подряд: подписанные, они сравниваются глазом и не путаются (FR-014). */}
+          <Row label="Накладывание">{castingTimeLabel(spell.castingTime)}</Row>
           <Row label="Длительность">{durationLabel(spell.duration)}</Row>
           <Row label="Цель">{targetingLabel(spell.targeting)}</Row>
           {spell.area === undefined ? null : <Row label="Область">{areaLabel(spell.area)}</Row>}

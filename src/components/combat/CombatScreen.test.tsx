@@ -224,10 +224,10 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const inBook = within(screen.getByLabelText("Ресурсы"));
     expect(inBook.getByLabelText("Ячейки заклинаний")).toBeDefined();
     expect(inBook.getByLabelText(/Ячейки 1 уровня/)).toBeDefined();
-    // Числа боя отсюда уходят: они не отвечают ни на один вопрос подготовки.
+    // Числа боя отсюда уходят: они не отвечают ни на один вопрос подготовки. Ряд «Прочие ресурсы»
+    // остаётся — что именно в нём осталось, проверяет отдельный набор тестов ниже (FR-217).
     expect(inBook.queryByText("КС закл.")).toBeNull();
     expect(inBook.queryByText("КД")).toBeNull();
-    expect(inBook.queryByLabelText("Прочие ресурсы")).toBeNull();
   });
 
   it("вне боя шапка называет кости хитов (FR-134)", async () => {
@@ -819,6 +819,45 @@ describe("магия крови в списке действий (FR-207)", () =
   // появляется, только когда не подошло вообще ничего.
 });
 
+describe("«Магия крови» в «Книге» (FR-207)", () => {
+  it("стоит в списке книги сразу за заговорами", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    const list = screen.getByRole("list", { name: "Заклинания и действия" });
+    const names = within(list)
+      .getAllByRole("listitem")
+      .map((row) => row.textContent ?? "");
+
+    const blood = names.findIndex((text) => text.startsWith("Магия крови"));
+    const firstLevelled = names.findIndex((text) => text.startsWith("Щит"));
+    expect(blood).toBeGreaterThan(-1);
+    expect(blood).toBeLessThan(firstLevelled);
+  });
+
+  it("«Подготовлено» оставляет тот же состав, что в бою: заговоры и магия крови на месте", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    // Имя доступное, а не текстовое: значок «✓» помечен `aria-hidden` и в имя не входит.
+    await user.click(screen.getByRole("button", { name: "Подготовлено" }));
+
+    const list = screen.getByRole("list", { name: "Заклинания и действия" });
+    const text = list.textContent ?? "";
+    expect(text).toContain("Магия крови");
+    expect(text).toContain("Электрошок");
+    expect(text).toContain("Молния");
+  });
+
+  it("фильтр уровня её прячет: уровня заклинания у обмена нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.click(screen.getByRole("button", { name: "1 ур." }));
+
+    expect(screen.queryByText("Магия крови")).toBeNull();
+  });
+});
+
 describe("краткая карточка (FR-010)", () => {
   it("показывает время, цену, дальность и пересказ эффекта", async () => {
     await renderWithStores(<CombatScreen />);
@@ -858,7 +897,7 @@ describe("краткая карточка (FR-010)", () => {
     await renderWithStores(<CombatScreen />, inBookMode());
     const row = screen.getByRole("button", { name: /Починка/ });
 
-    expect(within(row).getByText("1 минута")).toBeDefined();
+    expect(within(row).getByText("Накладывать 1 минуту")).toBeDefined();
     expect(within(row).queryByText("Минуты")).toBeNull();
   });
 
@@ -1103,5 +1142,31 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
     expect(stores.session.getState().session?.character.suppression.underDirectSunlight).toBe(
       false,
     );
+  });
+});
+
+describe("шапка «Книги»: очки видны, руны нет (FR-217)", () => {
+  it("показывает счётчик очков — ими в книге платят и их же в книге покупают", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).getByText(/Очки 0/)).toBeDefined();
+  });
+
+  it("не показывает рун, костей хитов и чисел боя", async () => {
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).queryByText(/Руны/)).toBeNull();
+    expect(within(header).queryByText(/Кости хитов/)).toBeNull();
+    expect(within(header).queryByText("КС закл.")).toBeNull();
+  });
+
+  it("в бою состав ряда прежний: и руны, и очки", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    const header = screen.getByRole("region", { name: "Ресурсы" });
+    expect(within(header).getByText(/Руны 3\/3/)).toBeDefined();
+    expect(within(header).getByText(/Очки 0/)).toBeDefined();
   });
 });

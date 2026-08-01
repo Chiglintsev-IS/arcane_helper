@@ -47,8 +47,14 @@ export function findBan(
   );
 }
 
-/** Подходит ли заклинание под поиск по названию: русскому или английскому. */
-export function matchesQuery(spell: Spell, query: string): boolean {
+/**
+ * Подходит ли строка под поиск по названию: русскому или английскому.
+ *
+ * Принимает не только заклинание, а любую именованную строку: «Магия крови» в списке «Книги» —
+ * не заклинание, но стоит среди них и обязана отвечать на тот же поиск ([FR-207](../../docs/features/F-18-screen-modes.md#fr-207)),
+ * иначе список для несовпавшего запроса показывал бы то, что явно не подошло.
+ */
+export function matchesQuery(spell: Pick<Spell, "nameRu" | "nameEn">, query: string): boolean {
   const needle = normalize(query);
   if (needle === "") return true;
   return (
