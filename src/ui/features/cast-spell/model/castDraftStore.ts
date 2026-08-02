@@ -16,7 +16,7 @@ import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { checkAvailability, type TurnResources } from "@/core/application/casting/availability";
 import { bestCastPlan, castOptions, type CastOption } from "@/core/application/casting/castOptions";
-import type { Rune } from "@/core/domain/arcana/runes";
+import { runeChoosesTarget, type Rune, type RuneTarget } from "@/core/domain/arcana/runes";
 import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
 
 /**
@@ -62,6 +62,8 @@ export type CastDraft = {
   allowAnyway: boolean;
   /** Приложенная руна или `null`. Не более одной на заклинание. */
   rune: Rune | null;
+  /** Кому её эффект. Спрашивается только у той руны, которая выбирает цель. */
+  runeTarget: RuneTarget;
   /**
    * Сколько Костей хитов бросить и что на них выпало. Оба `null`, пока игрок не выбрал.
    *
@@ -181,7 +183,7 @@ export function toCastRequest(draft: CastDraft): CastRequest {
     mode: draft.mode,
     payment: draft.payment,
     ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
-    ...(draft.rune === null ? {} : { rune: draft.rune }),
+    ...(draft.rune === null ? {} : { rune: draft.rune, runeTarget: draft.runeTarget }),
     ...(draft.hitDiceCount === null || draft.hitDiceRolled === null
       ? {}
       : { hitDice: { count: draft.hitDiceCount, rolled: draft.hitDiceRolled } }),
@@ -198,6 +200,7 @@ export type CastDraftState = {
   chooseCastOption: (option: CastOption) => void;
   /** Приложить руну или снять её. Не более одной на заклинание. */
   chooseRune: (rune: Rune) => void;
+  chooseRuneTarget: (target: RuneTarget) => void;
   /** Сколько костей бросить. Смена числа обнуляет выпавшее: оно относилось к прежнему. */
   setHitDiceCount: (count: number) => void;
   /** Что выпало на брошенных костях. */
@@ -246,6 +249,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           roleplayCategory: remembered.roleplay[spell.id] ?? DEFAULT_ROLEPLAY_CATEGORY,
           allowAnyway: false,
           rune: null,
+          runeTarget: "self",
           hitDiceCount: null,
           hitDiceRolled: null,
           step: "summary",
@@ -257,7 +261,15 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
 
       chooseRune(rune) {
         // Повторное нажатие снимает руну: выбор из трёх без возможности передумать — ловушка.
-        edit((draft) => ({ ...draft, rune: draft.rune === rune ? null : rune }));
+        edit((draft) => ({
+          ...draft,
+          rune: draft.rune === rune ? null : rune,
+          runeTarget: runeChoosesTarget(rune) ? draft.runeTarget : "self",
+        }));
+      },
+
+      chooseRuneTarget(target) {
+        edit((draft) => ({ ...draft, runeTarget: target }));
       },
 
       setHitDiceCount(count) {
@@ -274,7 +286,8 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           // Ритуал и заговор руну не принимают: выбранная до смены оплаты, она молча пропала бы
           // при подтверждении.
           const reset = { hitDiceCount: null, hitDiceRolled: null };
-          if (option.payment.kind !== "slot") return { ...draft, ...option, rune: null, ...reset };
+          if (option.payment.kind !== "slot")
+            return { ...draft, ...option, rune: null, runeTarget: "self" as const, ...reset };
           return { ...draft, mode: option.mode, payment: option.payment, ...reset };
         });
       },

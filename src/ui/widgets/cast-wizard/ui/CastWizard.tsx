@@ -25,7 +25,16 @@ import {
   type RoleplayCategory,
   type WizardStep,
 } from "@/ui/features/cast-spell/model/castDraftStore";
-import { RUNES, RUNE_LABEL, runeEffect, type Rune } from "@/core/domain/arcana/runes";
+import {
+  RUNES,
+  RUNE_LABEL,
+  RUNE_TARGETS,
+  RUNE_TARGET_LABEL,
+  runeChoosesTarget,
+  runeEffect,
+  type Rune,
+  type RuneTarget,
+} from "@/core/domain/arcana/runes";
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
 
 const STEP_TITLES: Record<WizardStep, string> = {
@@ -63,10 +72,12 @@ function RuneStep({
   draft,
   character,
   onChoose,
+  onChooseTarget,
 }: {
   draft: CastDraft;
   character: CharacterState;
   onChoose: (rune: Rune) => void;
+  onChooseTarget: (target: RuneTarget) => void;
 }) {
   const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
   const unavailable = runeUnavailable(draft, character);
@@ -110,6 +121,25 @@ function RuneStep({
           );
         })}
       </ul>
+      {draft.rune !== null && runeChoosesTarget(draft.rune) ? (
+        <div role="group" aria-label="Кому руна" className="flex gap-1">
+          {RUNE_TARGETS.map((target) => (
+            <button
+              key={target}
+              type="button"
+              aria-pressed={draft.runeTarget === target}
+              onClick={() => onChooseTarget(target)}
+              className={`min-h-11 grow rounded-lg border px-3 text-sm ${
+                draft.runeTarget === target
+                  ? "border-ritual bg-ritual/10 text-ritual-strong dark:text-ritual"
+                  : "border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              {RUNE_TARGET_LABEL[target]}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {draft.rune === null ? (
         <p className="text-xs text-slate-600 dark:text-slate-400">
           Руна не выбрана — заклинание сотворится без неё.
@@ -624,6 +654,7 @@ export function CastWizard({
               draft={draft}
               character={character}
               onChoose={(rune) => actions.chooseRune(rune)}
+              onChooseTarget={(target) => actions.chooseRuneTarget(target)}
             />
           )}
         </>

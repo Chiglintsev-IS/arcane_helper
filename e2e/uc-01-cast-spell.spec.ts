@@ -121,11 +121,11 @@ test("book mode shows only the book", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Ресурсы" })).toHaveCount(0);
   await expect(page.getByLabel("Ячейки заклинаний")).toHaveCount(0);
   await expect(page.getByLabel("Прочие ресурсы")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /Магия крови/ })).toHaveCount(0);
 
-  // Остаётся то, ради чего книгу открывают: состав, подготовка со счётчиком и фильтры.
+  // Остаётся то, ради чего книгу открывают: состав, подготовка со счётчиком и фильтры. «Магия
+  // крови» в составе: очки заклинаний покупают вне боя, и книга — единственный вход к магии там.
   await expect(page.getByLabel(/^Подготовлено \d+ из \d+/)).toBeVisible();
-  await expect(page.getByRole("list", { name: "Заклинания" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Магия крови/ })).toBeVisible();
 });
 
 test("filter by casting time", async ({ page }) => {
@@ -208,8 +208,8 @@ test("state survives a reload", async ({ page }) => {
 
   await page.reload();
   // После перезапуска экран снова «Книга»: ни заголовка с именем, ни шапки ресурсов там нет,
-  // поэтому признак загрузки — сам список заклинаний.
-  await expect(page.getByRole("list", { name: "Заклинания" })).toBeVisible();
+  // поэтому признак загрузки — сам список.
+  await expect(page.getByRole("list", { name: /^Заклинания/ })).toBeVisible();
   await expect(page.getByRole("radio", { name: /^Книга/ })).toHaveAttribute(
     "aria-checked",
     "true",
@@ -250,7 +250,11 @@ test("concentration block explains the effect", async ({ page }) => {
   await expect(page.getByText(/Держите концентрацию/)).toBeVisible();
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
-  // Виден после закрытия карточки заклинания.
+  // В «Книге» блока действующего нет: она отвечает, что персонаж знает, а не что сейчас держится.
+  await expect(page.getByRole("button", { name: /Концентрация: / })).toBeHidden();
+
+  // Блок стоит там, где идёт игра, и виден без открытия карточки заклинания.
+  await switchMode(page, /^Бой/);
   const card = page.getByRole("button", { name: /Концентрация: Обнаружение магии/ });
   await expect(card).toBeVisible();
   await expect(card).toContainText("Сфера 30 футов от себя");

@@ -107,6 +107,42 @@ describe("руна при сотворении (FR-151)", () => {
   });
 });
 
+describe("цель руны жизни (FR-156)", () => {
+  it("по умолчанию себе, но переключается на другого и уходит в запрос", () => {
+    store.getState().start(mageArmor, context());
+    store.getState().chooseRune("life");
+    expect(draftOf().runeTarget).toBe("self");
+
+    store.getState().chooseRuneTarget("other");
+    expect(draftOf().runeTarget).toBe("other");
+    expect(toCastRequest(draftOf()).runeTarget).toBe("other");
+  });
+
+  it("руна, цели не выбирающая, возвращает её себе: ветер действует только на заклинателя", () => {
+    store.getState().start(mageArmor, context());
+    store.getState().chooseRune("life");
+    store.getState().chooseRuneTarget("other");
+
+    store.getState().chooseRune("wind");
+    expect(draftOf().runeTarget).toBe("self");
+  });
+
+  it("смена оплаты на ритуал возвращает цель к себе вместе с руной", () => {
+    store.getState().start(detectMagic, context({ ...createThorne(), screenMode: "camp" }));
+    store.getState().chooseCastOption({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
+    store.getState().chooseRune("life");
+    store.getState().chooseRuneTarget("other");
+
+    store.getState().chooseCastOption({ mode: "ritual", payment: { kind: "none" } });
+    expect(draftOf().runeTarget).toBe("self");
+  });
+
+  it("без черновика выбор цели ничего не делает", () => {
+    store.getState().chooseRuneTarget("other");
+    expect(store.getState().draft).toBeNull();
+  });
+});
+
 describe("начало применения", () => {
   it("подготовленное заклинание начинается с ячейки своего уровня и первого видимого шага", () => {
     store.getState().start(mageArmor, context());

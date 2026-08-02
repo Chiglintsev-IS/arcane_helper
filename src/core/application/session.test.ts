@@ -539,11 +539,29 @@ describe("руна жизни начисляет временные хиты (FR
   it("не складываются с имеющимися: меньшее не берётся (FR-206)", () => {
     const stocked: Session = { ...session, character: { ...session.character, temporaryHitPoints: 12 } };
     expect(withRune("life", 1, stocked).character.temporaryHitPoints).toBe(12);
-    // Руна всё равно потрачена: союзникам её хиты достались, даже если Торну нечего добавить.
+    // Руна всё равно потрачена: хиты она дала, даже если Торну нечего добавить.
     expect(withRune("life", 1, stocked).character.runes.remaining).toBe(2);
   });
 
-  it("руны войны и ветра состояния Торна не меняют: их эффект у союзников", () => {
+  it("выбранный другой хиты Торну не даёт, а руну всё равно тратит (FR-156)", () => {
+    const cast = castSpell(
+      session,
+      {
+        spell: spell("mage-armor"),
+        mode: "normal",
+        payment: { kind: "slot", slotLevel: 3 },
+        rune: "life",
+        runeTarget: "other",
+      },
+      clock,
+    );
+
+    expect(cast.character.temporaryHitPoints).toBe(0);
+    expect(cast.character.runes.remaining).toBe(2);
+    expect(cast.journal.at(-1)?.summaryRu).toContain("15 временных хитов другому");
+  });
+
+  it("руны войны и ветра состояния Торна не меняют: чужих бросков приложение не ведёт", () => {
     expect(withRune("war", 4).character.temporaryHitPoints).toBe(0);
     expect(withRune("wind", 4).character.temporaryHitPoints).toBe(0);
   });

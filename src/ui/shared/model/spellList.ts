@@ -89,6 +89,23 @@ export function orderForCombat(spells: readonly Spell[]): Spell[] {
   return [...spells].sort((left, right) => compareCombatTraits(traitsOf(left), traitsOf(right)));
 }
 
+/**
+ * Куда встаёт строка, заклинанием не являющаяся: боевой список упорядочен ключом срочности, книга —
+ * уровнем, и одна проверка на оба списка поставила бы её не туда.
+ */
+export function positionInList(
+  spells: readonly Spell[],
+  traits: ActionTraits,
+  mode: ScreenMode,
+): number {
+  const standsAfter =
+    mode === "combat"
+      ? (spell: Spell) => compareCombatTraits(traitsOf(spell), traits) > 0
+      : (spell: Spell) => traitsOf(spell).level > traits.level;
+  const index = spells.findIndex(standsAfter);
+  return index === -1 ? spells.length : index;
+}
+
 /** Что показывать на экране: отбор по режиму, состав по подготовке, порядок по срочности. */
 export function spellsForScreen(spells: readonly Spell[], character: CharacterState): Spell[] {
   const inMode = spellsForMode(spells, character.screenMode);

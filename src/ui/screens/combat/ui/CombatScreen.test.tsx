@@ -816,13 +816,40 @@ describe("магия крови в списке действий (FR-207)", () =
   // появляется, только когда не подошло вообще ничего.
 });
 
-describe("«Магии крови» в «Книге» нет (FR-207)", () => {
-  it("книга отвечает, что персонаж знает, а не чем он заплатит", async () => {
+describe("«Магия крови» в «Книге» (FR-207)", () => {
+  it("стоит в списке книги сразу за заговорами: очки покупают вне боя", async () => {
     await renderWithStores(<CombatScreen />, inBookMode());
 
-    expect(screen.queryByRole("button", { name: /Магия крови/ })).toBeNull();
-    // И список зовётся по составу: «и действия» в имени обещали бы строку, которой там нет.
-    expect(screen.getByRole("list", { name: "Заклинания" })).toBeDefined();
+    const list = screen.getByRole("list", { name: "Заклинания и действия" });
+    const names = within(list)
+      .getAllByRole("listitem")
+      .map((row) => row.textContent ?? "");
+
+    const blood = names.findIndex((text) => text.startsWith("Магия крови"));
+    const firstLevelled = names.findIndex((text) => text.startsWith("Щит"));
+    expect(blood).toBeGreaterThan(-1);
+    expect(blood).toBeLessThan(firstLevelled);
+  });
+
+  it("«Без ячейки» её оставляет, уровень ячейки — прячет (FR-212)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.click(screen.getByRole("button", { name: "Без ячейки" }));
+    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: "Без ячейки" }));
+    await user.click(screen.getByRole("button", { name: "1 ур." }));
+    expect(screen.queryByText("Магия крови")).toBeNull();
+  });
+
+  it("«Подготовлено» её не прячет: подготовка к обмену не относится", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, inBookMode());
+
+    await user.click(screen.getByRole("button", { name: "Подготовлено" }));
+
+    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
   });
 });
 
@@ -1114,6 +1141,14 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     expect(screen.queryByLabelText("Прочие ресурсы")).toBeNull();
   });
 
+  it("действующего в книге нет: книга — только книга (FR-217)", async () => {
+    await renderWithStores(<CombatScreen />, { ...concentrating(), screenMode: "book" });
+
+    // Имя точное: «Концентрация» есть и у переключателя фильтров.
+    expect(screen.queryByRole("button", { name: /^Концентрация:/ })).toBeNull();
+    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+  });
+
   it("нет ни имени с классом и уровнем, ни поиска, ни «Реакций», ни отмены", async () => {
     await renderWithStores(<CombatScreen />, inBookMode());
 
@@ -1299,15 +1334,15 @@ describe("режим «Журнал» (FR-114, FR-220)", () => {
     expect(screen.queryByText(/раунд/)).toBeNull();
   });
 
-  it("действующее видно и в журнале: концентрация не уходит с экрана незаметно (FR-082)", async () => {
+  it("действующего в журнале нет: журнал — только записи (FR-220)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, {
-      ...concentrating(),
-      screenMode: "combat",
-    });
+    await renderWithStores(<CombatScreen />, { ...concentrating(), screenMode: "combat" });
+
+    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
 
     await openJournal(user);
 
-    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /Концентрация/ })).toBeNull();
+    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
   });
 });

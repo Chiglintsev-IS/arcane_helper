@@ -343,6 +343,39 @@ describe("недоступность руны названа причиной (F
   });
 });
 
+describe("руна жизни спрашивает кому (FR-156)", () => {
+  it("выбор цели появляется у жизни и не появляется у остальных", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />, withTurnTracking());
+    await openWizard(/^Паутина/);
+
+    expect(screen.queryByRole("group", { name: "Кому руна" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Руна жизни/ }));
+    const target = screen.getByRole("group", { name: "Кому руна" });
+    expect(within(target).getByRole("button", { name: "Себе" })).toBeDefined();
+    expect(within(target).getByRole("button", { name: "Другому" })).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: /Руна ветра/ }));
+    expect(screen.queryByRole("group", { name: "Кому руна" })).toBeNull();
+  });
+
+  it("выбранный другой оставляет временные хиты нетронутыми (FR-156)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />, withTurnTracking());
+    await openWizard(/^Паутина/);
+
+    await user.click(screen.getByRole("button", { name: /Руна жизни/ }));
+    await user.click(screen.getByRole("button", { name: "Другому" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const after = stores.session.getState().session?.character;
+    expect(after?.temporaryHitPoints).toBe(0);
+    expect(after?.runes.remaining).toBe(2);
+  });
+});
+
 describe("шаг костей хитов (FR-135)", () => {
   /**
    * Раненый Торн с подготовленной «Мистической бодростью».

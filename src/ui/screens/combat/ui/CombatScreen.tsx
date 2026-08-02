@@ -10,7 +10,7 @@
 
 "use client";
 
-import { BLOOD_MAGIC_TRAITS, traitsOf } from "@/ui/shared/model/actionTraits";
+import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { Character } from "@/core/domain/character/character";
 import { setScreenMode, setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
@@ -20,7 +20,7 @@ import { castSpell } from "@/core/application/useCases/casting";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import type { ScreenMode } from "@/core/shared/screenMode";
-import { compareCombatTraits, spellsForScreen } from "@/ui/shared/model/spellList";
+import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import { useMemo, useState } from "react";
 
@@ -89,6 +89,38 @@ function firstReason(
   return plan.availability.warnings[0]?.reasonRu ?? null;
 }
 
+/**
+ * Что показывает каждый режим. Таблица, а не условия по месту: состав экрана — одно решение, и
+ * читать его надо целиком, иначе один режим однажды снова покажет чужое.
+ */
+const SCREEN_PARTS: Record<
+  ScreenMode,
+  {
+    /** Имя, числа боя, ячейки, прочие ресурсы. */
+    resources: boolean;
+    /** Концентрация и активные эффекты. */
+    effects: boolean;
+    spellList: boolean;
+    /** «Начать бой» / «Окончить бой» и «Новый ход». */
+    encounter: boolean;
+    reactions: boolean;
+    /** Счётчик подготовки и кнопки подготовки в строках. */
+    preparation: boolean;
+    /** Отдых, восстановление, список покупок. */
+    camp: boolean;
+    journal: boolean;
+  }
+> = {
+  // prettier-ignore
+  combat: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, camp: false, journal: false },
+  // prettier-ignore
+  camp: { resources: true, effects: true, spellList: false, encounter: false, reactions: true, preparation: false, camp: true, journal: false },
+  // prettier-ignore
+  book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, camp: false, journal: false },
+  // prettier-ignore
+  journal: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, camp: false, journal: true },
+};
+
 export function CombatScreen() {
   const { clock, draft: draftStore, session: sessionStore } = useStores();
   const session = useSession((state) => state.session);
@@ -147,27 +179,13 @@ export function CombatScreen() {
   const context = { character, turn: economy };
   const apply = sessionStore.getState().apply;
   const mode = character.screenMode;
+  const parts = SCREEN_PARTS[mode];
   // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список.
   // Карточка при этом открывается из всей книги — режим не должен закрывать уже открытое.
   const inMode = spellsForScreen(spells, character);
   const shown = filterSpells(inMode, filters, context);
   const available = availableFilters(inMode);
-  // Список есть ровно там, где есть что выбирать: во «Вне боя» отдыхают, в «Журнале» разбирают
-  // случившееся.
-  const showsSpellList = mode === "combat" || mode === "book";
-  // Шапка ресурсов — там, где тратят и восстанавливают. «Книга» отвечает, что персонаж знает, а
-  // «Журнал» — что уже случилось: ни тому, ни другому остаток ячеек не нужен.
-  const showsResources = mode === "combat" || mode === "camp";
-  // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам. В «Книге» её
-  // нет: книга отвечает, что персонаж знает, а не чем он за это заплатит.
-  const bloodShown = mode === "combat" && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
-  // Подготовка живёт в «Книге»: в бою состав уже определён, и менять его под чужой ход приложение
-  // предлагать не должно.
-  const preparing = mode === "book";
-  // Отметки схватки — только в бою. «Реакции» стоят в бою и вне боя: провалить спасбросок можно и
-  // от ловушки в коридоре, а руна превращает провал в успех независимо от того, идёт ли бой.
-  const showsEncounter = mode === "combat";
-  const showsReactions = mode === "combat" || mode === "camp";
+  const bloodShown = parts.spellList && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
   const limit = Character.of(character).sheet.preparationLimit;
 
   const rows = shown.map((spell) => (
@@ -178,20 +196,15 @@ export function CombatScreen() {
       unavailableReason={firstReason(spell, character, economy)}
       onOpen={() => setOpenSpellId(spell.id)}
       onTogglePrepared={
-        preparing
+        parts.preparation
           ? () => apply((current) => togglePreparation(current, spell, limit, clock))
           : undefined
       }
     />
   ));
   if (bloodShown) {
-    // Один список, а не два: обмен хитов на очки ячейку не тратит, значит по цене он стоит там же,
-    // где заговоры, и идёт сразу за ними. Боевой список уже переставлен по тому же ключу
-    // `compareCombatTraits` — реакции вперёд, — поэтому место ищется им же.
-    const after = shown.findIndex(
-      (spell) => compareCombatTraits(traitsOf(spell), BLOOD_MAGIC_TRAITS) > 0,
-    );
-    rows.splice(after === -1 ? rows.length : after, 0, (
+    // Один список, а не два: ячейку обмен не тратит, значит по цене он стоит там же, где заговоры.
+    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, mode), 0, (
       <BloodMagicRow
         key="blood-magic"
         character={character}
@@ -249,7 +262,7 @@ export function CombatScreen() {
       <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
         <ModeSwitcher mode={mode} onChange={changeMode} />
 
-        {showsResources ? (
+        {parts.resources ? (
           <ResourceHeader
             character={character}
             economy={economy}
@@ -259,20 +272,21 @@ export function CombatScreen() {
           />
         ) : null}
 
-        {/* Действующее видно во всех режимах: концентрация не уходит с экрана незаметно. */}
-        <ActiveEffects
-          character={character}
-          concentration={concentrationSummary}
-          onOpenConcentration={() => setPanelOpen(true)}
-          onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
-        />
+        {parts.effects ? (
+          <ActiveEffects
+            character={character}
+            concentration={concentrationSummary}
+            onOpenConcentration={() => setPanelOpen(true)}
+            onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
+          />
+        ) : null}
 
         {/*
          * Ряда нет, когда в нём нечему стоять: в «Журнале» ни счётчика подготовки, ни кнопок, а
          * пустая обёртка всё равно забрала бы промежуток родителя — 8 пикселей, которых на
          * iPhone SE не бывает лишних.
          */}
-        {preparing || showsEncounter || showsReactions ? (
+        {parts.preparation || parts.encounter || parts.reactions ? (
           <div className="flex flex-wrap items-center gap-2">
             {/*
              * Счётчик подготовки: лимит — единственное жёсткое ограничение приложения, и
@@ -280,7 +294,7 @@ export function CombatScreen() {
              * Стоит в ряду кнопок, а не отдельной строкой: отдельная строка стоила бы ряда, а на
              * iPhone SE ряд — это пятая часть карточки.
              */}
-            {preparing ? (
+            {parts.preparation ? (
               <p
                 aria-label={`Подготовлено ${character.preparedSpellIds.length} из ${limit}`}
                 className={`flex-1 text-xs tabular-nums ${
@@ -300,7 +314,7 @@ export function CombatScreen() {
              * «Новый ход» гаснет, а не исчезает: пропавшая кнопка не отвечает на вопрос «почему
              * нельзя», а ответ здесь — «бой ещё не начат», и он же написан на соседней кнопке.
              */}
-            {showsEncounter ? (
+            {parts.encounter ? (
               <>
                 <button
                   type="button"
@@ -330,7 +344,7 @@ export function CombatScreen() {
              * и «Журнале» кнопки нет: их открывают намеренно и ненадолго, а не держат открытыми в
              * чужой ход.
              */}
-            {showsReactions ? (
+            {parts.reactions ? (
               <button
                 type="button"
                 onClick={() => setReactionsOpen(true)}
@@ -347,7 +361,7 @@ export function CombatScreen() {
          * готовятся, а отдыхают и докупают между сессиями. Кнопка отдыха посреди чтения предлагала
          * бы восемь часов случайным нажатием.
          */}
-        {mode === "camp" ? (
+        {parts.camp ? (
           <>
             <CampActions
               character={character}
@@ -383,7 +397,7 @@ export function CombatScreen() {
        * «Бою» она закреплена: список просматривают под чужой ход, и уехавший за край переключатель —
        * переключатель, которого нет. Там, где списка нет, нет и её.
        */}
-      {showsSpellList ? (
+      {parts.spellList ? (
         <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
           <SpellFilters
             filters={filters}
@@ -400,7 +414,7 @@ export function CombatScreen() {
          * Журнал занимает то же место, что и список: это и есть содержимое режима. Записи отдаются
          * в порядке хранения — переворачивает их сам компонент.
          */}
-        {mode === "journal" ? (
+        {parts.journal ? (
           <JournalScreen
             entries={session.journal}
             onUndo={() => apply(undoLast)}
@@ -412,7 +426,7 @@ export function CombatScreen() {
          * Без этой проверки «Вне боя» и «Журнал» отвечали бы «под выбранные фильтры не подходит ни
          * одно заклинание» — сообщением о пустом результате там, где искать никто не начинал.
          */}
-        {showsSpellList ? (
+        {parts.spellList ? (
           <>
             {rows.length > 0 ? (
               <ul aria-label={listLabel} className="flex flex-col gap-2">

@@ -10,7 +10,12 @@ import type { ActiveEffect, CharacterState } from "@/core/domain/character/state
 import type { Spell } from "@/core/domain/catalog/spell";
 import { DomainError } from "@/core/domain/shared/errors";
 import { CANTRIP_LEVEL, consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
-import { lifeRuneTemporaryHitPoints, RUNE_LABEL } from "@/core/domain/arcana/runes";
+import {
+  lifeRuneTemporaryHitPoints,
+  RUNE_LABEL,
+  type Rune,
+  type RuneTarget,
+} from "@/core/domain/arcana/runes";
 import { spellPointCost } from "@/core/domain/vitality/blood";
 import { hitDiceHealing } from "@/core/domain/vitality/hitDice";
 import { durationWithRoundsRu } from "@/core/domain/effects/concentration";
@@ -32,7 +37,9 @@ export type CastRequest = {
   payment: Payment;
   targetLabel?: string;
   /** Руна применяется только к заклинанию, оплаченному ячейкой. */
-  rune?: "life" | "war" | "wind";
+  rune?: Rune;
+  /** Кому досталась «Руна жизни»: остальные руны цели не выбирают. */
+  runeTarget?: RuneTarget;
   /** Мастер разрешил исключение — предупреждения не блокируют. */
   allowAnyway?: boolean;
   /**
@@ -105,21 +112,18 @@ function applyPayment(root: Character, request: CastRequest): Character {
   throw new DomainError("Заклинание с ячейкой требует способа оплаты");
 }
 
-/**
- * Руна при сотворении.
- *
- * «Руна жизни» начисляет свои временные хиты и самому заклинателю: в пределах тридцати футов от себя
- * стоит и он. Руны войны и ветра его состояния не меняют — чужие броски приложение не ведёт, и их
- * число живёт только в объявлении мастеру.
- */
+/** Состояние персонажа меняет только руна, выбравшая его самого: чужие числа живут в объявлении. */
+function grantsToCaster(request: CastRequest): boolean {
+  return request.rune === "life" && request.runeTarget !== "other";
+}
+
 function applyRune(root: Character, request: CastRequest): Character {
   if (request.rune === undefined) return root;
   if (request.payment.kind !== "slot") {
     throw new DomainError("Руна применяется только к заклинанию, оплаченному ячейкой");
   }
   const spent = root.withArcana(root.arcana.spendRune());
-  if (request.rune !== "life") return spent;
-  // Меньшее начисление не отказывает: руна уже потрачена и союзникам хиты дала.
+  if (!grantsToCaster(request)) return spent;
   return spent.withVitality(
     spent.vitality.grantTemporary(lifeRuneTemporaryHitPoints(request.payment.slotLevel)),
   );
@@ -129,8 +133,10 @@ function applyRune(root: Character, request: CastRequest): Character {
 function runeNote(request: CastRequest): string {
   if (request.rune === undefined || request.payment.kind !== "slot") return "";
   const name = RUNE_LABEL[request.rune].replace("Руна ", "руна ");
+  const points = lifeRuneTemporaryHitPoints(request.payment.slotLevel);
   if (request.rune !== "life") return ` · ${name}`;
-  return ` · ${name}: ${lifeRuneTemporaryHitPoints(request.payment.slotLevel)} временных хитов`;
+  if (!grantsToCaster(request)) return ` · ${name}: ${points} временных хитов другому`;
+  return ` · ${name}: ${points} временных хитов`;
 }
 
 function slotLevelUsed(request: CastRequest): number {
