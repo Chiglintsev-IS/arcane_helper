@@ -1,7 +1,17 @@
 import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
-import { abilityModifier, baseSpellAttackModifier, baseSpellSaveDc, preparedLimit, proficiencyBonus } from "@/core/domain/character/abilities";
+import {
+  abilityModifier,
+  initiativeModifier,
+  passivePerception,
+  preparedLimit,
+  proficiencyBonus,
+  savingThrowModifier,
+  skillModifier,
+  spellAttackModifier,
+  spellSaveDc,
+} from "@/core/domain/character/abilities";
 
 describe("proficiencyBonus", () => {
   it.each([
@@ -45,16 +55,48 @@ describe("производные характеристики Торна", () =>
   const level = 7;
   const intelligence = 18;
 
-  it("КС спасброска равна 15", () => {
-    expect(baseSpellSaveDc(level, intelligence)).toBe(15);
+  it("КС спасброска без прибавки предмета равна 15", () => {
+    expect(spellSaveDc({ level, score: intelligence, itemBonus: 0 })).toBe(15);
   });
 
-  it("модификатор атаки заклинанием равен +7", () => {
-    expect(baseSpellAttackModifier(level, intelligence)).toBe(7);
+  it("модификатор атаки заклинанием без прибавки предмета равен +7", () => {
+    expect(spellAttackModifier({ level, score: intelligence, itemBonus: 0 })).toBe(7);
   });
 
   it("лимит подготовки равен 11", () => {
     expect(preparedLimit(intelligence, level)).toBe(11);
+  });
+});
+
+describe("производные числа листа", () => {
+  it("спасбросок: модификатор, владение, прибавка предмета", () => {
+    // Торн: Телосложение 16 без владения, предмет +1.
+    expect(
+      savingThrowModifier({ score: 16, proficient: false, proficiencyBonus: 3, itemBonus: 1 }),
+    ).toBe(4);
+    // Интеллект 18 с владением.
+    expect(
+      savingThrowModifier({ score: 18, proficient: true, proficiencyBonus: 3, itemBonus: 1 }),
+    ).toBe(8);
+  });
+
+  it("навык: без владения, с владением, с компетентностью", () => {
+    expect(skillModifier({ score: 18, training: undefined, proficiencyBonus: 3 })).toBe(4);
+    expect(skillModifier({ score: 18, training: "proficient", proficiencyBonus: 3 })).toBe(7);
+    expect(skillModifier({ score: 18, training: "expert", proficiencyBonus: 3 })).toBe(10);
+  });
+
+  it("пассивное восприятие — десять плюс навык Восприятия", () => {
+    expect(passivePerception({ score: 12, training: undefined, proficiencyBonus: 3 })).toBe(11);
+  });
+
+  it("инициатива — модификатор Ловкости", () => {
+    expect(initiativeModifier(14)).toBe(2);
+  });
+
+  it("КС и атака включают прибавку предмета к магии", () => {
+    expect(spellSaveDc({ level: 7, score: 18, itemBonus: 1 })).toBe(16);
+    expect(spellAttackModifier({ level: 7, score: 18, itemBonus: 1 })).toBe(8);
   });
 });
 

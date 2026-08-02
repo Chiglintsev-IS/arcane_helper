@@ -50,3 +50,17 @@ describe("пул ресурса", () => {
     });
   });
 });
+
+describe("смена максимума", () => {
+  it("прибавка максимума приходит неистраченной", () => {
+    const pool = ResourcePool.from({ maximum: 1, remaining: 0 }, RU);
+    expect(pool.resized(2).toState()).toEqual({ maximum: 2, remaining: 1 });
+  });
+
+  it("убыль максимума обрезает остаток, но не уводит его ниже нуля", () => {
+    const full = ResourcePool.from({ maximum: 3, remaining: 3 }, RU);
+    expect(full.resized(1).toState()).toEqual({ maximum: 1, remaining: 1 });
+    const spent = ResourcePool.from({ maximum: 3, remaining: 0 }, RU);
+    expect(spent.resized(1).toState()).toEqual({ maximum: 1, remaining: 0 });
+  });
+});

@@ -48,6 +48,17 @@ export class ResourcePool {
     return this.shift(-count, nameRu);
   }
 
+  /**
+   * Новый максимум: остаток движется на ту же разницу.
+   *
+   * Правило одно на ячейки, руны и Кости хитов: взятый уровень отдаёт новую ячейку неистраченной, а
+   * потерянный забирает её, не трогая уже потраченное.
+   */
+  resized(maximum: number): ResourcePool {
+    const shifted = this.remaining + (maximum - this.maximum);
+    return new ResourcePool(maximum, Math.min(Math.max(0, shifted), maximum));
+  }
+
   /** Полное восстановление: долгий отдых возвращает пул целиком. */
   restored(): ResourcePool {
     return new ResourcePool(this.maximum, this.maximum);

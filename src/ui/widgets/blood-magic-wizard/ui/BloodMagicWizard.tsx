@@ -16,6 +16,7 @@ import {
   spellPointCost,
 } from "@/core/domain/vitality/blood";
 import { withPlural } from "@/core/shared/language";
+import { Vitality } from "@/core/domain/vitality/vitality";
 
 /** Шаги мастера обмена. Шага «чем оплатить» здесь нет: оплата у обмена одна — хиты. */
 const STEPS = ["availability", "amount", "summary"] as const;
@@ -139,7 +140,7 @@ function AmountStep({
       {/* Максимум назван вместе с текущими: без него непонятно, почему лечение потом упрётся. */}
       <p className="text-xs text-slate-600 dark:text-slate-400">
         Хиты {hitPoints.current} → {hitPoints.current - spent}, максимум тоже{" "}
-        {hitPoints.maximum - spent}
+        {Vitality.of(character).maximum - spent}
       </p>
     </section>
   );

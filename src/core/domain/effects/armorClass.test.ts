@@ -72,7 +72,7 @@ describe("effectiveArmorClass: как складываются вклады", ()
   it("замена ниже собственной базы не ухудшает КД", () => {
     const armored: CharacterState = {
       ...createThorne(),
-      armorClass: { base: 15, dexterityModifier: 2, itemBonus: 2 },
+      equipment: { ...createThorne().equipment, armorClassBase: 15 },
       activeEffects: [effect("mage-armor", MAGE_ARMOR)],
     };
     expect(effectiveArmorClass(armored)).toBe(19);

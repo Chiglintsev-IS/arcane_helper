@@ -9,6 +9,7 @@ import { expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import {
   parsePersisted,
   StorageCorruptedError,
@@ -157,8 +158,29 @@ export function describeParsingContract(): void {
     expect(() => parsePersisted(broken)).toThrow(/savedAt/);
   });
 
-  it("версию старее считает поводом для миграции, а не ошибкой версии", () => {
-    // Версии 0 ещё не существовало, но структура отличается — это повреждение, не «обновите приложение».
-    expect(() => parsePersisted({ ...snapshot(), schemaVersion: 0 })).toThrow(StorageCorruptedError);
+  it("версию старее приводит, а не отвергает: обновление не теряет данных", () => {
+    const legacy = snapshot();
+    const { abilities, equipment, overrides, hitPoints, ...character } = legacy.character;
+    const before = parsePersisted({
+      ...legacy,
+      schemaVersion: 1,
+      character: {
+        ...character,
+        intelligence: abilities.intelligence,
+        spellSaveDc: 16,
+        spellAttackModifier: 8,
+        constitutionSaveModifier: 4,
+        armorClass: { base: 10, dexterityModifier: 2, itemBonus: 2 },
+        hitPoints: { current: hitPoints.current, maximum: hitPoints.maximumBase, maximumReduction: 0 },
+      },
+    });
+    const totals = Sheet.of(before.character);
+    expect(totals.spellSaveDc).toBe(16);
+    expect(totals.armorClassParts).toEqual({ base: 10, dexterityModifier: 2, itemBonus: 2 });
+  });
+
+  it("испорченное сохранение остаётся повреждением, сколько бы ни стояло в версии", () => {
+    const broken = { ...snapshot(), schemaVersion: 0, character: { id: "thorne" } };
+    expect(() => parsePersisted(broken)).toThrow(StorageCorruptedError);
   });
 }

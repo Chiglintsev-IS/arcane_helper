@@ -10,8 +10,10 @@ import { z } from "zod";
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { DEFAULT_SCREEN_MODE, SCREEN_MODES } from "@/core/shared/screenMode";
 
-/** Версия формата экспорта. Файл неизвестной версии отклоняется. */
-export const EXPORT_SCHEMA_VERSION = 1;
+import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
+
+/** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
+export const EXPORT_SCHEMA_VERSION = 2;
 
 const nonEmpty = z.string().trim().min(1);
 const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
@@ -91,6 +93,57 @@ const roleplayPreferenceSchema = z.object({
   usageCount: z.record(nonEmpty, z.number().int().nonnegative()),
 });
 
+/** База Класса Доспеха без доспехов — правило, а не настройка снаряжения. */
+export const UNARMORED_ARMOR_CLASS_BASE = 10;
+
+/**
+ * Вещь в инвентаре.
+ *
+ * Прибавка необязательна: большая часть вещей на числа не влияет, и нулевые поля у каждой верёвки
+ * означали бы, что верёвка участвует в счёте Класса Доспеха.
+ */
+const inventoryItemSchema = z.object({
+  id: nonEmpty,
+  nameRu: nonEmpty,
+  /** Надето и потому действует. Лежащее в сумке к числам не прибавляется. */
+  worn: z.boolean().default(false),
+  note: nonEmpty.optional(),
+  bonuses: z
+    .object({
+      spellcasting: z.number().int().default(0),
+      armorClass: z.number().int().default(0),
+      savingThrows: z.number().int().default(0),
+    })
+    .optional(),
+});
+
+const abilityScore = z.number().int().min(1).max(30);
+
+/** Размер существа: из перечисления правил, потому что от него зависят правила захвата и укрытия. */
+export const CREATURE_SIZES = ["tiny", "small", "medium", "large", "huge", "gargantuan"] as const;
+
+const abilitiesSchema = z.object({
+  strength: abilityScore,
+  dexterity: abilityScore,
+  constitution: abilityScore,
+  intelligence: abilityScore,
+  wisdom: abilityScore,
+  charisma: abilityScore,
+});
+
+const overridesSchema = z
+  .object({
+    proficiencyBonus: z.number().int().optional(),
+    spellSaveDc: z.number().int().optional(),
+    spellAttackModifier: z.number().int().optional(),
+    preparedLimit: z.number().int().positive().optional(),
+    initiative: z.number().int().optional(),
+    passivePerception: z.number().int().optional(),
+    saves: z.partialRecord(z.enum(ABILITIES), z.number().int()).default({}),
+    skills: z.partialRecord(z.enum(SKILL_IDS), z.number().int()).default({}),
+  })
+  .default({ saves: {}, skills: {} });
+
 export const characterStateSchema = z
   .object({
     id: nonEmpty,
@@ -98,11 +151,32 @@ export const characterStateSchema = z
     className: nonEmpty,
     level: z.number().int().min(1).max(20),
 
-    intelligence: z.number().int().min(1).max(30),
-    // Производные числа — хранимые, а не вычисляемые: предметы и черты их сдвигают.
-    spellSaveDc: z.number().int(),
-    spellAttackModifier: z.number().int(),
-    constitutionSaveModifier: z.number().int(),
+    /**
+     * Справочные поля листа. Со значением по умолчанию, а не обязательные: сохранение, сделанное до
+     * появления листа, обязано читаться — обновление не имеет права терять данные.
+     */
+    species: nonEmpty.or(z.literal("")).default(""),
+    subclass: nonEmpty.or(z.literal("")).default(""),
+    age: z.number().int().nonnegative().default(0),
+    size: z.enum(CREATURE_SIZES).default("medium"),
+    speed: z.number().int().nonnegative().default(30),
+
+    abilities: abilitiesSchema,
+    saveProficiencies: z.array(z.enum(ABILITIES)).default([]),
+    skills: z.partialRecord(z.enum(SKILL_IDS), z.enum(SKILL_TRAINING)).default({}),
+    proficiencies: z
+      .object({
+        weapons: z.array(nonEmpty).default([]),
+        armor: z.array(nonEmpty).default([]),
+        tools: z.array(nonEmpty).default([]),
+        languages: z.array(nonEmpty).default([]),
+      })
+      .default({ weapons: [], armor: [], tools: [], languages: [] }),
+
+    overrides: overridesSchema,
+
+    exhaustion: z.number().int().min(0).max(6).default(0),
+    inspiration: z.boolean().default(false),
 
     cantripIds: z.array(nonEmpty),
     spellbookSpellIds: z.array(nonEmpty),
@@ -156,24 +230,25 @@ export const characterStateSchema = z
      */
     shortRestSinceLongRest: z.boolean().optional(),
 
-    // Хиты нужны потому, что кровавое колдовство покупает магию здоровьем.
+    /**
+     * Здоровье тремя слагаемыми: база с листа и два снижения. Действующий максимум считается.
+     * Одно поле «максимум, уже уменьшенный кровью» смешивало два факта, и правка базы требовала
+     * вычесть снижение руками.
+     */
     hitPoints: z
       .object({
         current: z.number().int(),
-        maximum: z.number().int().positive(),
-        maximumReduction: z.number().int().nonnegative(),
+        maximumBase: z.number().int().positive(),
+        bloodReduction: z.number().int().nonnegative(),
+        masterReduction: z.number().int().nonnegative().default(0),
       })
-      .refine((value) => value.current <= value.maximum, {
-        message: "Текущее здоровье не может превышать максимум",
-        path: ["current"],
-      }),
-
-    // Слагаемые КД раздельно: «Доспехи мага» заменяют базу, а не прибавляют к итогу.
-    armorClass: z.object({
-      base: z.number().int().positive(),
-      dexterityModifier: z.number().int(),
-      itemBonus: z.number().int(),
-    }),
+      .refine(
+        (value) => value.current <= value.maximumBase - value.bloodReduction - value.masterReduction,
+        {
+          message: "Текущее здоровье не может превышать действующий максимум",
+          path: ["current"],
+        },
+      ),
 
     /**
      * Снаряжение, от которого зависит проверка компонентов.
@@ -184,14 +259,51 @@ export const characterStateSchema = z
      * Поле необязательное: та же схема проверяет импорт чужих выгрузок, и старая выгрузка
      * его не знает. Без него проверка ведёт себя как прежде — перечисляет компоненты напоминанием.
      */
+    /**
+     * Снаряжение: чем персонаж располагает вещественно.
+     *
+     * Числа отсюда, а не с листа персонажа: «+1 к магии» — свойство предмета, а не Торна. Поле со
+     * значениями по умолчанию, а не обязательное: сохранение прежней версии обязано читаться.
+     */
     equipment: z
       .object({
-        spellcastingFocus: z.boolean(),
-        componentPouch: z.boolean(),
-        /** Идентификаторы заклинаний, чей дорогой компонент есть в сумке. */
-        materialsForSpellIds: z.array(nonEmpty),
+        /** База Класса Доспеха: надетый доспех или его отсутствие. */
+        armorClassBase: z.number().int().positive().default(UNARMORED_ARMOR_CLASS_BASE),
+
+        /**
+         * Прибавки, не привязанные к вещи.
+         *
+         * Второй источник рядом с инвентарём намеренно: приведение прежних данных не имеет права
+         * выдумывать названия предметов, а игрок не обязан заводить инвентарь ради своих +1.
+         */
+        otherBonuses: z
+          .object({
+            spellcasting: z.number().int().default(0),
+            armorClass: z.number().int().default(0),
+            savingThrows: z.number().int().default(0),
+          })
+          .default({ spellcasting: 0, armorClass: 0, savingThrows: 0 }),
+
+        items: z.array(inventoryItemSchema).default([]),
+
+        /**
+         * Сведения о компонентах. Необязательные: отсутствие записи — не пустая сумка, а незнание,
+         * и вердикта о компонентах в этом случае нет вовсе.
+         */
+        components: z
+          .object({
+            spellcastingFocus: z.boolean(),
+            componentPouch: z.boolean(),
+            /** Идентификаторы заклинаний, чей дорогой компонент есть в сумке. */
+            materialsForSpellIds: z.array(nonEmpty),
+          })
+          .optional(),
       })
-      .optional(),
+      .default({
+        armorClassBase: UNARMORED_ARMOR_CLASS_BASE,
+        otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+        items: [],
+      }),
 
     runes: z
       .object({
@@ -313,39 +425,45 @@ export const exportFileSchema = z.object({
 });
 
 /**
- * Что не меняется за игровую сессию: лист персонажа. Меняется только целиком, заменой персонажа.
+ * Поля, не попадающие в снимок отмены: справочные записи листа и состояние интерфейса. Их правка
+ * ничего не расходует, и возвращать их журналом было бы нечего.
  */
-const SHEET_KEYS = [
+const UNRECORDED_KEYS = [
   "id",
   "name",
   "className",
-  "level",
-  "intelligence",
-  "spellSaveDc",
-  "spellAttackModifier",
-  "constitutionSaveModifier",
-  "armorClass",
+  "species",
+  "subclass",
+  "age",
+  "size",
+  "speed",
+  "proficiencies",
   "roleplayProfile",
-  // Режим экрана — состояние интерфейса: его смена ничего не расходует и отмене не подлежит.
   "screenMode",
 ] as const satisfies readonly (keyof CharacterStateShape)[];
 
 /**
- * Поля, попадающие в снимок отмены: всё, кроме листа персонажа.
+ * Поля, попадающие в снимок отмены: всё, кроме справочных.
  *
  * Выводится вычитанием, а не перечисляется руками. Ручной список требовал бы помнить про него при
  * каждом новом ресурсе, и забытая строка молча оставляла бы ресурс потраченным после отмены.
  */
 export const MUTABLE_STATE_KEYS = (
   Object.keys(characterStateSchema.shape) as (keyof CharacterStateShape)[]
-).filter((key) => !(SHEET_KEYS as readonly string[]).includes(key));
+).filter((key) => !(UNRECORDED_KEYS as readonly string[]).includes(key));
 
 type CharacterStateShape = z.infer<typeof characterStateSchema>;
+
+export type InventoryItem = z.infer<typeof inventoryItemSchema>;
+export type ItemBonuses = NonNullable<InventoryItem["bonuses"]>;
+export type CreatureSize = (typeof CREATURE_SIZES)[number];
+export type Abilities = z.infer<typeof abilitiesSchema>;
+export type Overrides = z.infer<typeof overridesSchema>;
 
 export type SpellSlotsData = z.infer<typeof spellSlotsSchema>;
 export type ActiveEffect = z.infer<typeof activeEffectSchema>;
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
 export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;
 export type HitDice = NonNullable<z.infer<typeof characterStateSchema>["hitDice"]>;
-export type Equipment = NonNullable<z.infer<typeof characterStateSchema>["equipment"]>;
+export type Equipment = z.infer<typeof characterStateSchema>["equipment"];
 export type CharacterState = z.infer<typeof characterStateSchema>;

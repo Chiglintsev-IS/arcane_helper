@@ -22,15 +22,14 @@ import { commit, type Clock, type Session } from "@/core/application/session";
 export function longRest(session: Session, clock: Clock): Session {
   const root = Character.of(session.character);
   const reduction = maximumReductionAfterHours(
-    root.vitality.maximumReduction,
-    root.sheet.level,
+    root.vitality.bloodReduction,
+    root.base.level,
     LONG_REST_HOURS,
   );
-  const maximum = root.vitality.maximum + (root.vitality.maximumReduction - reduction);
 
   const dice = session.character.hitDice;
   const vitality = root.vitality
-    .withHitPointMaximum(maximum, reduction)
+    .restoredByLongRest(reduction)
     .dropTemporary()
     .clearFireSuppression()
     // Половина костей, округляя вниз. Персонажу без костей отдых их не выдумывает.
@@ -60,7 +59,7 @@ export function longRest(session: Session, clock: Clock): Session {
  */
 export function shortRest(session: Session, clock: Clock): Session {
   const root = Character.of(session.character);
-  const { vitality, returned, healed } = root.vitality.afterAnHour(root.sheet.level);
+  const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
 
   const after: CharacterState = {
     ...root.withVitality(vitality.clearFireSuppression()).toState(),
@@ -93,7 +92,7 @@ export function useArcaneRecovery(
   clock: Clock,
 ): Session {
   const root = Character.of(session.character);
-  const after = root.withArcana(root.arcana.useArcaneRecovery(plan, root.sheet.level));
+  const after = root.withArcana(root.arcana.useArcaneRecovery(plan, root.base.level));
   const returned = Object.entries(plan)
     .filter(([, count]) => count > 0)
     .map(([level, count]) => `${count}×${level} ур.`)

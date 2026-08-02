@@ -28,6 +28,7 @@ import {
   slotCostLabel,
 } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import { CANTRIP_LEVEL, type Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
@@ -75,7 +76,7 @@ export function SpellCardCompact({
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
   const ritualOnly = inBook ? ritualOnlyBadge(spell, character.preparedSpellIds) : null;
-  const resolution = resolutionBadge(spell.resolution, character);
+  const resolution = resolutionBadge(spell.resolution, Sheet.of(character));
   const damage = damageLabel(spell, spell.level, character.level);
   const slotCost = slotCostLabel(spell);
 

@@ -35,6 +35,7 @@ import { DataSheet } from "@/ui/features/data-exchange/ui/DataSheet";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
+import { CharacterSheetScreen } from "@/ui/widgets/character-sheet/ui/CharacterSheetScreen";
 import { JournalScreen } from "@/ui/widgets/journal/ui/JournalScreen";
 import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
 import { ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
@@ -45,6 +46,35 @@ import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
+import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
+import { ArmorSheet } from "@/ui/features/edit-character-sheet/ui/ArmorSheet";
+import { InventorySheet } from "@/ui/features/edit-character-sheet/ui/InventorySheet";
+import { HealthSheet } from "@/ui/features/edit-character-sheet/ui/HealthSheet";
+import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
+import { ItemBonusesSheet } from "@/ui/features/edit-character-sheet/ui/ItemBonusesSheet";
+import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
+import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
+import { OverridePickerSheet } from "@/ui/features/edit-character-sheet/ui/OverridePickerSheet";
+import { OverrideSheet } from "@/ui/features/edit-character-sheet/ui/OverrideSheet";
+import {
+  addItem,
+  editArmorClassBase,
+  editOtherBonuses,
+  removeItem,
+  toggleWorn,
+} from "@/core/application/useCases/equipment";
+import {
+  changeLevel,
+  editAbility,
+  editHealth,
+  editIdentity,
+  editMarks,
+  setOverride,
+} from "@/core/application/useCases/sheet";
+import { deriveNumbers, type DerivedId } from "@/core/domain/sheet/derived";
+import { ABILITIES } from "@/core/domain/character/skills";
+import { Equipment } from "@/core/domain/equipment/equipment";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { ascensionTierRate } from "@/core/domain/vitality/blood";
@@ -109,16 +139,20 @@ const SCREEN_PARTS: Record<
     /** Отдых, восстановление, список покупок. */
     camp: boolean;
     journal: boolean;
+    /** Лист персонажа целиком. */
+    sheet: boolean;
   }
 > = {
   // prettier-ignore
-  combat: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, camp: false, journal: false },
+  combat: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, camp: false, journal: false, sheet: false },
   // prettier-ignore
-  camp: { resources: true, effects: true, spellList: false, encounter: false, reactions: true, preparation: false, camp: true, journal: false },
+  camp: { resources: true, effects: true, spellList: false, encounter: false, reactions: true, preparation: false, camp: true, journal: false, sheet: false },
   // prettier-ignore
-  book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, camp: false, journal: false },
+  book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, camp: false, journal: false, sheet: false },
   // prettier-ignore
-  journal: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, camp: false, journal: true },
+  journal: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, camp: false, journal: true, sheet: false },
+  // prettier-ignore
+  sheet: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, camp: false, journal: false, sheet: true },
 };
 
 export function CombatScreen() {
@@ -144,6 +178,10 @@ export function CombatScreen() {
   const [dataOpen, setDataOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
+  const [openBlockId, setOpenBlockId] = useState<string | null>(null);
+  const [openOverrideId, setOpenOverrideId] = useState<DerivedId | null>(null);
+  // Блок характеристики называет себя `ability:<имя>`: шторка у каждой своя, как и блок.
+  const editedAbility = ABILITIES.find((ability) => openBlockId === `ability:${ability}`) ?? null;
 
   const economy = useMemo(
     () => (session === null ? null : deriveTurnEconomy(session)),
@@ -186,7 +224,15 @@ export function CombatScreen() {
   const shown = filterSpells(inMode, filters, context);
   const available = availableFilters(inMode);
   const bloodShown = parts.spellList && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
-  const limit = Character.of(character).sheet.preparationLimit;
+  const limit = Sheet.of(character).preparationLimit;
+  const derivedNumbers = Sheet.of(character).derived();
+  // Что дала бы формула без единой перебивки: шторка обязана назвать, от чего отступает игрок.
+  const formulaNumbers = deriveNumbers({
+    ...character,
+    bonuses: Equipment.of(character).bonuses,
+    armorClassBase: character.equipment.armorClassBase,
+    overrides: { saves: {}, skills: {} },
+  });
 
   const rows = shown.map((spell) => (
     <SpellCardCompact
@@ -230,7 +276,9 @@ export function CombatScreen() {
     setDamageOpen(false);
     setPanelOpen(false);
     if (character.concentration !== undefined) {
-      setPendingCheck(describeConcentrationCheck(damage, character.constitutionSaveModifier));
+      setPendingCheck(
+        describeConcentrationCheck(damage, Sheet.of(character).savingThrow("constitution")),
+      );
     }
   };
 
@@ -414,6 +462,10 @@ export function CombatScreen() {
          * Журнал занимает то же место, что и список: это и есть содержимое режима. Записи отдаются
          * в порядке хранения — переворачивает их сам компонент.
          */}
+        {parts.sheet ? (
+          <CharacterSheetScreen character={character} onEdit={setOpenBlockId} />
+        ) : null}
+
         {parts.journal ? (
           <JournalScreen
             entries={session.journal}
@@ -604,6 +656,127 @@ export function CombatScreen() {
           onClose={() => setReactionsOpen(false)}
         />
       ) : null}
+
+      {/*
+       * Шторки листа. Каждая закрывается только удавшейся правкой: отказ схемы оставляет введённое
+       * на экране, иначе игрок терял бы набранное вместе с сообщением об ошибке.
+       */}
+      {openBlockId === "identity" ? (
+        <IdentitySheet
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(patch) => {
+            if (apply((current) => editIdentity(current, patch)) === null) setOpenBlockId(null);
+          }}
+        />
+      ) : null}
+
+      {openBlockId === "level" ? (
+        <LevelSheet
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(next) => {
+            if (apply((current) => changeLevel(current, next, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {editedAbility === null ? null : (
+        <AbilitySheet
+          ability={editedAbility}
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(change) => {
+            if (apply((current) => editAbility(current, change, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      )}
+
+      {openBlockId === "itemBonuses" ? (
+        <ItemBonusesSheet
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(otherBonuses) => {
+            if (apply((current) => editOtherBonuses(current, otherBonuses, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {openBlockId === "health" ? (
+        <HealthSheet
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(change) => {
+            if (apply((current) => editHealth(current, change, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {openBlockId === "armorClassBase" ? (
+        <ArmorSheet
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(base) => {
+            if (apply((current) => editArmorClassBase(current, base, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {/* Инвентарь остаётся открытым: вещи заводят пачкой, и закрытие после каждой мешало бы. */}
+      {openBlockId === "inventory" ? (
+        <InventorySheet
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onAdd={(item) => apply((current) => addItem(current, item, clock))}
+          onRemove={(id) => apply((current) => removeItem(current, id, clock))}
+          onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}
+        />
+      ) : null}
+
+      {openBlockId === "marks" ? (
+        <MarksSheet
+          character={character}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(marks) => {
+            if (apply((current) => editMarks(current, marks, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      ) : null}
+
+      {openBlockId === "combatNumbers" && openOverrideId === null ? (
+        <OverridePickerSheet
+          numbers={derivedNumbers}
+          onCancel={() => setOpenBlockId(null)}
+          onPick={setOpenOverrideId}
+        />
+      ) : null}
+
+      {openOverrideId === null ? null : (
+        <OverrideSheet
+          id={openOverrideId}
+          formulaValue={formulaNumbers[openOverrideId]}
+          currentValue={derivedNumbers.find((number) => number.id === openOverrideId)?.value ?? 0}
+          onCancel={() => setOpenOverrideId(null)}
+          onSave={(value) => {
+            if (apply((current) => setOverride(current, openOverrideId, value, clock)) === null) {
+              setOpenOverrideId(null);
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      )}
 
       {damageOpen ? (
         <HitPointsSheet

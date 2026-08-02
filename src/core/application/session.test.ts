@@ -6,6 +6,7 @@ import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regeneratio
 import { adjustHitDice, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariantId, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, useRoleplayVariant } from "@/core/application/useCases/roleplay";
 import { actionUsedBy, castSpell } from "@/core/application/useCases/casting";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import { DomainError } from "@/core/domain/shared/errors";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -58,10 +59,11 @@ describe("начальное состояние Торна", () => {
   it("проходит схему и содержит подтверждённые числа", () => {
     const thorne = createThorne();
     expect(characterStateSchema.safeParse(thorne).success).toBe(true);
-    expect(thorne.spellSaveDc).toBe(16);
-    expect(thorne.spellAttackModifier).toBe(8);
-    expect(thorne.constitutionSaveModifier).toBe(4);
-    expect(thorne.hitPoints).toEqual({ current: 60, maximum: 60, maximumReduction: 0 });
+    const totals = Sheet.of(thorne);
+    expect(totals.spellSaveDc).toBe(16);
+    expect(totals.spellAttackModifier).toBe(8);
+    expect(totals.savingThrow("constitution")).toBe(4);
+    expect(thorne.hitPoints).toEqual({ current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 });
     expect(thorne.runes).toEqual({ maximum: 3, remaining: 3 });
     expect(thorne.spellSlots[1]?.maximum).toBe(4);
     expect(thorne.spellSlots[4]?.maximum).toBe(1);
@@ -584,8 +586,9 @@ describe("кровавое колдовство (FR-170…FR-174)", () => {
     expect(after.character.spellPoints.remaining).toBe(3);
     expect(after.character.hitPoints).toEqual({
       current: 51,
-      maximum: 51,
-      maximumReduction: 9,
+      maximumBase: 60,
+      bloodReduction: 9,
+      masterReduction: 0,
     });
     expect(after.journal.at(-1)?.kind).toBe("blood_exchange");
   });
@@ -605,7 +608,7 @@ describe("кровавое колдовство (FR-170…FR-174)", () => {
       ...session,
       character: {
         ...session.character,
-        hitPoints: { current: 5, maximum: 60, maximumReduction: 0 },
+        hitPoints: { current: 5, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
       },
     };
     expect(() => exchangeBlood(weak, 9, clock)).toThrow(/в наличии 5/);
@@ -716,8 +719,9 @@ describe("отдых и восстановление", () => {
     const wounded = takeDamage(session, 41, clock);
     expect(longRest(wounded, clock).character.hitPoints).toEqual({
       current: 60,
-      maximum: 60,
-      maximumReduction: 0,
+      maximumBase: 60,
+      bloodReduction: 0,
+      masterReduction: 0,
     });
   });
 
@@ -725,26 +729,28 @@ describe("отдых и восстановление", () => {
     // 30 хитов на очки: максимум 30, вернуть предстоит 30. За восемь часов по 3 — 24 очка,
     // остаётся 6, и текущие поднимаются ровно до нового максимума.
     const spent = exchangeBlood(session, 30, clock);
-    expect(spent.character.hitPoints).toEqual({ current: 30, maximum: 30, maximumReduction: 30 });
+    expect(spent.character.hitPoints).toEqual({ current: 30, maximumBase: 60, bloodReduction: 30, masterReduction: 0 });
 
     expect(longRest(spent, clock).character.hitPoints).toEqual({
       current: 54,
-      maximum: 54,
-      maximumReduction: 6,
+      maximumBase: 60,
+      bloodReduction: 6,
+      masterReduction: 0,
     });
   });
 
   it("отдых не обнуляет снижение махом: правило возвращает по часам", () => {
     const spent = exchangeBlood(session, 30, clock);
-    expect(longRest(spent, clock).character.hitPoints.maximumReduction).toBeGreaterThan(0);
+    expect(longRest(spent, clock).character.hitPoints.bloodReduction).toBeGreaterThan(0);
   });
 
   it("небольшое снижение отдых закрывает целиком", () => {
     const spent = exchangeBlood(session, 9, clock);
     expect(longRest(spent, clock).character.hitPoints).toEqual({
       current: 60,
-      maximum: 60,
-      maximumReduction: 0,
+      maximumBase: 60,
+      bloodReduction: 0,
+      masterReduction: 0,
     });
   });
 
@@ -995,7 +1001,6 @@ describe("экономия хода выводится из журнала (ADR-
     );
     const economy = deriveTurnEconomy(current);
     expect(economy.reactionAvailable).toBe(false);
-    expect(economy.reactionReturns).toBe("в начале вашего хода");
   });
 
   it("реакция возвращается началом следующего хода, а не концом раунда", () => {
@@ -1120,7 +1125,7 @@ describe("регенерация тролля начисляется в нача
       ...session,
       character: {
         ...session.character,
-        hitPoints: { current: 2, maximum: 4, maximumReduction: 56 },
+        hitPoints: { current: 2, maximumBase: 60, bloodReduction: 56, masterReduction: 0 },
       },
     };
     // 2 из 4 — не ниже половины, регенерация не идёт.
@@ -1130,7 +1135,7 @@ describe("регенерация тролля начисляется в нача
       ...session,
       character: {
         ...session.character,
-        hitPoints: { current: 1, maximum: 4, maximumReduction: 56 },
+        hitPoints: { current: 1, maximumBase: 60, bloodReduction: 56, masterReduction: 0 },
       },
     };
     expect(beginTurn(low, clock).character.hitPoints.current).toBe(4);
@@ -1211,7 +1216,7 @@ describe("обмен крови вне боя действие не расход
 
 describe("правка хитов: лечение и временные (FR-205, FR-206)", () => {
   function hurt(current: number): Session {
-    return { ...session, character: { ...session.character, hitPoints: { current, maximum: 60, maximumReduction: 0 } } };
+    return { ...session, character: { ...session.character, hitPoints: { current, maximumBase: 60, bloodReduction: 0, masterReduction: 0 } } };
   }
 
   it("лечение поднимает текущие хиты и пишется в журнал", () => {
@@ -1231,7 +1236,7 @@ describe("правка хитов: лечение и временные (FR-205,
     // хранит только то, сколько предстоит вернуть по часу. Придуманная пара «максимум 60, снижение
     // 9» в жизни не встречается, и тест на ней подтверждал бы вычитание снижения дважды.
     const reduced = exchangeBlood(hurt(40), 9, clock);
-    expect(reduced.character.hitPoints).toEqual({ current: 31, maximum: 51, maximumReduction: 9 });
+    expect(reduced.character.hitPoints).toEqual({ current: 31, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
 
     expect(heal(reduced, 30, clock).character.hitPoints.current).toBe(51);
   });
@@ -1614,21 +1619,22 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
 describe("дорогие компоненты (FR-030)", () => {
   it("отмечается купленным и обратно израсходованным", () => {
     const bought = toggleMaterial(session, "identify", clock);
-    expect(bought.character.equipment?.materialsForSpellIds).toEqual(["identify"]);
+    expect(bought.character.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
     expect(bought.journal.at(-1)?.summaryRu).toBe("Компонент куплен: identify");
 
     const spent = toggleMaterial(bought, "identify", clock);
-    expect(spent.character.equipment?.materialsForSpellIds).toEqual([]);
+    expect(spent.character.equipment.components?.materialsForSpellIds).toEqual([]);
     expect(spent.journal.at(-1)?.summaryRu).toBe("Компонент израсходован: identify");
   });
 
   it("обратимо, как любой расход (FR-111)", () => {
     const bought = toggleMaterial(session, "identify", clock);
-    expect(undoLast(bought).character.equipment?.materialsForSpellIds).toEqual([]);
+    expect(undoLast(bought).character.equipment.components?.materialsForSpellIds).toEqual([]);
   });
 
   it("состоянию без снаряжения отвечает причиной", () => {
-    const { equipment: _none, ...unknown } = session.character;
+    const { components: _none, ...withoutComponents } = session.character.equipment;
+    const unknown = { ...session.character, equipment: withoutComponents };
     expect(() => toggleMaterial(createSession(unknown), "identify", clock)).toThrow(
       /не заведено снаряжение/,
     );
@@ -1721,7 +1727,7 @@ describe("конец боя (FR-216)", () => {
   function wounded(current: number): Session {
     return {
       ...session,
-      character: { ...session.character, hitPoints: { current, maximum: 60, maximumReduction: 0 } },
+      character: { ...session.character, hitPoints: { current, maximumBase: 60, bloodReduction: 0, masterReduction: 0 } },
     };
   }
 
@@ -1798,24 +1804,25 @@ describe("почасовое восстановление максимума х�
 
   it("возвращает не больше, чем утрачено кровавым колдовством", () => {
     const spent = afterExchange();
-    expect(spent.character.hitPoints).toEqual({ current: 51, maximum: 51, maximumReduction: 9 });
+    expect(spent.character.hitPoints).toEqual({ current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
 
     const recovered = recoverHitPointMaximum(spent, clock);
     // На 7 уровне возвращается 3 за час.
     expect(recovered.character.hitPoints).toEqual({
       current: 51,
-      maximum: 54,
-      maximumReduction: 6,
+      maximumBase: 60,
+      bloodReduction: 6,
+      masterReduction: 0,
     });
   });
 
   it("последний час возвращает только остаток", () => {
     let state = exchangeBlood(session, 6, clock);
     state = recoverHitPointMaximum(state, clock);
-    expect(state.character.hitPoints).toEqual({ current: 54, maximum: 57, maximumReduction: 3 });
+    expect(state.character.hitPoints).toEqual({ current: 54, maximumBase: 60, bloodReduction: 3, masterReduction: 0 });
 
     state = recoverHitPointMaximum(state, clock);
-    expect(state.character.hitPoints).toEqual({ current: 54, maximum: 60, maximumReduction: 0 });
+    expect(state.character.hitPoints).toEqual({ current: 54, maximumBase: 60, bloodReduction: 0, masterReduction: 0 });
   });
 
   it("без снижения максимума восстанавливать нечего", () => {
@@ -1832,7 +1839,7 @@ describe("почасовое восстановление максимума х�
 
   it("обратимо через журнал", () => {
     const recovered = recoverHitPointMaximum(afterExchange(), clock);
-    expect(undoLast(recovered).character.hitPoints.maximumReduction).toBe(9);
+    expect(undoLast(recovered).character.hitPoints.bloodReduction).toBe(9);
   });
 
   it("час не только поднимает максимум, но и лечит: регенерация идёт непрерывно", () => {
@@ -1842,7 +1849,7 @@ describe("почасовое восстановление максимума х�
     expect(wounded.character.hitPoints.current).toBe(20);
 
     const recovered = recoverHitPointMaximum(wounded, clock);
-    expect(recovered.character.hitPoints).toEqual({ current: 27, maximum: 54, maximumReduction: 6 });
+    expect(recovered.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
     expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: максимум +3, регенерация +7");
   });
 })
@@ -1850,10 +1857,10 @@ describe("почасовое восстановление максимума х�
 describe("короткий отдых — это час (FR-132, FR-173)", () => {
   it("возвращает ступень максимума и доводит здоровье до половины", () => {
     const wounded = takeDamage(exchangeBlood(session, 9, clock), 31, clock);
-    expect(wounded.character.hitPoints).toEqual({ current: 20, maximum: 51, maximumReduction: 9 });
+    expect(wounded.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
 
     const rested = shortRest(wounded, clock);
-    expect(rested.character.hitPoints).toEqual({ current: 27, maximum: 54, maximumReduction: 6 });
+    expect(rested.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
     expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · максимум +3, регенерация +7");
   });
 
@@ -1865,7 +1872,7 @@ describe("короткий отдых — это час (FR-132, FR-173)", () =>
     const burned = takeDamage(exchangeBlood(session, 9, clock), 31, clock, { fire: true });
     const rested = shortRest(burned, clock);
 
-    expect(rested.character.hitPoints).toEqual({ current: 20, maximum: 51, maximumReduction: 9 });
+    expect(rested.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
     expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 })

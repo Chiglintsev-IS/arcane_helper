@@ -6,6 +6,7 @@
 
 import { DomainError } from "@/core/domain/shared/errors";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/character/abilities";
+import { ResourcePool } from "@/core/domain/shared/resourcePool";
 
 export const CANTRIP_LEVEL = 0;
 export const MINIMUM_SPELL_LEVEL = 1;
@@ -49,6 +50,24 @@ function assertSlotLevel(slotLevel: number): void {
       `Уровень ячейки должен быть целым от ${MINIMUM_SPELL_LEVEL} до ${MAXIMUM_SPELL_LEVEL}, получено: ${slotLevel}`,
     );
   }
+}
+
+/**
+ * Новая таблица ячеек при смене уровня: остаток движется на разницу максимумов, исчезнувшие уровни
+ * уходят целиком.
+ */
+export function resizeSlots(slots: SpellSlots, wizardLevel: number): SpellSlots {
+  const table = spellSlotsForLevel(wizardLevel);
+  const resized: SpellSlots = {};
+  for (const [key, target] of Object.entries(table)) {
+    const level = Number(key);
+    const current = slots[level];
+    resized[level] =
+      current === undefined
+        ? target
+        : ResourcePool.from(current, `Ячеек ${level} уровня`).resized(target.maximum).toState();
+  }
+  return resized;
 }
 
 /** Ячейки волшебника указанного уровня. Для 7 уровня — 4 / 3 / 3 / 1. */

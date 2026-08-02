@@ -401,8 +401,11 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
   const identify = spell("identify");
   const mageArmor = spell("mage-armor");
 
-  function withEquipment(equipment: CharacterState["equipment"]): CharacterState {
-    return { ...createThorne(), equipment };
+  function withEquipment(
+    components: NonNullable<CharacterState["equipment"]["components"]>,
+  ): CharacterState {
+    const base = createThorne();
+    return { ...base, equipment: { ...base.equipment, components } };
   }
 
   it("дорогого компонента нет в сумке — предупреждение с ценой", () => {
@@ -506,7 +509,9 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
   });
 
   it("состоянию без записи о снаряжении вердикта не выдумывает", () => {
-    const { equipment: _none, ...unknown } = createThorne();
+    const base = createThorne();
+    const { components: _none, ...withoutComponents } = base.equipment;
+    const unknown = { ...base, equipment: withoutComponents };
     const warnings = checkAvailability({
       spell: identify,
       character: unknown,

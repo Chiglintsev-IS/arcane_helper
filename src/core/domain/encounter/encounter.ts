@@ -19,15 +19,12 @@ export type TurnEconomy = {
   actionAvailable: boolean;
   bonusActionAvailable: boolean;
   reactionAvailable: boolean;
-  /** Когда реакция вернётся. Ответ на вопрос «когда», а не «нет». */
-  reactionReturns: "в начале вашего хода" | null;
 };
 
 const ALL_AVAILABLE = {
   actionAvailable: true,
   bonusActionAvailable: true,
   reactionAvailable: true,
-  reactionReturns: null,
 } as const;
 
 export class Encounter {
@@ -77,7 +74,6 @@ export class Encounter {
       actionAvailable: !spent.has("action"),
       bonusActionAvailable: !spent.has("bonus_action"),
       reactionAvailable,
-      reactionReturns: reactionAvailable ? null : "в начале вашего хода",
     };
   }
 

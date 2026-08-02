@@ -16,6 +16,7 @@ import {
   EXPORT_SCHEMA_VERSION,
   type CharacterState,
 } from "@/core/domain/character/state";
+import { migrateCharacterState } from "@/core/domain/character/migration";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 
 export type ExportFile = {
@@ -89,7 +90,16 @@ export function parseImport(raw: string): ImportOutcome {
     };
   }
 
-  const file = exportFileSchema.safeParse(parsed);
+  const migrated =
+    parsed === null || typeof parsed !== "object"
+      ? parsed
+      : {
+          ...(parsed as object),
+          schemaVersion: EXPORT_SCHEMA_VERSION,
+          character: migrateCharacterState((parsed as { character?: unknown }).character),
+        };
+
+  const file = exportFileSchema.safeParse(migrated);
   if (!file.success) {
     return { ok: false, reasonRu: `Файл не прошёл проверку — ${describeIssues(file.error)}` };
   }

@@ -156,7 +156,11 @@ describe("describeConcentration (FR-084)", () => {
 
   it("показывает отрицательные модификаторы со знаком минус", () => {
     // Волшебник со штрафом: у Торна оба модификатора положительные, а знак обязан быть верным.
-    const character = { ...createThorne(), spellAttackModifier: -1, constitutionSaveModifier: -2 };
+    const base = createThorne();
+    const character = {
+      ...base,
+      overrides: { ...base.overrides, spellAttackModifier: -1, saves: { constitution: -2 } },
+    };
     const summary = describeConcentration({
       spell: spell("ray-of-frost"),
       effect: effect({ spellId: "ray-of-frost", slotLevelUsed: 0 }),

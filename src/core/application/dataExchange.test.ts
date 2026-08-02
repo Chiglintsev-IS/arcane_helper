@@ -68,11 +68,11 @@ describe("parseImport (FR-121)", () => {
 
   it("ошибка называет путь до поля, а не «ошибка импорта»", () => {
     const raw = JSON.parse(snapshotText());
-    raw.character.hitPoints.maximum = -5;
+    raw.character.hitPoints.maximumBase = -5;
 
     const outcome = parseImport(JSON.stringify(raw));
     expect(outcome.ok).toBe(false);
-    if (!outcome.ok) expect(outcome.reasonRu).toContain("hitPoints.maximum");
+    if (!outcome.ok) expect(outcome.reasonRu).toContain("hitPoints.maximumBase");
   });
 
   it("битая карточка называет свой номер", () => {

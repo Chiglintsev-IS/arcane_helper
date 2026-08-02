@@ -64,7 +64,7 @@ export function exchangeBlood(
   options: { allowAnyway?: boolean } = {},
 ): Session {
   const root = Character.of(session.character);
-  const { vitality, exchange } = root.vitality.exchangeBlood(hitPoints, root.sheet.level, options);
+  const { vitality, exchange } = root.vitality.exchangeBlood(hitPoints, root.base.level, options);
   const withPoints = root
     .withVitality(vitality)
     .withArcana(root.arcana.gainSpellPoints(exchange.pointsCreated, clock.now()));
@@ -95,7 +95,7 @@ export function exchangeBlood(
  */
 export function recoverHitPointMaximum(session: Session, clock: Clock): Session {
   const root = Character.of(session.character);
-  if (root.vitality.maximumReduction <= 0) {
+  if (root.vitality.bloodReduction <= 0) {
     throw new DomainError("Максимум хитов не снижен: восстанавливать нечего");
   }
   if (root.vitality.suppressed) {
@@ -105,7 +105,7 @@ export function recoverHitPointMaximum(session: Session, clock: Clock): Session 
         : "Под прямым солнечным светом особенности не действуют",
     );
   }
-  const { vitality, returned, healed } = root.vitality.afterAnHour(root.sheet.level);
+  const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
   return commit(
     session,
     root.withVitality(vitality),

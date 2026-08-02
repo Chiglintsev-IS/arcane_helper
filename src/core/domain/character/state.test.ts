@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   activeEffectSchema,
   characterStateSchema,
+  EXPORT_SCHEMA_VERSION,
   exportFileSchema,
   roleplayProfileSchema,
   spellSlotsSchema,
 } from "@/core/domain/character/state";
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 const WEB_EFFECT = {
   id: "effect-web",
@@ -31,10 +33,14 @@ function thorne(): unknown {
     name: "Торн",
     className: "Волшебник",
     level: 7,
-    intelligence: 18,
-    spellSaveDc: 15,
-    spellAttackModifier: 7,
-    constitutionSaveModifier: 1,
+    abilities: {
+      strength: 8,
+      dexterity: 14,
+      constitution: 16,
+      intelligence: 18,
+      wisdom: 12,
+      charisma: 8,
+    },
     cantripIds: ["ray-of-frost", "shocking-grasp"],
     spellbookSpellIds: ["web", "magic-missile", "detect-magic"],
     preparedSpellIds: ["web", "magic-missile"],
@@ -58,8 +64,8 @@ function thorne(): unknown {
     },
     turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: true },
     arcaneRecoveryAvailable: true,
-    hitPoints: { current: 51, maximum: 51, maximumReduction: 9 },
-    armorClass: { base: 10, dexterityModifier: 2, itemBonus: 2 },
+    hitPoints: { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 },
+    armorClass: { base: 10 },
     runes: { maximum: 3, remaining: 2 },
     spellPoints: { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" },
     suppression: { firedUpon: false, underDirectSunlight: false },
@@ -209,7 +215,7 @@ describe("схемы вложенных структур", () => {
 
 describe("exportFileSchema", () => {
   const file = () => ({
-    schemaVersion: 1,
+    schemaVersion: EXPORT_SCHEMA_VERSION,
     exportedAt: "2026-07-31T18:30:00.000Z",
     character: thorne(),
     spells: [],
@@ -220,12 +226,60 @@ describe("exportFileSchema", () => {
   });
 
   it("отклоняет файл неизвестной версии", () => {
-    expect(exportFileSchema.safeParse({ ...file(), schemaVersion: 2 }).success).toBe(false);
+    expect(
+      exportFileSchema.safeParse({ ...file(), schemaVersion: EXPORT_SCHEMA_VERSION + 1 }).success,
+    ).toBe(false);
   });
 
   it("отклоняет файл с испорченным состоянием персонажа", () => {
     expect(
       exportFileSchema.safeParse({ ...file(), character: { id: "thorne" } }).success,
     ).toBe(false);
+  });
+});
+
+describe("лист персонажа", () => {
+  it("Торн заполнен целиком", () => {
+    const thorneState = createThorne();
+    expect(thorneState.species).toBe("Лунный тролль");
+    expect(thorneState.subclass).toBe("Создатель рун");
+    expect(thorneState.size).toBe("large");
+    expect(thorneState.speed).toBe(30);
+    expect(thorneState.abilities).toEqual({
+      strength: 8,
+      dexterity: 14,
+      constitution: 16,
+      intelligence: 18,
+      wisdom: 12,
+      charisma: 8,
+    });
+    expect(thorneState.saveProficiencies).toEqual(["intelligence", "wisdom"]);
+    expect(thorneState.equipment.otherBonuses).toEqual({
+      spellcasting: 1,
+      armorClass: 2,
+      savingThrows: 1,
+    });
+    expect(thorneState.equipment.armorClassBase).toBe(10);
+    expect(thorneState.equipment.items).toEqual([]);
+    expect(thorneState.exhaustion).toBe(0);
+    expect(thorneState.inspiration).toBe(false);
+    expect(thorneState.overrides).toEqual({ saves: {}, skills: {} });
+  });
+
+  it("отсутствующие поля получают значение по умолчанию: обновление не теряет данных", () => {
+    const { species: _s, skills: _k, exhaustion: _e, ...withoutNew } = createThorne();
+    const parsed = characterStateSchema.parse({
+      ...withoutNew,
+      abilities: createThorne().abilities,
+    });
+    expect(parsed.species).toBe("");
+    expect(parsed.skills).toEqual({});
+    expect(parsed.exhaustion).toBe(0);
+  });
+
+  it("характеристика вне диапазона 1–30 отвергается", () => {
+    const broken = { ...createThorne(), abilities: { ...createThorne().abilities, strength: 0 } };
+    const result = characterStateSchema.safeParse(broken);
+    expect(result.success).toBe(false);
   });
 });

@@ -50,8 +50,17 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
     expect(announcement.text).toContain("против КС 16");
   });
 
+  it("объявление берёт КС из характеристик, а не из хранимого числа", () => {
+    const smarter = { ...thorne, abilities: { ...thorne.abilities, intelligence: 20 } };
+    const announcement = renderAnnouncement(
+      spell("disguise-self"),
+      context({ character: smarter, payment: { kind: "slot", slotLevel: 1 } }),
+    );
+    expect(announcement.text).toContain("против КС 17");
+  });
+
   it("сохраняет знак отрицательного модификатора атаки", () => {
-    const cursed = { ...thorne, spellAttackModifier: -1 };
+    const cursed = { ...thorne, overrides: { ...thorne.overrides, spellAttackModifier: -1 } };
     const announcement = renderAnnouncement(
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip", targetLabel: "гоблин" }),
@@ -359,7 +368,7 @@ describe("castInstructions: что сделать этому персонажу 
   });
 
   it("отрицательный модификатор атаки сохраняет знак", () => {
-    const cursed = { ...thorne, spellAttackModifier: -2 };
+    const cursed = { ...thorne, overrides: { ...thorne.overrides, spellAttackModifier: -2 } };
     const steps = castInstructions(
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip" }),
@@ -404,14 +413,14 @@ describe("инструкция обмена (FR-172, FR-174, FR-175)", () => {
   });
 
   it("предупреждает о ранах, когда обмен опускает хиты в ноль", () => {
-    const dying = { ...thorne, hitPoints: { current: 6, maximum: 60, maximumReduction: 0 } };
+    const dying = { ...thorne, hitPoints: { current: 6, maximumBase: 60, bloodReduction: 0, masterReduction: 0 } };
     expect(bloodExchangeInstructions(2, dying).join(" ")).toMatch(
       /Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка — итого 1 рана/,
     );
   });
 
   it("считает раны от числа созданных очков", () => {
-    const dying = { ...thorne, hitPoints: { current: 18, maximum: 60, maximumReduction: 0 } };
+    const dying = { ...thorne, hitPoints: { current: 18, maximumBase: 60, bloodReduction: 0, masterReduction: 0 } };
     expect(bloodExchangeInstructions(6, dying).join(" ")).toMatch(/итого 3 раны/);
   });
 });

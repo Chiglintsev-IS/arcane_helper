@@ -34,7 +34,7 @@ export function BloodMagicRow({
   const reason = !bloodMagicAvailable(character.suppression)
     ? "особенности подавлены"
     : turnTracked(character) && !economy.actionAvailable
-      ? "действие израсходовано"
+      ? "действие"
       : null;
 
   const facts = [

@@ -33,7 +33,7 @@ export function deriveTurnEconomy(session: Session): TurnEconomy {
 /** Действует ли регенерация прямо сейчас и на сколько. */
 export function regenerationDue(character: CharacterState): number {
   const root = Character.of(character);
-  return root.vitality.regenerationDue(root.sheet.level);
+  return root.vitality.regenerationDue(root.base.level);
 }
 
 /**
@@ -58,7 +58,7 @@ function advanceTurn(
 ): Session {
   const root = Character.of(session.character);
   const encounter = encounterOf(session);
-  const healed = root.vitality.regenerationDue(root.sheet.level);
+  const healed = root.vitality.regenerationDue(root.base.level);
   const { board, expired } = root.effects.expire((effect) => encounter.roundsSince(effect.startedAt));
 
   const after = root

@@ -1,0 +1,155 @@
+/**
+ * Правка листа персонажа.
+ *
+ * Что меняет число — идёт в журнал и отменяется; справочное поле не идёт: журнал возвращает
+ * ресурсы, а не текст. Смена уровня — один сценарий, потому что тянет максимумы трёх ресурсов, и
+ * разложенная на четыре нажатия она оставила бы половину пересчитанной.
+ */
+
+import { proficiencyBonus } from "@/core/domain/character/abilities";
+import { Character } from "@/core/domain/character/character";
+import type { DerivedId } from "@/core/domain/sheet/derived";
+import {
+  ABILITIES,
+  skillsOfAbility,
+  type Ability,
+  type SkillId,
+  type SkillTraining,
+} from "@/core/domain/character/skills";
+import type { CharacterState } from "@/core/domain/character/state";
+import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
+
+/** Справочные поля: имени и возраста журнал не касается. */
+export type Identity = Partial<
+  Pick<
+    CharacterState,
+    "name" | "species" | "subclass" | "className" | "age" | "size" | "speed" | "proficiencies"
+  >
+>;
+
+export function editIdentity(session: Session, patch: Identity): Session {
+  return withoutRecord(session, Character.of(session.character).withSheet(patch));
+}
+
+/**
+ * Правка одной характеристики со всем, что к ней относится: значение, владение спасброском,
+ * владения её навыками.
+ *
+ * Одной командой, а не тремя, потому что на листе это один блок: разложенная на три записи журнала,
+ * правка отменялась бы по частям и оставляла бы характеристику с чужими владениями.
+ */
+export function editAbility(
+  session: Session,
+  change: {
+    ability: Ability;
+    score: number;
+    saveProficient: boolean;
+    /** Только навыки этой характеристики: чужие остаются как были. */
+    skills: Partial<Record<SkillId, SkillTraining>>;
+  },
+  clock: Clock,
+): Session {
+  const { character } = session;
+  const owned = new Set(skillsOfAbility(change.ability));
+  const skills = Object.fromEntries(
+    Object.entries(character.skills).filter(([id]) => !owned.has(id as SkillId)),
+  ) as Partial<Record<SkillId, SkillTraining>>;
+
+  return commit(
+    session,
+    Character.of(character).withSheet({
+      abilities: { ...character.abilities, [change.ability]: change.score },
+      // Порядок листа, а не порядок нажатий: устойчивый порядок сравним между выгрузками.
+      saveProficiencies: ABILITIES.filter((ability) =>
+        ability === change.ability
+          ? change.saveProficient
+          : character.saveProficiencies.includes(ability),
+      ),
+      skills: { ...skills, ...change.skills },
+    }),
+    { kind: "sheet_edited", summaryRu: "Правка характеристики" },
+    clock,
+  );
+}
+
+
+
+/** `null` снимает перебивку: число возвращается к формуле. */
+export function setOverride(
+  session: Session,
+  id: DerivedId,
+  value: number | null,
+  clock: Clock,
+): Session {
+  const { overrides } = session.character;
+  const { [id]: _dropped, ...rest } = overrides;
+  const next: CharacterState["overrides"] =
+    value === null ? { ...rest } : { ...overrides, [id]: value };
+  return commit(
+    session,
+    Character.of(session.character).withSheet({ overrides: next }),
+    {
+      kind: "sheet_edited",
+      summaryRu: value === null ? "Число возвращено к формуле" : `Число введено руками: ${value}`,
+    },
+    clock,
+  );
+}
+
+export function editMarks(
+  session: Session,
+  marks: { exhaustion: number; inspiration: boolean },
+  clock: Clock,
+): Session {
+  return commit(
+    session,
+    Character.of(session.character).withSheet(marks),
+    {
+      kind: "sheet_edited",
+      summaryRu:
+        marks.exhaustion > 0 ? `Истощение: ступень ${marks.exhaustion}` : "Отметки мастера изменены",
+    },
+    clock,
+  );
+}
+
+export function editHealth(
+  session: Session,
+  change: { maximumBase: number; masterReduction: number },
+  clock: Clock,
+): Session {
+  const root = Character.of(session.character);
+  const vitality = root.vitality
+    .withMaximumBase(change.maximumBase)
+    .withMasterReduction(change.masterReduction);
+  return commit(
+    session,
+    root.withVitality(vitality),
+    { kind: "sheet_edited", summaryRu: `Максимум хитов: ${vitality.maximum}` },
+    clock,
+  );
+}
+
+/**
+ * Смена уровня. Максимумы ячеек, рун и Костей хитов идут за уровнем; базовый максимум хитов вводит
+ * игрок — кость бросает он, а не приложение.
+ */
+export function changeLevel(
+  session: Session,
+  next: { level: number; hitPointMaximumBase: number },
+  clock: Clock,
+): Session {
+  const root = Character.of(session.character);
+  const withLevel = root.withSheet({ level: next.level });
+  const arcana = withLevel.arcana.resizedForLevel(next.level, proficiencyBonus(next.level));
+  const vitality = withLevel.vitality
+    .resizedHitDice(next.level)
+    .withMaximumBase(next.hitPointMaximumBase);
+
+  return commit(
+    session,
+    withLevel.withArcana(arcana).withVitality(vitality),
+    { kind: "sheet_edited", summaryRu: `Уровень: ${next.level}` },
+    clock,
+  );
+}

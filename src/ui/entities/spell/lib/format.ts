@@ -5,6 +5,7 @@
  * выбирает слово и падеж. Аббревиатуры русские — «КС», «КД», а не DC и AC.
  */
 
+import type { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { CombatRole } from "@/core/domain/catalog/combatRole";
@@ -205,8 +206,8 @@ export function signed(modifier: number): string {
   return modifier < 0 ? `−${Math.abs(modifier)}` : `+${modifier}`;
 }
 
-/** Числа персонажа, из которых собирается значок разрешения. Хранимые, а не выведенные. */
-export type ResolutionNumbers = Pick<CharacterState, "spellSaveDc" | "spellAttackModifier">;
+/** Числа персонажа, из которых собирается значок разрешения. Считает их лист. */
+export type ResolutionNumbers = Pick<Sheet, "spellSaveDc" | "spellAttackModifier">;
 
 /**
  * Как заклинание разрешается — числом, а не видом броска.

@@ -28,6 +28,7 @@ import {
 } from "@/ui/entities/spell/lib/format";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
@@ -151,7 +152,9 @@ export function SpellCardDetails({
           <Row label="Длительность">{durationLabel(spell.duration)}</Row>
           <Row label="Цель">{targetingLabel(spell.targeting)}</Row>
           {spell.area === undefined ? null : <Row label="Область">{areaLabel(spell.area)}</Row>}
-          <Row label="Разрешение">{resolutionLabel(spell.resolution, character.spellSaveDc)}</Row>
+          <Row label="Разрешение">
+            {resolutionLabel(spell.resolution, Sheet.of(character).spellSaveDc)}
+          </Row>
           {damage === null ? null : (
             <Row label="Урон">
               {damage} {spell.damage?.type}

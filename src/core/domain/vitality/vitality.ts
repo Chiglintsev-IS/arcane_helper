@@ -42,12 +42,21 @@ export class Vitality {
     return this.state.hitPoints.current;
   }
 
-  get maximum(): number {
-    return this.state.hitPoints.maximum;
+  get maximumBase(): number {
+    return this.state.hitPoints.maximumBase;
   }
 
-  get maximumReduction(): number {
-    return this.state.hitPoints.maximumReduction;
+  get bloodReduction(): number {
+    return this.state.hitPoints.bloodReduction;
+  }
+
+  get masterReduction(): number {
+    return this.state.hitPoints.masterReduction;
+  }
+
+  /** Действующий максимум: то, во что упирается лечение и от чего считается половина. */
+  get maximum(): number {
+    return this.maximumBase - this.bloodReduction - this.masterReduction;
   }
 
   get temporary(): number {
@@ -188,9 +197,9 @@ export class Vitality {
     return {
       vitality: this.with({
         hitPoints: {
+          ...this.state.hitPoints,
           current: this.current - exchange.hitPointsSpent,
-          maximum: this.maximum - exchange.hitPointsSpent,
-          maximumReduction: this.maximumReduction + exchange.hitPointsSpent,
+          bloodReduction: this.bloodReduction + exchange.hitPointsSpent,
         },
       }),
       exchange,
@@ -211,12 +220,16 @@ export class Vitality {
    */
   afterAnHour(characterLevel: number): { vitality: Vitality; returned: number; healed: number } {
     if (this.suppressed) return { vitality: this, returned: 0, healed: 0 };
-    const returned = Math.min(maximumRecoveryPerHour(characterLevel), this.maximumReduction);
+    const returned = Math.min(maximumRecoveryPerHour(characterLevel), this.bloodReduction);
     const maximum = this.maximum + returned;
     const current = Math.max(this.current, Math.floor(maximum / 2));
     return {
       vitality: this.with({
-        hitPoints: { current, maximum, maximumReduction: this.maximumReduction - returned },
+        hitPoints: {
+          ...this.state.hitPoints,
+          current,
+          bloodReduction: this.bloodReduction - returned,
+        },
       }),
       returned,
       healed: current - this.current,
@@ -242,8 +255,51 @@ export class Vitality {
     return this.with({ suppression: { ...this.state.suppression, firedUpon: false } });
   }
 
-  withHitPointMaximum(maximum: number, maximumReduction: number): Vitality {
-    return this.with({ hitPoints: { current: maximum, maximum, maximumReduction } });
+  /**
+   * Долгий отдых: часть кровавого снижения возвращается, здоровье поднимается до нового максимума.
+   * Снижение мастера остаётся — отдыхом оно не снимается.
+   */
+  restoredByLongRest(bloodReduction: number): Vitality {
+    const maximum = this.maximumBase - bloodReduction - this.masterReduction;
+    return this.with({
+      hitPoints: { ...this.state.hitPoints, current: maximum, bloodReduction },
+    });
+  }
+
+  /** Одна кость хитов за уровень. Пула может не быть — тогда менять нечего. */
+  resizedHitDice(total: number): Vitality {
+    const { hitDice } = this.state;
+    if (hitDice === undefined) return this;
+    const pool = ResourcePool.from(
+      { maximum: hitDice.total, remaining: hitDice.remaining },
+      HIT_DICE_RU,
+    ).resized(total);
+    return this.with({ hitDice: { ...hitDice, total: pool.maximum, remaining: pool.remaining } });
+  }
+
+  /** Правка базового максимума с листа. Текущее здоровье обрезается новым потолком. */
+  withMaximumBase(maximumBase: number): Vitality {
+    if (!Number.isInteger(maximumBase) || maximumBase <= 0) {
+      throw new DomainError(
+        `Максимум хитов должен быть целым положительным, получено: ${maximumBase}`,
+      );
+    }
+    return this.clamped({ ...this.state.hitPoints, maximumBase });
+  }
+
+  /** Понижение максимума мастером: часовое восстановление и отдых его не трогают. */
+  withMasterReduction(masterReduction: number): Vitality {
+    if (!Number.isInteger(masterReduction) || masterReduction < 0) {
+      throw new DomainError(
+        `Снижение должно быть целым неотрицательным, получено: ${masterReduction}`,
+      );
+    }
+    return this.clamped({ ...this.state.hitPoints, masterReduction });
+  }
+
+  private clamped(hitPoints: VitalityState["hitPoints"]): Vitality {
+    const maximum = hitPoints.maximumBase - hitPoints.bloodReduction - hitPoints.masterReduction;
+    return this.with({ hitPoints: { ...hitPoints, current: Math.min(hitPoints.current, maximum) } });
   }
 
   dropTemporary(): Vitality {

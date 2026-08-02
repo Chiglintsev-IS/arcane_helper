@@ -86,7 +86,7 @@ export function ReactionsSheet({
  */}
       {reactionAvailable ? null : (
         <p className="text-xs font-medium text-reaction-strong dark:text-reaction">
-          Реакция израсходована и вернётся в начале вашего хода.
+          Реакция
         </p>
       )}
 

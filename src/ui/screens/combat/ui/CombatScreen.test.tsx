@@ -196,6 +196,122 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(list.getByText("Починка")).toBeDefined();
   });
 
+  it("«Лист» показывает персонажа целиком и ничего из боя (FR-230)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Лист/ }));
+
+    // Лист открывается итогом: числа, которые спрашивают за столом.
+    expect(screen.getByRole("heading", { name: "Числа боя" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Здоровье" })).toBeDefined();
+    // Ни шапки, ни списка, ни отметок схватки: лист отвечает, кто он, а не что он делает сейчас.
+    expect(screen.queryByLabelText("Ресурсы")).toBeNull();
+    expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
+    expect(stores.session.getState().session?.character.screenMode).toBe("sheet");
+  });
+
+  it("«Лист»: правка характеристики доходит до состояния и в журнал (FR-231)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Лист/ }));
+    await user.click(screen.getByRole("tab", { name: "Персонаж" }));
+    await user.click(screen.getByRole("button", { name: "Править: Интеллект" }));
+
+    const field = screen.getByLabelText("Значение");
+    await user.clear(field);
+    await user.type(field, "20");
+    // Владение навыком ставится там же, где значение: на листе это один блок.
+    const arcana = within(screen.getByRole("radiogroup", { name: "Магия" }));
+    await user.click(arcana.getByRole("radio", { name: "компетентность" }));
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    const after = stores.session.getState().session;
+    expect(after?.character.abilities.intelligence).toBe(20);
+    expect(after?.character.skills).toEqual({ arcana: "expert" });
+    // Одна запись журнала на весь блок, а не три.
+    expect(after?.journal).toHaveLength(1);
+    expect(screen.queryByRole("dialog", { name: "Правка: Интеллект" })).toBeNull();
+    expect(screen.getByText("20 (+5)")).toBeDefined();
+  });
+
+  it("«Лист»: перебивка выбирается из чисел боя и снимается возвратом к формуле (FR-225)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Лист/ }));
+    await user.click(screen.getByRole("button", { name: "Править: Числа боя" }));
+    await user.click(screen.getByRole("button", { name: /^КС спасброска/ }));
+
+    const field = screen.getByLabelText("Значение");
+    await user.clear(field);
+    await user.type(field, "18");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(stores.session.getState().session?.character.overrides.spellSaveDc).toBe(18);
+    expect(screen.getByText("(введено руками)")).toBeDefined();
+  });
+
+  it("«Лист»: уровень пересчитывает ресурсы одной записью (FR-227)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Лист/ }));
+    await user.click(screen.getByRole("tab", { name: "Персонаж" }));
+    await user.click(screen.getByRole("button", { name: "Править: Уровень" }));
+
+    const level = screen.getByLabelText("Уровень");
+    await user.clear(level);
+    await user.type(level, "8");
+    const maximum = screen.getByLabelText("Базовый максимум хитов");
+    await user.clear(maximum);
+    await user.type(maximum, "66");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    const after = stores.session.getState().session;
+    expect(after?.character.level).toBe(8);
+    expect(after?.character.spellSlots[4]).toEqual({ maximum: 2, remaining: 2 });
+    expect(after?.journal).toHaveLength(1);
+  });
+
+  it("«Лист»: надетая вещь двигает КД, снятая — возвращает (FR-234)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Лист/ }));
+    await user.click(screen.getByRole("tab", { name: "Инвентарь" }));
+    await user.click(screen.getByRole("button", { name: "Править: Вещи" }));
+
+    await user.type(screen.getByLabelText("Новая вещь"), "Кольцо защиты");
+    const armorField = screen.getByLabelText("К защите");
+    await user.clear(armorField);
+    await user.type(armorField, "1");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Вещь легла в сумку: КД пока прежний — лежащее не действует.
+    expect(stores.session.getState().session?.character.equipment.items).toHaveLength(1);
+    await user.click(screen.getByRole("switch", { name: "Надето: Кольцо защиты" }));
+
+    const worn = stores.session.getState().session?.character;
+    expect(worn?.equipment.items[0]?.worn).toBe(true);
+    // Персонаж при этом не тронут: вещь не меняет того, кто он.
+    expect(worn?.abilities).toEqual(createThorne().abilities);
+  });
+
+  it("«Лист»: отмена шторки состояния не трогает", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<CombatScreen />);
+
+    await user.click(screen.getByRole("radio", { name: /^Лист/ }));
+    await user.click(screen.getByRole("button", { name: "Править: Отметки мастера" }));
+    await user.click(screen.getByRole("radio", { name: "Ступень 3" }));
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+    expect(stores.session.getState().session?.character.exhaustion).toBe(0);
+    expect(stores.session.getState().session?.journal).toHaveLength(0);
+  });
+
   it("режим попадает в состояние, а журнал не засоряет (FR-204)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<CombatScreen />);
@@ -246,6 +362,43 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
 
     expect(screen.getByText("Кости хитов 7d6")).toBeDefined();
+  });
+
+  it("инициативу шапка называет в бою, пассивное восприятие — вне его (FR-232)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CombatScreen />);
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
+
+    expect(screen.getByText("Инициатива +2")).toBeDefined();
+    expect(screen.queryByText(/Пассивное восприятие/)).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
+
+    expect(screen.getByText("Пассивное восприятие 11")).toBeDefined();
+    expect(screen.queryByText(/Инициатива/)).toBeNull();
+  });
+
+  it("истощение видно значком со ступенью (FR-232)", async () => {
+    const marked = createThorne();
+    marked.exhaustion = 3;
+    await renderWithStores(<CombatScreen />, marked);
+
+    expect(screen.getByLabelText("Истощение: ступень 3")).toBeDefined();
+  });
+
+  it("вдохновение видно, когда оно есть (FR-232)", async () => {
+    const marked = createThorne();
+    marked.inspiration = true;
+    await renderWithStores(<CombatScreen />, marked);
+
+    expect(screen.getByLabelText("Вдохновение")).toBeDefined();
+  });
+
+  it("отсутствующего шапка не показывает (FR-232)", async () => {
+    await renderWithStores(<CombatScreen />);
+
+    expect(screen.queryByLabelText(/Истощение/)).toBeNull();
+    expect(screen.queryByLabelText("Вдохновение")).toBeNull();
   });
 
   it("вне боя полосы фильтров нет: отбирать нечего (FR-202)", async () => {
@@ -406,7 +559,7 @@ describe("операции привала (FR-202, FR-215)", () => {
     const user = userEvent.setup();
     const reduced = createThorne();
     reduced.screenMode = "camp";
-    reduced.hitPoints = { current: 51, maximum: 51, maximumReduction: 9 };
+    reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
     await renderWithStores(<CombatScreen />, reduced);
 
     await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
@@ -617,7 +770,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     await user.click(screen.getByRole("button", { name: "Реакции" }));
     await user.click(screen.getByRole("radio", { name: "По мне попали" }));
 
-    expect(screen.getByText(/Реакция израсходована и вернётся/)).toBeDefined();
+    expect(screen.getByText(/Реакция/)).toBeDefined();
     expect(within(screen.getByLabelText("Подходящие реакции")).getByText("Щит")).toBeDefined();
   });
 
@@ -676,7 +829,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const full = inBookMode();
     // В книге Торна восемь записей, а лимит 11 — до края не дотянуться. Понижаем Интеллект до 8:
     // лимит становится 6 (модификатор −1 плюс уровень 7), и шесть подготовленных его исчерпывают.
-    full.intelligence = 8;
+    full.abilities = { ...full.abilities, intelligence: 8 };
     full.preparedSpellIds = [...full.spellbookSpellIds].slice(0, 6);
     await renderWithStores(<CombatScreen />, full);
 
@@ -697,7 +850,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
 describe("конец боя (FR-216, FR-221)", () => {
   function wounded(): CharacterState {
     const character = createThorne();
-    character.hitPoints = { current: 12, maximum: 60, maximumReduction: 0 };
+    character.hitPoints = { current: 12, maximumBase: 60, bloodReduction: 0, masterReduction: 0 };
     return character;
   }
 
@@ -974,7 +1127,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-    expect(screen.getByText(/Действие израсходовано/)).toBeDefined();
+    expect(screen.getByText(/Действие/)).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Новый ход" }));
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();

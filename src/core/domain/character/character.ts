@@ -12,7 +12,7 @@ import { Equipment } from "@/core/domain/equipment/equipment";
 import { Spellbook } from "@/core/domain/spellbook/spellbook";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import type { CharacterState } from "./state";
-import { CharacterSheet } from "./sheet";
+import { CharacterBase } from "./base";
 
 export class Character {
   private constructor(private readonly state: CharacterState) {}
@@ -21,8 +21,9 @@ export class Character {
     return new Character(state);
   }
 
-  get sheet(): CharacterSheet {
-    return CharacterSheet.of(this.state);
+  /** База персонажа. Итоговые числа складывает лист — он знает и про снаряжение. */
+  get base(): CharacterBase {
+    return CharacterBase.of(this.state);
   }
 
   get arcana(): Arcana {
@@ -73,6 +74,11 @@ export class Character {
       activeEffects: board.activeEffects,
       ...(board.concentration === undefined ? {} : { concentration: board.concentration }),
     });
+  }
+
+  /** Правка через корень — единственный путь: отдельные поля снаружи не меняются. */
+  withSheet(change: Partial<CharacterState>): Character {
+    return new Character({ ...this.state, ...change });
   }
 
   toState(): CharacterState {

@@ -1,14 +1,20 @@
 import { DomainError } from "@/core/domain/shared/errors";
+
+import type { SkillTraining } from "./skills";
+
 /**
- * Производные характеристики персонажа.
+ * Формулы листа персонажа: правила D&D 5e (2014) в виде функций.
  *
- * Все функции здесь возвращают значение по умолчанию: предметы и черты сдвигают итоговые числа,
- * поэтому фактические значения хранятся полями состояния, а не вычисляются в месте использования.
+ * Прибавка предмета приходит слагаемым, а не спрятана в итоге: иначе правка характеристики не
+ * сдвинула бы число, и расхождение с листом ничем себя не показало бы.
  */
 
 /** Уровни персонажа, определённые правилами. */
 export const MINIMUM_CHARACTER_LEVEL = 1;
 export const MAXIMUM_CHARACTER_LEVEL = 20;
+
+/** База КС спасброска от заклинаний. */
+const SAVE_DC_BASE = 8;
 
 function assertCharacterLevel(level: number): void {
   if (!Number.isInteger(level) || level < MINIMUM_CHARACTER_LEVEL || level > MAXIMUM_CHARACTER_LEVEL) {
@@ -32,14 +38,50 @@ export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2);
 }
 
-/** Базовая КС спасброска от заклинаний. Торн: 8 + 3 + 4 = 15. */
-export function baseSpellSaveDc(level: number, spellcastingAbilityScore: number): number {
-  return 8 + proficiencyBonus(level) + abilityModifier(spellcastingAbilityScore);
+/** КС спасброска от заклинаний. Торн: 8 + 3 + 4 + 1 = 16. */
+export function spellSaveDc(input: { level: number; score: number; itemBonus: number }): number {
+  return SAVE_DC_BASE + proficiencyBonus(input.level) + abilityModifier(input.score) + input.itemBonus;
 }
 
-/** Базовый модификатор атаки заклинанием. Торн: 3 + 4 = +7. */
-export function baseSpellAttackModifier(level: number, spellcastingAbilityScore: number): number {
-  return proficiencyBonus(level) + abilityModifier(spellcastingAbilityScore);
+/** Модификатор атаки заклинанием. Торн: 3 + 4 + 1 = +8. */
+export function spellAttackModifier(input: {
+  level: number;
+  score: number;
+  itemBonus: number;
+}): number {
+  return proficiencyBonus(input.level) + abilityModifier(input.score) + input.itemBonus;
+}
+
+export function savingThrowModifier(input: {
+  score: number;
+  proficient: boolean;
+  proficiencyBonus: number;
+  itemBonus: number;
+}): number {
+  return (
+    abilityModifier(input.score) + (input.proficient ? input.proficiencyBonus : 0) + input.itemBonus
+  );
+}
+
+/** Компетентность удваивает бонус мастерства — таково правило. */
+export function skillModifier(input: {
+  score: number;
+  training: SkillTraining | undefined;
+  proficiencyBonus: number;
+}): number {
+  const trained = input.training === undefined ? 0 : input.proficiencyBonus;
+  const doubled = input.training === "expert" ? input.proficiencyBonus : 0;
+  return abilityModifier(input.score) + trained + doubled;
+}
+
+export const PASSIVE_BASE = 10;
+
+export function passivePerception(input: Parameters<typeof skillModifier>[0]): number {
+  return PASSIVE_BASE + skillModifier(input);
+}
+
+export function initiativeModifier(dexterity: number): number {
+  return abilityModifier(dexterity);
 }
 
 /**

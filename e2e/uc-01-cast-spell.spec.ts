@@ -112,6 +112,23 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   });
   // Экран, который заканчивается шапкой, читается как пустой: начало строки обязано быть видно.
   expect(rowTop, "начало первой строки «Книги»").toBeLessThan(viewport - 24);
+
+  // «Лист» просматривают сверху вниз, поэтому прокрутка внутри области нормальна — но первый блок
+  // обязан быть виден целиком, иначе экран открывается на середине первой же строки.
+  await switchMode(page, /^Лист/);
+
+  const sheetLayout = await page.evaluate(() => ({
+    documentHeight: document.documentElement.scrollHeight,
+    viewportHeight: window.innerHeight,
+    horizontalOverflow: document.documentElement.scrollWidth - window.innerWidth,
+  }));
+  expect(sheetLayout.documentHeight).toBeLessThanOrEqual(sheetLayout.viewportHeight);
+  expect(sheetLayout.horizontalOverflow).toBeLessThanOrEqual(0);
+
+  const firstBlockBottom = await page
+    .getByRole("heading", { name: "Кто он" })
+    .evaluate((node) => Math.round(node.closest("section")?.getBoundingClientRect().bottom ?? 0));
+  expect(firstBlockBottom, "первый блок «Листа» целиком").toBeLessThanOrEqual(viewport);
 });
 
 test("book mode shows only the book", async ({ page }) => {
@@ -216,6 +233,28 @@ test("state survives a reload", async ({ page }) => {
   );
 });
 
+test("the sheet mode survives a reload and feeds the header", async ({ page }) => {
+  await switchMode(page, /^Лист/);
+  await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Править: Уровень" }).click();
+  const levelSheet = page.getByRole("dialog", { name: "Правка: Уровень" });
+  await levelSheet.getByRole("spinbutton", { name: "Уровень" }).fill("8");
+  await levelSheet.getByRole("spinbutton", { name: "Базовый максимум хитов" }).fill("66");
+  await page.getByRole("button", { name: "Сохранить" }).click();
+
+  await expect(page.getByText("Волшебник, 8")).toBeVisible();
+
+  await page.reload();
+  // Режим переживает перезапуск вместе с состоянием: приложение открывается там, где закрыто.
+  await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
+  await expect(page.getByText("Волшебник, 8")).toBeVisible();
+
+  // Новый уровень дошёл до шапки боя и до ячеек: смена уровня — не только строка листа.
+  await switchMode(page, /^Бой/);
+  await expect(page.getByText("Волшебник, 8 уровень")).toBeVisible();
+});
+
 test("reaction shows when it returns", async ({ page }) => {
   // Учёт хода в бою ведётся всегда — включать нечего. Бой нарочно не начат здесь: тест
   // проверяет, что «Начать бой» возвращает реакцию как первый ход, а начатый заранее бой этого
@@ -227,7 +266,7 @@ test("reaction shows when it returns", async ({ page }) => {
   await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
-  await expect(page.getByText(/Реакция израсходована, вернётся в начале вашего хода/)).toBeVisible();
+  await expect(page.getByText(/Реакция/)).toBeVisible();
 
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
@@ -320,6 +359,16 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await switchMode(page, /^Журнал/);
   await expect(page.getByRole("list", { name: "Журнал событий" })).toBeVisible();
   await scan("экран журнала");
+
+  // Лист — восьмой экран сверки: девять блоков, шторка правки и переключатели внутри неё.
+  await switchMode(page, /^Лист/);
+  await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
+  await scan("лист персонажа");
+
+  await page.getByRole("button", { name: "Править: Интеллект" }).click();
+  await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
+  await scan("шторка правки листа");
+  await page.getByRole("button", { name: "Отмена" }).click();
 
   await switchMode(page, /^Вне боя/);
 

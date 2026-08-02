@@ -1,3 +1,4 @@
+import { Sheet } from "@/core/domain/sheet/sheet";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
@@ -65,9 +66,9 @@ function reachLabel(spell: Spell): string {
 function resolutionShortRu(spell: Spell, character: CharacterState): string {
   switch (spell.resolution.type) {
     case "spell_attack":
-      return `атака заклинанием ${signed(character.spellAttackModifier)}`;
+      return `атака заклинанием ${signed(Sheet.of(character).spellAttackModifier)}`;
     case "saving_throw":
-      return `спасбросок ${SAVING_THROW_NAMES[spell.resolution.savingThrow ?? "CON"]} против КС ${character.spellSaveDc}`;
+      return `спасбросок ${SAVING_THROW_NAMES[spell.resolution.savingThrow ?? "CON"]} против КС ${Sheet.of(character).spellSaveDc}`;
     default:
       return "без спасброска";
   }
@@ -119,7 +120,7 @@ export function describeConcentration(input: {
 }): ConcentrationSummary {
   const { spell, effect, character, journal } = input;
   const start = startRound(journal, effect.startedAt);
-  const modifier = signed(character.constitutionSaveModifier);
+  const modifier = signed(Sheet.of(character).savingThrow("constitution"));
 
   return {
     spellId: effect.spellId,

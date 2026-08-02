@@ -8,13 +8,14 @@
 
 import { z } from "zod";
 
+import { migrateCharacterState } from "@/core/domain/character/migration";
 import { characterStateSchema } from "@/core/domain/character/state";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { checkIntegrity } from "@/core/application/dataExchange";
 import type { Session } from "@/core/application/session";
 
 /** Версия формата хранения. Читать чужое будущее приложение не берётся. */
-export const STORAGE_SCHEMA_VERSION = 1;
+export const STORAGE_SCHEMA_VERSION = 2;
 
 const journalEntrySchema = z.object({
   id: z.string().min(1),
@@ -119,7 +120,16 @@ export function parsePersisted(raw: unknown): PersistedSession {
     throw new StorageVersionError(version);
   }
 
-  const result = persistedSessionSchema.safeParse(raw);
+  const migrated =
+    raw === null || typeof raw !== "object"
+      ? raw
+      : {
+          ...(raw as object),
+          schemaVersion: STORAGE_SCHEMA_VERSION,
+          character: migrateCharacterState((raw as { character?: unknown }).character),
+        };
+
+  const result = persistedSessionSchema.safeParse(migrated);
   if (!result.success) {
     const details = result.error.issues
       .slice(0, 3)

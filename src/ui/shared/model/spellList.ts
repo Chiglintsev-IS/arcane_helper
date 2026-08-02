@@ -38,6 +38,7 @@ export function belongsToMode(spell: Spell, mode: ScreenMode): boolean {
       return castableWithinTurn(spell);
     case "camp":
     case "journal":
+    case "sheet":
       return false;
     default:
       return true;

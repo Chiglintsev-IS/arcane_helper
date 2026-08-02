@@ -13,6 +13,7 @@ import { ResourcePool } from "@/core/domain/shared/resourcePool";
 import {
   applyArcaneRecovery,
   refundSlot,
+  resizeSlots,
   restoreAllSlots,
   spendSlot,
   type SlotRecoveryPlan,
@@ -95,6 +96,14 @@ export class Arcana {
   }
 
   /** Долгий отдых возвращает всё разом и гасит очки заклинаний: они живут только до отдыха. */
+  /** Смена уровня: ячейки по таблице, руны по бонусу мастерства. */
+  resizedForLevel(wizardLevel: number, runesMaximum: number): Arcana {
+    return this.with({
+      spellSlots: resizeSlots(this.state.spellSlots, wizardLevel),
+      runes: this.runes.resized(runesMaximum).toState(),
+    });
+  }
+
   restoredByLongRest(): Arcana {
     return this.with({
       spellSlots: restoreAllSlots(this.state.spellSlots),

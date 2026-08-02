@@ -13,6 +13,7 @@ const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   camp: { title: "Вне боя", hint: "отдых и восстановление — привал, город, дорога" },
   book: { title: "Книга", hint: "весь состав целиком, для чтения и сверки" },
   journal: { title: "Журнал", hint: "что случилось, что можно отменить и где взять копию" },
+  sheet: { title: "Лист", hint: "кто он: уровень, характеристики, навыки, владения" },
 };
 
 export function ModeSwitcher({

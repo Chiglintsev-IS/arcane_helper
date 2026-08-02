@@ -10,6 +10,7 @@
 
 import type { CharacterState } from "@/core/domain/character/state";
 import { maximumRecoveryPerHour } from "@/core/domain/vitality/blood";
+import { Vitality } from "@/core/domain/vitality/vitality";
 
 export function CampActions({
   character,
@@ -24,9 +25,10 @@ export function CampActions({
   onArcaneRecovery: () => void;
   onRecoverMaximum: () => void;
 }) {
+  const vitality = Vitality.of(character);
   const hourReturns = Math.min(
     maximumRecoveryPerHour(character.level),
-    character.hitPoints.maximumReduction,
+    vitality.bloodReduction,
   );
 
   return (
@@ -45,7 +47,7 @@ export function CampActions({
           ? {}
           : { disabledReason: "Уже использовано до следующего долгого отдыха" })}
       />
-      {character.hitPoints.maximumReduction > 0 ? (
+      {vitality.bloodReduction > 0 ? (
         <Action onClick={onRecoverMaximum} name={`Прошёл час · максимум +${hourReturns}`} />
       ) : null}
     </section>

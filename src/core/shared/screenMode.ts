@@ -8,7 +8,7 @@
  * Переименование значения стоит миграции сохранённых состояний и потому идёт отдельным шагом.
  */
 
-export const SCREEN_MODES = ["combat", "camp", "book", "journal"] as const;
+export const SCREEN_MODES = ["combat", "camp", "book", "journal", "sheet"] as const;
 
 export type ScreenMode = (typeof SCREEN_MODES)[number];
 

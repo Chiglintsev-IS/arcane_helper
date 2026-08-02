@@ -11,8 +11,10 @@ import { turnTracked, type TurnEconomy } from "@/core/application/useCases/turn"
 import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
+import { Vitality } from "@/core/domain/vitality/vitality";
 
 function signed(value: number): string {
   return value < 0 ? `${value}` : `+${value}`;
@@ -122,6 +124,10 @@ export function ResourceHeader({
     .sort((left, right) => left.level - right.level);
 
   // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок.
+  const totals = Sheet.of(character);
+  const vitality = Vitality.of(character);
+  // Игроку важен разрыв с базой листа, а не то, чем он вызван: цифра одна.
+  const maximumReduction = vitality.bloodReduction + vitality.masterReduction;
   const armorClass = effectiveArmorClass(character);
   const inFight = turnTracked(character);
 
@@ -137,11 +143,11 @@ export function ResourceHeader({
       </header>
 
       <dl className="grid grid-cols-4 gap-1">
-        <Stat label="КС закл." value={`${character.spellSaveDc}`} />
-        <Stat label="Атака" value={signed(character.spellAttackModifier)} />
+        <Stat label="КС закл." value={`${totals.spellSaveDc}`} />
+        <Stat label="Атака" value={signed(totals.spellAttackModifier)} />
         <Stat label="КД" value={`${armorClass}`} />
         <HitPointsStat
-          value={`${character.hitPoints.current}/${character.hitPoints.maximum}`}
+          value={`${vitality.current}/${vitality.maximum}`}
           temporary={character.temporaryHitPoints}
           onOpen={onOpenHitPoints}
         />
@@ -172,6 +178,23 @@ export function ResourceHeader({
           </li>
         )}
         {/*
+         * Инициатива — в бою, пассивное восприятие — вне его: первое бросают в начале схватки,
+         * второе спрашивают в разведке. Каждое число стоит там, где его называют.
+         */}
+        {inFight ? (
+          <li>
+            <Badge tone="muted" icon="◔">
+              Инициатива {signed(totals.initiative)}
+            </Badge>
+          </li>
+        ) : (
+          <li>
+            <Badge tone="muted" icon="◉">
+              Пассивное восприятие {totals.passivePerception}
+            </Badge>
+          </li>
+        )}
+        {/*
          * Значок рун — не кнопка: правило 44 пикселей на зону нажатия сделало бы весь ряд значков
          * вдвое выше. Правка рун открывается плиткой ячейки — там же, где правятся ячейки.
          */}
@@ -185,10 +208,28 @@ export function ResourceHeader({
             Очки {character.spellPoints.remaining}
           </Badge>
         </li>
-        {character.hitPoints.maximumReduction > 0 ? (
+        {maximumReduction > 0 ? (
           <li>
             <Badge tone="reaction" icon="✖">
-              Максимум снижен на {character.hitPoints.maximumReduction}
+              Максимум снижен на {maximumReduction}
+            </Badge>
+          </li>
+        ) : null}
+        {/*
+         * Ступень названа числом и словом, а не одним цветом. Отсутствующего в ряду нет вовсе:
+         * «Истощение 0» занимало бы место сообщением о том, чего не происходит.
+         */}
+        {character.exhaustion > 0 ? (
+          <li aria-label={`Истощение: ступень ${character.exhaustion}`}>
+            <Badge tone="reaction" icon="✖">
+              Истощение {character.exhaustion}
+            </Badge>
+          </li>
+        ) : null}
+        {character.inspiration ? (
+          <li aria-label="Вдохновение">
+            <Badge tone="action" icon="✦">
+              Вдохновение
             </Badge>
           </li>
         ) : null}
@@ -222,7 +263,7 @@ export function ResourceHeader({
                 </Badge>
               ) : (
                 <Badge tone="muted" icon="✗">
-                  Действие израсходовано
+                  Действие
                 </Badge>
               )}
             </li>
@@ -241,7 +282,7 @@ export function ResourceHeader({
                   </Badge>
                 ) : (
                   <Badge tone="muted" icon="✗">
-                    Бонусное израсходовано
+                    Бонусное
                   </Badge>
                 )}
               </li>
@@ -250,7 +291,7 @@ export function ResourceHeader({
               aria-label={
                 economy.reactionAvailable
                   ? "Реакция доступна"
-                  : `Реакция израсходована, вернётся ${economy.reactionReturns}`
+                  : `Реакция израсходована`
               }
             >
               {economy.reactionAvailable ? (
@@ -259,7 +300,7 @@ export function ResourceHeader({
                 </Badge>
               ) : (
                 <Badge tone="muted" icon="✗">
-                  Реакция израсходована, вернётся {economy.reactionReturns}
+                  Реакция
                 </Badge>
               )}
             </li>

@@ -21,9 +21,9 @@ export function MaterialsList({
   character: CharacterState;
   onToggle: (spellId: string) => void;
 }) {
-  const { equipment } = character;
+  const components = character.equipment.components;
   const needed = costlyComponents(spells);
-  if (equipment === undefined || needed.length === 0) return null;
+  if (components === undefined || needed.length === 0) return null;
 
   return (
     <section aria-label="Компоненты" className="flex flex-col gap-1">
@@ -32,7 +32,7 @@ export function MaterialsList({
       </h2>
       <ul className="flex flex-col gap-1">
         {needed.map((spell) => {
-          const owned = equipment.materialsForSpellIds.includes(spell.id);
+          const owned = components.materialsForSpellIds.includes(spell.id);
           return (
             <li key={spell.id}>
               <button
@@ -58,7 +58,7 @@ export function MaterialsList({
       </ul>
       {/* Фокусировка закрывает всё остальное, и напоминать о ней в списке покупок незачем. */}
       <p className="text-xs text-slate-500">
-        {equipment.spellcastingFocus
+        {components.spellcastingFocus
           ? "Остальные компоненты закрывает фокусировка."
           : "Фокусировки нет: нужен мешочек с компонентами."}
       </p>

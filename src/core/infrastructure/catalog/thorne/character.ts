@@ -17,12 +17,29 @@ const RAW: unknown = {
   className: "Волшебник",
   level: 7,
 
-  intelligence: 18,
-  // КС 16 и атака +8 включают +1 от предмета на магию; спасбросок Телосложения +4 — это 3 от
-  // Телосложения 16 плюс 1 от предмета на защиту, владения нет.
-  spellSaveDc: 16,
-  spellAttackModifier: 8,
-  constitutionSaveModifier: 4,
+  species: "Лунный тролль",
+  subclass: "Создатель рун",
+  // Возраст не назван игроком: пустое поле честнее выдуманного.
+  age: 0,
+  size: "large",
+  speed: 30,
+
+  abilities: {
+    strength: 8,
+    dexterity: 14,
+    constitution: 16,
+    intelligence: 18,
+    wisdom: 12,
+    charisma: 8,
+  },
+  // Владение спасбросками волшебника; Телосложение не подтверждено и потому не отмечено.
+  saveProficiencies: ["intelligence", "wisdom"],
+  // Владения навыками игроком не названы.
+  skills: {},
+  proficiencies: { weapons: [], armor: [], tools: [], languages: [] },
+  overrides: { saves: {}, skills: {} },
+  exhaustion: 0,
+  inspiration: false,
 
   cantripIds: ["shocking-grasp", "ray-of-frost", "message", "mending"],
   // Двадцать пять записей книги: состав назван игроком.
@@ -95,16 +112,24 @@ const RAW: unknown = {
   turnTracking: { actionAvailable: true, bonusActionAvailable: true },
   arcaneRecoveryAvailable: true,
 
-  hitPoints: { current: 60, maximum: 60, maximumReduction: 0 },
-  // База 10 — доспехов нет; предметы дают +2, что выведено из КД 14 на листе.
-  armorClass: { base: 10, dexterityModifier: 2, itemBonus: 2 },
-
+  hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
   // Рун столько же, сколько бонус мастерства.
   // Одна кость за уровень, размер по классу: волшебник — d6. Расовые «11 очков здоровья»
   // на счёт костей не влияют, пока это надбавка к максимуму, а не замена кости, пункт 3.
   // Ответ игрока на (2026-08-01): фокусировка есть, и она «+1» — эта прибавка уже учтена
   // в КС 16 и атаке +8. Мешочка с компонентами нет, дорогих компонентов не куплено.
-  equipment: { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: [] },
+  equipment: {
+    // База 10 — доспехов нет.
+    armorClassBase: 10,
+    /**
+     * Прибавки без вещи: сами предметы игроком не названы, и выдумывать им имена нельзя.
+     * Выведено из листа: КС 16 и атака +8 дают +1 к магии, КД 14 при базе 10 и Ловкости 14 — +2 к
+     * защите, спасбросок Телосложения +4 при Телосложении 16 — +1 ко всем спасброскам.
+     */
+    otherBonuses: { spellcasting: 1, armorClass: 2, savingThrows: 1 },
+    items: [],
+    components: { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: [] },
+  },
   hitDice: { total: 7, size: 6, remaining: 7 },
   runes: { maximum: 3, remaining: 3 },
   spellPoints: { remaining: 0, createdAt: null },

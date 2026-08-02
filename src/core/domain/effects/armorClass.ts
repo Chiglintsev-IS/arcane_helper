@@ -9,6 +9,7 @@
  * карточка реакции. Расхождение этих чисел заставило бы перепроверять каждое.
  */
 
+import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
 
@@ -20,7 +21,7 @@ import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
  * доспехов» получается из формулы само. Прибавки суммируются.
  */
 function total(character: CharacterState, contributions: ArmorClassEffect[]): number {
-  const { base, dexterityModifier, itemBonus } = character.armorClass;
+  const { base, dexterityModifier, itemBonus } = Sheet.of(character).armorClassParts;
 
   const effectiveBase = contributions
     .filter((contribution) => contribution.kind === "base_override")

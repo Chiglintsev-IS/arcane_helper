@@ -16,7 +16,7 @@ import { castOptions, type CastOption } from "@/core/application/casting/castOpt
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import { hitPointCost, spellPointCost } from "@/core/domain/vitality/blood";
-import { abilityModifier } from "@/core/domain/character/abilities";
+import { CharacterBase } from "@/core/domain/character/base";
 import { maximumHitDiceForCast } from "@/core/domain/vitality/hitDice";
 import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
 import {
@@ -302,7 +302,7 @@ function HitDiceStep({
 
   const count = draft.hitDiceCount;
   const size = pool?.size ?? 0;
-  const modifier = cost.addsSpellcastingModifier ? abilityModifier(character.intelligence) : 0;
+  const modifier = cost.addsSpellcastingModifier ? CharacterBase.of(character).spellcastingModifier : 0;
   const rolled = draft.hitDiceRolled;
   const outOfRange =
     count !== null && rolled !== null && (rolled < count || rolled > count * size);

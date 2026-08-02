@@ -22,7 +22,8 @@ export type JournalKind =
   | "hit_points_changed"
   | "combat_started"
   | "combat_ended"
-  | "suppression_changed";
+  | "suppression_changed"
+  | "sheet_edited";
 
 /** Что потрачено внутри хода. Словарь один на журнал и на проверку доступности. */
 export type TurnResource = "action" | "bonus_action" | "reaction";
