@@ -18,6 +18,7 @@ import { createMemoryRepository } from "@/core/infrastructure/persistence/memory
 import type { Clock } from "@/core/application/session";
 import { createSessionStore } from "@/ui/entities/session/model/sessionStore";
 import { StoreProvider, type AppStores } from "@/ui/app/providers/stores";
+import { startCombat } from "@/core/application/useCases/turn";
 
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
@@ -42,9 +43,16 @@ export function testClock(): Clock {
   };
 }
 
+/**
+ * Идёт ли бой. Отметка ставится той же операцией, что и кнопкой на экране: хранимого признака
+ * «бой идёт» нет, и подделать его подстановкой в состояние нельзя.
+ */
+export type PlaySituation = { inFight?: boolean };
+
 /** Готовые сторы с загруженным состоянием: компонент рендерится сразу с данными. */
 export async function createTestStores(
   character: CharacterState = createThorne(),
+  situation: PlaySituation = {},
 ): Promise<AppStores> {
   const clock = testClock();
   const session = createSessionStore({
@@ -54,6 +62,9 @@ export async function createTestStores(
     loadBuiltInCatalog: loadThorneSpells,
   });
   await session.getState().hydrate();
+  if (situation.inFight === true) {
+    session.getState().apply((current) => startCombat(current, clock));
+  }
   return { session, draft: createCastDraftStore(), clock };
 }
 
@@ -63,8 +74,9 @@ export type RenderWithStores = RenderResult & { stores: AppStores };
 export async function renderWithStores(
   ui: ReactElement,
   character?: CharacterState,
+  situation: PlaySituation = {},
 ): Promise<RenderWithStores> {
-  const stores = character === undefined ? await createTestStores() : await createTestStores(character);
+  const stores = await createTestStores(character ?? createThorne(), situation);
   const result = render(<StoreProvider stores={stores}>{ui}</StoreProvider>);
   return { ...result, stores };
 }

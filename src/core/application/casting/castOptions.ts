@@ -69,7 +69,7 @@ export function bestCastPlan(
   turn: TurnResources,
 ): CastPlan | null {
   let best: CastPlan | null = null;
-  for (const option of castOptions(spell, character, { inCombat: turn.tracksTurn })) {
+  for (const option of castOptions(spell, character, { inCombat: turn.inFight })) {
     const availability = checkAvailability({ spell, character, turn, ...option });
     if (availability.available) return { option, availability };
     if (best === null || availability.warnings.length < best.availability.warnings.length) {

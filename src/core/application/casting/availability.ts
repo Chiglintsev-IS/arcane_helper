@@ -14,8 +14,8 @@ export type TurnResources = {
   actionAvailable: boolean;
   bonusActionAvailable: boolean;
   reactionAvailable: boolean;
+  /** Отмечен ли бой начатым. Он же признак того, что ведётся счёт ходов. */
   inFight: boolean;
-  tracksTurn: boolean;
 };
 
 export const ALL_TURN_RESOURCES: TurnResources = {
@@ -23,7 +23,6 @@ export const ALL_TURN_RESOURCES: TurnResources = {
   bonusActionAvailable: true,
   reactionAvailable: true,
   inFight: false,
-  tracksTurn: false,
 };
 
 /** Фразы целиком: род в русском не выводится из названия, «Реакция израсходовано» недопустимо. */
@@ -32,8 +31,6 @@ export const ACTION_SPENT_MESSAGES: Record<TurnResource, string> = {
   bonus_action: "Бонусное действие уже израсходовано",
   reaction: "Реакция уже израсходована",
 };
-
-export const COMBAT_NOT_STARTED_MESSAGE = "Бой не начат — сначала «Начать бой»";
 
 export type PaymentChoice =
   | { kind: "slot"; slotLevel: number }
@@ -48,7 +45,6 @@ export type AvailabilityCode =
   | "bonus_action_spent"
   | "reaction_spent"
   | "long_casting_time"
-  | "combat_not_started"
   | "no_payment"
   | "no_slot"
   | "slot_too_low"
@@ -99,24 +95,13 @@ function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
   const { castingTime } = input.spell;
   const unit = LONG_CASTING_UNITS[castingTime.type];
   if (unit === undefined || castingTime.value === undefined) return [];
-  if (!input.turn.tracksTurn) return [];
+  if (!input.turn.inFight) return [];
   return [
     {
       code: "long_casting_time",
       reasonRu:
         `Не уложится в один ход — ${longCastingTimeRu(unit, castingTime.value)},` +
         " действие каждый ход и концентрация",
-      overridable: true,
-    },
-  ];
-}
-
-function checkCombatStarted(input: AvailabilityInput): AvailabilityWarning[] {
-  if (!input.turn.tracksTurn || input.turn.inFight) return [];
-  return [
-    {
-      code: "combat_not_started",
-      reasonRu: COMBAT_NOT_STARTED_MESSAGE,
       overridable: true,
     },
   ];
@@ -310,7 +295,6 @@ export function checkAvailability(input: AvailabilityInput): Availability {
         ]
       : []),
     ...checkCastingTime(input),
-    ...checkCombatStarted(input),
     ...checkPayment(input),
     ...checkComponents(input),
     ...checkConcentration(input),

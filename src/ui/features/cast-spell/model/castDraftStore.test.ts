@@ -36,7 +36,7 @@ function context(
   turn: Partial<typeof ALL_TURN_RESOURCES> = {},
 ): DraftContext {
   // Бой идёт и ход считается: этот файл проверяет черновик мастера, а не факт начала боя.
-  return { character, turn: { ...ALL_TURN_RESOURCES, inFight: true, tracksTurn: true, ...turn } };
+  return { character, turn: { ...ALL_TURN_RESOURCES, inFight: true, ...turn } };
 }
 
 /**
@@ -92,7 +92,7 @@ describe("руна при сотворении (FR-151)", () => {
   });
 
   it("смена оплаты на ритуал снимает руну: ритуал её не принимает", () => {
-    store.getState().start(detectMagic, context({ ...createThorne(), screenMode: "camp" }));
+    store.getState().start(detectMagic, context(createThorne(), { inFight: false }));
     store.getState().chooseCastOption({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
     store.getState().chooseRune("war");
     expect(draftOf().rune).toBe("war");
@@ -128,7 +128,7 @@ describe("цель руны жизни (FR-156)", () => {
   });
 
   it("смена оплаты на ритуал возвращает цель к себе вместе с руной", () => {
-    store.getState().start(detectMagic, context({ ...createThorne(), screenMode: "camp" }));
+    store.getState().start(detectMagic, context(createThorne(), { inFight: false }));
     store.getState().chooseCastOption({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
     store.getState().chooseRune("life");
     store.getState().chooseRuneTarget("other");
@@ -168,7 +168,7 @@ describe("начало применения", () => {
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
     // Вне боя: в бою ритуального способа нет вовсе, +10 минут в раунд не помещаются.
-    store.getState().start(identify, context(createThorne(), { tracksTurn: false, inFight: false }));
+    store.getState().start(identify, context(createThorne(), { inFight: false }));
     expect(draftOf()).toMatchObject({ mode: "ritual", payment: { kind: "none" } });
   });
 

@@ -10,7 +10,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { CombatScreen } from "@/ui/screens/combat/ui/CombatScreen";
+import { PlayScreen } from "@/ui/screens/play/ui/PlayScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
@@ -29,7 +29,7 @@ function firstVariant(category: "short" | "sarcastic"): string {
  * включает. Имя оставлено: оно объясняет, зачем тесту учёт.
  */
 function withTurnTracking(): CharacterState {
-  return { ...createThorne(), screenMode: "combat" };
+  return { ...createThorne(), screenMode: "play" };
 }
 
 function withoutSlots(): CharacterState {
@@ -87,14 +87,14 @@ async function openWizard(
 
 describe("вход в мастер (FR-020)", () => {
   it("«Сотворить» открывает мастер применения", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     await openWizard(/Луч холода/);
 
     expect(screen.getByRole("dialog", { name: /Применение «Луч холода»/ })).toBeDefined();
   });
 
   it("заговор применяется одним экраном: сотворить и подтвердить (M-03)", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     await openWizard(/Луч холода/);
 
     expect(screen.getByText(/Шаг 1 из 1: Объявление и подтверждение/)).toBeDefined();
@@ -102,7 +102,7 @@ describe("вход в мастер (FR-020)", () => {
   });
 
   it("заклинание с ячейкой — за два шага", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     await openWizard(/Доспехи мага/);
 
     expect(screen.getByText(/Шаг 1 из 2: Чем сотворить/)).toBeDefined();
@@ -111,7 +111,7 @@ describe("вход в мастер (FR-020)", () => {
 
 describe("инвариант FR-022: до подтверждения ресурсы не тронуты", () => {
   it("полный проход мастера и отмена оставляют состояние прежним", async () => {
-    const { stores } = await renderWithStores(<CombatScreen />);
+    const { stores } = await renderWithStores(<PlayScreen />);
     // Бой начат заранее: снимок «до» должен отражать состояние прямо перед открытием мастера,
     // а не более раннее — иначе он не сойдётся с тем, что тест сравнивает после отмены.
     const user = userEvent.setup();
@@ -132,7 +132,7 @@ describe("инвариант FR-022: до подтверждения ресур�
 
 describe("подтверждение (FR-023, AC-11)", () => {
   it("списывает выбранную ячейку, создаёт эффект и одну запись журнала", async () => {
-    const { stores } = await renderWithStores(<CombatScreen />, withTurnTracking());
+    const { stores } = await renderWithStores(<PlayScreen />, withTurnTracking());
 
     const user = await openWizard(/Доспехи мага/);
     await user.click(screen.getByRole("button", { name: /Ячейка 2 уровня/ }));
@@ -150,7 +150,7 @@ describe("подтверждение (FR-023, AC-11)", () => {
   });
 
   it("после подтверждения мастер закрывается", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
 
     const user = await openWizard(/Луч холода/);
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
@@ -163,7 +163,7 @@ describe("объявление мастеру (FR-041, AC-12)", () => {
   it("называет выбранный уровень ячейки и цель", async () => {
     // «Молния»: выбор ячейки есть, концентрации нет — значит шага замены между ними не встанет,
     // а в объявлении стоят и уровень ячейки, и КС спасброска.
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
 
     const user = await openWizard(/^Молния/);
     await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
@@ -175,7 +175,7 @@ describe("объявление мастеру (FR-041, AC-12)", () => {
   });
 
   it("показывает урон по выбранному уровню ячейки до подтверждения (FR-071)", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     const user = await openWizard(/Поглощение стихий/);
 
     expect(screen.getByRole("button", { name: /Ячейка 1 уровня/ })).toBeDefined();
@@ -187,7 +187,7 @@ describe("объявление мастеру (FR-041, AC-12)", () => {
   });
 
   it("механика и отыгрыш живут в разных блоках (AC-20)", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     const user = await openWizard(/Луч холода/);
 
     const mechanics = screen.getByLabelText("Объявление мастеру");
@@ -202,7 +202,7 @@ describe("объявление мастеру (FR-041, AC-12)", () => {
 
 describe("предупреждение вместо запрета (FR-031)", () => {
   it("без свободных ячеек показывает причину и не пускает дальше без разрешения", async () => {
-    await renderWithStores(<CombatScreen />, withoutSlots());
+    await renderWithStores(<PlayScreen />, withoutSlots());
     const user = await openWizard(/Доспехи мага/);
 
     expect(screen.getByText("Нет свободной ячейки 1 уровня")).toBeDefined();
@@ -213,7 +213,7 @@ describe("предупреждение вместо запрета (FR-031)", ()
   });
 
   it("«Применить всё равно» доводит применение до конца и показывает долг ячейки", async () => {
-    const { stores } = await renderWithStores(<CombatScreen />, withoutSlots());
+    const { stores } = await renderWithStores(<PlayScreen />, withoutSlots());
     const user = await openWizard(/Доспехи мага/);
 
     await user.click(screen.getByRole("button", { name: "Применить всё равно" }));
@@ -227,7 +227,7 @@ describe("предупреждение вместо запрета (FR-031)", ()
 
 describe("замена концентрации (FR-081, AC-13)", () => {
   it("требует выбора из двух вариантов, а не «всё равно»", async () => {
-    await renderWithStores(<CombatScreen />, concentrating());
+    await renderWithStores(<PlayScreen />, concentrating());
     const user = await openWizard(/^Обнаружение магии/);
 
     expect(screen.getByText(/Шаг 1 из 3: Чем сотворить/)).toBeDefined();
@@ -241,7 +241,7 @@ describe("замена концентрации (FR-081, AC-13)", () => {
   });
 
   it("после замены остаётся ровно одна концентрация (FR-080)", async () => {
-    const { stores } = await renderWithStores(<CombatScreen />, concentrating());
+    const { stores } = await renderWithStores(<PlayScreen />, concentrating());
     const user = await openWizard(/^Обнаружение магии/);
 
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -255,7 +255,7 @@ describe("замена концентрации (FR-081, AC-13)", () => {
   });
 
   it("отмена на шаге концентрации оставляет прежний эффект", async () => {
-    const { stores } = await renderWithStores(<CombatScreen />, concentrating());
+    const { stores } = await renderWithStores(<PlayScreen />, concentrating());
     // Бой начат заранее — по той же причине, что и в тесте выше.
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
@@ -277,7 +277,7 @@ describe("шаг компонентов", () => {
   it("появляется для компонента со стоимостью и объясняет, что фокусировка его не заменяет", async () => {
     const user = userEvent.setup();
     // «Опознание» творится минуту, поэтому в режиме «Бой» его нет: берём книгу.
-    await renderWithStores(<CombatScreen />, { ...createThorne(), screenMode: "book" });
+    await renderWithStores(<PlayScreen />, { ...createThorne(), screenMode: "book" });
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /^Опознание/ }));
@@ -292,7 +292,7 @@ describe("шаг компонентов", () => {
 
 describe("обязательность в блоке отыгрыша (ADR-0011)", () => {
   it("подсвечивает, что вербальное заклинание нужно произнести вслух", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     await openWizard(/Луч холода/);
 
     const roleplay = screen.getByLabelText("Отыгрыш");
@@ -302,7 +302,7 @@ describe("обязательность в блоке отыгрыша (ADR-0011)
   });
 
   it("не просит цель и не показывает её отсутствие как пробел (OQ-10)", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     await openWizard(/Луч холода/);
 
     expect(screen.queryByLabelText("Цель или точка")).toBeNull();
@@ -315,7 +315,7 @@ describe("недоступность руны названа причиной (F
     const user = userEvent.setup();
     const rich = withTurnTracking();
     rich.spellPoints = { remaining: 6, createdAt: "2026-07-31T18:00:00.000Z" };
-    await renderWithStores(<CombatScreen />, rich);
+    await renderWithStores(<PlayScreen />, rich);
     await openWizard(/^Паутина/);
 
     await user.click(screen.getByRole("button", { name: /^Кровью/ }));
@@ -328,7 +328,7 @@ describe("недоступность руны названа причиной (F
   it("без рун объясняет, когда они вернутся", async () => {
     const spent = withTurnTracking();
     spent.runes = { maximum: 3, remaining: 0 };
-    await renderWithStores(<CombatScreen />, spent);
+    await renderWithStores(<PlayScreen />, spent);
     await openWizard(/^Паутина/);
 
     const rune = screen.getByLabelText("Руна");
@@ -336,7 +336,7 @@ describe("недоступность руны названа причиной (F
   });
 
   it("у заговора блока руны нет вовсе: ячейку он не тратит", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
     await openWizard(/Луч холода/);
 
     expect(screen.queryByLabelText("Руна")).toBeNull();
@@ -346,7 +346,7 @@ describe("недоступность руны названа причиной (F
 describe("руна жизни спрашивает кому (FR-156)", () => {
   it("выбор цели появляется у жизни и не появляется у остальных", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<CombatScreen />, withTurnTracking());
+    await renderWithStores(<PlayScreen />, withTurnTracking());
     await openWizard(/^Паутина/);
 
     expect(screen.queryByRole("group", { name: "Кому руна" })).toBeNull();
@@ -362,7 +362,7 @@ describe("руна жизни спрашивает кому (FR-156)", () => {
 
   it("выбранный другой оставляет временные хиты нетронутыми (FR-156)", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<CombatScreen />, withTurnTracking());
+    const { stores } = await renderWithStores(<PlayScreen />, withTurnTracking());
     await openWizard(/^Паутина/);
 
     await user.click(screen.getByRole("button", { name: /Руна жизни/ }));
@@ -398,19 +398,19 @@ describe("шаг костей хитов (FR-135)", () => {
   }
 
   it("шаг есть у заклинания с расходом костей", async () => {
-    await renderWithStores(<CombatScreen />, woundedThorne());
+    await renderWithStores(<PlayScreen />, woundedThorne());
     await openHitDiceStep();
     expect(screen.getByText("Сколько костей бросить")).toBeTruthy();
   });
 
   it("шага нет у заклинания без расхода", async () => {
-    await renderWithStores(<CombatScreen />, woundedThorne());
+    await renderWithStores(<PlayScreen />, woundedThorne());
     await openWizard(/Молния/);
     expect(screen.queryByText("Сколько костей бросить")).toBeNull();
   });
 
   it("ячейка 2 уровня даёт выбрать до двух костей", async () => {
-    await renderWithStores(<CombatScreen />, woundedThorne());
+    await renderWithStores(<PlayScreen />, woundedThorne());
     await openHitDiceStep();
     expect(screen.getByRole("button", { name: "1d6" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "2d6" })).toBeTruthy();
@@ -418,13 +418,13 @@ describe("шаг костей хитов (FR-135)", () => {
   });
 
   it("без выбранного числа костей дальше не пускает", async () => {
-    await renderWithStores(<CombatScreen />, woundedThorne());
+    await renderWithStores(<PlayScreen />, woundedThorne());
     await openHitDiceStep();
     expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("выпавшее вне возможного отвергается с причиной", async () => {
-    await renderWithStores(<CombatScreen />, woundedThorne());
+    await renderWithStores(<PlayScreen />, woundedThorne());
     const user = await openHitDiceStep();
     await user.click(screen.getByRole("button", { name: "2d6" }));
     await user.type(screen.getByLabelText("Что выпало на 2d6"), "13");
@@ -433,7 +433,7 @@ describe("шаг костей хитов (FR-135)", () => {
   });
 
   it("возможное выпавшее показывает итог с модификатором", async () => {
-    await renderWithStores(<CombatScreen />, woundedThorne());
+    await renderWithStores(<PlayScreen />, woundedThorne());
     const user = await openHitDiceStep();
     await user.click(screen.getByRole("button", { name: "2d6" }));
     await user.type(screen.getByLabelText("Что выпало на 2d6"), "9");
@@ -442,7 +442,7 @@ describe("шаг костей хитов (FR-135)", () => {
   });
 
   it("подтверждение списывает кости и лечит", async () => {
-    const { stores } = await renderWithStores(<CombatScreen />, woundedThorne());
+    const { stores } = await renderWithStores(<PlayScreen />, woundedThorne());
     const user = await openHitDiceStep();
     await user.click(screen.getByRole("button", { name: "2d6" }));
     await user.type(screen.getByLabelText("Что выпало на 2d6"), "9");
@@ -457,7 +457,7 @@ describe("шаг костей хитов (FR-135)", () => {
   it("без костей шаг объясняет, а не прячется", async () => {
     const spent = woundedThorne();
     spent.hitDice = { total: 7, size: 6, remaining: 0 };
-    await renderWithStores(<CombatScreen />, spent);
+    await renderWithStores(<PlayScreen />, spent);
     await openHitDiceStep();
     expect(screen.getByText(/бросать нечего/)).toBeTruthy();
     // Предупреждение, а не запрет: ячейку игрок вправе потратить впустую.

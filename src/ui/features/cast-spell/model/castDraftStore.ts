@@ -102,7 +102,7 @@ function defaultOption(
 ): CastOption {
   const rememberedPayment = remembered.payment[spell.id];
   if (rememberedPayment !== undefined) {
-    const match = castOptions(spell, context.character, { inCombat: context.turn.tracksTurn }).find(
+    const match = castOptions(spell, context.character, { inCombat: context.turn.inFight }).find(
       (option) =>
         option.payment.kind === rememberedPayment.kind &&
         (option.payment.kind !== "slot" ||

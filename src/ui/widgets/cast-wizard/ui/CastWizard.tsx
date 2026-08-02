@@ -641,7 +641,7 @@ export function CastWizard({
           <SlotStep
             draft={draft}
             character={character}
-            inCombat={economy.tracksTurn}
+            inCombat={economy.inFight}
             onChoose={(option) => actions.chooseCastOption(option)}
           />
           {/*

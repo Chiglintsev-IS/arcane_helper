@@ -5,12 +5,14 @@
  * ядре только потому, что сохраняется вместе с сессией: приложение обязано открыться там же, где
  * его закрыли. Что режим показывает и как отбирает список — дело интерфейса.
  *
+ * Боя среди значений нет: идущий бой — состояние игры, отмечаемое в журнале, а не вкладка.
+ *
  * Переименование значения стоит миграции сохранённых состояний и потому идёт отдельным шагом.
  */
 
-export const SCREEN_MODES = ["combat", "camp", "book", "journal", "sheet"] as const;
+export const SCREEN_MODES = ["play", "book", "journal", "sheet"] as const;
 
 export type ScreenMode = (typeof SCREEN_MODES)[number];
 
-/** За столом приложение чаще всего открывают в бою. */
-export const DEFAULT_SCREEN_MODE: ScreenMode = "combat";
+/** За столом приложение чаще всего открывают, чтобы сходить. */
+export const DEFAULT_SCREEN_MODE: ScreenMode = "play";

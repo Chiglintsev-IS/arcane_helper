@@ -1,17 +1,17 @@
 /**
- * «Магия крови» строкой боевого списка.
+ * «Магия крови» строкой списка «Игры».
  *
  * Обмен хитов на очки заклинаний расходует действие — то же самое действие, что и заклинание
  *. Значит и выбирается он там же, где
  * выбирают заклинание: конкуренция за действие видна глазами, а не выводится из памяти.
  *
- * Строка устроена как строка заклинания и подчиняется тем же фильтрам — отбор делает `CombatScreen`
+ * Строка устроена как строка заклинания и подчиняется тем же фильтрам — отбор делает `PlayScreen`
  * по `BLOOD_MAGIC_TRAITS`. Пока она стояла особняком, она оставалась на экране при любом фильтре, и
  * список, обещавший «вот всё, что подходит», врал.
  */
 
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
-import { turnTracked, type TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/application/useCases/turn";
 import { Fragment } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
@@ -33,7 +33,7 @@ export function BloodMagicRow({
   // Недоступность объясняется словами, как и у заклинаний: серое без причины оставляет в тупике.
   const reason = !bloodMagicAvailable(character.suppression)
     ? "особенности подавлены"
-    : turnTracked(character) && !economy.actionAvailable
+    : !economy.actionAvailable
       ? "действие"
       : null;
 

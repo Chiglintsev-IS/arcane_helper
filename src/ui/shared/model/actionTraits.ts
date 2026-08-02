@@ -8,10 +8,11 @@
 
 import type { Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
+import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
 
 export type ActionTraits = {
   castingTime: Spell["castingTime"]["type"];
-  /** Цена в ячейках: 0 — не расходует ячейку. По ней строится порядок боевого списка. */
+  /** Цена в ячейках: 0 — не расходует ячейку. По ней строится и порядок списка, и отбор по цене. */
   level: number;
   concentration: boolean;
   role: CombatRole;
@@ -25,10 +26,22 @@ export const BLOOD_MAGIC_TRAITS: ActionTraits = {
   role: "other",
 };
 
-export function traitsOf(spell: Spell): ActionTraits {
+/**
+ * Цена строки — самый дешёвый способ сотворить её прямо сейчас.
+ *
+ * Поэтому вне боя ритуал стоит ноль: ритуальный способ ячейки не требует. С началом боя он из
+ * перечня способов уходит, и то же заклинание стоит свой уровень. Повышаемое стоит наименьший
+ * уровень, а не наибольший: платить больше — выбор игрока, а не цена.
+ */
+export function priceOf(spell: Spell, inFight: boolean): number {
+  if (spell.level === CANTRIP_LEVEL) return 0;
+  return spell.ritual && !inFight ? 0 : spell.level;
+}
+
+export function traitsOf(spell: Spell, inFight: boolean): ActionTraits {
   return {
     castingTime: spell.castingTime.type,
-    level: spell.level,
+    level: priceOf(spell, inFight),
     concentration: spell.concentration,
     role: combatRoleOf(spell),
   };

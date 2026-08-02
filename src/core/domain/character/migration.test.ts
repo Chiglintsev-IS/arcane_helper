@@ -163,4 +163,34 @@ describe("приведение состояния версии 1", () => {
     expect(migrated.overrides.spellSaveDc).toBeUndefined();
     expect(migrated.overrides.saves).toEqual({});
   });
+
+  describe("режимы «Бой» и «Вне боя» слились в «Игру»", () => {
+    it("прежний режим читается как «Игра»", () => {
+      for (const screenMode of ["combat", "camp"]) {
+        const migrated = migrateCharacterState({ ...createThorne(), screenMode }) as {
+          screenMode: string;
+        };
+        expect(migrated.screenMode, screenMode).toBe("play");
+      }
+    });
+
+    it("уцелевший режим не трогается", () => {
+      const migrated = migrateCharacterState({ ...createThorne(), screenMode: "book" }) as {
+        screenMode: string;
+      };
+      expect(migrated.screenMode).toBe("book");
+    });
+
+    it("испорченное значение не подменяется молча: его отвергнет схема", () => {
+      const migrated = migrateCharacterState({ ...createThorne(), screenMode: 7 }) as {
+        screenMode: unknown;
+      };
+      expect(migrated.screenMode).toBe(7);
+    });
+
+    it("не объекту приведение не нужно", () => {
+      expect(migrateCharacterState(null)).toBeNull();
+      expect(migrateCharacterState("не состояние")).toBe("не состояние");
+    });
+  });
 });

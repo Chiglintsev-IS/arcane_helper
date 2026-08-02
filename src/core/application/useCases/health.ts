@@ -9,7 +9,7 @@ import type { CharacterState } from "@/core/domain/character/state";
 import { DomainError } from "@/core/domain/shared/errors";
 import { hitPointCost } from "@/core/domain/vitality/blood";
 import { commit, type Clock, type Session } from "@/core/application/session";
-import { turnTracked } from "./turn";
+import { inFight } from "./turn";
 
 /** Полученный урон. Огненный урон подавляет расовые особенности. */
 export function takeDamage(
@@ -71,7 +71,7 @@ export function exchangeBlood(
 
   const after: CharacterState = {
     ...withPoints.toState(),
-    ...(turnTracked(session.character)
+    ...(inFight(session)
       ? { turnTracking: { ...session.character.turnTracking, actionAvailable: false } }
       : {}),
   };

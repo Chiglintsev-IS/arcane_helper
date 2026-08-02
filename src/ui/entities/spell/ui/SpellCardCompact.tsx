@@ -34,11 +34,27 @@ import { CANTRIP_LEVEL, type Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
 
 /** Цвет рамки по роли. «Другое» цвета не получает: серое и означает «ни то, ни другое». */
-const ROLE_FRAME = {
-  offense: "border-offense/60 bg-offense/5",
-  defense: "border-defense/60 bg-defense/5",
+const ROLE_BORDER = {
+  offense: "border-offense/60",
+  defense: "border-defense/60",
   other: "border-slate-200 dark:border-slate-800",
 } as const;
+
+/** Подложка по роли — отдельно от рамки: приглушённая строка меняет её, не трогая рамку. */
+const ROLE_BACKGROUND = {
+  offense: "bg-offense/5",
+  defense: "bg-defense/5",
+  other: "",
+} as const;
+
+/**
+ * Подложка приглушённой строки.
+ *
+ * Прозрачностью строку гасить нельзя: она гасит и текст, и значки вместе с ним — контраст падает до
+ * 2.8 при требуемых 4.5, и это ловит прогон axe. Приглушение живёт в подложке, а причина, по которой
+ * строка приглушена, написана на ней словами.
+ */
+const DIMMED_BACKGROUND = "bg-slate-100 dark:bg-slate-900";
 
 /**
  * Цвет подписи роли. Тёмные варианты — не украшение: на подкрашенной подложке серый слишком светлый
@@ -69,13 +85,11 @@ export function SpellCardCompact({
   onTogglePrepared?: (() => void) | undefined;
 }) {
   // Карточка одна на все режимы: роль красит рамку и стоит в углу везде, цена называется везде.
-  // «Только ритуалом» — единственный значок, который зависит от режима: в бою ритуалом не творят.
-  const inBook = character.screenMode === "book";
   // Эффект уже висит — строка перестаёт претендовать на внимание, но из списка не уходит: повторное
   // применение бывает нужно.
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
-  const ritualOnly = inBook ? ritualOnlyBadge(spell, character.preparedSpellIds) : null;
+  const ritualOnly = ritualOnlyBadge(spell, character.preparedSpellIds);
   const resolution = resolutionBadge(spell.resolution, Sheet.of(character));
   const damage = damageLabel(spell, spell.level, character.level);
   const slotCost = slotCostLabel(spell);
@@ -86,7 +100,8 @@ export function SpellCardCompact({
    * занято, и подпись достаётся списку бесплатно.
    */
   const role = combatRoleOf(spell);
-  const frame = ROLE_FRAME[role];
+  const dimmed = unavailableReason !== null || active;
+  const frame = `${ROLE_BORDER[role]} ${dimmed ? DIMMED_BACKGROUND : ROLE_BACKGROUND[role]}`;
 
   /**
    * Нейтральные сведения строки. Длительность выделена контрастом: рядом с ней в значке стоит время
@@ -111,9 +126,7 @@ export function SpellCardCompact({
       <button
         type="button"
         onClick={onOpen}
-        className={`flex flex-1 flex-col items-start gap-1 rounded-lg border p-2 text-left ${frame} ${
-          unavailableReason === null && !active ? "" : "opacity-60"
-        }`}
+        className={`flex flex-1 flex-col items-start gap-1 rounded-lg border p-2 text-left ${frame}`}
       >
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">{spell.nameRu}</span>

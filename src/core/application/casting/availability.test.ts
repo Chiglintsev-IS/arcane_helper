@@ -31,9 +31,8 @@ const findFamiliar = spell("find-familiar");
 function check(overrides: Partial<AvailabilityInput> & { spell: Spell }) {
   const input: AvailabilityInput = {
     character: createThorne(),
-    // Бой уже начат: этот помощник проверяет прочие условия, а не сам факт начала боя —
-    // тот проверяется отдельно в «бой не начат » с явным `inFight: false`.
-    turn: { ...ALL_TURN_RESOURCES, inFight: true, tracksTurn: true },
+    // Бой уже начат: только тогда ход считается, и проверки хода вообще что-то говорят.
+    turn: { ...ALL_TURN_RESOURCES, inFight: true },
     mode: overrides.spell.level === 0 ? "cantrip" : "normal",
     payment:
       overrides.spell.level === 0
@@ -134,7 +133,6 @@ describe("checkAvailability: экономия хода (FR-030, FR-141)", () => 
         bonusActionAvailable: false,
         reactionAvailable: false,
         inFight: true,
-        tracksTurn: true,
       },
     });
     expect(reasonsOf(availability, "action_spent")).toEqual([]);
@@ -187,7 +185,7 @@ describe("checkAvailability: накладывание дольше хода (FR-
     const availability = check({
       spell: mending,
       character: createThorne(),
-      turn: { ...ALL_TURN_RESOURCES, inFight: true },
+      turn: ALL_TURN_RESOURCES,
     });
     expect(availability.warnings).toEqual([]);
     expect(availability.available).toBe(true);
@@ -524,45 +522,3 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
   });
 });
 
-describe("бой не начат (FR-034)", () => {
-  it("в режиме «Бой» до начала боя причина названа и проходима", () => {
-    const character = createThorne();
-    const availability = checkAvailability({
-      spell: shield,
-      character,
-      turn: { ...ALL_TURN_RESOURCES, inFight: false, tracksTurn: true },
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    });
-
-    expect(reasonsOf(availability, "combat_not_started")).toEqual([
-      "Бой не начат — сначала «Начать бой»",
-    ]);
-    expect(availability.available).toBe(false);
-    expect(availability.overridable).toBe(true);
-  });
-
-  it("после начала боя причины нет", () => {
-    const availability = checkAvailability({
-      spell: shield,
-      character: createThorne(),
-      turn: { ...ALL_TURN_RESOURCES, inFight: true, tracksTurn: true },
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    });
-
-    expect(reasonsOf(availability, "combat_not_started")).toEqual([]);
-  });
-
-  it("там, где ход не считается, проверка молчит: начинать нечего", () => {
-    const availability = checkAvailability({
-      spell: shield,
-      character: createThorne(),
-      turn: { ...ALL_TURN_RESOURCES, inFight: false, tracksTurn: false },
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    });
-
-    expect(reasonsOf(availability, "combat_not_started")).toEqual([]);
-  });
-});

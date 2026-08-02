@@ -10,12 +10,8 @@ import type { JournalEntry, TurnResource } from "@/core/domain/journal/entry";
 export type TurnEconomy = {
   /** Номер раунда — число отметок начала хода плюс текущий. */
   round: number;
-  /** Начинался ли свой ход хоть раз: до этого учёт вести не от чего. */
-  started: boolean;
-  /** Отмечен ли бой начатым. */
+  /** Отмечен ли бой начатым. Он же признак того, что ведётся счёт ходов. */
   inFight: boolean;
-  /** Ведётся ли счёт ходов вообще. */
-  tracksTurn: boolean;
   actionAvailable: boolean;
   bonusActionAvailable: boolean;
   reactionAvailable: boolean;
@@ -28,13 +24,10 @@ const ALL_AVAILABLE = {
 } as const;
 
 export class Encounter {
-  private constructor(
-    private readonly entries: readonly JournalEntry[],
-    private readonly tracksTurn: boolean,
-  ) {}
+  private constructor(private readonly entries: readonly JournalEntry[]) {}
 
-  static fromJournal(entries: readonly JournalEntry[], tracksTurn: boolean): Encounter {
-    return new Encounter(entries, tracksTurn);
+  static fromJournal(entries: readonly JournalEntry[]): Encounter {
+    return new Encounter(entries);
   }
 
   /**
@@ -54,10 +47,11 @@ export class Encounter {
     // Начало боя — это и первый ход: «Мой ход» после него открывает второй раунд, а не первый.
     const turns = sinceBoundary.filter((entry) => entry.kind === "turn_started").length;
     const round = Math.max(1, turns + (inFight ? 1 : 0));
-    const started = inFight || lastTurnIndex !== -1;
 
-    if (!this.tracksTurn) {
-      return { round, started, inFight, tracksTurn: false, ...ALL_AVAILABLE };
+    // Учёт хода включает отметка начала боя и ничто другое: вне боя ходов нет, и правило отвечает
+    // «всё доступно» независимо от записей.
+    if (!inFight) {
+      return { round, inFight, ...ALL_AVAILABLE };
     }
 
     const spent = new Set<TurnResource>();
@@ -68,9 +62,7 @@ export class Encounter {
     const reactionAvailable = !spent.has("reaction");
     return {
       round,
-      started,
       inFight,
-      tracksTurn: true,
       actionAvailable: !spent.has("action"),
       bonusActionAvailable: !spent.has("bonus_action"),
       reactionAvailable,

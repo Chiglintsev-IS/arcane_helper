@@ -2,13 +2,13 @@
 
 "use client";
 
-import { turnTracked, type TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/application/useCases/turn";
 import { useState } from "react";
 
 import { WizardShell } from "@/ui/shared/ui/WizardShell";
 import type { CharacterState } from "@/core/domain/character/state";
 import { bloodExchangeAnnouncement, bloodExchangeInstructions } from "@/core/application/casting/announcement";
-import { ACTION_SPENT_MESSAGES, COMBAT_NOT_STARTED_MESSAGE } from "@/core/application/casting/availability";
+import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 import {
   ascensionTierRate,
   bloodMagicAvailable,
@@ -53,13 +53,10 @@ export function exchangeWarnings(character: CharacterState, economy: TurnEconomy
         : "Кровавое колдовство не действует под прямым солнечным светом",
     );
   }
-  if (turnTracked(character) && !economy.actionAvailable) {
+  // Вне боя действие не тратится вовсе, поэтому отдельной проверки на бой здесь нет: экономия
+  // хода сама отвечает «доступно», пока схватка не начата.
+  if (!economy.actionAvailable) {
     warnings.push(ACTION_SPENT_MESSAGES.action);
-  }
-  // Та же причина и та же формулировка, что у заклинания: обмен тратит то же действие, и
-  // два разных текста об одном и том же читались бы как два разных правила.
-  if (turnTracked(character) && !economy.inFight) {
-    warnings.push(COMBAT_NOT_STARTED_MESSAGE);
   }
 
   const rate = ascensionTierRate(character.level);

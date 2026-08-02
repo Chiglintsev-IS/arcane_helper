@@ -1,5 +1,5 @@
 /**
- * Экран боя — единственный маршрут веха 1.
+ * Экран игры — единственный маршрут вехи 1.
  *
  * Страница клиентская целиком: серверных возможностей Next в проекте нет намеренно, а
  * состояние живёт в IndexedDB, до которой сервер не дотянется. Сторы создаются один раз на монтирование
@@ -10,15 +10,15 @@
 
 import { useState } from "react";
 
-import { CombatScreen } from "@/ui/screens/combat/ui/CombatScreen";
+import { PlayScreen } from "@/ui/screens/play/ui/PlayScreen";
 import { createBrowserStores, StoreProvider } from "@/ui/app/providers/stores";
 
-export default function CombatPage() {
+export default function PlayPage() {
   const [stores] = useState(createBrowserStores);
 
   return (
     <StoreProvider stores={stores}>
-      <CombatScreen />
+      <PlayScreen />
     </StoreProvider>
   );
 }

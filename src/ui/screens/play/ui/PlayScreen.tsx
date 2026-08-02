@@ -21,14 +21,13 @@ import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import type { ScreenMode } from "@/core/shared/screenMode";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
-import { NO_FILTERS, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
+import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import { useMemo, useState } from "react";
 
 import { ArcaneRecoverySheet } from "@/ui/features/arcane-recovery/ui/ArcaneRecoverySheet";
 import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
-import { CampActions } from "@/ui/features/rest/ui/CampActions";
-import { MaterialsList } from "@/ui/features/materials/ui/MaterialsList";
+import { CampSheet } from "@/ui/widgets/camp/ui/CampSheet";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { DataSheet } from "@/ui/features/data-exchange/ui/DataSheet";
@@ -41,7 +40,7 @@ import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
 import { ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
 import { ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
-import { SpellFilters, type AvailableFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
+import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
 import type { Spell } from "@/core/domain/catalog/spell";
@@ -78,30 +77,11 @@ import { Sheet } from "@/core/domain/sheet/sheet";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { ascensionTierRate } from "@/core/domain/vitality/blood";
-import { rolesPresent } from "@/core/domain/catalog/combatRole";
 import { exportFileName, exportSnapshot, parseImport } from "@/core/application/dataExchange";
 import { bestCastPlan } from "@/core/application/casting/castOptions";
 import { toCastRequest, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { undoLast } from "@/core/application/session";
-
-/**
- * Что встречается в переданном списке.
- *
- * Переключатели и значки строятся отсюда, а не из списка всех мыслимых значений: элемент, за которым
- * нет ни одного заклинания, обещает возможность, которой нет. Считается от списка
- * режима, а не от всей книги, — иначе в бою предлагался бы фильтр «Ритуал», за которым в этом
- * режиме ничего не стоит.
- */
-function availableFilters(spells: readonly Spell[]): AvailableFilters {
-  return {
-    castingTimes: new Set(spells.map((spell) => spell.castingTime.type)),
-    levels: [...new Set(spells.map((spell) => spell.level))].sort((a, b) => a - b),
-    roles: rolesPresent(spells),
-    concentration: spells.some((spell) => spell.concentration),
-    ritual: spells.some((spell) => spell.ritual),
-  };
-}
 
 /**
  * Первая причина, по которой заклинание сейчас не применить, — для строки списка.
@@ -122,6 +102,10 @@ function firstReason(
 /**
  * Что показывает каждый режим. Таблица, а не условия по месту: состав экрана — одно решение, и
  * читать его надо целиком, иначе один режим однажды снова покажет чужое.
+ *
+ * Отметки схватки стоят в «Игре» всегда: начало и конец боя — её собственные операции. Что внутри
+ * «Игры» убирает сам бой — отдых и «Новый ход», — таблице не принадлежит: это состояние игры, а не
+ * режима, и решается оно там, где стоит блок.
  */
 const SCREEN_PARTS: Record<
   ScreenMode,
@@ -144,9 +128,7 @@ const SCREEN_PARTS: Record<
   }
 > = {
   // prettier-ignore
-  combat: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, camp: false, journal: false, sheet: false },
-  // prettier-ignore
-  camp: { resources: true, effects: true, spellList: false, encounter: false, reactions: true, preparation: false, camp: true, journal: false, sheet: false },
+  play: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, camp: true, journal: false, sheet: false },
   // prettier-ignore
   book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, camp: false, journal: false, sheet: false },
   // prettier-ignore
@@ -155,7 +137,7 @@ const SCREEN_PARTS: Record<
   sheet: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, camp: false, journal: false, sheet: true },
 };
 
-export function CombatScreen() {
+export function PlayScreen() {
   const { clock, draft: draftStore, session: sessionStore } = useStores();
   const session = useSession((state) => state.session);
   const status = useSession((state) => state.status);
@@ -170,6 +152,7 @@ export function CombatScreen() {
   const [bloodOpen, setBloodOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [damageOpen, setDamageOpen] = useState(false);
+  const [campOpen, setCampOpen] = useState(false);
   const [longRestOpen, setLongRestOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
@@ -218,11 +201,12 @@ export function CombatScreen() {
   const apply = sessionStore.getState().apply;
   const mode = character.screenMode;
   const parts = SCREEN_PARTS[mode];
+  const { inFight } = economy;
   // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список.
   // Карточка при этом открывается из всей книги — режим не должен закрывать уже открытое.
-  const inMode = spellsForScreen(spells, character);
+  const inMode = spellsForScreen(spells, character, inFight);
   const shown = filterSpells(inMode, filters, context);
-  const available = availableFilters(inMode);
+  const dividing = dividingCategories(inMode, inFight);
   const bloodShown = parts.spellList && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
   const limit = Sheet.of(character).preparationLimit;
   const derivedNumbers = Sheet.of(character).derived();
@@ -250,7 +234,7 @@ export function CombatScreen() {
   ));
   if (bloodShown) {
     // Один список, а не два: ячейку обмен не тратит, значит по цене он стоит там же, где заговоры.
-    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, mode), 0, (
+    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, mode, inFight), 0, (
       <BloodMagicRow
         key="blood-magic"
         character={character}
@@ -290,10 +274,25 @@ export function CombatScreen() {
    */
   const changeMode = (next: ScreenMode): void => {
     // Наборы фильтров у режимов разные, и выбранное в одном становится в другом невидимым:
-    // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым это
+    // «Ритуал» из «Книги» молча сузил бы боевой список до пустого, а переключателя, которым это
     // снять, на экране уже нет.
     setFilters(NO_FILTERS);
     apply((current) => setScreenMode(current, next));
+  };
+
+  /**
+   * Начало и конец боя пересобирают список не меньше, чем смена режима, и так же снимают фильтры:
+   * «Ритуал» после начала боя не нашёл бы ни строки, а переключателя, которым его снять, на экране
+   * к этому времени нет.
+   */
+  const startFight = (): void => {
+    if (apply((current) => startCombat(current, clock)) === null) setFilters(NO_FILTERS);
+  };
+
+  const finishFight = (): void => {
+    if (apply((current) => endCombat(current, clock)) !== null) return;
+    setFilters(NO_FILTERS);
+    setFightOverOpen(false);
   };
 
   /** Подтверждение применения: одна транзакция, одна запись журнала. */
@@ -314,7 +313,7 @@ export function CombatScreen() {
           <ResourceHeader
             character={character}
             economy={economy}
-            bookCastingTimes={available.castingTimes}
+            bookCastingTimes={dividing.castingTimes}
             onOpenHitPoints={() => setDamageOpen(true)}
             onEditResources={() => setResourcesOpen(true)}
           />
@@ -359,31 +358,29 @@ export function CombatScreen() {
              * сходил, закончил. Без явного начала приложение не знает, где кончился прежний бой, и
              * следующий открывался бы шестым раундом; без явного конца счёт раундов не обнулить.
              *
-             * «Новый ход» гаснет, а не исчезает: пропавшая кнопка не отвечает на вопрос «почему
-             * нельзя», а ответ здесь — «бой ещё не начат», и он же написан на соседней кнопке.
+             * «Новый ход» появляется вместе с боем и уходит вместе с ним: вне боя ходов нет, и
+             * кнопка отвечала бы на вопрос, которого не задают.
              */}
             {parts.encounter ? (
               <>
                 <button
                   type="button"
                   onClick={() =>
-                    economy.inFight
-                      ? setFightOverOpen(true)
-                      : apply((current) => startCombat(current, clock))
+                    inFight ? setFightOverOpen(true) : startFight()
                   }
                   className="min-h-11 grow whitespace-nowrap rounded-xl bg-action-strong px-1 text-sm font-semibold leading-tight text-white"
                 >
-                  {economy.inFight ? "Окончить бой" : "Начать бой"}
+                  {inFight ? "Окончить бой" : "Начать бой"}
                 </button>
-                <button
-                  type="button"
-                  disabled={!economy.inFight}
-                  onClick={() => apply((current) => beginTurn(current, clock))}
-                  aria-label={economy.inFight ? undefined : "Новый ход — бой не начат"}
-                  className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold text-action-strong disabled:opacity-50 dark:text-action"
-                >
-                  Новый ход
-                </button>
+                {inFight ? (
+                  <button
+                    type="button"
+                    onClick={() => apply((current) => beginTurn(current, clock))}
+                    className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold text-action-strong dark:text-action"
+                  >
+                    Новый ход
+                  </button>
+                ) : null}
               </>
             ) : null}
             {/*
@@ -401,29 +398,21 @@ export function CombatScreen() {
                 Реакции
               </button>
             ) : null}
+            {/*
+             * Привал — кнопка, а не блок: отдых, восстановление и покупки вместе со списком и
+             * фильтрами не помещаются на 320 × 568, а первая карточка списка обязана быть видна
+             * целиком. Открывают его намеренно и ненадолго — как «Реакции».
+             */}
+            {parts.camp && !inFight ? (
+              <button
+                type="button"
+                onClick={() => setCampOpen(true)}
+                className="min-h-11 grow whitespace-nowrap rounded-xl border border-slate-300 px-1 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300"
+              >
+                Привал
+              </button>
+            ) : null}
           </div>
-        ) : null}
-
-        {/*
-         * Операции привала и список покупок — только на привале. В книге их нет: там читают и
-         * готовятся, а отдыхают и докупают между сессиями. Кнопка отдыха посреди чтения предлагала
-         * бы восемь часов случайным нажатием.
-         */}
-        {parts.camp ? (
-          <>
-            <CampActions
-              character={character}
-              onShortRest={() => apply((current) => shortRest(current, clock))}
-              onLongRest={() => setLongRestOpen(true)}
-              onArcaneRecovery={() => setRecoveryOpen(true)}
-              onRecoverMaximum={() => apply((current) => recoverHitPointMaximum(current, clock))}
-            />
-            <MaterialsList
-              spells={spells}
-              character={character}
-              onToggle={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
-            />
-          </>
         ) : null}
 
         {error === null ? null : (
@@ -449,10 +438,9 @@ export function CombatScreen() {
         <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
           <SpellFilters
             filters={filters}
-            available={available}
+            dividing={dividing}
             mode={mode}
             onChange={setFilters}
-            onReset={() => setFilters(NO_FILTERS)}
           />
         </div>
       ) : null}
@@ -486,18 +474,13 @@ export function CombatScreen() {
               </ul>
             ) : null}
 
-            {/* Пусто — только когда не подошло вообще ничего, включая «Магию крови». */}
+            {/*
+             * Пусто — только когда не подошло вообще ничего, включая «Магию крови». Кнопки сброса
+             * рядом нет: полоса переключателей стоит на экране выше и не прокручивается, снять
+             * выбранное — одно касание там же, где его поставили.
+             */}
             {rows.length === 0 ? (
-              <div className="flex flex-col items-start gap-2 text-sm">
-                <p>Под выбранные фильтры не подходит ни одно заклинание.</p>
-                <button
-                  type="button"
-                  onClick={() => setFilters(NO_FILTERS)}
-                  className="min-h-11 rounded-lg border border-slate-200 px-3 dark:border-slate-800"
-                >
-                  Сбросить фильтры
-                </button>
-              </div>
+              <p className="text-sm">Под выбранные фильтры не подходит ни одно заклинание.</p>
             ) : null}
           </>
         ) : null}
@@ -592,9 +575,7 @@ export function CombatScreen() {
           }
           confirmLabel="Да, бой закончен"
           cancelLabel="Нет, продолжается"
-          onConfirm={() => {
-            if (apply((current) => endCombat(current, clock)) === null) setFightOverOpen(false);
-          }}
+          onConfirm={finishFight}
           onCancel={() => setFightOverOpen(false)}
         />
       ) : null}
@@ -635,6 +616,36 @@ export function CombatScreen() {
           onAdjustRunes={(delta) => apply((current) => adjustRunes(current, delta, clock))}
           onSunlight={(under) => apply((current) => setSunlight(current, under, clock))}
           onClose={() => setResourcesOpen(false)}
+        />
+      ) : null}
+
+      {/*
+       * Привал закрывается вместе с начатой операцией: её итог — ячейки, хиты и руны — виден в
+       * шапке, которую шторка закрывает собой. Список покупок закрытия не требует: он о том, что
+       * лежит в сумке, а не о числах шапки.
+       */}
+      {campOpen ? (
+        <CampSheet
+          character={character}
+          spells={spells}
+          onShortRest={() => {
+            if (apply((current) => shortRest(current, clock)) === null) setCampOpen(false);
+          }}
+          onLongRest={() => {
+            setCampOpen(false);
+            setLongRestOpen(true);
+          }}
+          onArcaneRecovery={() => {
+            setCampOpen(false);
+            setRecoveryOpen(true);
+          }}
+          onRecoverMaximum={() => {
+            if (apply((current) => recoverHitPointMaximum(current, clock)) === null) {
+              setCampOpen(false);
+            }
+          }}
+          onToggleMaterial={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
+          onClose={() => setCampOpen(false)}
         />
       ) : null}
 

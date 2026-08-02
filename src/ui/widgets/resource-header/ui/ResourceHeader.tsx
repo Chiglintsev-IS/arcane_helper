@@ -1,13 +1,14 @@
 /**
  * Шапка ресурсов: чем платить и сколько осталось.
  *
- * Стоит там, где тратят и восстанавливают, — в «Бою» и «Вне боя». Не прокручивается и потому обязана
- * быть плотной: на iPhone SE ключевая механика должна быть видна целиком.
+ * Стоит там, где тратят и восстанавливают, — в «Игре». Не прокручивается и потому обязана быть
+ * плотной: на iPhone SE ключевая механика должна быть видна целиком. Имени, класса и уровня в ней
+ * нет: за столом их не спрашивают, а место они занимают постоянно — их дом «Лист».
  *
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
 
-import { turnTracked, type TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/application/useCases/turn";
 import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
@@ -150,19 +151,10 @@ export function ResourceHeader({
   // Игроку важен разрыв с базой листа, а не то, чем он вызван: цифра одна.
   const maximumReduction = vitality.bloodReduction + vitality.masterReduction;
   const armorClass = effectiveArmorClass(character);
-  const inFight = turnTracked(character);
+  const { inFight } = economy;
 
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
-      <header className="flex items-baseline justify-between gap-2">
-        <h1 className="text-lg font-semibold leading-tight">{character.name}</h1>
-        {/* Номер раунда — только там, где раунды идут: вне боя число застыло бы. */}
-        <p className="text-xs text-slate-600 dark:text-slate-400">
-          {character.className}, {character.level} уровень
-          {inFight ? ` · раунд ${economy.round}` : ""}
-        </p>
-      </header>
-
       <dl className="grid grid-cols-4 gap-1">
         <Stat label="КС закл." value={`${totals.spellSaveDc}`} />
         <Stat label="Атака" value={signed(totals.spellAttackModifier)} />
@@ -188,33 +180,24 @@ export function ResourceHeader({
 
       <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
         {/*
-         * Кости хитов — вне боя: тратятся они коротким отдыхом, а в бою о них нечего решать. Значок
-         * стоит первым, потому что вне боя это главный вопрос — чем лечиться.
+         * Постоянная часть ряда идёт первой и одинаково в бою и вне его: кости хитов, пассивное
+         * восприятие, руны, очки. Значок, исчезающий с началом боя, сдвинул бы соседей, и глаз
+         * искал бы число заново там, где секунду назад стояло другое.
          */}
-        {inFight ? null : (
-          <li>
-            <Badge tone="muted" icon="✚">
-              Кости хитов {hitDiceLabel(character.hitDice)}
-            </Badge>
-          </li>
-        )}
+        <li aria-label={`Кости хитов ${hitDiceLabel(character.hitDice)}`}>
+          <Badge tone="muted" icon="✚">
+            Кости {hitDiceLabel(character.hitDice)}
+          </Badge>
+        </li>
         {/*
-         * Инициатива — в бою, пассивное восприятие — вне его: первое бросают в начале схватки,
-         * второе спрашивают в разведке. Каждое число стоит там, где его называют.
+         * Подпись короткая, доступное имя полное: на 320 пикселях «Пассивное восприятие» забирает
+         * целый ряд значков, а ряд здесь стоит четверти карточки списка.
          */}
-        {inFight ? (
-          <li>
-            <Badge tone="muted" icon="◔">
-              Инициатива {signed(totals.initiative)}
-            </Badge>
-          </li>
-        ) : (
-          <li>
-            <Badge tone="muted" icon="◉">
-              Пассивное восприятие {totals.passivePerception}
-            </Badge>
-          </li>
-        )}
+        <li aria-label={`Пассивное восприятие ${totals.passivePerception}`}>
+          <Badge tone="muted" icon="◉">
+            Восприятие {totals.passivePerception}
+          </Badge>
+        </li>
         {/*
          * Значок рун — не кнопка: правило 44 пикселей на зону нажатия сделало бы весь ряд значков
          * вдвое выше. Правка рун открывается плиткой ячейки — там же, где правятся ячейки.
@@ -229,6 +212,24 @@ export function ResourceHeader({
             Очки {character.spellPoints.remaining}
           </Badge>
         </li>
+        {/*
+         * Приходящее с боем встаёт за постоянной частью, ничего не сдвигая: инициатива, затем
+         * номер раунда. Вне боя раунда нет вовсе — число застыло бы на последнем.
+         */}
+        {inFight ? (
+          <>
+            <li>
+              <Badge tone="muted" icon="◔">
+                Инициатива {signed(totals.initiative)}
+              </Badge>
+            </li>
+            <li>
+              <Badge tone="action" icon="◷">
+                Раунд {economy.round}
+              </Badge>
+            </li>
+          </>
+        ) : null}
         {maximumReduction > 0 ? (
           <li>
             <Badge tone="reaction" icon="✖">

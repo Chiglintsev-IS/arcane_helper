@@ -26,52 +26,31 @@ export function castableWithinTurn(spell: Spell): boolean {
 }
 
 /**
- * Место заклинания в режиме.
+ * Может ли персонаж сотворить заклинание в этой ситуации.
  *
- * Вне боя списка нет вовсе: спешить некуда, и отбор «что успеет за ход» перестаёт что-либо значить —
- * там отдыхают, а за заклинанием идут в «Книгу». Ритуальное заклинание из-за этого не пропадает: в
- * бою оно доступно за ячейку, в «Книге» — ритуалом за лишние десять минут.
+ * Вне боя это заговоры, подготовленные и ритуальные записи книги: ритуал творится из книги без
+ * подготовки. С началом боя ритуальный способ исчезает, и неподготовленный ритуал уходит из списка
+ * вовсе — ячейкой его не сотворить; остаётся только то, что укладывается в ход.
  */
-export function belongsToMode(spell: Spell, mode: ScreenMode): boolean {
-  switch (mode) {
-    case "combat":
-      return castableWithinTurn(spell);
-    case "camp":
-    case "journal":
-    case "sheet":
-      return false;
-    default:
-      return true;
-  }
-}
-
-/** Заклинания режима в исходном порядке: сортировка — дело списка, не отбора. */
-export function spellsForMode(spells: readonly Spell[], mode: ScreenMode): Spell[] {
-  return spells.filter((spell) => belongsToMode(spell, mode));
-}
-
-/**
- * Заклинания, которые в бою вообще можно сотворить: заговоры и подготовленные.
- *
- * Неподготовленное — не выбор, а лишняя строка в списке, который просматривают под чужой ход.
- */
-export function preparedForCombat(spells: readonly Spell[], character: CharacterState): Spell[] {
-  const prepared = new Set(character.preparedSpellIds);
-  return spells.filter((spell) => spell.level === CANTRIP_LEVEL || prepared.has(spell.id));
+export function belongsToPlayList(spell: Spell, character: CharacterState, inFight: boolean): boolean {
+  const ready =
+    spell.level === CANTRIP_LEVEL || character.preparedSpellIds.includes(spell.id);
+  if (inFight) return ready && castableWithinTurn(spell);
+  return ready || spell.ritual;
 }
 
 /** Порядок ролей внутри одной цены: сначала чем бить, потом чем закрыться, потом всё прочее. */
 const ROLE_ORDER: Record<CombatRole, number> = { offense: 0, defense: 1, other: 2 };
 
 /**
- * Место строки в боевом порядке: реакции, затем цена, затем роль.
+ * Место строки в списке: сначала цена, потом роль.
  *
- * Реакции наверху потому, что триггер приходит в чужой ход и в любой момент, а собственное действие
- * случается раз за круг. Ключ считается по признакам строки, а не по заклинанию: в списке стоит и
- * «Магия крови», и её место определяется теми же тремя вопросами.
+ * Реакции наверх не поднимаются: их ищут переключателем и кнопкой «Реакции», которая стоит вне
+ * списка и видна независимо от фильтров, — а третий ключ стоил списку понятности, потому что в
+ * половине случаев ключ ничего не упорядочивал.
  */
-export function combatOrderKey(traits: ActionTraits): [number, number, number] {
-  return [traits.castingTime === "reaction" ? 0 : 1, traits.level, ROLE_ORDER[traits.role]];
+export function orderKey(traits: ActionTraits): [number, number] {
+  return [traits.level, ROLE_ORDER[traits.role]];
 }
 
 /**
@@ -79,37 +58,58 @@ export function combatOrderKey(traits: ActionTraits): [number, number, number] {
  * элемент, который у кортежа фиксированной длины отсутствовать не может, и завела бы ветку,
  * недостижимую для теста.
  */
-export function compareCombatTraits(left: ActionTraits, right: ActionTraits): number {
-  const [leftGroup, leftLevel, leftRole] = combatOrderKey(left);
-  const [rightGroup, rightLevel, rightRole] = combatOrderKey(right);
-  return leftGroup - rightGroup || leftLevel - rightLevel || leftRole - rightRole;
+export function compareTraits(left: ActionTraits, right: ActionTraits): number {
+  const [leftPrice, leftRole] = orderKey(left);
+  const [rightPrice, rightRole] = orderKey(right);
+  return leftPrice - rightPrice || leftRole - rightRole;
 }
 
-/** Боевой порядок заклинаний. Внутри равных ключей порядок исходный: он задан книгой. */
-export function orderForCombat(spells: readonly Spell[]): Spell[] {
-  return [...spells].sort((left, right) => compareCombatTraits(traitsOf(left), traitsOf(right)));
+/** Порядок списка «Игры». Внутри равных ключей порядок исходный: он задан книгой. */
+export function orderForPlay(spells: readonly Spell[], inFight: boolean): Spell[] {
+  return [...spells].sort((left, right) =>
+    compareTraits(traitsOf(left, inFight), traitsOf(right, inFight)),
+  );
 }
 
 /**
- * Куда встаёт строка, заклинанием не являющаяся: боевой список упорядочен ключом срочности, книга —
- * уровнем, и одна проверка на оба списка поставила бы её не туда.
+ * Куда встаёт строка, заклинанием не являющаяся: «Игра» упорядочена ценой, книга — уровнем, и одна
+ * проверка на оба списка поставила бы её не туда.
  */
 export function positionInList(
   spells: readonly Spell[],
   traits: ActionTraits,
   mode: ScreenMode,
+  inFight: boolean,
 ): number {
   const standsAfter =
-    mode === "combat"
-      ? (spell: Spell) => compareCombatTraits(traitsOf(spell), traits) > 0
-      : (spell: Spell) => traitsOf(spell).level > traits.level;
+    mode === "play"
+      ? (spell: Spell) => compareTraits(traitsOf(spell, inFight), traits) > 0
+      : (spell: Spell) => spell.level > traits.level;
   const index = spells.findIndex(standsAfter);
   return index === -1 ? spells.length : index;
 }
 
-/** Что показывать на экране: отбор по режиму, состав по подготовке, порядок по срочности. */
-export function spellsForScreen(spells: readonly Spell[], character: CharacterState): Spell[] {
-  const inMode = spellsForMode(spells, character.screenMode);
-  if (character.screenMode !== "combat") return inMode;
-  return orderForCombat(preparedForCombat(inMode, character));
+/**
+ * Что показывать на экране.
+ *
+ * «Книга» показывает весь состав в исходном порядке: там смотрят состав, а не то, чем сходить.
+ * «Игра» отбирает по тому, что персонаж может сотворить сейчас, и упорядочивает ценой. Там, где
+ * списка нет вовсе, он пуст.
+ */
+export function spellsForScreen(
+  spells: readonly Spell[],
+  character: CharacterState,
+  inFight: boolean,
+): Spell[] {
+  switch (character.screenMode) {
+    case "book":
+      return [...spells];
+    case "play":
+      return orderForPlay(
+        spells.filter((spell) => belongsToPlayList(spell, character, inFight)),
+        inFight,
+      );
+    default:
+      return [];
+  }
 }

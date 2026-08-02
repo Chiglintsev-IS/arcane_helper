@@ -13,7 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { exchangeWarnings } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
-import { CombatScreen } from "@/ui/screens/combat/ui/CombatScreen";
+import { PlayScreen } from "@/ui/screens/play/ui/PlayScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
@@ -21,9 +21,7 @@ import { renderWithStores } from "@/ui/app/testing/stores";
 /** Экономия хода «всё цело»: тесты обмена интересуются не ходом, а хитами и очками. */
 const ALL_AVAILABLE_ECONOMY: TurnEconomy = {
   round: 1,
-  started: true,
   inFight: true,
-  tracksTurn: true,
   actionAvailable: true,
   bonusActionAvailable: true,
   reactionAvailable: true,
@@ -31,7 +29,7 @@ const ALL_AVAILABLE_ECONOMY: TurnEconomy = {
 
 async function openWizard(character: CharacterState = createThorne()) {
   const user = userEvent.setup();
-  const rendered = await renderWithStores(<CombatScreen />, character);
+  const rendered = await renderWithStores(<PlayScreen />, character);
   await user.click(screen.getByRole("button", { name: /Магия крови/ }));
   return { user, ...rendered };
 }
@@ -52,12 +50,8 @@ describe("инвариант FR-022 для обмена (FR-177)", () => {
     const { user, stores } = await openWizard();
 
     // Бой не начат нарочно: начатый бой означал бы ещё и первый ход, а вместе с ним —
-    // возможную регенерацию, которая исказила бы стартовые хиты этого теста. Причину проходим
-    // «Применить всё равно», не трогая состояние боя.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
+    // возможную регенерацию, которая исказила бы стартовые хиты этого теста. Обмену это не
+    // мешает: вне боя действие не тратится, и мастер не предупреждает ни о чём.
     await user.click(screen.getByRole("button", { name: "Больше очков" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
@@ -91,10 +85,6 @@ describe("подтверждение обмена (FR-170, FR-172)", () => {
     const { user, stores } = await openWizard();
 
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
@@ -116,10 +106,6 @@ describe("подтверждение обмена (FR-170, FR-172)", () => {
     const { user } = await openWizard();
 
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
@@ -131,10 +117,6 @@ describe("выбор объёма (FR-178)", () => {
   it("называет цену в хитах и остаток после обмена", async () => {
     const { user } = await openWizard();
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     const amount = screen.getByLabelText("Сколько очков создать");
 
     expect(within(amount).getByText("6 хитов")).toBeDefined();
@@ -149,10 +131,6 @@ describe("выбор объёма (FR-178)", () => {
     const { user, stores } = await openWizard();
 
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     // 4 очка — это два заклинания первого уровня, чего четыре кнопки панели не позволяли.
     await user.click(screen.getByRole("button", { name: "Больше очков" }));
     await user.click(screen.getByRole("button", { name: "Больше очков" }));
@@ -169,10 +147,6 @@ describe("выбор объёма (FR-178)", () => {
     saved.spellPoints = { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" };
     const { user } = await openWizard(saved);
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
 
     // 3 своих плюс 2 созданных — это пятое очко, то есть уже третий уровень.
     const amount = screen.getByLabelText("Сколько очков создать");
@@ -186,11 +160,7 @@ describe("выбор объёма (FR-178)", () => {
 
     // Бой не начат нарочно: у этого персонажа хиты уже занижены для теста, и «Начать
     // бой» означал бы ещё и первый ход — а с ним, возможно, регенерацию, которая испортила бы
-    // подготовленное число. Причину проходим «Применить всё равно».
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
+    // подготовленное число.
     await user.click(screen.getByRole("button", { name: "Больше очков" }));
     const more = screen.getByRole("button", { name: "Больше очков" });
     expect(more.hasAttribute("disabled")).toBe(true);
@@ -205,10 +175,6 @@ describe("выбор объёма (FR-178)", () => {
     const { user } = await openWizard();
 
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Меньше очков" }));
     expect(
       screen
@@ -232,10 +198,6 @@ describe("предупреждения (FR-031, FR-175, FR-176)", () => {
 
     // Бой не начат нарочно: хиты занижены для этого теста, и «Начать бой» рисковал бы
     // их регенерацией — см. комментарий в «потолок счётчика» выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     expect(screen.getByText(/Хиты уйдут в ноль/)).toBeDefined();
 
@@ -281,10 +243,6 @@ describe("итоговый экран (FR-032, FR-174)", () => {
     const { user } = await openWizard();
 
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
     expect(
@@ -299,27 +257,15 @@ describe("итоговый экран (FR-032, FR-174)", () => {
     const { user } = await openWizard();
 
     // Бой не начат нарочно — см. комментарий в инварианте выше.
-    await user.click(
-      screen.getByRole("button", { name: "Применить всё равно" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     expect(screen.queryByLabelText("Отыгрыш")).toBeNull();
   });
 });
 
-describe("обмен до начала боя (FR-034)", () => {
-  it("называет ту же причину, что и заклинание: обмен тратит то же действие", () => {
+describe("обмен вне боя (FR-143)", () => {
+  it("вне боя действие не тратится, и причины нет", () => {
+    // Экономия хода вне боя отвечает «всё доступно», и отдельной проверки на бой мастеру не нужно.
     const economy = { ...ALL_AVAILABLE_ECONOMY, inFight: false };
-    expect(exchangeWarnings(createThorne(), economy)).toContain(
-      "Бой не начат — сначала «Начать бой»",
-    );
-  });
-
-  it("после начала боя причины нет", () => {
-    const economy = { ...ALL_AVAILABLE_ECONOMY, inFight: true };
-    expect(exchangeWarnings(createThorne(), economy)).not.toContain(
-      "Бой не начат — сначала «Начать бой»",
-    );
+    expect(exchangeWarnings(createThorne(), economy)).toEqual([]);
   });
 });

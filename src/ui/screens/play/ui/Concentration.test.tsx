@@ -11,7 +11,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { CombatScreen } from "@/ui/screens/combat/ui/CombatScreen";
+import { PlayScreen } from "@/ui/screens/play/ui/PlayScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
@@ -39,13 +39,13 @@ function concentrating(): CharacterState {
 describe("карточка концентрации в шапке (FR-082, FR-084)", () => {
   it("без концентрации карточки нет вовсе", async () => {
     // Ряд нескролящейся шапки не тратится на сообщение об отсутствии.
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
 
     expect(screen.queryByLabelText("Концентрация")).toBeNull();
   });
 
   it("показывает название, ячейку, механику и чем сорвётся", async () => {
-    await renderWithStores(<CombatScreen />, concentrating());
+    await renderWithStores(<PlayScreen />, concentrating());
 
     const block = screen.getByLabelText("Концентрация");
     expect(within(block).getByText("Обнаружение магии")).toBeDefined();
@@ -55,7 +55,7 @@ describe("карточка концентрации в шапке (FR-082, FR-08
   });
 
   it("карточка нажимаема и ведёт к подробностям", async () => {
-    await renderWithStores(<CombatScreen />, concentrating());
+    await renderWithStores(<PlayScreen />, concentrating());
 
     const card = screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ });
     await userEvent.click(card);
@@ -66,7 +66,7 @@ describe("карточка концентрации в шапке (FR-082, FR-08
 
 describe("лист концентрации (FR-084, FR-091)", () => {
   async function openPanel(): Promise<void> {
-    await renderWithStores(<CombatScreen />, concentrating());
+    await renderWithStores(<PlayScreen />, concentrating());
     await userEvent.click(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ }));
   }
 
@@ -110,7 +110,7 @@ describe("лист концентрации (FR-084, FR-091)", () => {
 
 describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   it("списывает хиты и без активной концентрации", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "12");
@@ -121,7 +121,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   });
 
   it("отмечает подавление особенностей огнём", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "5");
@@ -132,7 +132,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   });
 
   it("при активной концентрации предлагает проверку с готовой КС", async () => {
-    await renderWithStores(<CombatScreen />, concentrating());
+    await renderWithStores(<PlayScreen />, concentrating());
 
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "24");
@@ -144,7 +144,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
   });
 
   it("не принимает ноль и не пишет пустую запись", async () => {
-    await renderWithStores(<CombatScreen />);
+    await renderWithStores(<PlayScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.click(screen.getByRole("button", { name: "Записать" }));
@@ -154,8 +154,12 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
 });
 
 describe("проверка концентрации (FR-083, FR-154)", () => {
-  async function damage(amount: string, character: CharacterState = concentrating()): Promise<void> {
-    await renderWithStores(<CombatScreen />, character);
+  async function damage(
+    amount: string,
+    character: CharacterState = concentrating(),
+    situation: { inFight?: boolean } = {},
+  ): Promise<void> {
+    await renderWithStores(<PlayScreen />, character, situation);
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), amount);
     await userEvent.click(screen.getByRole("button", { name: "Записать" }));
@@ -185,16 +189,16 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
   });
 
   it("руна сохраняет концентрацию, списывая реакцию", async () => {
-    // Режим «Бой» — значит учёт хода ведётся и трата реакции видна в шапке.
+    // Бой отмечен начатым — значит учёт хода ведётся и трата реакции видна в шапке.
     const character = concentrating();
-    await damage("24", character);
+    await damage("24", character, { inFight: true });
     await userEvent.click(screen.getByRole("button", { name: "Провал" }));
 
     await userEvent.click(screen.getByRole("button", { name: "Потратить руну" }));
 
     expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
     expect(screen.getByText(/Руны 2\/3/)).toBeDefined();
-    // Значок траты реакции есть только в «Бою» — он проверяется до ухода в журнал.
+    // Значок траты реакции есть только в бою — он проверяется до ухода в журнал.
     expect(screen.getByLabelText(/Реакция израсходована/)).toBeDefined();
 
     await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
@@ -246,7 +250,7 @@ describe("завершение активного эффекта (FR-091)", () =
         endConditionRu: "До истечения длительности.",
       },
     ];
-    await renderWithStores(<CombatScreen />, character);
+    await renderWithStores(<PlayScreen />, character);
 
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Доспехи мага" }));
 

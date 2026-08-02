@@ -4,20 +4,22 @@
  * Логика отбора живёт в движке правил, здесь только переключатели. Состояние каждой кнопки
  * объявлено через `aria-pressed`: нажатость не должна читаться только по цвету
  *
- * Набор один на все режимы и растёт от состава списка, а не от режима: время накладывания, роль и
- * концентрация есть везде, где есть чем их наполнить. Вне боя к ним добавляются уровень,
- * ритуальность и подготовка — вопросы, которых в бою не задают. Уровень при этом стоит не
- * в общей полосе, а в своей прокручиваемой строке — читается шкалой чисел, а не набором вопросов.
+ * Набор один на все режимы и на обе ситуации: переключатель показывается, когда делит список, —
+ * часть строк ему отвечает, часть нет. Перечня по режимам нет, потому что состав списка меняется от
+ * отметки схватки, и перечень оказался бы неверен в одной из двух ситуаций.
+ *
+ * Исключения — два вопроса, которые задают только в «Книге»: подготовка, потому что там её и
+ * меняют, и цена, потому что список «Игры» уже упорядочен ценой и шкала повторяла бы его порядок.
  */
 
 import { TONE_CLASS } from "@/ui/shared/ui/tone";
-import { CASTING_TIME, COMBAT_ROLE, levelChipLabel, type CastingTimeType } from "@/ui/entities/spell/lib/format";
+import { CASTING_TIME, COMBAT_ROLE, levelChipLabel } from "@/ui/entities/spell/lib/format";
 import type { CombatRole } from "@/core/domain/catalog/combatRole";
-import { type SpellFilters as Filters } from "@/ui/features/filter-spells/model/filters";
 import type { ScreenMode } from "@/core/shared/screenMode";
+import { type SpellFilters as Filters, type DividingCategories } from "@/ui/features/filter-spells/model/filters";
 import { toggleValue, type CastingTimeFilter } from "@/ui/features/filter-spells/model/filters";
 
-/** Порядок переключателей времени накладывания. Показываются не все — только имеющиеся в списке. */
+/** Порядок переключателей времени накладывания. Показываются не все — только делящие список. */
 const CASTING_TIME_FILTERS: CastingTimeFilter[] = ["action", "bonus_action", "reaction"];
 
 /**
@@ -25,15 +27,6 @@ const CASTING_TIME_FILTERS: CastingTimeFilter[] = ["action", "bonus_action", "re
  * фильтр по нему отвечал бы на вопрос, которого в бою не задают.
  */
 const ROLE_FILTERS: CombatRole[] = ["offense", "defense"];
-
-/** Что вообще встречается в текущем списке: переключатель без единой находки не показывается. */
-export type AvailableFilters = {
-  castingTimes: ReadonlySet<CastingTimeType>;
-  levels: number[];
-  roles: ReadonlySet<CombatRole>;
-  concentration: boolean;
-  ritual: boolean;
-};
 
 function Toggle({
   pressed,
@@ -65,47 +58,30 @@ function Toggle({
 
 export function SpellFilters({
   filters,
-  available,
+  dividing,
   mode,
   onChange,
-  onReset,
 }: {
   filters: Filters;
   /**
-   * Что встречается в списке режима. Переключатель, который не может найти ни одного заклинания, —
-   * обещание несуществующего: он занимает место в полосе и всегда возвращает пустой список
+   * Что делит текущий список. Переключатель, который нашёл бы весь список или ни одной строки, —
+   * обещание отбора, которого не будет: он занимает место в полосе и ничего не меняет.
    */
-  available: AvailableFilters;
+  dividing: DividingCategories;
+  /** Режим нужен ради двух вопросов, которые задают только в «Книге», — подготовки и цены. */
   mode: ScreenMode;
   onChange: (filters: Filters) => void;
-  onReset: () => void;
 }) {
-  const inCombat = mode === "combat";
-  // Набор один на все режимы: переключатель показывается, если в списке есть чем его наполнить, и
-  // ничем больше не ограничен. Разные наборы читались как две разные программы — замечание
-  // игрока о том же, о чём и одинаковая карточка.
-  const castingTimes = CASTING_TIME_FILTERS.filter((value) => available.castingTimes.has(value));
-  const roles = ROLE_FILTERS.filter((value) => available.roles.has(value));
-  // «Сбросить» живёт только в бою: там полосу оглядывают под чужой ход, и снимать
-  // переключатели по одному в этот момент некогда. В «Книге» их немного и время есть — кнопка
-  // забирала бы место в полосе ради редкого случая. Появляется она по-прежнему, только когда есть
-  // что сбрасывать: кнопка, которая ничего не делает, обещает действие.
-  const resettable =
-    inCombat &&
-    (filters.castingTimes.length > 0 ||
-    filters.levels.length > 0 ||
-    filters.roles.length > 0 ||
-    filters.concentration ||
-    filters.ritual ||
-    filters.prepared ||
-    filters.availableNow);
+  const inBook = mode === "book";
+  const castingTimes = CASTING_TIME_FILTERS.filter((value) => dividing.castingTimes.has(value));
+  const roles = ROLE_FILTERS.filter((value) => dividing.roles.has(value));
 
   return (
     <section aria-label="Фильтры">
       {/*
  Полоса переносится, а не прокручивается: переключатель за краем экрана — это переключатель,
  которого для игрока нет, и в бою его не ищут. Плата — второй ряд, когда набор не влез;
- поэтому набор и сокращён до вопросов, которые в этом режиме действительно задают.
+ поэтому набор и сокращён до вопросов, которые в этой ситуации действительно задают.
  */}
       <div className="flex flex-wrap gap-1">
         {castingTimes.map((value) => (
@@ -132,7 +108,7 @@ export function SpellFilters({
             {COMBAT_ROLE[value].label}
           </Toggle>
         ))}
-        {available.concentration ? (
+        {dividing.concentration ? (
           <Toggle
             pressed={filters.concentration}
             tone="concentration"
@@ -143,69 +119,51 @@ export function SpellFilters({
           </Toggle>
         ) : null}
         {/*
- Ритуальность, уровень и подготовка добавляются к общему набору там, где они отвечают на
- вопрос: в бою ритуал творится за ячейку и от обычного заклинания неотличим, а
- неподготовленного в списке нет вовсе — переключатели нашли бы весь список.
+ «Ритуал» спрашивает не про признак заклинания, а про способ: что можно сотворить ритуалом
+ прямо сейчас. В бою таких строк нет вовсе, и переключатель не показывается сам — отдельного
+ условия про бой для этого не нужно.
  */}
-        {inCombat ? null : (
-          <>
-            {available.ritual ? (
-              <Toggle
-                pressed={filters.ritual}
-                tone="ritual"
-                icon="❖"
-                onClick={() => onChange({ ...filters, ritual: !filters.ritual })}
-              >
-                Ритуал
-              </Toggle>
-            ) : null}
-            <Toggle
-              pressed={filters.prepared}
-              tone="muted"
-              icon="✓"
-              onClick={() => onChange({ ...filters, prepared: !filters.prepared })}
-            >
-              Подготовлено
-            </Toggle>
-            {/*
- Переключателя «Доступно» здесь нет. Полоса эта показывается только вне боя, а
- вне боя ход не отслеживается: действие и реакция всегда целы, ячейки на месте, — и
- «доступно» означает ровно «подготовлено». Два переключателя отбирали один список и
- стоили полосе ряда.
- */}
-          </>
-        )}
-        {resettable ? (
-          <button
-            type="button"
-            onClick={onReset}
-            className="min-h-11 shrink-0 rounded-lg px-2 text-xs text-slate-500 underline"
+        {dividing.ritual ? (
+          <Toggle
+            pressed={filters.ritual}
+            tone="ritual"
+            icon="❖"
+            onClick={() => onChange({ ...filters, ritual: !filters.ritual })}
           >
-            Сбросить
-          </button>
+            Ритуал
+          </Toggle>
+        ) : null}
+        {inBook ? (
+          <Toggle
+            pressed={filters.prepared}
+            tone="muted"
+            icon="✓"
+            onClick={() => onChange({ ...filters, prepared: !filters.prepared })}
+          >
+            Подготовлено
+          </Toggle>
         ) : null}
       </div>
 
       {/*
- Уровень — единственный переключатель, вынесенный в свою прокручиваемую строку, а не в
- переносящуюся полосу выше. Довод у переноса там другой: переключатель за краем
- экрана — переключатель, которого для игрока нет, и в бою полосу не пролистывают, а
- оглядывают (см. выше). У уровня причина обратная. Уровней пять, они идут подряд одним рядом
- чисел и читаются как шкала, а не как набор вопросов вроде «Ритуал» или «Подготовлено»; в
- «Книге» их к тому же оглядывают не под чужой ход, а прокрутка — обычный способ работы со
- списком в этом режиме. Правило боя при этом не меняется: фильтра по уровню в бою
- нет вовсе, и строки этой там тоже нет.
+ Цена отбирает только в «Книге»: список «Игры» уже упорядочен ценой, и шкала повторяла бы
+ его порядок, забирая ряд на экране, где ряд стоит пятой части карточки.
+
+ Стоит она своей прокручиваемой строкой, а не в переносящейся полосе выше. Довод у переноса
+ там другой: переключатель за краем экрана — переключатель, которого для игрока нет. У цены
+ причина обратная: значений до пяти, они идут подряд одним рядом чисел и читаются как шкала,
+ а не как набор вопросов вроде «Ритуал» или «Концентрация», — а шкалу пролистывают.
  */}
-      {inCombat || available.levels.length === 0 ? null : (
-        <div role="group" aria-label="Уровень" className="flex flex-nowrap gap-1 overflow-x-auto">
-          {available.levels.map((level) => (
+      {!inBook || dividing.prices.length === 0 ? null : (
+        <div role="group" aria-label="Цена" className="flex flex-nowrap gap-1 overflow-x-auto">
+          {dividing.prices.map((price) => (
             <Toggle
-              key={level}
-              pressed={filters.levels.includes(level)}
+              key={price}
+              pressed={filters.prices.includes(price)}
               tone="muted"
-              onClick={() => onChange({ ...filters, levels: toggleValue(filters.levels, level) })}
+              onClick={() => onChange({ ...filters, prices: toggleValue(filters.prices, price) })}
             >
-              {levelChipLabel(level)}
+              {levelChipLabel(price)}
             </Toggle>
           ))}
         </div>

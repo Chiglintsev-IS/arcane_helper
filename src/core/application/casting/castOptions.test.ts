@@ -18,6 +18,11 @@ function filters(overrides: Partial<SpellFilters> = {}): SpellFilters {
   return { ...NO_FILTERS, ...overrides };
 }
 
+/** Бой не начат: только тогда у ритуального заклинания есть ритуальный способ. */
+function outOfFight() {
+  return context({ turn: ALL_TURN_RESOURCES });
+}
+
 function context(overrides: { character?: CharacterState; turn?: TurnResources } = {}) {
   return {
     character: overrides.character ?? createThorne(),
@@ -36,7 +41,7 @@ function outsideCombat(): CharacterState {
 }
 
 /** Идёт бой: счёт ходов ведётся. Раньше это следовало из режима экрана, теперь — из хода. */
-const IN_COMBAT_TURN = { ...ALL_TURN_RESOURCES, inFight: true, tracksTurn: true };
+const IN_COMBAT_TURN = { ...ALL_TURN_RESOURCES, inFight: true };
 
 function withoutSlots(): CharacterState {
   const character = createThorne();
@@ -56,7 +61,8 @@ describe("filterSpells: список без фильтров", () => {
   });
 
   it("показывает ритуалы по фильтру «ритуал»", () => {
-    expect(ids(filterSpells(allSpells, filters({ ritual: true }), context()))).toEqual([
+    // «Ритуал» спрашивает про способ: он есть, только пока бой не идёт.
+    expect(ids(filterSpells(allSpells, filters({ ritual: true }), outOfFight()))).toEqual([
       "find-familiar",
       "detect-magic",
       "identify",
@@ -87,9 +93,9 @@ describe("filterSpells: значения одной категории соед�
     expect(shown).not.toContain("mending");
   });
 
-  it("уровень: заговоры и первый уровень вместе", () => {
-    const onlyCantrips = ids(filterSpells(allSpells, filters({ levels: [0] }), context()));
-    const both = ids(filterSpells(allSpells, filters({ levels: [0, 1] }), context()));
+  it("цена: без ячейки и первый уровень вместе", () => {
+    const onlyCantrips = ids(filterSpells(allSpells, filters({ prices: [0] }), context()));
+    const both = ids(filterSpells(allSpells, filters({ prices: [0, 1] }), context()));
 
     expect(onlyCantrips).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
     // Четыре заговора и девять заклинаний первого уровня.
@@ -100,13 +106,13 @@ describe("filterSpells: значения одной категории соед�
 describe("filterSpells: категории соединяются «и» (FR-003)", () => {
   it("действие плюс заговор оставляют только заговоры действием", () => {
     expect(
-      ids(filterSpells(allSpells, filters({ castingTimes: ["action"], levels: [0] }), context())),
+      ids(filterSpells(allSpells, filters({ castingTimes: ["action"], prices: [0] }), context())),
     ).toEqual(["shocking-grasp", "ray-of-frost", "message"]);
   });
 
   it("несовместимые категории дают пустой список, а не ошибку", () => {
     expect(
-      filterSpells(allSpells, filters({ castingTimes: ["reaction"], levels: [0] }), context()),
+      filterSpells(allSpells, filters({ castingTimes: ["reaction"], prices: [0] }), context()),
     ).toEqual([]);
   });
 });
@@ -114,7 +120,7 @@ describe("filterSpells: категории соединяются «и» (FR-003
 describe("filterSpells: концентрация и подготовка", () => {
   it("фильтр концентрации вместе с ритуалами находит «Обнаружение магии»", () => {
     expect(
-      ids(filterSpells(allSpells, filters({ concentration: true, ritual: true }), context())),
+      ids(filterSpells(allSpells, filters({ concentration: true, ritual: true }), outOfFight())),
     ).toEqual(["detect-magic"]);
   });
 
@@ -253,7 +259,7 @@ describe("matchesTraits: строка, не являющаяся заклина�
 
   it("признаки заклинания собираются той же функцией, что и признаки действия", () => {
     const shield = allSpells.find((spell) => spell.id === "shield");
-    expect(traitsOf(shield!)).toEqual({
+    expect(traitsOf(shield!, true)).toEqual({
       castingTime: "reaction",
       level: 1,
       concentration: false,
@@ -272,8 +278,8 @@ describe("matchesActionRow: книжные фильтры для строки-д
   });
 
   it("«Без ячейки» её оставляет, уровень ячейки — прячет: отбирают по цене", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ levels: [0] }))).toBe(true);
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ levels: [1] }))).toBe(false);
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ prices: [0] }))).toBe(true);
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ prices: [1] }))).toBe(false);
   });
 
   it("общие фильтры работают так же, как раньше", () => {

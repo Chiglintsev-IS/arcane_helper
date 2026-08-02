@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Arcane Helper",
-  description: "Оффлайн-помощник для магического боя в D&D 5e",
+  description: "Оффлайн-помощник для магического боя",
   applicationName: "Arcane Helper",
   appleWebApp: { capable: true, title: "Arcane Helper", statusBarStyle: "black-translucent" },
   // Относительные пути: статический экспорт кладут и в подкаталог, и абсолютный «/» там сломался бы.

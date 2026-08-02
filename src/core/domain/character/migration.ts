@@ -7,6 +7,8 @@
  * руками.
  */
 
+import { DEFAULT_SCREEN_MODE } from "@/core/shared/screenMode";
+
 const UNKNOWN_ABILITY_SCORE = 10;
 /** База Класса Доспеха без доспехов. Нужна только на случай испорченного сохранения без неё. */
 const DEFAULT_ARMOR_CLASS_BASE = 10;
@@ -43,7 +45,25 @@ function migrateEquipment(state: LegacyShape, armorClassBase: number): unknown {
   };
 }
 
+/** Режимы, слитые в «Игру»: бой перестал быть вкладкой и стал состоянием игры. */
+const MERGED_SCREEN_MODES = new Set(["combat", "camp"]);
+
+/**
+ * Приведение режима идёт отдельно от формы состояния: сохранение свежей версии остальные шаги
+ * пропускают, а закрыто оно могло быть на любом из прежних режимов.
+ */
+function migrateScreenMode(state: unknown): unknown {
+  if (state === null || typeof state !== "object") return state;
+  const { screenMode } = state as { screenMode?: unknown };
+  if (typeof screenMode !== "string" || !MERGED_SCREEN_MODES.has(screenMode)) return state;
+  return { ...state, screenMode: DEFAULT_SCREEN_MODE };
+}
+
 export function migrateCharacterState(raw: unknown): unknown {
+  return migrateScreenMode(migrateShape(raw));
+}
+
+function migrateShape(raw: unknown): unknown {
   if (raw === null || typeof raw !== "object") return raw;
 
   const state = raw as LegacyShape;

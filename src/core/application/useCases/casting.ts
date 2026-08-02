@@ -26,7 +26,7 @@ import {
   type TurnResource,
 } from "@/core/application/casting/availability";
 import { commit, type Clock, type Session } from "@/core/application/session";
-import { deriveTurnEconomy, turnTracked } from "./turn";
+import { deriveTurnEconomy, inFight } from "./turn";
 
 /** Способ оплаты определён правилами — здесь только его применение к состоянию. */
 export type Payment = PaymentChoice;
@@ -61,7 +61,7 @@ export function actionUsedBy(spell: Spell): TurnResource | undefined {
 function spendAction(session: Session, spell: Spell, allowAnyway: boolean): CharacterState {
   const { character } = session;
   const used = actionUsedBy(spell);
-  if (used === undefined || !turnTracked(character)) return character;
+  if (used === undefined || !inFight(session)) return character;
 
   const economy = deriveTurnEconomy(session);
   const available =
@@ -212,7 +212,7 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
  * вернуть её значило бы решать за него, что он ошибся.
  */
   const expiresImmediately =
-    effect !== null && effect.duration.type === "rounds" && !turnTracked(session.character);
+    effect !== null && effect.duration.type === "rounds" && !inFight(session);
   const expiredNote = expiresImmediately
     ? ` · «${spell.nameRu}» истёк сразу: вне боя раундов нет`
     : "";
@@ -259,7 +259,7 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
       slotLevel: level,
       // Вне схватки ход не отслеживается, значит и тратить нечего: записанное действие
       // предъявлялось бы игроку в бою, потому что до отметки о начале боя границы в журнале нет.
-      ...(used === undefined || !turnTracked(session.character) ? {} : { actionUsed: used }),
+      ...(used === undefined || !inFight(session) ? {} : { actionUsed: used }),
     },
     clock,
   );

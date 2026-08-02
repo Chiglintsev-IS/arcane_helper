@@ -2,7 +2,7 @@ import { setScreenMode, setSpellNote, toggleMaterial, togglePreparation } from "
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
 import { endConcentration, endEffect, spendRuneOnWardingSigil, wardingSigilAvailable } from "@/core/application/useCases/effects";
 import { bloodCostFor, exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
-import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regenerationDue } from "@/core/application/useCases/turn";
+import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regenerationDue, startCombat } from "@/core/application/useCases/turn";
 import { adjustHitDice, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariantId, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, useRoleplayVariant } from "@/core/application/useCases/roleplay";
 import { actionUsedBy, castSpell } from "@/core/application/useCases/casting";
@@ -43,16 +43,19 @@ beforeEach(() => {
 });
 
 /**
- * Учёт хода ведётся ровно в режиме «Бой», а он же начальный, — поэтому помощник ничего не
- * включает. Оставлен именем: он объясняет, зачем тесту вообще учёт.
+ * Бой отмечен начатым: только тогда ведётся учёт хода. Отметка — та же операция, которой её ставит
+ * игрок, и она же считается первым ходом.
  */
 function withTurnTracking(base: Session): Session {
-  return { ...base, character: { ...base.character, screenMode: "combat" } };
+  return startCombat(base, clock);
 }
 
-/** Вне боя: ходов нет, значит и расходовать в них нечего. */
+/**
+ * Вне боя: ходов нет, значит и расходовать в них нечего. Отметки не ставится вовсе — помощник
+ * оставлен именем, он объясняет, почему тест ничего не включает.
+ */
 function outOfCombat(base: Session): Session {
-  return { ...base, character: { ...base.character, screenMode: "camp" } };
+  return base;
 }
 
 describe("начальное состояние Торна", () => {
@@ -968,7 +971,7 @@ describe("журнал (FR-110, FR-112)", () => {
 describe("экономия хода выводится из журнала (ADR-0008, FR-144)", () => {
   it("до первой отметки хода считает всё доступным", () => {
     const economy = deriveTurnEconomy(withTurnTracking(session));
-    expect(economy).toMatchObject({ started: false, reactionAvailable: true, round: 1 });
+    expect(economy).toMatchObject({ inFight: true, reactionAvailable: true, round: 1 });
   });
 
   it("вне боя всё доступно независимо от журнала", () => {
@@ -982,9 +985,10 @@ describe("экономия хода выводится из журнала (ADR-
   });
 
   it("считает раунды по отметкам начала хода", () => {
+    // Отметка начала боя — она же первый ход, поэтому счёт открывается на единице без «Нового хода».
     let current = withTurnTracking(session);
     expect(deriveTurnEconomy(current).round).toBe(1);
-    for (const expected of [1, 2, 3]) {
+    for (const expected of [2, 3, 4]) {
       current = beginTurn(current, clock);
       expect(deriveTurnEconomy(current).round).toBe(expected);
     }
@@ -1152,8 +1156,9 @@ describe("регенерация тролля начисляется в нача
 describe("активный эффект без указанной длительности", () => {
   it("создаётся с типом длительности, но без значения", () => {
     const vague: Spell = { ...spell("mage-armor"), duration: { type: "rounds" } };
+    // Раундовый эффект держится только в бою: вне схватки раундов нет, и он истёк бы сразу.
     const after = castSpell(
-      session,
+      withTurnTracking(session),
       { spell: vague, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
       clock,
     );
@@ -1196,13 +1201,13 @@ describe("активный эффект без указанной длитель
 
 describe("режим экрана (FR-200, FR-204)", () => {
   it("меняется без записи в журнал: отменять в виде нечего", () => {
-    const after = setScreenMode(session, "camp");
-    expect(after.character.screenMode).toBe("camp");
+    const after = setScreenMode(session, "book");
+    expect(after.character.screenMode).toBe("book");
     expect(after.journal).toHaveLength(0);
   });
 
   it("повторный выбор того же режима возвращает ту же сессию", () => {
-    expect(setScreenMode(session, "combat")).toBe(session);
+    expect(setScreenMode(session, "play")).toBe(session);
   });
 });
 
@@ -1761,12 +1766,12 @@ describe("конец боя (FR-216)", () => {
 
   it("сбрасывает счёт раундов: следующий бой начинается с первого", () => {
     let current = withTurnTracking(session);
-    for (let round = 0; round < 5; round += 1) current = beginTurn(current, clock);
+    for (let round = 0; round < 4; round += 1) current = beginTurn(current, clock);
     expect(deriveTurnEconomy(current).round).toBe(5);
 
     current = endCombat(current, clock);
     expect(deriveTurnEconomy(current).round).toBe(1);
-    expect(deriveTurnEconomy(current).started).toBe(false);
+    expect(deriveTurnEconomy(current).inFight).toBe(false);
 
     current = beginTurn(current, clock);
     expect(deriveTurnEconomy(current).round).toBe(1);
@@ -1791,7 +1796,7 @@ describe("конец боя (FR-216)", () => {
 
   it("отмена возвращает и счёт раундов прежнего боя (FR-111)", () => {
     let current = withTurnTracking(session);
-    for (let round = 0; round < 3; round += 1) current = beginTurn(current, clock);
+    for (let round = 0; round < 2; round += 1) current = beginTurn(current, clock);
     const undone = undoLast(endCombat(current, clock));
     expect(deriveTurnEconomy(undone).round).toBe(3);
   });
@@ -1907,23 +1912,20 @@ describe("схема ритуала не влияет на механику (FR-
 describe("сотворённое вне боя не переносится в бой (FR-145, FR-095)", () => {
   it("вне боя действие не записывается: в бою оно остаётся целым", () => {
     const clock = testClock();
-    const character = { ...createThorne(), screenMode: "book" as const };
     const session = castSpell(
-      { character, journal: [] },
+      { character: createThorne(), journal: [] },
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       clock,
     );
 
     expect(session.journal.at(-1)?.actionUsed).toBeUndefined();
-
-    const inCombat = { ...session, character: { ...session.character, screenMode: "combat" as const } };
-    expect(deriveTurnEconomy(inCombat).actionAvailable).toBe(true);
+    expect(deriveTurnEconomy(startCombat(session, clock)).actionAvailable).toBe(true);
   });
 
   it("в бою действие записывается по-прежнему", () => {
     const clock = testClock();
     const session = castSpell(
-      { character: createThorne(), journal: [] },
+      startCombat({ character: createThorne(), journal: [] }, clock),
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       clock,
     );
@@ -1934,9 +1936,8 @@ describe("сотворённое вне боя не переносится в б
 
   it("раундовый эффект вне боя истекает сразу: КД не входит в бой", () => {
     const clock = testClock();
-    const character = { ...createThorne(), screenMode: "book" as const };
     const session = castSpell(
-      { character, journal: [] },
+      { character: createThorne(), journal: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       clock,
     );
@@ -1948,7 +1949,7 @@ describe("сотворённое вне боя не переносится в б
   it("в бою раундовый эффект остаётся висеть", () => {
     const clock = testClock();
     const session = castSpell(
-      { character: createThorne(), journal: [] },
+      startCombat({ character: createThorne(), journal: [] }, clock),
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       clock,
     );
@@ -1958,9 +1959,8 @@ describe("сотворённое вне боя не переносится в б
 
   it("ячейка тратится в обоих случаях: сотворить игрок выбрал сам", () => {
     const clock = testClock();
-    const character = { ...createThorne(), screenMode: "book" as const };
     const session = castSpell(
-      { character, journal: [] },
+      { character: createThorne(), journal: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       clock,
     );

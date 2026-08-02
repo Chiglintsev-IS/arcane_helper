@@ -13,17 +13,13 @@ import { commit, type Clock, type Session } from "@/core/application/session";
 
 export type { TurnEconomy };
 
-/**
- * Ведётся ли учёт хода. Ровно в режиме «Бой»: вне боя ходов нет, и считать нечего.
- *
- * Решение принимается здесь, а не в правилах: правило получает готовый признак и про экран не знает.
- */
-export function turnTracked(character: CharacterState): boolean {
-  return character.screenMode === "combat";
+export function encounterOf(session: Session): Encounter {
+  return Encounter.fromJournal(session.journal);
 }
 
-export function encounterOf(session: Session): Encounter {
-  return Encounter.fromJournal(session.journal, turnTracked(session.character));
+/** Идёт ли бой прямо сейчас. Ответ один на всё приложение, и он выводится из журнала. */
+export function inFight(session: Session): boolean {
+  return encounterOf(session).economy.inFight;
 }
 
 export function deriveTurnEconomy(session: Session): TurnEconomy {
