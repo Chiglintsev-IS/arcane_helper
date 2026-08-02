@@ -40,10 +40,10 @@ test("play-screen renders all resource blocks", async ({ page }) => {
 
   // Имени, класса и уровня в шапке нет: их место — «Лист».
   await expect(page.getByRole("heading", { name: "Торн" })).toBeHidden();
-  await expect(resources.getByText("16", { exact: true })).toBeVisible();
-  await expect(resources.getByText("+8", { exact: true })).toBeVisible();
-  // КД без активных эффектов: 10 базы + 2 Ловкости + 2 предметов.
+  // КД без активных эффектов: 10 базы + 2 Ловкости + 2 предметов. Чисел заклинателя в шапке нет —
+  // их называет строка действия.
   await expect(resources.getByText("14", { exact: true })).toBeVisible();
+  await expect(resources.getByText("Атака", { exact: true })).toBeHidden();
 
   const slots = page.getByLabel("Ячейки заклинаний");
   await expect(slots.getByRole("listitem")).toHaveCount(4);

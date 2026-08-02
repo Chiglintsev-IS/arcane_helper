@@ -57,8 +57,10 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(screen.queryByText(/Волшебник, 7 уровень/)).toBeNull();
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("16")).toBeDefined(); // КС спасброска
-    expect(within(numbers).getByText("+8")).toBeDefined(); // атака заклинанием
+    // КД: 10 базы + 2 Ловкости + 2 предметов. Чисел заклинателя в шапке нет — их называет строка
+    // действия, а шапка о том, что тратится и чем защищаются.
+    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(within(numbers).queryByText("Атака")).toBeNull();
 
     const slots = screen.getByLabelText("Ячейки заклинаний");
     expect(within(slots).getAllByRole("listitem")).toHaveLength(4);
@@ -356,24 +358,25 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
     const inCombat = within(screen.getByLabelText("Ресурсы"));
     expect(inCombat.getByLabelText("Ячейки заклинаний")).toBeDefined();
-    expect(inCombat.getByText("КС")).toBeDefined();
+    expect(inCombat.getByText("КД")).toBeDefined();
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 
     // Книга отвечает, что персонаж знает, а не чем он за это заплатит: ни ячеек, ни чисел боя.
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
     expect(screen.queryByLabelText("Ячейки заклинаний")).toBeNull();
-    expect(screen.queryByText("КС")).toBeNull();
+    expect(screen.queryByText("КД")).toBeNull();
   });
 
-  it("шапка сокращает КС, потому что рядом стоит КД", async () => {
+  it("чисел заклинателя в шапке нет: их называет строка действия", async () => {
     await renderWithStores(<PlayScreen />);
 
     const header = within(screen.getByLabelText("Ресурсы"));
-    expect(header.getByText("КС")).toBeDefined();
-    expect(header.getByText("КД")).toBeDefined();
-    // Третьего имени одному числу не заводится: «КС закл.» было им.
-    expect(header.queryByText("КС закл.")).toBeNull();
+    expect(header.queryByText("КС")).toBeNull();
+    expect(header.queryByText("Атака")).toBeNull();
+    // Число, которое игрок называет мастеру, стоит там, где он выбирает заклинание.
+    const row = within(screen.getByRole("button", { name: /Луч холода/ }));
+    expect(row.getByText("Атака d20+8")).toBeDefined();
   });
 
   it("кости хитов шапка называет и в бою, и вне его (FR-134)", async () => {
