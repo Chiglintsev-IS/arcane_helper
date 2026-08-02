@@ -11,6 +11,7 @@ export type JournalKind =
   | "slot_refunded"
   | "concentration_started"
   | "concentration_ended"
+  | "manual_effect_started"
   | "effect_ended"
   | "long_rest"
   | "short_rest"

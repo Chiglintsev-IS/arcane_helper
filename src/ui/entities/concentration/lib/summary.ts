@@ -18,7 +18,8 @@ export type ConcentrationBreaker = {
 };
 
 export type ConcentrationSummary = {
-  spellId: string;
+  /** Концентрационный эффект всегда ссылается на заклинание; `null` — только ради общего с ручным эффектом поля. */
+  spellId: string | null;
   nameRu: string;
   slotLabel: string;
   startLabel: string;
@@ -90,7 +91,7 @@ export function describeConcentration(input: {
   const modifier = signed(Sheet.of(character).savingThrow("constitution"));
 
   return {
-    spellId: effect.spellId,
+    spellId: effect.spellId ?? null,
     nameRu: effect.nameRu,
     slotLabel: effect.slotLevelUsed === 0 ? "без ячейки" : `ячейка ${effect.slotLevelUsed} ур.`,
     startLabel: start.approximate ? `раунд ≥ ${start.round}` : `раунд ${start.round}`,

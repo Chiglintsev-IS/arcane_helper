@@ -38,7 +38,8 @@ export const spellSlotsSchema = z.record(
 
 export const activeEffectSchema = z.object({
   id: nonEmpty,
-  spellId: nonEmpty,
+  /** Отсутствует у эффекта, заведённого игроком вручную: статуса или чужого вклада в КД. */
+  spellId: nonEmpty.optional(),
   nameRu: nonEmpty,
 
   type: z.enum(["buff", "control", "utility", "summon"]),

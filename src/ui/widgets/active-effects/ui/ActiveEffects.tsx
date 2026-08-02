@@ -28,18 +28,18 @@ export function ActiveEffects({
   concentration,
   onOpenConcentration,
   onEndEffect,
+  onAddEffect,
 }: {
   character: CharacterState;
   concentration: ConcentrationSummary | null;
   onOpenConcentration: () => void;
   onEndEffect: (effectId: string) => void;
+  /** Заводит статус или прикрытие союзника: блок эффектов — единственное место для этого. */
+  onAddEffect: () => void;
 }) {
   const armorClass = effectiveArmorClass(character);
   const concentrationEffect = character.activeEffects.find((effect) => effect.isConcentration);
   const otherEffects = character.activeEffects.filter((effect) => !effect.isConcentration);
-
-  // Пустой блок забрал бы промежуток родителя — 8 пикселей, которых на iPhone SE не бывает лишних.
-  if (concentration === null && otherEffects.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -87,6 +87,15 @@ export function ActiveEffects({
           ))}
         </ul>
       ) : null}
+
+      <button
+        type="button"
+        onClick={onAddEffect}
+        aria-label="Добавить эффект"
+        className="min-h-11 self-start rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 dark:border-slate-800 dark:text-slate-400"
+      >
+        <span aria-hidden="true">+</span> Эффект
+      </button>
     </div>
   );
 }

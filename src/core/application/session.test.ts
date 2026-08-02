@@ -1,6 +1,7 @@
 import { setScreenMode, setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
-import { endConcentration, endEffect, spendRuneOnWardingSigil, wardingSigilAvailable } from "@/core/application/useCases/effects";
+import { endConcentration, endEffect, spendRuneOnWardingSigil, startManualEffect, wardingSigilAvailable } from "@/core/application/useCases/effects";
+import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
 import { bloodCostFor, exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regenerationDue, startCombat } from "@/core/application/useCases/turn";
 import { adjustHitDice, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
@@ -846,6 +847,63 @@ describe("активные эффекты (FR-091)", () => {
 
   it("отклоняет неизвестный эффект", () => {
     expect(() => endEffect(session, "нет-такого", clock)).toThrow(DomainError);
+  });
+});
+
+describe("ручной эффект (FR-236)", () => {
+  it("создаёт эффект без заклинания и пишет это в журнал", () => {
+    const after = startManualEffect(session, { nameRu: "Опутанный" }, clock);
+
+    expect(after.character.activeEffects).toHaveLength(1);
+    const [effect] = after.character.activeEffects;
+    expect(effect?.nameRu).toBe("Опутанный");
+    expect(effect?.spellId).toBeUndefined();
+    expect(effect?.isConcentration).toBe(false);
+    expect(effect?.armorClass).toBeUndefined();
+    expect(after.journal.at(-1)?.summaryRu).toBe("Эффект начат: Опутанный");
+  });
+
+  it("вклад в Класс Доспеха складывается с активными эффектами заклинаний", () => {
+    // В бою: раундовая длительность «Щита» не истекает сразу же после сотворения.
+    const shielded = castSpell(
+      withTurnTracking(session),
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    const after = startManualEffect(
+      shielded,
+      { nameRu: "Прикрытие союзника", armorClass: { kind: "bonus", value: 2 } },
+      clock,
+    );
+
+    // Без вкладов: 14; «Щит» прибавляет 5; прикрытие союзника прибавляет ещё 2.
+    expect(effectiveArmorClass(after.character)).toBe(21);
+  });
+
+  it("снимается тем же путём, что и любой активный эффект", () => {
+    const started = startManualEffect(session, { nameRu: "Опутанный" }, clock);
+    const effectId = started.character.activeEffects[0]?.id ?? "";
+
+    const ended = endEffect(started, effectId, clock);
+
+    expect(ended.character.activeEffects).toHaveLength(0);
+    expect(ended.journal.at(-1)?.summaryRu).toBe("Эффект завершён: Опутанный");
+  });
+
+  it("отклоняет пустое имя", () => {
+    expect(() => startManualEffect(session, { nameRu: "   " }, clock)).toThrow(DomainError);
+  });
+
+  it("отклоняет неположительный вклад в Класс Доспеха", () => {
+    expect(() =>
+      startManualEffect(session, { nameRu: "Статус", armorClass: { kind: "bonus", value: 0 } }, clock),
+    ).toThrow(DomainError);
+  });
+
+  it("отклоняет дробный вклад в Класс Доспеха", () => {
+    expect(() =>
+      startManualEffect(session, { nameRu: "Статус", armorClass: { kind: "bonus", value: 1.5 } }, clock),
+    ).toThrow(DomainError);
   });
 });
 

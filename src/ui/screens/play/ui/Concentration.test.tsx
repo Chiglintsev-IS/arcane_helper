@@ -262,3 +262,72 @@ describe("завершение активного эффекта (FR-091)", () =
     ).toBeDefined();
   });
 });
+
+describe("ручной эффект (FR-236)", () => {
+  it("заводит статус без вклада в КД и его можно снять", async () => {
+    await renderWithStores(<PlayScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Добавить эффект" }));
+    const dialog = screen.getByRole("dialog", { name: "Новый эффект" });
+    await userEvent.type(within(dialog).getByLabelText("Название"), "Опутанный");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Добавить" }));
+
+    expect(screen.queryByRole("dialog", { name: "Новый эффект" })).toBeNull();
+    const list = screen.getByLabelText("Активные эффекты");
+    expect(within(list).getByText(/Опутанный/)).toBeDefined();
+    expect(within(list).queryByText(/КД/)).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Завершить: Опутанный" }));
+    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+
+    await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
+    // Отменить можно только последнюю запись — снятие эффекта; начало осталось строкой без кнопки.
+    expect(screen.getByText("Эффект начат: Опутанный")).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /Отменить: Эффект завершён: Опутанный/ }),
+    ).toBeDefined();
+  });
+
+  it("заводит прикрытие союзника, и вклад складывается с «Доспехами мага»", async () => {
+    const character = createThorne();
+    character.activeEffects = [
+      {
+        id: "effect-mage-armor",
+        spellId: "mage-armor",
+        nameRu: "Доспехи мага",
+        type: "buff",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "hours", value: 8 },
+        isConcentration: false,
+        slotLevelUsed: 1,
+        armorClass: { kind: "base_override", value: 13 },
+        endConditionRu: "До истечения длительности.",
+      },
+    ];
+    await renderWithStores(<PlayScreen />, character);
+
+    await userEvent.click(screen.getByRole("button", { name: "Добавить эффект" }));
+    const dialog = screen.getByRole("dialog", { name: "Новый эффект" });
+    await userEvent.type(within(dialog).getByLabelText("Название"), "Прикрытие союзника");
+    await userEvent.click(within(dialog).getByRole("radio", { name: "Прибавка" }));
+    await userEvent.type(within(dialog).getByLabelText("Значение"), "2");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Добавить" }));
+
+    // «Доспехи мага» дают 17, прикрытие союзника прибавляет ещё 2.
+    const list = screen.getByLabelText("Активные эффекты");
+    const row = within(list).getByText(/Прикрытие союзника/).closest("li");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText(/КД 19/)).toBeDefined();
+  });
+
+  it("не позволяет добавить эффект без названия", async () => {
+    await renderWithStores(<PlayScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Добавить эффект" }));
+    const dialog = screen.getByRole("dialog", { name: "Новый эффект" });
+
+    expect(
+      within(dialog).getByRole("button", { name: "Добавить" }).hasAttribute("disabled"),
+    ).toBe(true);
+  });
+});

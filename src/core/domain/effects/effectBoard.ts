@@ -13,6 +13,14 @@ export type EffectBoardState = Pick<CharacterState, "activeEffects" | "concentra
 
 export type ConcentrationEnd = "manual" | "failed_check" | "replaced" | "long_rest";
 
+/** Концентрация ссылается на заклинание; эффект, заведённый вручную, её не держит. */
+function concentrationSpellId(effect: ActiveEffect): string {
+  if (effect.spellId === undefined) {
+    throw new DomainError("Концентрационный эффект обязан ссылаться на заклинание");
+  }
+  return effect.spellId;
+}
+
 export class EffectBoard {
   private constructor(private readonly state: EffectBoardState) {}
 
@@ -42,7 +50,9 @@ export class EffectBoard {
       : this.state.activeEffects;
     return this.with(
       [...kept, effect],
-      effect.isConcentration ? { spellId: effect.spellId, startedAt } : this.state.concentration,
+      effect.isConcentration
+        ? { spellId: concentrationSpellId(effect), startedAt }
+        : this.state.concentration,
     );
   }
 

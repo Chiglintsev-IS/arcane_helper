@@ -206,6 +206,13 @@ describe("схемы вложенных структур", () => {
     expect(activeEffectSchema.safeParse(withoutAction).success).toBe(true);
   });
 
+  it("активный эффект без заклинания (ручной) принимается", () => {
+    const { spellId: _omitted, ...manual } = WEB_EFFECT;
+    expect(
+      activeEffectSchema.safeParse({ ...manual, isConcentration: false }).success,
+    ).toBe(true);
+  });
+
   it("профиль отыгрыша без тона отклоняется", () => {
     const profile = structuredClone(thorne()) as { roleplayProfile: Record<string, unknown> };
     profile.roleplayProfile.tone = [];
