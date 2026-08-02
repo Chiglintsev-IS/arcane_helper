@@ -168,8 +168,8 @@ describe("describeConcentration (FR-084)", () => {
       journal,
     });
 
-    expect(summary.mechanicsLabel).toContain("атака заклинанием -1");
-    expect(summary.breakLabel).toBe("Урон → спасбросок Телосложения -2, КС от 10");
+    expect(summary.mechanicsLabel).toContain("атака заклинанием −1");
+    expect(summary.breakLabel).toBe("Урон → спасбросок Телосложения −2, КС от 10");
   });
 
   it.each([

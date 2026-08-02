@@ -8,7 +8,7 @@ import {
   startRound,
   type TurnMark,
 } from "@/core/domain/effects/concentration";
-import { plural, SAVING_THROW_NAMES } from "@/core/shared/language";
+import { plural, SAVING_THROW_NAMES, signed } from "@/core/shared/language";
 
 const AREA_SHAPES: Record<NonNullable<Spell["area"]>["shape"], string> = {
   cone: "Конус",
@@ -37,10 +37,6 @@ export type ConcentrationSummary = {
   rulesAvailable: boolean;
   breakers: ConcentrationBreaker[];
 };
-
-function signed(value: number): string {
-  return value < 0 ? `${value}` : `+${value}`;
-}
 
 function feet(value: number): string {
   return `${value} ${plural(value, ["фут", "фута", "футов"])}`;

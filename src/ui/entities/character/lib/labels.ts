@@ -54,11 +54,6 @@ export const SIZE_LABELS: Record<CreatureSize, string> = {
 
 export const TRAINING_LABELS = { proficient: "владение", expert: "компетентность" } as const;
 
-/** Модификатор всегда со знаком: «2» и «+2» на листе читаются по-разному. */
-export function signed(value: number): string {
-  return value >= 0 ? `+${value}` : String(value);
-}
-
 /** Пустое справочное поле — прочерк: ноль здесь читался бы как настоящий ноль. */
 export function orDash(value: string | number): string {
   return value === "" || value === 0 ? "—" : String(value);

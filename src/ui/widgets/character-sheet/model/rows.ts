@@ -14,11 +14,11 @@ import {
   ABILITY_LABELS,
   DERIVED_LABELS,
   orDash,
-  signed,
   SIZE_LABELS,
   SKILL_LABELS,
   TRAINING_LABELS,
 } from "@/ui/entities/character/lib/labels";
+import { signed } from "@/core/shared/language";
 
 export type SheetRow = { labelRu: string; value: string; hint?: string };
 

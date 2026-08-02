@@ -12,6 +12,7 @@ import type { CombatRole } from "@/core/domain/catalog/combatRole";
 import {
   longCastingTimeRu,
   plural,
+  signed,
   timeSpanAccusativeRu,
   type LongCastingUnit,
   type TimeUnit,
@@ -200,11 +201,6 @@ export function resolutionLabel(resolution: Spell["resolution"], spellSaveDc: nu
 // Падеж один и тот же, что в подробной карточке: «Спасбросок Ловкости». Второго словаря
 // сокращений здесь не заводится — расхождение между строкой и карточкой читалось бы как разные
 // заклинания.
-
-/** Знак перед модификатором пишется всегда: «d20+8» произносят вслух именно так. */
-export function signed(modifier: number): string {
-  return modifier < 0 ? `−${Math.abs(modifier)}` : `+${modifier}`;
-}
 
 /** Числа персонажа, из которых собирается значок разрешения. Считает их лист. */
 export type ResolutionNumbers = Pick<Sheet, "spellSaveDc" | "spellAttackModifier">;

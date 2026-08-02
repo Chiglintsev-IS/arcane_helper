@@ -17,10 +17,7 @@ import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
 import { Vitality } from "@/core/domain/vitality/vitality";
-
-function signed(value: number): string {
-  return value < 0 ? `${value}` : `+${value}`;
-}
+import { signed } from "@/core/shared/language";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (

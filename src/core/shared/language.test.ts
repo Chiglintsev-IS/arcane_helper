@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { longCastingTimeRu, plural, SAVING_THROW_NAMES, timeSpanAccusativeRu, withPlural } from "@/core/shared/language";
+import { longCastingTimeRu, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, withPlural } from "@/core/shared/language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -61,5 +61,17 @@ describe("timeSpanAccusativeRu: винительный падеж (FR-014)", () 
     expect(timeSpanAccusativeRu("hour", 8)).toBe("8 часов");
     expect(timeSpanAccusativeRu("round", 1)).toBe("1 раунд");
     expect(timeSpanAccusativeRu("round", 3)).toBe("3 раунда");
+  });
+});
+
+describe("signed", () => {
+  it("знак ставится всегда: «d20+8» произносят вслух именно так", () => {
+    expect(signed(8)).toBe("+8");
+    expect(signed(0)).toBe("+0");
+  });
+
+  it("минус типографский: дефис в этой позиции читается как перенос", () => {
+    expect(signed(-2)).toBe("−2");
+    expect(signed(-11)).toBe("−11");
   });
 });

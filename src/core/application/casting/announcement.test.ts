@@ -65,7 +65,7 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip", targetLabel: "гоблин" }),
     );
-    expect(announcement.text).toContain("модификатор -1");
+    expect(announcement.text).toContain("модификатор −1");
   });
 
   it("называет выбранный уровень ячейки при повышении", () => {
@@ -373,7 +373,7 @@ describe("castInstructions: что сделать этому персонажу 
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip" }),
     );
-    expect(steps).toContain("Бросьте d20 -2 — попадание, если результат не ниже КД цели");
+    expect(steps).toContain("Бросьте d20 −2 — попадание, если результат не ниже КД цели");
   });
 })
 

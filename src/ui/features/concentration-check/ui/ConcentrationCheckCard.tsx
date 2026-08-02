@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import type { ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { checkGuidanceRu } from "@/ui/features/concentration-check/lib/checkGuidance";
+import { signed } from "@/core/shared/language";
 
 export function ConcentrationCheckCard({
   check,
@@ -41,8 +42,7 @@ export function ConcentrationCheckCard({
       <div>
         <h2 className="text-sm font-semibold">Проверка концентрации: «{spellNameRu}»</h2>
         <p className="text-sm">
-          Спасбросок Телосложения против КС {check.dc}, модификатор{" "}
-          {check.modifier < 0 ? check.modifier : `+${check.modifier}`}
+          Спасбросок Телосложения против КС {check.dc}, модификатор {signed(check.modifier)}
         </p>
         <p className="text-base font-semibold">{checkGuidanceRu(check)}</p>
       </div>

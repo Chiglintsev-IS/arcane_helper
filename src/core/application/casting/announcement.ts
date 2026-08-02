@@ -15,7 +15,7 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
 import { armorClassWithSpell } from "@/core/domain/effects/armorClass";
 import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
-import { SAVING_THROW_NAMES, withPlural } from "@/core/shared/language";
+import { SAVING_THROW_NAMES, signed, withPlural } from "@/core/shared/language";
 import {
   ascensionTierRate,
   hitPointCost,
@@ -52,11 +52,6 @@ export type AnnouncementContext = {
   /** Приложенная руна. К оплате кровью не применяется. */
   rune?: Rune;
 };
-
-/** Знак обязателен: игрок называет «плюс восемь», а не «восемь». */
-function signed(value: number): string {
-  return value < 0 ? `${value}` : `+${value}`;
-}
 
 /** Уровень, на котором сотворяется заклинание: выбранная ячейка или собственный уровень. */
 function castLevel(spell: Spell, payment: PaymentChoice): number {

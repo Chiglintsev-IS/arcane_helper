@@ -8,7 +8,6 @@ import {
   durationPhrase,
   ritualOnlyBadge,
   resolutionBadge,
-  signed,
 } from "./format";
 
 /** Числа Торна: оба включают +1 от предмета, и книга их не знает. */
@@ -65,17 +64,6 @@ describe("durationPhrase (FR-014)", () => {
   it("особая длительность и длительность без числа названы особой", () => {
     expect(durationPhrase({ type: "special" })).toBe("Длительность особая");
     expect(durationPhrase({ type: "minutes" })).toBe("Длительность особая");
-  });
-});
-
-describe("signed", () => {
-  it("знак ставится всегда: «d20+8» произносят вслух именно так", () => {
-    expect(signed(8)).toBe("+8");
-    expect(signed(0)).toBe("+0");
-  });
-
-  it("отрицательный модификатор пишется минусом", () => {
-    expect(signed(-2)).toBe("−2");
   });
 });
 
