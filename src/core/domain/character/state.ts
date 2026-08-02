@@ -10,7 +10,7 @@ import { z } from "zod";
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { DEFAULT_SCREEN_MODE, SCREEN_MODES } from "@/core/shared/screenMode";
 
-/** Версия формата экспорта. Файл неизвестной версии отклоняется (F-11). */
+/** Версия формата экспорта. Файл неизвестной версии отклоняется. */
 export const EXPORT_SCHEMA_VERSION = 1;
 
 const nonEmpty = z.string().trim().min(1);
@@ -156,7 +156,7 @@ export const characterStateSchema = z
      */
     shortRestSinceLongRest: z.boolean().optional(),
 
-    // Хиты нужны потому, что кровавое колдовство покупает магию здоровьем (F-15).
+    // Хиты нужны потому, что кровавое колдовство покупает магию здоровьем.
     hitPoints: z
       .object({
         current: z.number().int(),

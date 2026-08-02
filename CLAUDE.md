@@ -77,7 +77,7 @@ Arcane Helper — оффлайн PWA-помощник по применению 
 | Новое в интерфейсе: экран, список, фильтр | [docs/screens.md](docs/screens.md) |
 | Развилка в реализации, выбранный вариант | новая запись `ADR` в [docs/decisions.md](docs/decisions.md) |
 | Неизвестное правило, неподтверждённое число | [docs/open-questions.md](docs/open-questions.md) |
-| Новое заклинание или изменение его данных | [docs/content.md](docs/content.md) + файл контента |
+| Новое заклинание или изменение его данных | файл контента + правило в [docs/domains/catalog.md](docs/domains/catalog.md) |
 | Формула или алгоритм правил | раздел «Правила» соответствующего домена |
 
 ## Язык

@@ -63,7 +63,7 @@ describe("состав фильтров зависит от книги (FR-002)"
 
     renderFilters(EVERYTHING);
     expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Заговор" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Без ячейки" })).toBeDefined();
     expect(screen.getByRole("button", { name: "2 ур." })).toBeDefined();
   });
 
@@ -114,7 +114,7 @@ describe("фильтры боя (FR-212)", () => {
       expect(screen.getByRole("button", { name }), name).toBeDefined();
     }
     // Уровень, ритуальность, подготовка и «доступно сейчас» в бою не отвечают ни на один вопрос.
-    for (const name of ["Заговор", "2 ур.", "Ритуал", "Подготовлено", "Доступно сейчас"]) {
+    for (const name of ["Без ячейки", "2 ур.", "Ритуал", "Подготовлено", "Доступно сейчас"]) {
       expect(screen.queryByRole("button", { name }), name).toBeNull();
     }
   });
@@ -131,7 +131,7 @@ describe("фильтры боя (FR-212)", () => {
     renderFilters(EVERYTHING, { mode: "camp" });
 
     expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Заговор" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Без ячейки" })).toBeDefined();
   });
 });
 
@@ -140,7 +140,7 @@ describe("уровни — отдельная прокручиваемая ст�
     renderFilters(EVERYTHING);
 
     const levels = within(screen.getByRole("group", { name: "Уровень" }));
-    expect(levels.getByRole("button", { name: "Заговор" })).toBeDefined();
+    expect(levels.getByRole("button", { name: "Без ячейки" })).toBeDefined();
     expect(levels.getByRole("button", { name: "1 ур." })).toBeDefined();
     expect(levels.getByRole("button", { name: "2 ур." })).toBeDefined();
 

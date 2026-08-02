@@ -136,7 +136,7 @@ function modeGap(spell: Spell, mode: CastMode): AnnouncementGap[] {
   ];
 }
 
-/** Оплата кровью в шаблонах не предусмотрена: она добавляется фразой, а не подстановкой (F-15). */
+/** Оплата кровью в шаблонах не предусмотрена: она добавляется фразой, а не подстановкой. */
 function paymentSentence(spell: Spell, payment: PaymentChoice): string {
   if (payment.kind !== "spell_points") return "";
   return ` Ячейка не расходуется: сотворяю за очки заклинаний (${spellPointCost(spell.level)}).`;
@@ -203,7 +203,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
     steps.push(`Спишется ячейка ${level} уровня`);
   } else if (context.payment.kind === "spell_points") {
     // Снижение максимума хитов названо отдельным следствием: «столько же максимума» игрок читает как
-    // повтор цены, а это вторая, невосстановимая её половина (F-15).
+    // повтор цены, а это вторая, невосстановимая её половина.
     steps.push(
       `Спишется ${withPlural(spellPointCost(spell.level), ["очко", "очка", "очков"])}` +
         ` заклинаний — заплатите ${withPlural(hitPointCost(spell.level, character.level), ["хит", "хита", "хитов"])},` +
@@ -288,7 +288,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
  * Объявление обмена хитов на очки.
  *
  * Шаблона у расовой особенности нет и быть не может: она не заклинание, карточки у неё не заведено
- * (content.md). Текст собирается из чисел состояния — значит остаётся
+ * Текст собирается из чисел состояния — значит остаётся
  * верным и после смены ступени возвышения.
  */
 export function bloodExchangeAnnouncement(points: number, character: CharacterState): string {

@@ -6,7 +6,7 @@ import {
   castingTimeLabel,
   castingTimePhrase,
   durationPhrase,
-  preparationBadge,
+  ritualOnlyBadge,
   resolutionBadge,
   signed,
 } from "./format";
@@ -105,28 +105,28 @@ describe("resolutionBadge (FR-211)", () => {
   });
 });
 
-describe("preparationBadge (FR-219)", () => {
+describe("ritualOnlyBadge (FR-219)", () => {
   const SPELLS = loadThorneSpells();
   const spell = (id: string) => SPELLS.find((candidate) => candidate.id === id)!;
 
   it("подготовленное значка не получает: рядом нажатая кнопка подготовки", () => {
-    expect(preparationBadge(spell("mage-armor"), ["mage-armor"])).toBeNull();
+    expect(ritualOnlyBadge(spell("mage-armor"), ["mage-armor"])).toBeNull();
   });
 
   it("неподготовленное — тоже: причину скажет строка недоступности словами", () => {
-    expect(preparationBadge(spell("blink"), [])).toBeNull();
+    expect(ritualOnlyBadge(spell("blink"), [])).toBeNull();
   });
 
-  it("заговор остаётся: значок говорит о цене, а кнопки подготовки у него нет", () => {
-    expect(preparationBadge(spell("ray-of-frost"), [])?.label).toBe("Заговор");
+  it("заговор значка не получает: цену он называет строкой «Без ячейки»", () => {
+    expect(ritualOnlyBadge(spell("ray-of-frost"), [])).toBeNull();
   });
 
   it("неподготовленный ритуал остаётся: без подписи цена обещала бы ячейку", () => {
     // «Обнаружение магии» стоит «Ячейка 1 ур. или ритуал», но без подготовки способ один.
-    expect(preparationBadge(spell("detect-magic"), [])?.label).toBe("Только ритуалом");
+    expect(ritualOnlyBadge(spell("detect-magic"), [])?.label).toBe("Только ритуалом");
   });
 
   it("подготовленный ритуал молчит: ячейка ему доступна наравне с ритуалом", () => {
-    expect(preparationBadge(spell("detect-magic"), ["detect-magic"])).toBeNull();
+    expect(ritualOnlyBadge(spell("detect-magic"), ["detect-magic"])).toBeNull();
   });
 });

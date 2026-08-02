@@ -230,7 +230,7 @@ describe("навигация по шагам", () => {
   });
 });
 
-describe("запоминание выбора (F-03)", () => {
+describe("запоминание выбора", () => {
   it("повторное применение предлагает прежний уровень ячейки", () => {
     store.getState().start(mageArmor, context());
     store.getState().chooseCastOption({ mode: "normal", payment: { kind: "slot", slotLevel: 3 } });

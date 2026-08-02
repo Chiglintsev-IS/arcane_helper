@@ -22,7 +22,7 @@ import {
   castingTimePhrase,
   damageLabel,
   durationPhrase,
-  preparationBadge,
+  ritualOnlyBadge,
   rangeLabel,
   resolutionBadge,
   slotCostLabel,
@@ -41,7 +41,7 @@ const ROLE_FRAME = {
 
 /**
  * Цвет подписи роли. Тёмные варианты — не украшение: на подкрашенной подложке серый слишком светлый
- * и даёт 4.31 вместо требуемых WCAG 4.5 (, проверка axe-core).
+ * и даёт 4.31 вместо требуемых WCAG 4.5 — это ловит прогон axe-core.
  */
 const ROLE_WORD = {
   offense: "text-offense-strong dark:text-offense",
@@ -67,21 +67,17 @@ export function SpellCardCompact({
    */
   onTogglePrepared?: (() => void) | undefined;
 }) {
-  // В бою значков подготовки нет: неподготовленного в списке уже нет, и значок сообщал бы то, что
-  // и так верно про каждую строку. Вне боя остаются только те, что говорят о цене
-  // и о ритуале, — про саму подготовку отвечает кнопка рядом.
-  // Карточка одна на все режимы: «в книге она выглядит иначе — это плохо», сказал игрок, и он прав.
-  // Роль красит рамку и стоит в углу везде, цена ячейки называется везде, значок подготовки — только
-  // там, где подготовку меняют.
+  // Карточка одна на все режимы: роль красит рамку и стоит в углу везде, цена называется везде.
+  // «Только ритуалом» — единственный значок, который зависит от режима: в бою ритуалом не творят.
   const inBook = character.screenMode === "book";
   // Эффект уже висит — строка перестаёт претендовать на внимание, но из списка не уходит: повторное
   // применение бывает нужно.
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
-  const preparation = inBook ? preparationBadge(spell, character.preparedSpellIds) : null;
+  const ritualOnly = inBook ? ritualOnlyBadge(spell, character.preparedSpellIds) : null;
   const resolution = resolutionBadge(spell.resolution, character);
   const damage = damageLabel(spell, spell.level, character.level);
-  const slotCost = slotCostLabel(spell) ?? "Без ячейки";
+  const slotCost = slotCostLabel(spell);
 
   /**
    * Роль красит рамку, а не занимает отдельный значок. Цвет один ничего не сообщает
@@ -133,9 +129,9 @@ export function SpellCardCompact({
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
             {castingTimePhrase(spell.castingTime)}
           </Badge>
-          {preparation === null ? null : (
-            <Badge tone={preparation.tone} icon={preparation.icon}>
-              {preparation.label}
+          {ritualOnly === null ? null : (
+            <Badge tone={ritualOnly.tone} icon={ritualOnly.icon}>
+              {ritualOnly.label}
             </Badge>
           )}
           {active ? (

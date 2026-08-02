@@ -11,7 +11,8 @@
 
 import { useState } from "react";
 
-import { checkGuidanceRu, type ConcentrationCheck } from "@/core/domain/effects/concentration";
+import type { ConcentrationCheck } from "@/core/domain/effects/concentration";
+import { checkGuidanceRu } from "@/ui/features/concentration-check/lib/checkGuidance";
 
 export function ConcentrationCheckCard({
   check,

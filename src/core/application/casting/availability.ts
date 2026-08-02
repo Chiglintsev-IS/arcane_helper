@@ -64,7 +64,7 @@ export const ACTION_SPENT_MESSAGES: Record<TurnResource, string> = {
 /** Одна формулировка на оба мастера: у заклинания и у обмена причина буквально одна. */
 export const COMBAT_NOT_STARTED_MESSAGE = "Бой не начат — сначала «Начать бой»";
 
-/** Способ оплаты сотворения: ячейка, очки заклинаний (F-15) или ничего — заговор и ритуал. */
+/** Способ оплаты сотворения: ячейка, очки заклинаний или ничего — заговор и ритуал. */
 export type PaymentChoice =
   | { kind: "slot"; slotLevel: number }
   | { kind: "spell_points" }
@@ -151,7 +151,7 @@ function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
   return [
     {
       code: "long_casting_time",
-      // Тире, а не двоеточие: строка списка печатает причину после «Недоступно:» (F-02).
+      // Тире, а не двоеточие: строка списка печатает причину после «Недоступно:».
       reasonRu:
         `Не уложится в один ход — ${longCastingTimeRu(unit, castingTime.value)},` +
         " действие каждый ход и концентрация",
@@ -369,7 +369,7 @@ export function componentRequirements(components: Spell["components"]): string[]
   if (components.material && components.materialText !== undefined) {
     const notes: string[] = [];
     // Фокусировка заменяет компоненты без стоимости; со стоимостью — нет, и это предупреждение
-    // обязательно, даже если фокусировка есть (F-03, «Материальный компонент со стоимостью»).
+    // обязательно, даже если фокусировка есть («Материальный компонент со стоимостью»).
     if (components.costGp !== undefined) {
       notes.push(`${components.costGp} зм, фокусировка не заменяет`);
     }

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   // Устаревшее имя мета-тега рядом с современным: Next пишет только `mobile-web-app-capable`, а
   // Safari до iOS 17 читает полноэкранный режим из `apple-mobile-web-app-capable` и без него
-  // открывает приложение с домашнего экрана в обычной вкладке (F-12,).
+  // открывает приложение с домашнего экрана в обычной вкладке.
   other: { "apple-mobile-web-app-capable": "yes" },
   icons: {
     icon: [{ url: "./icon-192.png", sizes: "192x192", type: "image/png" }],

@@ -25,7 +25,7 @@ const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   combat: { title: "Бой", hint: "то, что творится внутри хода" },
   camp: { title: "Вне боя", hint: "отдых и восстановление — привал, город, дорога" },
   book: { title: "Книга", hint: "весь состав целиком, для чтения и сверки" },
-  journal: { title: "Журнал", hint: "что случилось и что можно отменить" },
+  journal: { title: "Журнал", hint: "что случилось, что можно отменить и где взять копию" },
 };
 
 export function ModeSwitcher({

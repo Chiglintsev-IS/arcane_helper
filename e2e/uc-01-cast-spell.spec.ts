@@ -29,16 +29,9 @@ test.beforeEach(async ({ page }) => {
   await openFreshApp(page);
 });
 
-/**
- * Уйти из «Боя» в другой режим, ответив «нет» на вопрос о конце боя.
- *
- * Вопрос задаётся на каждом выходе из боя: конец боя — факт, сбрасывающий счёт раундов, и
- * приложение обязано о нём узнать. Прогону, который просто заглядывает в книгу, нужен ответ «нет».
- */
+/** Смена режима: она ничего не спрашивает — бой начинают и заканчивают кнопками в самом бою. */
 async function switchMode(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("radio", { name }).click();
-  const sheet = page.getByRole("dialog", { name: "Бой закончен?" });
-  if (await sheet.isVisible()) await sheet.getByRole("button", { name: "Нет, продолжается" }).click();
 }
 
 test("combat-screen renders all resource blocks", async ({ page }) => {
@@ -70,19 +63,19 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
     horizontalOverflow: document.documentElement.scrollWidth - window.innerWidth,
   }));
 
-  // Прокручивается только список заклинаний; страница целиком — нет (F-01).
+  // Прокручивается только список заклинаний; страница целиком — нет.
   expect(layout.documentHeight).toBeLessThanOrEqual(layout.viewportHeight);
   expect(layout.horizontalOverflow).toBeLessThanOrEqual(0);
   await expect(page.getByLabel("Заклинания")).toBeVisible();
 });
 
-test("combat keeps the first card whole, the book keeps the header", async ({ page }) => {
+test("combat keeps the first card whole, the book keeps the first row", async ({ page }) => {
   // Бой начат: причина добавляет строке ещё одну строку текста, а бюджет здесь меряет
   // обычную игру — после «Начать бой», а не до него.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
 
   // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
-  // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18,).
+  // нужно доскроллить, а в бою скроллят одной рукой под чужой ход.
   const firstCardBottom = async (): Promise<number> =>
     page.evaluate(() => {
       const first = document.querySelector('[aria-label^="Заклинания"] li');
@@ -103,13 +96,14 @@ test("combat keeps the first card whole, the book keeps the header", async ({ pa
   expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
 
   // «Вне боя» списка не показывает вовсе — мерить там нечего.
-  // В «Книге» бюджет другой: шапка целиком и начало первой строки, а не строка целиком.
+  // В «Книге» бюджет другой: счётчик подготовки, фильтры и начало первой строки, а не строка
+  // целиком: там читают и готовятся, и прокрутка нормальна.
   await switchMode(page, /^Книга/);
 
-  const headerBottom = await page
-    .getByRole("region", { name: "Ресурсы" })
+  const filtersBottom = await page
+    .getByLabel("Фильтры")
     .evaluate((node) => Math.round(node.getBoundingClientRect().bottom));
-  expect(headerBottom, "шапка «Книги» целиком").toBeLessThanOrEqual(viewport);
+  expect(filtersBottom, "полоса фильтров «Книги» целиком").toBeLessThanOrEqual(viewport);
 
   const rowTop = await page.evaluate(() => {
     const first = document.querySelector('[aria-label^="Заклинания"] li');
@@ -120,21 +114,18 @@ test("combat keeps the first card whole, the book keeps the header", async ({ pa
   expect(rowTop, "начало первой строки «Книги»").toBeLessThan(viewport - 24);
 });
 
-test("book mode shows slots", async ({ page }) => {
-  // Ячейки нужны там, где выбирают состав на день: подготовка — это вопрос «чем платить».
+test("book mode shows only the book", async ({ page }) => {
+  // Книга отвечает, что персонаж знает, а не чем он за это заплатит: шапки ресурсов в ней нет.
   await switchMode(page, /^Книга/);
 
-  const header = page.getByRole("region", { name: "Ресурсы" });
-  await expect(header.getByLabel("Ячейки заклинаний")).toBeVisible();
-  await expect(header.getByLabel(/Ячейки 1 уровня/)).toBeVisible();
-  // И только они: числа боя на вопрос «чем сегодня платить» не отвечают.
-  await expect(header.getByText("КС закл.")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Ресурсы" })).toHaveCount(0);
+  await expect(page.getByLabel("Ячейки заклинаний")).toHaveCount(0);
+  await expect(page.getByLabel("Прочие ресурсы")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Магия крови/ })).toHaveCount(0);
 
-  // Ряд прочих ресурсов в «Книге» состоит из одного значка: очки — способ оплаты, и их же здесь
-  // покупают строкой «Магия крови». Рун и чисел боя в нём нет.
-  const other = header.getByLabel("Прочие ресурсы");
-  await expect(other).toContainText("Очки");
-  await expect(other).not.toContainText("Руны");
+  // Остаётся то, ради чего книгу открывают: состав, подготовка со счётчиком и фильтры.
+  await expect(page.getByLabel(/^Подготовлено \d+ из \d+/)).toBeVisible();
+  await expect(page.getByRole("list", { name: "Заклинания" })).toBeVisible();
 });
 
 test("filter by casting time", async ({ page }) => {
@@ -197,11 +188,13 @@ test("undo returns the slot through the journal screen", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^Отменить/ })).toBeHidden();
   await switchMode(page, /^Журнал/);
   await page.getByRole("button", { name: /^Отменить/ }).click();
-  await expect(slots.getByText("4/4")).toBeVisible();
+  // Ячейку возвращают из журнала, а видят в бою: шапки ресурсов в журнале нет.
+  await expect(page.getByRole("button", { name: "Отменить: Бой начался" })).toBeVisible();
 
   // Возврат в бой застаёт тот же бой: журнал его не заканчивает.
   await switchMode(page, /^Бой/);
-  await expect(page.getByRole("button", { name: "Мой ход" })).toBeVisible();
+  await expect(slots.getByText("4/4")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Окончить бой" })).toBeVisible();
 });
 
 test("state survives a reload", async ({ page }) => {
@@ -214,9 +207,9 @@ test("state survives a reload", async ({ page }) => {
   await switchMode(page, /^Книга/);
 
   await page.reload();
-  // После перезапуска экран снова «Книга»: заголовка с именем там больше нет, поэтому
-  // признак загрузки — плитки ячеек, которые в «Книге» как раз и остаются.
-  await expect(page.getByLabel("Ячейки заклинаний")).toBeVisible();
+  // После перезапуска экран снова «Книга»: ни заголовка с именем, ни шапки ресурсов там нет,
+  // поэтому признак загрузки — сам список заклинаний.
+  await expect(page.getByRole("list", { name: "Заклинания" })).toBeVisible();
   await expect(page.getByRole("radio", { name: /^Книга/ })).toHaveAttribute(
     "aria-checked",
     "true",
@@ -263,7 +256,7 @@ test("concentration block explains the effect", async ({ page }) => {
   await expect(card).toContainText("Сфера 30 футов от себя");
   await expect(card).toContainText("спасбросок Телосложения");
 
-  // Ключевая механика по-прежнему без прокрутки страницы (F-01).
+  // Ключевая механика по-прежнему без прокрутки страницы.
   const layout = await page.evaluate(() => ({
     documentHeight: document.documentElement.scrollHeight,
     viewportHeight: window.innerHeight,
@@ -407,8 +400,10 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
 
   await switchMode(page, /^Вне боя/);
 
-  // Вне боя ходов нет: ни кнопки, ни счётчика раундов.
-  await expect(page.getByRole("button", { name: /Начать бой|Мой ход/ })).toBeHidden();
+  // Вне боя ходов нет: ни отметок схватки, ни счётчика раундов.
+  await expect(
+    page.getByRole("button", { name: /Начать бой|Окончить бой|Новый ход/ }),
+  ).toBeHidden();
   // Точное имя: подстрока «Ресурсы» есть и у списка «Прочие ресурсы».
   await expect(page.getByLabel("Ресурсы", { exact: true })).not.toContainText("раунд");
 

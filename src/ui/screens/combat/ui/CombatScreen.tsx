@@ -1,15 +1,11 @@
 /**
- * Экран боя (F-01) — единственная точка входа во время игры.
+ * Главный экран — единственная точка входа во время игры.
  *
- * Порядок сверху вниз задан ресурсы, концентрация и эффекты, фильтры,
- * прокручиваемый список заклинаний. Шапка не прокручивается: она отвечает на вопросы, которые
- * возникают чаще всего.
+ * Порядок сверху вниз: переключатель режима, шапка ресурсов, действующее, ряд кнопок, операции
+ * режима, фильтры, прокручиваемая область. Прокручивается только она.
  *
- * Единственная точка изменения состояния персонажа — `apply`. Компоненты списка
- * и карточки состояние не трогают: они сообщают о нажатии, а операцию выбирает этот экран.
- *
- * Отмены на этом экране нет: она живёт в режиме «Журнал» и только там. Прежняя
- * кнопка в шапке отменяла вслепую — что вернётся, было написано только в доступном имени.
+ * Единственная точка изменения состояния персонажа — `apply`. Компоненты списка и карточки
+ * состояние не трогают: они сообщают о нажатии, а операцию выбирает этот экран.
  */
 
 "use client";
@@ -38,6 +34,7 @@ import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { DataSheet } from "@/ui/features/data-exchange/ui/DataSheet";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
+import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
 import { JournalScreen } from "@/ui/widgets/journal/ui/JournalScreen";
 import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
 import { ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
@@ -48,11 +45,8 @@ import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
-import {
-  describeConcentration,
-  describeConcentrationCheck,
-  type ConcentrationCheck,
-} from "@/core/domain/effects/concentration";
+import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
+import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { ascensionTierRate } from "@/core/domain/vitality/blood";
 import { rolesPresent } from "@/core/domain/catalog/combatRole";
 import { exportFileName, exportSnapshot, parseImport } from "@/core/application/dataExchange";
@@ -83,7 +77,7 @@ function availableFilters(spells: readonly Spell[]): AvailableFilters {
  * Первая причина, по которой заклинание сейчас не применить, — для строки списка.
  *
  * Причина берётся у лучшего способа сотворения, а не у первого попавшегося: строка обязана называть
- * то же, что скажет мастер применения (F-02, «Причина недоступности берётся у лучшего способа»).
+ * то же, что скажет мастер применения.
  */
 function firstReason(
   spell: Spell,
@@ -127,7 +121,7 @@ export function CombatScreen() {
   /**
    * Описание концентрации собирается из контента по `spellId` эффекта. Карточки может не быть —
    * состояние пришло импортом из другой сборки — тогда описание деградирует, но не исчезает:
-   * концентрация не может уйти с экрана незаметно (F-07).
+   * концентрация не может уйти с экрана незаметно.
    */
   const concentrationSummary = useMemo(() => {
     if (session === null) return null;
@@ -152,43 +146,28 @@ export function CombatScreen() {
   const { character } = session;
   const context = { character, turn: economy };
   const apply = sessionStore.getState().apply;
-  // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список
-  //. Карточка открывается из всей книги — режим не должен закрывать уже открытое.
+  const mode = character.screenMode;
+  // Режим отбирает раньше фильтров: фильтр сужает список внутри режима, режим задаёт сам список.
+  // Карточка при этом открывается из всей книги — режим не должен закрывать уже открытое.
   const inMode = spellsForScreen(spells, character);
-  // Поиск раньше жил в «Книге»: там 29 карточек и вопрос «где оно» настоящий. Игрок назвал поле
-  // лишним для чтения и подготовки, и кнопку с полем убрали вовсе — список теперь строится
-  // прямо из `inMode`, без промежуточного отбора по названию. Вместе с полем ушёл и единственный
-  // вход к объяснению запрета мастера. Игрок решил вопрос иначе, чем предполагало требование:
-  // запрещённое заклинание просто отсутствует, объяснять нечего —
-  // отменено,
-  // закрыт тем же решением.
   const shown = filterSpells(inMode, filters, context);
   const available = availableFilters(inMode);
-  // Журнал — экран одной задачи: ни списка, ни фильтров, ни кнопок хода. Список есть ровно
-  // там, где есть что выбирать, — в «Бою» и в «Книге».
-  const showsSpellList = character.screenMode === "combat" || character.screenMode === "book";
-  // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам.
-  // Она стоит и в «Книге»: очки заклинаний покупают вне боя, а «Книга» — единственный вход к
-  // заклинаниям вне боя. Во «Вне боя» её нет, потому что списка там нет вовсе;
-  // в «Журнале» — по той же причине.
-  // Поиску она раньше отвечала тоже: запрос «дракон» в «Книге» не находил бы строку,
-  // которая явно не подходит. С уходом поля поиска отбирать по названию стало нечем —
-  // проверка снята как недостижимая, а не забыта.
-  const bloodShown = showsSpellList && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
-
-  /**
-   * Один список, а не два. Обмен хитов на очки ячейку не тратит, значит по цене он
-   * стоит там же, где заговоры, и идёт сразу за ними. Отдельным списком он оказывался бы или выше
-   * реакций, или ниже всего — в обоих случаях не на своём месте, а порядок здесь и есть подсказка.
-   */
-  // Подготовка живёт в «Книге»: в бою состав уже определён, и менять его под чужой ход
-  // приложение предлагать не должно.
-  const preparing = character.screenMode === "book";
-  // Ход начинается только в бою, «Реакции» стоят в бою и вне боя. Оба
-  // признака названы, потому что от них зависит и содержимое ряда кнопок, и сам ряд: пустой ряд
-  // стоил бы 8 пикселей высоты, а на iPhone SE за них воюют везде.
-  const showsTurnButton = character.screenMode === "combat";
-  const showsReactions = character.screenMode === "combat" || character.screenMode === "camp";
+  // Список есть ровно там, где есть что выбирать: во «Вне боя» отдыхают, в «Журнале» разбирают
+  // случившееся.
+  const showsSpellList = mode === "combat" || mode === "book";
+  // Шапка ресурсов — там, где тратят и восстанавливают. «Книга» отвечает, что персонаж знает, а
+  // «Журнал» — что уже случилось: ни тому, ни другому остаток ячеек не нужен.
+  const showsResources = mode === "combat" || mode === "camp";
+  // «Магия крови» — конкурент за то же действие и потому подчиняется тем же фильтрам. В «Книге» её
+  // нет: книга отвечает, что персонаж знает, а не чем он за это заплатит.
+  const bloodShown = mode === "combat" && matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
+  // Подготовка живёт в «Книге»: в бою состав уже определён, и менять его под чужой ход приложение
+  // предлагать не должно.
+  const preparing = mode === "book";
+  // Отметки схватки — только в бою. «Реакции» стоят в бою и вне боя: провалить спасбросок можно и
+  // от ловушки в коридоре, а руна превращает провал в успех независимо от того, идёт ли бой.
+  const showsEncounter = mode === "combat";
+  const showsReactions = mode === "combat" || mode === "camp";
   const limit = Character.of(character).sheet.preparationLimit;
 
   const rows = shown.map((spell) => (
@@ -206,17 +185,12 @@ export function CombatScreen() {
     />
   ));
   if (bloodShown) {
-    // Позиция ищется по-разному, потому что «Бой» и «Книга» сортированы по-разному. В «Бою» список
-    // уже переставлен `orderForCombat` по тому же ключу `compareCombatTraits` — реакции вынесены
-    // вперёд, — и искать по нему корректно: реакция уровня выше нуля всё равно упорядочена раньше
-    // «Магии крови». В «Книге» список идёт «уровень, затем алфавит» без такой перестановки, и та же
-    // проверка нашла бы «Щит» (реакция первого уровня) раньше заговоров только потому, что он
-    // реакция, — а этот список реакции вперёд не выносит. Проверка по одному уровню верна для обоих
-    // случаев здесь, потому что содержимое отсортировано по уровню в обоих списках.
-    const after =
-      character.screenMode === "combat"
-        ? shown.findIndex((spell) => compareCombatTraits(traitsOf(spell), BLOOD_MAGIC_TRAITS) > 0)
-        : shown.findIndex((spell) => traitsOf(spell).level > BLOOD_MAGIC_TRAITS.level);
+    // Один список, а не два: обмен хитов на очки ячейку не тратит, значит по цене он стоит там же,
+    // где заговоры, и идёт сразу за ними. Боевой список уже переставлен по тому же ключу
+    // `compareCombatTraits` — реакции вперёд, — поэтому место ищется им же.
+    const after = shown.findIndex(
+      (spell) => compareCombatTraits(traitsOf(spell), BLOOD_MAGIC_TRAITS) > 0,
+    );
     rows.splice(after === -1 ? rows.length : after, 0, (
       <BloodMagicRow
         key="blood-magic"
@@ -226,7 +200,7 @@ export function CombatScreen() {
       />
     ));
   }
-  // Имя списка называет то, что в нём есть: вне боя — только заклинания, в бою ещё и «Магия крови».
+  // Имя списка называет то, что в нём есть: в «Книге» — только заклинания, в бою ещё «Магия крови».
   const listLabel = bloodShown ? "Заклинания и действия" : "Заклинания";
   const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
@@ -235,8 +209,8 @@ export function CombatScreen() {
    * проверка.
    *
    * Обработчик один на все точки ввода намеренно: вторая реализация рано или поздно забыла бы
-   * предложить проверку, а незаметно потерять концентрацию нельзя (F-07). Обмен хитов на очки сюда
-   * не идёт — это не урон и проверки не требует.
+   * предложить проверку, а незаметно потерять концентрацию нельзя. Обмен хитов на очки сюда не
+   * идёт — это не урон и проверки не требует.
    */
   const recordDamage = (damage: number, fire: boolean): void => {
     if (apply((current) => takeDamage(current, damage, clock, { fire })) !== null) return;
@@ -248,18 +222,17 @@ export function CombatScreen() {
   };
 
   /**
-   * Смена режима и вопрос о конце боя.
+   * Смена режима.
    *
-   * Режим переключается сразу и ничего не спрашивает: игрок мог уйти в книгу за справкой посреди
-   * боя, и вопрос «бой закончен?» на каждый такой взгляд — шум. Конец боя отмечается явной кнопкой
-   * в режиме «Вне боя», а начало — кнопкой в бою.
+   * Ничего не спрашивает: игрок мог уйти в книгу за справкой посреди боя, и вопрос «бой закончен?»
+   * на каждый такой взгляд — шум. Начало и конец боя отмечаются кнопками в самом бою.
    */
-  const changeMode = (mode: ScreenMode): void => {
+  const changeMode = (next: ScreenMode): void => {
     // Наборы фильтров у режимов разные, и выбранное в одном становится в другом невидимым:
     // «Ритуал» с привала молча сузил бы боевой список до пустого, а переключателя, которым это
     // снять, на экране уже нет.
     setFilters(NO_FILTERS);
-    apply((current) => setScreenMode(current, mode));
+    apply((current) => setScreenMode(current, next));
   };
 
   /** Подтверждение применения: одна транзакция, одна запись журнала. */
@@ -274,60 +247,39 @@ export function CombatScreen() {
   return (
     <main className="flex h-dvh flex-col">
       <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
-        <ModeSwitcher mode={character.screenMode} onChange={changeMode} />
+        <ModeSwitcher mode={mode} onChange={changeMode} />
 
-        <ResourceHeader
+        {showsResources ? (
+          <ResourceHeader
+            character={character}
+            economy={economy}
+            bookCastingTimes={available.castingTimes}
+            onOpenHitPoints={() => setDamageOpen(true)}
+            onEditResources={() => setResourcesOpen(true)}
+          />
+        ) : null}
+
+        {/* Действующее видно во всех режимах: концентрация не уходит с экрана незаметно. */}
+        <ActiveEffects
           character={character}
-          economy={economy}
           concentration={concentrationSummary}
-          bookCastingTimes={available.castingTimes}
-          onOpenHitPoints={() => setDamageOpen(true)}
-          onEditResources={() => setResourcesOpen(true)}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
         />
 
         {/*
- Операции привала — только на привале. В книге их нет: там читают и
- готовятся, а отдыхают на привале, и кнопка отдыха посреди чтения предлагала бы восемь
- часов случайным нажатием.
- */}
-        {character.screenMode === "camp" ? (
-          <CampActions
-            character={character}
-            onShortRest={() => apply((current) => shortRest(current, clock))}
-            onLongRest={() => setLongRestOpen(true)}
-            onArcaneRecovery={() => setRecoveryOpen(true)}
-            onRecoverMaximum={() => apply((current) => recoverHitPointMaximum(current, clock))}
-            inFight={economy.inFight}
-            onFightOver={() => setFightOverOpen(true)}
-            onData={() => setDataOpen(true)}
-          />
-        ) : null}
-        {/*
- Список покупок живёт вне боя: докупают между сессиями, а не под чужой ход.
- */}
-        {character.screenMode === "camp" ? (
-          <MaterialsList
-            spells={spells}
-            character={character}
-            onToggle={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
-          />
-        ) : null}
-
-        {/*
- Ряда нет, когда в нём нечему стоять: в «Журнале» ни счётчика подготовки, ни кнопок хода
-, а пустая обёртка всё равно забрала бы промежуток родителя — 8 пикселей, которых
- на iPhone SE не бывает лишних.
- */}
-        {preparing || showsTurnButton || showsReactions ? (
+         * Ряда нет, когда в нём нечему стоять: в «Журнале» ни счётчика подготовки, ни кнопок, а
+         * пустая обёртка всё равно забрала бы промежуток родителя — 8 пикселей, которых на
+         * iPhone SE не бывает лишних.
+         */}
+        {preparing || showsEncounter || showsReactions ? (
           <div className="flex flex-wrap items-center gap-2">
             {/*
- Счётчик подготовки: лимит — единственное жёсткое ограничение приложения, и
- двенадцатое заклинание обязано упираться в видимое число, а не во внезапный отказ.
- Стоит в ряду кнопок, а не отдельной строкой: отдельная строка стоила ряда, а на iPhone SE
- ряд — это пятая часть карточки.
- */}
+             * Счётчик подготовки: лимит — единственное жёсткое ограничение приложения, и
+             * двенадцатое заклинание обязано упираться в видимое число, а не во внезапный отказ.
+             * Стоит в ряду кнопок, а не отдельной строкой: отдельная строка стоила бы ряда, а на
+             * iPhone SE ряд — это пятая часть карточки.
+             */}
             {preparing ? (
               <p
                 aria-label={`Подготовлено ${character.preparedSpellIds.length} из ${limit}`}
@@ -340,57 +292,76 @@ export function CombatScreen() {
                 {character.preparedSpellIds.length} из {limit}
               </p>
             ) : null}
-            {/* Ход начинается только в бою: вне боя ходов нет, и кнопка звала бы начать то, чего не происходит. */}
-            {showsTurnButton ? (
+            {/*
+             * Отметки схватки стоят рядом, потому что это три решения одной ситуации: начал,
+             * сходил, закончил. Без явного начала приложение не знает, где кончился прежний бой, и
+             * следующий открывался бы шестым раундом; без явного конца счёт раундов не обнулить.
+             *
+             * «Новый ход» гаснет, а не исчезает: пропавшая кнопка не отвечает на вопрос «почему
+             * нельзя», а ответ здесь — «бой ещё не начат», и он же написан на соседней кнопке.
+             */}
+            {showsEncounter ? (
               <>
-                {/*
- Бой начинается явно. Пока он не начат, кнопка предлагает начать: это же и
- первый ход. Дальше она называет то, что делает каждый следующий раз, — «Мой ход».
- Без явного начала приложение не знает, где кончился прежний бой, и следующий
- открывался шестым раундом.
- */}
                 <button
                   type="button"
                   onClick={() =>
-                    apply((current) =>
-                      economy.inFight ? beginTurn(current, clock) : startCombat(current, clock),
-                    )
+                    economy.inFight
+                      ? setFightOverOpen(true)
+                      : apply((current) => startCombat(current, clock))
                   }
-                  className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold leading-tight text-white"
+                  className="min-h-11 grow whitespace-nowrap rounded-xl bg-action-strong px-1 text-sm font-semibold leading-tight text-white"
                 >
-                  {economy.inFight ? "Мой ход" : "Начать бой"}
+                  {economy.inFight ? "Окончить бой" : "Начать бой"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!economy.inFight}
+                  onClick={() => apply((current) => beginTurn(current, clock))}
+                  aria-label={economy.inFight ? undefined : "Новый ход — бой не начат"}
+                  className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold text-action-strong disabled:opacity-50 dark:text-action"
+                >
+                  Новый ход
                 </button>
               </>
             ) : null}
             {/*
- Реакции — отдельный вход, видимый независимо от фильтров и прокрутки списка:
- триггер приходит в чужой ход, и искать заклинание по списку в этот момент некогда.
-
- Кнопка стояла во всех трёх режимах, включая «Книгу»: провалить спасбросок
- Ловкости или Телосложения можно и от ловушки в коридоре, а руна превращает провал в
- успех независимо от того, идёт ли бой. Довод не отменяется — в «Бою» и «Вне боя» кнопка
- стоит по нему же, — но «Книгу» открывают заранее, готовясь или читая, а не в чужой ход:
- там кнопка только забирала ряд у того, чем в книге пользуются. Состав листа
- по-прежнему задаёт режим: во «Вне боя» списка заклинаний нет, и в листе остаются одни
- «Знаки ограждения». В «Журнале» кнопки нет по тому же доводу, что и в «Книге»:
- журнал открывают намеренно и ненадолго, а не держат открытым в чужой ход.
-
- Ширина зависит от соседа: в «Бою» ряд делят с кнопкой хода, и «Реакции» занимают ровно
- своё слово; вне боя они в ряду одни и забирают его целиком — узкая кнопка у левого края
- читалась бы как остаток от чего-то убранного.
- */}
+             * Реакции — отдельный вход, видимый независимо от фильтров и прокрутки списка: триггер
+             * приходит в чужой ход, и искать заклинание по списку в этот момент некогда. В «Книге»
+             * и «Журнале» кнопки нет: их открывают намеренно и ненадолго, а не держат открытыми в
+             * чужой ход.
+             */}
             {showsReactions ? (
               <button
                 type="button"
                 onClick={() => setReactionsOpen(true)}
-                className={`min-h-11 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction ${
-                  showsTurnButton ? "shrink-0" : "grow"
-                }`}
+                className="min-h-11 grow whitespace-nowrap rounded-xl border border-reaction px-1 text-sm font-semibold text-reaction-strong dark:text-reaction"
               >
                 Реакции
               </button>
             ) : null}
           </div>
+        ) : null}
+
+        {/*
+         * Операции привала и список покупок — только на привале. В книге их нет: там читают и
+         * готовятся, а отдыхают и докупают между сессиями. Кнопка отдыха посреди чтения предлагала
+         * бы восемь часов случайным нажатием.
+         */}
+        {mode === "camp" ? (
+          <>
+            <CampActions
+              character={character}
+              onShortRest={() => apply((current) => shortRest(current, clock))}
+              onLongRest={() => setLongRestOpen(true)}
+              onArcaneRecovery={() => setRecoveryOpen(true)}
+              onRecoverMaximum={() => apply((current) => recoverHitPointMaximum(current, clock))}
+            />
+            <MaterialsList
+              spells={spells}
+              character={character}
+              onToggle={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
+            />
+          </>
         ) : null}
 
         {error === null ? null : (
@@ -408,16 +379,16 @@ export function CombatScreen() {
       </div>
 
       {/*
- Полоса фильтров жмётся по вертикали: каждые 8 пикселей здесь — это восьмая часть карточки.
- В «Бою» она закреплена: список просматривают под чужой ход, и уехавший за край переключатель —
- переключатель, которого нет. Вне боя и в «Журнале» её нет вовсе: списка там тоже нет.
- */}
+       * Полоса фильтров жмётся по вертикали: каждые 8 пикселей здесь — восьмая часть карточки. В
+       * «Бою» она закреплена: список просматривают под чужой ход, и уехавший за край переключатель —
+       * переключатель, которого нет. Там, где списка нет, нет и её.
+       */}
       {showsSpellList ? (
         <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
           <SpellFilters
             filters={filters}
             available={available}
-            mode={character.screenMode}
+            mode={mode}
             onChange={setFilters}
             onReset={() => setFilters(NO_FILTERS)}
           />
@@ -426,20 +397,21 @@ export function CombatScreen() {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
         {/*
- Журнал занимает то же место, что и список: это и есть содержимое режима.
- Записи отдаются в порядке хранения — переворачивает их сам компонент.
- */}
-        {character.screenMode === "journal" ? (
-          <JournalScreen entries={session.journal} onUndo={() => apply(undoLast)} />
+         * Журнал занимает то же место, что и список: это и есть содержимое режима. Записи отдаются
+         * в порядке хранения — переворачивает их сам компонент.
+         */}
+        {mode === "journal" ? (
+          <JournalScreen
+            entries={session.journal}
+            onUndo={() => apply(undoLast)}
+            onData={() => setDataOpen(true)}
+          />
         ) : null}
 
         {/*
- «Вне боя» списка заклинаний не показывает вовсе: читать книгу игрок идёт в
- «Книгу», а здесь работают отдых, восстановление и подготовка. В «Журнале» его нет по той
- же причине: там разбирают случившееся, а не выбирают, чем ответить. Без этой
- проверки оба режима отвечали бы «под выбранные фильтры не подходит ни одно заклинание» —
- сообщением о пустом результате там, где искать никто не начинал.
- */}
+         * Без этой проверки «Вне боя» и «Журнал» отвечали бы «под выбранные фильтры не подходит ни
+         * одно заклинание» — сообщением о пустом результате там, где искать никто не начинал.
+         */}
         {showsSpellList ? (
           <>
             {rows.length > 0 ? (
@@ -477,9 +449,9 @@ export function CombatScreen() {
       )}
 
       {/*
- Обмен идёт тем же мастером, что и заклинания. Хиты считаются здесь, а не в
- компоненте: цена — правило ступени возвышения, и компонент её не выдумывает.
- */}
+       * Обмен идёт тем же мастером, что и заклинания. Хиты считаются здесь, а не в компоненте:
+       * цена — правило ступени возвышения, и компонент её не выдумывает.
+       */}
       {bloodOpen ? (
         <BloodMagicWizard
           character={character}
@@ -505,7 +477,7 @@ export function CombatScreen() {
           }}
           onTakeDamage={() => setDamageOpen(true)}
           onDrop={() => {
-            // Подтверждения нет: ошибка отменяется журналом (, ux.md).
+            // Подтверждения нет: ошибка отменяется журналом.
             if (apply((current) => endConcentration(current, "manual", clock)) === null) {
               setPanelOpen(false);
             }
@@ -541,9 +513,9 @@ export function CombatScreen() {
       ) : null}
 
       {/*
- Восстановление предлагается, а не выполняется молча: половина максимума названа игроком, но
- из документа расы не следует (, пункт 6). Отказ ничего не меняет — бой продолжается.
- */}
+       * Восстановление предлагается, а не выполняется молча: половина максимума названа игроком,
+       * но из документа расы не следует. Отказ ничего не меняет — бой продолжается.
+       */}
       {fightOverOpen ? (
         <ConfirmSheet
           title="Бой закончен?"

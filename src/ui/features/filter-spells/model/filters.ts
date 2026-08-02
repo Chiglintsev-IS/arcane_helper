@@ -21,7 +21,7 @@ export type CastingTimeFilter = TurnResource;
 
 export type SpellFilters = {
   castingTimes: CastingTimeFilter[];
-  /** 0 — заговоры, далее уровни заклинаний. */
+  /** Цена в ячейках: 0 — «Без ячейки», далее уровни. Отбирают по цене, а не по виду строки. */
   levels: number[];
   roles: CombatRole[];
   concentration: boolean;
@@ -46,30 +46,27 @@ export type FilterContext = {
   turn: TurnResources;
 };
 
-/** Часть отбора, не требующая знать, что строка — заклинание: время, роль, концентрация. */
+/** Часть отбора, общая для заклинания и для строки, заклинанием не являющейся. */
 export function matchesTraits(traits: ActionTraits, filters: SpellFilters): boolean {
   if (filters.castingTimes.length > 0 && !filters.castingTimes.some((v) => v === traits.castingTime)) {
     return false;
   }
   if (filters.roles.length > 0 && !filters.roles.includes(traits.role)) return false;
   if (filters.concentration && !traits.concentration) return false;
+  if (filters.levels.length > 0 && !filters.levels.includes(traits.level)) return false;
   return true;
 }
 
 /**
  * Полный отбор строки, заклинанием не являющейся.
  *
- * Отдельно от `matchesTraits`, потому что ту зовут и для заклинаний: поле уровня у заклинания
- * означает его уровень, а у «Магии крови» — цену в ячейках, и отбор по уровню внутри общей функции
- * отсёк бы заклинания их собственным фильтром.
- *
- * «Подготовлено» строку не прячет: подготовка к обмену не относится вовсе. «Ритуал» и уровень
- * прячут: обмен не ритуал, и уровня заклинания у него нет.
+ * По цене она отбирается наравне с заклинаниями: «Без ячейки» ловит и заговоры, и обмен хитов на
+ * очки. «Ритуал» прячет — обмен не ритуал. «Подготовлено» не прячет: подготовка к нему не
+ * относится вовсе.
  */
 export function matchesActionRow(traits: ActionTraits, filters: SpellFilters): boolean {
   if (!matchesTraits(traits, filters)) return false;
   if (filters.ritual) return false;
-  if (filters.levels.length > 0) return false;
   return true;
 }
 
@@ -78,14 +75,8 @@ function isReady(spell: Spell, character: CharacterState): boolean {
   return spell.level === CANTRIP_LEVEL || character.preparedSpellIds.includes(spell.id);
 }
 
-function matchesLevel(spell: Spell, filters: SpellFilters): boolean {
-  if (filters.levels.length === 0) return true;
-  return filters.levels.includes(spell.level);
-}
-
 function matches(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
   if (!matchesTraits(traitsOf(spell), filters)) return false;
-  if (!matchesLevel(spell, filters)) return false;
   if (filters.ritual && !spell.ritual) return false;
   // «Подготовлено» не скрывает заговоры: они не готовятся, но доступны всегда.
   if (filters.prepared && !isReady(spell, context.character)) return false;

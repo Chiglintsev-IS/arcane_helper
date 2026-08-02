@@ -10,7 +10,7 @@
  * Компонент презентационный: текст приходит готовым из `describeConcentration`.
  */
 
-import type { ConcentrationSummary } from "@/core/domain/effects/concentration";
+import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 
 export function ConcentrationCard({
   summary,

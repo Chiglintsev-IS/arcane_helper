@@ -8,7 +8,7 @@
  * Компонент презентационный: текст приходит готовым, состояние меняет экран боя.
  */
 
-import type { ConcentrationSummary } from "@/core/domain/effects/concentration";
+import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 
 export function ConcentrationPanel({
   summary,

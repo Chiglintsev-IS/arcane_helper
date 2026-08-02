@@ -25,6 +25,7 @@ describe("экран журнала (FR-113)", () => {
       <JournalScreen
         entries={[entry("id-1", "Бой начался"), entry("id-2", "Огненный шар — ячейка 3 уровня")]}
         onUndo={() => {}}
+        onData={() => {}}
       />,
     );
 
@@ -40,6 +41,7 @@ describe("экран журнала (FR-113)", () => {
       <JournalScreen
         entries={[entry("id-1", "Бой начался"), entry("id-2", "Огненный шар — ячейка 3 уровня")]}
         onUndo={() => {}}
+        onData={() => {}}
       />,
     );
 
@@ -53,7 +55,7 @@ describe("экран журнала (FR-113)", () => {
 
   it("нажатие зовёт отмену", async () => {
     const onUndo = vi.fn();
-    render(<JournalScreen entries={[entry("id-1", "Бой начался")]} onUndo={onUndo} />);
+    render(<JournalScreen entries={[entry("id-1", "Бой начался")]} onUndo={onUndo} onData={() => {}} />);
 
     await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
 
@@ -61,14 +63,14 @@ describe("экран журнала (FR-113)", () => {
   });
 
   it("строка называет время", () => {
-    render(<JournalScreen entries={[entry("id-1", "Бой начался")]} onUndo={() => {}} />);
+    render(<JournalScreen entries={[entry("id-1", "Бой начался")]} onUndo={() => {}} onData={() => {}} />);
 
     // Час не сверяется с числом: он зависит от часового пояса прогона, а проверяется здесь формат.
     expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeDefined();
   });
 
   it("пустой журнал объясняет, а не показывает кнопку", () => {
-    render(<JournalScreen entries={[]} onUndo={() => {}} />);
+    render(<JournalScreen entries={[]} onUndo={() => {}} onData={() => {}} />);
 
     expect(screen.getByText("Пока ничего не произошло.")).toBeDefined();
     expect(screen.queryByRole("button", { name: /^Отменить/ })).toBeNull();

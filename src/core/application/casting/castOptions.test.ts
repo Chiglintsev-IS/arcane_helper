@@ -271,8 +271,8 @@ describe("matchesActionRow: книжные фильтры для строки-д
     expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ ritual: true }))).toBe(false);
   });
 
-  it("любой уровень прячет: у обмена уровня заклинания нет вовсе", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ levels: [0] }))).toBe(false);
+  it("«Без ячейки» её оставляет, уровень ячейки — прячет: отбирают по цене", () => {
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ levels: [0] }))).toBe(true);
     expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ levels: [1] }))).toBe(false);
   });
 
