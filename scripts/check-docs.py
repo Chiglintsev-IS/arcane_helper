@@ -10,6 +10,7 @@
   4. Каждое требование определено ровно один раз и только в документе, который им владеет.
   5. Требования из ТЗ не потеряны.
   6. Статусы взяты из словаря CLAUDE.md.
+  7. Имена из колонки «Имя в коде» глоссария существуют в src/.
 
 Требования живут в доменных документах и в документах сквозных сценариев, экранов и обмена данными.
 Реестра фич больше нет: владельца требования задаёт файл, в котором оно определено, а не отдельная
@@ -118,6 +119,36 @@ def check_requirements(files: list[pathlib.Path]) -> None:
         errors.append(f"требование ТЗ {requirement} потеряно")
 
 
+CODE_NAME = re.compile(r"`([A-Za-z][A-Za-z0-9_]*)`")
+NAMING_CONVENTIONS = {"camelCase", "SCREAMING_SNAKE_CASE"}
+
+
+def check_glossary(root: pathlib.Path) -> None:
+    """Имя из колонки «Имя в коде» обязано существовать в коде.
+
+    Глоссарий — единственное место, где документация называет идентификаторы, и без проверки он
+    расходится с кодом молча: имя переименовали, строка осталась обещанием несуществующего.
+    """
+    glossary = root / "glossary.md"
+    if not glossary.exists():
+        return
+    sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in pathlib.Path("src").rglob("*.ts*")
+    )
+    for line in glossary.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        for name in CODE_NAME.findall(cells[2]):
+            if name in NAMING_CONVENTIONS:
+                continue
+            if not re.search(r"\b" + re.escape(name) + r"\b", sources):
+                errors.append(f"{glossary}: имени `{name}` нет в коде — {cells[0]}")
+
+
 def check_statuses(files: list[pathlib.Path]) -> None:
     for path in files:
         for status in STATUS_LINE.findall(path.read_text(encoding="utf-8")):
@@ -141,6 +172,7 @@ def main() -> int:
     files = markdown_files()
     check_links(files)
     check_requirements(files)
+    check_glossary(pathlib.Path(DOCS))
     check_statuses(files)
 
     if errors:

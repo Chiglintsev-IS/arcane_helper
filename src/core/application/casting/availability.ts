@@ -1,18 +1,3 @@
-/**
- * Проверка доступности заклинания.
- *
- * Возвращает не «да/нет», а список предупреждений с причинами: приложение не запрещает применение,
- * потому что мастер вправе разрешить исключение. Единственное неотменяемое предупреждение —
- * замена концентрации: там нужен осознанный выбор одного из двух.
- *
- * Чистая функция: ни React, ни хранилища, ни состояния хода во флагах. Доступность действия и
- * реакции приходит параметром, потому что выводится из журнала, а не хранится.
- *
- * Чего эта функция пока не проверяет: наличие материального компонента и фокусировки. В модели
- * персонажа таких данных нет. Вместо ложного вердикта
- * компоненты перечисляются напоминанием: «нужна жемчужина за 100 зм, фокусировка её не заменяет».
- */
-
 import { Character } from "@/core/domain/character/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { CharacterState } from "@/core/domain/character/state";
@@ -24,28 +9,15 @@ import { CANTRIP_LEVEL, consumesSlot, type CastMode } from "@/core/domain/arcana
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
 export type TurnResource = "action" | "bonus_action" | "reaction";
 
-/** Доступность ресурсов хода. Структурно совпадает с `TurnEconomy` — её можно передавать как есть. */
+/** Признаки хода приходят параметром: правило не вправе зависеть от того, что открыл игрок. */
 export type TurnResources = {
   actionAvailable: boolean;
   bonusActionAvailable: boolean;
   reactionAvailable: boolean;
-  /** Отмечен ли бой начатым. Выводится из журнала, а не хранится, поэтому приходит параметром. */
   inFight: boolean;
-  /**
-   * Ведётся ли счёт ходов.
-   *
-   * Признак приходит параметром, а не читается из состояния: правило не вправе зависеть от того,
-   * какую вкладку открыл игрок. Кто и по чему решает, что ходы идут, — дело вызывающего.
-   */
   tracksTurn: boolean;
 };
 
-/**
- * Всё доступно: начало хода и выключенный учёт хода выглядят одинаково.
- *
- * `inFight: false` здесь безопасно: проверка начала боя сначала смотрит на режим и вне «Боя» молчит
- * вовсе — так же устроен `checkCastingTime`.
- */
 export const ALL_TURN_RESOURCES: TurnResources = {
   actionAvailable: true,
   bonusActionAvailable: true,
@@ -61,10 +33,8 @@ export const ACTION_SPENT_MESSAGES: Record<TurnResource, string> = {
   reaction: "Реакция уже израсходована",
 };
 
-/** Одна формулировка на оба мастера: у заклинания и у обмена причина буквально одна. */
 export const COMBAT_NOT_STARTED_MESSAGE = "Бой не начат — сначала «Начать бой»";
 
-/** Способ оплаты сотворения: ячейка, очки заклинаний или ничего — заговор и ритуал. */
 export type PaymentChoice =
   | { kind: "slot"; slotLevel: number }
   | { kind: "spell_points" }
@@ -88,19 +58,14 @@ export type AvailabilityCode =
 
 export type AvailabilityWarning = {
   code: AvailabilityCode;
-  /** Причина словами: серый элемент без объяснения оставляет игрока в тупике (ux.md). */
   reasonRu: string;
-  /** Можно ли пройти это предупреждение кнопкой «Применить всё равно». */
   overridable: boolean;
 };
 
 export type Availability = {
-  /** Предупреждений нет вовсе. */
   available: boolean;
-  /** Можно ли применить вопреки предупреждениям. */
   overridable: boolean;
   warnings: AvailabilityWarning[];
-  /** Компоненты, наличие которых приложению неизвестно. */
   componentReminders: string[];
 };
 
@@ -112,7 +77,6 @@ export type AvailabilityInput = {
   payment: PaymentChoice;
 };
 
-/** Что заклинание тратит внутри хода; `undefined` — накладывание в минутах или часах. */
 export function turnResourceFor(castingTime: Spell["castingTime"]["type"]): TurnResource | undefined {
   switch (castingTime) {
     case "reaction":
@@ -126,32 +90,19 @@ export function turnResourceFor(castingTime: Spell["castingTime"]["type"]): Turn
   }
 }
 
-/** Минуты и часы: ресурс хода не тратят, но и в ход не укладываются. */
 const LONG_CASTING_UNITS: Partial<Record<Spell["castingTime"]["type"], LongCastingUnit>> = {
   minute: "minute",
   hour: "hour",
 };
 
-/**
- * Предупреждение о накладывании дольше хода.
- *
- * Называет не только время, но и цену по правилам: действие каждый ход и концентрация всё время
- * накладывания (rules-engine.md).
- *
- * Молчит при выключенном учёте хода: вне боя
- * ход не считается, и минута ничего не стоит. Иначе каждый ритуал получал бы предупреждение всегда, а
- * предупреждение, которое нельзя не увидеть, перестаёт что-либо значить.
- */
 function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
   const { castingTime } = input.spell;
   const unit = LONG_CASTING_UNITS[castingTime.type];
   if (unit === undefined || castingTime.value === undefined) return [];
-  // Ходов вне схватки нет, значит и тратить в них нечего.
   if (!input.turn.tracksTurn) return [];
   return [
     {
       code: "long_casting_time",
-      // Тире, а не двоеточие: строка списка печатает причину после «Недоступно:».
       reasonRu:
         `Не уложится в один ход — ${longCastingTimeRu(unit, castingTime.value)},` +
         " действие каждый ход и концентрация",
@@ -160,20 +111,6 @@ function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
   ];
 }
 
-/**
- * Применение до начала боя.
- *
- * Пока бой не отмечен начатым, счёт раундов и экономия действий ни на чём не основаны: приложение
- * показывает «раунд 1» и три целых ресурса, потому что журналу не от чего считать, а не потому, что
- * так обстоят дела. Заклинание при этом творится, ячейка списывается, и игрок узнаёт о расхождении
- * позже — когда числа перестанут сходиться с тем, что называет мастер.
- *
- * Причина, а не запрет: бой мог начаться до того, как игрок взял телефон, и тупик здесь
- * дороже лишнего нажатия.
- *
- * Молчит вне режима «Бой»: там ходов не идёт, начинать нечего, и предупреждение стояло бы
- * на каждой строке «Книги».
- */
 function checkCombatStarted(input: AvailabilityInput): AvailabilityWarning[] {
   if (!input.turn.tracksTurn || input.turn.inFight) return [];
   return [
@@ -217,7 +154,6 @@ function checkPreparation(input: AvailabilityInput): AvailabilityWarning[] {
     });
   }
 
-  // Заговор подготовки не требует, ритуал доступен прямо из книги.
   const needsPreparation = spell.level !== CANTRIP_LEVEL && mode !== "ritual";
   if (needsPreparation && !spellbook.isPrepared(spell.id)) {
     warnings.push({ code: "not_prepared", reasonRu: "Заклинание не подготовлено", overridable: true });
@@ -230,7 +166,6 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character, mode, payment } = input;
 
   if (!consumesSlot(spell.level, mode)) {
-    // Ошибка вызывающего, а не игровая ситуация: предупреждать пользователя тут не о чем.
     if (payment.kind !== "none") {
       throw new DomainError(
         spell.level === CANTRIP_LEVEL
@@ -290,10 +225,7 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
   return [];
 }
 
-/**
- * Замена концентрации. Единственное предупреждение, которое нельзя пройти «всё равно»:
- * цена ошибки — молча потерянный эффект, поэтому нужен выбор между двумя вариантами.
- */
+/** Единственное предупреждение без «Применить всё равно»: цена ошибки — молча потерянный эффект. */
 function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character } = input;
   const current = character.concentration;
@@ -312,16 +244,7 @@ function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
   ];
 }
 
-/**
- * Наличие материального компонента.
- *
- * Компонент без стоимости заменяет фокусировка или мешочек — их наличие приложение теперь знает
- * ( закрыт ответом игрока). Компонент со стоимостью или
- * расходуемый фокусировка не заменяет: он должен лежать в сумке штучно.
- *
- * Без записи о снаряжении вердикта нет вовсе: состояние могло прийти импортом из сборки, которая
- * про снаряжение не знала, и «компонента нет» было бы выдумкой про чужого персонажа.
- */
+/** Без записи о снаряжении вердикта нет: состояние могло прийти из сборки, которая про него не знала. */
 function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character } = input;
   const equipment = Character.of(character).equipment;
@@ -351,15 +274,7 @@ function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
   ];
 }
 
-/**
- * Что нужно сделать, чтобы сотворить заклинание — словами, а не аббревиатурами.
- *
- * «В, С, М» за столом не читается: игрок должен видеть действие, а не букву. Формулировка одна на
- * весь проект, потому что она нужна и в проверке доступности, и в карточке, и в мастере применения.
- *
- * Это перечень требований, а не вердикт: вердикт о наличии даёт `checkComponents` по записи о
- * снаряжении, а перечень нужен и там, где снаряжение неизвестно.
- */
+/** Перечень требований словами, а не вердикт: «В, С, М» за столом не читается. */
 export function componentRequirements(components: Spell["components"]): string[] {
   const requirements: string[] = [];
 
@@ -368,8 +283,6 @@ export function componentRequirements(components: Spell["components"]): string[]
 
   if (components.material && components.materialText !== undefined) {
     const notes: string[] = [];
-    // Фокусировка заменяет компоненты без стоимости; со стоимостью — нет, и это предупреждение
-    // обязательно, даже если фокусировка есть («Материальный компонент со стоимостью»).
     if (components.costGp !== undefined) {
       notes.push(`${components.costGp} зм, фокусировка не заменяет`);
     }
@@ -411,7 +324,6 @@ export function checkAvailability(input: AvailabilityInput): Availability {
   };
 }
 
-/** Причины одного вида — для интерфейса и тестов: искать по коду удобнее, чем по тексту. */
 export function reasonsOf(availability: Availability, code: AvailabilityCode): string[] {
   return availability.warnings
     .filter((warning) => warning.code === code)

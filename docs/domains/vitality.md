@@ -57,8 +57,8 @@
 
 ## События
 
-`DamageTaken`, `HitPointsRestored`, `TemporaryHitPointsGranted`, `BloodExchanged`,
-`MaximumRecovered`, `Regenerated`, `HitDiceSpent`, `SuppressionChanged`.
+Урон получен · Хиты восстановлены · Временные хиты выданы · Кровь обменяна · Максимум возвращён ·
+Регенерация сработала · Кости хитов потрачены · Подавление изменилось.
 
 ## Границы
 
