@@ -224,7 +224,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
       // «КД цели» — единственное сокращение, которое инструкция не может заменить порогом: числа
       // противника приложение не знает. Поэтому рядом сказано, что с ним делать.
       steps.push(
-        `Бросьте d20 ${signed(totals.spellAttackModifier)} — попадание, если результат не ниже КД цели`,
+        `Бросьте d20${signed(totals.spellAttackModifier)} — попадание, если результат не ниже КД цели`,
       );
       break;
     case "saving_throw": {
@@ -272,7 +272,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
     // Формула «10 или половина урона, что больше» требует счёта в уме на каждое попадание. Порог
     // постоянен, пока половина урона его не превысит, — эта граница и названа числом.
     steps.push(
-      `Держите концентрацию: получите урон — бросьте d20 ${signed(totals.savingThrow("constitution"))}.` +
+      `Держите концентрацию: получите урон — бросьте d20${signed(totals.savingThrow("constitution"))}.` +
         ` Нужно ${MINIMUM_CONCENTRATION_DC} и больше` +
         ` (при уроне от ${DAMAGE_ABOVE_MINIMUM_CONCENTRATION_DC} — половину урона и больше),` +
         " иначе заклинание спадает",

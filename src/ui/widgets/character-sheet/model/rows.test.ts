@@ -177,6 +177,14 @@ describe("блоки листа", () => {
     });
   });
 
+  it("отрицательный модификатор характеристики печатается тем же минусом, что в значке", () => {
+    // Сила Торна — 8: модификатор −1, и минус обязан быть типографским, а не дефисом.
+    expect(blockById("ability:strength")?.rows).toContainEqual({
+      labelRu: "Значение",
+      value: "8 (−1)",
+    });
+  });
+
   it("каждый блок называет свою шторку, а уровень правится второй кнопкой", () => {
     expect(blockById("ability:wisdom")?.editId).toBe("ability:wisdom");
     expect(blockById("identity")?.secondary).toEqual({ labelRu: "Уровень", editId: "level" });

@@ -30,11 +30,13 @@ export function resolutionBadge(
   switch (resolution.type) {
     case "spell_attack":
       return { label: `Атака d20${signed(numbers.spellAttackModifier)}`, icon: "✶" };
-    case "saving_throw":
-      return {
-        label: `Спасбросок ${SAVING_THROW_NAMES[resolution.savingThrow ?? "CON"]} КС ${numbers.spellSaveDc}`,
-        icon: "◇",
-      };
+    case "saving_throw": {
+      // Схема требует характеристику при спасброске; без неё состояние испорчено, и назвать один
+      // порог честнее, чем выдумать характеристику.
+      const ability = resolution.savingThrow;
+      const name = ability === undefined ? "Спасбросок" : `Спасбросок ${SAVING_THROW_NAMES[ability]}`;
+      return { label: `${name} КС ${numbers.spellSaveDc}`, icon: "◇" };
+    }
     default:
       return { label: NO_ROLL_RU, icon: "○" };
   }

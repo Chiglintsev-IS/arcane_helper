@@ -36,6 +36,12 @@ describe("resolutionBadge (FR-211)", () => {
     );
   });
 
+  it("не выдумывает характеристику, когда спасбросок в карточке не указан", () => {
+    // Схема требует характеристику при спасброске; отсутствие — испорченное состояние, а не повод
+    // угадать «Телосложение».
+    expect(resolutionBadge({ type: "saving_throw" }, THORNE).label).toBe("Спасбросок КС 16");
+  });
+
   it("кто бросает, отвечает иконка, а не цвет: тона значок не несёт", () => {
     const attack = resolutionBadge({ type: "spell_attack" }, THORNE);
     const save = resolutionBadge({ type: "saving_throw", savingThrow: "DEX" }, THORNE);

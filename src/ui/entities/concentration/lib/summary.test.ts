@@ -61,7 +61,7 @@ describe("describeConcentration (FR-084)", () => {
     });
   }
 
-  it("описывает заклинание с областью и без спасброска", () => {
+  it("описывает заклинание с областью и без броска", () => {
     const summary = summaryFor("detect-magic");
 
     expect(summary.spellId).toBe("detect-magic");
@@ -142,7 +142,7 @@ describe("describeConcentration (FR-084)", () => {
     expect(summary.breakers).toHaveLength(6);
   });
 
-  it("называет Телосложение, когда спасбросок в карточке не указан", () => {
+  it("не выдумывает характеристику, когда спасбросок в карточке не указан", () => {
     const summary = describeConcentration({
       spell: { ...withoutArea("detect-magic"), resolution: { type: "saving_throw" } },
       effect: effect(),
@@ -150,8 +150,9 @@ describe("describeConcentration (FR-084)", () => {
       journal,
     });
 
-    // Подстановка по умолчанию: концентрацию срывает спасбросок Телосложения.
-    expect(summary.mechanicsLabel).toBe("На себя · Спасбросок Телосложения КС 16");
+    // Схема требует характеристику при спасброске; без неё состояние испорчено, и назвать один
+    // порог честнее, чем выдумать характеристику.
+    expect(summary.mechanicsLabel).toBe("На себя · Спасбросок КС 16");
   });
 
   it("показывает отрицательные модификаторы со знаком минус", () => {

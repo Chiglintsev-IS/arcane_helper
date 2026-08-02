@@ -38,4 +38,10 @@ describe("BloodMagicRow (FR-207)", () => {
 
     expect(screen.queryByText(/Недоступно/)).toBeNull();
   });
+
+  it("значок разрешения называет «Без броска» общей сборкой, а не своей копией", () => {
+    renderRow(IN_TURN);
+
+    expect(screen.getByText("Без броска")).toBeDefined();
+  });
 });

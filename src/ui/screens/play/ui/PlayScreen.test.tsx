@@ -1246,6 +1246,29 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     expect(within(card).getByText("Без броска: эффект применяется сразу")).toBeDefined();
   });
 
+  it("строка «Разрешение» показывает общую подпись, не свою копию (FR-211)", async () => {
+    const user = userEvent.setup();
+    // Опознание разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
+    await renderWithStores(<PlayScreen />, inBookMode());
+    await user.click(screen.getByRole("button", { name: "Ритуал" }));
+    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
+    const automaticCard = screen.getByRole("dialog", { name: /Опознание/ });
+    expect(within(automaticCard).getByText("Разрешение").nextElementSibling?.textContent).toBe(
+      "Без броска",
+    );
+  });
+
+  it("строка «Разрешение» показывает атаку заклинанием общей подписью (FR-211)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<PlayScreen />);
+
+    await user.click(screen.getByRole("button", { name: /Луч холода/ }));
+    const attackCard = screen.getByRole("dialog", { name: /Луч холода/ });
+    expect(within(attackCard).getByText("Разрешение").nextElementSibling?.textContent).toBe(
+      "Атака d20+8",
+    );
+  });
+
   it("полные правила и отыгрыш закрыты по умолчанию", async () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayScreen />);

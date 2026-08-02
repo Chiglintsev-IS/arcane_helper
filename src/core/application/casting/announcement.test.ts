@@ -274,7 +274,7 @@ describe("castInstructions: что сделать этому персонажу 
       context({ mode: "cantrip", targetLabel: "гоблин" }),
     );
 
-    expect(steps).toContain("Бросьте d20 +8 — попадание, если результат не ниже КД цели");
+    expect(steps).toContain("Бросьте d20+8 — попадание, если результат не ниже КД цели");
     expect(steps).toContain(
       "Урон: 2d8 (холод) — только кубики, модификатор характеристики к урону не прибавляется",
     );
@@ -338,7 +338,7 @@ describe("castInstructions: что сделать этому персонажу 
       context({ mode: "ritual" }),
     );
     expect(steps).toContain(
-      "Держите концентрацию: получите урон — бросьте d20 +4." +
+      "Держите концентрацию: получите урон — бросьте d20+4." +
         " Нужно 10 и больше (при уроне от 22 — половину урона и больше), иначе заклинание спадает",
     );
   });
@@ -373,7 +373,7 @@ describe("castInstructions: что сделать этому персонажу 
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip" }),
     );
-    expect(steps).toContain("Бросьте d20 −2 — попадание, если результат не ниже КД цели");
+    expect(steps).toContain("Бросьте d20−2 — попадание, если результат не ниже КД цели");
   });
 })
 

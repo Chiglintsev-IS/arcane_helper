@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 import { SpellCardCompact } from "./SpellCardCompact";
+
+// Автоматической очистки нет: тесты не пользуются глобалями vitest.
+afterEach(cleanup);
 
 const BASE_SPELL = loadThorneSpells()[0]!;
 
