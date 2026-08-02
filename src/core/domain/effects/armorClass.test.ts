@@ -4,7 +4,12 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
-import { armorClassWithSpell, effectiveArmorClass } from "@/core/domain/effects/armorClass";
+import {
+  ARMOR_CLASS_ADJUSTMENT_NAME_RU,
+  armorClassAdjustment,
+  armorClassWithSpell,
+  effectiveArmorClass,
+} from "@/core/domain/effects/armorClass";
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 
@@ -111,5 +116,40 @@ describe("armorClassWithSpell: КД до подтверждения примен
     armorClassWithSpell(character, spell("mage-armor"));
     expect(character.activeEffects).toEqual([]);
     expect(effectiveArmorClass(character)).toBe(14);
+  });
+});
+
+describe("armorClassAdjustment: поправка к КД из шапки ресурсов", () => {
+  it("без заведённой поправки — 0", () => {
+    expect(armorClassAdjustment(createThorne())).toBe(0);
+  });
+
+  it("читает значение своего эффекта", () => {
+    const character = withEffects({
+      id: "adjustment",
+      nameRu: ARMOR_CLASS_ADJUSTMENT_NAME_RU,
+      type: "utility",
+      startedAt: "2026-07-31T12:00:00.000Z",
+      duration: { type: "special" },
+      isConcentration: false,
+      slotLevelUsed: 0,
+      armorClass: { kind: "bonus", value: -3 },
+      endConditionRu: "Снимается вручную.",
+    });
+    expect(armorClassAdjustment(character)).toBe(-3);
+  });
+
+  it("не путает поправку со статусом того же имени без вклада в КД", () => {
+    const character = withEffects({
+      id: "namesake",
+      nameRu: ARMOR_CLASS_ADJUSTMENT_NAME_RU,
+      type: "utility",
+      startedAt: "2026-07-31T12:00:00.000Z",
+      duration: { type: "special" },
+      isConcentration: false,
+      slotLevelUsed: 0,
+      endConditionRu: "Снимается вручную.",
+    });
+    expect(armorClassAdjustment(character)).toBe(0);
   });
 });

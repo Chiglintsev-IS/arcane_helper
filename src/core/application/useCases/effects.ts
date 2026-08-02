@@ -6,10 +6,16 @@ import { Character } from "@/core/domain/character/character";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { ArmorClassEffect } from "@/core/domain/catalog/spell";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
+import {
+  ARMOR_CLASS_ADJUSTMENT_NAME_RU,
+  armorClassAdjustmentEffect,
+} from "@/core/domain/effects/armorClass";
 import { DomainError } from "@/core/domain/shared/errors";
+import { signed } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
 export type { ConcentrationEnd };
+export { armorClassAdjustment } from "@/core/domain/effects/armorClass";
 
 /** Условие окончания ручного эффекта: игрок снимает его сам, приложение сроков не считает. */
 const MANUAL_EFFECT_END_CONDITION_RU = "Снимается вручную.";
@@ -82,6 +88,25 @@ export function spendRuneOnWardingSigil(session: Session, clock: Clock): Session
   );
 }
 
+/** Активный эффект без заклинания и уровня ячейки: общая форма для статуса и для поправки к КД. */
+function buildManualEffect(
+  nameRu: string,
+  armorClass: ArmorClassEffect | undefined,
+  clock: Clock,
+): ActiveEffect {
+  return {
+    id: clock.nextId(),
+    nameRu,
+    type: "utility",
+    startedAt: clock.now(),
+    duration: { type: "special" },
+    isConcentration: false,
+    slotLevelUsed: 0,
+    ...(armorClass === undefined ? {} : { armorClass }),
+    endConditionRu: MANUAL_EFFECT_END_CONDITION_RU,
+  };
+}
+
 /**
  * Заводит активный эффект без заклинания: статус, которого нет в каталоге, либо временный вклад в
  * Класс Доспеха от союзника. Снимается тем же путём, что и любой другой активный эффект.
@@ -98,23 +123,39 @@ export function startManualEffect(session: Session, input: ManualEffectInput, cl
     throw new DomainError("Вклад в Класс Доспеха должен быть положительным");
   }
 
-  const effect: ActiveEffect = {
-    id: clock.nextId(),
-    nameRu,
-    type: "utility",
-    startedAt: clock.now(),
-    duration: { type: "special" },
-    isConcentration: false,
-    slotLevelUsed: 0,
-    ...(input.armorClass === undefined ? {} : { armorClass: input.armorClass }),
-    endConditionRu: MANUAL_EFFECT_END_CONDITION_RU,
-  };
-
   const root = Character.of(session.character);
+  const effect = buildManualEffect(nameRu, input.armorClass, clock);
   return commit(
     session,
     root.withEffects(root.effects.start(effect, clock.now())),
     { kind: "manual_effect_started", summaryRu: `Эффект начат: ${nameRu}` },
+    clock,
+  );
+}
+
+/**
+ * Заводит, заменяет или снимает временную поправку к КД в шапке ресурсов — одним переходом, как и
+ * замена концентрации: новое значение вытесняет прежнее, а ноль снимает поправку вовсе.
+ */
+export function setArmorClassAdjustment(session: Session, value: number, clock: Clock): Session {
+  if (!Number.isInteger(value)) {
+    throw new DomainError("Поправка к КД должна быть целым числом");
+  }
+
+  const existing = armorClassAdjustmentEffect(session.character);
+  if (value === 0) {
+    if (existing === undefined) return session;
+    return endEffect(session, existing.id, clock);
+  }
+
+  const root = Character.of(session.character);
+  const cleared = existing === undefined ? root.effects : root.effects.end(existing.id).board;
+  const effect = buildManualEffect(ARMOR_CLASS_ADJUSTMENT_NAME_RU, { kind: "bonus", value }, clock);
+
+  return commit(
+    session,
+    root.withEffects(cleared.start(effect, clock.now())),
+    { kind: "manual_effect_started", summaryRu: `Поправка к КД: ${signed(value)}` },
     clock,
   );
 }

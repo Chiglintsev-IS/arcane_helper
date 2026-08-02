@@ -263,19 +263,18 @@ describe("завершение активного эффекта (FR-091)", () =
   });
 });
 
-describe("ручной эффект (FR-236)", () => {
+describe("ручной статус (FR-236)", () => {
   it("заводит статус без вклада в КД и его можно снять", async () => {
     await renderWithStores(<PlayScreen />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Добавить эффект" }));
-    const dialog = screen.getByRole("dialog", { name: "Новый эффект" });
-    await userEvent.type(within(dialog).getByLabelText("Название"), "Опутанный");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Добавить" }));
+    const field = screen.getByLabelText("Новый статус");
+    await userEvent.type(field, "Опутанный{Enter}");
 
-    expect(screen.queryByRole("dialog", { name: "Новый эффект" })).toBeNull();
     const list = screen.getByLabelText("Активные эффекты");
     expect(within(list).getByText(/Опутанный/)).toBeDefined();
     expect(within(list).queryByText(/КД/)).toBeNull();
+    // Поле готово к следующему статусу без лишнего нажатия.
+    expect((field as HTMLInputElement).value).toBe("");
 
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Опутанный" }));
     expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
@@ -288,46 +287,77 @@ describe("ручной эффект (FR-236)", () => {
     ).toBeDefined();
   });
 
-  it("заводит прикрытие союзника, и вклад складывается с «Доспехами мага»", async () => {
-    const character = createThorne();
-    character.activeEffects = [
-      {
-        id: "effect-mage-armor",
-        spellId: "mage-armor",
-        nameRu: "Доспехи мага",
-        type: "buff",
-        startedAt: "2026-07-31T18:00:00.000Z",
-        duration: { type: "hours", value: 8 },
-        isConcentration: false,
-        slotLevelUsed: 1,
-        armorClass: { kind: "base_override", value: 13 },
-        endConditionRu: "До истечения длительности.",
-      },
-    ];
-    await renderWithStores(<PlayScreen />, character);
-
-    await userEvent.click(screen.getByRole("button", { name: "Добавить эффект" }));
-    const dialog = screen.getByRole("dialog", { name: "Новый эффект" });
-    await userEvent.type(within(dialog).getByLabelText("Название"), "Прикрытие союзника");
-    await userEvent.click(within(dialog).getByRole("radio", { name: "Прибавка" }));
-    await userEvent.type(within(dialog).getByLabelText("Значение"), "2");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Добавить" }));
-
-    // «Доспехи мага» дают 17, прикрытие союзника прибавляет ещё 2.
-    const list = screen.getByLabelText("Активные эффекты");
-    const row = within(list).getByText(/Прикрытие союзника/).closest("li");
-    expect(row).not.toBeNull();
-    expect(within(row as HTMLElement).getByText(/КД 19/)).toBeDefined();
-  });
-
-  it("не позволяет добавить эффект без названия", async () => {
+  it("пустая отправка ничего не заводит", async () => {
     await renderWithStores(<PlayScreen />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Добавить эффект" }));
-    const dialog = screen.getByRole("dialog", { name: "Новый эффект" });
+    const field = screen.getByLabelText("Новый статус");
+    await userEvent.type(field, "   {Enter}");
 
-    expect(
-      within(dialog).getByRole("button", { name: "Добавить" }).hasAttribute("disabled"),
-    ).toBe(true);
+    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+  });
+});
+
+describe("поправка к КД (FR-236)", () => {
+  it("заводится и меняет итоговый КД тем же способом, что и временные хиты", async () => {
+    await renderWithStores(<PlayScreen />);
+
+    const numbers = screen.getByLabelText("Ресурсы");
+    expect(within(numbers).getByText("14")).toBeDefined();
+
+    await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
+    const dialog = screen.getByRole("dialog", { name: "Правка КД" });
+    await userEvent.type(within(dialog).getByLabelText("Поправка"), "2");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Записать" }));
+
+    expect(screen.queryByRole("dialog", { name: "Правка КД" })).toBeNull();
+    expect(within(numbers).getByText("16")).toBeDefined();
+    expect(within(numbers).getByRole("button", { name: /^КД 16\. Правка: поправка/ })).toBeDefined();
+    expect(within(numbers).getByText("КД +2")).toBeDefined();
+  });
+
+  it("отрицательная поправка печатается типографским минусом и снижает КД", async () => {
+    await renderWithStores(<PlayScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
+    await userEvent.type(screen.getByLabelText("Поправка"), "-3");
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    const numbers = screen.getByLabelText("Ресурсы");
+    expect(within(numbers).getByText("11")).toBeDefined();
+    expect(within(numbers).getByText("КД −3")).toBeDefined();
+  });
+
+  it("новое значение заменяет прежнее, а не складывается с ним", async () => {
+    await renderWithStores(<PlayScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
+    await userEvent.type(screen.getByLabelText("Поправка"), "2");
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
+    await userEvent.clear(screen.getByLabelText("Поправка"));
+    await userEvent.type(screen.getByLabelText("Поправка"), "5");
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    const numbers = screen.getByLabelText("Ресурсы");
+    expect(within(numbers).getByText("19")).toBeDefined();
+    expect(within(numbers).getByText("КД +5")).toBeDefined();
+    expect(within(numbers).queryByText("КД +2")).toBeNull();
+  });
+
+  it("ноль снимает поправку вовсе", async () => {
+    await renderWithStores(<PlayScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
+    await userEvent.type(screen.getByLabelText("Поправка"), "2");
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
+    await userEvent.clear(screen.getByLabelText("Поправка"));
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    const numbers = screen.getByLabelText("Ресурсы");
+    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(within(numbers).queryByText(/КД [+−]/)).toBeNull();
   });
 });

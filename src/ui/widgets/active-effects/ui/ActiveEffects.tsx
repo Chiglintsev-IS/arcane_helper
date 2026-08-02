@@ -5,8 +5,13 @@
  * экрана незаметно, а эффект со сроком в раундах истекает сам — оба видны там же, где игрок
  * находится, а не только там, где он тратит.
  *
- * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
+ * Компонент презентационный: состояние приходит параметрами, действия — из экрана. Поле нового
+ * статуса — исключение: черновик набранного текста ему не передать снаружи без потери фокуса.
  */
+
+"use client";
+
+import { useState, type FormEvent } from "react";
 
 import { ConcentrationCard } from "@/ui/entities/concentration/ui/ConcentrationCard";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
@@ -23,19 +28,49 @@ function armorClassNote(effect: ActiveEffect, armorClass: number): string {
   return effect.armorClass === undefined ? "" : ` · КД ${armorClass}`;
 }
 
+/**
+ * Строка ввода статуса: без кнопки и без листа, тем же нажатием Enter, что и любая форма из
+ * одного поля. Заводит статус без вклада в КД — числовую поправку вводит плитка КД в шапке.
+ */
+function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
+  const [value, setValue] = useState("");
+
+  const submit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const nameRu = value.trim();
+    if (nameRu === "") return;
+    onAdd(nameRu);
+    setValue("");
+  };
+
+  return (
+    <form onSubmit={submit}>
+      <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-2 text-xs dark:border-slate-800">
+        <span className="shrink-0 text-slate-500 dark:text-slate-400">Новый статус</span>
+        <input
+          type="text"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
+        />
+      </label>
+    </form>
+  );
+}
+
 export function ActiveEffects({
   character,
   concentration,
   onOpenConcentration,
   onEndEffect,
-  onAddEffect,
+  onAddStatus,
 }: {
   character: CharacterState;
   concentration: ConcentrationSummary | null;
   onOpenConcentration: () => void;
   onEndEffect: (effectId: string) => void;
-  /** Заводит статус или прикрытие союзника: блок эффектов — единственное место для этого. */
-  onAddEffect: () => void;
+  /** Заводит статус без вклада в КД: поле стоит прямо в блоке, рядом со списком. */
+  onAddStatus: (nameRu: string) => void;
 }) {
   const armorClass = effectiveArmorClass(character);
   const concentrationEffect = character.activeEffects.find((effect) => effect.isConcentration);
@@ -88,14 +123,7 @@ export function ActiveEffects({
         </ul>
       ) : null}
 
-      <button
-        type="button"
-        onClick={onAddEffect}
-        aria-label="Добавить эффект"
-        className="min-h-11 self-start rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 dark:border-slate-800 dark:text-slate-400"
-      >
-        <span aria-hidden="true">+</span> Эффект
-      </button>
+      <NewStatusField onAdd={onAddStatus} />
     </div>
   );
 }

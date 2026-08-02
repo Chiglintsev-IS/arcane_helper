@@ -10,8 +10,14 @@
  */
 
 import { Sheet } from "@/core/domain/sheet/sheet";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
+
+/**
+ * Имя ручного эффекта, которым шапка ресурсов хранит временную поправку к КД. Фиксировано, потому
+ * что это единственный способ узнать её среди активных эффектов — числа своего поля она не имеет.
+ */
+export const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
 /**
  * КД по слагаемым состояния и произвольному набору вкладов.
@@ -44,6 +50,18 @@ function contributionsOf(character: CharacterState): ArmorClassEffect[] {
 /** Итоговый КД персонажа с учётом того, что действует прямо сейчас. */
 export function effectiveArmorClass(character: CharacterState): number {
   return total(character, contributionsOf(character));
+}
+
+/** Активный эффект временной поправки к КД, заведённый шапкой ресурсов, если он есть. */
+export function armorClassAdjustmentEffect(character: CharacterState): ActiveEffect | undefined {
+  return character.activeEffects.find(
+    (effect) => effect.nameRu === ARMOR_CLASS_ADJUSTMENT_NAME_RU && effect.armorClass !== undefined,
+  );
+}
+
+/** Значение временной поправки к КД: 0, если она не заведена. */
+export function armorClassAdjustment(character: CharacterState): number {
+  return armorClassAdjustmentEffect(character)?.armorClass?.value ?? 0;
 }
 
 /**

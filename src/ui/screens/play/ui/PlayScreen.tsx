@@ -15,7 +15,15 @@ import { Character } from "@/core/domain/character/character";
 import { setScreenMode, setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
 import { exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
-import { endConcentration, endEffect, spendRuneOnWardingSigil, startManualEffect, wardingSigilAvailable } from "@/core/application/useCases/effects";
+import {
+  armorClassAdjustment,
+  endConcentration,
+  endEffect,
+  setArmorClassAdjustment,
+  spendRuneOnWardingSigil,
+  startManualEffect,
+  wardingSigilAvailable,
+} from "@/core/application/useCases/effects";
 import { castSpell } from "@/core/application/useCases/casting";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
@@ -45,7 +53,7 @@ import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
-import { ManualEffectSheet } from "@/ui/features/manual-effect/ui/ManualEffectSheet";
+import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
 import { ArmorSheet } from "@/ui/features/edit-character-sheet/ui/ArmorSheet";
 import { InventorySheet } from "@/ui/features/edit-character-sheet/ui/InventorySheet";
@@ -158,7 +166,7 @@ export function PlayScreen() {
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
-  const [manualEffectOpen, setManualEffectOpen] = useState(false);
+  const [armorClassOpen, setArmorClassOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -316,6 +324,7 @@ export function PlayScreen() {
             character={character}
             economy={economy}
             bookCastingTimes={dividing.castingTimes}
+            onOpenArmorClass={() => setArmorClassOpen(true)}
             onOpenHitPoints={() => setDamageOpen(true)}
             onEditResources={() => setResourcesOpen(true)}
           />
@@ -327,7 +336,7 @@ export function PlayScreen() {
             concentration={concentrationSummary}
             onOpenConcentration={() => setPanelOpen(true)}
             onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
-            onAddEffect={() => setManualEffectOpen(true)}
+            onAddStatus={(nameRu) => apply((current) => startManualEffect(current, { nameRu }, clock))}
           />
         ) : null}
 
@@ -538,12 +547,13 @@ export function PlayScreen() {
         />
       ) : null}
 
-      {manualEffectOpen ? (
-        <ManualEffectSheet
-          onCancel={() => setManualEffectOpen(false)}
-          onConfirm={(input) => {
-            const failure = apply((current) => startManualEffect(current, input, clock));
-            if (failure === null) setManualEffectOpen(false);
+      {armorClassOpen ? (
+        <ArmorClassSheet
+          value={armorClassAdjustment(character)}
+          onCancel={() => setArmorClassOpen(false)}
+          onSave={(value) => {
+            const failure = apply((current) => setArmorClassAdjustment(current, value, clock));
+            if (failure === null) setArmorClassOpen(false);
           }}
         />
       ) : null}
