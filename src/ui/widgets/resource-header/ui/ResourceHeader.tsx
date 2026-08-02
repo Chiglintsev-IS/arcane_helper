@@ -153,7 +153,8 @@ export function ResourceHeader({
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
       <dl className="grid grid-cols-4 gap-1">
-        <Stat label="КС закл." value={`${totals.spellSaveDc}`} />
+        {/* «КС» без раскрытия: рядом стоит «КД», и пара читается сама. */}
+        <Stat label="КС" value={`${totals.spellSaveDc}`} />
         <Stat label="Атака" value={signed(totals.spellAttackModifier)} />
         <Stat label="КД" value={`${armorClass}`} />
         <HitPointsStat

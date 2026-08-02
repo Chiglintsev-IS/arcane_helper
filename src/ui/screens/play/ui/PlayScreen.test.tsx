@@ -356,14 +356,24 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
     const inCombat = within(screen.getByLabelText("Ресурсы"));
     expect(inCombat.getByLabelText("Ячейки заклинаний")).toBeDefined();
-    expect(inCombat.getByText("КС закл.")).toBeDefined();
+    expect(inCombat.getByText("КС")).toBeDefined();
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 
     // Книга отвечает, что персонаж знает, а не чем он за это заплатит: ни ячеек, ни чисел боя.
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
     expect(screen.queryByLabelText("Ячейки заклинаний")).toBeNull();
-    expect(screen.queryByText("КС закл.")).toBeNull();
+    expect(screen.queryByText("КС")).toBeNull();
+  });
+
+  it("шапка сокращает КС, потому что рядом стоит КД (FR-217)", async () => {
+    await renderWithStores(<PlayScreen />);
+
+    const header = within(screen.getByLabelText("Ресурсы"));
+    expect(header.getByText("КС")).toBeDefined();
+    expect(header.getByText("КД")).toBeDefined();
+    // Третьего имени одному числу не заводится: «КС закл.» было им.
+    expect(header.queryByText("КС закл.")).toBeNull();
   });
 
   it("кости хитов шапка называет и в бою, и вне его (FR-134)", async () => {
