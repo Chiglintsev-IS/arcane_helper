@@ -1042,7 +1042,7 @@ fix: blood magic explains unavailability with a whole phrase
 Добавить рядом:
 
 ```tsx
-  it("шапка сокращает КС, потому что рядом стоит КД (FR-217)", async () => {
+  it("шапка сокращает КС, потому что рядом стоит КД", async () => {
     await renderWithStores(<PlayScreen />);
 
     const header = within(screen.getByLabelText("Ресурсы"));
