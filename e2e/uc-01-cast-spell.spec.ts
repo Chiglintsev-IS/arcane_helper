@@ -183,6 +183,27 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
   await expect(page.getByLabel("Активные эффекты")).toContainText("Доспехи мага");
 });
 
+test("undo returns the slot through the journal screen", async ({ page }) => {
+  const slots = page.getByLabel("Ячейки заклинаний");
+
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /Доспехи мага/ }).click();
+  await page.getByRole("button", { name: "Сотворить" }).click();
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByRole("button", { name: "Подтвердить" }).click();
+  await expect(slots.getByText("3/4")).toBeVisible();
+
+  // Отмена живёт только в журнале (FR-114): в бою кнопки нет вовсе.
+  await expect(page.getByRole("button", { name: /^Отменить/ })).toBeHidden();
+  await switchMode(page, /^Журнал/);
+  await page.getByRole("button", { name: /^Отменить/ }).click();
+  await expect(slots.getByText("4/4")).toBeVisible();
+
+  // Возврат в бой застаёт тот же бой: журнал его не заканчивает (FR-220).
+  await switchMode(page, /^Бой/);
+  await expect(page.getByRole("button", { name: "Мой ход" })).toBeVisible();
+});
+
 test("state survives a reload", async ({ page }) => {
   // Бой начат: иначе FR-034 добавила бы шаг «Бой не начат» перед подтверждением.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
@@ -290,10 +311,19 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("привал");
 
   await switchMode(page, /^Бой/);
-  await page.getByRole("button", { name: "Реакции" }).click();
+  // Точное совпадение: строка «Электрошока» говорит, что цель «не может совершать реакции», и по
+  // подстроке кнопка шапки перестала быть единственной.
+  await page.getByRole("button", { name: "Реакции", exact: true }).click();
   await page.getByRole("radio", { name: "По мне попали" }).click();
   await scan("экран реакций");
   await page.getByRole("button", { name: "Закрыть" }).click();
+
+  // Журнал — седьмой экран сверки: в нём стоит единственная кнопка отмены (FR-113, FR-114), и её
+  // доступное имя строится из текста записи, а не задано вручную.
+  await switchMode(page, /^Журнал/);
+  await expect(page.getByRole("list", { name: "Журнал событий" })).toBeVisible();
+  await scan("экран журнала");
+
   await switchMode(page, /^Вне боя/);
 
   await page.getByRole("button", { name: /Магическое восстановление/ }).click();
@@ -303,7 +333,8 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 
 test("reactions in one tap", async ({ page }) => {
   // Триггер приходит в чужой ход: путь от события до результата обязан быть коротким (AC-08).
-  await page.getByRole("button", { name: "Реакции" }).click();
+  // Имя точное по той же причине, что и в прогоне axe: «реакции» есть и в тексте «Электрошока».
+  await page.getByRole("button", { name: "Реакции", exact: true }).click();
   await page.getByRole("radio", { name: "По мне попали" }).click();
 
   const matching = page.getByLabel("Подходящие реакции");
