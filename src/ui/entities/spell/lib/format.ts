@@ -271,7 +271,7 @@ export function damageLabel(spell: Spell, slotLevel: number, characterLevel: num
 }
 
 /**
- * Значок «Только ритуалом» — или `null`, когда добавлять нечего.
+ * Значок «Ритуал» — или `null`, когда добавлять нечего.
  *
  * Единственный случай, о котором сказать больше некому: неподготовленный ритуал творится прямо из
  * книги, и без подписи цена «Ячейка 1 ур. или ритуал» обещала бы способ, которого сейчас нет.
@@ -282,7 +282,7 @@ export function ritualOnlyBadge(
   preparedSpellIds: readonly string[],
 ): { label: string; icon: string; tone: Tone } | null {
   if (spell.ritual && !preparedSpellIds.includes(spell.id)) {
-    return { label: "Только ритуалом", icon: "❖", tone: "muted" };
+    return { label: "Ритуал", icon: "❖", tone: "muted" };
   }
   return null;
 }
