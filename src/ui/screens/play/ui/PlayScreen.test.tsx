@@ -358,7 +358,7 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
     const inCombat = within(screen.getByLabelText("Ресурсы"));
     expect(inCombat.getByLabelText("Ячейки заклинаний")).toBeDefined();
-    expect(inCombat.getByText("КД")).toBeDefined();
+    expect(inCombat.getByRole("button", { name: /^КД/ })).toBeDefined();
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 

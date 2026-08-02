@@ -1,6 +1,13 @@
 import { setScreenMode, setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
-import { endConcentration, endEffect, spendRuneOnWardingSigil, startManualEffect, wardingSigilAvailable } from "@/core/application/useCases/effects";
+import {
+  endConcentration,
+  endEffect,
+  setArmorClassAdjustment,
+  spendRuneOnWardingSigil,
+  startManualEffect,
+  wardingSigilAvailable,
+} from "@/core/application/useCases/effects";
 import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
 import { bloodCostFor, exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regenerationDue, startCombat } from "@/core/application/useCases/turn";
@@ -904,6 +911,67 @@ describe("ручной эффект (FR-236)", () => {
     expect(() =>
       startManualEffect(session, { nameRu: "Статус", armorClass: { kind: "bonus", value: 1.5 } }, clock),
     ).toThrow(DomainError);
+  });
+});
+
+describe("поправка к КД (FR-236)", () => {
+  it("заводит поправку одним эффектом и складывает её по общему правилу", () => {
+    const after = setArmorClassAdjustment(session, 2, clock);
+
+    expect(after.character.activeEffects).toHaveLength(1);
+    expect(effectiveArmorClass(after.character)).toBe(16);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Поправка к КД: +2");
+  });
+
+  it("допускает отрицательное значение", () => {
+    const after = setArmorClassAdjustment(session, -3, clock);
+
+    expect(effectiveArmorClass(after.character)).toBe(11);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Поправка к КД: −3");
+  });
+
+  it("новое значение заменяет прежнее одним переходом, а не двумя", () => {
+    const first = setArmorClassAdjustment(session, 2, clock);
+    const journalLengthAfterFirst = first.journal.length;
+
+    const second = setArmorClassAdjustment(first, 5, clock);
+
+    expect(second.character.activeEffects).toHaveLength(1);
+    expect(effectiveArmorClass(second.character)).toBe(19);
+    expect(second.journal.length).toBe(journalLengthAfterFirst + 1);
+  });
+
+  it("ноль снимает поправку вовсе", () => {
+    const started = setArmorClassAdjustment(session, 2, clock);
+
+    const cleared = setArmorClassAdjustment(started, 0, clock);
+
+    expect(cleared.character.activeEffects).toHaveLength(0);
+    expect(effectiveArmorClass(cleared.character)).toBe(14);
+  });
+
+  it("ноль без заведённой поправки ничего не делает", () => {
+    const after = setArmorClassAdjustment(session, 0, clock);
+
+    expect(after).toBe(session);
+  });
+
+  it("отклоняет дробное значение", () => {
+    expect(() => setArmorClassAdjustment(session, 1.5, clock)).toThrow(DomainError);
+  });
+
+  it("не путается с другими активными эффектами: складывается с «Щитом»", () => {
+    // В бою: раундовая длительность «Щита» не истекает сразу же после сотворения.
+    const shielded = castSpell(
+      withTurnTracking(session),
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+
+    const after = setArmorClassAdjustment(shielded, 2, clock);
+
+    // Без вкладов: 14; «Щит» прибавляет 5; поправка прибавляет ещё 2.
+    expect(effectiveArmorClass(after.character)).toBe(21);
   });
 });
 

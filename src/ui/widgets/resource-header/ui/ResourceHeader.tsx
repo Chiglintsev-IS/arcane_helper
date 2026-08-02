@@ -15,18 +15,9 @@ import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
-import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
+import { armorClassAdjustment, effectiveArmorClass } from "@/core/domain/effects/armorClass";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import { signed } from "@/core/shared/language";
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-slate-200 px-2 py-1 dark:border-slate-800">
-      <dt className="text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">{label}</dt>
-      <dd className="text-base font-semibold leading-tight tabular-nums">{value}</dd>
-    </div>
-  );
-}
 
 /**
  * Ярлык ресурса хода. Подпись одна и та же в обоих состояниях: израсходованность несут знак и
@@ -45,6 +36,39 @@ function TurnResource({
     <Badge tone={available ? tone : "muted"} icon={available ? "✓" : "✗"}>
       {children}
     </Badge>
+  );
+}
+
+/**
+ * Плитка КД — кнопка, как и плитка хитов: временная поправка правится там же, где она видна.
+ */
+function ArmorClassStat({
+  value,
+  adjustment,
+  onOpen,
+}: {
+  value: string;
+  adjustment: number;
+  onOpen: () => void;
+}) {
+  // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
+  return (
+    <div className="rounded-md border border-slate-200 dark:border-slate-800">
+      <dt className="sr-only">КД</dt>
+      <dd>
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`КД ${value}. Правка: поправка`}
+          className="w-full px-2 py-1 text-left"
+        >
+          <span className="block text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
+            КД{adjustment !== 0 ? ` ${signed(adjustment)}` : ""}
+          </span>
+          <span className="block text-base font-semibold leading-tight tabular-nums">{value}</span>
+        </button>
+      </dd>
+    </div>
   );
 }
 
@@ -127,6 +151,7 @@ export function ResourceHeader({
   character,
   economy,
   bookCastingTimes,
+  onOpenArmorClass,
   onOpenHitPoints,
   onEditResources,
 }: {
@@ -134,6 +159,7 @@ export function ResourceHeader({
   economy: TurnEconomy;
   /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
   bookCastingTimes: ReadonlySet<CastingTimeType>;
+  onOpenArmorClass: () => void;
   onOpenHitPoints: () => void;
   /** Ручная правка ячеек и рун. */
   onEditResources: () => void;
@@ -153,7 +179,11 @@ export function ResourceHeader({
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
       <dl className="grid grid-cols-2 gap-1">
-        <Stat label="КД" value={`${armorClass}`} />
+        <ArmorClassStat
+          value={`${armorClass}`}
+          adjustment={armorClassAdjustment(character)}
+          onOpen={onOpenArmorClass}
+        />
         <HitPointsStat
           value={`${vitality.current}/${vitality.maximum}`}
           temporary={character.temporaryHitPoints}
