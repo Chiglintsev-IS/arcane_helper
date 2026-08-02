@@ -640,6 +640,7 @@ export function PlayScreen() {
       {campOpen ? (
         <CampSheet
           character={character}
+          inFight={inFight}
           spells={spells}
           onShortRest={() => {
             if (apply((current) => shortRest(current, clock)) === null) setCampOpen(false);

@@ -67,7 +67,7 @@ function thorne(): unknown {
     hitPoints: { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 },
     armorClass: { base: 10 },
     runes: { maximum: 3, remaining: 2 },
-    spellPoints: { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" },
+    spellPoints: { remaining: 3 },
     suppression: { firedUpon: false, underDirectSunlight: false },
     spellNotes: { web: "Мастер считает, что паутина не горит." },
     roleplayPreferences: {
@@ -108,6 +108,15 @@ describe("characterStateSchema принимает корректное сост�
       draft.activeEffects = [];
     });
     expect(characterStateSchema.safeParse(idle).success).toBe(true);
+  });
+
+  it("время создания очков заклинаний из старого сохранения читается и отбрасывается", () => {
+    const legacy = mutate((draft) => {
+      draft.spellPoints = { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" };
+    });
+    const result = characterStateSchema.safeParse(legacy);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.spellPoints).toEqual({ remaining: 3 });
   });
 });
 

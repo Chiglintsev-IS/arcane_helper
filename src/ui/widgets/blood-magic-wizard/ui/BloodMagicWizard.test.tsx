@@ -144,7 +144,7 @@ describe("выбор объёма (FR-178)", () => {
 
   it("подсказывает, на что хватит, с учётом уже имеющихся очков", async () => {
     const saved = createThorne();
-    saved.spellPoints = { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" };
+    saved.spellPoints = { remaining: 3 };
     const { user } = await openWizard(saved);
     // Бой не начат нарочно — см. комментарий в инварианте выше.
 

@@ -314,7 +314,7 @@ describe("недоступность руны названа причиной (F
   it("при оплате кровью руна не применяется и говорит почему", async () => {
     const user = userEvent.setup();
     const rich = withTurnTracking();
-    rich.spellPoints = { remaining: 6, createdAt: "2026-07-31T18:00:00.000Z" };
+    rich.spellPoints = { remaining: 6 };
     await renderWithStores(<PlayScreen />, rich);
     await openWizard(/^Паутина/);
 
