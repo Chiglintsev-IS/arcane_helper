@@ -50,7 +50,7 @@ describe("карточка концентрации в шапке (FR-082, FR-08
     const block = screen.getByLabelText("Концентрация");
     expect(within(block).getByText("Обнаружение магии")).toBeDefined();
     expect(within(block).getByText(/ячейка 1 ур\./)).toBeDefined();
-    expect(within(block).getByText(/Сфера 30 футов от себя · без спасброска/)).toBeDefined();
+    expect(within(block).getByText(/Сфера 30 футов от себя · Без броска/)).toBeDefined();
     expect(within(block).getByText(/спасбросок Телосложения \+4, КС от 10/)).toBeDefined();
   });
 

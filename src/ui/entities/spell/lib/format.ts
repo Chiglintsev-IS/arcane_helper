@@ -114,19 +114,6 @@ export function slotCostLabel(spell: Spell): string {
   return spell.ritual ? `${slot} или ритуал` : slot;
 }
 
-export function rangeLabel(range: Spell["range"]): string {
-  switch (range.type) {
-    case "self":
-      return "На себя";
-    case "touch":
-      return "Касание";
-    case "distance":
-      return `${range.distanceFeet} ${plural(range.distanceFeet ?? 0, ["фут", "фута", "футов"])}`;
-    default:
-      return "Особая";
-  }
-}
-
 export function durationLabel(duration: Spell["duration"]): string {
   const value = duration.value ?? 0;
   switch (duration.type) {
@@ -160,18 +147,6 @@ export function targetingLabel(targeting: Spell["targeting"]): string {
     default:
       return "Область";
   }
-}
-
-const AREA_SHAPES: Record<string, string> = {
-  cone: "Конус",
-  cube: "Куб",
-  line: "Линия",
-  sphere: "Сфера",
-  cylinder: "Цилиндр",
-};
-
-export function areaLabel(area: NonNullable<Spell["area"]>): string {
-  return `${AREA_SHAPES[area.shape] ?? area.shape}, ${area.sizeFeet} ${plural(area.sizeFeet, ["фут", "фута", "футов"])}`;
 }
 
 /** Единицы длительности в терминах морфологии. `instant` и `special` числа не несут. */

@@ -48,6 +48,15 @@ export const SAVING_THROW_NAMES = {
   CHA: "Харизмы",
 } as const;
 
+/** Фигуры области: слова правил, и в двух местах их держать нельзя. */
+export const AREA_SHAPES_RU = {
+  cone: "Конус",
+  cube: "Куб",
+  line: "Линия",
+  sphere: "Сфера",
+  cylinder: "Цилиндр",
+} as const;
+
 /**
  * Способ разрешения, при котором никто ничего не бросает.
  *

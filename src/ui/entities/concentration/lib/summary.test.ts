@@ -70,7 +70,7 @@ describe("describeConcentration (FR-084)", () => {
     expect(summary.slotLabel).toBe("ячейка 1 ур.");
     expect(summary.startLabel).toBe("раунд 1");
     expect(summary.durationLabel).toBe("до 10 минут");
-    expect(summary.mechanicsLabel).toBe("Сфера 30 футов от себя · без спасброска");
+    expect(summary.mechanicsLabel).toBe("Сфера 30 футов от себя · Без броска");
     expect(summary.breakLabel).toBe("Урон → спасбросок Телосложения +4, КС от 10");
     expect(summary.shortRulesRu).toContain("чувствует присутствие магии");
   });
@@ -83,7 +83,7 @@ describe("describeConcentration (FR-084)", () => {
       journal,
     });
 
-    expect(summary.mechanicsLabel).toBe("На себя · спасбросок Ловкости против КС 16");
+    expect(summary.mechanicsLabel).toBe("На себя · Спасбросок Ловкости КС 16");
   });
 
   it("подставляет модификатор атаки и урон по фактической ячейке", () => {
@@ -97,7 +97,7 @@ describe("describeConcentration (FR-084)", () => {
     expect(summary.slotLabel).toBe("без ячейки");
     expect(summary.durationLabel).toBe("до 3 раундов");
     // Заговор растёт от уровня персонажа: пороги 5 и 11, у 7 уровня — два кубика.
-    expect(summary.mechanicsLabel).toBe("60 футов · атака заклинанием +8 · урон 2d8 (холод)");
+    expect(summary.mechanicsLabel).toBe("60 футов · Атака d20+8 · Урон 2d8 (холод)");
   });
 
   it("помечает раунд неточным, если начало вытеснено из журнала", () => {
@@ -151,7 +151,7 @@ describe("describeConcentration (FR-084)", () => {
     });
 
     // Подстановка по умолчанию: концентрацию срывает спасбросок Телосложения.
-    expect(summary.mechanicsLabel).toBe("На себя · спасбросок Телосложения против КС 16");
+    expect(summary.mechanicsLabel).toBe("На себя · Спасбросок Телосложения КС 16");
   });
 
   it("показывает отрицательные модификаторы со знаком минус", () => {
@@ -168,7 +168,7 @@ describe("describeConcentration (FR-084)", () => {
       journal,
     });
 
-    expect(summary.mechanicsLabel).toContain("атака заклинанием −1");
+    expect(summary.mechanicsLabel).toContain("Атака d20−1");
     expect(summary.breakLabel).toBe("Урон → спасбросок Телосложения −2, КС от 10");
   });
 

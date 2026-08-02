@@ -10,7 +10,7 @@
 
 import type { Sheet } from "@/core/domain/sheet/sheet";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { NO_ROLL_RU, SAVING_THROW_NAMES, signed } from "@/core/shared/language";
+import { AREA_SHAPES_RU, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed } from "@/core/shared/language";
 
 /** Числа персонажа, из которых собирается подпись разрешения. Считает их лист. */
 export type ResolutionNumbers = Pick<Sheet, "spellSaveDc" | "spellAttackModifier">;
@@ -38,4 +38,43 @@ export function resolutionBadge(
     default:
       return { label: NO_ROLL_RU, icon: "○" };
   }
+}
+
+function feet(value: number): string {
+  return `${value} ${plural(value, ["фут", "фута", "футов"])}`;
+}
+
+/**
+ * Дальность там, где рядом стоит ярлык.
+ *
+ * Парная к `rangePhrase`: подпись под ярлыком «Дальность» отвечать за себя не обязана, а подпись в
+ * ряду фактов через точку — обязана. То же правило действует у времени накладывания и длительности.
+ */
+export function rangeLabel(range: Spell["range"]): string {
+  switch (range.type) {
+    case "self":
+      return "На себя";
+    case "touch":
+      return "Касание";
+    case "distance":
+      return feet(range.distanceFeet ?? 0);
+    default:
+      return "Особая";
+  }
+}
+
+/** Дальность там, где ярлыка рядом нет: «Особая» одна не говорит, что именно особое. */
+export function rangePhrase(range: Spell["range"]): string {
+  return range.type === "special" ? "Особая дальность" : rangeLabel(range);
+}
+
+/** Область под ярлыком: запятая отделяет фигуру от размера. */
+export function areaLabel(area: NonNullable<Spell["area"]>): string {
+  return `${AREA_SHAPES_RU[area.shape]}, ${feet(area.sizeFeet)}`;
+}
+
+/** Область в ряду фактов: «от себя» отвечает на вопрос, откуда её отмерять. */
+export function areaPhrase(area: NonNullable<Spell["area"]>, fromSelf: boolean): string {
+  const shape = `${AREA_SHAPES_RU[area.shape]} ${feet(area.sizeFeet)}`;
+  return fromSelf ? `${shape} от себя` : shape;
 }

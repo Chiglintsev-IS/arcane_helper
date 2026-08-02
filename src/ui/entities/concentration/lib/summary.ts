@@ -8,15 +8,8 @@ import {
   startRound,
   type TurnMark,
 } from "@/core/domain/effects/concentration";
-import { plural, SAVING_THROW_NAMES, signed } from "@/core/shared/language";
-
-const AREA_SHAPES: Record<NonNullable<Spell["area"]>["shape"], string> = {
-  cone: "Конус",
-  cube: "Куб",
-  line: "Линия",
-  sphere: "Сфера",
-  cylinder: "Цилиндр",
-};
+import { signed } from "@/core/shared/language";
+import { areaPhrase, rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 
 /** Способ прерывания концентрации. Право мастера помечено: приложение его не применяет само. */
 export type ConcentrationBreaker = {
@@ -38,49 +31,27 @@ export type ConcentrationSummary = {
   breakers: ConcentrationBreaker[];
 };
 
-function feet(value: number): string {
-  return `${value} ${plural(value, ["фут", "фута", "футов"])}`;
-}
-
-function reachLabel(spell: Spell): string {
-  if (spell.area !== undefined) {
-    const shape = `${AREA_SHAPES[spell.area.shape]} ${feet(spell.area.sizeFeet)}`;
-    return spell.range.type === "self" ? `${shape} от себя` : shape;
-  }
-  switch (spell.range.type) {
-    case "self":
-      return "На себя";
-    case "touch":
-      return "Касание";
-    case "distance":
-      return feet(spell.range.distanceFeet ?? 0);
-    default:
-      return "Особая дальность";
-  }
-}
-
-function resolutionShortRu(spell: Spell, character: CharacterState): string {
-  switch (spell.resolution.type) {
-    case "spell_attack":
-      return `атака заклинанием ${signed(Sheet.of(character).spellAttackModifier)}`;
-    case "saving_throw":
-      return `спасбросок ${SAVING_THROW_NAMES[spell.resolution.savingThrow ?? "CON"]} против КС ${Sheet.of(character).spellSaveDc}`;
-    default:
-      return "без спасброска";
-  }
-}
-
+/**
+ * Механика висящего эффекта в ряду фактов через точку.
+ *
+ * Каждый факт назван той же подписью, что в строке боевого списка: пока блок держал свои
+ * формулировки, «Луч холода» показывал «атака заклинанием +8» там, где список говорил «Атака d20+8».
+ */
 function mechanicsRu(spell: Spell, effect: ActiveEffect, character: CharacterState): string {
+  const reach =
+    spell.area === undefined
+      ? rangePhrase(spell.range)
+      : areaPhrase(spell.area, spell.range.type === "self");
   const damage =
     spell.damage === undefined
       ? null
-      : `урон ${effectiveDamage(spell.damage, {
+      : `Урон ${effectiveDamage(spell.damage, {
           spellLevel: spell.level,
           slotLevel: effect.slotLevelUsed,
           characterLevel: character.level,
         })} (${spell.damage.type})`;
 
-  return [reachLabel(spell), resolutionShortRu(spell, character), damage]
+  return [reach, resolutionBadge(spell.resolution, Sheet.of(character)).label, damage]
     .filter((part) => part !== null)
     .join(" · ");
 }

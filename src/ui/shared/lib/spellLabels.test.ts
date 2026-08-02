@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
+import {
+  areaLabel,
+  areaPhrase,
+  rangeLabel,
+  rangePhrase,
+  resolutionBadge,
+} from "@/ui/shared/lib/spellLabels";
 
 /** Числа Торна: оба включают +1 от предмета, и книга их не знает. */
 const THORNE = { spellSaveDc: 16, spellAttackModifier: 8 };
@@ -37,5 +43,36 @@ describe("resolutionBadge (FR-211)", () => {
 
     expect([attack.icon, save.icon, none.icon]).toEqual(["✶", "◇", "○"]);
     expect(Object.keys(attack)).toEqual(["label", "icon"]);
+  });
+});
+
+describe("дальность в двух формах", () => {
+  it("подписанная строка говорит коротко: ярлык рядом уже ответил, о чём речь", () => {
+    expect(rangeLabel({ type: "self" })).toBe("На себя");
+    expect(rangeLabel({ type: "touch" })).toBe("Касание");
+    expect(rangeLabel({ type: "distance", distanceFeet: 150 })).toBe("150 футов");
+    expect(rangeLabel({ type: "special" })).toBe("Особая");
+  });
+
+  it("строка без ярлыка называет себя сама: «Особая» одна ничего не говорит", () => {
+    expect(rangePhrase({ type: "special" })).toBe("Особая дальность");
+    expect(rangePhrase({ type: "distance", distanceFeet: 30 })).toBe("30 футов");
+    expect(rangePhrase({ type: "self" })).toBe("На себя");
+  });
+
+  it("футы склоняются", () => {
+    expect(rangeLabel({ type: "distance", distanceFeet: 1 })).toBe("1 фут");
+    expect(rangeLabel({ type: "distance", distanceFeet: 2 })).toBe("2 фута");
+  });
+});
+
+describe("область в двух формах", () => {
+  it("подписанная строка отделяет фигуру от размера запятой", () => {
+    expect(areaLabel({ shape: "sphere", sizeFeet: 30 })).toBe("Сфера, 30 футов");
+  });
+
+  it("строка без ярлыка добавляет, откуда область считается", () => {
+    expect(areaPhrase({ shape: "sphere", sizeFeet: 30 }, true)).toBe("Сфера 30 футов от себя");
+    expect(areaPhrase({ shape: "cone", sizeFeet: 15 }, false)).toBe("Конус 15 футов");
   });
 });

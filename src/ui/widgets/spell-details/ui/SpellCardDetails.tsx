@@ -16,16 +16,14 @@ import { useState } from "react";
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import {
   CASTING_TIME,
-  areaLabel,
   castingTimeLabel,
   castingTimePhrase,
   durationLabel,
   levelLabel,
-  rangeLabel,
   slotCostLabel,
   targetingLabel,
 } from "@/ui/entities/spell/lib/format";
-import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
+import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { Sheet } from "@/core/domain/sheet/sheet";

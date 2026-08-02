@@ -23,10 +23,9 @@ import {
   damageLabel,
   durationPhrase,
   ritualOnlyBadge,
-  rangeLabel,
   slotCostLabel,
 } from "@/ui/entities/spell/lib/format";
-import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
+import { rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
