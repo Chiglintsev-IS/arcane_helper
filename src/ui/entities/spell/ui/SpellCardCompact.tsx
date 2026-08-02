@@ -25,7 +25,7 @@ import {
   ritualOnlyBadge,
   slotCostLabel,
 } from "@/ui/entities/spell/lib/format";
-import { rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
+import { rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
@@ -112,7 +112,7 @@ export function SpellCardCompact({
    */
   const facts: { text: string; strong: boolean }[] = [
     { text: slotCost, strong: false },
-    { text: rangeLabel(spell.range), strong: false },
+    { text: rangePhrase(spell.range), strong: false },
     { text: durationPhrase(spell.duration), strong: true },
     ...(damage === null ? [] : [{ text: `Урон ${damage}`, strong: false }]),
   ];
