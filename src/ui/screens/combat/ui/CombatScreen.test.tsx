@@ -229,7 +229,13 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
     const after = stores.session.getState().session;
     expect(after?.character.abilities.intelligence).toBe(20);
-    expect(after?.character.skills).toEqual({ arcana: "expert" });
+    // Магия стала компетентностью; навык чужой характеристики правкой Интеллекта не задет.
+    expect(after?.character.skills).toEqual({
+      arcana: "expert",
+      investigation: "proficient",
+      nature: "proficient",
+      perception: "proficient",
+    });
     // Одна запись журнала на весь блок, а не три.
     expect(after?.journal).toHaveLength(1);
     expect(screen.queryByRole("dialog", { name: "Правка: Интеллект" })).toBeNull();
@@ -290,11 +296,12 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     // Вещь легла в сумку: КД пока прежний — лежащее не действует.
-    expect(stores.session.getState().session?.character.equipment.items).toHaveLength(1);
+    const carried = stores.session.getState().session?.character.equipment.items ?? [];
+    expect(carried.find((item) => item.id === "кольцо-защиты")?.worn).toBe(false);
     await user.click(screen.getByRole("switch", { name: "Надето: Кольцо защиты" }));
 
     const worn = stores.session.getState().session?.character;
-    expect(worn?.equipment.items[0]?.worn).toBe(true);
+    expect(worn?.equipment.items.find((item) => item.id === "кольцо-защиты")?.worn).toBe(true);
     // Персонаж при этом не тронут: вещь не меняет того, кто он.
     expect(worn?.abilities).toEqual(createThorne().abilities);
   });
@@ -369,12 +376,12 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     await renderWithStores(<CombatScreen />);
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
-    expect(screen.getByText("Инициатива +2")).toBeDefined();
+    expect(screen.getByText("Инициатива +1")).toBeDefined();
     expect(screen.queryByText(/Пассивное восприятие/)).toBeNull();
 
     await user.click(screen.getByRole("radio", { name: /^Вне боя/ }));
 
-    expect(screen.getByText("Пассивное восприятие 11")).toBeDefined();
+    expect(screen.getByText("Пассивное восприятие 14")).toBeDefined();
     expect(screen.queryByText(/Инициатива/)).toBeNull();
   });
 

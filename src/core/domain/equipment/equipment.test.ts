@@ -39,10 +39,10 @@ describe("снаряжение", () => {
 
   it("вещь правится и убирается", () => {
     const worn = gear().addItem(ring(true));
-    expect(worn.replaceItem({ ...ring(true), nameRu: "Кольцо защиты +1" }).items[0]?.nameRu).toBe(
-      "Кольцо защиты +1",
-    );
-    expect(worn.removeItem("ring").items).toEqual([]);
+    const renamed = worn.replaceItem({ ...ring(true), nameRu: "Кольцо защиты +1" });
+
+    expect(renamed.items.find((item) => item.id === "ring")?.nameRu).toBe("Кольцо защиты +1");
+    expect(worn.removeItem("ring").items.some((item) => item.id === "ring")).toBe(false);
   });
 
   it("правка одной вещи соседних не трогает", () => {
@@ -51,7 +51,11 @@ describe("снаряжение", () => {
       .addItem({ id: "rope", nameRu: "Верёвка", worn: false });
     const renamed = two.replaceItem({ ...ring(true), nameRu: "Кольцо защиты +1" });
 
-    expect(renamed.items.map((item) => item.nameRu)).toEqual(["Кольцо защиты +1", "Верёвка"]);
+    expect(renamed.items.map((item) => item.nameRu)).toEqual([
+      ...gear().items.map((item) => item.nameRu),
+      "Кольцо защиты +1",
+      "Верёвка",
+    ]);
   });
 
   it("повтор, отсутствие вещи и порча данных отвергаются с причиной", () => {
@@ -68,10 +72,11 @@ describe("снаряжение", () => {
     expect(() => gear().withArmorClassBase(1.5)).toThrow(DomainError);
   });
 
-  it("прибавки без вещи правятся отдельно от инвентаря", () => {
-    const changed = gear().withOtherBonuses({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
-    expect(changed.otherBonuses.spellcasting).toBe(0);
-    expect(changed.bonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
+  it("прибавки без вещи складываются с надетыми вещами, а не заменяют их", () => {
+    const changed = gear().withOtherBonuses({ spellcasting: 2, armorClass: 0, savingThrows: 0 });
+    expect(changed.otherBonuses.spellcasting).toBe(2);
+    // Вещи Торна дают +1 к магии, +2 к защите и +1 к спасброскам.
+    expect(changed.bonuses).toEqual({ spellcasting: 3, armorClass: 2, savingThrows: 1 });
   });
 
   it("отсутствие записи о компонентах — не пустая сумка, а незнание", () => {

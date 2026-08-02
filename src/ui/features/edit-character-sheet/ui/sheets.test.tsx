@@ -7,6 +7,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { AbilitySheet } from "./AbilitySheet";
 import { HealthSheet } from "./HealthSheet";
 import { IdentitySheet } from "./IdentitySheet";
+import { InventorySheet } from "./InventorySheet";
 import { ItemBonusesSheet } from "./ItemBonusesSheet";
 import { LevelSheet } from "./LevelSheet";
 import { MarksSheet } from "./MarksSheet";
@@ -35,11 +36,12 @@ describe("шторки правки листа", () => {
     await userEvent.type(field, "20");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
+    // Владения приходят из листа и возвращаются нетронутыми: правили значение, а не навыки.
     expect(onSave).toHaveBeenCalledWith({
       ability: "intelligence",
       score: 20,
       saveProficient: true,
-      skills: {},
+      skills: { arcana: "proficient", investigation: "proficient", nature: "proficient" },
     });
   });
 
@@ -265,7 +267,11 @@ describe("шторки правки листа", () => {
     await userEvent.click(within(arcana).getByRole("radio", { name: "компетентность" }));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(onSave.mock.calls[0]?.[0].skills).toEqual({ arcana: "expert" });
+    expect(onSave.mock.calls[0]?.[0].skills).toEqual({
+      arcana: "expert",
+      investigation: "proficient",
+      nature: "proficient",
+    });
   });
 
   it("характеристика: «нет» убирает навык, а не записывает значение", async () => {
@@ -319,6 +325,30 @@ describe("шторки правки листа", () => {
     expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
   });
 
+  it("вещи: заметка сохраняется вместе с вещью, пустая не хранится", async () => {
+    const onAdd = vi.fn();
+    render(
+      <InventorySheet
+        character={createThorne()}
+        onAdd={onAdd}
+        onRemove={() => {}}
+        onToggleWorn={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Новая вещь"), "Сапоги следопыта");
+    await userEvent.type(screen.getByLabelText("Заметка"), "1d4 к Скрытности в лесу");
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onAdd.mock.calls[0]?.[0]).toEqual({
+      id: "сапоги-следопыта",
+      nameRu: "Сапоги следопыта",
+      worn: false,
+      note: "1d4 к Скрытности в лесу",
+    });
+  });
+
   it("прибавки предметов: отрицательная принимается", async () => {
     const onSave = vi.fn();
     render(<ItemBonusesSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
@@ -328,7 +358,7 @@ describe("шторки правки листа", () => {
     await userEvent.type(field, "-1");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(onSave).toHaveBeenCalledWith({ spellcasting: 1, armorClass: -1, savingThrows: 1 });
+    expect(onSave).toHaveBeenCalledWith({ spellcasting: 0, armorClass: -1, savingThrows: 0 });
   });
 
   it("прибавки предметов: пустое поле не сохраняется", async () => {

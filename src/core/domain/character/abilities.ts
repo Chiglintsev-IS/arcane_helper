@@ -80,8 +80,13 @@ export function passivePerception(input: Parameters<typeof skillModifier>[0]): n
   return PASSIVE_BASE + skillModifier(input);
 }
 
-export function initiativeModifier(dexterity: number): number {
-  return abilityModifier(dexterity);
+/**
+ * Инициатива: половина суммы модификаторов Ловкости и Мудрости, округляя вниз.
+ *
+ * Это домашнее правило стола: по правилам 5e инициатива равна модификатору Ловкости.
+ */
+export function initiativeModifier(input: { dexterity: number; wisdom: number }): number {
+  return Math.floor((abilityModifier(input.dexterity) + abilityModifier(input.wisdom)) / 2);
 }
 
 /**

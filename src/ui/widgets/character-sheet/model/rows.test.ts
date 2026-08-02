@@ -34,7 +34,11 @@ describe("блоки листа", () => {
   });
 
   it("пустой инвентарь называется пустым, надетая вещь — своим вкладом", () => {
-    expect(blockById("inventory")?.rows).toEqual([{ labelRu: "Пусто", value: "—" }]);
+    const bare = createThorne();
+    const empty = { ...bare, equipment: { ...bare.equipment, items: [] } };
+    expect(sheetBlocks(empty).find((block) => block.id === "inventory")?.rows).toEqual([
+      { labelRu: "Пусто", value: "—" },
+    ]);
 
     const state = createThorne();
     const withRing = {
@@ -73,6 +77,20 @@ describe("блоки листа", () => {
     expect(rows).toContainEqual({ labelRu: "Посох", value: "в сумке", hint: "магия +1" });
     // Верёвка в счёте не участвует, и подсказки у неё нет вовсе.
     expect(rows).toContainEqual({ labelRu: "Верёвка", value: "в сумке" });
+  });
+
+  it("заметка вещи попадает в подсказку рядом с прибавками", () => {
+    const rows = blockById("inventory")?.rows ?? [];
+    expect(rows).toContainEqual({
+      labelRu: "Комплект болотной маскировки",
+      value: "в сумке",
+      hint: "1d4 к Скрытности в болотах",
+    });
+    expect(rows).toContainEqual({
+      labelRu: "Плащ защиты",
+      value: "надето",
+      hint: "защита +1, спасброски +1",
+    });
   });
 
   it("кто он — вид, возраст и класс с уровнем", () => {
@@ -121,10 +139,10 @@ describe("блоки листа", () => {
     expect(blockById("ability:intelligence")?.rows).toEqual([
       { labelRu: "Значение", value: "18 (+4)" },
       { labelRu: "Спасбросок", value: "+8", hint: "владение" },
-      { labelRu: "Магия", value: "+4" },
+      { labelRu: "Магия", value: "+7", hint: "владение" },
       { labelRu: "История", value: "+4" },
-      { labelRu: "Расследование", value: "+4" },
-      { labelRu: "Природа", value: "+4" },
+      { labelRu: "Расследование", value: "+7", hint: "владение" },
+      { labelRu: "Природа", value: "+7", hint: "владение" },
       { labelRu: "Религия", value: "+4" },
     ]);
   });
@@ -175,8 +193,8 @@ describe("блоки листа", () => {
     expect(blockById("marks")?.rows).toContainEqual({ labelRu: "Истощение", value: "нет" });
   });
 
-  it("прибавки предметов показаны со знаком", () => {
-    expect(blockById("itemBonuses")?.rows).toContainEqual({ labelRu: "К защите", value: "+2" });
+  it("прибавки без вещи показаны со знаком и у Торна равны нулю", () => {
+    expect(blockById("itemBonuses")?.rows).toContainEqual({ labelRu: "К защите", value: "+0" });
   });
 
   it("пустой список владений называется прочерком", () => {

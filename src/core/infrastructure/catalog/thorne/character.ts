@@ -34,8 +34,12 @@ const RAW: unknown = {
   },
   // Владение спасбросками волшебника; Телосложение не подтверждено и потому не отмечено.
   saveProficiencies: ["intelligence", "wisdom"],
-  // Владения навыками игроком не названы.
-  skills: {},
+  skills: {
+    arcana: "proficient",
+    investigation: "proficient",
+    nature: "proficient",
+    perception: "proficient",
+  },
   proficiencies: { weapons: [], armor: [], tools: [], languages: [] },
   overrides: { saves: {}, skills: {} },
   exhaustion: 0,
@@ -113,24 +117,44 @@ const RAW: unknown = {
   arcaneRecoveryAvailable: true,
 
   hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
-  // Рун столько же, сколько бонус мастерства.
-  // Одна кость за уровень, размер по классу: волшебник — d6. Расовые «11 очков здоровья»
-  // на счёт костей не влияют, пока это надбавка к максимуму, а не замена кости, пункт 3.
-  // Ответ игрока на (2026-08-01): фокусировка есть, и она «+1» — эта прибавка уже учтена
-  // в КС 16 и атаке +8. Мешочка с компонентами нет, дорогих компонентов не куплено.
   equipment: {
     // База 10 — доспехов нет.
     armorClassBase: 10,
-    /**
-     * Прибавки без вещи: сами предметы игроком не названы, и выдумывать им имена нельзя.
-     * Выведено из листа: КС 16 и атака +8 дают +1 к магии, КД 14 при базе 10 и Ловкости 14 — +2 к
-     * защите, спасбросок Телосложения +4 при Телосложении 16 — +1 ко всем спасброскам.
-     */
-    otherBonuses: { spellcasting: 1, armorClass: 2, savingThrows: 1 },
-    items: [],
+    // Каждая прибавка Торна принадлежит названной вещи, поэтому прибавок без вещи у него нет.
+    otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+    items: [
+      {
+        id: "spellcasting-focus",
+        nameRu: "Магическая фокусировка +1",
+        worn: true,
+        bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 },
+      },
+      {
+        id: "robe",
+        nameRu: "Мантия +1",
+        worn: true,
+        bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+      },
+      {
+        id: "cloak-of-protection",
+        nameRu: "Плащ защиты",
+        worn: true,
+        bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+      },
+      {
+        // Прибавка кубиком и по обстановке: приложение её не считает, поэтому она заметка.
+        id: "swamp-camouflage-kit",
+        nameRu: "Комплект болотной маскировки",
+        worn: false,
+        note: "1d4 к Скрытности в болотах",
+      },
+    ],
     components: { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: [] },
   },
+  // Одна кость за уровень, размер по классу: волшебник — d6. Расовые «11 очков здоровья»
+  // на счёт костей не влияют: это надбавка к максимуму, а не замена кости.
   hitDice: { total: 7, size: 6, remaining: 7 },
+  // Рун столько же, сколько бонус мастерства.
   runes: { maximum: 3, remaining: 3 },
   spellPoints: { remaining: 0, createdAt: null },
   suppression: { firedUpon: false, underDirectSunlight: false },

@@ -104,7 +104,12 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
         itemBonus: sheet.bonuses.spellcasting,
       }),
     preparedLimit: overrides.preparedLimit ?? preparedLimit(spellcastingScore, sheet.level),
-    initiative: overrides.initiative ?? initiativeModifier(sheet.abilities.dexterity),
+    initiative:
+      overrides.initiative ??
+      initiativeModifier({
+        dexterity: sheet.abilities.dexterity,
+        wisdom: sheet.abilities.wisdom,
+      }),
     passivePerception:
       overrides.passivePerception ??
       passivePerception({

@@ -6,7 +6,7 @@
 import { Character } from "@/core/domain/character/character";
 import { ABILITIES, skillsOfAbility } from "@/core/domain/character/skills";
 import type { Ability } from "@/core/domain/character/skills";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState, ItemBonuses } from "@/core/domain/character/state";
 import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { Vitality } from "@/core/domain/vitality/vitality";
@@ -21,6 +21,16 @@ import {
 } from "@/ui/entities/character/lib/labels";
 
 export type SheetRow = { labelRu: string; value: string; hint?: string };
+
+/** Вклад вещи словами: нулевое слагаемое не называется, иначе верёвка выглядит участницей счёта. */
+function bonusParts(bonuses: ItemBonuses | undefined): string[] {
+  if (bonuses === undefined) return [];
+  return [
+    bonuses.spellcasting === 0 ? null : `магия ${signed(bonuses.spellcasting)}`,
+    bonuses.armorClass === 0 ? null : `защита ${signed(bonuses.armorClass)}`,
+    bonuses.savingThrows === 0 ? null : `спасброски ${signed(bonuses.savingThrows)}`,
+  ].filter((part) => part !== null);
+}
 
 /**
  * Вкладки листа. Лист — итог, и первая вкладка так и называется: она складывает базу персонажа,
@@ -187,23 +197,17 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
       rows:
         character.equipment.items.length === 0
           ? [{ labelRu: "Пусто", value: "—" }]
-          : character.equipment.items.map((item) => ({
-              labelRu: item.nameRu,
-              value: item.worn ? "надето" : "в сумке",
-              ...(item.bonuses === undefined
-                ? {}
-                : {
-                    hint: [
-                      item.bonuses.spellcasting === 0 ? null : `магия ${signed(item.bonuses.spellcasting)}`,
-                      item.bonuses.armorClass === 0 ? null : `защита ${signed(item.bonuses.armorClass)}`,
-                      item.bonuses.savingThrows === 0
-                        ? null
-                        : `спасброски ${signed(item.bonuses.savingThrows)}`,
-                    ]
-                      .filter((part) => part !== null)
-                      .join(", "),
-                  }),
-            })),
+          : character.equipment.items.map((item) => {
+              const hint = [
+                ...bonusParts(item.bonuses),
+                ...(item.note === undefined ? [] : [item.note]),
+              ].join(", ");
+              return {
+                labelRu: item.nameRu,
+                value: item.worn ? "надето" : "в сумке",
+                ...(hint === "" ? {} : { hint }),
+              };
+            }),
     },
     {
       id: "proficiencies",

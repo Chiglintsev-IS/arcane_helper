@@ -53,7 +53,7 @@ describe("правка снаряжения", () => {
     const added = addItem(session(), ring, clock);
     const gone = removeItem(added, "ring", clock);
 
-    expect(gone.character.equipment.items).toEqual([]);
+    expect(gone.character.equipment.items.some((item) => item.id === "ring")).toBe(false);
     expect(gone.journal[1]?.summaryRu).toBe("Убрано: Кольцо защиты");
   });
 
@@ -74,7 +74,8 @@ describe("правка снаряжения", () => {
       { spellcasting: 3, armorClass: 2, savingThrows: 1 },
       clock,
     );
-    expect(Sheet.of(richer.character).spellSaveDc).toBe(18);
+    // 8 + 3 (мастерство) + 4 (Интеллект) + 3 (без вещи) + 1 (фокусировка).
+    expect(Sheet.of(richer.character).spellSaveDc).toBe(19);
     expect(richer.journal[0]?.summaryRu).toBe("Правка прибавок без вещи");
   });
 });

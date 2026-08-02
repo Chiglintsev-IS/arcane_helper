@@ -25,6 +25,7 @@ export function InventorySheet({
   onCancel: () => void;
 }) {
   const [nameRu, setNameRu] = useState("");
+  const [note, setNote] = useState("");
   const [spellcasting, setSpellcasting] = useState("0");
   const [armorClass, setArmorClass] = useState("0");
   const [savingThrows, setSavingThrows] = useState("0");
@@ -49,6 +50,7 @@ export function InventorySheet({
           id: nameRu.trim().toLowerCase().replaceAll(" ", "-"),
           nameRu: nameRu.trim(),
           worn: false,
+          ...(note.trim() === "" ? {} : { note: note.trim() }),
           ...(contributes ? { bonuses: numbers } : {}),
         })
       }
@@ -86,6 +88,7 @@ export function InventorySheet({
       </ul>
 
       <TextField labelRu="Новая вещь" value={nameRu} onChange={setNameRu} />
+      <TextField labelRu="Заметка" value={note} onChange={setNote} />
       <NumberField labelRu="К магии" value={spellcasting} onChange={setSpellcasting} />
       <NumberField labelRu="К защите" value={armorClass} onChange={setArmorClass} />
       <NumberField labelRu="Ко всем спасброскам" value={savingThrows} onChange={setSavingThrows} />

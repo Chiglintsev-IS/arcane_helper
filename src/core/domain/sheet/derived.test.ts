@@ -15,16 +15,27 @@ describe("производные числа листа", () => {
     expect(sheet.spellSaveDc).toBe(16);
     expect(sheet.spellAttackModifier).toBe(8);
     expect(sheet.preparationLimit).toBe(11);
-    expect(sheet.initiative).toBe(2);
+    expect(sheet.initiative).toBe(1);
     expect(sheet.savingThrow("constitution")).toBe(4);
     expect(sheet.savingThrow("intelligence")).toBe(8);
     expect(sheet.savingThrow("wisdom")).toBe(5);
     expect(sheet.savingThrow("strength")).toBe(0);
     expect(sheet.armorClassParts).toEqual({ base: 10, dexterityModifier: 2, itemBonus: 2 });
+    expect(sheet.skill("arcana")).toBe(7);
+    expect(sheet.skill("investigation")).toBe(7);
+    expect(sheet.skill("nature")).toBe(7);
+    expect(sheet.skill("perception")).toBe(4);
+    expect(sheet.passivePerception).toBe(14);
+  });
+
+  it("инициатива двигается за Мудростью, а не только за Ловкостью", () => {
+    const state = createThorne();
+    // Ловкость 14 (+2), Мудрость 16 (+3): (2 + 3) ÷ 2 вниз.
+    expect(sheetOf({ ...state, abilities: { ...state.abilities, wisdom: 16 } }).initiative).toBe(2);
   });
 
   it("навык без владения — только модификатор характеристики", () => {
-    expect(sheetOf().skill("arcana")).toBe(4);
+    expect(sheetOf().skill("history")).toBe(4);
   });
 
   it("владение навыком прибавляет бонус мастерства, компетентность — дважды", () => {
@@ -33,8 +44,8 @@ describe("производные числа листа", () => {
     expect(sheetOf({ ...state, skills: { arcana: "expert" } }).skill("arcana")).toBe(10);
   });
 
-  it("пассивное восприятие считается от Мудрости", () => {
-    expect(sheetOf().passivePerception).toBe(11);
+  it("пассивное восприятие считается от навыка Восприятия", () => {
+    expect(sheetOf().passivePerception).toBe(14);
   });
 
   it("перебивка перекрывает формулу", () => {
@@ -65,7 +76,7 @@ describe("производные числа листа", () => {
     expect(overridden.passivePerception).toBe(30);
     // Бонус мастерства перебит — спасбросок с владением считается по новому бонусу.
     expect(overridden.savingThrow("intelligence")).toBe(10);
-    expect(overridden.skill("arcana")).toBe(4);
+    expect(overridden.skill("arcana")).toBe(9);
   });
 
   it("перебивка навыка перекрывает счёт по владению", () => {

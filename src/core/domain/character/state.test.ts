@@ -254,13 +254,29 @@ describe("лист персонажа", () => {
       charisma: 8,
     });
     expect(thorneState.saveProficiencies).toEqual(["intelligence", "wisdom"]);
+    expect(thorneState.skills).toEqual({
+      arcana: "proficient",
+      investigation: "proficient",
+      nature: "proficient",
+      perception: "proficient",
+    });
     expect(thorneState.equipment.otherBonuses).toEqual({
-      spellcasting: 1,
-      armorClass: 2,
-      savingThrows: 1,
+      spellcasting: 0,
+      armorClass: 0,
+      savingThrows: 0,
     });
     expect(thorneState.equipment.armorClassBase).toBe(10);
-    expect(thorneState.equipment.items).toEqual([]);
+    expect(thorneState.equipment.items.map((item) => item.nameRu)).toEqual([
+      "Магическая фокусировка +1",
+      "Мантия +1",
+      "Плащ защиты",
+      "Комплект болотной маскировки",
+    ]);
+
+    const kit = thorneState.equipment.items.at(-1);
+    expect(kit?.note).toBe("1d4 к Скрытности в болотах");
+    expect(kit?.bonuses).toBeUndefined();
+    expect(kit?.worn).toBe(false);
     expect(thorneState.exhaustion).toBe(0);
     expect(thorneState.inspiration).toBe(false);
     expect(thorneState.overrides).toEqual({ saves: {}, skills: {} });
