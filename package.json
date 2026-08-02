@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "check:docs": "python3 scripts/check-docs.py",
     "test:e2e": "npm run build && playwright test",
-    "test:e2e:only": "playwright test"
+    "test:e2e:only": "playwright test",
+    "check:layers": "python3 scripts/check-layers.py"
   },
   "dependencies": {
     "dexie": "^4.4.4",

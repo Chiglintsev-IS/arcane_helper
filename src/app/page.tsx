@@ -1,7 +1,7 @@
 /**
- * Экран боя — единственный маршрут веха 1 ([F-01](../../docs/features/F-01-combat-screen.md)).
+ * Экран боя — единственный маршрут веха 1 (F-01).
  *
- * Страница клиентская целиком: серверных возможностей Next в проекте нет намеренно (ADR-0002), а
+ * Страница клиентская целиком: серверных возможностей Next в проекте нет намеренно, а
  * состояние живёт в IndexedDB, до которой сервер не дотянется. Сторы создаются один раз на монтирование
  * и передаются провайдером, поэтому компоненты не знают ни о Dexie, ни о часах.
  */
@@ -10,8 +10,8 @@
 
 import { useState } from "react";
 
-import { CombatScreen } from "@/components/combat/CombatScreen";
-import { createBrowserStores, StoreProvider } from "@/store/provider";
+import { CombatScreen } from "@/ui/screens/combat/ui/CombatScreen";
+import { createBrowserStores, StoreProvider } from "@/ui/app/providers/stores";
 
 export default function CombatPage() {
   const [stores] = useState(createBrowserStores);

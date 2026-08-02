@@ -10,7 +10,7 @@ import { expect, test, type Page } from "@playwright/test";
  * прогоны видят потраченные ячейки друг друга.
  */
 
-/** Чистая база на каждый тест: сохранённая сессия переживает перезагрузку по замыслу (NFR-003). */
+/** Чистая база на каждый тест: сохранённая сессия переживает перезагрузку по замыслу. */
 async function openFreshApp(page: Page): Promise<void> {
   await page.goto("/");
   await page.evaluate(async () => {
@@ -32,7 +32,7 @@ test.beforeEach(async ({ page }) => {
 /**
  * Уйти из «Боя» в другой режим, ответив «нет» на вопрос о конце боя.
  *
- * Вопрос задаётся на каждом выходе из боя (FR-216): конец боя — факт, сбрасывающий счёт раундов, и
+ * Вопрос задаётся на каждом выходе из боя: конец боя — факт, сбрасывающий счёт раундов, и
  * приложение обязано о нём узнать. Прогону, который просто заглядывает в книгу, нужен ответ «нет».
  */
 async function switchMode(page: Page, name: RegExp): Promise<void> {
@@ -48,14 +48,14 @@ test("combat-screen renders all resource blocks", async ({ page }) => {
   await expect(resources.getByText("Волшебник, 7 уровень", { exact: false })).toBeVisible();
   await expect(resources.getByText("16", { exact: true })).toBeVisible();
   await expect(resources.getByText("+8", { exact: true })).toBeVisible();
-  // КД без активных эффектов: 10 базы + 2 Ловкости + 2 предметов (FR-093).
+  // КД без активных эффектов: 10 базы + 2 Ловкости + 2 предметов.
   await expect(resources.getByText("14", { exact: true })).toBeVisible();
 
   const slots = page.getByLabel("Ячейки заклинаний");
   await expect(slots.getByRole("listitem")).toHaveCount(4);
   await expect(slots.getByText("4/4")).toBeVisible();
 
-  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет (FR-001). Экономия хода
+  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет. Экономия хода
   // в бою ведётся всегда, а бонусное действие появилось вместе с «Туманным шагом».
   await expect(page.getByLabel("Концентрация")).toBeHidden();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
@@ -77,12 +77,12 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
 });
 
 test("combat keeps the first card whole, the book keeps the header", async ({ page }) => {
-  // Бой начат: причина FR-034 добавляет строке ещё одну строку текста, а бюджет здесь меряет
+  // Бой начат: причина добавляет строке ещё одну строку текста, а бюджет здесь меряет
   // обычную игру — после «Начать бой», а не до него.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
 
   // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
-  // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18, ux.md#общие-правила).
+  // нужно доскроллить, а в бою скроллят одной рукой под чужой ход (F-18,).
   const firstCardBottom = async (): Promise<number> =>
     page.evaluate(() => {
       const first = document.querySelector('[aria-label^="Заклинания"] li');
@@ -102,8 +102,8 @@ test("combat keeps the first card whole, the book keeps the header", async ({ pa
   }));
   expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
 
-  // «Вне боя» списка не показывает вовсе (FR-202) — мерить там нечего.
-  // В «Книге» бюджет другой (FR-218): шапка целиком и начало первой строки, а не строка целиком.
+  // «Вне боя» списка не показывает вовсе — мерить там нечего.
+  // В «Книге» бюджет другой: шапка целиком и начало первой строки, а не строка целиком.
   await switchMode(page, /^Книга/);
 
   const headerBottom = await page
@@ -121,17 +121,17 @@ test("combat keeps the first card whole, the book keeps the header", async ({ pa
 });
 
 test("book mode shows slots", async ({ page }) => {
-  // Ячейки нужны там, где выбирают состав на день (FR-217): подготовка — это вопрос «чем платить».
+  // Ячейки нужны там, где выбирают состав на день: подготовка — это вопрос «чем платить».
   await switchMode(page, /^Книга/);
 
   const header = page.getByRole("region", { name: "Ресурсы" });
   await expect(header.getByLabel("Ячейки заклинаний")).toBeVisible();
   await expect(header.getByLabel(/Ячейки 1 уровня/)).toBeVisible();
-  // И только они: числа боя на вопрос «чем сегодня платить» не отвечают (FR-217).
+  // И только они: числа боя на вопрос «чем сегодня платить» не отвечают.
   await expect(header.getByText("КС закл.")).toHaveCount(0);
 
   // Ряд прочих ресурсов в «Книге» состоит из одного значка: очки — способ оплаты, и их же здесь
-  // покупают строкой «Магия крови» (FR-207, FR-217). Рун и чисел боя в нём нет.
+  // покупают строкой «Магия крови». Рун и чисел боя в нём нет.
   const other = header.getByLabel("Прочие ресурсы");
   await expect(other).toContainText("Очки");
   await expect(other).not.toContainText("Руны");
@@ -143,12 +143,12 @@ test("filter by casting time", async ({ page }) => {
   const list = page.getByLabel("Заклинания");
   // Три подготовленные реакции: «Щит», «Поглощение стихий», «Контрзаклинание».
   await expect(list.getByRole("listitem")).toHaveCount(3);
-  // Точное совпадение: подстрока «щит» есть и в подписи роли «Защита» (FR-211).
+  // Точное совпадение: подстрока «щит» есть и в подписи роли «Защита».
   await expect(list.getByText("Щит", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Сбросить" }).click();
   // Пятнадцать: четыре заговора и одиннадцать подготовленных минус «Починка», которая творится
-  // минуту (FR-201), плюс строка «Магия крови» в том же списке (FR-207).
+  // минуту, плюс строка «Магия крови» в том же списке.
   await expect(list.getByRole("listitem")).toHaveCount(15);
 });
 
@@ -160,12 +160,12 @@ test("technical instruction is two taps away", async ({ page }) => {
 });
 
 test("wizard steps order and cast spends the slot", async ({ page }) => {
-  // Бой начат: иначе FR-034 добавила бы шаг «Бой не начат» перед тем, что здесь считается (M-03).
+  // Бой начат: иначе добавила бы шаг «Бой не начат» перед тем, что здесь считается.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
 
-  // Два основных шага при бюджете M-03 в четыре: чем сотворить и объявление с подтверждением.
+  // Два основных шага при бюджете в четыре: чем сотворить и объявление с подтверждением.
   await expect(page.getByText("Шаг 1 из 2: Чем сотворить")).toBeVisible();
   await page.getByRole("button", { name: /Ячейка 2 уровня/ }).click();
   await page.getByRole("button", { name: "Далее" }).click();
@@ -193,28 +193,28 @@ test("undo returns the slot through the journal screen", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(slots.getByText("3/4")).toBeVisible();
 
-  // Отмена живёт только в журнале (FR-114): в бою кнопки нет вовсе.
+  // Отмена живёт только в журнале: в бою кнопки нет вовсе.
   await expect(page.getByRole("button", { name: /^Отменить/ })).toBeHidden();
   await switchMode(page, /^Журнал/);
   await page.getByRole("button", { name: /^Отменить/ }).click();
   await expect(slots.getByText("4/4")).toBeVisible();
 
-  // Возврат в бой застаёт тот же бой: журнал его не заканчивает (FR-220).
+  // Возврат в бой застаёт тот же бой: журнал его не заканчивает.
   await switchMode(page, /^Бой/);
   await expect(page.getByRole("button", { name: "Мой ход" })).toBeVisible();
 });
 
 test("state survives a reload", async ({ page }) => {
-  // Бой начат: иначе FR-034 добавила бы шаг «Бой не начат» перед подтверждением.
+  // Бой начат: иначе добавила бы шаг «Бой не начат» перед подтверждением.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await page.getByRole("button", { name: /Луч холода/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  // Заодно проверяется, что режим переживает перезапуск (FR-204).
+  // Заодно проверяется, что режим переживает перезапуск.
   await switchMode(page, /^Книга/);
 
   await page.reload();
-  // После перезапуска экран снова «Книга»: заголовка с именем там больше нет (FR-217), поэтому
+  // После перезапуска экран снова «Книга»: заголовка с именем там больше нет, поэтому
   // признак загрузки — плитки ячеек, которые в «Книге» как раз и остаются.
   await expect(page.getByLabel("Ячейки заклинаний")).toBeVisible();
   await expect(page.getByRole("radio", { name: /^Книга/ })).toHaveAttribute(
@@ -224,9 +224,9 @@ test("state survives a reload", async ({ page }) => {
 });
 
 test("reaction shows when it returns", async ({ page }) => {
-  // Учёт хода в бою ведётся всегда — включать нечего (FR-143). Бой нарочно не начат здесь: тест
+  // Учёт хода в бою ведётся всегда — включать нечего. Бой нарочно не начат здесь: тест
   // проверяет, что «Начать бой» возвращает реакцию как первый ход, а начатый заранее бой этого
-  // не показал бы. Причину FR-034 проходим «Применить всё равно».
+  // не показал бы. Причину проходим «Применить всё равно».
   await page.getByRole("button", { name: /Щит/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Применить всё равно" }).click();
@@ -241,7 +241,7 @@ test("reaction shows when it returns", async ({ page }) => {
 });
 
 test("concentration block explains the effect", async ({ page }) => {
-  // «Обнаружение магии» не подготовлено, поэтому в боевом списке его нет вовсе (FR-209): идём в
+  // «Обнаружение магии» не подготовлено, поэтому в боевом списке его нет вовсе: идём в
   // книгу. Концентрацию оно требует в любом режиме, а творить надо тем способом, что и в бою, —
   // ячейкой, а не ритуалом.
   await switchMode(page, /^Книга/);
@@ -252,12 +252,12 @@ test("concentration block explains the effect", async ({ page }) => {
   await page.getByRole("button", { name: "Далее" }).click();
 
   // Шагов три: условия (ритуал неподготовлен), чем сотворить, подтверждение. Отдельного экрана про
-  // концентрацию нет — заменять нечего, и о ней говорит инструкция на итоговом (FR-021).
+  // концентрацию нет — заменять нечего, и о ней говорит инструкция на итоговом.
   await expect(page.getByText("Шаг 3 из 3: Объявление и подтверждение")).toBeVisible();
   await expect(page.getByText(/Держите концентрацию/)).toBeVisible();
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
-  // Виден после закрытия карточки заклинания (AC-14).
+  // Виден после закрытия карточки заклинания.
   const card = page.getByRole("button", { name: /Концентрация: Обнаружение магии/ });
   await expect(card).toBeVisible();
   await expect(card).toContainText("Сфера 30 футов от себя");
@@ -274,7 +274,7 @@ test("concentration block explains the effect", async ({ page }) => {
   const panel = page.getByRole("dialog", { name: /Концентрация/ });
   await expect(panel.getByLabel("Чем прерывается")).toContainText("Недееспособность или смерть");
 
-  // КС считается по введённому урону (AC-15).
+  // КС считается по введённому урону.
   await panel.getByRole("button", { name: "Получил урон" }).click();
   await page.getByLabel("Полученный урон").fill("24");
   await page.getByRole("button", { name: "Записать" }).click();
@@ -291,7 +291,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
     );
   };
 
-  // Бой начат: иначе причина FR-034 держала бы каждую строку списка притушенной, а мастер
+  // Бой начат: иначе причина держала бы каждую строку списка притушенной, а мастер
   // применения открывался бы на шаге «Бой не начат» вместо обычного первого шага.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await scan("экран боя");
@@ -304,7 +304,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: /Применение/ })).toBeVisible();
   await scan("мастер применения");
 
-  // Привал — второй по времени экран после боя: там отдыхают и готовятся (FR-202).
+  // Привал — второй по времени экран после боя: там отдыхают и готовятся.
   await page.getByRole("button", { name: "Отмена" }).click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await switchMode(page, /^Вне боя/);
@@ -318,7 +318,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("экран реакций");
   await page.getByRole("button", { name: "Закрыть" }).click();
 
-  // Журнал — седьмой экран сверки: в нём стоит единственная кнопка отмены (FR-113, FR-114), и её
+  // Журнал — седьмой экран сверки: в нём стоит единственная кнопка отмены, и её
   // доступное имя строится из текста записи, а не задано вручную.
   await switchMode(page, /^Журнал/);
   await expect(page.getByRole("list", { name: "Журнал событий" })).toBeVisible();
@@ -332,14 +332,14 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 });
 
 test("reactions in one tap", async ({ page }) => {
-  // Триггер приходит в чужой ход: путь от события до результата обязан быть коротким (AC-08).
+  // Триггер приходит в чужой ход: путь от события до результата обязан быть коротким.
   // Имя точное по той же причине, что и в прогоне axe: «реакции» есть и в тексте «Электрошока».
   await page.getByRole("button", { name: "Реакции", exact: true }).click();
   await page.getByRole("radio", { name: "По мне попали" }).click();
 
   const matching = page.getByLabel("Подходящие реакции");
   await expect(matching.getByText("Щит", { exact: true })).toBeVisible();
-  // Готовое число, а не формула (FR-062).
+  // Готовое число, а не формула.
   await expect(matching.getByText("КД 19 вместо 14")).toBeVisible();
 
   await matching.getByRole("button", { name: /Щит/ }).click();
@@ -348,7 +348,7 @@ test("reactions in one tap", async ({ page }) => {
 
 test("book mode prepares spells", async ({ page }) => {
   await switchMode(page, /^Книга/);
-  // Стартовый набор занимает лимит целиком, и двенадцатое заклинание в него не влезает (FR-101).
+  // Стартовый набор занимает лимит целиком, и двенадцатое заклинание в него не влезает.
   await expect(page.getByLabel("Подготовлено 11 из 11")).toBeVisible();
 
   await page.getByRole("button", { name: "Снять подготовку: Отражения" }).click();
@@ -357,14 +357,14 @@ test("book mode prepares spells", async ({ page }) => {
   await page.getByRole("button", { name: "Подготовить: Обнаружение магии" }).click();
   await expect(page.getByLabel("Подготовлено 11 из 11")).toBeVisible();
 
-  // Подготовка определяет состав боевого списка (FR-209).
+  // Подготовка определяет состав боевого списка.
   await switchMode(page, /^Бой/);
   await expect(page.getByLabel(/^Заклинания/)).toContainText("Обнаружение магии");
 });
 
 test("serves the app from cache when the network is gone", async ({ page, context }) => {
   // Игра идёт за столом, где телефон может быть в авиарежиме: офлайн — условие
-  // работоспособности, а не оптимизация (NFR-001, NFR-002, AC-02).
+  // работоспособности, а не оптимизация.
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, {
     timeout: 10_000,
   });
@@ -396,7 +396,7 @@ test("serves the app from cache when the network is gone", async ({ page, contex
 });
 
 test("camp mode reaches rest and recovery", async ({ page }) => {
-  // Бой начат: иначе FR-034 добавила бы шаг «Бой не начат» перед тратой ячейки.
+  // Бой начат: иначе добавила бы шаг «Бой не начат» перед тратой ячейки.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   // Тратим ячейку в бою, чтобы на привале было что восстанавливать.
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
@@ -407,28 +407,28 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
 
   await switchMode(page, /^Вне боя/);
 
-  // Вне боя ходов нет: ни кнопки, ни счётчика раундов (FR-202).
+  // Вне боя ходов нет: ни кнопки, ни счётчика раундов.
   await expect(page.getByRole("button", { name: /Начать бой|Мой ход/ })).toBeHidden();
   // Точное имя: подстрока «Ресурсы» есть и у списка «Прочие ресурсы».
   await expect(page.getByLabel("Ресурсы", { exact: true })).not.toContainText("раунд");
 
-  // Долгий отдых уничтожает состояние боя, поэтому спрашивает (FR-133).
+  // Долгий отдых уничтожает состояние боя, поэтому спрашивает.
   await page.getByRole("button", { name: /Долгий отдых/ }).click();
   await page.getByRole("button", { name: "Отдохнуть" }).click();
   await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
 });
 
 test("blood exchange goes through the wizard, not one tap", async ({ page }) => {
-  // Бой начат: иначе обмен предупреждал бы ещё и о том, что бой не начат (FR-034) — тот же текст,
+  // Бой начат: иначе обмен предупреждал бы ещё и о том, что бой не начат — тот же текст,
   // что у заклинания, но не то, что здесь проверяется.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await page.getByRole("button", { name: /Магия крови/ }).click();
 
-  // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется (FR-177).
+  // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется.
   await expect(page.getByLabel("Прочие ресурсы")).toContainText("Очки 0");
   await expect(page.getByLabel("Сколько очков создать")).toContainText("6 хитов");
 
-  // Счётчик создаёт запас на два заклинания первого уровня одним действием (FR-178).
+  // Счётчик создаёт запас на два заклинания первого уровня одним действием.
   await page.getByRole("button", { name: "Больше очков" }).click();
   await page.getByRole("button", { name: "Больше очков" }).click();
   await expect(page.getByLabel("Сколько очков создать")).toContainText("12 хитов");
