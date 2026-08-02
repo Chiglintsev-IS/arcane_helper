@@ -990,7 +990,7 @@ describe("экономия хода выводится из журнала (ADR-
     }
   });
 
-  it("реакция, потраченная после начала хода, недоступна и сообщает когда вернётся", () => {
+  it("реакция, потраченная после начала хода, недоступна", () => {
     let current = beginTurn(withTurnTracking(session), clock);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
 

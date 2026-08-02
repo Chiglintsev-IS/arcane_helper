@@ -10,6 +10,7 @@
 import { turnTracked, type TurnEconomy } from "@/core/application/useCases/turn";
 import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
+import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
@@ -26,6 +27,26 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dt className="text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">{label}</dt>
       <dd className="text-base font-semibold leading-tight tabular-nums">{value}</dd>
     </div>
+  );
+}
+
+/**
+ * Ярлык ресурса хода. Подпись одна и та же в обоих состояниях: израсходованность несут знак и
+ * пониженная контрастность, а словами её называет доступное имя, которое ставит вызывающий.
+ */
+function TurnResource({
+  available,
+  tone,
+  children,
+}: {
+  available: boolean;
+  tone: Tone;
+  children: React.ReactNode;
+}) {
+  return (
+    <Badge tone={available ? tone : "muted"} icon={available ? "✓" : "✗"}>
+      {children}
+    </Badge>
   );
 }
 
@@ -257,15 +278,9 @@ export function ResourceHeader({
         {inFight ? (
           <>
             <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
-              {economy.actionAvailable ? (
-                <Badge tone="action" icon="✓">
-                  Действие
-                </Badge>
-              ) : (
-                <Badge tone="muted" icon="✗">
-                  Действие
-                </Badge>
-              )}
+              <TurnResource available={economy.actionAvailable} tone="action">
+                Действие
+              </TurnResource>
             </li>
             {/* Бонусного действия нет ни у одной карточки — тратить его не на что. */}
             {bookCastingTimes.has("bonus_action") ? (
@@ -276,33 +291,15 @@ export function ResourceHeader({
                     : "Бонусное действие израсходовано"
                 }
               >
-                {economy.bonusActionAvailable ? (
-                  <Badge tone="bonus" icon="✓">
-                    Бонусное
-                  </Badge>
-                ) : (
-                  <Badge tone="muted" icon="✗">
-                    Бонусное
-                  </Badge>
-                )}
+                <TurnResource available={economy.bonusActionAvailable} tone="bonus">
+                  Бонусное
+                </TurnResource>
               </li>
             ) : null}
-            <li
-              aria-label={
-                economy.reactionAvailable
-                  ? "Реакция доступна"
-                  : `Реакция израсходована`
-              }
-            >
-              {economy.reactionAvailable ? (
-                <Badge tone="reaction" icon="✓">
-                  Реакция
-                </Badge>
-              ) : (
-                <Badge tone="muted" icon="✗">
-                  Реакция
-                </Badge>
-              )}
+            <li aria-label={economy.reactionAvailable ? "Реакция доступна" : "Реакция израсходована"}>
+              <TurnResource available={economy.reactionAvailable} tone="reaction">
+                Реакция
+              </TurnResource>
             </li>
           </>
         ) : null}

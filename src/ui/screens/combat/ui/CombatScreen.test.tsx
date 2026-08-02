@@ -145,7 +145,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(within(screen.getByLabelText("Ресурсы")).getByText("14")).toBeDefined();
   });
 
-  it("на израсходованную реакцию отвечает «когда вернётся», а не «нет» (FR-144)", async () => {
+  it("израсходованная реакция видна ярлыком, а её состояние — доступным именем (FR-144)", async () => {
     const character = withTurnTracking();
     character.reactionAvailable = false;
     const { stores } = await renderWithStores(<CombatScreen />, character);
@@ -159,7 +159,8 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(stores.session.getState().session?.character.reactionAvailable).toBe(false);
-    expect(screen.getByText(/вернётся в начале вашего хода/)).toBeDefined();
+    const spent = screen.getByLabelText("Реакция израсходована");
+    expect(within(spent).getByText("Реакция")).toBeDefined();
   });
 });
 
@@ -777,8 +778,13 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     await user.click(screen.getByRole("button", { name: "Реакции" }));
     await user.click(screen.getByRole("radio", { name: "По мне попали" }));
 
-    expect(screen.getByText(/Реакция/)).toBeDefined();
-    expect(within(screen.getByLabelText("Подходящие реакции")).getByText("Щит")).toBeDefined();
+    const suitable = within(screen.getByLabelText("Подходящие реакции"));
+    expect(suitable.getByText("Щит")).toBeDefined();
+
+    // Причина стоит там, где выбирают: вариант открывается, и мастер называет её словами.
+    await user.click(suitable.getByText("Щит"));
+    expect(screen.getByText("Реакция уже израсходована")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Применить всё равно" })).toBeDefined();
   });
 
   it("провал спасброска отвечает руной, а не заклинанием (FR-153)", async () => {
@@ -1134,7 +1140,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-    expect(screen.getByText(/Действие/)).toBeDefined();
+    expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Новый ход" }));
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
