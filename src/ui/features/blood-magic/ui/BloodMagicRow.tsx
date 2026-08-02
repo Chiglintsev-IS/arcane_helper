@@ -21,6 +21,7 @@ import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import { ascensionTierRate, bloodMagicAvailable } from "@/core/domain/vitality/blood";
 import { withPlural } from "@/core/shared/language";
+import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 
 export function BloodMagicRow({
   character,
@@ -32,11 +33,11 @@ export function BloodMagicRow({
   onOpen: () => void;
 }) {
   const rate = ascensionTierRate(character.level);
-  // Недоступность объясняется словами, как и у заклинаний: серое без причины оставляет в тупике.
+  // Причина — целая фраза, как у заклинания: одно слово «действие» не говорит, что с ним не так.
   const reason = !bloodMagicAvailable(character.suppression)
-    ? "особенности подавлены"
+    ? "Особенности подавлены"
     : !economy.actionAvailable
-      ? "действие"
+      ? ACTION_SPENT_MESSAGES.action
       : null;
 
   const facts = [
