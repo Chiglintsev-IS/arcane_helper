@@ -67,7 +67,7 @@ export function exchangeBlood(
   const { vitality, exchange } = root.vitality.exchangeBlood(hitPoints, root.base.level, options);
   const withPoints = root
     .withVitality(vitality)
-    .withArcana(root.arcana.gainSpellPoints(exchange.pointsCreated, clock.now()));
+    .withArcana(root.arcana.gainSpellPoints(exchange.pointsCreated));
 
   const after: CharacterState = {
     ...withPoints.toState(),
@@ -89,32 +89,51 @@ export function exchangeBlood(
 }
 
 /**
- * Почасовое восстановление максимума хитов. Час отмечает игрок: таймеров в приложении нет.
+ * Строки журнала одного часа: что вернулось максимуму, что долечила регенерация, что погашено
+ * очками заклинаний. Общие для отдельной отметки часа и короткого отдыха — короткий отдых им и
+ * является.
+ */
+export function hourNotes(returned: number, healed: number, hadSpellPoints: boolean): string[] {
+  return [
+    ...(returned > 0 ? [`максимум +${returned}`] : []),
+    ...(healed > 0 ? [`регенерация +${healed}`] : []),
+    ...(hadSpellPoints ? ["очки заклинаний погашены"] : []),
+  ];
+}
+
+/**
+ * Почасовое восстановление максимума хитов и погашение очков заклинаний. Час отмечает игрок:
+ * таймеров в приложении нет, а внутри боевого раунда часа не бывает.
  *
- * Текущие хиты растут не сами по себе, а регенерацией, которая за час успевает дойти до половины.
+ * Очки заклинаний гаснут любым отмеченным часом независимо от подавления: оно решает только за
+ * восстановление максимума и регенерацию, а очки истекают сами по себе.
  */
 export function recoverHitPointMaximum(session: Session, clock: Clock): Session {
+  if (inFight(session)) {
+    throw new DomainError("Пока идёт бой, час пройти не может");
+  }
   const root = Character.of(session.character);
-  if (root.vitality.bloodReduction <= 0) {
-    throw new DomainError("Максимум хитов не снижен: восстанавливать нечего");
-  }
-  if (root.vitality.suppressed) {
-    throw new DomainError(
-      session.character.suppression.firedUpon
-        ? "Урон огнём подавил особенности: максимум пока не восстанавливается"
-        : "Под прямым солнечным светом особенности не действуют",
-    );
-  }
+  const hadSpellPoints = root.arcana.spellPoints > 0;
   const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
+
+  if (returned <= 0 && healed <= 0 && !hadSpellPoints) {
+    if (root.vitality.suppressed && root.vitality.bloodReduction > 0) {
+      throw new DomainError(
+        session.character.suppression.firedUpon
+          ? "Урон огнём подавил особенности: максимум пока не восстанавливается"
+          : "Под прямым солнечным светом особенности не действуют",
+      );
+    }
+    throw new DomainError("Восстанавливать максимум и гасить очки заклинаний нечего");
+  }
+
+  const after = root.withVitality(vitality).withArcana(root.arcana.expireSpellPoints());
   return commit(
     session,
-    root.withVitality(vitality),
+    after,
     {
       kind: "hit_points_changed",
-      summaryRu:
-        healed > 0
-          ? `Прошёл час: максимум +${returned}, регенерация +${healed}`
-          : `Прошёл час: максимум хитов восстановлен на ${returned}`,
+      summaryRu: `Прошёл час: ${hourNotes(returned, healed, hadSpellPoints).join(", ")}`,
     },
     clock,
   );

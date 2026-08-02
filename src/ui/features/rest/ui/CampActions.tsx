@@ -2,8 +2,15 @@
  * Операции привала: чем восстановиться, пока бой не идёт.
  *
  * Показывается только то, что сейчас сделать можно: магическое восстановление гаснет, пока не было
- * короткого отдыха и когда оно израсходовано, «Прошёл час» исчезает, когда максимум хитов не
- * снижен. Кнопка, которая гарантированно ответит отказом, занимает ряд и обещает возможность.
+ * короткого отдыха и когда оно израсходовано. «Прошёл час» исчезает, когда часу нечего изменить — ни
+ * вернуть максимум, ни долечить регенерацией, ни погасить очки заклинаний: кнопка, которая
+ * гарантированно ответит отказом, занимает ряд и обещает возможность. Внутри боя у часа есть что
+ * менять, но пройти он не может — кнопка остаётся и называет причину словами, как и магическое
+ * восстановление.
+ *
+ * Час не только даёт, но и берёт: сгорят очки заклинаний, созданные до него. Подпись обязана
+ * назвать это число заранее — нажатие тратит ресурс молча, а строка списка так не делает ни для
+ * одного заклинания.
  *
  * Порядок рядов — по цене времени: час стоит рядом с тем, что он открывает, восемь часов идут
  * отдельной строкой. Долгий отдых уничтожает состояние боя, и соседство с коротким приглашало бы
@@ -13,8 +20,9 @@
 "use client";
 
 import type { CharacterState } from "@/core/domain/character/state";
-import { maximumRecoveryPerHour } from "@/core/domain/vitality/blood";
 import { Vitality } from "@/core/domain/vitality/vitality";
+import { Arcana } from "@/core/domain/arcana/arcana";
+import { withPlural } from "@/core/shared/language";
 
 /**
  * Почему магическое восстановление сейчас недоступно. `null` — доступно.
@@ -28,24 +36,39 @@ function arcaneRecoveryReason(character: CharacterState): string | null {
   return null;
 }
 
+/**
+ * Подпись «Прошёл час»: называет только то, что случится именно сейчас. Максимум без остатка не
+ * упомянут, очков без остатка тоже нет — иначе кнопка обещала бы то, чего не сделает.
+ */
+function hourLabel(maximumReturn: number, spellPoints: number): string {
+  const facts = [
+    ...(maximumReturn > 0 ? [`максимум +${maximumReturn}`] : []),
+    ...(spellPoints > 0 ? [`сгорит ${withPlural(spellPoints, ["очко", "очка", "очков"])}`] : []),
+  ];
+  return facts.length === 0 ? "Прошёл час" : `Прошёл час · ${facts.join(", ")}`;
+}
+
 export function CampActions({
   character,
+  inFight,
   onShortRest,
   onLongRest,
   onArcaneRecovery,
   onRecoverMaximum,
 }: {
   character: CharacterState;
+  /** Идёт ли бой прямо сейчас: внутри раунда час не проходит. */
+  inFight: boolean;
   onShortRest: () => void;
   onLongRest: () => void;
   onArcaneRecovery: () => void;
   onRecoverMaximum: () => void;
 }) {
-  const vitality = Vitality.of(character);
-  const hourReturns = Math.min(
-    maximumRecoveryPerHour(character.level),
-    vitality.bloodReduction,
+  const { returned: hourReturns, healed: hourHealed } = Vitality.of(character).afterAnHour(
+    character.level,
   );
+  const spellPoints = Arcana.of(character).spellPoints;
+  const hourHasWork = hourReturns > 0 || hourHealed > 0 || spellPoints > 0;
   const recoveryReason = arcaneRecoveryReason(character);
 
   return (
@@ -65,8 +88,12 @@ export function CampActions({
       </div>
       <div className="flex flex-wrap gap-1">
         <Action onClick={onLongRest} name="Долгий отдых" />
-        {vitality.bloodReduction > 0 ? (
-          <Action onClick={onRecoverMaximum} name={`Прошёл час · максимум +${hourReturns}`} />
+        {hourHasWork ? (
+          <Action
+            onClick={onRecoverMaximum}
+            name={hourLabel(hourReturns, spellPoints)}
+            {...(inFight ? { disabledReason: "Час не проходит во время боя" } : {})}
+          />
         ) : null}
       </div>
     </section>

@@ -15,6 +15,7 @@ import { MaterialsList } from "@/ui/features/materials/ui/MaterialsList";
 
 export function CampSheet({
   character,
+  inFight,
   spells,
   onShortRest,
   onLongRest,
@@ -24,6 +25,8 @@ export function CampSheet({
   onClose,
 }: {
   character: CharacterState;
+  /** Идёт ли бой прямо сейчас: внутри раунда час не проходит. */
+  inFight: boolean;
   spells: readonly Spell[];
   onShortRest: () => void;
   onLongRest: () => void;
@@ -43,6 +46,7 @@ export function CampSheet({
 
       <CampActions
         character={character}
+        inFight={inFight}
         onShortRest={onShortRest}
         onLongRest={onLongRest}
         onArcaneRecovery={onArcaneRecovery}

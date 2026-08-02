@@ -80,9 +80,13 @@ export class Arcana {
     });
   }
 
-  /** Очки не существуют без времени создания: игроку показывают, когда они появились. */
-  gainSpellPoints(count: number, at: string): Arcana {
-    return this.with({ spellPoints: { remaining: this.spellPoints + count, createdAt: at } });
+  gainSpellPoints(count: number): Arcana {
+    return this.with({ spellPoints: { remaining: this.spellPoints + count } });
+  }
+
+  /** Час стирает то, что накопилось до него, независимо от того, сколько его успело набежать. */
+  expireSpellPoints(): Arcana {
+    return this.with({ spellPoints: { remaining: 0 } });
   }
 
   useArcaneRecovery(plan: SlotRecoveryPlan, wizardLevel: number): Arcana {
@@ -95,7 +99,6 @@ export class Arcana {
     });
   }
 
-  /** Долгий отдых возвращает всё разом и гасит очки заклинаний: они живут только до отдыха. */
   /** Смена уровня: ячейки по таблице, руны по бонусу мастерства. */
   resizedForLevel(wizardLevel: number, runesMaximum: number): Arcana {
     return this.with({
@@ -104,12 +107,13 @@ export class Arcana {
     });
   }
 
+  /** Долгий отдых возвращает всё разом; очки при этом гаснут — тот же итог, что и у любого часа. */
   restoredByLongRest(): Arcana {
     return this.with({
       spellSlots: restoreAllSlots(this.state.spellSlots),
       runes: this.runes.restored().toState(),
       arcaneRecoveryAvailable: true,
-      spellPoints: { remaining: 0, createdAt: null },
+      spellPoints: { remaining: 0 },
     });
   }
 

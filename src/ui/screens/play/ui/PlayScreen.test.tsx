@@ -596,21 +596,69 @@ describe("операции привала (FR-202, FR-215)", () => {
     ).toBe(false);
   });
 
-  it("без снижения максимума «Прошёл час» не предлагается (FR-002)", async () => {
+  it("часу нечего сделать — «Прошёл час» не предлагается (FR-002)", async () => {
     await atCamp();
     expect(screen.queryByRole("button", { name: /Прошёл час/ })).toBeNull();
   });
 
-  it("«Прошёл час» возвращает часть снижённого максимума (FR-173)", async () => {
+  describe("подпись «Прошёл час» называет весь итог заранее (FR-173, FR-175)", () => {
+    it("только снижение максимума — называет только его", async () => {
+      const reduced = createThorne();
+      reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
+      await renderWithStores(<PlayScreen />, reduced);
+
+      await userEvent.click(screen.getByRole("button", { name: "Привал" }));
+      expect(screen.getByRole("button", { name: "Прошёл час · максимум +3" })).toBeDefined();
+    });
+
+    it("только непогашенные очки — называет их числом, а не намёком", async () => {
+      const withPoints = createThorne();
+      withPoints.spellPoints = { remaining: 5 };
+      await renderWithStores(<PlayScreen />, withPoints);
+
+      await userEvent.click(screen.getByRole("button", { name: "Привал" }));
+      expect(screen.getByRole("button", { name: "Прошёл час · сгорит 5 очков" })).toBeDefined();
+    });
+
+    it("снижение и очки вместе — называет оба факта", async () => {
+      const both = createThorne();
+      both.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
+      both.spellPoints = { remaining: 1 };
+      await renderWithStores(<PlayScreen />, both);
+
+      await userEvent.click(screen.getByRole("button", { name: "Привал" }));
+      expect(screen.getByRole("button", { name: "Прошёл час · максимум +3, сгорит 1 очко" })).toBeDefined();
+    });
+  });
+
+  it("«Прошёл час» возвращает часть снижённого максимума и гасит очки заклинаний (FR-173, FR-175)", async () => {
     const user = userEvent.setup();
     const reduced = createThorne();
     reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
+    reduced.spellPoints = { remaining: 3 };
     await renderWithStores(<PlayScreen />, reduced);
 
     await user.click(screen.getByRole("button", { name: "Привал" }));
     await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
     // На 7 уровне возвращается 3 за час: максимум 51 → 54, текущие не растут.
     expect(screen.getByLabelText("Ресурсы").textContent).toContain("51/54");
+    expect(screen.getByLabelText("Ресурсы").textContent).toContain("Очки 0");
+  });
+
+  it("бой запрещает час: кнопка остаётся видимой, но недоступной с причиной (FR-215)", async () => {
+    const user = userEvent.setup();
+    const reduced = createThorne();
+    reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
+    await renderWithStores(<PlayScreen />, reduced);
+
+    await user.click(screen.getByRole("button", { name: "Привал" }));
+    // Бой начинается поверх уже открытого привала: кнопка боя стоит в общем ряду выше шторки.
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+
+    const button = screen.getByRole("button", {
+      name: "Прошёл час · максимум +3 — Час не проходит во время боя",
+    });
+    expect(button.hasAttribute("disabled")).toBe(true);
   });
 
   it("вне боя нет ни «Нового хода», ни счётчика раундов (FR-221)", async () => {

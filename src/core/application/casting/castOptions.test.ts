@@ -159,7 +159,7 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
 
   it("оплата кровью делает заклинание доступным без ячеек", () => {
     const character = withoutSlots();
-    character.spellPoints = { remaining: 2, createdAt: "2026-07-31T18:00:00.000Z" };
+    character.spellPoints = { remaining: 2 };
 
     expect(ids(filterSpells(allSpells, filters({ availableNow: true }), context({ character })))).toContain(
       "mage-armor",

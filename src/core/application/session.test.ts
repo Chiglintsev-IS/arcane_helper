@@ -482,7 +482,7 @@ describe("руна при сотворении (FR-151)", () => {
       ...session,
       character: {
         ...session.character,
-        spellPoints: { remaining: 5, createdAt: clock.now() },
+        spellPoints: { remaining: 5 },
       },
     };
     expect(() =>
@@ -714,7 +714,7 @@ describe("отдых и восстановление", () => {
     expect(current.character.spellSlots[2]?.remaining).toBe(3);
     expect(current.character.runes.remaining).toBe(3);
     expect(current.character.concentration).toBeUndefined();
-    expect(current.character.spellPoints).toEqual({ remaining: 0, createdAt: null });
+    expect(current.character.spellPoints).toEqual({ remaining: 0 });
     expect(current.character.arcaneRecoveryAvailable).toBe(true);
   });
 
@@ -1802,7 +1802,7 @@ describe("конец боя (FR-216)", () => {
   });
 });
 
-describe("почасовое восстановление максимума хитов (FR-173)", () => {
+describe("почасовое восстановление максимума хитов и очков заклинаний (FR-173, FR-175)", () => {
   function afterExchange(): Session {
     return exchangeBlood(session, 9, clock);
   }
@@ -1830,21 +1830,51 @@ describe("почасовое восстановление максимума х�
     expect(state.character.hitPoints).toEqual({ current: 54, maximumBase: 60, bloodReduction: 0, masterReduction: 0 });
   });
 
-  it("без снижения максимума восстанавливать нечего", () => {
+  it("без снижения максимума, регенерации и очков восстанавливать нечего", () => {
     expect(() => recoverHitPointMaximum(session, clock)).toThrow(DomainError);
   });
 
-  it("под подавлением не работает: ни солнце, ни огонь восстановления не дают", () => {
-    const spent = setSunlight(afterExchange(), true, clock);
-    expect(() => recoverHitPointMaximum(spent, clock)).toThrow(/солнеч/);
+  it("очки заклинаний гаснут любым отмеченным часом, сколько бы их ни набежало", () => {
+    const withPoints = afterExchange();
+    expect(withPoints.character.spellPoints.remaining).toBe(3);
 
-    const burned = takeDamage(afterExchange(), 5, clock, { fire: true });
+    const recovered = recoverHitPointMaximum(withPoints, clock);
+    expect(recovered.character.spellPoints.remaining).toBe(0);
+    expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: максимум +3, очки заклинаний погашены");
+  });
+
+  it("под подавлением максимум не восстанавливается, но очки гаснут независимо от него", () => {
+    const recovered = recoverHitPointMaximum(setSunlight(afterExchange(), true, clock), clock);
+    expect(recovered.character.hitPoints.bloodReduction).toBe(9);
+    expect(recovered.character.spellPoints.remaining).toBe(0);
+    expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: очки заклинаний погашены");
+  });
+
+  it("под подавлением без непогашенных очков восстанавливать нечего: ни солнце, ни огонь", () => {
+    // Очки уже потрачены на сотворение — остаётся только снижение, а его подавление и держит.
+    const drained = castSpell(
+      exchangeBlood(session, 6, clock),
+      { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } },
+      clock,
+    );
+    expect(drained.character.spellPoints.remaining).toBe(0);
+    expect(drained.character.hitPoints.bloodReduction).toBe(6);
+
+    expect(() => recoverHitPointMaximum(setSunlight(drained, true, clock), clock)).toThrow(/солнеч/);
+
+    const burned = takeDamage(drained, 5, clock, { fire: true });
     expect(() => recoverHitPointMaximum(burned, clock)).toThrow(/огн/);
+  });
+
+  it("во время боя час пройти не может, как и любая другая отметка схватки", () => {
+    expect(() => recoverHitPointMaximum(withTurnTracking(afterExchange()), clock)).toThrow(/бой/);
   });
 
   it("обратимо через журнал", () => {
     const recovered = recoverHitPointMaximum(afterExchange(), clock);
-    expect(undoLast(recovered).character.hitPoints.bloodReduction).toBe(9);
+    const undone = undoLast(recovered);
+    expect(undone.character.hitPoints.bloodReduction).toBe(9);
+    expect(undone.character.spellPoints.remaining).toBe(3);
   });
 
   it("час не только поднимает максимум, но и лечит: регенерация идёт непрерывно", () => {
@@ -1855,30 +1885,50 @@ describe("почасовое восстановление максимума х�
 
     const recovered = recoverHitPointMaximum(wounded, clock);
     expect(recovered.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
-    expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: максимум +3, регенерация +7");
+    expect(recovered.journal.at(-1)?.summaryRu).toBe(
+      "Прошёл час: максимум +3, регенерация +7, очки заклинаний погашены",
+    );
+  });
+
+  it("одна регенерация тоже оправдывает час — без снижения максимума и без очков", () => {
+    const injured: Session = {
+      ...session,
+      character: {
+        ...session.character,
+        hitPoints: { current: 10, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
+      },
+    };
+    const recovered = recoverHitPointMaximum(injured, clock);
+    expect(recovered.character.hitPoints.current).toBe(30);
+    expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: регенерация +20");
   });
 })
 
-describe("короткий отдых — это час (FR-132, FR-173)", () => {
-  it("возвращает ступень максимума и доводит здоровье до половины", () => {
+describe("короткий отдых — это час (FR-132, FR-173, FR-175)", () => {
+  it("возвращает ступень максимума, доводит здоровье до половины и гасит очки заклинаний", () => {
     const wounded = takeDamage(exchangeBlood(session, 9, clock), 31, clock);
     expect(wounded.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
+    expect(wounded.character.spellPoints.remaining).toBe(3);
 
     const rested = shortRest(wounded, clock);
     expect(rested.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
-    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · максимум +3, регенерация +7");
+    expect(rested.character.spellPoints.remaining).toBe(0);
+    expect(rested.journal.at(-1)?.summaryRu).toBe(
+      "Короткий отдых · максимум +3, регенерация +7, очки заклинаний погашены",
+    );
   });
 
   it("здоровому и не занимавшему в долг отдых пишется коротко", () => {
     expect(shortRest(session, clock).journal.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 
-  it("под подавлением час проходит впустую: особенности не действуют (FR-176)", () => {
+  it("под подавлением максимум не восстанавливается, но очки гаснут независимо от него (FR-176)", () => {
     const burned = takeDamage(exchangeBlood(session, 9, clock), 31, clock, { fire: true });
     const rested = shortRest(burned, clock);
 
     expect(rested.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
-    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых");
+    expect(rested.character.spellPoints.remaining).toBe(0);
+    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · очки заклинаний погашены");
   });
 })
 

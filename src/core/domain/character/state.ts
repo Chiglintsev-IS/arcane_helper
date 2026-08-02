@@ -335,15 +335,13 @@ export const characterStateSchema = z
       })
       .optional(),
 
-    spellPoints: z
-      .object({
-        remaining: z.number().int().nonnegative(),
-        createdAt: isoDateTime.nullable(),
-      })
-      .refine((value) => value.remaining === 0 || value.createdAt !== null, {
-        message: "У очков заклинаний должно быть время создания: иначе их нечем погасить через час",
-        path: ["createdAt"],
-      }),
+    /**
+     * Очки заклинаний: только остаток. Время создания схема не хранит — гасит их не срок, а любой
+     * отмеченный час, независимо от того, когда они появились.
+     */
+    spellPoints: z.object({
+      remaining: z.number().int().nonnegative(),
+    }),
 
     suppression: z.object({
       firedUpon: z.boolean(),

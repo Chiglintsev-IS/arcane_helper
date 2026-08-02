@@ -156,7 +156,7 @@ const RAW: unknown = {
   hitDice: { total: 7, size: 6, remaining: 7 },
   // Рун столько же, сколько бонус мастерства.
   runes: { maximum: 3, remaining: 3 },
-  spellPoints: { remaining: 0, createdAt: null },
+  spellPoints: { remaining: 0 },
   suppression: { firedUpon: false, underDirectSunlight: false },
 
   spellNotes: {},

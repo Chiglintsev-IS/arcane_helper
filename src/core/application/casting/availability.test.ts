@@ -234,7 +234,7 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
 
   it("оплата очками доступна, когда очков хватает", () => {
     const character = createThorne();
-    character.spellPoints = { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" };
+    character.spellPoints = { remaining: 3 };
     const availability = check({
       spell: mageArmor,
       character,

@@ -11,6 +11,7 @@ import type { SlotRecoveryPlan } from "@/core/domain/arcana/slots";
 import { LONG_REST_HOURS, maximumReductionAfterHours } from "@/core/domain/vitality/blood";
 import { hitDiceRegainedOnLongRest } from "@/core/domain/vitality/hitDice";
 import { commit, type Clock, type Session } from "@/core/application/session";
+import { hourNotes } from "./health";
 
 /**
  * Долгий отдых. Восстанавливает всё, включая руны и здоровье, и снимает концентрацию.
@@ -54,15 +55,19 @@ export function longRest(session: Session, clock: Clock): Session {
  * Короткий отдых. Ячеек сам по себе не восстанавливает.
  *
  * Короткий отдых — это час, и час делает всё, что делает час: возвращает ступень снижённого
- * максимума и даёт регенерации дойти до половины. Отдельная кнопка «Прошёл час» рядом с ним не
- * должна значить больше, чем сам отдых.
+ * максимума, даёт регенерации дойти до половины и гасит очки заклинаний. Отдельная кнопка «Прошёл
+ * час» рядом с ним не должна значить больше, чем сам отдых.
  */
 export function shortRest(session: Session, clock: Clock): Session {
   const root = Character.of(session.character);
   const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
+  const hadSpellPoints = root.arcana.spellPoints > 0;
 
   const after: CharacterState = {
-    ...root.withVitality(vitality.clearFireSuppression()).toState(),
+    ...root
+      .withVitality(vitality.clearFireSuppression())
+      .withArcana(root.arcana.expireSpellPoints())
+      .toState(),
     reactionAvailable: true,
     // Отметка нужна интерфейсу: сама операция восстановления её не проверяет — отдых мог случиться
     // за столом без нажатия кнопки.
@@ -70,10 +75,7 @@ export function shortRest(session: Session, clock: Clock): Session {
     turnTracking: { actionAvailable: true, bonusActionAvailable: true },
   };
 
-  const notes = [
-    ...(returned > 0 ? [`максимум +${returned}`] : []),
-    ...(healed > 0 ? [`регенерация +${healed}`] : []),
-  ];
+  const notes = hourNotes(returned, healed, hadSpellPoints);
   return commit(
     session,
     after,
