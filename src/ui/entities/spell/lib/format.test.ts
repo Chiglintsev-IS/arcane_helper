@@ -7,11 +7,7 @@ import {
   castingTimePhrase,
   durationPhrase,
   ritualOnlyBadge,
-  resolutionBadge,
 } from "./format";
-
-/** Числа Торна: оба включают +1 от предмета, и книга их не знает. */
-const THORNE = { spellSaveDc: 16, spellAttackModifier: 8 };
 
 describe("castingTimeLabel (FR-033)", () => {
   it("действие, бонусное действие и реакция называются словом", () => {
@@ -64,32 +60,6 @@ describe("durationPhrase (FR-014)", () => {
   it("особая длительность и длительность без числа названы особой", () => {
     expect(durationPhrase({ type: "special" })).toBe("Длительность особая");
     expect(durationPhrase({ type: "minutes" })).toBe("Длительность особая");
-  });
-});
-
-describe("resolutionBadge (FR-211)", () => {
-  it("атака называет бросок числом, а не словом «Атака»", () => {
-    expect(resolutionBadge({ type: "spell_attack" }, THORNE).label).toBe("d20+8");
-  });
-
-  it("спасбросок называет и характеристику, и КС", () => {
-    // В книге Торна спасбросковых заклинаний пока нет: значок проверяется на данных напрямую,
-    // иначе он появится в приложении непроверенным вместе с первой карточкой 2 уровня.
-    expect(resolutionBadge({ type: "saving_throw", savingThrow: "DEX" }, THORNE).label).toBe(
-      "Спасбросок Ловкости КС 16",
-    );
-  });
-
-  it("числа берутся у персонажа, а не из книги", () => {
-    const novice = { spellSaveDc: 13, spellAttackModifier: 5 };
-    expect(resolutionBadge({ type: "spell_attack" }, novice).label).toBe("d20+5");
-    expect(resolutionBadge({ type: "saving_throw", savingThrow: "CON" }, novice).label).toBe(
-      "Спасбросок Телосложения КС 13",
-    );
-  });
-
-  it("без броска остаётся «Без броска»: числа тут нет и выдумывать его нечем", () => {
-    expect(resolutionBadge({ type: "automatic" }, THORNE).label).toBe("Без броска");
   });
 });
 

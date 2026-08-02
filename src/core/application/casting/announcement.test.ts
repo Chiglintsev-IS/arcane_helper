@@ -345,7 +345,7 @@ describe("castInstructions: что сделать этому персонажу 
 
   it("заклинание без броска говорит об этом прямо", () => {
     const steps = castInstructions(spell("mending"), context({ mode: "cantrip" }));
-    expect(steps).toContain("Броска нет: эффект применяется сразу");
+    expect(steps).toContain("Без броска: эффект применяется сразу");
   });
 
   it("эффекты успеха и провала показываются, когда они заданы", () => {

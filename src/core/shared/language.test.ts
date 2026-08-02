@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { longCastingTimeRu, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, withPlural } from "@/core/shared/language";
+import { longCastingTimeRu, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, withPlural } from "@/core/shared/language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -61,6 +61,12 @@ describe("timeSpanAccusativeRu: винительный падеж (FR-014)", () 
     expect(timeSpanAccusativeRu("hour", 8)).toBe("8 часов");
     expect(timeSpanAccusativeRu("round", 1)).toBe("1 раунд");
     expect(timeSpanAccusativeRu("round", 3)).toBe("3 раунда");
+  });
+});
+
+describe("NO_ROLL_RU", () => {
+  it("отсутствие броска называется одним словом на все экраны", () => {
+    expect(NO_ROLL_RU).toBe("Без броска");
   });
 });
 

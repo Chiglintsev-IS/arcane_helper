@@ -5,14 +5,11 @@
  * выбирает слово и падеж. Аббревиатуры русские — «КС», «КД», а не DC и AC.
  */
 
-import type { Sheet } from "@/core/domain/sheet/sheet";
-import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { CombatRole } from "@/core/domain/catalog/combatRole";
 import {
   longCastingTimeRu,
   plural,
-  signed,
   timeSpanAccusativeRu,
   type LongCastingUnit,
   type TimeUnit,
@@ -84,15 +81,6 @@ export function castingTimePhrase(castingTime: Spell["castingTime"]): string {
   }
   return `Накладывать ${timeSpanAccusativeRu(unit, castingTime.value)}`;
 }
-
-const ABILITY_NAMES: Record<string, string> = {
-  STR: "Силы",
-  DEX: "Ловкости",
-  CON: "Телосложения",
-  INT: "Интеллекта",
-  WIS: "Мудрости",
-  CHA: "Харизмы",
-};
 
 export function levelLabel(level: number): string {
   return level === CANTRIP_LEVEL ? "Заговор" : `${level} уровень`;
@@ -184,51 +172,6 @@ const AREA_SHAPES: Record<string, string> = {
 
 export function areaLabel(area: NonNullable<Spell["area"]>): string {
   return `${AREA_SHAPES[area.shape] ?? area.shape}, ${area.sizeFeet} ${plural(area.sizeFeet, ["фут", "фута", "футов"])}`;
-}
-
-/** Кто бросает и против чего — самая частая путаница за столом (rules-engine.md). */
-export function resolutionLabel(resolution: Spell["resolution"], spellSaveDc: number): string {
-  switch (resolution.type) {
-    case "spell_attack":
-      return "Атака заклинанием: бросаете вы";
-    case "saving_throw":
-      return `Спасбросок ${ABILITY_NAMES[resolution.savingThrow ?? ""] ?? ""} против КС ${spellSaveDc}: бросает цель`;
-    default:
-      return "Броска нет";
-  }
-}
-
-// Падеж один и тот же, что в подробной карточке: «Спасбросок Ловкости». Второго словаря
-// сокращений здесь не заводится — расхождение между строкой и карточкой читалось бы как разные
-// заклинания.
-
-/** Числа персонажа, из которых собирается значок разрешения. Считает их лист. */
-export type ResolutionNumbers = Pick<Sheet, "spellSaveDc" | "spellAttackModifier">;
-
-/**
- * Как заклинание разрешается — числом, а не видом броска.
- *
- * «Атака» и «Спасбросок Ловкости» отвечают на половину вопроса: следом игрок спрашивает, какое
- * число называть мастеру. Значок отвечает сразу и тем, что произносят вслух, — «d20+8», «КС 16».
- * Числа берутся из состояния персонажа: у Торна оба включают +1 от предмета, и книга их не знает
- * (rules-engine.md).
- */
-export function resolutionBadge(
-  resolution: Spell["resolution"],
-  numbers: ResolutionNumbers,
-): { label: string; icon: string; tone: Tone } {
-  switch (resolution.type) {
-    case "spell_attack":
-      return { label: `d20${signed(numbers.spellAttackModifier)}`, icon: "✶", tone: "action" };
-    case "saving_throw":
-      return {
-        label: `Спасбросок ${ABILITY_NAMES[resolution.savingThrow ?? ""] ?? ""} КС ${numbers.spellSaveDc}`,
-        icon: "◇",
-        tone: "bonus",
-      };
-    default:
-      return { label: "Без броска", icon: "○", tone: "muted" };
-  }
 }
 
 /** Единицы длительности в терминах морфологии. `instant` и `special` числа не несут. */

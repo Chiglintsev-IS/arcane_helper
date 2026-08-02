@@ -1082,10 +1082,10 @@ describe("краткая карточка (FR-010)", () => {
   it("разрешение называет число, а не вид броска (FR-211)", async () => {
     await renderWithStores(<PlayScreen />);
 
-    // «Атака» — половина ответа: следом игрок спрашивает, какое число называть мастеру.
+    // Название проверки и число вместе: «Атака» без числа — половина ответа, «d20+8» без названия
+    // не связывается с тем, что скажет мастер.
     const row = within(screen.getByRole("button", { name: /Луч холода/ }));
-    expect(row.getByText("d20+8")).toBeDefined();
-    expect(row.queryByText("Атака")).toBeNull();
+    expect(row.getByText("Атака d20+8")).toBeDefined();
   });
 
   it("накладывание дольше хода называет точное время, а не категорию (FR-033)", async () => {
@@ -1233,7 +1233,7 @@ describe("подробная карточка (FR-011, FR-012)", () => {
       within(card).getByText(new RegExp(spell("identify").components.materialText ?? "")),
     ).toBeDefined();
     expect(within(card).getByText(/фокусировка не заменяет/)).toBeDefined();
-    expect(within(card).getByText("Броска нет: эффект применяется сразу")).toBeDefined();
+    expect(within(card).getByText("Без броска: эффект применяется сразу")).toBeDefined();
   });
 
   it("полные правила и отыгрыш закрыты по умолчанию", async () => {

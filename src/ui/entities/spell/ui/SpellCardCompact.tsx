@@ -24,9 +24,9 @@ import {
   durationPhrase,
   ritualOnlyBadge,
   rangeLabel,
-  resolutionBadge,
   slotCostLabel,
 } from "@/ui/entities/spell/lib/format";
+import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
@@ -153,7 +153,7 @@ export function SpellCardCompact({
               Уже действует
             </Badge>
           ) : null}
-          <Badge tone={resolution.tone} icon={resolution.icon}>
+          <Badge tone="muted" icon={resolution.icon}>
             {resolution.label}
           </Badge>
           {spell.concentration ? (

@@ -15,7 +15,7 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
 import { armorClassWithSpell } from "@/core/domain/effects/armorClass";
 import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
-import { SAVING_THROW_NAMES, signed, withPlural } from "@/core/shared/language";
+import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/core/shared/language";
 import {
   ascensionTierRate,
   hitPointCost,
@@ -241,7 +241,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
       break;
     }
     default:
-      steps.push("Броска нет: эффект применяется сразу");
+      steps.push(`${NO_ROLL_RU}: эффект применяется сразу`);
   }
 
   if (spell.damage !== undefined) {

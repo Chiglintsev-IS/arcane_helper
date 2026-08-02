@@ -22,10 +22,10 @@ import {
   durationLabel,
   levelLabel,
   rangeLabel,
-  resolutionLabel,
   slotCostLabel,
   targetingLabel,
 } from "@/ui/entities/spell/lib/format";
+import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { Sheet } from "@/core/domain/sheet/sheet";
@@ -153,7 +153,7 @@ export function SpellCardDetails({
           <Row label="Цель">{targetingLabel(spell.targeting)}</Row>
           {spell.area === undefined ? null : <Row label="Область">{areaLabel(spell.area)}</Row>}
           <Row label="Разрешение">
-            {resolutionLabel(spell.resolution, Sheet.of(character).spellSaveDc)}
+            {resolutionBadge(spell.resolution, Sheet.of(character)).label}
           </Row>
           {damage === null ? null : (
             <Row label="Урон">
