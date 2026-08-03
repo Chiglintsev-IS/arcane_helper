@@ -6,6 +6,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   addItem,
   editArmorClassBase,
+  editItem,
   editOtherBonuses,
   removeItem,
   spendItem,
@@ -33,6 +34,31 @@ const ring = {
 const potions = { id: "healing-potion", nameRu: "Зелье лечения", worn: false, count: 3, kind: "potion" as const };
 
 describe("правка снаряжения", () => {
+  it("одноимённая находка пополняет запас, и журнал называет получившееся количество", () => {
+    const stacked = addItem(addItem(session(), potions, clock), { ...potions, count: 1 }, clock);
+
+    expect(stacked.character.equipment.items.find((item) => item.id === potions.id)?.count).toBe(4);
+    expect(stacked.journal[0]?.summaryRu).toBe("Добавлено: Зелье лечения");
+    expect(stacked.journal[1]?.summaryRu).toBe("Добавлено: Зелье лечения (стало 4)");
+    // Пополнение обратимо, как всякая правка: запас возвращается к прежнему числу.
+    expect(
+      undoLast(stacked).character.equipment.items.find((item) => item.id === potions.id)?.count,
+    ).toBe(3);
+  });
+
+  it("правка вещи меняет её саму и обратима через журнал (FR-235)", () => {
+    const carried = addItem(session(), { ...ring, worn: false }, clock);
+    const noted = editItem(carried, { ...ring, worn: false, count: 2, note: "фамильное" }, clock);
+
+    const item = noted.character.equipment.items.find((candidate) => candidate.id === "ring");
+    expect(item?.note).toBe("фамильное");
+    expect(item?.count).toBe(2);
+    expect(noted.journal[1]?.summaryRu).toBe("Правка вещи: Кольцо защиты");
+    expect(
+      undoLast(noted).character.equipment.items.find((candidate) => candidate.id === "ring")?.note,
+    ).toBeUndefined();
+  });
+
   it("надетая вещь двигает КД и спасброски, но не характеристики", () => {
     const after = addItem(session(), ring, clock);
     const sheet = Sheet.of(after.character);

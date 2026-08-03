@@ -7,7 +7,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { AbilitySheet } from "./AbilitySheet";
 import { HealthSheet } from "./HealthSheet";
 import { IdentitySheet } from "./IdentitySheet";
-import { InventorySheet } from "./InventorySheet";
+import { ItemSheet } from "./ItemSheet";
 import { ItemBonusesSheet } from "./ItemBonusesSheet";
 import { LevelSheet } from "./LevelSheet";
 import { MarksSheet } from "./MarksSheet";
@@ -325,96 +325,98 @@ describe("шторки правки листа", () => {
     expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
   });
 
-  it("вещи: заметка сохраняется вместе с вещью, пустая не хранится", async () => {
-    const onAdd = vi.fn();
+  it("вещь: заметка и вид дописываются к уже заведённой вещи (FR-235)", async () => {
+    const onSave = vi.fn();
     render(
-      <InventorySheet
-        character={createThorne()}
-        onAdd={onAdd}
-        onRemove={() => {}}
+      <ItemSheet
+        item={{ id: "сапоги", nameRu: "Сапоги следопыта", worn: false, count: 1 }}
+        onSave={onSave}
         onToggleWorn={() => {}}
         onSpend={() => {}}
+        onRemove={() => {}}
         onCancel={() => {}}
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Новая вещь"), "Сапоги следопыта");
     await userEvent.type(screen.getByLabelText("Заметка"), "1d4 к Скрытности в лесу");
+    await userEvent.click(screen.getByRole("radio", { name: "Зелье" }));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(onAdd.mock.calls[0]?.[0]).toEqual({
-      id: "сапоги-следопыта",
+    expect(onSave).toHaveBeenCalledWith({
+      id: "сапоги",
       nameRu: "Сапоги следопыта",
       worn: false,
       count: 1,
+      kind: "potion",
       note: "1d4 к Скрытности в лесу",
     });
   });
 
-  it("вещи: количество и вид сохраняются вместе с новой вещью", async () => {
-    const onAdd = vi.fn();
+  it("вещь: количество полем не правится — оно живёт расходом и находкой (FR-241)", () => {
     render(
-      <InventorySheet
-        character={createThorne()}
-        onAdd={onAdd}
-        onRemove={() => {}}
+      <ItemSheet
+        item={{ id: "зелье", nameRu: "Зелье лечения", worn: false, count: 2 }}
+        onSave={() => {}}
         onToggleWorn={() => {}}
         onSpend={() => {}}
+        onRemove={() => {}}
         onCancel={() => {}}
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Новая вещь"), "Зелье лечения");
-    const countField = screen.getByLabelText("Количество");
-    await userEvent.clear(countField);
-    await userEvent.type(countField, "3");
-    await userEvent.click(screen.getByRole("radio", { name: "Зелье" }));
+    // Поля нет вовсе: набранное до расхода число вернуло бы потраченный экземпляр обратно.
+    expect(screen.queryByLabelText("Количество")).toBeNull();
+    // Запас при этом виден: он стоит в заголовке шторки.
+    expect(screen.getByRole("dialog", { name: "Правка: Зелье лечения ×2" })).toBeDefined();
+  });
+
+  it("вещь: правка не трогает ни запас, ни надетость (FR-241)", async () => {
+    const onSave = vi.fn();
+    render(
+      <ItemSheet
+        item={{ id: "зелье", nameRu: "Зелье лечения", worn: true, count: 3 }}
+        onSave={onSave}
+        onToggleWorn={() => {}}
+        onSpend={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Заметка"), "от мастера");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(onAdd.mock.calls[0]?.[0]).toEqual({
-      id: "зелье-лечения",
+    expect(onSave).toHaveBeenCalledWith({
+      id: "зелье",
       nameRu: "Зелье лечения",
-      worn: false,
+      worn: true,
       count: 3,
-      kind: "potion",
+      note: "от мастера",
     });
   });
 
-  it("вещи: нулевое количество не сохраняется", async () => {
-    render(
-      <InventorySheet
-        character={createThorne()}
-        onAdd={() => {}}
-        onRemove={() => {}}
-        onToggleWorn={() => {}}
-        onSpend={() => {}}
-        onCancel={() => {}}
-      />,
-    );
-
-    await userEvent.type(screen.getByLabelText("Новая вещь"), "Зелье лечения");
-    const countField = screen.getByLabelText("Количество");
-    await userEvent.clear(countField);
-    await userEvent.type(countField, "0");
-
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
-  });
-
-  it("вещи: кнопка «Потратить» расходует вещь", async () => {
+  it("вещь: расход, надевание и удаление стоят в её же шторке (FR-239)", async () => {
     const onSpend = vi.fn();
+    const onToggleWorn = vi.fn();
+    const onRemove = vi.fn();
     render(
-      <InventorySheet
-        character={createThorne()}
-        onAdd={() => {}}
-        onRemove={() => {}}
-        onToggleWorn={() => {}}
+      <ItemSheet
+        item={{ id: "зелье", nameRu: "Зелье лечения", worn: false, count: 2 }}
+        onSave={() => {}}
+        onToggleWorn={onToggleWorn}
         onSpend={onSpend}
+        onRemove={onRemove}
         onCancel={() => {}}
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Потратить: Плащ защиты" }));
-    expect(onSpend).toHaveBeenCalledWith("cloak-of-protection");
+    await userEvent.click(screen.getByRole("button", { name: "Потратить: Зелье лечения" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Надето: Зелье лечения" }));
+    await userEvent.click(screen.getByRole("button", { name: "Убрать: Зелье лечения" }));
+
+    expect(onSpend).toHaveBeenCalled();
+    expect(onToggleWorn).toHaveBeenCalled();
+    expect(onRemove).toHaveBeenCalled();
   });
 
   it("прибавки предметов: отрицательная принимается", async () => {

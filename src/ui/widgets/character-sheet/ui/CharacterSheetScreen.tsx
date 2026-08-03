@@ -7,23 +7,25 @@ import { sheetBlocks, SHEET_TABS, type SheetTab } from "../model/rows";
 import { SheetBlock } from "./SheetBlock";
 
 /**
- * Подписи вкладок. «Итог» стоит первым: за столом спрашивают число, а не то, из чего оно сложилось.
+ * Подписи вкладок. Обе показывают действующие числа: делят они персонажа и вещи, а не итог со
+ * слагаемыми. «Персонаж» открывается первым — за столом спрашивают его числа.
  */
 const TAB_LABELS: Record<SheetTab, string> = {
-  total: "Итог",
   character: "Персонаж",
-  equipment: "Экипировка",
-  inventory: "Инвентарь",
+  items: "Вещи",
 };
 
 export function CharacterSheetScreen({
   character,
   onEdit,
+  onAddItem,
 }: {
   character: CharacterState;
   onEdit: (blockId: string) => void;
+  /** Быстрый ввод находки: одно название, подробности дописываются нажатием на вещь. */
+  onAddItem: (nameRu: string) => void;
 }) {
-  const [tab, setTab] = useState<SheetTab>("total");
+  const [tab, setTab] = useState<SheetTab>("character");
   const blocks = sheetBlocks(character).filter((block) => block.tab === tab);
 
   return (
@@ -57,6 +59,8 @@ export function CharacterSheetScreen({
           block={block}
           onEdit={() => onEdit(block.editId)}
           onSecondaryEdit={() => onEdit(block.secondary?.editId ?? block.editId)}
+          onOpenRow={onEdit}
+          onQuickAdd={onAddItem}
         />
       ))}
     </div>

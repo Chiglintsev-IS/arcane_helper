@@ -288,18 +288,22 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const { stores } = await renderWithStores(<PlayScreen />);
 
     await user.click(screen.getByRole("radio", { name: /^Лист/ }));
-    await user.click(screen.getByRole("tab", { name: "Инвентарь" }));
-    await user.click(screen.getByRole("button", { name: "Править: Вещи" }));
+    await user.click(screen.getByRole("tab", { name: "Вещи" }));
 
-    await user.type(screen.getByLabelText("Новая вещь"), "Кольцо защиты");
+    // Находка заводится одним названием, прямо в списке: подробности — потом и по нажатию.
+    await user.type(screen.getByLabelText("Новая вещь"), "Кольцо защиты{Enter}");
+
+    // Вещь легла в сумку: КД пока прежний — лежащее не действует.
+    const carried = stores.session.getState().session?.character.equipment.items ?? [];
+    expect(carried.find((item) => item.id === "кольцо-защиты")?.worn).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Открыть: Кольцо защиты" }));
     const armorField = screen.getByLabelText("К защите");
     await user.clear(armorField);
     await user.type(armorField, "1");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Вещь легла в сумку: КД пока прежний — лежащее не действует.
-    const carried = stores.session.getState().session?.character.equipment.items ?? [];
-    expect(carried.find((item) => item.id === "кольцо-защиты")?.worn).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Открыть: Кольцо защиты" }));
     await user.click(screen.getByRole("switch", { name: "Надето: Кольцо защиты" }));
 
     const worn = stores.session.getState().session?.character;

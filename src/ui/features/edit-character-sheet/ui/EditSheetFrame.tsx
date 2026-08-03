@@ -7,6 +7,10 @@ import type { ReactNode } from "react";
  *
  * Одна на восемь шторок — иначе кнопка «Сохранить» рано или поздно поехала бы в одной из них, и
  * пришлось бы проверять каждую.
+ *
+ * Прокручивается только содержимое: главное действие стоит внизу экрана и остаётся на месте. Пока
+ * прокручивалась шторка целиком, на 320 × 568 «Сохранить» у длинной шторки уходило за край, и
+ * сохранение требовало сперва догадаться, что список полей продолжается.
  */
 export function EditSheetFrame({
   titleRu,
@@ -26,10 +30,10 @@ export function EditSheetFrame({
       role="dialog"
       aria-modal="true"
       aria-label={`Правка: ${titleRu}`}
-      className="fixed inset-x-0 bottom-0 z-20 flex max-h-[80dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
       <h2 className="text-sm font-semibold">{titleRu}</h2>
-      {children}
+      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">{children}</div>
       <div className="flex gap-2">
         <button
           type="button"

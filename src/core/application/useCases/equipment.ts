@@ -44,11 +44,28 @@ export function editOtherBonuses(
   );
 }
 
+/**
+ * Заводит вещь. Одноимённая пополняет запас: журнал называет получившееся количество, потому что
+ * «Добавлено: зелье лечения» дважды подряд не отвечает на вопрос, сколько их теперь.
+ */
 export function addItem(session: Session, item: InventoryItem, clock: Clock): Session {
+  const found = session.character.equipment.items.find((existing) => existing.id === item.id);
   return applied(
     session,
     (root) => root.withEquipment(root.equipment.addItem(item)),
-    `Добавлено: ${item.nameRu}`,
+    found === undefined
+      ? `Добавлено: ${item.nameRu}`
+      : `Добавлено: ${item.nameRu} (стало ${found.count + item.count})`,
+    clock,
+  );
+}
+
+/** Правка вещи: заметка, количество, вид и прибавки. Отдельно от надевания — то другое событие. */
+export function editItem(session: Session, item: InventoryItem, clock: Clock): Session {
+  return applied(
+    session,
+    (root) => root.withEquipment(root.equipment.replaceItem(item)),
+    `Правка вещи: ${item.nameRu}`,
     clock,
   );
 }

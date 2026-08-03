@@ -57,7 +57,7 @@ import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet"
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
 import { ArmorSheet } from "@/ui/features/edit-character-sheet/ui/ArmorSheet";
-import { InventorySheet } from "@/ui/features/edit-character-sheet/ui/InventorySheet";
+import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { HealthSheet } from "@/ui/features/edit-character-sheet/ui/HealthSheet";
 import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
 import { ItemBonusesSheet } from "@/ui/features/edit-character-sheet/ui/ItemBonusesSheet";
@@ -68,6 +68,7 @@ import { OverrideSheet } from "@/ui/features/edit-character-sheet/ui/OverrideShe
 import {
   addItem,
   editArmorClassBase,
+  editItem,
   editOtherBonuses,
   removeItem,
   spendItem,
@@ -218,6 +219,9 @@ export function PlayScreen() {
   const { character } = session;
   const context = { character, turn: economy };
   const apply = sessionStore.getState().apply;
+  // Строка вещи называет себя `item:<вещь>`: шторка открывается той вещью, на которую нажали.
+  const openedItem =
+    character.equipment.items.find((item) => openBlockId === `item:${item.id}`) ?? null;
   const mode = character.screenMode;
   const parts = SCREEN_PARTS[mode];
   const { inFight } = economy;
@@ -472,7 +476,20 @@ export function PlayScreen() {
          * в порядке хранения — переворачивает их сам компонент.
          */}
         {parts.sheet ? (
-          <CharacterSheetScreen character={character} onEdit={setOpenBlockId} />
+          <CharacterSheetScreen
+            character={character}
+            onEdit={setOpenBlockId}
+            onAddItem={(nameRu) =>
+              apply((current) =>
+                addItem(
+                  current,
+                  // Имя и есть опознание: вводить отдельный код за столом никто не станет.
+                  { id: nameRu.toLowerCase().replaceAll(" ", "-"), nameRu, worn: false, count: 1 },
+                  clock,
+                ),
+              )
+            }
+          />
         ) : null}
 
         {parts.journal ? (
@@ -757,17 +774,30 @@ export function PlayScreen() {
         />
       ) : null}
 
-      {/* Инвентарь остаётся открытым: вещи заводят пачкой, и закрытие после каждой мешало бы. */}
-      {openBlockId === "inventory" ? (
-        <InventorySheet
-          character={character}
+      {/*
+       * Шторка вещи, на которую нажали. Надевание и расход её не закрывают: обе операции видны
+       * тут же переключателем и количеством, а закрытие заставляло бы открывать вещь заново.
+       * Расход последнего экземпляра — исключение: вещи больше нет, и держать её шторку не на чём.
+       */}
+      {openedItem === null ? null : (
+        <ItemSheet
+          item={openedItem}
           onCancel={() => setOpenBlockId(null)}
-          onAdd={(item) => apply((current) => addItem(current, item, clock))}
-          onRemove={(id) => apply((current) => removeItem(current, id, clock))}
-          onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}
-          onSpend={(id) => apply((current) => spendItem(current, id, clock))}
+          onSave={(item) => {
+            if (apply((current) => editItem(current, item, clock)) === null) setOpenBlockId(null);
+          }}
+          onToggleWorn={() => apply((current) => toggleWorn(current, openedItem.id, clock))}
+          onSpend={() => {
+            apply((current) => spendItem(current, openedItem.id, clock));
+            if (openedItem.count === 1) setOpenBlockId(null);
+          }}
+          onRemove={() => {
+            if (apply((current) => removeItem(current, openedItem.id, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
         />
-      ) : null}
+      )}
 
       {openBlockId === "marks" ? (
         <MarksSheet

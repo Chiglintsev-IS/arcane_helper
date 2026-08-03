@@ -138,9 +138,9 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   expect(sheetLayout.documentHeight).toBeLessThanOrEqual(sheetLayout.viewportHeight);
   expect(sheetLayout.horizontalOverflow).toBeLessThanOrEqual(0);
 
-  // Лист открывается итогом, и первый его блок — «Числа боя».
+  // Лист открывается персонажем, и первый его блок — «Кто он».
   const firstBlockBottom = await page
-    .getByRole("heading", { name: "Числа боя" })
+    .getByRole("heading", { name: "Кто он" })
     .evaluate((node) => Math.round(node.closest("section")?.getBoundingClientRect().bottom ?? 0));
   expect(firstBlockBottom, "первый блок «Листа» целиком").toBeLessThanOrEqual(viewport);
 
@@ -259,9 +259,9 @@ test("state survives a reload", async ({ page }) => {
 
 test("the sheet mode survives a reload and feeds the header", async ({ page }) => {
   await switchMode(page, /^Лист/);
-  // Лист открывается итогом: «Кто он» стоит на вкладке «Персонаж».
-  await page.getByRole("tab", { name: "Персонаж" }).click();
+  // «Персонаж» — вкладка по умолчанию: числа боя стоят рядом с тем, из чего сложились.
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Числа боя" })).toBeVisible();
 
   await page.getByRole("button", { name: "Править: Уровень" }).click();
   const levelSheet = page.getByRole("dialog", { name: "Правка: Уровень" });
@@ -273,9 +273,8 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
 
   await page.reload();
   // Режим переживает перезапуск вместе с состоянием: приложение открывается там, где закрыто.
-  // Вкладка листа не хранится: он снова открывается итогом.
+  // Вкладка листа не хранится: он снова открывается персонажем.
   await expect(page.getByRole("heading", { name: "Числа боя" })).toBeVisible();
-  await page.getByRole("tab", { name: "Персонаж" }).click();
   await expect(page.getByText("Волшебник, 8")).toBeVisible();
 
   // Новый уровень дошёл до ячеек: смена уровня — не только строка листа.
@@ -392,11 +391,23 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("list", { name: "Журнал событий" })).toBeVisible();
   await scan("экран журнала");
 
-  // Лист — восьмой экран сверки: девять блоков, шторка правки и переключатели внутри неё.
+  // Лист — восьмой экран сверки: блоки персонажа, шторка правки и переключатели внутри неё.
   await switchMode(page, /^Лист/);
-  await page.getByRole("tab", { name: "Персонаж" }).click();
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
   await scan("лист персонажа");
+
+  // Вещи — свой экран сверки: строки-кнопки, строка быстрого ввода и шторка одной вещи.
+  await page.getByRole("tab", { name: "Вещи" }).click();
+  await expect(page.getByRole("heading", { name: "Вещи", exact: true })).toBeVisible();
+  await scan("вещи листа");
+
+  await page.getByRole("textbox", { name: "Новая вещь" }).fill("Зелье лечения");
+  await page.getByRole("textbox", { name: "Новая вещь" }).press("Enter");
+  await page.getByRole("button", { name: "Открыть: Зелье лечения" }).click();
+  await expect(page.getByRole("dialog", { name: "Правка: Зелье лечения" })).toBeVisible();
+  await scan("шторка вещи");
+  await page.getByRole("button", { name: "Отмена" }).click();
+  await page.getByRole("tab", { name: "Персонаж" }).click();
 
   await page.getByRole("button", { name: "Править: Интеллект" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
