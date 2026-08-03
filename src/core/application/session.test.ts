@@ -396,6 +396,26 @@ describe("концентрация (FR-080, FR-081)", () => {
     ).toThrow(/Уже идёт концентрация/);
   });
 
+  it("исключение мастера замену концентрации не разрешает: согласие своё (FR-031)", () => {
+    const first = castSpell(
+      session,
+      { spell: concentrating(), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    expect(() =>
+      castSpell(
+        first,
+        {
+          spell: { ...concentrating(), id: "other-concentration", nameRu: "Другое" },
+          mode: "normal",
+          payment: { kind: "slot", slotLevel: 1 },
+          allowAnyway: true,
+        },
+        clock,
+      ),
+    ).toThrow(/Уже идёт концентрация/);
+  });
+
   it("подтверждённая замена оставляет ровно одну концентрацию (UC-03)", () => {
     const first = castSpell(
       session,
@@ -408,7 +428,7 @@ describe("концентрация (FR-080, FR-081)", () => {
         spell: { ...concentrating(), id: "other-concentration", nameRu: "Другое" },
         mode: "normal",
         payment: { kind: "slot", slotLevel: 1 },
-        allowAnyway: true,
+        replaceConcentration: true,
       },
       clock,
     );

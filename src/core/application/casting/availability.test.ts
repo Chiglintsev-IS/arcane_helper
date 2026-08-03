@@ -8,7 +8,9 @@ import {
   ALL_TURN_RESOURCES,
   checkAvailability,
   reasonsOf,
+  withoutConsent,
   type AvailabilityInput,
+  type AvailabilityWarning,
 } from "@/core/application/casting/availability";
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
@@ -167,7 +169,11 @@ describe("checkAvailability: накладывание дольше хода (FR-
   });
 
   it("предупреждение проходимо: мастер вправе разрешить исключение (FR-031)", () => {
-    expect(check({ spell: mending, character: inCombat() }).overridable).toBe(true);
+    expect(
+      check({ spell: mending, character: inCombat() }).warnings.every(
+        (warning) => warning.enforcement !== "ending_concentration",
+      ),
+    ).toBe(true);
   });
 
   it("заклинание действием такого предупреждения не получает", () => {
@@ -303,7 +309,7 @@ describe("checkAvailability: концентрация (FR-030, FR-081)", () => {
       payment: { kind: "none" },
     });
     const warning = availability.warnings.find((item) => item.code === "concentration_busy");
-    expect(warning?.overridable).toBe(false);
+    expect(warning?.enforcement).toBe("ending_concentration");
   });
 
   it("на испорченном состоянии без эффекта называет заклинание по идентификатору", () => {
@@ -391,7 +397,9 @@ describe("checkAvailability: несколько нарушений сразу", 
       mode: "normal",
       turn: { ...ALL_TURN_RESOURCES, inFight: true, actionAvailable: false },
     });
-    expect(availability.overridable).toBe(true);
+    expect(
+      availability.warnings.every((warning) => warning.enforcement !== "ending_concentration"),
+    ).toBe(true);
   });
 });
 
@@ -418,7 +426,7 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
     const missing = warnings.find((warning) => warning.code === "no_component");
     expect(missing?.reasonRu).toContain("100 зм");
     // Проходимо: мастер вправе разрешить, а игрок — вспомнить, что жемчужина всё-таки есть.
-    expect(missing?.overridable).toBe(true);
+    expect(missing?.enforcement).toBe("advisory");
   });
 
   it("купленный компонент предупреждения не даёт", () => {
@@ -522,3 +530,46 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
   });
 });
 
+
+describe("исполнение предупреждений по объявлению", () => {
+  const advisory: AvailabilityWarning = {
+    code: "not_prepared",
+    reasonRu: "Заклинание не подготовлено",
+    enforcement: "advisory",
+  };
+  const exception: AvailabilityWarning = {
+    code: "no_payment",
+    reasonRu: "Не выбран способ оплаты",
+    enforcement: "gm_exception",
+  };
+  const concentration: AvailabilityWarning = {
+    code: "concentration_busy",
+    reasonRu: "Уже идёт концентрация",
+    enforcement: "ending_concentration",
+  };
+
+  it("предупреждающее не требует согласия", () => {
+    expect(withoutConsent([advisory], {})).toBeUndefined();
+  });
+
+  it("без согласия отказывает первым же исполняемым", () => {
+    expect(withoutConsent([advisory, exception], {})).toBe(exception);
+  });
+
+  it("исключение мастера снимает своё и не снимает чужого", () => {
+    expect(withoutConsent([exception], { gm_exception: true })).toBeUndefined();
+    expect(withoutConsent([concentration], { gm_exception: true })).toBe(concentration);
+  });
+
+  it("согласие на замену концентрации снимает своё и не снимает чужого", () => {
+    expect(withoutConsent([concentration], { ending_concentration: true })).toBeUndefined();
+    expect(withoutConsent([exception], { ending_concentration: true })).toBe(exception);
+  });
+
+  it("ячейка ниже уровня заклинания отказывает, пока мастер не разрешил", () => {
+    const secondLevel: Spell = { ...mageArmor, level: 2 };
+    const { warnings } = check({ spell: secondLevel, payment: { kind: "slot", slotLevel: 1 } });
+    expect(withoutConsent(warnings, {})?.code).toBe("slot_too_low");
+    expect(withoutConsent(warnings, { gm_exception: true })).toBeUndefined();
+  });
+});

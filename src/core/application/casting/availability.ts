@@ -53,18 +53,45 @@ export type AvailabilityCode =
   | "concentration_busy"
   | "no_component";
 
+/**
+ * Что предупреждение делает с подтверждённым сотворением — объявляет сам предикат.
+ *
+ * `advisory` — предупреждает и не мешает: нарушение видно игроку, а расплатиться за него нечем.
+ * Прочие значения — согласие, без которого сотворение отклоняется, и согласия эти не заменяют друг
+ * друга: «Применить всё равно» разрешает мастер, а замену концентрации выбирает игрок. Одно
+ * согласие на оба означало бы, что игрок, бросивший прежнее заклинание, заодно молча разрешил себе
+ * перерасход ячейки.
+ */
+export type Enforcement = "advisory" | "gm_exception" | "ending_concentration";
+
+/** Согласие игрока или мастера, полученное до подтверждения. */
+export type Consent = Exclude<Enforcement, "advisory">;
+
 export type AvailabilityWarning = {
   code: AvailabilityCode;
   reasonRu: string;
-  overridable: boolean;
+  /** Чем снимается. Список кодов у сценария не заводится: он расходится с объявлением. */
+  enforcement: Enforcement;
 };
 
 export type Availability = {
   available: boolean;
-  overridable: boolean;
   warnings: AvailabilityWarning[];
   componentReminders: string[];
 };
+
+/** Полученные согласия. Отсутствующее согласие оставляет предупреждение в силе. */
+export type Consents = Partial<Record<Consent, boolean>>;
+
+/** Первое предупреждение, на которое нужного согласия нет: оно и есть причина отказа. */
+export function withoutConsent(
+  warnings: readonly AvailabilityWarning[],
+  consents: Consents,
+): AvailabilityWarning | undefined {
+  return warnings.find(
+    (warning) => warning.enforcement !== "advisory" && consents[warning.enforcement] !== true,
+  );
+}
 
 export type AvailabilityInput = {
   spell: Spell;
@@ -103,7 +130,7 @@ function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
       reasonRu:
         `Не уложится в один ход — ${longCastingTimeRu(unit, castingTime.value)},` +
         " действие каждый ход и концентрация",
-      overridable: true,
+      enforcement: "advisory",
     },
   ];
 }
@@ -126,7 +153,11 @@ function checkPreparation(input: AvailabilityInput): AvailabilityWarning[] {
 
   if (!spellbook.knows(spell.id, spell.level)) {
     return [
-      { code: "not_in_spellbook", reasonRu: "Заклинания нет в книге заклинаний", overridable: true },
+      {
+        code: "not_in_spellbook",
+        reasonRu: "Заклинания нет в книге заклинаний",
+        enforcement: "advisory",
+      },
     ];
   }
 
@@ -136,13 +167,17 @@ function checkPreparation(input: AvailabilityInput): AvailabilityWarning[] {
     warnings.push({
       code: "not_ritual",
       reasonRu: `«${spell.nameRu}» нельзя сотворить ритуалом`,
-      overridable: true,
+      enforcement: "advisory",
     });
   }
 
   const needsPreparation = spell.level !== CANTRIP_LEVEL && mode !== "ritual";
   if (needsPreparation && !spellbook.isPrepared(spell.id)) {
-    warnings.push({ code: "not_prepared", reasonRu: "Заклинание не подготовлено", overridable: true });
+    warnings.push({
+      code: "not_prepared",
+      reasonRu: "Заклинание не подготовлено",
+      enforcement: "advisory",
+    });
   }
 
   return warnings;
@@ -167,7 +202,7 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
       {
         code: "no_payment",
         reasonRu: "Не выбран способ оплаты: ячейка или очки заклинаний",
-        overridable: true,
+        enforcement: "advisory",
       },
     ];
   }
@@ -181,18 +216,20 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
         reasonRu:
           `Очков заклинаний ${character.spellPoints.remaining}, нужно ${points}` +
           ` — это ${hitPointCost(spell.level, character.level)} хитов кровью`,
-        overridable: true,
+        enforcement: "advisory",
       },
     ];
   }
 
   const { slotLevel } = payment;
   if (slotLevel < spell.level) {
+    // Ячейка ниже уровня заклинания сотворения не даёт: списать её значило бы потратить ресурс
+    // впустую и записать в журнал заклинание, которого не было.
     return [
       {
         code: "slot_too_low",
         reasonRu: `Ячейка ${slotLevel} уровня ниже уровня заклинания — нужен ${spell.level}`,
-        overridable: true,
+        enforcement: "gm_exception",
       },
     ];
   }
@@ -200,18 +237,29 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
   const slot = character.spellSlots[slotLevel];
   if (slot === undefined) {
     return [
-      { code: "no_slot", reasonRu: `Ячеек ${slotLevel} уровня у персонажа нет`, overridable: true },
+      {
+        code: "no_slot",
+        reasonRu: `Ячеек ${slotLevel} уровня у персонажа нет`,
+        enforcement: "advisory",
+      },
     ];
   }
   if (slot.remaining <= 0) {
     return [
-      { code: "no_slot", reasonRu: `Нет свободной ячейки ${slotLevel} уровня`, overridable: true },
+      {
+        code: "no_slot",
+        reasonRu: `Нет свободной ячейки ${slotLevel} уровня`,
+        enforcement: "advisory",
+      },
     ];
   }
   return [];
 }
 
-/** Единственное предупреждение без «Применить всё равно»: цена ошибки — молча потерянный эффект. */
+/**
+ * Единственное предупреждение, которое не снимается исключением мастера: цена ошибки — молча
+ * потерянный эффект, и снять его вправе только осознанный выбор между двумя заклинаниями.
+ */
 function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character } = input;
   const current = character.concentration;
@@ -225,7 +273,7 @@ function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
     {
       code: "concentration_busy",
       reasonRu: `Уже идёт концентрация: «${nameRu}» завершится`,
-      overridable: false,
+      enforcement: "ending_concentration",
     },
   ];
 }
@@ -245,7 +293,7 @@ function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
       {
         code: "no_component",
         reasonRu: `Нет компонента${cost}: ${components.materialText ?? "материальный компонент"}`,
-        overridable: true,
+        enforcement: "advisory",
       },
     ];
   }
@@ -255,7 +303,7 @@ function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
     {
       code: "no_component",
       reasonRu: "Нет ни фокусировки, ни мешочка с компонентами",
-      overridable: true,
+      enforcement: "advisory",
     },
   ];
 }
@@ -291,7 +339,8 @@ export function checkAvailability(input: AvailabilityInput): Availability {
           {
             code: SPENT_CODES[resource],
             reasonRu: ACTION_SPENT_MESSAGES[resource],
-            overridable: true,
+            // Экономию хода ведёт приложение: молча потраченное второе действие оно и предъявит.
+            enforcement: "gm_exception" as const,
           },
         ]
       : []),
@@ -303,7 +352,6 @@ export function checkAvailability(input: AvailabilityInput): Availability {
 
   return {
     available: warnings.length === 0,
-    overridable: warnings.every((warning) => warning.overridable),
     warnings,
     componentReminders: componentRequirements(input.spell.components),
   };

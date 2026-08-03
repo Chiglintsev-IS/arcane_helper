@@ -378,7 +378,24 @@ describe("заявка на применение", () => {
       payment: { kind: "slot", slotLevel: 1 },
       targetLabel: "на себя",
       allowAnyway: true,
+      replaceConcentration: false,
     });
+  });
+
+  it("исключение мастера не выдаёт согласия на замену концентрации", () => {
+    store.getState().start(mageArmor, context());
+    store.getState().allowAnyway();
+
+    expect(toCastRequest(draftOf()).replaceConcentration).toBe(false);
+  });
+
+  it("согласие на замену концентрации не выдаёт исключения мастера", () => {
+    store.getState().start(mageArmor, context());
+    store.getState().replaceConcentration();
+
+    const request = toCastRequest(draftOf());
+    expect(request.replaceConcentration).toBe(true);
+    expect(request.allowAnyway).toBe(false);
   });
 
   it("без цели поля цели в заявке нет", () => {

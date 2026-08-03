@@ -578,11 +578,12 @@ export function CastWizard({
   const castingTime = CASTING_TIME[draft.spell.castingTime.type];
   const actions = draftStore.getState();
 
-  // Замена концентрации требует явного выбора: без него дальше не пускаем.
+  // Замена концентрации требует явного выбора: без него дальше не пускаем. Согласие своё, а не
+  // общее с «Применить всё равно»: иначе брошенное заклинание молча разрешало бы и перерасход.
   const concentrationBlocked =
     draft.step === "concentration" &&
     character.concentration !== undefined &&
-    !draft.allowAnyway;
+    !draft.replaceConcentration;
   const availabilityBlocked = draft.step === "availability" && !draft.allowAnyway;
   // Кости: пока число не выбрано или выпавшее вне возможного, дальше не пускаем. Костей может не
   // остаться вовсе — тогда выбирать нечего, и шаг не задерживает.
@@ -671,8 +672,8 @@ export function CastWizard({
       {draft.step === "concentration" ? (
         <ConcentrationStep
           character={character}
-          replaceConfirmed={draft.allowAnyway}
-          onReplace={() => actions.allowAnyway()}
+          replaceConfirmed={draft.replaceConcentration}
+          onReplace={() => actions.replaceConcentration()}
           onCancel={() => actions.cancel()}
         />
       ) : null}

@@ -58,8 +58,10 @@ export type CastDraft = {
   /** Цель свободным текстом; `null` — не указана, и объявление корректно без неё. */
   targetLabel: string | null;
   roleplayCategory: RoleplayCategory;
-  /** Мастер разрешил исключение. */
+  /** Мастер разрешил исключение. Замену концентрации это согласие не покрывает. */
   allowAnyway: boolean;
+  /** Игрок согласился прервать идущую концентрацию: выбор между двумя эффектами — только его. */
+  replaceConcentration: boolean;
   /** Приложенная руна или `null`. Не более одной на заклинание. */
   rune: Rune | null;
   /** Кому её эффект. Спрашивается только у той руны, которая выбирает цель. */
@@ -188,6 +190,7 @@ export function toCastRequest(draft: CastDraft): CastRequest {
       ? {}
       : { hitDice: { count: draft.hitDiceCount, rolled: draft.hitDiceRolled } }),
     allowAnyway: draft.allowAnyway,
+    replaceConcentration: draft.replaceConcentration,
   };
 }
 
@@ -207,8 +210,10 @@ export type CastDraftState = {
   setHitDiceRolled: (rolled: number | null) => void;
   setTarget: (label: string) => void;
   setRoleplayCategory: (category: RoleplayCategory) => void;
-  /** «Применить всё равно»: предупреждения перестают мешать. */
+  /** «Применить всё равно»: предупреждения, которые снимает исключение мастера, перестают мешать. */
   allowAnyway: () => void;
+  /** «Прервать и сотворить»: согласие на замену идущей концентрации. */
+  replaceConcentration: () => void;
   next: (steps: readonly WizardStep[]) => void;
   back: (steps: readonly WizardStep[]) => void;
   cancel: () => void;
@@ -248,6 +253,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           targetLabel: null,
           roleplayCategory: remembered.roleplay[spell.id] ?? DEFAULT_ROLEPLAY_CATEGORY,
           allowAnyway: false,
+          replaceConcentration: false,
           rune: null,
           runeTarget: "self",
           hitDiceCount: null,
@@ -313,6 +319,10 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
 
       allowAnyway() {
         edit((draft) => ({ ...draft, allowAnyway: true }));
+      },
+
+      replaceConcentration() {
+        edit((draft) => ({ ...draft, replaceConcentration: true }));
       },
 
       next(steps) {

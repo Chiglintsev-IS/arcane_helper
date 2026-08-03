@@ -24,6 +24,8 @@ import { durationWithRoundsRu } from "@/core/domain/effects/concentration";
 import {
   checkAvailability,
   turnResourceFor,
+  withoutConsent,
+  type Consents,
   type PaymentChoice,
   type TurnResource,
 } from "@/core/application/casting/availability";
@@ -42,8 +44,13 @@ export type CastRequest = {
   rune?: Rune;
   /** Кому досталась «Руна жизни»: остальные руны цели не выбирают. */
   runeTarget?: RuneTarget;
-  /** Мастер разрешил исключение — предупреждения не блокируют. */
+  /** Мастер разрешил исключение — предупреждения, которые оно снимает, не блокируют. */
   allowAnyway?: boolean;
+  /**
+   * Игрок согласился прервать идущую концентрацию. Исключением мастера это согласие не заменяется:
+   * выбор между двумя эффектами принадлежит игроку и делается на своём шаге.
+   */
+  replaceConcentration?: boolean;
   /**
    * Потраченные Кости хитов и выпавшее на них. Есть только у заклинания, которое их тратит.
    * Выпавшее приходит от игрока: кубик бросает он, приложение принимает результат и складывает.
@@ -64,11 +71,6 @@ function applyPayment(root: Character, request: CastRequest): Character {
   }
 
   if (payment.kind === "slot") {
-    if (payment.slotLevel < spell.level) {
-      throw new DomainError(
-        `Ячейка ${payment.slotLevel} уровня ниже уровня заклинания ${spell.level}`,
-      );
-    }
     return root.withArcana(root.arcana.spendSlot(payment.slotLevel, { allowOverdraft: allowAnyway }));
   }
 
@@ -162,7 +164,7 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
 
 /** Подтверждённое применение: оплата, действие, руна, концентрация, эффект — одной записью. */
 export function castSpell(session: Session, request: CastRequest, clock: Clock): Session {
-  const { spell, allowAnyway = false } = request;
+  const { spell } = request;
 
   const turn = deriveTurnEconomy(session);
   const { warnings } = checkAvailability({
@@ -172,16 +174,19 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
     mode: request.mode,
     payment: request.payment,
   });
-  // Подготовку и остальные условия проверяет UI до вызова; здесь — только ресурсы хода и концентрация
-  const enforced = warnings.filter(
-    (w) =>
-      w.code === "concentration_busy" ||
-      w.code === "action_spent" ||
-      w.code === "bonus_action_spent" ||
-      w.code === "reaction_spent",
-  );
-  if (enforced.length > 0 && !allowAnyway) {
-    throw new DomainError(enforced[0]!.reasonRu);
+  /*
+   * Запрет исполняется по объявлению предиката, а не по списку кодов: перечень «что здесь важно»
+   * расходился с тем, чем предупреждение объявлено, и одно согласие снимало даже то, которое им не
+   * снимается. Мастер применения спрашивает те же согласия до подтверждения — сюда они приходят
+   * ответом игрока, а не догадкой сценария.
+   */
+  const consents: Consents = {
+    gm_exception: request.allowAnyway === true,
+    ending_concentration: request.replaceConcentration === true,
+  };
+  const blocking = withoutConsent(warnings, consents);
+  if (blocking !== undefined) {
+    throw new DomainError(blocking.reasonRu);
   }
 
   let root = Character.of(session.character);
