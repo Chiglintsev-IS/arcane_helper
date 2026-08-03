@@ -295,7 +295,7 @@ describe("лист персонажа", () => {
     expect(kit?.worn).toBe(false);
     // Сохранение Торна не называло количества ни у одной вещи — старая запись читается как одна штука.
     expect(kit?.count).toBe(1);
-    expect(kit?.kind).toBeUndefined();
+    expect(kit?.kind).toBe("other");
     expect(thorneState.exhaustion).toBe(0);
     expect(thorneState.inspiration).toBe(false);
     expect(thorneState.overrides).toEqual({ saves: {}, skills: {} });
@@ -330,7 +330,7 @@ describe("лист персонажа", () => {
     expect(parsed.equipment.items[0]?.count).toBe(1);
   });
 
-  it("вещь без нулевого или отрицательного количества не существует", () => {
+  it("счёт вещи — от нуля до предела: ноль хранится, отрицательное и перебор отвергаются", () => {
     const withCount = (count: number) => ({
       ...createThorne(),
       equipment: {
@@ -338,12 +338,13 @@ describe("лист персонажа", () => {
         items: [{ id: "healing-potion", nameRu: "Зелье лечения", count }],
       },
     });
-    expect(characterStateSchema.safeParse(withCount(0)).success).toBe(false);
+    expect(characterStateSchema.safeParse(withCount(0)).success).toBe(true);
     expect(characterStateSchema.safeParse(withCount(-1)).success).toBe(false);
-    expect(characterStateSchema.safeParse(withCount(3)).success).toBe(true);
+    expect(characterStateSchema.safeParse(withCount(9999)).success).toBe(true);
+    expect(characterStateSchema.safeParse(withCount(10000)).success).toBe(false);
   });
 
-  it("вид вещи ограничен зельем, ингредиентом и хламом", () => {
+  it("категория вещи ограничена четырьмя: экипировка, расходник, ингредиент, другое", () => {
     const withKind = (kind: string) => ({
       ...createThorne(),
       equipment: {
@@ -351,9 +352,36 @@ describe("лист персонажа", () => {
         items: [{ id: "thing", nameRu: "Штука", kind }],
       },
     });
-    expect(characterStateSchema.safeParse(withKind("potion")).success).toBe(true);
+    expect(characterStateSchema.safeParse(withKind("gear")).success).toBe(true);
+    expect(characterStateSchema.safeParse(withKind("consumable")).success).toBe(true);
     expect(characterStateSchema.safeParse(withKind("ingredient")).success).toBe(true);
-    expect(characterStateSchema.safeParse(withKind("junk")).success).toBe(true);
-    expect(characterStateSchema.safeParse(withKind("weapon")).success).toBe(false);
+    expect(characterStateSchema.safeParse(withKind("other")).success).toBe(true);
+    // Прежние рода в живом состоянии не хранятся: их переводит приведение, а не схема.
+    expect(characterStateSchema.safeParse(withKind("potion")).success).toBe(false);
+  });
+
+  it("кошелёк по умолчанию пуст, отрицательная монета отвергается", () => {
+    const { money: _gone, ...equipment } = createThorne().equipment;
+    const parsed = characterStateSchema.parse({ ...createThorne(), equipment });
+    expect(parsed.equipment.money).toEqual({ gold: 0, silver: 0, copper: 0 });
+
+    const negative = {
+      ...createThorne(),
+      equipment: { ...createThorne().equipment, money: { ...parsed.equipment.money, gold: -1 } },
+    };
+    expect(characterStateSchema.safeParse(negative).success).toBe(false);
+  });
+
+  it("цена вещи необязательна, а заданная проверяется монетой и целым числом", () => {
+    const withPrice = (price: unknown) => ({
+      ...createThorne(),
+      equipment: {
+        ...createThorne().equipment,
+        items: [{ id: "thing", nameRu: "Штука", price }],
+      },
+    });
+    expect(characterStateSchema.safeParse(withPrice({ amount: 50, currency: "gold" })).success).toBe(true);
+    expect(characterStateSchema.safeParse(withPrice({ amount: -1, currency: "gold" })).success).toBe(false);
+    expect(characterStateSchema.safeParse(withPrice({ amount: 50, currency: "рубль" })).success).toBe(false);
   });
 });

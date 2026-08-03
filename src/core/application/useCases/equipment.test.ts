@@ -5,11 +5,12 @@ import { undoLast, type Clock } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   addItem,
+  adjustItemCount,
   editArmorClassBase,
   editItem,
+  editMoney,
   editOtherBonuses,
   removeItem,
-  spendItem,
   toggleWorn,
 } from "./equipment";
 
@@ -27,11 +28,18 @@ const clock = testClock();
 const ring = {
   id: "ring",
   nameRu: "Кольцо защиты",
+  kind: "gear" as const,
   worn: true,
   count: 1,
   bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
 };
-const potions = { id: "healing-potion", nameRu: "Зелье лечения", worn: false, count: 3, kind: "potion" as const };
+const potions = {
+  id: "healing-potion",
+  nameRu: "Зелье лечения",
+  kind: "consumable" as const,
+  worn: false,
+  count: 3,
+};
 
 describe("правка снаряжения", () => {
   it("одноимённая находка пополняет запас, и журнал называет получившееся количество", () => {
@@ -94,28 +102,50 @@ describe("правка снаряжения", () => {
   it("неизвестная вещь отвергается доменом, а подпись не выдумывает имени", () => {
     expect(() => removeItem(session(), "нет-такой", clock)).toThrow(/нет в инвентаре/);
     expect(() => toggleWorn(session(), "нет-такой", clock)).toThrow(/нет в инвентаре/);
-    expect(() => spendItem(session(), "нет-такой", clock)).toThrow(/нет в инвентаре/);
+    expect(() => adjustItemCount(session(), "нет-такой", -1, clock)).toThrow(/нет в инвентаре/);
   });
 
-  it("вещь тратится по одной, и это обратимо через журнал", () => {
+  it("расход тратит по одной, журнал называет остаток, отмена возвращает (FR-239)", () => {
     const stacked = addItem(session(), potions, clock);
-    const spent = spendItem(stacked, "healing-potion", clock);
+    const spent = adjustItemCount(stacked, "healing-potion", -1, clock);
 
     expect(spent.character.equipment.items.find((item) => item.id === "healing-potion")?.count).toBe(2);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения");
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения (осталось 2)");
 
     const undone = undoLast(spent);
     expect(undone.character.equipment.items.find((item) => item.id === "healing-potion")?.count).toBe(3);
   });
 
-  it("последний экземпляр расходуется вместе с вещью, и отмена возвращает её", () => {
+  it("последний экземпляр оставляет вещь нулём: кончилось — не то же, что выброшено (FR-239)", () => {
     const single = addItem(session(), { ...potions, count: 1 }, clock);
-    const spent = spendItem(single, "healing-potion", clock);
+    const spent = adjustItemCount(single, "healing-potion", -1, clock);
 
-    expect(spent.character.equipment.items.some((item) => item.id === "healing-potion")).toBe(false);
+    const left = spent.character.equipment.items.find((item) => item.id === "healing-potion");
+    expect(left?.count).toBe(0);
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения (осталось 0)");
+  });
 
-    const undone = undoLast(spent);
-    expect(undone.character.equipment.items.find((item) => item.id === "healing-potion")?.count).toBe(1);
+  it("пополнение — то же приращение с другим словом (FR-239)", () => {
+    const stacked = addItem(session(), potions, clock);
+    const refilled = adjustItemCount(stacked, "healing-potion", 2, clock);
+
+    expect(refilled.character.equipment.items.find((item) => item.id === "healing-potion")?.count).toBe(5);
+    expect(refilled.journal.at(-1)?.summaryRu).toBe("Пополнено: Зелье лечения (осталось 5)");
+  });
+
+  it("кошелёк правится итогом, журнал называет только сдвинувшиеся монеты (FR-242)", () => {
+    const paid = editMoney(session(), { gold: 215, silver: 30, copper: 0 }, clock);
+
+    expect(paid.character.equipment.money.gold).toBe(215);
+    expect(paid.journal[0]?.summaryRu).toBe("Деньги: зм 0 → 215, см 0 → 30");
+
+    const undone = undoLast(paid);
+    expect(undone.character.equipment.money.gold).toBe(0);
+  });
+
+  it("правка кошелька без изменений так и называется", () => {
+    const same = editMoney(session(), { gold: 0, silver: 0, copper: 0 }, clock);
+    expect(same.journal[0]?.summaryRu).toBe("Деньги: без изменений");
   });
 
   it("база Класса Доспеха правится и доходит до итога", () => {

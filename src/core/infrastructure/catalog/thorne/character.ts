@@ -128,18 +128,21 @@ const RAW: unknown = {
       {
         id: "spellcasting-focus",
         nameRu: "Магическая фокусировка +1",
+        kind: "gear",
         worn: true,
         bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 },
       },
       {
         id: "robe",
         nameRu: "Мантия +1",
+        kind: "gear",
         worn: true,
         bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
       },
       {
         id: "cloak-of-protection",
         nameRu: "Плащ защиты",
+        kind: "gear",
         worn: true,
         bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
       },
@@ -147,6 +150,7 @@ const RAW: unknown = {
         // Прибавка кубиком и по обстановке: приложение её не считает, поэтому она заметка.
         id: "swamp-camouflage-kit",
         nameRu: "Комплект болотной маскировки",
+        kind: "other",
         worn: false,
         note: "1d4 к Скрытности в болотах",
       },

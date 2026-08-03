@@ -209,6 +209,64 @@ describe("приведение состояния версии 1", () => {
     });
   });
 
+  describe("род вещи становится категорией", () => {
+    const withItems = (items: unknown[]) => {
+      const state = createThorne();
+      return { ...state, equipment: { ...state.equipment, items } };
+    };
+    const itemsOf = (migrated: unknown) =>
+      (migrated as { equipment: { items: Record<string, unknown>[] } }).equipment.items;
+
+    it("зелье — расходник, хлам — «другое», ингредиент остаётся собой", () => {
+      const migrated = migrateCharacterState(
+        withItems([
+          { id: "potion", nameRu: "Зелье", kind: "potion" },
+          { id: "junk", nameRu: "Черепок", kind: "junk" },
+          { id: "dust", nameRu: "Пыль", kind: "ingredient" },
+        ]),
+      );
+      expect(itemsOf(migrated).map((item) => item.kind)).toEqual([
+        "consumable",
+        "other",
+        "ingredient",
+      ]);
+    });
+
+    it("вещь без рода опознаётся по поведению: надетая или с прибавкой — экипировка", () => {
+      const migrated = migrateCharacterState(
+        withItems([
+          { id: "robe", nameRu: "Мантия", worn: true },
+          { id: "ring", nameRu: "Кольцо", worn: false, bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 } },
+          { id: "rope", nameRu: "Верёвка", worn: false },
+        ]),
+      );
+      expect(itemsOf(migrated).map((item) => item.kind)).toEqual(["gear", "gear", "other"]);
+    });
+
+    it("надетость вне экипировки снимается: надетое зелье не двигает числа", () => {
+      const migrated = migrateCharacterState(
+        withItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
+      );
+      expect(itemsOf(migrated)[0]).toMatchObject({ kind: "consumable", worn: false });
+    });
+
+    it("состояние с новыми категориями проходит насквозь той же ссылкой", () => {
+      const fresh = createThorne();
+      expect(migrateCharacterState(fresh)).toBe(fresh);
+    });
+
+    it("порченые записи проходят как есть: их отвергнет схема, а не приведение", () => {
+      const state = withItems(["не вещь", null]);
+      expect(itemsOf(migrateCharacterState(state))).toEqual(["не вещь", null]);
+    });
+
+    it("состояние без списка вещей приведению не подлежит", () => {
+      const state = createThorne();
+      const broken = { ...state, equipment: { ...state.equipment, items: "не список" } };
+      expect(migrateCharacterState(broken)).toBe(broken);
+    });
+  });
+
   describe("режимы «Бой» и «Вне боя» слились в «Игру»", () => {
     it("прежний режим читается как «Игра»", () => {
       for (const screenMode of ["combat", "camp"]) {

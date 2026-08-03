@@ -8,6 +8,7 @@ import { AbilitySheet } from "./AbilitySheet";
 import { HealthSheet } from "./HealthSheet";
 import { IdentitySheet } from "./IdentitySheet";
 import { ItemSheet } from "./ItemSheet";
+import { MoneySheet } from "./MoneySheet";
 import { ItemBonusesSheet } from "./ItemBonusesSheet";
 import { LevelSheet } from "./LevelSheet";
 import { MarksSheet } from "./MarksSheet";
@@ -325,40 +326,73 @@ describe("шторки правки листа", () => {
     expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
   });
 
-  it("вещь: заметка и вид дописываются к уже заведённой вещи (FR-235)", async () => {
+  it("вещь: категория, заметка и цена дописываются к уже заведённой вещи (FR-235)", async () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "сапоги", nameRu: "Сапоги следопыта", worn: false, count: 1 }}
+        item={{ id: "свиток", nameRu: "Свиток огненного шара", kind: "other", worn: false, count: 1 }}
         onSave={onSave}
-        onToggleWorn={() => {}}
-        onSpend={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Заметка"), "1d4 к Скрытности в лесу");
-    await userEvent.click(screen.getByRole("radio", { name: "Зелье" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Расходник" }));
+    await userEvent.type(screen.getByLabelText("Заметка"), "3 уровень, КС 15");
+    await userEvent.type(screen.getByLabelText("Цена"), "150");
+    await userEvent.click(screen.getByRole("radio", { name: "Монета: зм" }));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(onSave).toHaveBeenCalledWith({
-      id: "сапоги",
-      nameRu: "Сапоги следопыта",
+      id: "свиток",
+      nameRu: "Свиток огненного шара",
+      kind: "consumable",
       worn: false,
       count: 1,
-      kind: "potion",
-      note: "1d4 к Скрытности в лесу",
+      price: { amount: 150, currency: "gold" },
+      note: "3 уровень, КС 15",
     });
   });
 
-  it("вещь: количество полем не правится — оно живёт расходом и находкой (FR-241)", () => {
+  it("вещь: прибавки видны только у экипировки, и смена категории снимает вещь (FR-238)", async () => {
+    const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", worn: false, count: 2 }}
+        item={{
+          id: "кольцо",
+          nameRu: "Кольцо защиты",
+          kind: "gear",
+          worn: true,
+          count: 1,
+          bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+        }}
+        onSave={onSave}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    expect(screen.getByLabelText("К защите")).toBeDefined();
+
+    await userEvent.click(screen.getByRole("radio", { name: "Другое" }));
+    // Поля прибавок ушли вместе с категорией: зелье действует, когда его пьют, а не когда несут.
+    expect(screen.queryByLabelText("К защите")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(onSave).toHaveBeenCalledWith({
+      id: "кольцо",
+      nameRu: "Кольцо защиты",
+      kind: "other",
+      worn: false,
+      count: 1,
+    });
+  });
+
+  it("вещь: счёт полем не правится — он живёт расходом и пополнением на строке (FR-241)", () => {
+    render(
+      <ItemSheet
+        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 2 }}
         onSave={() => {}}
-        onToggleWorn={() => {}}
-        onSpend={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -370,53 +404,124 @@ describe("шторки правки листа", () => {
     expect(screen.getByRole("dialog", { name: "Правка: Зелье лечения ×2" })).toBeDefined();
   });
 
-  it("вещь: правка не трогает ни запас, ни надетость (FR-241)", async () => {
+  it("вещь: пустая цена — вещь без цены, а не цена ноль", async () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", worn: true, count: 3 }}
+        item={{
+          id: "зелье",
+          nameRu: "Зелье лечения",
+          kind: "consumable",
+          worn: false,
+          count: 1,
+          price: { amount: 50, currency: "gold" },
+        }}
         onSave={onSave}
-        onToggleWorn={() => {}}
-        onSpend={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
     );
 
-    await userEvent.type(screen.getByLabelText("Заметка"), "от мастера");
+    await userEvent.clear(screen.getByLabelText("Цена"));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(onSave).toHaveBeenCalledWith({
       id: "зелье",
       nameRu: "Зелье лечения",
-      worn: true,
-      count: 3,
-      note: "от мастера",
+      kind: "consumable",
+      worn: false,
+      count: 1,
     });
   });
 
-  it("вещь: расход, надевание и удаление стоят в её же шторке (FR-239)", async () => {
-    const onSpend = vi.fn();
-    const onToggleWorn = vi.fn();
+  it("вещь: дробная цена не сохраняется", async () => {
+    render(
+      <ItemSheet
+        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 1 }}
+        onSave={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Цена"), "1.5");
+    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+  });
+
+  it("вещь: пустая прибавка экипировки не сохраняется полем нулей", async () => {
+    const onSave = vi.fn();
+    render(
+      <ItemSheet
+        item={{ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 }}
+        onSave={onSave}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(onSave).toHaveBeenCalledWith({ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 });
+  });
+
+  it("вещь: пустое поле прибавки у экипировки не сохраняется", async () => {
+    render(
+      <ItemSheet
+        item={{ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 }}
+        onSave={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.clear(screen.getByLabelText("К защите"));
+    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+  });
+
+  it("вещь: удаление стоит в её же шторке (FR-241)", async () => {
     const onRemove = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", worn: false, count: 2 }}
+        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 2 }}
         onSave={() => {}}
-        onToggleWorn={onToggleWorn}
-        onSpend={onSpend}
         onRemove={onRemove}
         onCancel={() => {}}
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Потратить: Зелье лечения" }));
-    await userEvent.click(screen.getByRole("switch", { name: "Надето: Зелье лечения" }));
     await userEvent.click(screen.getByRole("button", { name: "Убрать: Зелье лечения" }));
-
-    expect(onSpend).toHaveBeenCalled();
-    expect(onToggleWorn).toHaveBeenCalled();
     expect(onRemove).toHaveBeenCalled();
+  });
+
+  it("деньги: три монеты стола правятся итогом (FR-242)", async () => {
+    const onSave = vi.fn();
+    render(
+      <MoneySheet
+        money={{ gold: 15, silver: 30, copper: 12 }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+
+    const gold = screen.getByLabelText("Золото");
+    await userEvent.clear(gold);
+    await userEvent.type(gold, "215");
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onSave).toHaveBeenCalledWith({ gold: 215, silver: 30, copper: 12 });
+  });
+
+  it("деньги: отрицательное и пустое не сохраняются", async () => {
+    render(
+      <MoneySheet money={{ gold: 15, silver: 0, copper: 0 }} onSave={() => {}} onCancel={() => {}} />,
+    );
+
+    const gold = screen.getByLabelText("Золото");
+    await userEvent.clear(gold);
+    await userEvent.type(gold, "-5");
+    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+
+    await userEvent.clear(gold);
+    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
   });
 
   it("прибавки предметов: отрицательная принимается", async () => {

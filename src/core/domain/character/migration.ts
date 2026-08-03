@@ -86,8 +86,46 @@ function migrateArcaneRecovery(state: unknown): unknown {
   return { ...rest, arcaneRecovery: { maximum, remaining: arcaneRecoveryAvailable ? maximum : 0 } };
 }
 
+/** Прежние рода вещей, у которых в четырёх категориях есть прямой наследник. */
+const LEGACY_ITEM_KINDS: Record<string, string> = { potion: "consumable", junk: "other" };
+
+/**
+ * Род вещи становится категорией: зелье — расходник, хлам — «другое». Вещь без рода определяется
+ * по поведению — надетая или дающая прибавку была экипировкой и до того, как слово появилось.
+ * Надетость вне экипировки снимается: расходник не бывает надет, и молчаливое «надето» на зелье
+ * ломало бы правило «числа считаются из надетого».
+ */
+function migrateItemCategories(state: unknown): unknown {
+  if (state === null || typeof state !== "object") return state;
+  const { equipment } = state as { equipment?: { items?: unknown } };
+  const stored = equipment?.items;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map((item) => {
+    if (item === null || typeof item !== "object") return item;
+    const { kind, worn, bonuses } = item as { kind?: unknown; worn?: unknown; bonuses?: unknown };
+    if (kind === "gear" || kind === "consumable" || kind === "ingredient" || kind === "other") {
+      return item;
+    }
+    const migrated =
+      typeof kind === "string" && kind in LEGACY_ITEM_KINDS
+        ? LEGACY_ITEM_KINDS[kind]
+        : worn === true || bonuses !== undefined
+          ? "gear"
+          : "other";
+    return {
+      ...(item as Record<string, unknown>),
+      kind: migrated,
+      ...(migrated === "gear" ? {} : { worn: false }),
+    };
+  });
+  // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
+  if (items.every((item, index) => item === stored[index])) return state;
+  return { ...state, equipment: { ...equipment, items } };
+}
+
 export function migrateCharacterState(raw: unknown): unknown {
-  return migrateArcaneRecovery(migrateScreenMode(migrateShape(raw)));
+  return migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw))));
 }
 
 function migrateShape(raw: unknown): unknown {

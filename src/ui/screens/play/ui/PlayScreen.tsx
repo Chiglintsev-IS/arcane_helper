@@ -43,6 +43,7 @@ import { DataSheet } from "@/ui/features/data-exchange/ui/DataSheet";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
+import { BagScreen } from "@/ui/widgets/bag/ui/BagScreen";
 import { CharacterSheetScreen } from "@/ui/widgets/character-sheet/ui/CharacterSheetScreen";
 import { JournalScreen } from "@/ui/widgets/journal/ui/JournalScreen";
 import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
@@ -63,15 +64,17 @@ import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentityShe
 import { ItemBonusesSheet } from "@/ui/features/edit-character-sheet/ui/ItemBonusesSheet";
 import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
 import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
+import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
 import { OverridePickerSheet } from "@/ui/features/edit-character-sheet/ui/OverridePickerSheet";
 import { OverrideSheet } from "@/ui/features/edit-character-sheet/ui/OverrideSheet";
 import {
   addItem,
+  adjustItemCount,
   editArmorClassBase,
   editItem,
+  editMoney,
   editOtherBonuses,
   removeItem,
-  spendItem,
   toggleWorn,
 } from "@/core/application/useCases/equipment";
 import {
@@ -143,18 +146,22 @@ const SCREEN_PARTS: Record<
     journal: boolean;
     /** Лист персонажа целиком. */
     sheet: boolean;
+    /** Сумка: вещи по категориям и деньги. */
+    bag: boolean;
   }
 > = {
   // prettier-ignore
-  play: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, hour: true, rest: false, journal: false, sheet: false },
+  play: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, hour: true, rest: false, journal: false, sheet: false, bag: false },
   // prettier-ignore
-  book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, hour: false, rest: false, journal: false, sheet: false },
+  book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, hour: false, rest: false, journal: false, sheet: false, bag: false },
   // prettier-ignore
-  journal: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, hour: false, rest: false, journal: true, sheet: false },
+  journal: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, hour: false, rest: false, journal: true, sheet: false, bag: false },
   // prettier-ignore
-  sheet: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, hour: false, rest: false, journal: false, sheet: true },
+  sheet: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, hour: false, rest: false, journal: false, sheet: true, bag: false },
   // prettier-ignore
-  rest: { resources: true, effects: true, spellList: false, encounter: false, reactions: false, preparation: false, hour: true, rest: true, journal: false, sheet: false },
+  bag: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, hour: false, rest: false, journal: false, sheet: false, bag: true },
+  // prettier-ignore
+  rest: { resources: true, effects: true, spellList: false, encounter: false, reactions: false, preparation: false, hour: true, rest: true, journal: false, sheet: false, bag: false },
 };
 
 export function PlayScreen() {
@@ -476,19 +483,36 @@ export function PlayScreen() {
          * в порядке хранения — переворачивает их сам компонент.
          */}
         {parts.sheet ? (
-          <CharacterSheetScreen
+          <CharacterSheetScreen character={character} onEdit={setOpenBlockId} />
+        ) : null}
+
+        {parts.bag ? (
+          <BagScreen
             character={character}
-            onEdit={setOpenBlockId}
-            onAddItem={(nameRu) =>
+            onEditMoney={() => setOpenBlockId("money")}
+            onOpenItem={(id) => setOpenBlockId(`item:${id}`)}
+            onAddItem={(kind, nameRu) =>
               apply((current) =>
                 addItem(
                   current,
                   // Имя и есть опознание: вводить отдельный код за столом никто не станет.
-                  { id: nameRu.toLowerCase().replaceAll(" ", "-"), nameRu, worn: false, count: 1 },
+                  {
+                    id: nameRu.toLowerCase().replaceAll(" ", "-"),
+                    nameRu,
+                    kind,
+                    worn: false,
+                    count: 1,
+                  },
                   clock,
                 ),
               )
             }
+            onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}
+            onAdjustCount={(id, delta) =>
+              apply((current) => adjustItemCount(current, id, delta, clock))
+            }
+            onEditArmor={() => setOpenBlockId("armorClassBase")}
+            onEditOtherBonuses={() => setOpenBlockId("itemBonuses")}
           />
         ) : null}
 
@@ -774,22 +798,13 @@ export function PlayScreen() {
         />
       ) : null}
 
-      {/*
-       * Шторка вещи, на которую нажали. Надевание и расход её не закрывают: обе операции видны
-       * тут же переключателем и количеством, а закрытие заставляло бы открывать вещь заново.
-       * Расход последнего экземпляра — исключение: вещи больше нет, и держать её шторку не на чём.
-       */}
+      {/* Шторка вещи, на которую нажали в сумке: категория, заметка, цена, прибавки, удаление. */}
       {openedItem === null ? null : (
         <ItemSheet
           item={openedItem}
           onCancel={() => setOpenBlockId(null)}
           onSave={(item) => {
             if (apply((current) => editItem(current, item, clock)) === null) setOpenBlockId(null);
-          }}
-          onToggleWorn={() => apply((current) => toggleWorn(current, openedItem.id, clock))}
-          onSpend={() => {
-            apply((current) => spendItem(current, openedItem.id, clock));
-            if (openedItem.count === 1) setOpenBlockId(null);
           }}
           onRemove={() => {
             if (apply((current) => removeItem(current, openedItem.id, clock)) === null) {
@@ -798,6 +813,18 @@ export function PlayScreen() {
           }}
         />
       )}
+
+      {openBlockId === "money" ? (
+        <MoneySheet
+          money={character.equipment.money}
+          onCancel={() => setOpenBlockId(null)}
+          onSave={(money) => {
+            if (apply((current) => editMoney(current, money, clock)) === null) {
+              setOpenBlockId(null);
+            }
+          }}
+        />
+      ) : null}
 
       {openBlockId === "marks" ? (
         <MarksSheet

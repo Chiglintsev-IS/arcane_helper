@@ -97,8 +97,36 @@ const roleplayPreferenceSchema = z.object({
 /** База Класса Доспеха без доспехов — правило, а не настройка снаряжения. */
 export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
-/** Род вещи: то немногое, что уже нужно отличить, не выдумывая правил алхимии. */
-export const ITEM_KINDS = ["potion", "ingredient", "junk"] as const;
+/**
+ * Категория вещи — четыре ответа на вопрос «что с этим делают»: экипировку надевают, расходник
+ * тратят счётом, ингредиент копят под алхимию, остальное — «другое», пока стол не решил иначе.
+ */
+export const ITEM_KINDS = ["gear", "consumable", "ingredient", "other"] as const;
+
+/** Монеты стола: золото, серебро, медь. Платину и электрум стол не использует — решение игрока. */
+export const CURRENCIES = ["gold", "silver", "copper"] as const;
+
+/** Верхний предел счёта вещи. Ноль — состояние, а не отсутствие: вещь с нулём остаётся в сумке. */
+export const MAXIMUM_ITEM_COUNT = 9999;
+
+/** Верхний предел одной монеты в кошельке. */
+export const MAXIMUM_COIN_AMOUNT = 999_999;
+
+const coinAmount = z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT);
+
+export const moneySchema = z.object({
+  gold: coinAmount.default(0),
+  silver: coinAmount.default(0),
+  copper: coinAmount.default(0),
+});
+
+export const NO_MONEY = { gold: 0, silver: 0, copper: 0 };
+
+/** Цена вещи. Необязательна: у находки из подземелья её может не назвать и мастер. */
+const priceSchema = z.object({
+  amount: z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT),
+  currency: z.enum(CURRENCIES),
+});
 
 /**
  * Вещь в инвентаре.
@@ -109,12 +137,13 @@ export const ITEM_KINDS = ["potion", "ingredient", "junk"] as const;
 const inventoryItemSchema = z.object({
   id: nonEmpty,
   nameRu: nonEmpty,
+  /** Категория без явного выбора — «другое»: неопознанную находку не заставляют классифицировать. */
+  kind: z.enum(ITEM_KINDS).default("other"),
   /** Надето и потому действует. Лежащее в сумке к числам не прибавляется. */
   worn: z.boolean().default(false),
-  /** Сколько экземпляров лежит вместе. Меньше одного не бывает — расход убирает вещь целиком. */
-  count: z.number().int().positive().default(1),
-  /** Не задан у обычного снаряжения: род нужен только зелью, ингредиенту и хламу. */
-  kind: z.enum(ITEM_KINDS).optional(),
+  /** Сколько экземпляров лежит вместе. Ноль остаётся в сумке: кончилось — не то же, что выброшено. */
+  count: z.number().int().min(0).max(MAXIMUM_ITEM_COUNT).default(1),
+  price: priceSchema.optional(),
   note: nonEmpty.optional(),
   bonuses: z
     .object({
@@ -307,6 +336,9 @@ export const characterStateSchema = z
 
         items: z.array(inventoryItemSchema).default([]),
 
+        /** Кошелёк. Со значениями по умолчанию: сохранение прежней версии денег не знало. */
+        money: moneySchema.default(NO_MONEY),
+
         /**
          * Сведения о компонентах. Необязательные: отсутствие записи — не пустая сумка, а незнание,
          * и вердикта о компонентах в этом случае нет вовсе.
@@ -324,6 +356,7 @@ export const characterStateSchema = z
         armorClassBase: UNARMORED_ARMOR_CLASS_BASE,
         otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
         items: [],
+        money: NO_MONEY,
       }),
 
     runes: z
@@ -476,6 +509,9 @@ type CharacterStateShape = z.infer<typeof characterStateSchema>;
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
 export type ItemBonuses = NonNullable<InventoryItem["bonuses"]>;
 export type ItemKind = (typeof ITEM_KINDS)[number];
+export type ItemPrice = NonNullable<InventoryItem["price"]>;
+export type Currency = (typeof CURRENCIES)[number];
+export type Money = z.infer<typeof moneySchema>;
 export type CreatureSize = (typeof CREATURE_SIZES)[number];
 export type Abilities = z.infer<typeof abilitiesSchema>;
 export type Overrides = z.infer<typeof overridesSchema>;

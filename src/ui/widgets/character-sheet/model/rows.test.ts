@@ -5,16 +5,10 @@ import { sheetBlocks } from "./rows";
 
 const blockById = (id: string) => sheetBlocks(createThorne()).find((block) => block.id === id);
 
-const byTab = (tab: string) =>
-  sheetBlocks(createThorne())
-    .filter((block) => block.tab === tab)
-    .map((block) => block.id);
-
 describe("блоки листа", () => {
-  it("вкладка «Персонаж» идёт порядком бумажного листа и держит действующие числа", () => {
-    expect(byTab("character")).toEqual([
+  it("лист — только база персонажа, порядком бумажного листа (FR-230)", () => {
+    expect(sheetBlocks(createThorne()).map((block) => block.id)).toEqual([
       "identity",
-      "combatNumbers",
       "health",
       "marks",
       "ability:strength",
@@ -25,109 +19,6 @@ describe("блоки листа", () => {
       "ability:charisma",
       "proficiencies",
     ]);
-  });
-
-  it("вещи, доспех и прибавки живут одной вкладкой, а не тремя", () => {
-    expect(byTab("items")).toEqual(["inventory", "armorClassBase", "itemBonuses"]);
-  });
-
-  it("строка вещи открывает её саму, а кнопки правки у списка нет", () => {
-    expect(blockById("inventory")?.editable).toBe(false);
-    expect(blockById("inventory")?.quickAddLabelRu).toBe("Новая вещь");
-    expect(blockById("inventory")?.rows[0]?.openId).toBe("item:spellcasting-focus");
-  });
-
-  it("пустой инвентарь называется пустым, надетая вещь — своим вкладом", () => {
-    const bare = createThorne();
-    const empty = { ...bare, equipment: { ...bare.equipment, items: [] } };
-    expect(sheetBlocks(empty).find((block) => block.id === "inventory")?.rows).toEqual([
-      { labelRu: "Пусто", value: "—" },
-    ]);
-
-    const state = createThorne();
-    const withRing = {
-      ...state,
-      equipment: {
-        ...state.equipment,
-        items: [
-          {
-            id: "ring",
-            nameRu: "Кольцо защиты",
-            worn: true,
-            count: 1,
-            bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
-          },
-        ],
-      },
-    };
-    const rows = sheetBlocks(withRing).find((block) => block.id === "inventory")?.rows ?? [];
-    expect(rows).toContainEqual({
-      labelRu: "Кольцо защиты",
-      value: "надето",
-      hint: "защита +1, спасброски +1",
-      openId: "item:ring",
-    });
-  });
-
-  it("подсказка называет только то, что вещь действительно даёт", () => {
-    const state = createThorne();
-    const items = [
-      {
-        id: "staff",
-        nameRu: "Посох",
-        worn: false,
-        count: 1,
-        bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 },
-      },
-      { id: "rope", nameRu: "Верёвка", worn: false, count: 1 },
-    ];
-    const rows =
-      sheetBlocks({ ...state, equipment: { ...state.equipment, items } }).find(
-        (block) => block.id === "inventory",
-      )?.rows ?? [];
-
-    expect(rows).toContainEqual({
-      labelRu: "Посох",
-      value: "в сумке",
-      hint: "магия +1",
-      openId: "item:staff",
-    });
-    // Верёвка в счёте не участвует, и подсказки у неё нет вовсе.
-    expect(rows).toContainEqual({ labelRu: "Верёвка", value: "в сумке", openId: "item:rope" });
-  });
-
-  it("количество больше одной штуки и вид вещи показаны в «Инвентаре»", () => {
-    const state = createThorne();
-    const items = [
-      { id: "healing-potion", nameRu: "Зелье лечения", worn: false, count: 3, kind: "potion" as const },
-    ];
-    const rows =
-      sheetBlocks({ ...state, equipment: { ...state.equipment, items } }).find(
-        (block) => block.id === "inventory",
-      )?.rows ?? [];
-
-    expect(rows).toContainEqual({
-      labelRu: "Зелье лечения",
-      value: "в сумке ×3",
-      hint: "Зелье",
-      openId: "item:healing-potion",
-    });
-  });
-
-  it("заметка вещи попадает в подсказку рядом с прибавками", () => {
-    const rows = blockById("inventory")?.rows ?? [];
-    expect(rows).toContainEqual({
-      labelRu: "Комплект болотной маскировки",
-      value: "в сумке",
-      hint: "1d4 к Скрытности в болотах",
-      openId: "item:swamp-camouflage-kit",
-    });
-    expect(rows).toContainEqual({
-      labelRu: "Плащ защиты",
-      value: "надето",
-      hint: "защита +1, спасброски +1",
-      openId: "item:cloak-of-protection",
-    });
   });
 
   it("кто он — вид, возраст и класс с уровнем", () => {
@@ -141,21 +32,7 @@ describe("блоки листа", () => {
     expect(blockById("identity")?.rows).toContainEqual({ labelRu: "Возраст", value: "—" });
   });
 
-  it("числа боя со знаком там, где он есть", () => {
-    const rows = blockById("combatNumbers")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "КС спасброска", value: "16" });
-    expect(rows).toContainEqual({ labelRu: "Атака заклинанием", value: "+8" });
-    expect(rows).toContainEqual({ labelRu: "Класс Доспеха", value: "14" });
-  });
-
-  it("перебитое число помечено подсказкой", () => {
-    const state = createThorne();
-    const overridden = { ...state, overrides: { ...state.overrides, spellSaveDc: 18 } };
-    const rows = sheetBlocks(overridden).find((block) => block.id === "combatNumbers")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "КС спасброска", value: "18", hint: "введено руками" });
-  });
-
-  it("здоровье показывает действующее число, а снижения называет подсказкой", () => {
+  it("здоровье показывает действующее число, а снижения называет подсказкой (FR-240)", () => {
     const state = createThorne();
     const hurt = {
       ...state,
@@ -175,7 +52,7 @@ describe("блоки листа", () => {
     expect(rows).toContainEqual({ labelRu: "Максимум", value: "60" });
   });
 
-  it("временные хиты видны на листе сразу, как только они есть", () => {
+  it("временные хиты видны на листе сразу, как только они есть (FR-240)", () => {
     const state = createThorne();
     const rows =
       sheetBlocks({ ...state, temporaryHitPoints: 5 }).find((block) => block.id === "health")
@@ -187,6 +64,40 @@ describe("блоки листа", () => {
     const { hitDice: _none, ...withoutDice } = createThorne();
     const rows = sheetBlocks(withoutDice).find((block) => block.id === "health")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Кости хитов", value: "—" });
+  });
+
+  it("отметки мастера читаются словами", () => {
+    const state = createThorne();
+    const marked = { ...state, exhaustion: 3, inspiration: true };
+    const rows = sheetBlocks(marked).find((block) => block.id === "marks")?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "Истощение", value: "ступень 3" });
+    expect(rows).toContainEqual({ labelRu: "Вдохновение", value: "есть" });
+    expect(blockById("marks")?.rows).toContainEqual({ labelRu: "Истощение", value: "нет" });
+  });
+
+  it("перебитое число — отметка мастера: стоит в его блоке с подсказкой (FR-230)", () => {
+    const state = createThorne();
+    const overridden = { ...state, overrides: { ...state.overrides, spellSaveDc: 18, initiative: 5 } };
+    const rows = sheetBlocks(overridden).find((block) => block.id === "marks")?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "КС спасброска", value: "18", hint: "введено руками" });
+    expect(rows).toContainEqual({ labelRu: "Инициатива", value: "+5", hint: "введено руками" });
+    // Не перебитое в отметках не перечисляется: формула — не отметка.
+    expect(rows?.some((row) => row.labelRu === "Атака заклинанием")).toBe(false);
+  });
+
+  it("перебивки открываются второй кнопкой блока отметок", () => {
+    expect(blockById("marks")?.secondary).toEqual({
+      labelRu: "Перебивки",
+      editId: "combatNumbers",
+    });
+  });
+
+  it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {
+    const ids = sheetBlocks(createThorne()).map((block) => block.id);
+    expect(ids).not.toContain("combatNumbers");
+    expect(ids).not.toContain("inventory");
+    expect(ids).not.toContain("armorClassBase");
+    expect(ids).not.toContain("itemBonuses");
   });
 
   it("характеристика держит значение, спасбросок и свои навыки — как на бумажном листе", () => {
@@ -244,19 +155,6 @@ describe("блоки листа", () => {
     expect(blockById("identity")?.secondary).toEqual({ labelRu: "Уровень", editId: "level" });
     // Снаряжение и языки правятся тем же окном, что и «Кто он»: это одна запись листа.
     expect(blockById("proficiencies")?.editId).toBe("identity");
-  });
-
-  it("отметки мастера читаются словами", () => {
-    const state = createThorne();
-    const marked = { ...state, exhaustion: 3, inspiration: true };
-    const rows = sheetBlocks(marked).find((block) => block.id === "marks")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Истощение", value: "ступень 3" });
-    expect(rows).toContainEqual({ labelRu: "Вдохновение", value: "есть" });
-    expect(blockById("marks")?.rows).toContainEqual({ labelRu: "Истощение", value: "нет" });
-  });
-
-  it("прибавки без вещи показаны со знаком и у Торна равны нулю", () => {
-    expect(blockById("itemBonuses")?.rows).toContainEqual({ labelRu: "К защите", value: "+0" });
   });
 
   it("пустой список владений называется прочерком", () => {
