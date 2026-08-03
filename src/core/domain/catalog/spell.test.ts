@@ -476,3 +476,22 @@ describe("расход костей хитов (FR-135)", () => {
     ).toBeTruthy();
   });
 });
+
+describe("вклад в Класс Доспеха (FR-093)", () => {
+  const withEffect = (value: number): unknown => ({
+    ...(web() as object),
+    armorClassEffect: { kind: "bonus", value },
+  });
+
+  it("нулевого вклада не бывает: отсутствие поля и есть «не влияет»", () => {
+    expect(firstError(withEffect(0))).toContain("не может быть нулевым");
+  });
+
+  it("отрицательный вклад карточкой не приходит: это поправка мастера", () => {
+    expect(firstError(withEffect(-1))).toContain("не бывает отрицательным");
+  });
+
+  it("положительный принимается", () => {
+    expect(spellSchema.safeParse(withEffect(2)).success).toBe(true);
+  });
+});

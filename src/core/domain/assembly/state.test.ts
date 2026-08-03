@@ -17,7 +17,6 @@ const WEB_EFFECT = {
   id: "effect-web",
   spellId: "web",
   nameRu: "Паутина",
-  type: "control",
   startedAt: "2026-07-31T18:00:00.000Z",
   duration: { type: "hours", value: 1 },
   isConcentration: true,
@@ -173,7 +172,6 @@ describe("инварианты концентрации", () => {
           spellId: "mage-armor",
           nameRu: "Доспехи мага",
           isConcentration: false,
-          type: "buff",
         },
       ];
     });

@@ -1398,28 +1398,6 @@ describe("активный эффект без указанной длитель
     expect(after.character.activeEffects[0]?.duration).toEqual({ type: "special" });
   });
 
-  it("эффект не на себя получает тип «utility»", () => {
-    const onOther: Spell = {
-      ...spell("mage-armor"),
-      targeting: { type: "creature", maximumTargets: 1 },
-    };
-    const after = castSpell(
-      session,
-      { spell: onOther, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
-    );
-    expect(after.character.activeEffects[0]?.type).toBe("utility");
-  });
-
-  it("эффект на себя получает тип «buff»", () => {
-    const onSelf: Spell = { ...spell("mage-armor"), targeting: { type: "self" } };
-    const after = castSpell(
-      session,
-      { spell: onSelf, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
-    );
-    expect(after.character.activeEffects[0]?.type).toBe("buff");
-  });
 });
 
 describe("обмен крови вне боя действие не расходует (FR-143, FR-170)", () => {

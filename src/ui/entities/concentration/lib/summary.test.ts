@@ -42,7 +42,6 @@ describe("describeConcentration (FR-084)", () => {
       id: "effect-1",
       spellId: "detect-magic",
       nameRu: "Обнаружение магии",
-      type: "control",
       startedAt: "2026-07-31T18:00:01.000Z",
       duration: { type: "minutes", value: 10 },
       isConcentration: true,

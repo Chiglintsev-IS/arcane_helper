@@ -13,7 +13,6 @@ function manualEffect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
   return {
     id: "manual-1",
     nameRu: "Опутанный",
-    type: "control",
     startedAt: "2026-08-02T00:00:00.000Z",
     duration: { type: "special" },
     isConcentration: false,

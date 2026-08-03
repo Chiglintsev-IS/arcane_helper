@@ -355,7 +355,6 @@ describe("приведение состояния версии 1", () => {
     const legacyAdjustment = {
       id: "adjustment",
       nameRu: "Поправка к КД",
-      type: "utility",
       startedAt: "2026-07-31T12:00:00.000Z",
       duration: { type: "special" },
       isConcentration: false,

@@ -161,7 +161,6 @@ describe("renderAnnouncement: готовый КД (FR-093)", () => {
               id: "effect-mage-armor",
               spellId: "mage-armor",
               nameRu: "Доспехи мага",
-              type: "buff",
               startedAt: "2026-07-31T12:00:00.000Z",
               duration: { type: "hours", value: 8 },
               isConcentration: false,

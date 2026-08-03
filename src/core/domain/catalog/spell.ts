@@ -383,6 +383,16 @@ function countCompleteVariants(roleplay: z.infer<typeof roleplaySchema>): number
 }
 
 export const spellSchema = spellShape.superRefine((spell, context) => {
+  // Карточка несёт только положительный вклад в защиту: отрицательный — это поправка мастера, и
+  // она заводится вручную, а не приходит контентом.
+  if (spell.armorClassEffect !== undefined && spell.armorClassEffect.value < 0) {
+    context.addIssue({
+      code: "custom",
+      path: ["armorClassEffect", "value"],
+      message: "Вклад заклинания в Класс Доспеха не бывает отрицательным",
+    });
+  }
+
   //: схема ритуала есть ровно у ритуального заклинания.
   if (spell.ritual && spell.ritualDiagram === undefined) {
     context.addIssue({

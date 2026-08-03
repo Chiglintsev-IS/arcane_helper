@@ -280,7 +280,6 @@ describe("checkAvailability: концентрация (FR-030, FR-081)", () => {
         id: "effect-1",
         spellId: "detect-magic",
         nameRu: "Обнаружение магии",
-        type: "control",
         startedAt: "2026-07-31T18:00:00.000Z",
         duration: { type: "minutes", value: 10 },
         isConcentration: true,

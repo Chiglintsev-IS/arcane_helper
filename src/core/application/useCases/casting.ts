@@ -132,12 +132,6 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
   const { spell } = request;
   if (spell.duration.type === "instant") return null;
 
-  const type: ActiveEffect["type"] = spell.concentration
-    ? "control"
-    : spell.targeting.type === "self"
-      ? "buff"
-      : "utility";
-
   const duration: ActiveEffect["duration"] =
     spell.duration.type === "special"
       ? { type: "special" }
@@ -150,7 +144,6 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
     id: clock.nextId(),
     spellId: spell.id,
     nameRu: spell.nameRu,
-    type,
     startedAt: clock.now(),
     duration,
     isConcentration: spell.concentration,

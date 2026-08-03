@@ -19,12 +19,16 @@ import { withPlural } from "@/core/shared/language";
 import { RestActionButton } from "./RestActionButton";
 
 /**
- * Подпись «Прошёл час»: называет только то, что случится именно сейчас. Максимум без остатка не
- * упомянут, очков без остатка тоже нет — иначе кнопка обещала бы то, чего не сделает.
+ * Подпись «Прошёл час»: называет всё, что случится именно сейчас, и только это. Максимум без
+ * остатка не упомянут, очков без остатка тоже нет — иначе кнопка обещала бы то, чего не сделает.
+ *
+ * Три факта те же, что в записи журнала, но время другое: кнопка обещает, журнал сообщает. Одна
+ * строка на оба случая читалась бы за столом как «уже произошло».
  */
-function hourLabel(maximumReturn: number, spellPoints: number): string {
+function hourLabel(maximumReturn: number, healed: number, spellPoints: number): string {
   const facts = [
     ...(maximumReturn > 0 ? [`максимум +${maximumReturn}`] : []),
+    ...(healed > 0 ? [`регенерация +${healed}`] : []),
     ...(spellPoints > 0 ? [`сгорит ${withPlural(spellPoints, ["очко", "очка", "очков"])}`] : []),
   ];
   return facts.length === 0 ? "Прошёл час" : `Прошёл час · ${facts.join(", ")}`;
@@ -49,7 +53,7 @@ export function HourMark({
   return (
     <RestActionButton
       onClick={onRecoverMaximum}
-      name={hourLabel(returned, spellPoints)}
+      name={hourLabel(returned, healed, spellPoints)}
       {...(inFight ? { disabledReason: "Час не проходит во время боя" } : {})}
     />
   );

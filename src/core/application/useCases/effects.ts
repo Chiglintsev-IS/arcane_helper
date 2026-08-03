@@ -100,7 +100,6 @@ function buildManualEffect(
   return {
     id: clock.nextId(),
     nameRu,
-    type: "utility",
     startedAt: clock.now(),
     duration: { type: "special" },
     isConcentration: false,

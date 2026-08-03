@@ -25,7 +25,6 @@ function concentrating(): CharacterState {
       id: "effect-1",
       spellId: "detect-magic",
       nameRu: "Обнаружение магии",
-      type: "control",
       startedAt: "2026-07-31T18:00:00.000Z",
       duration: { type: "minutes", value: 10 },
       isConcentration: true,
@@ -250,6 +249,16 @@ describe("режим «Привал» и операции отдыха (FR-215, 
       await renderWithStores(<RestScreen />, withPoints);
 
       expect(screen.getByRole("button", { name: "Прошёл час · сгорит 5 очков" })).toBeDefined();
+    });
+
+    it("одна регенерация тоже называется: кнопка обещает всё, что случится", async () => {
+      const wounded = createThorne();
+      // Хиты ниже половины и максимум цел: возвращать нечего, а час доводит регенерацией до
+      // половины — с 20 до 30.
+      wounded.hitPoints = { current: 20, maximumBase: 60, bloodReduction: 0, masterReduction: 0 };
+      await renderWithStores(<RestScreen />, wounded);
+
+      expect(screen.getByRole("button", { name: "Прошёл час · регенерация +10" })).toBeDefined();
     });
 
     it("снижение и очки вместе — называет оба факта", async () => {

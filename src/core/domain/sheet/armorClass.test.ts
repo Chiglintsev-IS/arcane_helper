@@ -25,7 +25,6 @@ function effect(spellId: string, armorClass?: ArmorClassEffect): ActiveEffect {
     id: `effect-${spellId}`,
     spellId,
     nameRu: spellId,
-    type: "buff",
     startedAt: "2026-07-31T12:00:00.000Z",
     duration: { type: "hours", value: 8 },
     isConcentration: false,
@@ -129,7 +128,6 @@ describe("armorClassAdjustment: поправка к КД из шапки рес�
   const manualEffect = (extra: Partial<ActiveEffect>): ActiveEffect => ({
     id: "manual",
     nameRu: "Поправка к КД",
-    type: "utility",
     startedAt: "2026-07-31T12:00:00.000Z",
     duration: { type: "special" },
     isConcentration: false,

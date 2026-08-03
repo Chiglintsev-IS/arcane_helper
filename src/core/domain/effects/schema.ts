@@ -16,7 +16,6 @@ export const activeEffectSchema = z.object({
   spellId: nonEmpty.optional(),
   nameRu: nonEmpty,
 
-  type: z.enum(["buff", "control", "utility", "summon"]),
   startedAt: isoDateTime,
 
   duration: z.object({
