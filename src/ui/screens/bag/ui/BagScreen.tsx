@@ -36,19 +36,7 @@ export function BagScreen() {
         onEditMoney={() => setOpenBlockId("money")}
         onOpenItem={(id) => setOpenBlockId(`item:${id}`)}
         onAddItem={(kind, nameRu) =>
-          apply((current) =>
-            addItem(
-              current,
-              {
-                id: nameRu.toLowerCase().replaceAll(" ", "-"),
-                nameRu,
-                kind,
-                worn: false,
-                count: 1,
-              },
-              clock,
-            ),
-          )
+          apply((current) => addItem(current, { nameRu, kind, worn: false, count: 1 }, clock))
         }
         onEditArmor={() => setOpenBlockId("armorClassBase")}
         onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}

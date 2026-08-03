@@ -11,10 +11,9 @@
 import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { TurnResource, TurnResources } from "@/core/application/casting/availability";
-import { canCastNow } from "@/core/application/casting/castOptions";
+import { canCastNow, isSpellReady, ritualAvailable } from "@/core/application/casting/castOptions";
 import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
 import { priceOf, traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
-import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
 
 /** Время накладывания как фильтр: минуты и часы в бою не выбирают. */
 export type CastingTimeFilter = TurnResource;
@@ -79,18 +78,6 @@ export function matchesActionRow(traits: ActionTraits, filters: SpellFilters): b
   return true;
 }
 
-/** Готово ли заклинание к сотворению без подготовки: заговоры — всегда. */
-function isReady(spell: Spell, character: CharacterState): boolean {
-  return spell.level === CANTRIP_LEVEL || character.preparedSpellIds.includes(spell.id);
-}
-
-/**
- * Можно ли сотворить заклинание ритуалом прямо сейчас. В бою — нельзя ничем: ритуал занимает на
- * десять минут больше обычного.
- */
-function ritualNow(spell: Spell, inFight: boolean): boolean {
-  return spell.ritual && !inFight;
-}
 
 /**
  * Категории, которые делят список: часть строк им отвечает, часть — нет.
@@ -116,15 +103,15 @@ export function dividingCategories(
     prices: [...valuesDividing((spell) => priceOf(spell, inFight))].sort((a, b) => a - b),
     roles: valuesDividing(combatRoleOf),
     concentration: divides(countOf((spell) => spell.concentration)),
-    ritual: divides(countOf((spell) => ritualNow(spell, inFight))),
+    ritual: divides(countOf((spell) => ritualAvailable(spell, inFight))),
   };
 }
 
 function matches(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
   if (!matchesTraits(traitsOf(spell, context.turn.inFight), filters)) return false;
-  if (filters.ritual && !ritualNow(spell, context.turn.inFight)) return false;
+  if (filters.ritual && !ritualAvailable(spell, context.turn.inFight)) return false;
   // «Подготовлено» не скрывает заговоры: они не готовятся, но доступны всегда.
-  if (filters.prepared && !isReady(spell, context.character)) return false;
+  if (filters.prepared && !isSpellReady(spell, context.character)) return false;
   if (filters.availableNow && !canCastNow(spell, context.character, context.turn)) return false;
   return true;
 }

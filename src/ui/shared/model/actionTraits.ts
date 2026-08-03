@@ -8,6 +8,7 @@
 
 import type { Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
+import { ritualAvailable } from "@/core/application/casting/castOptions";
 import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
 
 export type ActionTraits = {
@@ -35,7 +36,7 @@ export const BLOOD_MAGIC_TRAITS: ActionTraits = {
  */
 export function priceOf(spell: Spell, inFight: boolean): number {
   if (spell.level === CANTRIP_LEVEL) return 0;
-  return spell.ritual && !inFight ? 0 : spell.level;
+  return ritualAvailable(spell, inFight) ? 0 : spell.level;
 }
 
 export function traitsOf(spell: Spell, inFight: boolean): ActionTraits {

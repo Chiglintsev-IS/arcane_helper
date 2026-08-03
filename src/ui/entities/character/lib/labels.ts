@@ -3,6 +3,7 @@
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import type { Ability, SkillId } from "@/core/domain/character/skills";
 import type { CreatureSize, Currency, ItemKind } from "@/core/domain/character/state";
+import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   strength: "Сила",
@@ -69,11 +70,7 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
 };
 
 /** Сокращения монет — для значков и цены: «50 зм» произносится, полное имя — нет. */
-export const CURRENCY_ABBR: Record<Currency, string> = {
-  gold: "зм",
-  silver: "см",
-  copper: "мм",
-};
+export const CURRENCY_ABBR: Record<Currency, string> = CURRENCY_ABBREVIATIONS;
 
 /** Пустое справочное поле — прочерк: ноль здесь читался бы как настоящий ноль. */
 export function orDash(value: string | number): string {

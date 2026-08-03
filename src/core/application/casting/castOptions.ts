@@ -5,6 +5,7 @@
  * мастер применения называют одну причину, иначе приложению перестают верить.
  */
 
+import { Character } from "@/core/domain/character/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
@@ -15,6 +16,16 @@ import {
 } from "@/core/application/casting/availability";
 import { MAXIMUM_PAYABLE_SPELL_LEVEL } from "@/core/domain/arcana/slots";
 import { castableSlotLevels, CANTRIP_LEVEL, type CastMode } from "@/core/domain/arcana/slots";
+
+/** Ритуальный способ существует только вне боя: он занимает на десять минут больше обычного. */
+export function ritualAvailable(spell: Pick<Spell, "ritual">, inFight: boolean): boolean {
+  return spell.ritual === true && !inFight;
+}
+
+/** Готово ли заклинание к сотворению без подготовки: заговоры — всегда, прочее — по книге. */
+export function isSpellReady(spell: Spell, character: CharacterState): boolean {
+  return spell.level === CANTRIP_LEVEL || Character.of(character).spellbook.isPrepared(spell.id);
+}
 
 /** Способ сотворения: режим плюс оплата. */
 export type CastOption = {
@@ -47,7 +58,7 @@ export function castOptions(
   if (spell.level <= MAXIMUM_PAYABLE_SPELL_LEVEL) {
     plans.push({ mode: "normal", payment: { kind: "spell_points" } });
   }
-  if (spell.ritual && !options.inCombat) {
+  if (ritualAvailable(spell, options.inCombat)) {
     plans.push({ mode: "ritual", payment: { kind: "none" } });
   }
   return plans;

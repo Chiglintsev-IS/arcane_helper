@@ -8,9 +8,10 @@
 
 import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
 import type { CharacterState } from "@/core/domain/character/state";
-import { CANTRIP_LEVEL, type Spell } from "@/core/domain/catalog/spell";
+import { type Spell } from "@/core/domain/catalog/spell";
 import type { CombatRole } from "@/core/domain/catalog/combatRole";
 import type { ScreenMode } from "@/core/shared/screenMode";
+import { isSpellReady, ritualAvailable } from "@/core/application/casting/castOptions";
 
 /** Виды времени накладывания, укладывающиеся в один ход. */
 const WITHIN_TURN = new Set<Spell["castingTime"]["type"]>(["action", "bonus_action", "reaction"]);
@@ -33,10 +34,9 @@ export function castableWithinTurn(spell: Spell): boolean {
  * вовсе — ячейкой его не сотворить; остаётся только то, что укладывается в ход.
  */
 export function belongsToPlayList(spell: Spell, character: CharacterState, inFight: boolean): boolean {
-  const ready =
-    spell.level === CANTRIP_LEVEL || character.preparedSpellIds.includes(spell.id);
+  const ready = isSpellReady(spell, character);
   if (inFight) return ready && castableWithinTurn(spell);
-  return ready || spell.ritual;
+  return ready || ritualAvailable(spell, inFight);
 }
 
 /** Порядок ролей внутри одной цены: сначала чем бить, потом чем закрыться, потом всё прочее. */

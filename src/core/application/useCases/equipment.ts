@@ -7,15 +7,10 @@
  */
 
 import { Character } from "@/core/domain/character/character";
+import { Equipment } from "@/core/domain/equipment/equipment";
 import { CURRENCIES, type InventoryItem, type Money } from "@/core/domain/character/state";
+import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
-
-/** Сокращения монет для журнала: полные имена — дело экрана, запись должна оставаться строкой. */
-const CURRENCY_ABBREVIATIONS: Record<(typeof CURRENCIES)[number], string> = {
-  gold: "зм",
-  silver: "см",
-  copper: "мм",
-};
 
 function applied(
   session: Session,
@@ -32,9 +27,16 @@ function applied(
 /**
  * Заводит вещь. Одноимённая пополняет запас: журнал называет получившееся количество, потому что
  * «Добавлено: зелье лечения» дважды подряд не отвечает на вопрос, сколько их теперь.
+ *
+ * id не передан — его выводит из имени агрегат: экран не решает, как вещь опознаётся.
  */
-export function addItem(session: Session, item: InventoryItem, clock: Clock): Session {
-  const found = session.character.equipment.items.find((existing) => existing.id === item.id);
+export function addItem(
+  session: Session,
+  item: Omit<InventoryItem, "id"> & { id?: string },
+  clock: Clock,
+): Session {
+  const id = item.id ?? Equipment.idFromName(item.nameRu);
+  const found = session.character.equipment.items.find((existing) => existing.id === id);
   return applied(
     session,
     (root) => root.withEquipment(root.equipment.addItem(item)),

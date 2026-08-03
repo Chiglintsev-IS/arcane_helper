@@ -132,22 +132,34 @@ export class Equipment {
   }
 
   /**
+   * id по умолчанию для новой вещи: строчными, пробелы дефисом. Одинаковое имя всегда даёт
+   * одинаковый id, поэтому находка того же названия сама находит свой стек.
+   */
+  static idFromName(nameRu: string): string {
+    return nameRu.trim().toLowerCase().replaceAll(" ", "-");
+  }
+
+  /**
    * Новая вещь идёт в конец: порядок ввода — единственный, который игрок помнит.
    *
    * Одноимённая той же категории складывается в запас, а не отвергается: второе зелье лечения —
    * самая частая находка за столом. Одноимённая другой категории отвергается с причиной: молча
    * пополнить чужой раздел значит спрятать находку от игрока, который печатал её в свой.
+   *
+   * id можно не передавать: находка по имени получает его сама, а не от экрана.
    */
-  addItem(item: InventoryItem): Equipment {
-    const found = this.data.items.find((existing) => existing.id === item.id);
+  addItem(item: Omit<InventoryItem, "id"> & { id?: string }): Equipment {
+    const id = item.id ?? Equipment.idFromName(item.nameRu);
+    const withId: InventoryItem = { ...item, id };
+    const found = this.data.items.find((existing) => existing.id === id);
     if (found === undefined) {
-      return this.with({ items: [...this.data.items, item] });
+      return this.with({ items: [...this.data.items, withId] });
     }
     if (found.kind !== item.kind) {
       throw new DomainError(`«${found.nameRu}» уже лежит в сумке другой категорией`);
     }
     // Пополнение идёт тем же приращением, что и кнопка «+»: предел запаса один на оба входа.
-    return item.count === 0 ? this : this.adjustCount(item.id, item.count);
+    return item.count === 0 ? this : this.adjustCount(id, item.count);
   }
 
   replaceItem(item: InventoryItem): Equipment {

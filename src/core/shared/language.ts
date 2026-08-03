@@ -48,6 +48,16 @@ export const SAVING_THROW_NAMES = {
   CHA: "Харизмы",
 } as const;
 
+/**
+ * Сокращения монет: «зм», «см», «мм». Журнал и лист называют одну и ту же монету одним словом.
+ */
+export const CURRENCY_ABBREVIATIONS = {
+  gold: "зм",
+  silver: "см",
+  copper: "мм",
+} as const;
+
+
 /** Фигуры области: слова правил, и в двух местах их держать нельзя. */
 export const AREA_SHAPES_RU = {
   cone: "Конус",
