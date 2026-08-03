@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 
 import type { ScreenMode } from "@/core/shared/screenMode";
-import { DEFAULT_SCREEN_MODE } from "@/core/shared/screenMode";
-import { deriveTurnEconomy } from "@/core/application/useCases/turn";
+import { DEFAULT_SCREEN_MODE, SCREEN_MODES } from "@/core/shared/screenMode";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
@@ -16,14 +15,28 @@ import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
 
 const STORAGE_KEY = "playScreenMode";
 
+function storedMode(): string | null {
+  // Приватный режим Safari бросает на самом обращении к хранилищу: выбор режима не стоит того,
+  // чтобы приложение из-за него не открылось.
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 function readMode(): ScreenMode {
   if (typeof window === "undefined") return DEFAULT_SCREEN_MODE;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return (stored as ScreenMode | null) ?? DEFAULT_SCREEN_MODE;
+  const stored = storedMode();
+  return SCREEN_MODES.find((mode) => mode === stored) ?? DEFAULT_SCREEN_MODE;
 }
 
 function writeMode(mode: ScreenMode): void {
-  localStorage.setItem(STORAGE_KEY, mode);
+  try {
+    localStorage.setItem(STORAGE_KEY, mode);
+  } catch {
+    return;
+  }
 }
 
 function ScreenContent({ mode }: { mode: ScreenMode }) {
@@ -51,7 +64,8 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
 
   const [mode, setMode] = useState<ScreenMode>(() => initialMode ?? DEFAULT_SCREEN_MODE);
 
-  // Читаем mode из localStorage после монтирования (клиентская сторона)
+  // Статическая сборка отдаёт разметку без хранилища: прочитанный до гидратации режим разошёлся бы
+  // с отданным сервером.
   useEffect(() => {
     if (initialMode === undefined) {
       setMode(readMode());
@@ -65,8 +79,6 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
       </main>
     );
   }
-
-  const economy = deriveTurnEconomy(session);
 
   const changeMode = (next: ScreenMode): void => {
     setMode(next);
