@@ -133,7 +133,7 @@
 
 ### FR-093 — Влияние эффекта на Класс Доспеха
 
-**Статус:** Готово · **Проверка:** unit `effectiveArmorClass`, `armorClassWithSpell`, E2E `combat-screen renders all resource blocks`
+**Статус:** Готово · **Проверка:** unit `effectiveArmorClass`, `armorClassWithSpell`, E2E `play-screen renders all resource blocks`
 
 Эффект несёт вклад в Класс Доспеха данными: замену базы либо прибавку. Итог считает лист — одним
 расчётом для всех мест, где число называют: у Торна 14, с «Доспехами мага» 17, со «Щитом» 19, с

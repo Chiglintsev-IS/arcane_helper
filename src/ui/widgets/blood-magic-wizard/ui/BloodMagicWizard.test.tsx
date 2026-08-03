@@ -260,3 +260,36 @@ describe("итоговый экран (FR-032, FR-174)", () => {
     expect(screen.queryByLabelText("Отыгрыш")).toBeNull();
   });
 });
+
+describe("потеря хитов обменом не считается уроном (FR-174)", () => {
+  it("при активной концентрации обмен проверки не предлагает", async () => {
+    const concentrating: CharacterState = {
+      ...createThorne(),
+      concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+      activeEffects: [
+        {
+          id: "effect-1",
+          spellId: "detect-magic",
+          nameRu: "Обнаружение магии",
+          type: "control",
+          startedAt: "2026-07-31T18:00:00.000Z",
+          duration: { type: "minutes", value: 10 },
+          isConcentration: true,
+          slotLevelUsed: 1,
+          endConditionRu: "До конца концентрации или истечения длительности.",
+        },
+      ],
+    };
+    const { user, stores } = await openWizard(concentrating);
+
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    // Хиты ушли, а проверки нет: своё колдовство уроном не считается.
+    expect(stores.session.getState().session?.character.hitPoints.current).toBe(54);
+    expect(screen.queryByText(/Проверка концентрации/)).toBeNull();
+    expect(stores.session.getState().session?.character.concentration?.spellId).toBe(
+      "detect-magic",
+    );
+  });
+});
