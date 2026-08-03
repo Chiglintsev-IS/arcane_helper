@@ -8,6 +8,7 @@
 import { z } from "zod";
 
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
+import { VITALITY_FIELDS, type HitDice } from "@/core/domain/vitality/schema";
 import {
   isoDateTime,
   itemBonusesSchema,
@@ -240,14 +241,6 @@ export const characterStateSchema = z
     roleplayProfile: roleplayProfileSchema,
 
     /**
-     * Временные хиты.
-     *
-     * Отдельным числом, а не прибавкой к текущим: сложенные вместе, они молча исказили бы и
-     * максимум, и КС проверки концентрации.
-     */
-    temporaryHitPoints: z.number().int().nonnegative().default(0),
-
-    /**
      * Дневной бюджет «Магического восстановления» уровнями ячеек: сколько всего и сколько осталось
      * до следующего долгого отдыха. За столом его берут частями — остаток может быть нулём без
      * долгого отдыха, а не только целиком доступен или целиком потрачен.
@@ -270,35 +263,6 @@ export const characterStateSchema = z
      */
     shortRestSinceLongRest: z.boolean().optional(),
 
-    /**
-     * Здоровье тремя слагаемыми: база с листа и два снижения. Действующий максимум считается.
-     * Одно поле «максимум, уже уменьшенный кровью» смешивало два факта, и правка базы требовала
-     * вычесть снижение руками.
-     */
-    hitPoints: z
-      .object({
-        current: z.number().int(),
-        maximumBase: z.number().int().positive(),
-        bloodReduction: z.number().int().nonnegative(),
-        masterReduction: z.number().int().nonnegative().default(0),
-      })
-      .refine(
-        (value) => value.current <= value.maximumBase - value.bloodReduction - value.masterReduction,
-        {
-          message: "Текущее здоровье не может превышать действующий максимум",
-          path: ["current"],
-        },
-      ),
-
-    /**
-     * Снаряжение, от которого зависит проверка компонентов.
-     *
-     * Минимальная модель: чем заменяются компоненты без стоимости и что из дорогого лежит в сумке.
-     * Инвентарь целиком вне MVP — учитываются только компоненты заклинаний.
-     *
-     * Поле необязательное: та же схема проверяет импорт чужих выгрузок, и старая выгрузка
-     * его не знает. Без него проверка ведёт себя как прежде — перечисляет компоненты напоминанием.
-     */
     /**
      * Снаряжение: чем персонаж располагает вещественно.
      *
@@ -341,26 +305,6 @@ export const characterStateSchema = z
       }),
 
     /**
-     * Кости хитов: по одной за уровень, размер задаёт класс — у волшебника d6.
-     *
-     * Поле необязательное: той же схемой проверяется импорт чужих данных
-     *, и выгрузка прежней версии не
-     * обязана его знать. У Торна
-     * оно есть — этого требует тест контента.
-     */
-    hitDice: z
-      .object({
-        total: z.number().int().positive(),
-        size: z.number().int().positive(),
-        remaining: z.number().int().nonnegative(),
-      })
-      .refine((value) => value.remaining <= value.total, {
-        message: "Костей хитов не может остаться больше, чем есть",
-        path: ["remaining"],
-      })
-      .optional(),
-
-    /**
      * Очки заклинаний: только остаток. Время создания схема не хранит — гасит их не срок, а любой
      * отмеченный час, независимо от того, когда они появились.
      */
@@ -368,13 +312,10 @@ export const characterStateSchema = z
       remaining: z.number().int().nonnegative(),
     }),
 
-    suppression: z.object({
-      firedUpon: z.boolean(),
-      underDirectSunlight: z.boolean(),
-    }),
-
     spellNotes: z.record(nonEmpty, nonEmpty),
     roleplayPreferences: z.record(nonEmpty, roleplayPreferenceSchema),
+
+    ...VITALITY_FIELDS,
   })
   .superRefine((character, context) => {
     // Идентификаторы не дублируются ни в одной коллекции.
@@ -491,6 +432,7 @@ export type SpellSlotsData = z.infer<typeof spellSlotsSchema>;
 export type ActiveEffect = z.infer<typeof activeEffectSchema>;
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
 export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;
-export type HitDice = NonNullable<z.infer<typeof characterStateSchema>["hitDice"]>;
+// Кости хитов — поле жизнеспособности: тип живёт у владельца.
+export type { HitDice };
 export type Equipment = z.infer<typeof characterStateSchema>["equipment"];
 export type CharacterState = z.infer<typeof characterStateSchema>;

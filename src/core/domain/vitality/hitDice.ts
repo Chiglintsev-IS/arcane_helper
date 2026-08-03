@@ -1,5 +1,14 @@
 import { DomainError } from "@/core/domain/shared/errors";
-import type { HitDiceCost } from "@/core/domain/catalog/spell";
+
+/**
+ * Во что заклинанию обходятся Кости хитов. Форма описана здесь, а не взята у каталога: карточку
+ * жизнеспособность не знает, а поля совпадают — вызывающий передаёт цену прямо из карточки.
+ */
+export type HitDiceCost = {
+  maximumDice: number;
+  extraDicePerSlotLevel: number;
+  addsSpellcastingModifier: boolean;
+};
 
 export function hitDiceRegainedOnLongRest(total: number): number {
   if (!Number.isInteger(total) || total <= 0) {

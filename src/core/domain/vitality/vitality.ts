@@ -7,7 +7,6 @@
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import type { CharacterState } from "@/core/domain/character/state";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
 import {
   maximumRecoveryPerHour,
@@ -15,11 +14,9 @@ import {
   traitsSuppressed,
   type Exchange,
 } from "./blood";
+import type { VitalityState } from "./schema";
 
-export type VitalityState = Pick<
-  CharacterState,
-  "hitPoints" | "temporaryHitPoints" | "hitDice" | "suppression"
->;
+export type { VitalityState };
 
 const HIT_DICE_RU = "Костей хитов";
 
