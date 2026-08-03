@@ -1,11 +1,4 @@
 {
-  "edges": [
-    "character -> arcana",
-    "character -> effects",
-    "character -> equipment",
-    "character -> spellbook",
-    "character -> vitality",
-    "journal -> character"
-  ],
+  "edges": [],
   "cycles": []
 }
