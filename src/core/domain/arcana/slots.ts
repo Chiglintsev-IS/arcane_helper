@@ -189,18 +189,23 @@ export type RecoveryValidation =
   | { valid: true }
   | { valid: false; reason: string };
 
+/** Суммарный уровень плана: сколько остатка бюджета он расходует. */
+export function arcaneRecoveryPlanCost(plan: SlotRecoveryPlan): number {
+  return Object.entries(plan).reduce((total, [level, count]) => total + Number(level) * count, 0);
+}
+
 /**
- * Проверяет план восстановления: суммарный уровень в пределах бюджета, уровень ячейки не выше
- * пятого, и ни по одному уровню не превышен максимум.
+ * Проверяет план восстановления: суммарный уровень в пределах переданного остатка бюджета, уровень
+ * ячейки не выше пятого, и ни по одному уровню не превышен максимум.
+ *
+ * Бюджет приходит параметром, а не уровнем волшебника: за столом его берут частями, и сколько
+ * осталось — знает только текущий остаток пула, а не формула по уровню.
  */
 export function validateArcaneRecovery(
   slots: SpellSlots,
   plan: SlotRecoveryPlan,
-  wizardLevel: number,
+  budget: number,
 ): RecoveryValidation {
-  const budget = arcaneRecoveryBudget(wizardLevel);
-  let spentBudget = 0;
-
   for (const [rawLevel, rawCount] of Object.entries(plan)) {
     const level = Number(rawLevel);
     const count = rawCount;
@@ -226,17 +231,16 @@ export function validateArcaneRecovery(
         reason: `Ячеек ${level} уровня нельзя вернуть больше, чем потрачено (потрачено ${slot.maximum - slot.remaining})`,
       };
     }
-
-    spentBudget += level * count;
   }
 
+  const spentBudget = arcaneRecoveryPlanCost(plan);
   if (spentBudget === 0) {
     return { valid: false, reason: "План восстановления пуст" };
   }
   if (spentBudget > budget) {
     return {
       valid: false,
-      reason: `Суммарный уровень возвращаемых ячеек ${spentBudget} превышает бюджет ${budget}`,
+      reason: `Суммарный уровень возвращаемых ячеек ${spentBudget} превышает остаток бюджета ${budget}`,
     };
   }
   return { valid: true };
@@ -246,9 +250,9 @@ export function validateArcaneRecovery(
 export function applyArcaneRecovery(
   slots: SpellSlots,
   plan: SlotRecoveryPlan,
-  wizardLevel: number,
+  budget: number,
 ): SpellSlots {
-  const validation = validateArcaneRecovery(slots, plan, wizardLevel);
+  const validation = validateArcaneRecovery(slots, plan, budget);
   if (!validation.valid) {
     throw new DomainError(validation.reason);
   }

@@ -62,6 +62,19 @@ describe("смена уровня", () => {
     expect(after.character.runes).toEqual({ maximum: 4, remaining: 4 });
   });
 
+  it("бюджет магического восстановления следует за уровнем", () => {
+    const after = changeLevel(session(), { level: 9, hitPointMaximumBase: 72 }, clock);
+    // ceil(9 / 2) = 5, а остаток был полным — двигается вместе с максимумом.
+    expect(after.character.arcaneRecovery).toEqual({ maximum: 5, remaining: 5 });
+  });
+
+  it("частично потраченный бюджет двигается на разницу максимумов, а не сбрасывается", () => {
+    const spent = session();
+    spent.character.arcaneRecovery = { maximum: 4, remaining: 1 };
+    const after = changeLevel(spent, { level: 9, hitPointMaximumBase: 72 }, clock);
+    expect(after.character.arcaneRecovery).toEqual({ maximum: 5, remaining: 2 });
+  });
+
   it("подготовку сверх нового лимита понижение уровня не снимает", () => {
     const before = session();
     const preparedCount = before.character.preparedSpellIds.length;

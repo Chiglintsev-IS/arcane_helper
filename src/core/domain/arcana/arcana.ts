@@ -12,6 +12,8 @@ import type { CharacterState } from "@/core/domain/character/state";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
 import {
   applyArcaneRecovery,
+  arcaneRecoveryBudget,
+  arcaneRecoveryPlanCost,
   refundSlot,
   resizeSlots,
   restoreAllSlots,
@@ -23,16 +25,17 @@ import { spellPointCost } from "@/core/domain/vitality/blood";
 
 export type ArcanaState = Pick<
   CharacterState,
-  "spellSlots" | "runes" | "spellPoints" | "arcaneRecoveryAvailable"
+  "spellSlots" | "runes" | "spellPoints" | "arcaneRecovery"
 >;
 
 const RUNES_RU = "Рун";
+const ARCANE_RECOVERY_RU = "Бюджет магического восстановления";
 
 export class Arcana {
   private constructor(private readonly state: ArcanaState) {}
 
   /** Владеет только своими полями: иначе агрегат затирал бы правки соседа. */
-  private static readonly KEYS = ["spellSlots", "runes", "spellPoints", "arcaneRecoveryAvailable"] as const satisfies readonly (keyof ArcanaState)[];
+  private static readonly KEYS = ["spellSlots", "runes", "spellPoints", "arcaneRecovery"] as const satisfies readonly (keyof ArcanaState)[];
 
   static of(state: ArcanaState): Arcana {
     return new Arcana(ownedFields(state, Arcana.KEYS));
@@ -89,21 +92,27 @@ export class Arcana {
     return this.with({ spellPoints: { remaining: 0 } });
   }
 
-  useArcaneRecovery(plan: SlotRecoveryPlan, wizardLevel: number): Arcana {
-    if (!this.state.arcaneRecoveryAvailable) {
-      throw new DomainError("Магическое восстановление уже использовано до следующего долгого отдыха");
-    }
+  /**
+   * Магическое восстановление. Бюджет — общий на весь день между долгими отдыхами: книга тратит его
+   * одним применением, этот стол — частями, пока остаток не кончится.
+   */
+  useArcaneRecovery(plan: SlotRecoveryPlan): Arcana {
+    const budget = ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU);
+    const spellSlots = applyArcaneRecovery(this.state.spellSlots, plan, budget.remaining);
     return this.with({
-      spellSlots: applyArcaneRecovery(this.state.spellSlots, plan, wizardLevel),
-      arcaneRecoveryAvailable: false,
+      spellSlots,
+      arcaneRecovery: budget.spend(ARCANE_RECOVERY_RU, arcaneRecoveryPlanCost(plan)).toState(),
     });
   }
 
-  /** Смена уровня: ячейки по таблице, руны по бонусу мастерства. */
+  /** Смена уровня: ячейки по таблице, руны по бонусу мастерства, бюджет восстановления по формуле. */
   resizedForLevel(wizardLevel: number, runesMaximum: number): Arcana {
     return this.with({
       spellSlots: resizeSlots(this.state.spellSlots, wizardLevel),
       runes: this.runes.resized(runesMaximum).toState(),
+      arcaneRecovery: ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU)
+        .resized(arcaneRecoveryBudget(wizardLevel))
+        .toState(),
     });
   }
 
@@ -112,7 +121,7 @@ export class Arcana {
     return this.with({
       spellSlots: restoreAllSlots(this.state.spellSlots),
       runes: this.runes.restored().toState(),
-      arcaneRecoveryAvailable: true,
+      arcaneRecovery: ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU).restored().toState(),
       spellPoints: { remaining: 0 },
     });
   }

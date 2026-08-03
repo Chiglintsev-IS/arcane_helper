@@ -564,36 +564,53 @@ describe("операции привала (FR-202, FR-215)", () => {
     await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
 
     expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
-    expect(stores.session.getState().session?.character.arcaneRecoveryAvailable).toBe(false);
+    expect(stores.session.getState().session?.character.arcaneRecovery.remaining).toBe(3);
   });
 
-  it("израсходованное восстановление гаснет, но остаётся с причиной (FR-131)", async () => {
+  it("исчерпанный бюджет гаснет, но остаётся с причиной (FR-131)", async () => {
     // Раньше кнопка исчезала. Пропавшая кнопка не отвечает на вопрос «почему нельзя», а за столом
     // он возникает раньше, чем игрок вспомнит правило, — требование это изменило.
-    await atCamp({ ...createThorne(), arcaneRecoveryAvailable: false });
+    await atCamp({ ...createThorne(), arcaneRecovery: { maximum: 4, remaining: 0 } });
     const button = screen.getByRole("button", {
-      name: "Магическое восстановление — Уже использовано до следующего долгого отдыха",
+      name: "Магическое восстановление · осталось 0 уровней — Дневной бюджет восстановления исчерпан до следующего долгого отдыха",
     });
     expect(button.hasAttribute("disabled")).toBe(true);
   });
 
-  it("без короткого отдыха восстановление недоступно (FR-131)", async () => {
+  it("без короткого отдыха восстановление недоступно, но остаток бюджета виден заранее (FR-131)", async () => {
     const user = userEvent.setup();
     const spent = createThorne();
     spent.spellSlots[1] = { maximum: 4, remaining: 3 };
     await atCamp(spent);
 
-    // Причина названа словами на самой кнопке, и лечится она соседней — в том же ряду.
+    // Причина названа словами на самой кнопке, и лечится она соседней — в том же ряду. Остаток
+    // бюджета виден в подписи ещё до того, как отдых его открыл.
     const blocked = screen.getByRole("button", {
-      name: "Магическое восстановление — Берётся после короткого отдыха",
+      name: "Магическое восстановление · осталось 4 уровня — Берётся после короткого отдыха",
     });
     expect(blocked.hasAttribute("disabled")).toBe(true);
 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
     await user.click(screen.getByRole("button", { name: "Привал" }));
+    const available = screen.getByRole("button", { name: "Магическое восстановление · осталось 4 уровня" });
+    expect(available.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("частичное восстановление уменьшает остаток бюджета в подписи кнопки (FR-131)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await atCamp();
+
+    await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
+    await user.click(screen.getByRole("button", { name: "Привал" }));
+    await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
+    await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
+    await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
+    expect(stores.session.getState().session?.character.arcaneRecovery.remaining).toBe(3);
+
+    await user.click(screen.getByRole("button", { name: "Привал" }));
     expect(
-      screen.getByRole("button", { name: "Магическое восстановление" }).hasAttribute("disabled"),
-    ).toBe(false);
+      screen.getByRole("button", { name: "Магическое восстановление · осталось 3 уровня" }),
+    ).toBeDefined();
   });
 
   it("часу нечего сделать — «Прошёл час» не предлагается (FR-002)", async () => {

@@ -8,6 +8,8 @@
  */
 
 import { DEFAULT_SCREEN_MODE } from "@/core/shared/screenMode";
+import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
+import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "./abilities";
 
 const UNKNOWN_ABILITY_SCORE = 10;
 /** База Класса Доспеха без доспехов. Нужна только на случай испорченного сохранения без неё. */
@@ -59,8 +61,33 @@ function migrateScreenMode(state: unknown): unknown {
   return { ...state, screenMode: DEFAULT_SCREEN_MODE };
 }
 
+/**
+ * Признак «доступно/потрачено» становится бюджетом уровней ячеек: старое значение переносится без
+ * потерь, потому что оба его состояния — ровно полный бюджет или ровно нулевой остаток.
+ */
+function migrateArcaneRecovery(state: unknown): unknown {
+  if (state === null || typeof state !== "object") return state;
+  const { arcaneRecoveryAvailable, arcaneRecovery, level } = state as {
+    arcaneRecoveryAvailable?: unknown;
+    arcaneRecovery?: unknown;
+    level?: unknown;
+  };
+  if (arcaneRecovery !== undefined || typeof arcaneRecoveryAvailable !== "boolean") return state;
+
+  const maximum =
+    typeof level === "number" &&
+    Number.isInteger(level) &&
+    level >= MINIMUM_CHARACTER_LEVEL &&
+    level <= MAXIMUM_CHARACTER_LEVEL
+      ? arcaneRecoveryBudget(level)
+      : 0;
+
+  const { arcaneRecoveryAvailable: _omitted, ...rest } = state as Record<string, unknown>;
+  return { ...rest, arcaneRecovery: { maximum, remaining: arcaneRecoveryAvailable ? maximum : 0 } };
+}
+
 export function migrateCharacterState(raw: unknown): unknown {
-  return migrateScreenMode(migrateShape(raw));
+  return migrateArcaneRecovery(migrateScreenMode(migrateShape(raw)));
 }
 
 function migrateShape(raw: unknown): unknown {

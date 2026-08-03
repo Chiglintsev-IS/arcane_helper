@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Sheet } from "@/core/domain/sheet/sheet";
+import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { migrateCharacterState } from "./migration";
 import { characterStateSchema } from "./state";
@@ -90,6 +91,7 @@ describe("приведение состояния версии 1", () => {
       ...VERSION_ONE,
       abilities: createThorne().abilities,
       equipment: createThorne().equipment,
+      arcaneRecovery: createThorne().arcaneRecovery,
     };
     expect(migrateCharacterState(already)).toBe(already);
   });
@@ -162,6 +164,49 @@ describe("приведение состояния версии 1", () => {
     expect(migrated.equipment.otherBonuses.armorClass).toBe(0);
     expect(migrated.overrides.spellSaveDc).toBeUndefined();
     expect(migrated.overrides.saves).toEqual({});
+  });
+
+  describe("признак магического восстановления становится дневным бюджетом", () => {
+    const budget = arcaneRecoveryBudget(VERSION_ONE.level);
+
+    it("доступный флаг переносится как полный бюджет", () => {
+      const migrated = migrateCharacterState({
+        ...VERSION_ONE,
+        arcaneRecoveryAvailable: true,
+      }) as { arcaneRecovery: { maximum: number; remaining: number } };
+      expect(migrated.arcaneRecovery).toEqual({ maximum: budget, remaining: budget });
+    });
+
+    it("потраченный флаг переносится как нулевой остаток — тот же бюджет, но исчерпанный", () => {
+      const migrated = migrateCharacterState({
+        ...VERSION_ONE,
+        arcaneRecoveryAvailable: false,
+      }) as { arcaneRecovery: { maximum: number; remaining: number } };
+      expect(migrated.arcaneRecovery).toEqual({ maximum: budget, remaining: 0 });
+    });
+
+    it("уже приведённое состояние не трогается", () => {
+      const already = { ...VERSION_ONE, arcaneRecovery: { maximum: 4, remaining: 2 } };
+      const migrated = migrateCharacterState(already) as { arcaneRecovery: unknown };
+      expect(migrated.arcaneRecovery).toEqual({ maximum: 4, remaining: 2 });
+    });
+
+    it("испорченный уровень получает нулевой бюджет вместо падения", () => {
+      const corrupted = { ...VERSION_ONE, level: "семь" };
+      const migrated = migrateCharacterState(corrupted) as { arcaneRecovery: unknown };
+      expect(migrated.arcaneRecovery).toEqual({ maximum: 0, remaining: 0 });
+    });
+
+    it("сохранение вовсе без признака приведению не подлежит", () => {
+      const { arcaneRecoveryAvailable: _omitted, ...withoutFlag } = VERSION_ONE;
+      const migrated = migrateCharacterState(withoutFlag) as { arcaneRecovery?: unknown };
+      expect(migrated.arcaneRecovery).toBeUndefined();
+    });
+
+    it("не объекту приведение не нужно", () => {
+      expect(migrateCharacterState(null)).toBeNull();
+      expect(migrateCharacterState("не состояние")).toBe("не состояние");
+    });
   });
 
   describe("режимы «Бой» и «Вне боя» слились в «Игру»", () => {

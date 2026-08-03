@@ -6,10 +6,12 @@
  */
 
 import { characterStateSchema, type CharacterState } from "@/core/domain/character/state";
-import { spellSlotsForLevel } from "@/core/domain/arcana/slots";
+import { arcaneRecoveryBudget, spellSlotsForLevel } from "@/core/domain/arcana/slots";
 
 /** Ячейки берём из движка, чтобы таблица уровней жила в одном месте. */
 const SLOTS = spellSlotsForLevel(7);
+/** Дневной бюджет восстановления из той же формулы, что и у движка. */
+const ARCANE_RECOVERY_BUDGET = arcaneRecoveryBudget(7);
 
 const RAW: unknown = {
   id: "thorne",
@@ -114,7 +116,7 @@ const RAW: unknown = {
   },
 
   turnTracking: { actionAvailable: true, bonusActionAvailable: true },
-  arcaneRecoveryAvailable: true,
+  arcaneRecovery: { maximum: ARCANE_RECOVERY_BUDGET, remaining: ARCANE_RECOVERY_BUDGET },
 
   hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
   equipment: {

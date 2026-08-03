@@ -723,7 +723,7 @@ describe("отдых и восстановление", () => {
     expect(current.character.runes.remaining).toBe(3);
     expect(current.character.concentration).toBeUndefined();
     expect(current.character.spellPoints).toEqual({ remaining: 0 });
-    expect(current.character.arcaneRecoveryAvailable).toBe(true);
+    expect(current.character.arcaneRecovery).toEqual({ maximum: 4, remaining: 4 });
   });
 
   it("долгий отдых возвращает здоровье (FR-130)", () => {
@@ -793,19 +793,43 @@ describe("отдых и восстановление", () => {
     expect(current.character.reactionAvailable).toBe(true);
   });
 
-  it("магическое восстановление работает один раз до долгого отдыха (FR-131)", () => {
-    let current = castSpell(
-      session,
-      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
-    );
+  it("два последовательных частичных восстановления укладываются в общий бюджет (FR-131)", () => {
+    let current = outOfCombat(session);
+    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, clock);
+    expect(current.character.spellSlots[1]?.remaining).toBe(0);
+
     current = useArcaneRecovery(current, { 1: 1 }, clock);
-    expect(current.character.spellSlots[1]?.remaining).toBe(4);
-    expect(current.character.arcaneRecoveryAvailable).toBe(false);
-    expect(() => useArcaneRecovery(current, { 1: 1 }, clock)).toThrow(/уже использовано/);
+    expect(current.character.spellSlots[1]?.remaining).toBe(1);
+    expect(current.character.arcaneRecovery).toEqual({ maximum: 4, remaining: 3 });
+
+    current = useArcaneRecovery(current, { 1: 1 }, clock);
+    expect(current.character.spellSlots[1]?.remaining).toBe(2);
+    expect(current.character.arcaneRecovery).toEqual({ maximum: 4, remaining: 2 });
   });
 
-  it("магическое восстановление не превышает бюджет", () => {
+  it("третье восстановление отклоняется, когда бюджет исчерпан (FR-131)", () => {
+    let current = outOfCombat(session);
+    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, clock);
+
+    current = useArcaneRecovery(current, { 1: 2 }, clock);
+    current = useArcaneRecovery(current, { 1: 2 }, clock);
+    expect(current.character.arcaneRecovery.remaining).toBe(0);
+
+    current = spendSpellSlot(current, 1, clock);
+    expect(() => useArcaneRecovery(current, { 1: 1 }, clock)).toThrow(/превышает остаток бюджета 0/);
+  });
+
+  it("долгий отдых заполняет бюджет заново (FR-131)", () => {
+    let current = outOfCombat(session);
+    current = spendSpellSlot(current, 1, clock);
+    current = useArcaneRecovery(current, { 1: 1 }, clock);
+    expect(current.character.arcaneRecovery.remaining).toBe(3);
+
+    current = longRest(current, clock);
+    expect(current.character.arcaneRecovery).toEqual({ maximum: 4, remaining: 4 });
+  });
+
+  it("магическое восстановление не превышает остаток бюджета одним планом", () => {
     let current = outOfCombat(session);
     for (const level of [3, 2] as const) {
       current = castSpell(
@@ -814,7 +838,9 @@ describe("отдых и восстановление", () => {
         clock,
       );
     }
-    expect(() => useArcaneRecovery(current, { 3: 1, 2: 1 }, clock)).toThrow(/превышает бюджет 4/);
+    expect(() => useArcaneRecovery(current, { 3: 1, 2: 1 }, clock)).toThrow(
+      /превышает остаток бюджета 4/,
+    );
   });
 
   it("возврат ошибочной ячейки (FR-071)", () => {
@@ -2278,7 +2304,7 @@ describe("отметка короткого отдыха (FR-131)", () => {
     expect(spent.character.spellSlots[1]?.remaining).toBe(3);
     const after = useArcaneRecovery(spent, { 1: 1 }, clock);
     expect(after.character.spellSlots[1]?.remaining).toBe(4);
-    expect(after.character.arcaneRecoveryAvailable).toBe(false);
+    expect(after.character.arcaneRecovery.remaining).toBe(3);
     // Отметки отдыха не было, и операция всё равно отработала: запрет живёт только в интерфейсе.
     expect(after.character.shortRestSinceLongRest ?? false).toBe(false);
   });

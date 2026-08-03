@@ -63,7 +63,7 @@ function thorne(): unknown {
       maximumPhraseLength: 15,
     },
     turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: true },
-    arcaneRecoveryAvailable: true,
+    arcaneRecovery: { maximum: 4, remaining: 4 },
     hitPoints: { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 },
     armorClass: { base: 10 },
     runes: { maximum: 3, remaining: 2 },
