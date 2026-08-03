@@ -9,7 +9,7 @@
 
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PlayShell } from "@/ui/app/PlayShell";
 import { renderWithStores } from "@/ui/app/testing/stores";
@@ -49,4 +49,26 @@ describe("режим экрана переживает перезапуск (FR-
     expect(selected("Игра")).toBe(true);
     expect(screen.getByLabelText("Ресурсы")).toBeDefined();
   });
+
+  /**
+   * Единственная подмена в этих прогонах, и подменяется в ней не наш код, а платформа: приватный
+   * режим Safari бросает на самом обращении к хранилищу, и воспроизвести это иначе нечем.
+   */
+  it("недоступное хранилище не мешает открыться", async () => {
+    const unavailable = (): never => {
+      throw new Error("SecurityError");
+    };
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(unavailable);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(unavailable);
+    const user = userEvent.setup();
+
+    await renderWithStores(<PlayShell />);
+    await user.click(screen.getByRole("radio", { name: /^Книга/ }));
+
+    expect(selected("Книга")).toBe(true);
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
