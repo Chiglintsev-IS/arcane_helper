@@ -6,10 +6,8 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   addItem,
   adjustItemCount,
-  editArmorClassBase,
   editItem,
   editMoney,
-  editOtherBonuses,
   removeItem,
   toggleWorn,
 } from "./equipment";
@@ -71,7 +69,13 @@ describe("правка снаряжения", () => {
     const after = addItem(session(), ring, clock);
     const sheet = Sheet.of(after.character);
 
-    expect(sheet.armorClassParts).toEqual({ base: 10, dexterityModifier: 2, itemBonus: 3 });
+    expect(sheet.armorClassParts).toEqual({
+      base: 10,
+      baseOverridden: false,
+      dexterityModifier: 2,
+      itemBonus: 3,
+      miscBonus: 0,
+    });
     expect(sheet.savingThrow("constitution")).toBe(5);
     expect(after.character.abilities.constitution).toBe(16);
     expect(after.journal).toHaveLength(1);
@@ -148,20 +152,19 @@ describe("правка снаряжения", () => {
     expect(same.journal[0]?.summaryRu).toBe("Деньги: без изменений");
   });
 
-  it("база Класса Доспеха правится и доходит до итога", () => {
-    const armored = editArmorClassBase(session(), 15, clock);
-    expect(Sheet.of(armored.character).armorClassParts.base).toBe(15);
-    expect(armored.journal[0]?.summaryRu).toBe("База Класса Доспеха: 15");
-  });
+  it("надетый доспех двигает базу КД сам, снятие возвращает базу без доспехов", () => {
+    const chainmail = {
+      id: "chainmail",
+      nameRu: "Кольчуга",
+      kind: "gear" as const,
+      worn: true,
+      count: 1,
+      armorBase: 16,
+    };
+    const armored = addItem(session(), chainmail, clock);
+    expect(Sheet.of(armored.character).armorClassParts.base).toBe(16);
 
-  it("прибавки без вещи двигают КС заклинаний", () => {
-    const richer = editOtherBonuses(
-      session(),
-      { spellcasting: 3, armorClass: 2, savingThrows: 1 },
-      clock,
-    );
-    // 8 + 3 (мастерство) + 4 (Интеллект) + 3 (без вещи) + 1 (фокусировка).
-    expect(Sheet.of(richer.character).spellSaveDc).toBe(19);
-    expect(richer.journal[0]?.summaryRu).toBe("Правка прибавок без вещи");
+    const takenOff = toggleWorn(armored, "chainmail", clock);
+    expect(Sheet.of(takenOff.character).armorClassParts.base).toBe(10);
   });
 });

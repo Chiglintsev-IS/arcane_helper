@@ -10,6 +10,8 @@ import {
   editHealth,
   editIdentity,
   editMarks,
+  editMiscBonuses,
+  setArmorClassBaseOverride,
   setOverride,
 } from "./sheet";
 
@@ -144,6 +146,20 @@ describe("правка листа", () => {
     expect(after.journal[0]?.summaryRu).toBe("Отметки мастера изменены");
   });
 
+  it("прочие прибавки правятся с листа и двигают КС заклинаний", () => {
+    const blessed = editMiscBonuses(
+      session(),
+      { spellcasting: 3, armorClass: 2, savingThrows: 1 },
+      clock,
+    );
+    // 8 + 3 (мастерство) + 4 (Интеллект) + 3 (прочие) + 1 (фокусировка).
+    expect(Sheet.of(blessed.character).spellSaveDc).toBe(19);
+    expect(blessed.journal[0]?.summaryRu).toBe("Правка прочих прибавок");
+
+    const undone = undoLast(blessed);
+    expect(undone.character.miscBonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
+  });
+
   it("перебивка ставится и снимается", () => {
     const set = setOverride(session(), "spellSaveDc", 18, clock);
     expect(Sheet.of(set.character).spellSaveDc).toBe(18);
@@ -171,5 +187,21 @@ describe("правка листа", () => {
       ),
     ).toThrow();
     expect(before.character.abilities.strength).toBe(8);
+  });
+
+  it("перебивка базы КД ставится, снимается и проверяет значение", () => {
+    const set = setArmorClassBaseOverride(session(), 14, clock);
+    expect(Sheet.of(set.character).armorClassParts.base).toBe(14);
+    expect(Sheet.of(set.character).armorClassParts.baseOverridden).toBe(true);
+    expect(set.journal[0]?.summaryRu).toBe("База Класса Доспеха: 14");
+
+    const cleared = setArmorClassBaseOverride(set, null, clock);
+    expect(Sheet.of(cleared.character).armorClassParts.baseOverridden).toBe(false);
+    expect(cleared.journal.at(-1)?.summaryRu).toBe("База Класса Доспеха: по надетому");
+  });
+
+  it("база КД: нецелое или отрицательное отклоняется", () => {
+    expect(() => setArmorClassBaseOverride(session(), 10.5, clock)).toThrow();
+    expect(() => setArmorClassBaseOverride(session(), -1, clock)).toThrow();
   });
 });

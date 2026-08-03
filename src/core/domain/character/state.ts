@@ -13,7 +13,7 @@ import { DEFAULT_SCREEN_MODE, SCREEN_MODES } from "@/core/shared/screenMode";
 import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
-export const EXPORT_SCHEMA_VERSION = 3;
+export const EXPORT_SCHEMA_VERSION = 4;
 
 const nonEmpty = z.string().trim().min(1);
 const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
@@ -60,6 +60,12 @@ export const activeEffectSchema = z.object({
   // Копия вклада заклинания в КД: итог считается из одного состояния, без каталога.
   armorClass: armorClassEffectSchema.optional(),
 
+  /**
+   * Роль ручного эффекта, когда она есть: поправка к КД опознаётся этим признаком, а не строкой
+   * имени — переименование подписи не имеет права ломать опознание.
+   */
+  manualKind: z.literal("armorAdjustment").optional(),
+
   endConditionRu: nonEmpty,
   note: nonEmpty.optional(),
 });
@@ -94,9 +100,6 @@ const roleplayPreferenceSchema = z.object({
   usageCount: z.record(nonEmpty, z.number().int().nonnegative()),
 });
 
-/** База Класса Доспеха без доспехов — правило, а не настройка снаряжения. */
-export const UNARMORED_ARMOR_CLASS_BASE = 10;
-
 /**
  * Категория вещи — четыре ответа на вопрос «что с этим делают»: экипировку надевают, расходник
  * тратят счётом, ингредиент копят под алхимию, остальное — «другое», пока стол не решил иначе.
@@ -128,6 +131,15 @@ const priceSchema = z.object({
   currency: z.enum(CURRENCIES),
 });
 
+/** Прибавки к магии, защите и спасброскам: одна форма у вещи и у прочих прибавок персонажа. */
+const itemBonusesSchema = z.object({
+  spellcasting: z.number().int().default(0),
+  armorClass: z.number().int().default(0),
+  savingThrows: z.number().int().default(0),
+});
+
+const NO_ITEM_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
+
 /**
  * Вещь в инвентаре.
  *
@@ -145,13 +157,12 @@ const inventoryItemSchema = z.object({
   count: z.number().int().min(0).max(MAXIMUM_ITEM_COUNT).default(1),
   price: priceSchema.optional(),
   note: nonEmpty.optional(),
-  bonuses: z
-    .object({
-      spellcasting: z.number().int().default(0),
-      armorClass: z.number().int().default(0),
-      savingThrows: z.number().int().default(0),
-    })
-    .optional(),
+  bonuses: itemBonusesSchema.optional(),
+  /**
+   * База КД доспеха: у кольчуги 16, у кольца поля нет. База персонажа выводится из надетого —
+   * наибольшая из баз, без доспеха действует база без доспехов.
+   */
+  armorBase: z.number().int().positive().optional(),
 });
 
 const abilityScore = z.number().int().min(1).max(30);
@@ -176,6 +187,8 @@ const overridesSchema = z
     preparedLimit: z.number().int().positive().optional(),
     initiative: z.number().int().optional(),
     passivePerception: z.number().int().optional(),
+    /** Перебивка базы КД: действует вместо выведенной из надетого доспеха. */
+    armorClassBase: z.number().int().positive().optional(),
     saves: z.partialRecord(z.enum(ABILITIES), z.number().int()).default({}),
     skills: z.partialRecord(z.enum(SKILL_IDS), z.number().int()).default({}),
   })
@@ -211,6 +224,12 @@ export const characterStateSchema = z
       .default({ weapons: [], armor: [], tools: [], languages: [] }),
 
     overrides: overridesSchema,
+
+    /**
+     * Прочие прибавки — свойство самого персонажа: благословение, дар, обучение. Прибавка,
+     * привязанная к вещи, живёт у вещи в снаряжении; сюда идёт та, у которой вещи нет.
+     */
+    miscBonuses: itemBonusesSchema.default(NO_ITEM_BONUSES),
 
     exhaustion: z.number().int().min(0).max(6).default(0),
     inspiration: z.boolean().default(false),
@@ -317,23 +336,6 @@ export const characterStateSchema = z
      */
     equipment: z
       .object({
-        /** База Класса Доспеха: надетый доспех или его отсутствие. */
-        armorClassBase: z.number().int().positive().default(UNARMORED_ARMOR_CLASS_BASE),
-
-        /**
-         * Прибавки, не привязанные к вещи.
-         *
-         * Второй источник рядом с инвентарём намеренно: приведение прежних данных не имеет права
-         * выдумывать названия предметов, а игрок не обязан заводить инвентарь ради своих +1.
-         */
-        otherBonuses: z
-          .object({
-            spellcasting: z.number().int().default(0),
-            armorClass: z.number().int().default(0),
-            savingThrows: z.number().int().default(0),
-          })
-          .default({ spellcasting: 0, armorClass: 0, savingThrows: 0 }),
-
         items: z.array(inventoryItemSchema).default([]),
 
         /** Кошелёк. Со значениями по умолчанию: сохранение прежней версии денег не знало. */
@@ -353,8 +355,6 @@ export const characterStateSchema = z
           .optional(),
       })
       .default({
-        armorClassBase: UNARMORED_ARMOR_CLASS_BASE,
-        otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
         items: [],
         money: NO_MONEY,
       }),

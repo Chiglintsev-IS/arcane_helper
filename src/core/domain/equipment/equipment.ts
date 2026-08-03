@@ -16,6 +16,9 @@ import { DomainError } from "@/core/domain/shared/errors";
 
 export type EquipmentState = Pick<CharacterState, "equipment">;
 
+/** База Класса Доспеха без доспехов — правило игры, а не настройка. */
+export const UNARMORED_ARMOR_CLASS_BASE = 10;
+
 const NO_BONUSES: ItemBonuses = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
 export class Equipment {
@@ -35,17 +38,32 @@ export class Equipment {
     return new Equipment({ equipment: { ...this.data, ...change } });
   }
 
-  /** База Класса Доспеха: надетый доспех или его отсутствие. */
+  /**
+   * Надетый доспех, задающий базу КД: из надетой экипировки с базой берётся наибольшая.
+   *
+   * Замены базы не складываются — то же правило, что у «Доспехов мага» против кольчуги: вторая
+   * кираса поверх первой защищает не лучше.
+   */
+  get wornArmor(): InventoryItem | undefined {
+    return this.data.items.reduce<InventoryItem | undefined>(
+      (best, item) =>
+        item.kind === "gear" &&
+        item.worn &&
+        item.armorBase !== undefined &&
+        item.armorBase > (best?.armorBase ?? 0)
+          ? item
+          : best,
+      undefined,
+    );
+  }
+
+  /** База Класса Доспеха — производная от надетого: доспех или его отсутствие. */
   get armorClassBase(): number {
-    return this.data.armorClassBase;
+    return this.wornArmor?.armorBase ?? UNARMORED_ARMOR_CLASS_BASE;
   }
 
   get items(): readonly InventoryItem[] {
     return this.data.items;
-  }
-
-  get otherBonuses(): ItemBonuses {
-    return this.data.otherBonuses;
   }
 
   get money(): Money {
@@ -53,10 +71,11 @@ export class Equipment {
   }
 
   /**
-   * Что снаряжение прибавляет к числам: непривязанные прибавки плюс надетые вещи.
+   * Что снаряжение прибавляет к числам: надетые вещи, и только они.
    *
    * Лежащее в сумке не считается: кольцо в мешке защиты не даёт, и число, выросшее от покупки,
-   * разошлось бы с тем, что действует за столом.
+   * разошлось бы с тем, что действует за столом. Прибавка без вещи — свойство персонажа, а не
+   * снаряжения, и живёт у него.
    */
   get bonuses(): ItemBonuses {
     return this.data.items.reduce<ItemBonuses>(
@@ -68,7 +87,7 @@ export class Equipment {
               armorClass: total.armorClass + item.bonuses.armorClass,
               savingThrows: total.savingThrows + item.bonuses.savingThrows,
             },
-      { ...this.data.otherBonuses },
+      { ...NO_BONUSES },
     );
   }
 
@@ -110,19 +129,6 @@ export class Equipment {
       }),
       owned: !owned,
     };
-  }
-
-  withArmorClassBase(armorClassBase: number): Equipment {
-    if (!Number.isInteger(armorClassBase) || armorClassBase <= 0) {
-      throw new DomainError(
-        `База Класса Доспеха должна быть целым положительным, получено: ${armorClassBase}`,
-      );
-    }
-    return this.with({ armorClassBase });
-  }
-
-  withOtherBonuses(otherBonuses: ItemBonuses): Equipment {
-    return this.with({ otherBonuses });
   }
 
   /**

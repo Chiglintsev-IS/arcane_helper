@@ -1,23 +1,16 @@
 /**
  * Итоговый Класс Доспеха.
  *
- * Единственная производная, зависящая от активных эффектов, а не только от полей состояния:
- * «Доспехи мага» заменяют базу, «Щит» прибавляет к итогу. Формула и числа с листа персонажа —
- *, выбор места хранения вклада.
+ * Живёт у листа: формула принадлежит контексту, чьим словом назван результат. Эффекты итог не
+ * считают — отдают вклады данными, и лист читает их из состояния, как любое другое слагаемое.
  *
- * Одна функция на все три места, где число называется игроку: шапка боя, объявление мастеру и
+ * Одна функция на все места, где число называется игроку: шапка боя, объявление мастеру и
  * карточка реакции. Расхождение этих чисел заставило бы перепроверять каждое.
  */
 
-import { Sheet } from "@/core/domain/sheet/sheet";
+import { Sheet } from "./sheet";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
-
-/**
- * Имя ручного эффекта, которым шапка ресурсов хранит временную поправку к КД. Фиксировано, потому
- * что это единственный способ узнать её среди активных эффектов — числа своего поля она не имеет.
- */
-export const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
 /**
  * КД по слагаемым состояния и произвольному набору вкладов.
@@ -27,7 +20,7 @@ export const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
  * доспехов» получается из формулы само. Прибавки суммируются.
  */
 function total(character: CharacterState, contributions: ArmorClassEffect[]): number {
-  const { base, dexterityModifier, itemBonus } = Sheet.of(character).armorClassParts;
+  const { base, dexterityModifier, itemBonus, miscBonus } = Sheet.of(character).armorClassParts;
 
   const effectiveBase = contributions
     .filter((contribution) => contribution.kind === "base_override")
@@ -37,7 +30,7 @@ function total(character: CharacterState, contributions: ArmorClassEffect[]): nu
     .filter((contribution) => contribution.kind === "bonus")
     .reduce((sum, contribution) => sum + contribution.value, 0);
 
-  return effectiveBase + dexterityModifier + itemBonus + bonuses;
+  return effectiveBase + dexterityModifier + itemBonus + miscBonus + bonuses;
 }
 
 /** Вклады активных эффектов: эффект без вклада к КД отношения не имеет. */
@@ -55,7 +48,7 @@ export function effectiveArmorClass(character: CharacterState): number {
 /** Активный эффект временной поправки к КД, заведённый шапкой ресурсов, если он есть. */
 export function armorClassAdjustmentEffect(character: CharacterState): ActiveEffect | undefined {
   return character.activeEffects.find(
-    (effect) => effect.nameRu === ARMOR_CLASS_ADJUSTMENT_NAME_RU && effect.armorClass !== undefined,
+    (effect) => effect.manualKind === "armorAdjustment" && effect.armorClass !== undefined,
   );
 }
 

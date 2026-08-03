@@ -57,11 +57,11 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
-import { ArmorSheet } from "@/ui/features/edit-character-sheet/ui/ArmorSheet";
+import { ArmorClassBaseSheet } from "@/ui/features/edit-character-sheet/ui/ArmorClassBaseSheet";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { HealthSheet } from "@/ui/features/edit-character-sheet/ui/HealthSheet";
 import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
-import { ItemBonusesSheet } from "@/ui/features/edit-character-sheet/ui/ItemBonusesSheet";
+import { MiscBonusesSheet } from "@/ui/features/edit-character-sheet/ui/MiscBonusesSheet";
 import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
 import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
@@ -70,10 +70,8 @@ import { OverrideSheet } from "@/ui/features/edit-character-sheet/ui/OverrideShe
 import {
   addItem,
   adjustItemCount,
-  editArmorClassBase,
   editItem,
   editMoney,
-  editOtherBonuses,
   removeItem,
   toggleWorn,
 } from "@/core/application/useCases/equipment";
@@ -83,6 +81,8 @@ import {
   editHealth,
   editIdentity,
   editMarks,
+  editMiscBonuses,
+  setArmorClassBaseOverride,
   setOverride,
 } from "@/core/application/useCases/sheet";
 import { deriveNumbers, type DerivedId } from "@/core/domain/sheet/derived";
@@ -244,7 +244,7 @@ export function PlayScreen() {
   const formulaNumbers = deriveNumbers({
     ...character,
     bonuses: Equipment.of(character).bonuses,
-    armorClassBase: character.equipment.armorClassBase,
+    armorClassBase: Equipment.of(character).armorClassBase,
     overrides: { saves: {}, skills: {} },
   });
 
@@ -507,12 +507,11 @@ export function PlayScreen() {
                 ),
               )
             }
+            onEditArmor={() => setOpenBlockId("armorClassBase")}
             onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}
             onAdjustCount={(id, delta) =>
               apply((current) => adjustItemCount(current, id, delta, clock))
             }
-            onEditArmor={() => setOpenBlockId("armorClassBase")}
-            onEditOtherBonuses={() => setOpenBlockId("itemBonuses")}
           />
         ) : null}
 
@@ -763,12 +762,12 @@ export function PlayScreen() {
         />
       )}
 
-      {openBlockId === "itemBonuses" ? (
-        <ItemBonusesSheet
+      {openBlockId === "miscBonuses" ? (
+        <MiscBonusesSheet
           character={character}
           onCancel={() => setOpenBlockId(null)}
-          onSave={(otherBonuses) => {
-            if (apply((current) => editOtherBonuses(current, otherBonuses, clock)) === null) {
+          onSave={(miscBonuses) => {
+            if (apply((current) => editMiscBonuses(current, miscBonuses, clock)) === null) {
               setOpenBlockId(null);
             }
           }}
@@ -788,11 +787,11 @@ export function PlayScreen() {
       ) : null}
 
       {openBlockId === "armorClassBase" ? (
-        <ArmorSheet
+        <ArmorClassBaseSheet
           character={character}
           onCancel={() => setOpenBlockId(null)}
-          onSave={(base) => {
-            if (apply((current) => editArmorClassBase(current, base, clock)) === null) {
+          onSave={(value) => {
+            if (apply((current) => setArmorClassBaseOverride(current, value, clock)) === null) {
               setOpenBlockId(null);
             }
           }}

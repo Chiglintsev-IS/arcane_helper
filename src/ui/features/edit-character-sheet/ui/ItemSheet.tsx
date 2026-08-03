@@ -37,6 +37,9 @@ export function ItemSheet({
   const [spellcasting, setSpellcasting] = useState(String(item.bonuses?.spellcasting ?? 0));
   const [armorClass, setArmorClass] = useState(String(item.bonuses?.armorClass ?? 0));
   const [savingThrows, setSavingThrows] = useState(String(item.bonuses?.savingThrows ?? 0));
+  const [armorBase, setArmorBase] = useState(
+    item.armorBase === undefined ? "" : String(item.armorBase),
+  );
 
   const numbers = {
     spellcasting: Number.parseInt(spellcasting, 10),
@@ -51,6 +54,9 @@ export function ItemSheet({
     (Number.isInteger(amount) && amount >= 0 && amount <= MAXIMUM_COIN_AMOUNT);
   const bonusesValid =
     kind !== "gear" || Object.values(numbers).every((value) => Number.isInteger(value));
+  // Пустая база — вещь не доспех: кольцо защищает прибавкой, а не заменой базы.
+  const base = armorBase.trim() === "" ? undefined : Number(armorBase);
+  const baseValid = kind !== "gear" || base === undefined || (Number.isInteger(base) && base > 0);
   // Пустая прибавка не хранится вовсе: верёвка не участвует в счёте Класса Доспеха.
   const contributes = Object.values(numbers).some((value) => value !== 0);
 
@@ -58,7 +64,7 @@ export function ItemSheet({
     <EditSheetFrame
       // Счёт стоит в заголовке, а не полем: его меняют расход и пополнение на строке сумки.
       titleRu={item.count === 1 ? item.nameRu : `${item.nameRu} ×${item.count}`}
-      canSave={priceValid && bonusesValid}
+      canSave={priceValid && bonusesValid && baseValid}
       onCancel={onCancel}
       onSave={() =>
         onSave({
@@ -71,6 +77,7 @@ export function ItemSheet({
           ...(amount === undefined ? {} : { price: { amount, currency } }),
           ...(note.trim() === "" ? {} : { note: note.trim() }),
           ...(kind === "gear" && contributes ? { bonuses: numbers } : {}),
+          ...(kind === "gear" && base !== undefined ? { armorBase: base } : {}),
         })
       }
     >
@@ -144,12 +151,17 @@ export function ItemSheet({
         ))}
       </div>
 
-      {/* Прибавки — свойство экипировки: зелье действует, когда его пьют, а не когда несут. */}
+      {/* Прибавки и база доспеха — свойства экипировки: зелье действует, когда его пьют. */}
       {kind === "gear" ? (
         <>
           <NumberField labelRu="К магии" value={spellcasting} onChange={setSpellcasting} />
           <NumberField labelRu="К защите" value={armorClass} onChange={setArmorClass} />
           <NumberField labelRu="Ко всем спасброскам" value={savingThrows} onChange={setSavingThrows} />
+          <NumberField labelRu="База КД доспеха" value={armorBase} onChange={setArmorBase} min={1} />
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            База — только у доспеха: у кольчуги 16, у кольца поля нет. Надетый доспех задаёт базу
+            КД сам; Ловкость и прибавки считаются сверху.
+          </p>
         </>
       ) : null}
 

@@ -8,7 +8,7 @@ import {
   startManualEffect,
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
-import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
+import { effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import { bloodCostFor, exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regenerationDue, startCombat } from "@/core/application/useCases/turn";
 import { adjustHitDice, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
@@ -1001,6 +1001,12 @@ describe("поправка к КД (FR-236)", () => {
     const after = setArmorClassAdjustment(session, 0, clock);
 
     expect(after).toBe(session);
+  });
+
+  it("несёт типизированный признак: опознание не зависит от подписи", () => {
+    const after = setArmorClassAdjustment(session, 2, clock);
+
+    expect(after.character.activeEffects[0]?.manualKind).toBe("armorAdjustment");
   });
 
   it("отклоняет дробное значение", () => {

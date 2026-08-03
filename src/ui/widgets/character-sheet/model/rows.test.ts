@@ -10,7 +10,9 @@ describe("блоки листа", () => {
     expect(sheetBlocks(createThorne()).map((block) => block.id)).toEqual([
       "identity",
       "health",
+      "armorClass",
       "marks",
+      "miscBonuses",
       "ability:strength",
       "ability:dexterity",
       "ability:constitution",
@@ -18,6 +20,18 @@ describe("блоки листа", () => {
       "ability:wisdom",
       "ability:charisma",
       "proficiencies",
+    ]);
+  });
+
+  it("прочие прибавки — карточка листа: вклад без вещи принадлежит персонажу (FR-243)", () => {
+    const state = createThorne();
+    const blessed = { ...state, miscBonuses: { spellcasting: 1, armorClass: -1, savingThrows: 0 } };
+    const block = sheetBlocks(blessed).find((candidate) => candidate.id === "miscBonuses");
+    expect(block?.editId).toBe("miscBonuses");
+    expect(block?.rows).toEqual([
+      { labelRu: "К магии", value: "+1" },
+      { labelRu: "К защите", value: "−1" },
+      { labelRu: "Ко всем спасброскам", value: "+0" },
     ]);
   });
 
@@ -90,6 +104,36 @@ describe("блоки листа", () => {
       labelRu: "Перебивки",
       editId: "combatNumbers",
     });
+  });
+
+  it("блок КД показывает слагаемые и подсказку по надетому доспеху", () => {
+    const rows = blockById("armorClass")?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "База", value: "10", hint: "без доспехов" });
+    expect(rows).toContainEqual({ labelRu: "Ловкость", value: "+2" });
+    expect(rows).toContainEqual({ labelRu: "Вещи", value: "+2" });
+  });
+
+  it("перебивка базы КД меняет подсказку на \"введено руками\"", () => {
+    const state = createThorne();
+    const overridden = { ...state, overrides: { ...state.overrides, armorClassBase: 12 } };
+    const rows = sheetBlocks(overridden).find((block) => block.id === "armorClass")?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "База", value: "12", hint: "введено руками" });
+  });
+
+  it("надетый доспех называется в подсказке базы КД", () => {
+    const state = createThorne();
+    const withArmor = {
+      ...state,
+      equipment: {
+        ...state.equipment,
+        items: [
+          ...state.equipment.items,
+          { id: "scale-mail", nameRu: "Чешуйчатый доспех", kind: "gear" as const, worn: true, count: 1, armorBase: 14 },
+        ],
+      },
+    };
+    const rows = sheetBlocks(withArmor).find((block) => block.id === "armorClass")?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "База", value: "14", hint: "Чешуйчатый доспех" });
   });
 
   it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {

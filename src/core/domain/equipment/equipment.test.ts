@@ -27,7 +27,8 @@ const rope: InventoryItem = { id: "rope", nameRu: "Верёвка", kind: "other
 const gear = () => Equipment.of(createThorne());
 
 describe("снаряжение", () => {
-  it("прибавка складывается из непривязанных и надетых вещей", () => {
+  it("прибавка считается только из надетых вещей", () => {
+    // Вещи Торна: фокусировка +1 к магии, мантия +1 и плащ +1 к защите, плащ +1 к спасброскам.
     expect(gear().bonuses).toEqual({ spellcasting: 1, armorClass: 2, savingThrows: 1 });
 
     const worn = gear().addItem(ring(true));
@@ -128,17 +129,54 @@ describe("снаряжение", () => {
     expect(gear().money.gold).toBe(0);
   });
 
-  it("база Класса Доспеха правится и проверяется", () => {
-    expect(gear().withArmorClassBase(15).armorClassBase).toBe(15);
-    expect(() => gear().withArmorClassBase(0)).toThrow(DomainError);
-    expect(() => gear().withArmorClassBase(1.5)).toThrow(DomainError);
+  it("база КД выводится из надетого: без доспеха 10, надетый доспех задаёт свою", () => {
+    expect(gear().armorClassBase).toBe(10);
+    expect(gear().wornArmor).toBeUndefined();
+
+    const chainmail: InventoryItem = {
+      id: "chainmail",
+      nameRu: "Кольчуга",
+      kind: "gear",
+      worn: true,
+      count: 1,
+      armorBase: 16,
+    };
+    const armored = gear().addItem(chainmail);
+    expect(armored.armorClassBase).toBe(16);
+    expect(armored.wornArmor?.nameRu).toBe("Кольчуга");
   });
 
-  it("прибавки без вещи складываются с надетыми вещами, а не заменяют их", () => {
-    const changed = gear().withOtherBonuses({ spellcasting: 2, armorClass: 0, savingThrows: 0 });
-    expect(changed.otherBonuses.spellcasting).toBe(2);
-    // Вещи Торна дают +1 к магии, +2 к защите и +1 к спасброскам.
-    expect(changed.bonuses).toEqual({ spellcasting: 3, armorClass: 2, savingThrows: 1 });
+  it("из двух надетых доспехов действует наибольшая база — замены не складываются", () => {
+    const leather: InventoryItem = {
+      id: "leather",
+      nameRu: "Кожаный доспех",
+      kind: "gear",
+      worn: true,
+      count: 1,
+      armorBase: 11,
+    };
+    const chainmail: InventoryItem = {
+      id: "chainmail",
+      nameRu: "Кольчуга",
+      kind: "gear",
+      worn: true,
+      count: 1,
+      armorBase: 16,
+    };
+    expect(gear().addItem(chainmail).addItem(leather).armorClassBase).toBe(16);
+    expect(gear().addItem(leather).addItem(chainmail).armorClassBase).toBe(16);
+  });
+
+  it("доспех в сумке базы не задаёт: кольчуга защищает надетой", () => {
+    const carried: InventoryItem = {
+      id: "chainmail",
+      nameRu: "Кольчуга",
+      kind: "gear",
+      worn: false,
+      count: 1,
+      armorBase: 16,
+    };
+    expect(gear().addItem(carried).armorClassBase).toBe(10);
   });
 
   it("отсутствие записи о компонентах — не пустая сумка, а незнание", () => {

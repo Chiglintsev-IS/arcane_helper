@@ -42,6 +42,7 @@ export class Sheet {
         saveProficiencies: state.saveProficiencies,
         skills: state.skills,
         overrides: state.overrides,
+        miscBonuses: state.miscBonuses,
         bonuses: equipment.bonuses,
         armorClassBase: equipment.armorClassBase,
       },
@@ -73,12 +74,26 @@ export class Sheet {
     return this.numbers.passivePerception;
   }
 
-  /** Слагаемые КД без учёта эффектов: их прибавляет доска эффектов. */
-  get armorClassParts(): { base: number; dexterityModifier: number; itemBonus: number } {
+  /**
+   * Слагаемые КД без учёта эффектов: их вклады прибавляет итоговый расчёт.
+   *
+   * База — из надетого доспеха, если игрок не перебил её руками; признак перебивки экран обязан
+   * показать, иначе введённое выглядит счётом.
+   */
+  get armorClassParts(): {
+    base: number;
+    baseOverridden: boolean;
+    dexterityModifier: number;
+    itemBonus: number;
+    miscBonus: number;
+  } {
+    const override = this.input.overrides.armorClassBase;
     return {
-      base: this.input.armorClassBase,
+      base: override ?? this.input.armorClassBase,
+      baseOverridden: override !== undefined,
       dexterityModifier: this.dexterityModifier,
       itemBonus: this.input.bonuses.armorClass,
+      miscBonus: this.input.miscBonuses.armorClass,
     };
   }
 

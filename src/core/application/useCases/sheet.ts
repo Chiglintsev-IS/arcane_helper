@@ -8,6 +8,7 @@
 
 import { proficiencyBonus } from "@/core/domain/character/abilities";
 import { Character } from "@/core/domain/character/character";
+import { DomainError } from "@/core/domain/shared/errors";
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import {
   ABILITIES,
@@ -16,7 +17,7 @@ import {
   type SkillId,
   type SkillTraining,
 } from "@/core/domain/character/skills";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState, ItemBonuses } from "@/core/domain/character/state";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
 
 /** Справочные поля: имени и возраста журнал не касается. */
@@ -92,6 +93,50 @@ export function setOverride(
       kind: "sheet_edited",
       summaryRu: value === null ? "Число возвращено к формуле" : `Число введено руками: ${value}`,
     },
+    clock,
+  );
+}
+
+/**
+ * Перебивка базы КД: действует вместо выведенной из надетого доспеха, `null` возвращает счёт.
+ *
+ * Живёт рядом с остальными перебивками, а не в общем их сценарии: база КД — не производное число
+ * листа, у неё своя формула и своя шторка.
+ */
+export function setArmorClassBaseOverride(
+  session: Session,
+  value: number | null,
+  clock: Clock,
+): Session {
+  if (value !== null && (!Number.isInteger(value) || value <= 0)) {
+    throw new DomainError(`База Класса Доспеха должна быть целым положительным, получено: ${value}`);
+  }
+  const { overrides } = session.character;
+  const { armorClassBase: _dropped, ...rest } = overrides;
+  const next: CharacterState["overrides"] =
+    value === null ? { ...rest } : { ...overrides, armorClassBase: value };
+  return commit(
+    session,
+    Character.of(session.character).withSheet({ overrides: next }),
+    {
+      kind: "sheet_edited",
+      summaryRu:
+        value === null ? "База Класса Доспеха: по надетому" : `База Класса Доспеха: ${value}`,
+    },
+    clock,
+  );
+}
+
+/** Прочие прибавки: свойство самого персонажа — благословение, дар, обучение. */
+export function editMiscBonuses(
+  session: Session,
+  miscBonuses: ItemBonuses,
+  clock: Clock,
+): Session {
+  return commit(
+    session,
+    Character.of(session.character).withSheet({ miscBonuses }),
+    { kind: "sheet_edited", summaryRu: "Правка прочих прибавок" },
     clock,
   );
 }

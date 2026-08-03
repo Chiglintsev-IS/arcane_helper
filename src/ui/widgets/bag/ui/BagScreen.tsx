@@ -2,6 +2,7 @@
 
 import type { CharacterState, InventoryItem, ItemKind } from "@/core/domain/character/state";
 import { CURRENCIES } from "@/core/domain/character/state";
+import { Equipment } from "@/core/domain/equipment/equipment";
 import { CURRENCY_ABBR } from "@/ui/entities/character/lib/labels";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { signed } from "@/core/shared/language";
@@ -128,23 +129,22 @@ function ItemRow({
 export function BagScreen({
   character,
   onEditMoney,
+  onEditArmor,
   onOpenItem,
   onAddItem,
   onToggleWorn,
   onAdjustCount,
-  onEditArmor,
-  onEditOtherBonuses,
 }: {
   character: CharacterState;
   onEditMoney: () => void;
+  onEditArmor: () => void;
   onOpenItem: (id: string) => void;
   onAddItem: (kind: ItemKind, nameRu: string) => void;
   onToggleWorn: (id: string) => void;
   onAdjustCount: (id: string, delta: number) => void;
-  onEditArmor: () => void;
-  onEditOtherBonuses: () => void;
 }) {
-  const { money, items, armorClassBase, otherBonuses } = character.equipment;
+  const { money, items } = character.equipment;
+  const equipment = Equipment.of(character);
 
   return (
     <div className="flex flex-col gap-2">
@@ -169,6 +169,28 @@ export function BagScreen({
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Доспех</h2>
+          <button
+            type="button"
+            onClick={onEditArmor}
+            aria-label="Править: Доспех"
+            className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+          >
+            Править
+          </button>
+        </div>
+        <p className="text-sm tabular-nums">
+          База КД {equipment.armorClassBase}
+          {equipment.wornArmor !== undefined ? (
+            <span className="text-slate-500 dark:text-slate-400"> · {equipment.wornArmor.nameRu}</span>
+          ) : (
+            <span className="text-slate-500 dark:text-slate-400"> · без доспехов</span>
+          )}
+        </p>
       </section>
 
       {SECTIONS.map((section) => {
@@ -197,42 +219,6 @@ export function BagScreen({
         );
       })}
 
-      {/* База защиты и прибавки без вещи — тоже про вещественное; правятся редко и стоят внизу. */}
-      <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Доспех</h2>
-          <button
-            type="button"
-            onClick={onEditArmor}
-            aria-label="Править: Доспех"
-            className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
-          >
-            Править
-          </button>
-        </div>
-        <p className="text-sm">
-          <span className="text-slate-600 dark:text-slate-400">База Класса Доспеха</span>{" "}
-          <span className="tabular-nums">{armorClassBase}</span>
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Прибавки без вещи</h2>
-          <button
-            type="button"
-            onClick={onEditOtherBonuses}
-            aria-label="Править: Прибавки без вещи"
-            className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
-          >
-            Править
-          </button>
-        </div>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          магия {signed(otherBonuses.spellcasting)} · защита {signed(otherBonuses.armorClass)} ·
-          спасброски {signed(otherBonuses.savingThrows)}
-        </p>
-      </section>
     </div>
   );
 }

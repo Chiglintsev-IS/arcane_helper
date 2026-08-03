@@ -38,6 +38,32 @@ export type SheetBlockData = {
 const OVERRIDDEN_HINT = "введено руками";
 
 /**
+ * Раскладка КД: база из надетого доспеха, Ловкость, вещи, прочие прибавки.
+ *
+ * Итога здесь нет: его двигают действующие эффекты, и действующее число стоит в шапке «Игры» —
+ * второе место для того же итога расходилось бы с первым молча.
+ */
+function armorClassBlock(character: CharacterState): SheetBlockData {
+  const parts = Sheet.of(character).armorClassParts;
+  const wornArmor = Character.of(character).equipment.wornArmor;
+  return {
+    id: "armorClass",
+    titleRu: "Класс Доспеха",
+    editId: "armorClassBase",
+    rows: [
+      {
+        labelRu: "База",
+        value: String(parts.base),
+        hint: parts.baseOverridden ? OVERRIDDEN_HINT : (wornArmor?.nameRu ?? "без доспехов"),
+      },
+      { labelRu: "Ловкость", value: signed(parts.dexterityModifier) },
+      { labelRu: "Вещи", value: signed(parts.itemBonus) },
+      { labelRu: "Прочие прибавки", value: signed(parts.miscBonus) },
+    ],
+  };
+}
+
+/**
  * Откуда взялся действующий максимум хитов, когда он не равен базовому: снижения названы, но
  * место занимает одно число, а не четыре строки слагаемых. Целый максимум подсказки не требует —
  * объяснять нечего.
@@ -149,6 +175,7 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
         },
       ],
     },
+    armorClassBlock(character),
     {
       id: "marks",
       titleRu: "Отметки мастера",
@@ -161,6 +188,20 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
         },
         { labelRu: "Вдохновение", value: character.inspiration ? "есть" : "нет" },
         ...overriddenNumbers,
+      ],
+    },
+    /**
+     * Прочие прибавки — свойство самого Торна: благословение, дар, обучение. Прибавка с вещью
+     * правится у вещи в «Сумке», а этой карточке принадлежит вклад, у которого вещи нет.
+     */
+    {
+      id: "miscBonuses",
+      titleRu: "Прочие прибавки",
+      editId: "miscBonuses",
+      rows: [
+        { labelRu: "К магии", value: signed(character.miscBonuses.spellcasting) },
+        { labelRu: "К защите", value: signed(character.miscBonuses.armorClass) },
+        { labelRu: "Ко всем спасброскам", value: signed(character.miscBonuses.savingThrows) },
       ],
     },
     ...ABILITIES.map((ability) => abilityBlock(character, ability)),

@@ -193,7 +193,9 @@ export function describeParsingContract(): void {
 
   it("версию старее приводит, а не отвергает: обновление не теряет данных", () => {
     const legacy = snapshot();
-    const { abilities, equipment, overrides, hitPoints, ...character } = legacy.character;
+    // Полей нынешней формы у версии 1 не было — из образца они убираются вместе с их владельцами.
+    const { abilities, equipment, overrides, hitPoints, miscBonuses, ...character } =
+      legacy.character;
     const before = parsePersisted({
       ...legacy,
       schemaVersion: 1,
@@ -209,7 +211,14 @@ export function describeParsingContract(): void {
     });
     const totals = Sheet.of(before.character);
     expect(totals.spellSaveDc).toBe(16);
-    expect(totals.armorClassParts).toEqual({ base: 10, dexterityModifier: 2, itemBonus: 2 });
+    // Прибавка версии 1 не называла вещи — она читается прочей прибавкой персонажа.
+    expect(totals.armorClassParts).toEqual({
+      base: 10,
+      baseOverridden: false,
+      dexterityModifier: 2,
+      itemBonus: 0,
+      miscBonus: 2,
+    });
   });
 
   it("испорченное сохранение остаётся повреждением, сколько бы ни стояло в версии", () => {

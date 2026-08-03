@@ -15,7 +15,7 @@ import { useState, type FormEvent } from "react";
 
 import { ConcentrationCard } from "@/ui/entities/concentration/ui/ConcentrationCard";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
-import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
+import { effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 
 /**

@@ -120,10 +120,6 @@ const RAW: unknown = {
 
   hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
   equipment: {
-    // База 10 — доспехов нет.
-    armorClassBase: 10,
-    // Каждая прибавка Торна принадлежит названной вещи, поэтому прибавок без вещи у него нет.
-    otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
     items: [
       {
         id: "spellcasting-focus",

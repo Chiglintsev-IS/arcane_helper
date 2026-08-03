@@ -9,6 +9,7 @@ import {
   spellSlotsSchema,
 } from "@/core/domain/character/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { Equipment } from "@/core/domain/equipment/equipment";
 
 const WEB_EFFECT = {
   id: "effect-web",
@@ -222,6 +223,13 @@ describe("схемы вложенных структур", () => {
     ).toBe(true);
   });
 
+  it("признак ручного эффекта — закрытый словарь: поправка к КД принимается, чужое слово нет", () => {
+    const { spellId: _omitted, ...manual } = WEB_EFFECT;
+    const withKind = (manualKind: string) => ({ ...manual, isConcentration: false, manualKind });
+    expect(activeEffectSchema.safeParse(withKind("armorAdjustment")).success).toBe(true);
+    expect(activeEffectSchema.safeParse(withKind("blessing")).success).toBe(false);
+  });
+
   it("профиль отыгрыша без тона отклоняется", () => {
     const profile = structuredClone(thorne()) as { roleplayProfile: Record<string, unknown> };
     profile.roleplayProfile.tone = [];
@@ -276,12 +284,12 @@ describe("лист персонажа", () => {
       nature: "proficient",
       perception: "proficient",
     });
-    expect(thorneState.equipment.otherBonuses).toEqual({
+    expect(thorneState.miscBonuses).toEqual({
       spellcasting: 0,
       armorClass: 0,
       savingThrows: 0,
     });
-    expect(thorneState.equipment.armorClassBase).toBe(10);
+    expect(Equipment.of(thorneState).armorClassBase).toBe(10);
     expect(thorneState.equipment.items.map((item) => item.nameRu)).toEqual([
       "Магическая фокусировка +1",
       "Мантия +1",

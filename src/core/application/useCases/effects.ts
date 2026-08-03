@@ -6,19 +6,19 @@ import { Character } from "@/core/domain/character/character";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { ArmorClassEffect } from "@/core/domain/catalog/spell";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
-import {
-  ARMOR_CLASS_ADJUSTMENT_NAME_RU,
-  armorClassAdjustmentEffect,
-} from "@/core/domain/effects/armorClass";
+import { armorClassAdjustmentEffect } from "@/core/domain/sheet/armorClass";
 import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
 export type { ConcentrationEnd };
-export { armorClassAdjustment } from "@/core/domain/effects/armorClass";
+export { armorClassAdjustment } from "@/core/domain/sheet/armorClass";
 
 /** Условие окончания ручного эффекта: игрок снимает его сам, приложение сроков не считает. */
 const MANUAL_EFFECT_END_CONDITION_RU = "Снимается вручную.";
+
+/** Подпись поправки к КД в списке эффектов. Опознаётся поправка признаком, а не этой строкой. */
+export const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
 export type ManualEffectInput = {
   nameRu: string;
@@ -93,6 +93,7 @@ function buildManualEffect(
   nameRu: string,
   armorClass: ArmorClassEffect | undefined,
   clock: Clock,
+  manualKind?: ActiveEffect["manualKind"],
 ): ActiveEffect {
   return {
     id: clock.nextId(),
@@ -103,6 +104,7 @@ function buildManualEffect(
     isConcentration: false,
     slotLevelUsed: 0,
     ...(armorClass === undefined ? {} : { armorClass }),
+    ...(manualKind === undefined ? {} : { manualKind }),
     endConditionRu: MANUAL_EFFECT_END_CONDITION_RU,
   };
 }
@@ -150,7 +152,12 @@ export function setArmorClassAdjustment(session: Session, value: number, clock: 
 
   const root = Character.of(session.character);
   const cleared = existing === undefined ? root.effects : root.effects.end(existing.id).board;
-  const effect = buildManualEffect(ARMOR_CLASS_ADJUSTMENT_NAME_RU, { kind: "bonus", value }, clock);
+  const effect = buildManualEffect(
+    ARMOR_CLASS_ADJUSTMENT_NAME_RU,
+    { kind: "bonus", value },
+    clock,
+    "armorAdjustment",
+  );
 
   return commit(
     session,

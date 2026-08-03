@@ -41,14 +41,14 @@ export const DERIVED_IDS: readonly DerivedId[] = [
 export type DerivedNumber = { id: DerivedId; value: number; overridden: boolean };
 
 /**
- * Основания счёта: база персонажа и вклад снаряжения.
+ * Основания счёта: база персонажа, его прочие прибавки и вклад снаряжения.
  *
  * Снаряжение приходит отдельным полем, а не полем персонажа: так контекст персонажа остаётся листом
  * графа зависимостей и не узнаёт ни про вещи, ни про инвентарь.
  */
 export type SheetInput = Pick<
   CharacterState,
-  "level" | "abilities" | "saveProficiencies" | "skills" | "overrides"
+  "level" | "abilities" | "saveProficiencies" | "skills" | "overrides" | "miscBonuses"
 > & {
   bonuses: ItemBonuses;
   armorClassBase: number;
@@ -63,6 +63,9 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
   const { overrides } = sheet;
   const bonus = overrides.proficiencyBonus ?? proficiencyBonus(sheet.level);
   const spellcastingScore = sheet.abilities[SPELLCASTING_ABILITY];
+  // Вклад надетых вещей и прочие прибавки персонажа складываются: источники разные, правило одно.
+  const spellcastingBonus = sheet.bonuses.spellcasting + sheet.miscBonuses.spellcasting;
+  const savingThrowBonus = sheet.bonuses.savingThrows + sheet.miscBonuses.savingThrows;
 
   const saves = {} as Record<Ability, number>;
   for (const ability of ABILITIES) {
@@ -72,7 +75,7 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
         score: sheet.abilities[ability],
         proficient: sheet.saveProficiencies.includes(ability),
         proficiencyBonus: bonus,
-        itemBonus: sheet.bonuses.savingThrows,
+        itemBonus: savingThrowBonus,
       });
   }
 
@@ -94,14 +97,14 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
       spellSaveDc({
         level: sheet.level,
         score: spellcastingScore,
-        itemBonus: sheet.bonuses.spellcasting,
+        itemBonus: spellcastingBonus,
       }),
     spellAttackModifier:
       overrides.spellAttackModifier ??
       spellAttackModifier({
         level: sheet.level,
         score: spellcastingScore,
-        itemBonus: sheet.bonuses.spellcasting,
+        itemBonus: spellcastingBonus,
       }),
     preparedLimit: overrides.preparedLimit ?? preparedLimit(spellcastingScore, sheet.level),
     initiative:

@@ -9,11 +9,10 @@
 
 import { DEFAULT_SCREEN_MODE } from "@/core/shared/screenMode";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
+import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "./abilities";
 
 const UNKNOWN_ABILITY_SCORE = 10;
-/** База Класса Доспеха без доспехов. Нужна только на случай испорченного сохранения без неё. */
-const DEFAULT_ARMOR_CLASS_BASE = 10;
 
 type LegacyShape = {
   equipment?: { spellcastingFocus?: boolean; armorClassBase?: number };
@@ -141,24 +140,135 @@ function migrateItemCategories(state: unknown): unknown {
 }
 
 /**
+ * Хранимая база КД из снаряжения становится перебивкой листа.
+ *
+ * База, равная базе без доспехов, перебивкой не становится: это не выбор игрока, а умолчание.
+ * Имя доспеха приведение не выдумывает — отличное от умолчания число честнее хранить перебивкой,
+ * пока игрок не заведёт доспех сам.
+ */
+function migrateArmorBase(state: unknown): unknown {
+  const split = splitArmorBase(state);
+  if (split === null) return state;
+
+  const overrides = (state as { overrides?: unknown }).overrides;
+  const known =
+    overrides !== null && typeof overrides === "object"
+      ? (overrides as Record<string, unknown>)
+      : {};
+  const keepDerived =
+    typeof split.base !== "number" ||
+    split.base === UNARMORED_ARMOR_CLASS_BASE ||
+    known.armorClassBase !== undefined;
+
+  return {
+    ...(state as Record<string, unknown>),
+    equipment: split.equipment,
+    ...(keepDerived ? {} : { overrides: { ...known, armorClassBase: split.base } }),
+  };
+}
+
+/**
+ * Снимок отмены хранимую базу просто теряет: перебивку из него не собрать — снимок не знает,
+ * какие перебивки действовали в тот момент, а дописанная наугад затёрла бы чужие.
+ */
+function migrateArmorBasePatch(patch: unknown): unknown {
+  const split = splitArmorBase(patch);
+  if (split === null) return patch;
+  return { ...(patch as Record<string, unknown>), equipment: split.equipment };
+}
+
+/** Снимает хранимую базу со снаряжения; `null` — приводить нечего. */
+function splitArmorBase(
+  state: unknown,
+): { equipment: Record<string, unknown>; base: unknown } | null {
+  if (state === null || typeof state !== "object") return null;
+  const { equipment } = state as { equipment?: unknown };
+  if (equipment === null || typeof equipment !== "object" || !("armorClassBase" in equipment)) {
+    return null;
+  }
+  const { armorClassBase, ...bare } = equipment as Record<string, unknown>;
+  return { equipment: bare, base: armorClassBase };
+}
+
+/**
+ * «Прибавки без вещи» жили в снаряжении; теперь это прочие прибавки самого персонажа.
+ *
+ * Работает и над состоянием, и над снимком отмены: у обоих одна и та же пара «снаряжение —
+ * персонаж», и снимок со старым полем возвращал бы прибавку туда, откуда она уехала.
+ */
+function migrateMiscBonuses(state: unknown): unknown {
+  if (state === null || typeof state !== "object") return state;
+  const { equipment, miscBonuses } = state as { equipment?: unknown; miscBonuses?: unknown };
+  if (equipment === null || typeof equipment !== "object" || !("otherBonuses" in equipment)) {
+    return state;
+  }
+  const { otherBonuses, ...rest } = equipment as Record<string, unknown>;
+  return {
+    ...state,
+    equipment: rest,
+    ...(miscBonuses === undefined ? { miscBonuses: otherBonuses } : {}),
+  };
+}
+
+/**
+ * Имя, которым прежние версии опознавали поправку к КД среди активных эффектов. Заморожено на дате
+ * приведения: нынешняя подпись поправки вправе меняться, а прошлые сохранения — нет.
+ */
+const LEGACY_ADJUSTMENT_NAME_RU = "Поправка к КД";
+
+/** Эффект прежней формы получает признак поправки: опознание по строке имени умерло. */
+function migrateAdjustmentEffect(effect: unknown): unknown {
+  if (effect === null || typeof effect !== "object") return effect;
+  const { nameRu, armorClass, manualKind } = effect as {
+    nameRu?: unknown;
+    armorClass?: unknown;
+    manualKind?: unknown;
+  };
+  if (nameRu !== LEGACY_ADJUSTMENT_NAME_RU || armorClass === undefined || manualKind !== undefined) {
+    return effect;
+  }
+  return { ...(effect as Record<string, unknown>), manualKind: "armorAdjustment" };
+}
+
+function migrateAdjustmentMarker(state: unknown): unknown {
+  if (state === null || typeof state !== "object") return state;
+  const { activeEffects } = state as { activeEffects?: unknown };
+  if (!Array.isArray(activeEffects)) return state;
+
+  const effects = activeEffects.map(migrateAdjustmentEffect);
+  if (effects.every((effect, index) => effect === activeEffects[index])) return state;
+  return { ...state, activeEffects: effects };
+}
+
+/**
  * Приведение снимка отмены. Снимок держит прежние значения изменяемых полей, включая снаряжение
  * прежней формы; без приведения отмена старой записи вернула бы в состояние рода вещей, которых
  * новая модель не знает.
  */
 export function migrateUndoPatch(patch: unknown): unknown {
-  return migrateItemCategories(patch);
+  return migrateAdjustmentMarker(
+    migrateArmorBasePatch(migrateMiscBonuses(migrateItemCategories(patch))),
+  );
 }
 
 export function migrateCharacterState(raw: unknown): unknown {
-  return migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw))));
+  return migrateAdjustmentMarker(
+    migrateArmorBase(
+      migrateMiscBonuses(
+        migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw)))),
+      ),
+    ),
+  );
 }
 
 function migrateShape(raw: unknown): unknown {
   if (raw === null || typeof raw !== "object") return raw;
 
   const state = raw as LegacyShape;
-  // Версия 3 узнаётся по снаряжению, знающему про базу защиты; версия 2 — по характеристикам.
-  if ((state.equipment as { armorClassBase?: number } | undefined)?.armorClassBase !== undefined) {
+  // Версии 3 и 4 узнаются по снаряжению, знающему про инвентарь либо хранимую базу защиты;
+  // версия 2 — по характеристикам.
+  const equipment = state.equipment as { armorClassBase?: number; items?: unknown } | undefined;
+  if (equipment?.armorClassBase !== undefined || equipment?.items !== undefined) {
     return raw;
   }
 
@@ -168,7 +278,7 @@ function migrateShape(raw: unknown): unknown {
     };
     return {
       ...rest,
-      equipment: migrateEquipment(state, armorClass?.base ?? DEFAULT_ARMOR_CLASS_BASE),
+      equipment: migrateEquipment(state, armorClass?.base ?? UNARMORED_ARMOR_CLASS_BASE),
     };
   }
 
@@ -195,7 +305,7 @@ function migrateShape(raw: unknown): unknown {
       charisma: UNKNOWN_ABILITY_SCORE,
     },
     equipment: {
-      armorClassBase: armorClass?.base ?? DEFAULT_ARMOR_CLASS_BASE,
+      armorClassBase: armorClass?.base ?? UNARMORED_ARMOR_CLASS_BASE,
       otherBonuses: { spellcasting: 0, armorClass: itemBonus, savingThrows: 0 },
       items: [],
       ...(state.equipment === undefined ? {} : { components: state.equipment }),
