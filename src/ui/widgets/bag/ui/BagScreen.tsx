@@ -20,10 +20,13 @@ const SECTIONS: { kind: ItemKind; titleRu: string; addLabelRu: string }[] = [
 /** Категории, чей запас меняют прямо со строки: расходуют и пополняют счётом. */
 const COUNTABLE_KINDS: readonly ItemKind[] = ["consumable", "ingredient", "other"];
 
-/** Вторая строка вещи: цена, прибавки, заметка — только то, что у вещи действительно есть. */
+/**
+ * Вторая строка вещи: цена, прибавки, заметка — только то, что у вещи действительно есть.
+ * Прибавка называется только у экипировки: у остальных она не действует, и показанное число лгало бы.
+ */
 export function itemMeta(item: InventoryItem): string {
   const bonuses =
-    item.bonuses === undefined
+    item.bonuses === undefined || item.kind !== "gear"
       ? []
       : [
           item.bonuses.spellcasting === 0 ? null : `магия ${signed(item.bonuses.spellcasting)}`,
@@ -157,7 +160,7 @@ export function BagScreen({
             Править
           </button>
         </div>
-        {/* Все пять монет всегда: исчезнувший ноль заставляет гадать, кончилось или забыто. */}
+        {/* Все монеты стола всегда: исчезнувший ноль заставляет гадать, кончилось или забыто. */}
         <ul aria-label="Кошелёк" className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
           {CURRENCIES.map((currency) => (
             <li key={currency}>

@@ -17,11 +17,14 @@ import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 export function ItemSheet({
   item,
   onSave,
+  onAdjustCount,
   onRemove,
   onCancel,
 }: {
   item: InventoryItem;
   onSave: (item: InventoryItem) => void;
+  /** Немедленный расход и пополнение — не черновик: применяется нажатием, как кнопки на строке. */
+  onAdjustCount: (delta: number) => void;
   onRemove: () => void;
   onCancel: () => void;
 }) {
@@ -71,6 +74,34 @@ export function ItemSheet({
         })
       }
     >
+      {/*
+       * Запас меняется кнопками, а не полем: поле хранило бы число, набранное до расхода, и
+       * сохранение возвращало бы потраченное. У экипировки это единственное место уменьшить стопку.
+       */}
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span className="text-slate-600 dark:text-slate-400">Запас</span>
+        <span className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label={`Потратить один: ${item.nameRu}`}
+            disabled={item.count === 0}
+            onClick={() => onAdjustCount(-1)}
+            className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+          >
+            −
+          </button>
+          <span className="min-w-8 text-center tabular-nums">{item.count}</span>
+          <button
+            type="button"
+            aria-label={`Добавить один: ${item.nameRu}`}
+            onClick={() => onAdjustCount(1)}
+            className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base dark:border-slate-800"
+          >
+            +
+          </button>
+        </span>
+      </div>
+
       <div role="radiogroup" aria-label="Категория" className="flex flex-wrap gap-1">
         {ITEM_KINDS.map((choice) => (
           <button

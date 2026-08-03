@@ -28,7 +28,12 @@ export function MoneySheet({
     copper: String(money.copper),
   });
 
-  const parsed = CURRENCIES.map((currency) => [currency, Number.parseInt(values[currency], 10)] as const);
+  // Number, а не parseInt: «12.5» обязано отвергнуться, а не молча стать двенадцатью.
+  // Пустое поле — не ноль, а незаполненное: Number("") молча дал бы ноль.
+  const parsed = CURRENCIES.map(
+    (currency) =>
+      [currency, values[currency].trim() === "" ? Number.NaN : Number(values[currency])] as const,
+  );
   const valid = parsed.every(
     ([, amount]) => Number.isInteger(amount) && amount >= 0 && amount <= MAXIMUM_COIN_AMOUNT,
   );

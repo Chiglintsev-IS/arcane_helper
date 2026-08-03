@@ -89,39 +89,64 @@ function migrateArcaneRecovery(state: unknown): unknown {
 /** Прежние рода вещей, у которых в четырёх категориях есть прямой наследник. */
 const LEGACY_ITEM_KINDS: Record<string, string> = { potion: "consumable", junk: "other" };
 
+/** Верхний предел счёта вещи — тот же, что в схеме; сюда продублирован против цикла импортов. */
+const ITEM_COUNT_CAP = 9999;
+
 /**
- * Род вещи становится категорией: зелье — расходник, хлам — «другое». Вещь без рода определяется
- * по поведению — надетая или дающая прибавку была экипировкой и до того, как слово появилось.
- * Надетость вне экипировки снимается: расходник не бывает надет, и молчаливое «надето» на зелье
- * ломало бы правило «числа считаются из надетого».
+ * Одна вещь прежней формы — к новой: род становится категорией (зелье — расходник, хлам —
+ * «другое», без рода — по поведению: надетая или с прибавкой была экипировкой и до слова),
+ * надетость вне экипировки снимается — расходник не бывает надет, — а счёт выше предела
+ * обрезается пределом: старая схема потолка не знала, и отказ схемы запирал бы всё сохранение.
  */
+function migrateItem(item: unknown): unknown {
+  if (item === null || typeof item !== "object") return item;
+  const { kind, worn, bonuses, count } = item as {
+    kind?: unknown;
+    worn?: unknown;
+    bonuses?: unknown;
+    count?: unknown;
+  };
+
+  const migratedKind =
+    kind === "gear" || kind === "consumable" || kind === "ingredient" || kind === "other"
+      ? kind
+      : typeof kind === "string" && kind in LEGACY_ITEM_KINDS
+        ? LEGACY_ITEM_KINDS[kind]
+        : worn === true || bonuses !== undefined
+          ? "gear"
+          : "other";
+
+  const wornOff = migratedKind !== "gear" && worn === true;
+  const capped = typeof count === "number" && count > ITEM_COUNT_CAP;
+  if (migratedKind === kind && !wornOff && !capped) return item;
+
+  return {
+    ...(item as Record<string, unknown>),
+    kind: migratedKind,
+    ...(wornOff ? { worn: false } : {}),
+    ...(capped ? { count: ITEM_COUNT_CAP } : {}),
+  };
+}
+
 function migrateItemCategories(state: unknown): unknown {
   if (state === null || typeof state !== "object") return state;
   const { equipment } = state as { equipment?: { items?: unknown } };
   const stored = equipment?.items;
   if (!Array.isArray(stored)) return state;
 
-  const items = stored.map((item) => {
-    if (item === null || typeof item !== "object") return item;
-    const { kind, worn, bonuses } = item as { kind?: unknown; worn?: unknown; bonuses?: unknown };
-    if (kind === "gear" || kind === "consumable" || kind === "ingredient" || kind === "other") {
-      return item;
-    }
-    const migrated =
-      typeof kind === "string" && kind in LEGACY_ITEM_KINDS
-        ? LEGACY_ITEM_KINDS[kind]
-        : worn === true || bonuses !== undefined
-          ? "gear"
-          : "other";
-    return {
-      ...(item as Record<string, unknown>),
-      kind: migrated,
-      ...(migrated === "gear" ? {} : { worn: false }),
-    };
-  });
+  const items = stored.map(migrateItem);
   // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
   if (items.every((item, index) => item === stored[index])) return state;
   return { ...state, equipment: { ...equipment, items } };
+}
+
+/**
+ * Приведение снимка отмены. Снимок держит прежние значения изменяемых полей, включая снаряжение
+ * прежней формы; без приведения отмена старой записи вернула бы в состояние рода вещей, которых
+ * новая модель не знает.
+ */
+export function migrateUndoPatch(patch: unknown): unknown {
+  return migrateItemCategories(patch);
 }
 
 export function migrateCharacterState(raw: unknown): unknown {

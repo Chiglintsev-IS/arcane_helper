@@ -751,6 +751,7 @@ export function PlayScreen() {
 
       {editedAbility === null ? null : (
         <AbilitySheet
+          key={editedAbility}
           ability={editedAbility}
           character={character}
           onCancel={() => setOpenBlockId(null)}
@@ -801,11 +802,17 @@ export function PlayScreen() {
       {/* Шторка вещи, на которую нажали в сумке: категория, заметка, цена, прибавки, удаление. */}
       {openedItem === null ? null : (
         <ItemSheet
+          // Ключ обязателен: без него нажатие на другую вещь при открытой шторке сохранило бы
+          // черновик первой во вторую — React переиспользовал бы инстанс вместе с полями.
+          key={openedItem.id}
           item={openedItem}
           onCancel={() => setOpenBlockId(null)}
           onSave={(item) => {
             if (apply((current) => editItem(current, item, clock)) === null) setOpenBlockId(null);
           }}
+          onAdjustCount={(delta) =>
+            apply((current) => adjustItemCount(current, openedItem.id, delta, clock))
+          }
           onRemove={() => {
             if (apply((current) => removeItem(current, openedItem.id, clock)) === null) {
               setOpenBlockId(null);

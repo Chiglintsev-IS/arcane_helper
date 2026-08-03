@@ -128,15 +128,20 @@ export class Equipment {
   /**
    * Новая вещь идёт в конец: порядок ввода — единственный, который игрок помнит.
    *
-   * Одноимённая складывается в количество, а не отвергается: второе зелье лечения — самая частая
-   * находка за столом, и отказ на ней означал бы, что запас пополняют удалением и вводом заново.
+   * Одноимённая той же категории складывается в запас, а не отвергается: второе зелье лечения —
+   * самая частая находка за столом. Одноимённая другой категории отвергается с причиной: молча
+   * пополнить чужой раздел значит спрятать находку от игрока, который печатал её в свой.
    */
   addItem(item: InventoryItem): Equipment {
     const found = this.data.items.find((existing) => existing.id === item.id);
-    if (found !== undefined) {
-      return this.replaceItem({ ...found, count: found.count + item.count });
+    if (found === undefined) {
+      return this.with({ items: [...this.data.items, item] });
     }
-    return this.with({ items: [...this.data.items, item] });
+    if (found.kind !== item.kind) {
+      throw new DomainError(`«${found.nameRu}» уже лежит в сумке другой категорией`);
+    }
+    // Пополнение идёт тем же приращением, что и кнопка «+»: предел запаса один на оба входа.
+    return item.count === 0 ? this : this.adjustCount(item.id, item.count);
   }
 
   replaceItem(item: InventoryItem): Equipment {

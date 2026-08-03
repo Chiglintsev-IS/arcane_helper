@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { migrateCharacterState } from "./migration";
+import { migrateCharacterState, migrateUndoPatch } from "./migration";
 import { characterStateSchema } from "./state";
 
 /** Лист Торна в том виде, в каком его писала версия 1. */
@@ -248,6 +248,35 @@ describe("приведение состояния версии 1", () => {
         withItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
       );
       expect(itemsOf(migrated)[0]).toMatchObject({ kind: "consumable", worn: false });
+    });
+
+    it("надетый ингредиент прежней сборки снимается и с уже верной категорией", () => {
+      const migrated = migrateCharacterState(
+        withItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
+      );
+      expect(itemsOf(migrated)[0]).toMatchObject({ kind: "ingredient", worn: false });
+    });
+
+    it("счёт выше предела обрезается пределом: старое сохранение обязано читаться", () => {
+      const migrated = migrateCharacterState(
+        withItems([{ id: "arrows", nameRu: "Стрелы", kind: "other", count: 15000 }]),
+      );
+      expect(itemsOf(migrated)[0]?.count).toBe(9999);
+    });
+
+    it("снимок отмены приводится так же, как состояние", () => {
+      const patch = {
+        equipment: {
+          armorClassBase: 10,
+          otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+          items: [{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }],
+        },
+      };
+      const migrated = migrateUndoPatch(patch) as typeof patch;
+      expect(migrated.equipment.items[0]).toMatchObject({ kind: "consumable", worn: false });
+      // Снимок без снаряжения проходит насквозь: приводить в нём нечего.
+      const bare = { hitPoints: { current: 1 } };
+      expect(migrateUndoPatch(bare)).toBe(bare);
     });
 
     it("состояние с новыми категориями проходит насквозь той же ссылкой", () => {

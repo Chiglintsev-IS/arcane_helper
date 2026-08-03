@@ -77,11 +77,23 @@ describe("снаряжение", () => {
     ]);
   });
 
-  it("одноимённая вещь пополняет запас, а не отвергается", () => {
+  it("одноимённая вещь той же категории пополняет запас, а не отвергается", () => {
     const stacked = gear().addItem(potions(2)).addItem(potions(3));
 
     expect(stacked.items.filter((item) => item.id === "healing-potion")).toHaveLength(1);
     expect(stacked.items.find((item) => item.id === "healing-potion")?.count).toBe(5);
+  });
+
+  it("одноимённая вещь другой категории отвергается с причиной (FR-241)", () => {
+    const stocked = gear().addItem(rope);
+    expect(() => stocked.addItem({ ...rope, kind: "gear" })).toThrow(/другой категорией/);
+  });
+
+  it("пополнение через находку не пробивает предел запаса (FR-238)", () => {
+    const full = gear().addItem(potions(9999));
+    expect(() => full.addItem(potions(1))).toThrow(DomainError);
+    // Нулевое пополнение одноимённой вещи ничего не меняет и не отвергается.
+    expect(full.addItem(potions(0)).items.find((item) => item.id === "healing-potion")?.count).toBe(9999);
   });
 
   it("отсутствие вещи и порча данных отвергаются с причиной", () => {

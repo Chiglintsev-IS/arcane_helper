@@ -332,6 +332,7 @@ describe("шторки правки листа", () => {
       <ItemSheet
         item={{ id: "свиток", nameRu: "Свиток огненного шара", kind: "other", worn: false, count: 1 }}
         onSave={onSave}
+        onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -367,6 +368,7 @@ describe("шторки правки листа", () => {
           bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
         }}
         onSave={onSave}
+        onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -393,6 +395,7 @@ describe("шторки правки листа", () => {
       <ItemSheet
         item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 2 }}
         onSave={() => {}}
+        onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -417,6 +420,7 @@ describe("шторки правки листа", () => {
           price: { amount: 50, currency: "gold" },
         }}
         onSave={onSave}
+        onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -439,6 +443,7 @@ describe("шторки правки листа", () => {
       <ItemSheet
         item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 1 }}
         onSave={() => {}}
+        onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -454,6 +459,7 @@ describe("шторки правки листа", () => {
       <ItemSheet
         item={{ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 }}
         onSave={onSave}
+        onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -468,6 +474,7 @@ describe("шторки правки листа", () => {
       <ItemSheet
         item={{ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 }}
         onSave={() => {}}
+        onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -483,6 +490,7 @@ describe("шторки правки листа", () => {
       <ItemSheet
         item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 2 }}
         onSave={() => {}}
+        onAdjustCount={() => {}}
         onRemove={onRemove}
         onCancel={() => {}}
       />,
@@ -522,6 +530,44 @@ describe("шторки правки листа", () => {
 
     await userEvent.clear(gold);
     expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+
+    // Дробное не усечётся молча: «12.5» — отказ, а не двенадцать.
+    await userEvent.type(gold, "12.5");
+    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+  });
+
+  it("вещь: запас меняется кнопками в шторке — единственный способ уменьшить стопку экипировки", async () => {
+    const onAdjustCount = vi.fn();
+    render(
+      <ItemSheet
+        item={{ id: "кинжал", nameRu: "Кинжал", kind: "gear", worn: false, count: 2 }}
+        onSave={() => {}}
+        onAdjustCount={onAdjustCount}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Потратить один: Кинжал" }));
+    await userEvent.click(screen.getByRole("button", { name: "Добавить один: Кинжал" }));
+    expect(onAdjustCount).toHaveBeenNthCalledWith(1, -1);
+    expect(onAdjustCount).toHaveBeenNthCalledWith(2, 1);
+  });
+
+  it("вещь: расход в шторке выключен на нуле — ноль состояние, а не отсутствие", () => {
+    render(
+      <ItemSheet
+        item={{ id: "зелье", nameRu: "Зелье", kind: "consumable", worn: false, count: 0 }}
+        onSave={() => {}}
+        onAdjustCount={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Потратить один: Зелье" })).toHaveProperty(
+      "disabled",
+      true,
+    );
   });
 
   it("прибавки предметов: отрицательная принимается", async () => {

@@ -142,6 +142,17 @@ describe("экран «Сумка»", () => {
       }),
     ).toBe("магия +2");
     expect(itemMeta({ id: "rope", nameRu: "Верёвка", kind: "other", worn: false, count: 1 })).toBe("");
+    // Прибавка вне экипировки не действует — и потому не называется: показанное число лгало бы.
+    expect(
+      itemMeta({
+        id: "old-potion",
+        nameRu: "Странное зелье",
+        kind: "consumable",
+        worn: false,
+        count: 1,
+        bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+      }),
+    ).toBe("");
   });
 
   it("доспех и прибавки открывают свои шторки", async () => {
