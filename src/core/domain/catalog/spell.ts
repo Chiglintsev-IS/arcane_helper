@@ -11,10 +11,11 @@ import { GLYPH_IDS, SEAL_KINDS } from "@/core/domain/catalog/diagram/glyphs";
 import { isRune } from "@/core/domain/catalog/diagram/futhark";
 import { COMBAT_ROLES } from "@/core/domain/catalog/combatRole";
 import { REACTION_TRIGGERS } from "@/core/domain/catalog/reactions";
+import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
+import { nonEmpty } from "@/core/domain/shared/schema";
 
 export const CANTRIP_LEVEL = 0;
 export const MAXIMUM_SPELL_LEVEL = 9;
-export const MAXIMUM_CHARACTER_LEVEL = 20;
 
 /** Минимум художественного контента на заклинание. */
 export const MINIMUM_COMPLETE_VARIANTS = 3;
@@ -34,8 +35,6 @@ export const ANNOUNCEMENT_PLACEHOLDERS = [
 ] as const;
 
 const PLACEHOLDER_PATTERN = /\{[^}]*\}/g;
-
-const nonEmpty = z.string().trim().min(1);
 
 /** Минуты и часы — единственные типы, у которых число осмысленно: 1 минута ≠ 10 минут. */
 const LONG_CASTING_TYPES = ["minute", "hour"] as const;
@@ -458,11 +457,11 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
     if (spell.level === CANTRIP_LEVEL) {
       // Для заговора ключи — пороги уровня персонажа.
       for (const threshold of thresholds) {
-        if (threshold < 1 || threshold > MAXIMUM_CHARACTER_LEVEL) {
+        if (threshold < MINIMUM_CHARACTER_LEVEL || threshold > MAXIMUM_CHARACTER_LEVEL) {
           context.addIssue({
             code: "custom",
             path: ["damage", "scaling", String(threshold)],
-            message: `Порог уровня персонажа должен быть от 1 до ${MAXIMUM_CHARACTER_LEVEL}`,
+            message: `Порог уровня персонажа должен быть от ${MINIMUM_CHARACTER_LEVEL} до ${MAXIMUM_CHARACTER_LEVEL}`,
           });
         }
       }

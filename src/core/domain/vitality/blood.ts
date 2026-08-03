@@ -7,7 +7,7 @@
  */
 
 import { DomainError } from "@/core/domain/shared/errors";
-import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/character/abilities";
+import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 
 /** Раны за обмен, опустивший здоровье до нуля: одна за сам факт и по одной за каждые три очка. */
 const WOUNDS_PER_POINTS = 3;

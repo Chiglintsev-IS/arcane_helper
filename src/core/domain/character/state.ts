@@ -8,16 +8,18 @@
 import { z } from "zod";
 
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
+import {
+  isoDateTime,
+  itemBonusesSchema,
+  nonEmpty,
+  NO_ITEM_BONUSES,
+  type ItemBonuses,
+} from "@/core/domain/shared/schema";
 
 import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
 export const EXPORT_SCHEMA_VERSION = 6;
-
-const nonEmpty = z.string().trim().min(1);
-const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
-  message: "Ожидается дата и время в формате ISO 8601",
-});
 
 const slotSchema = z
   .object({
@@ -129,15 +131,6 @@ const priceSchema = z.object({
   amount: z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT),
   currency: z.enum(CURRENCIES),
 });
-
-/** Прибавки к магии, защите и спасброскам: одна форма у вещи и у прочих прибавок персонажа. */
-const itemBonusesSchema = z.object({
-  spellcasting: z.number().int().default(0),
-  armorClass: z.number().int().default(0),
-  savingThrows: z.number().int().default(0),
-});
-
-const NO_ITEM_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
 /**
  * Вещь в инвентаре.
@@ -484,7 +477,8 @@ export const MUTABLE_STATE_KEYS = (
 type CharacterStateShape = z.infer<typeof characterStateSchema>;
 
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
-export type ItemBonuses = NonNullable<InventoryItem["bonuses"]>;
+// Форма прибавок живёт в общем ядре: она общая у вещи и у прочих прибавок персонажа.
+export type { ItemBonuses };
 export type ItemKind = (typeof ITEM_KINDS)[number];
 export type ItemPrice = NonNullable<InventoryItem["price"]>;
 export type Currency = (typeof CURRENCIES)[number];

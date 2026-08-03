@@ -1,4 +1,5 @@
 import { DomainError } from "@/core/domain/shared/errors";
+import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 
 import type { SkillTraining } from "./skills";
 
@@ -8,10 +9,6 @@ import type { SkillTraining } from "./skills";
  * Прибавка предмета приходит слагаемым, а не спрятана в итоге: иначе правка характеристики не
  * сдвинула бы число, и расхождение с листом ничем себя не показало бы.
  */
-
-/** Уровни персонажа, определённые правилами. */
-export const MINIMUM_CHARACTER_LEVEL = 1;
-export const MAXIMUM_CHARACTER_LEVEL = 20;
 
 /** База КС спасброска от заклинаний. */
 const SAVE_DC_BASE = 8;

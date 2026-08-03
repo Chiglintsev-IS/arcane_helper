@@ -9,7 +9,8 @@
  * значило бы править характеристики.
  */
 
-import type { CharacterState, Equipment as EquipmentData, InventoryItem, ItemBonuses, Money } from "@/core/domain/character/state";
+import type { CharacterState, Equipment as EquipmentData, InventoryItem, Money } from "@/core/domain/character/state";
+import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/character/state";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";

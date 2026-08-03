@@ -5,7 +5,7 @@
  */
 
 import { DomainError } from "@/core/domain/shared/errors";
-import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/character/abilities";
+import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { CANTRIP_LEVEL, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
 

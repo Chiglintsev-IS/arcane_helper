@@ -9,7 +9,7 @@
 
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
-import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "./abilities";
+import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 
 const UNKNOWN_ABILITY_SCORE = 10;
 

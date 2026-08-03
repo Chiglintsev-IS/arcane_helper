@@ -19,7 +19,8 @@ import {
 } from "@/core/domain/character/abilities";
 import { ABILITIES, SKILL_ABILITY, SKILL_IDS, type Ability, type SkillId } from "@/core/domain/character/skills";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
-import type { CharacterState, ItemBonuses } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/character/state";
+import type { ItemBonuses } from "@/core/domain/shared/schema";
 
 export type DerivedId =
   | "proficiencyBonus"
