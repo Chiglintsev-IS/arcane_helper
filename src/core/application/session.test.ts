@@ -1,4 +1,4 @@
-import { setScreenMode, setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
+import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
 import {
   endConcentration,
@@ -1375,18 +1375,6 @@ describe("активный эффект без указанной длитель
       clock,
     );
     expect(after.character.activeEffects[0]?.type).toBe("buff");
-  });
-});
-
-describe("режим экрана (FR-200, FR-204)", () => {
-  it("меняется без записи в журнал: отменять в виде нечего", () => {
-    const after = setScreenMode(session, "book");
-    expect(after.character.screenMode).toBe("book");
-    expect(after.journal).toHaveLength(0);
-  });
-
-  it("повторный выбор того же режима возвращает ту же сессию", () => {
-    expect(setScreenMode(session, "play")).toBe(session);
   });
 });
 

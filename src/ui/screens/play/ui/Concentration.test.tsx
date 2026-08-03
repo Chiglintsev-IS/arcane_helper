@@ -11,7 +11,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { PlayScreen } from "@/ui/screens/play/ui/PlayScreen";
+import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import { renderWithStores } from "@/ui/app/testing/stores";

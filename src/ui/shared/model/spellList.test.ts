@@ -19,7 +19,7 @@ const SPELLS = loadThorneSpells();
 
 /** Список «Игры» для Торна: одна функция на обе ситуации, различает их отметка боя. */
 function playList(inFight: boolean): string[] {
-  return spellsForScreen(SPELLS, createThorne(), inFight).map((spell) => spell.id);
+  return spellsForScreen(SPELLS, createThorne(), "play", inFight).map((spell) => spell.id);
 }
 
 describe("castableWithinTurn", () => {
@@ -146,7 +146,7 @@ describe("порядок: сначала бесплатное, потом по �
 
 describe("«Магия крови» встаёт среди того, что ячейки не стоит (FR-207, FR-210)", () => {
   it("в бою — сразу за заговорами", () => {
-    const shown = spellsForScreen(SPELLS, createThorne(), true);
+    const shown = spellsForScreen(SPELLS, createThorne(), "play", true);
     const rows = shown.map((spell) => spell.id);
     rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play", true), 0, "магия-крови");
 
@@ -161,7 +161,7 @@ describe("«Магия крови» встаёт среди того, что я�
   });
 
   it("вне боя — за ритуалами: они тоже ничего не стоят", () => {
-    const shown = spellsForScreen(SPELLS, createThorne(), false);
+    const shown = spellsForScreen(SPELLS, createThorne(), "play", false);
     const at = positionInList(shown, BLOOD_MAGIC_TRAITS, "play", false);
     expect(shown[at - 1]?.id).toBe("unseen-servant");
     expect(shown[at]?.id).toBe("shield");
@@ -182,16 +182,14 @@ describe("«Магия крови» встаёт среди того, что я�
 
 describe("состав по режимам (FR-203, FR-220, FR-230)", () => {
   it("книга не отбирает ничего и порядка не трогает", () => {
-    const character = { ...createThorne(), screenMode: "book" as const };
-    expect(spellsForScreen(SPELLS, character, false)).toEqual(SPELLS);
-    expect(spellsForScreen(SPELLS, character, true)).toEqual(SPELLS);
+    const character = createThorne();
+    expect(spellsForScreen(SPELLS, character, "book", false)).toEqual(SPELLS);
+    expect(spellsForScreen(SPELLS, character, "book", true)).toEqual(SPELLS);
   });
 
   it("в «Журнале» и «Листе» списка нет", () => {
-    for (const screenMode of ["journal", "sheet"] as const) {
-      expect(spellsForScreen(SPELLS, { ...createThorne(), screenMode }, false), screenMode).toEqual(
-        [],
-      );
+    for (const mode of ["journal", "sheet", "bag", "rest"] as const) {
+      expect(spellsForScreen(SPELLS, createThorne(), mode, false), mode).toEqual([]);
     }
   });
 

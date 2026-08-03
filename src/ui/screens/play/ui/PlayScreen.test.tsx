@@ -14,16 +14,18 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { exportSnapshot } from "@/core/application/dataExchange";
 import type { CharacterState } from "@/core/domain/character/state";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
-import { PlayScreen } from "./PlayScreen";
+import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 
 /**
- * Торн в режиме «Книга»: виден весь состав, включая долгое накладывание и ритуалы.
+ * Рендер в режиме «Книга»: виден весь состав, включая долгое накладывание и ритуалы.
  *
  * Нужен там, где проверяется сама карточка, а не отбор по режиму: в «Бою» «Починки» и «Опознания»
  * нет по составу режима, и тест о формате подписи спотыкался бы о режим.
  */
-function inBookMode(): CharacterState {
-  return { ...createThorne(), screenMode: "book" };
+async function inBookMode(character?: CharacterState) {
+  const user = userEvent.setup();
+  const result = await renderWithStores(<PlayScreen initialMode="book" />, character);
+  return { user, ...result };
 }
 
 /** Бой отмечен начатым: только тогда ведётся учёт хода. */
@@ -212,7 +214,6 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
     // Чисел боя на листе нет: они стоят в шапке «Игры», а перебивки — в отметках мастера.
     expect(screen.queryByRole("heading", { name: "Числа боя" })).toBeNull();
-    expect(stores.session.getState().session?.character.screenMode).toBe("sheet");
   });
 
   it("«Лист»: правка характеристики доходит до состояния и в журнал (FR-231)", async () => {
@@ -315,7 +316,6 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const { stores } = await renderWithStores(<PlayScreen />);
 
     await user.click(screen.getByRole("radio", { name: /^Сумка/ }));
-    expect(stores.session.getState().session?.character.screenMode).toBe("bag");
 
     await user.type(screen.getByLabelText("Новый расходник"), "Зелье лечения{Enter}");
     await user.click(screen.getByRole("button", { name: "Добавить один: Зелье лечения" }));
@@ -361,7 +361,6 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 
     // Сохранение — да, запись в журнал — нет: режим меняет вид, отменять в нём нечего.
-    expect(stores.session.getState().session?.character.screenMode).toBe("book");
     expect(stores.session.getState().session?.journal).toHaveLength(0);
   });
 
@@ -770,7 +769,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
   it("в книге привала нет: там читают, а не отдыхают", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
     expect(screen.queryByRole("button", { name: /Долгий отдых/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Прошёл час/ })).toBeNull();
   });
@@ -848,10 +847,7 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
   /** Выгрузка приложения, снятая с текущего состояния: её же и загружаем обратно. */
   async function openData(character: CharacterState = createThorne()) {
     const user = userEvent.setup();
-    const rendered = await renderWithStores(<PlayScreen />, {
-      ...character,
-      screenMode: "journal",
-    });
+    const rendered = await renderWithStores(<PlayScreen initialMode="journal" />, character);
     await user.click(screen.getByRole("button", { name: "Данные" }));
     return { user, ...rendered };
   }
@@ -860,10 +856,10 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
     await renderWithStores(<PlayScreen />);
     expect(screen.queryByRole("button", { name: "Данные" })).toBeNull();
 
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
     expect(screen.queryByRole("button", { name: "Данные" })).toBeNull();
 
-    await renderWithStores(<PlayScreen />, { ...createThorne(), screenMode: "journal" });
+    await renderWithStores(<PlayScreen initialMode="journal" />);
     expect(screen.getByRole("button", { name: "Данные" })).toBeDefined();
   });
 
@@ -988,7 +984,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
 describe("подготовка в «Книге» (FR-214, FR-101)", () => {
   it("отмечает и снимает подготовку прямо в списке", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<PlayScreen />, inBookMode());
+    const { stores } = await inBookMode();
 
     // Набор Торна ровно на пределе, поэтому сначала освобождаем место.
     await user.click(screen.getByRole("button", { name: "Снять подготовку: Отражения" }));
@@ -1003,7 +999,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
 
   it("подготовленное появляется в боевом списке (FR-209)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     await user.click(screen.getByRole("button", { name: "Снять подготовку: Отражения" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
@@ -1015,7 +1011,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
   });
 
   it("считает подготовленное и не считает заговоры (FR-102)", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     // Стартовый набор Торна занимает лимит целиком; четыре заговора в него не входят.
     expect(screen.getByLabelText("Подготовлено 11 из 11")).toBeDefined();
@@ -1024,12 +1020,14 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
 
   it("двенадцатое заклинание упирается в лимит и объясняет причину (FR-101)", async () => {
     const user = userEvent.setup();
-    const full = inBookMode();
     // В книге Торна восемь записей, а лимит 11 — до края не дотянуться. Понижаем Интеллект до 8:
     // лимит становится 6 (модификатор −1 плюс уровень 7), и шесть подготовленных его исчерпывают.
-    full.abilities = { ...full.abilities, intelligence: 8 };
-    full.preparedSpellIds = [...full.spellbookSpellIds].slice(0, 6);
-    await renderWithStores(<PlayScreen />, full);
+    const overloaded = {
+      ...createThorne(),
+      abilities: { ...createThorne().abilities, intelligence: 8 },
+      preparedSpellIds: [...createThorne().spellbookSpellIds].slice(0, 6),
+    };
+    await renderWithStores(<PlayScreen initialMode="book" />, overloaded);
 
     expect(screen.getByLabelText("Подготовлено 6 из 6")).toBeDefined();
     // Седьмое: подготовки нет ровно у двух записей книги, берём первую попавшуюся.
@@ -1164,7 +1162,7 @@ describe("магия крови в списке действий (FR-207)", () =
 
 describe("«Магия крови» в «Книге» (FR-207)", () => {
   it("стоит в списке книги сразу за заговорами: очки покупают вне боя", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     const list = screen.getByRole("list", { name: "Заклинания и действия" });
     const names = within(list)
@@ -1179,7 +1177,7 @@ describe("«Магия крови» в «Книге» (FR-207)", () => {
 
   it("«Без ячейки» её оставляет, уровень ячейки — прячет (FR-212)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     await user.click(screen.getByRole("button", { name: "Без ячейки" }));
     expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
@@ -1191,7 +1189,7 @@ describe("«Магия крови» в «Книге» (FR-207)", () => {
 
   it("«Подготовлено» её не прячет: подготовка к обмену не относится", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     await user.click(screen.getByRole("button", { name: "Подготовлено" }));
 
@@ -1235,7 +1233,7 @@ describe("краткая карточка (FR-010)", () => {
   });
 
   it("накладывание дольше хода называет точное время, а не категорию (FR-033)", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
     const row = screen.getByRole("button", { name: /Починка/ });
 
     expect(within(row).getByText("Накладывать 1 минуту")).toBeDefined();
@@ -1263,7 +1261,7 @@ describe("краткая карточка (FR-010)", () => {
   });
 
   it("у заговора цена названа во всех режимах: строка не молчит о стоимости (FR-010)", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     // Цена названа один раз: значок «Заговор» повторял бы строку «Без ячейки» тем же словом.
     const row = within(screen.getByRole("button", { name: /Луч холода/ }));
@@ -1297,7 +1295,7 @@ describe("краткая карточка (FR-010)", () => {
     // обязана назвать ту же причину, иначе она отговаривает от способа, который работает.
     const user = userEvent.setup();
     // Ритуал в бою не показывается, пока не подготовлен: сверяем причину в книге.
-    await renderWithStores(<PlayScreen />, { ...concentrating(), screenMode: "book" });
+    await renderWithStores(<PlayScreen initialMode="book" />, concentrating());
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
 
@@ -1369,7 +1367,7 @@ describe("подробная карточка (FR-011, FR-012)", () => {
   it("открывается по строке списка и показывает механику", async () => {
     const user = userEvent.setup();
     // Неподготовленные ритуалы в списке скрыты: показываем их фильтром.
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /^Опознание/ }));
 
@@ -1385,7 +1383,7 @@ describe("подробная карточка (FR-011, FR-012)", () => {
   it("строка «Разрешение» показывает общую подпись, не свою копию (FR-211)", async () => {
     const user = userEvent.setup();
     // Опознание разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /^Опознание/ }));
     const automaticCard = screen.getByRole("dialog", { name: /Опознание/ });
@@ -1444,7 +1442,7 @@ describe("схема ритуала (FR-192)", () => {
   it("карточка ритуала открывает схему на полный экран", async () => {
     const user = userEvent.setup();
     // Ритуалы в списке скрыты по умолчанию: сначала фильтр, потом строка списка.
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(
       within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /^Опознание/ }),
@@ -1505,7 +1503,7 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
 
 describe("«Книга» говорит только о книге (FR-217)", () => {
   it("шапки ресурсов нет: ни ячеек, ни рун, ни очков, ни костей хитов", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     expect(screen.queryByRole("region", { name: "Ресурсы" })).toBeNull();
     expect(screen.queryByLabelText("Ячейки заклинаний")).toBeNull();
@@ -1513,7 +1511,7 @@ describe("«Книга» говорит только о книге (FR-217)", ()
   });
 
   it("действующего в книге нет: книга — только книга (FR-217)", async () => {
-    await renderWithStores(<PlayScreen />, { ...concentrating(), screenMode: "book" });
+    await renderWithStores(<PlayScreen initialMode="book" />, concentrating());
 
     // Имя точное: «Концентрация» есть и у переключателя фильтров.
     expect(screen.queryByRole("button", { name: /^Концентрация:/ })).toBeNull();
@@ -1521,7 +1519,7 @@ describe("«Книга» говорит только о книге (FR-217)", ()
   });
 
   it("нет ни поиска, ни «Реакций», ни отмены", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
 
     expect(screen.queryByRole("button", { name: "Поиск" })).toBeNull();
     expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
@@ -1530,7 +1528,7 @@ describe("«Книга» говорит только о книге (FR-217)", ()
   });
 
   it("счётчик подготовки остаётся: он отвечает на вопрос «сколько ещё можно» (FR-214)", async () => {
-    await renderWithStores(<PlayScreen />, inBookMode());
+    await inBookMode();
     expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/)).toBeDefined();
   });
 

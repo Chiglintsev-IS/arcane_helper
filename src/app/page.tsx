@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 
-import { PlayScreen } from "@/ui/screens/play/ui/PlayScreen";
+import { PlayShell } from "@/ui/app/PlayShell";
 import { createBrowserStores, StoreProvider } from "@/ui/app/providers/stores";
 
 export default function PlayPage() {
@@ -18,7 +18,7 @@ export default function PlayPage() {
 
   return (
     <StoreProvider stores={stores}>
-      <PlayScreen />
+      <PlayShell />
     </StoreProvider>
   );
 }

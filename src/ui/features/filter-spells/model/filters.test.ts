@@ -16,7 +16,7 @@ import { spellsForScreen } from "@/ui/shared/model/spellList";
 const SPELLS = loadThorneSpells();
 
 function categoriesOf(inFight: boolean) {
-  return dividingCategories(spellsForScreen(SPELLS, createThorne(), inFight), inFight);
+  return dividingCategories(spellsForScreen(SPELLS, createThorne(), "play", inFight), inFight);
 }
 
 describe("dividingCategories", () => {

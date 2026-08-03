@@ -7,7 +7,6 @@
  * руками.
  */
 
-import { DEFAULT_SCREEN_MODE } from "@/core/shared/screenMode";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "./abilities";
@@ -44,20 +43,6 @@ function migrateEquipment(state: LegacyShape, armorClassBase: number): unknown {
     items: [],
     ...(known ? { components: equipment } : {}),
   };
-}
-
-/** Режимы, слитые в «Игру»: бой перестал быть вкладкой и стал состоянием игры. */
-const MERGED_SCREEN_MODES = new Set(["combat", "camp"]);
-
-/**
- * Приведение режима идёт отдельно от формы состояния: сохранение свежей версии остальные шаги
- * пропускают, а закрыто оно могло быть на любом из прежних режимов.
- */
-function migrateScreenMode(state: unknown): unknown {
-  if (state === null || typeof state !== "object") return state;
-  const { screenMode } = state as { screenMode?: unknown };
-  if (typeof screenMode !== "string" || !MERGED_SCREEN_MODES.has(screenMode)) return state;
-  return { ...state, screenMode: DEFAULT_SCREEN_MODE };
 }
 
 /**
@@ -255,7 +240,7 @@ export function migrateCharacterState(raw: unknown): unknown {
   return migrateAdjustmentMarker(
     migrateArmorBase(
       migrateMiscBonuses(
-        migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw)))),
+        migrateItemCategories(migrateArcaneRecovery(migrateShape(raw))),
       ),
     ),
   );

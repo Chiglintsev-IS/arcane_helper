@@ -8,12 +8,11 @@
 import { z } from "zod";
 
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
-import { DEFAULT_SCREEN_MODE, SCREEN_MODES } from "@/core/shared/screenMode";
 
 import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
-export const EXPORT_SCHEMA_VERSION = 4;
+export const EXPORT_SCHEMA_VERSION = 5;
 
 const nonEmpty = z.string().trim().min(1);
 const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
@@ -259,15 +258,6 @@ export const characterStateSchema = z
     }),
 
     /**
-     * Выбранный режим экрана.
-     *
-     * Со значением по умолчанию, а не обязательное: иначе сохранения, сделанные до появления
-     * режимов, перестали бы читаться, а обновление приложения не имеет права терять данные
-     *. Отсутствие поля означает «первый запуск после обновления», а не порчу.
-     */
-    screenMode: z.enum(SCREEN_MODES).default(DEFAULT_SCREEN_MODE),
-
-    /**
      * Временные хиты.
      *
      * Отдельным числом, а не прибавкой к текущим: сложенные вместе, они молча исказили бы и
@@ -491,7 +481,6 @@ const UNRECORDED_KEYS = [
   "speed",
   "proficiencies",
   "roleplayProfile",
-  "screenMode",
 ] as const satisfies readonly (keyof CharacterStateShape)[];
 
 /**

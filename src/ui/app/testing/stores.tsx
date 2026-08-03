@@ -22,6 +22,9 @@ import { startCombat } from "@/core/application/useCases/turn";
 
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
+afterEach(() => {
+  if (typeof localStorage !== "undefined") localStorage.clear();
+});
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 

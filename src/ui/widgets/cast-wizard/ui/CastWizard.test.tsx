@@ -10,7 +10,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { PlayScreen } from "@/ui/screens/play/ui/PlayScreen";
+import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
@@ -29,7 +29,7 @@ function firstVariant(category: "short" | "sarcastic"): string {
  * включает. Имя оставлено: оно объясняет, зачем тесту учёт.
  */
 function withTurnTracking(): CharacterState {
-  return { ...createThorne(), screenMode: "play" };
+  return { ...createThorne() };
 }
 
 function withoutSlots(): CharacterState {
@@ -275,9 +275,10 @@ describe("замена концентрации (FR-081, AC-13)", () => {
 
 describe("шаг компонентов", () => {
   it("появляется для компонента со стоимостью и объясняет, что фокусировка его не заменяет", async () => {
-    const user = userEvent.setup();
     // «Опознание» творится минуту, поэтому в режиме «Бой» его нет: берём книгу.
-    await renderWithStores(<PlayScreen />, { ...createThorne(), screenMode: "book" });
+    const user = userEvent.setup();
+    await renderWithStores(<PlayScreen />);
+    await user.click(screen.getByRole("radio", { name: /Книга/ }));
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /^Опознание/ }));

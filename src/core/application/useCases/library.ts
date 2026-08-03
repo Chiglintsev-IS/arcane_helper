@@ -1,10 +1,9 @@
 /**
- * Книга: подготовка, компоненты, заметки, а также запоминание открытого режима экрана.
+ * Книга: подготовка, компоненты, заметки.
  */
 
 import { Character } from "@/core/domain/character/character";
 import type { Spell } from "@/core/domain/catalog/spell";
-import type { ScreenMode } from "@/core/shared/screenMode";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
 
 /** Переключение подготовки заклинания. */
@@ -63,15 +62,4 @@ export function toggleMaterial(session: Session, spellId: string, clock: Clock):
 export function setSpellNote(session: Session, spellId: string, note: string): Session {
   const root = Character.of(session.character);
   return withoutRecord(session, root.withSpellbook(root.spellbook.setNote(spellId, note)));
-}
-
-/**
- * Смена режима экрана.
- *
- * Без записи в журнал и без отмены: режим меняет вид, а не состояние персонажа. Записывать его
- * значило бы засорять журнал тем, что нечего отменять.
- */
-export function setScreenMode(session: Session, mode: ScreenMode): Session {
-  if (session.character.screenMode === mode) return session;
-  return { ...session, character: { ...session.character, screenMode: mode } };
 }

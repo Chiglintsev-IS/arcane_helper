@@ -99,9 +99,10 @@ export function positionInList(
 export function spellsForScreen(
   spells: readonly Spell[],
   character: CharacterState,
+  mode: ScreenMode,
   inFight: boolean,
 ): Spell[] {
-  switch (character.screenMode) {
+  switch (mode) {
     case "book":
       return [...spells];
     case "play":
