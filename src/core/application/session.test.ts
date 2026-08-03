@@ -817,6 +817,27 @@ describe("отдых и восстановление", () => {
     expect(() => useArcaneRecovery(current, { 3: 1, 2: 1 }, clock)).toThrow(/превышает бюджет 4/);
   });
 
+  it("долгий отдых отказывает во время боя и не трогает ячейки (FR-215)", () => {
+    const spent = castSpell(
+      withTurnTracking(session),
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      clock,
+    );
+    // Худший случай: долгий отдых посреди раунда молча вернул бы все ячейки разом.
+    expect(() => longRest(spent, clock)).toThrow(/Пока идёт бой/);
+    expect(spent.character.spellSlots[1]?.remaining).toBe(3);
+  });
+
+  it("короткий отдых отказывает во время боя (FR-215)", () => {
+    expect(() => shortRest(withTurnTracking(session), clock)).toThrow(/Пока идёт бой/);
+  });
+
+  it("магическое восстановление отказывает во время боя (FR-215)", () => {
+    expect(() => useArcaneRecovery(withTurnTracking(session), { 1: 1 }, clock)).toThrow(
+      /Пока идёт бой/,
+    );
+  });
+
   it("возврат ошибочной ячейки (FR-071)", () => {
     let current = castSpell(
       session,
