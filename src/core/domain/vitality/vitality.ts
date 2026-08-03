@@ -186,7 +186,7 @@ export class Vitality {
     if (spellPoints <= 0) {
       throw new DomainError("Нужно хотя бы одно очко заклинаний");
     }
-    const exchange: Exchange = { hitPointsSpent: hitPoints, pointsCreated: spellPoints, remainderIgnored: 0 };
+    const exchange: Exchange = { hitPointsSpent: hitPoints, pointsCreated: spellPoints };
     if (exchange.hitPointsSpent > this.current && options.allowAnyway !== true) {
       throw new DomainError(`Нужно ${exchange.hitPointsSpent} хитов, в наличии ${this.current}`);
     }

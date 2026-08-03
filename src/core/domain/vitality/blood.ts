@@ -1,8 +1,7 @@
 /**
  * Кровавое колдовство и расовые особенности лунного тролля.
  *
- * Все числа взяты из документа расы игрока и перенесены в
- *. Раса самодельная, поэтому значения ждут подтверждения
+ * Все числа взяты из документа расы игрока. Раса самодельная, поэтому значения ждут подтверждения
  * мастером. Менять их следует здесь и в спеке одновременно.
  */
 
@@ -22,29 +21,11 @@ function assertLevel(level: number): void {
   }
 }
 
+/** Состоявшийся обмен: очки выбирает игрок, хиты считаются по курсу до подтверждения. */
 export type Exchange = {
-  /** Сколько хитов будет потрачено. */
   hitPointsSpent: number;
   pointsCreated: number;
-  /** Остаток хитов, не давший очка: равен нулю, если хиты кратны курсу. */
-  remainderIgnored: number;
 };
-
-/**
- * Обмен хитов на очки: принимает уже вычисленный курс (хитов за одно очко).
- * Остаток в пределах курса не расходуется и не учитывается.
- */
-export function exchangeHitPoints(hitPoints: number, rate: number): Exchange {
-  if (!Number.isInteger(hitPoints) || hitPoints < 0) {
-    throw new DomainError(`Количество хитов должно быть целым неотрицательным, получено: ${hitPoints}`);
-  }
-  const pointsCreated = Math.floor(hitPoints / rate);
-  return {
-    hitPointsSpent: pointsCreated * rate,
-    pointsCreated,
-    remainderIgnored: hitPoints - pointsCreated * rate,
-  };
-}
 
 /** Раны за обмен, опустивший здоровье до нуля. */
 export function woundsFromExchange(pointsCreated: number): number {
@@ -100,50 +81,7 @@ export function traitsSuppressed(state: SuppressionState): boolean {
   return state.firedUpon || state.underDirectSunlight;
 }
 
-export type HitPointState = {
-  current: number;
-  /** Максимум уже с учётом снижения от кровавого колдовства. */
-  maximum: number;
-};
-
-/**
- * Действует ли регенерация в начале хода: есть хиты, здоровье ниже половины максимума,
- * нет подавления. Порог считается от снижённого максимума, а не от исходного.
- */
-export function regenerationApplies(
-  hitPoints: HitPointState,
-  suppression: SuppressionState,
-): boolean {
-  if (traitsSuppressed(suppression)) return false;
-  if (hitPoints.current <= 0) return false;
-  return hitPoints.current < hitPoints.maximum / 2;
-}
-
 /** Доступно ли кровавое колдовство: те же условия подавления. */
 export function bloodMagicAvailable(suppression: SuppressionState): boolean {
   return !traitsSuppressed(suppression);
-}
-
-/**
- * Снижение максимума хитов после обмена: ровно на потраченные хиты.
- * Лечением и регенерацией не устраняется.
- */
-export function applyExchangeToHitPoints(
-  hitPoints: HitPointState,
-  exchange: Exchange,
-): HitPointState {
-  return {
-    current: hitPoints.current - exchange.hitPointsSpent,
-    maximum: hitPoints.maximum - exchange.hitPointsSpent,
-  };
-}
-
-/** КС почасового спасброска под солнцем. Вне MVP, формула сохранена. */
-export function sunSaveDc(savesMadeToday: number): number {
-  if (!Number.isInteger(savesMadeToday) || savesMadeToday < 0) {
-    throw new DomainError(
-      `Число совершённых спасбросков должно быть целым неотрицательным, получено: ${savesMadeToday}`,
-    );
-  }
-  return 10 + 2 * savesMadeToday;
 }
