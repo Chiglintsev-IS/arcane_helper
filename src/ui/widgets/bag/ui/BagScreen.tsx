@@ -133,7 +133,6 @@ export function BagScreen({
   onToggleWorn,
   onAdjustCount,
   onEditArmor,
-  onEditOtherBonuses,
 }: {
   character: CharacterState;
   onEditMoney: () => void;
@@ -142,9 +141,8 @@ export function BagScreen({
   onToggleWorn: (id: string) => void;
   onAdjustCount: (id: string, delta: number) => void;
   onEditArmor: () => void;
-  onEditOtherBonuses: () => void;
 }) {
-  const { money, items, armorClassBase, otherBonuses } = character.equipment;
+  const { money, items, armorClassBase } = character.equipment;
 
   return (
     <div className="flex flex-col gap-2">
@@ -197,7 +195,7 @@ export function BagScreen({
         );
       })}
 
-      {/* База защиты и прибавки без вещи — тоже про вещественное; правятся редко и стоят внизу. */}
+      {/* База защиты — тоже про вещественное; правится редко и стоит внизу. */}
       <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Доспех</h2>
@@ -213,24 +211,6 @@ export function BagScreen({
         <p className="text-sm">
           <span className="text-slate-600 dark:text-slate-400">База Класса Доспеха</span>{" "}
           <span className="tabular-nums">{armorClassBase}</span>
-        </p>
-      </section>
-
-      <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Прибавки без вещи</h2>
-          <button
-            type="button"
-            onClick={onEditOtherBonuses}
-            aria-label="Править: Прибавки без вещи"
-            className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
-          >
-            Править
-          </button>
-        </div>
-        <p className="text-sm text-slate-600 dark:text-slate-400">
-          магия {signed(otherBonuses.spellcasting)} · защита {signed(otherBonuses.armorClass)} ·
-          спасброски {signed(otherBonuses.savingThrows)}
         </p>
       </section>
     </div>

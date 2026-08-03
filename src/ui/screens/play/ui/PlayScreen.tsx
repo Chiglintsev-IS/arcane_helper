@@ -61,7 +61,7 @@ import { ArmorSheet } from "@/ui/features/edit-character-sheet/ui/ArmorSheet";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { HealthSheet } from "@/ui/features/edit-character-sheet/ui/HealthSheet";
 import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
-import { ItemBonusesSheet } from "@/ui/features/edit-character-sheet/ui/ItemBonusesSheet";
+import { MiscBonusesSheet } from "@/ui/features/edit-character-sheet/ui/MiscBonusesSheet";
 import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
 import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
@@ -73,7 +73,6 @@ import {
   editArmorClassBase,
   editItem,
   editMoney,
-  editOtherBonuses,
   removeItem,
   toggleWorn,
 } from "@/core/application/useCases/equipment";
@@ -83,6 +82,7 @@ import {
   editHealth,
   editIdentity,
   editMarks,
+  editMiscBonuses,
   setOverride,
 } from "@/core/application/useCases/sheet";
 import { deriveNumbers, type DerivedId } from "@/core/domain/sheet/derived";
@@ -512,7 +512,6 @@ export function PlayScreen() {
               apply((current) => adjustItemCount(current, id, delta, clock))
             }
             onEditArmor={() => setOpenBlockId("armorClassBase")}
-            onEditOtherBonuses={() => setOpenBlockId("itemBonuses")}
           />
         ) : null}
 
@@ -763,12 +762,12 @@ export function PlayScreen() {
         />
       )}
 
-      {openBlockId === "itemBonuses" ? (
-        <ItemBonusesSheet
+      {openBlockId === "miscBonuses" ? (
+        <MiscBonusesSheet
           character={character}
           onCancel={() => setOpenBlockId(null)}
-          onSave={(otherBonuses) => {
-            if (apply((current) => editOtherBonuses(current, otherBonuses, clock)) === null) {
+          onSave={(miscBonuses) => {
+            if (apply((current) => editMiscBonuses(current, miscBonuses, clock)) === null) {
               setOpenBlockId(null);
             }
           }}

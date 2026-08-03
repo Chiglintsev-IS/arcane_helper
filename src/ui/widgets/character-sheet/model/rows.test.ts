@@ -11,6 +11,7 @@ describe("блоки листа", () => {
       "identity",
       "health",
       "marks",
+      "miscBonuses",
       "ability:strength",
       "ability:dexterity",
       "ability:constitution",
@@ -18,6 +19,18 @@ describe("блоки листа", () => {
       "ability:wisdom",
       "ability:charisma",
       "proficiencies",
+    ]);
+  });
+
+  it("прочие прибавки — карточка листа: вклад без вещи принадлежит персонажу (FR-243)", () => {
+    const state = createThorne();
+    const blessed = { ...state, miscBonuses: { spellcasting: 1, armorClass: -1, savingThrows: 0 } };
+    const block = sheetBlocks(blessed).find((candidate) => candidate.id === "miscBonuses");
+    expect(block?.editId).toBe("miscBonuses");
+    expect(block?.rows).toEqual([
+      { labelRu: "К магии", value: "+1" },
+      { labelRu: "К защите", value: "−1" },
+      { labelRu: "Ко всем спасброскам", value: "+0" },
     ]);
   });
 

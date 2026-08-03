@@ -122,8 +122,6 @@ const RAW: unknown = {
   equipment: {
     // База 10 — доспехов нет.
     armorClassBase: 10,
-    // Каждая прибавка Торна принадлежит названной вещи, поэтому прибавок без вещи у него нет.
-    otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
     items: [
       {
         id: "spellcasting-focus",

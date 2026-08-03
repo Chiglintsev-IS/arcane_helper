@@ -10,6 +10,7 @@ import {
   editHealth,
   editIdentity,
   editMarks,
+  editMiscBonuses,
   setOverride,
 } from "./sheet";
 
@@ -142,6 +143,20 @@ describe("правка листа", () => {
   it("снятое истощение записывается общей подписью", () => {
     const after = editMarks(session(), { exhaustion: 0, inspiration: true }, clock);
     expect(after.journal[0]?.summaryRu).toBe("Отметки мастера изменены");
+  });
+
+  it("прочие прибавки правятся с листа и двигают КС заклинаний", () => {
+    const blessed = editMiscBonuses(
+      session(),
+      { spellcasting: 3, armorClass: 2, savingThrows: 1 },
+      clock,
+    );
+    // 8 + 3 (мастерство) + 4 (Интеллект) + 3 (прочие) + 1 (фокусировка).
+    expect(Sheet.of(blessed.character).spellSaveDc).toBe(19);
+    expect(blessed.journal[0]?.summaryRu).toBe("Правка прочих прибавок");
+
+    const undone = undoLast(blessed);
+    expect(undone.character.miscBonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
   });
 
   it("перебивка ставится и снимается", () => {

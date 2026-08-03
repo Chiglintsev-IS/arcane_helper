@@ -16,7 +16,6 @@ const NOOP = {
   onToggleWorn: () => {},
   onAdjustCount: () => {},
   onEditArmor: () => {},
-  onEditOtherBonuses: () => {},
 };
 
 function withItems(items: InventoryItem[]): CharacterState {
@@ -34,7 +33,7 @@ const potion: InventoryItem = {
 };
 
 describe("экран «Сумка»", () => {
-  it("держит деньги, четыре раздела категорий, доспех и прибавки (FR-242)", () => {
+  it("держит деньги, четыре раздела категорий и доспех (FR-242)", () => {
     render(<BagScreen character={createThorne()} {...NOOP} />);
 
     expect(screen.getByRole("heading", { name: "Деньги" })).toBeDefined();
@@ -43,7 +42,9 @@ describe("экран «Сумка»", () => {
     expect(screen.getByRole("heading", { name: "Ингредиенты" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Другое" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Доспех" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Прибавки без вещи" })).toBeDefined();
+    // Прибавки без вещи — свойство персонажа: их карточка живёт на «Листе», не в сумке.
+    expect(screen.queryByRole("heading", { name: "Прибавки без вещи" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Прочие прибавки" })).toBeNull();
   });
 
   it("кошелёк показывает все три монеты стола, включая нули (FR-242)", () => {
@@ -155,26 +156,22 @@ describe("экран «Сумка»", () => {
     ).toBe("");
   });
 
-  it("доспех и прибавки открывают свои шторки", async () => {
+  it("доспех и деньги открывают свои шторки", async () => {
     const user = userEvent.setup();
     const onEditArmor = vi.fn();
-    const onEditOtherBonuses = vi.fn();
     const onEditMoney = vi.fn();
     render(
       <BagScreen
         character={createThorne()}
         {...NOOP}
         onEditArmor={onEditArmor}
-        onEditOtherBonuses={onEditOtherBonuses}
         onEditMoney={onEditMoney}
       />,
     );
 
     await user.click(screen.getByRole("button", { name: "Править: Доспех" }));
-    await user.click(screen.getByRole("button", { name: "Править: Прибавки без вещи" }));
     await user.click(screen.getByRole("button", { name: "Править: Деньги" }));
     expect(onEditArmor).toHaveBeenCalled();
-    expect(onEditOtherBonuses).toHaveBeenCalled();
     expect(onEditMoney).toHaveBeenCalled();
   });
 

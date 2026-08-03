@@ -9,7 +9,7 @@ import { HealthSheet } from "./HealthSheet";
 import { IdentitySheet } from "./IdentitySheet";
 import { ItemSheet } from "./ItemSheet";
 import { MoneySheet } from "./MoneySheet";
-import { ItemBonusesSheet } from "./ItemBonusesSheet";
+import { MiscBonusesSheet } from "./MiscBonusesSheet";
 import { LevelSheet } from "./LevelSheet";
 import { MarksSheet } from "./MarksSheet";
 import { OverrideSheet } from "./OverrideSheet";
@@ -570,9 +570,9 @@ describe("шторки правки листа", () => {
     );
   });
 
-  it("прибавки предметов: отрицательная принимается", async () => {
+  it("прочие прибавки: отрицательная принимается — проклятие тоже вклад", async () => {
     const onSave = vi.fn();
-    render(<ItemBonusesSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
+    render(<MiscBonusesSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
 
     const field = screen.getByLabelText("К защите");
     await userEvent.clear(field);
@@ -582,8 +582,8 @@ describe("шторки правки листа", () => {
     expect(onSave).toHaveBeenCalledWith({ spellcasting: 0, armorClass: -1, savingThrows: 0 });
   });
 
-  it("прибавки предметов: пустое поле не сохраняется", async () => {
-    render(<ItemBonusesSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+  it("прочие прибавки: пустое поле не сохраняется", async () => {
+    render(<MiscBonusesSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText("К магии"));
 

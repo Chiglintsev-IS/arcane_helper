@@ -283,7 +283,7 @@ describe("лист персонажа", () => {
       nature: "proficient",
       perception: "proficient",
     });
-    expect(thorneState.equipment.otherBonuses).toEqual({
+    expect(thorneState.miscBonuses).toEqual({
       spellcasting: 0,
       armorClass: 0,
       savingThrows: 0,

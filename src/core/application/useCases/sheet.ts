@@ -16,7 +16,7 @@ import {
   type SkillId,
   type SkillTraining,
 } from "@/core/domain/character/skills";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState, ItemBonuses } from "@/core/domain/character/state";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
 
 /** Справочные поля: имени и возраста журнал не касается. */
@@ -92,6 +92,20 @@ export function setOverride(
       kind: "sheet_edited",
       summaryRu: value === null ? "Число возвращено к формуле" : `Число введено руками: ${value}`,
     },
+    clock,
+  );
+}
+
+/** Прочие прибавки: свойство самого персонажа — благословение, дар, обучение. */
+export function editMiscBonuses(
+  session: Session,
+  miscBonuses: ItemBonuses,
+  clock: Clock,
+): Session {
+  return commit(
+    session,
+    Character.of(session.character).withSheet({ miscBonuses }),
+    { kind: "sheet_edited", summaryRu: "Правка прочих прибавок" },
     clock,
   );
 }

@@ -163,6 +163,20 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
         ...overriddenNumbers,
       ],
     },
+    /**
+     * Прочие прибавки — свойство самого Торна: благословение, дар, обучение. Прибавка с вещью
+     * правится у вещи в «Сумке», а этой карточке принадлежит вклад, у которого вещи нет.
+     */
+    {
+      id: "miscBonuses",
+      titleRu: "Прочие прибавки",
+      editId: "miscBonuses",
+      rows: [
+        { labelRu: "К магии", value: signed(character.miscBonuses.spellcasting) },
+        { labelRu: "К защите", value: signed(character.miscBonuses.armorClass) },
+        { labelRu: "Ко всем спасброскам", value: signed(character.miscBonuses.savingThrows) },
+      ],
+    },
     ...ABILITIES.map((ability) => abilityBlock(character, ability)),
     {
       id: "proficiencies",

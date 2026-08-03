@@ -6,23 +6,23 @@ import type { CharacterState, ItemBonuses } from "@/core/domain/character/state"
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /**
- * Прибавки, не привязанные к вещи.
+ * Прочие прибавки персонажа: благословение, дар, обучение — вклад, у которого нет вещи.
  *
- * Границ нет: проклятый предмет тоже предмет, и его вклад отрицателен. Вклад надетых вещей сюда не
- * входит — он считается из инвентаря и правится там.
+ * Границ нет: проклятие — тоже вклад, и его число отрицательно. Прибавки надетых вещей сюда не
+ * входят — они считаются из инвентаря и правятся у самой вещи в «Сумке».
  */
-export function ItemBonusesSheet({
+export function MiscBonusesSheet({
   character,
   onSave,
   onCancel,
 }: {
   character: CharacterState;
-  onSave: (otherBonuses: ItemBonuses) => void;
+  onSave: (miscBonuses: ItemBonuses) => void;
   onCancel: () => void;
 }) {
-  const [spellcasting, setSpellcasting] = useState(String(character.equipment.otherBonuses.spellcasting));
-  const [armorClass, setArmorClass] = useState(String(character.equipment.otherBonuses.armorClass));
-  const [savingThrows, setSavingThrows] = useState(String(character.equipment.otherBonuses.savingThrows));
+  const [spellcasting, setSpellcasting] = useState(String(character.miscBonuses.spellcasting));
+  const [armorClass, setArmorClass] = useState(String(character.miscBonuses.armorClass));
+  const [savingThrows, setSavingThrows] = useState(String(character.miscBonuses.savingThrows));
 
   const parsed = {
     spellcasting: Number.parseInt(spellcasting, 10),
@@ -33,7 +33,7 @@ export function ItemBonusesSheet({
 
   return (
     <EditSheetFrame
-      titleRu="Прибавки без вещи"
+      titleRu="Прочие прибавки"
       canSave={valid}
       onCancel={onCancel}
       onSave={() => onSave(parsed)}

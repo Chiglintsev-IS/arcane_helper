@@ -20,7 +20,7 @@ import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
  * доспехов» получается из формулы само. Прибавки суммируются.
  */
 function total(character: CharacterState, contributions: ArmorClassEffect[]): number {
-  const { base, dexterityModifier, itemBonus } = Sheet.of(character).armorClassParts;
+  const { base, dexterityModifier, itemBonus, miscBonus } = Sheet.of(character).armorClassParts;
 
   const effectiveBase = contributions
     .filter((contribution) => contribution.kind === "base_override")
@@ -30,7 +30,7 @@ function total(character: CharacterState, contributions: ArmorClassEffect[]): nu
     .filter((contribution) => contribution.kind === "bonus")
     .reduce((sum, contribution) => sum + contribution.value, 0);
 
-  return effectiveBase + dexterityModifier + itemBonus + bonuses;
+  return effectiveBase + dexterityModifier + itemBonus + miscBonus + bonuses;
 }
 
 /** Вклады активных эффектов: эффект без вклада к КД отношения не имеет. */

@@ -42,6 +42,7 @@ export class Sheet {
         saveProficiencies: state.saveProficiencies,
         skills: state.skills,
         overrides: state.overrides,
+        miscBonuses: state.miscBonuses,
         bonuses: equipment.bonuses,
         armorClassBase: equipment.armorClassBase,
       },
@@ -73,12 +74,18 @@ export class Sheet {
     return this.numbers.passivePerception;
   }
 
-  /** Слагаемые КД без учёта эффектов: их прибавляет доска эффектов. */
-  get armorClassParts(): { base: number; dexterityModifier: number; itemBonus: number } {
+  /** Слагаемые КД без учёта эффектов: их вклады прибавляет итоговый расчёт. */
+  get armorClassParts(): {
+    base: number;
+    dexterityModifier: number;
+    itemBonus: number;
+    miscBonus: number;
+  } {
     return {
       base: this.input.armorClassBase,
       dexterityModifier: this.dexterityModifier,
       itemBonus: this.input.bonuses.armorClass,
+      miscBonus: this.input.miscBonuses.armorClass,
     };
   }
 

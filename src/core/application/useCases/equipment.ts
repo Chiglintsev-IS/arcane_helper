@@ -7,7 +7,7 @@
  */
 
 import { Character } from "@/core/domain/character/character";
-import { CURRENCIES, type InventoryItem, type ItemBonuses, type Money } from "@/core/domain/character/state";
+import { CURRENCIES, type InventoryItem, type Money } from "@/core/domain/character/state";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
 /** Сокращения монет для журнала: полные имена — дело экрана, запись должна оставаться строкой. */
@@ -34,19 +34,6 @@ export function editArmorClassBase(session: Session, base: number, clock: Clock)
     session,
     (root) => root.withEquipment(root.equipment.withArmorClassBase(base)),
     `База Класса Доспеха: ${base}`,
-    clock,
-  );
-}
-
-export function editOtherBonuses(
-  session: Session,
-  otherBonuses: ItemBonuses,
-  clock: Clock,
-): Session {
-  return applied(
-    session,
-    (root) => root.withEquipment(root.equipment.withOtherBonuses(otherBonuses)),
-    "Правка прибавок без вещи",
     clock,
   );
 }

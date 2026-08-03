@@ -49,7 +49,13 @@ describe("приведение состояния версии 1", () => {
     expect(sheet.spellSaveDc).toBe(16);
     expect(sheet.spellAttackModifier).toBe(8);
     expect(sheet.savingThrow("constitution")).toBe(4);
-    expect(sheet.armorClassParts).toEqual({ base: 10, dexterityModifier: 2, itemBonus: 2 });
+    // Прибавка версии 1 не называла вещи — она переезжает в прочие прибавки персонажа.
+    expect(sheet.armorClassParts).toEqual({
+      base: 10,
+      dexterityModifier: 2,
+      itemBonus: 0,
+      miscBonus: 2,
+    });
   });
 
   it("Интеллект переносится, Ловкость выводится из модификатора, остальные неизвестны", () => {
@@ -96,7 +102,7 @@ describe("приведение состояния версии 1", () => {
     expect(migrateCharacterState(already)).toBe(already);
   });
 
-  it("версия 2 переносит прибавки и базу защиты в снаряжение, компоненты не теряя", () => {
+  it("версия 2 переносит базу защиты в снаряжение, а прибавки — персонажу, компоненты не теряя", () => {
     const versionTwo = {
       ...VERSION_ONE,
       abilities: createThorne().abilities,
@@ -108,7 +114,7 @@ describe("приведение состояния версии 1", () => {
     const state = characterStateSchema.parse(migrateCharacterState(versionTwo));
 
     expect(state.equipment.armorClassBase).toBe(13);
-    expect(state.equipment.otherBonuses).toEqual({ spellcasting: 1, armorClass: 2, savingThrows: 1 });
+    expect(state.miscBonuses).toEqual({ spellcasting: 1, armorClass: 2, savingThrows: 1 });
     expect(state.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
     expect(state.equipment.items).toEqual([]);
   });
@@ -124,7 +130,7 @@ describe("приведение состояния версии 1", () => {
     const state = characterStateSchema.parse(migrateCharacterState(bare));
 
     expect(state.equipment.armorClassBase).toBe(10);
-    expect(state.equipment.otherBonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
+    expect(state.miscBonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
     expect(state.equipment.components).toBeUndefined();
   });
 
@@ -135,7 +141,7 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(withComponents));
     expect(state.equipment.components?.spellcastingFocus).toBe(true);
-    expect(state.equipment.otherBonuses.armorClass).toBe(2);
+    expect(state.miscBonuses.armorClass).toBe(2);
   });
 
   it("не объект остаётся собой: испорченные данные отвергнет схема, а не приведение", () => {
@@ -155,13 +161,14 @@ describe("приведение состояния версии 1", () => {
     };
     const migrated = migrateCharacterState(bare) as {
       abilities: { intelligence: number; dexterity: number };
-      equipment: { armorClassBase: number; otherBonuses: { armorClass: number } };
+      equipment: { armorClassBase: number };
+      miscBonuses: { armorClass: number };
       overrides: { spellSaveDc?: number; saves: Record<string, number> };
     };
     expect(migrated.abilities.intelligence).toBe(10);
     expect(migrated.abilities.dexterity).toBe(10);
     expect(migrated.equipment.armorClassBase).toBe(10);
-    expect(migrated.equipment.otherBonuses.armorClass).toBe(0);
+    expect(migrated.miscBonuses.armorClass).toBe(0);
     expect(migrated.overrides.spellSaveDc).toBeUndefined();
     expect(migrated.overrides.saves).toEqual({});
   });
@@ -293,6 +300,50 @@ describe("приведение состояния версии 1", () => {
       const state = createThorne();
       const broken = { ...state, equipment: { ...state.equipment, items: "не список" } };
       expect(migrateCharacterState(broken)).toBe(broken);
+    });
+  });
+
+  describe("«прибавки без вещи» становятся прочими прибавками персонажа", () => {
+    const bonuses = { spellcasting: 1, armorClass: 2, savingThrows: 0 };
+    /** Сохранение версии 3: прибавки лежат в снаряжении, а поля прочих прибавок ещё нет. */
+    const legacyState = () => {
+      const { miscBonuses: _absent, ...state } = createThorne() as Record<string, unknown> & {
+        miscBonuses: unknown;
+      };
+      return {
+        ...state,
+        equipment: { ...(state.equipment as object), otherBonuses: bonuses },
+      };
+    };
+
+    it("прибавки переезжают из снаряжения к персонажу", () => {
+      const migrated = migrateCharacterState(legacyState()) as {
+        miscBonuses: unknown;
+        equipment: Record<string, unknown>;
+      };
+      expect(migrated.miscBonuses).toEqual(bonuses);
+      expect("otherBonuses" in migrated.equipment).toBe(false);
+    });
+
+    it("уже заведённые прочие прибавки не затираются прежним полем", () => {
+      const both = { ...legacyState(), miscBonuses: { spellcasting: 9, armorClass: 0, savingThrows: 0 } };
+      const migrated = migrateCharacterState(both) as { miscBonuses: { spellcasting: number } };
+      expect(migrated.miscBonuses.spellcasting).toBe(9);
+    });
+
+    it("состояние без прежнего поля проходит насквозь той же ссылкой", () => {
+      const fresh = createThorne();
+      expect(migrateCharacterState(fresh)).toBe(fresh);
+    });
+
+    it("снимок отмены приводится так же, как состояние", () => {
+      const patch = { equipment: { items: [], otherBonuses: bonuses } };
+      const migrated = migrateUndoPatch(patch) as {
+        miscBonuses: unknown;
+        equipment: Record<string, unknown>;
+      };
+      expect(migrated.miscBonuses).toEqual(bonuses);
+      expect("otherBonuses" in migrated.equipment).toBe(false);
     });
   });
 

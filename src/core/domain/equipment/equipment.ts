@@ -44,19 +44,16 @@ export class Equipment {
     return this.data.items;
   }
 
-  get otherBonuses(): ItemBonuses {
-    return this.data.otherBonuses;
-  }
-
   get money(): Money {
     return this.data.money;
   }
 
   /**
-   * Что снаряжение прибавляет к числам: непривязанные прибавки плюс надетые вещи.
+   * Что снаряжение прибавляет к числам: надетые вещи, и только они.
    *
    * Лежащее в сумке не считается: кольцо в мешке защиты не даёт, и число, выросшее от покупки,
-   * разошлось бы с тем, что действует за столом.
+   * разошлось бы с тем, что действует за столом. Прибавка без вещи — свойство персонажа, а не
+   * снаряжения, и живёт у него.
    */
   get bonuses(): ItemBonuses {
     return this.data.items.reduce<ItemBonuses>(
@@ -68,7 +65,7 @@ export class Equipment {
               armorClass: total.armorClass + item.bonuses.armorClass,
               savingThrows: total.savingThrows + item.bonuses.savingThrows,
             },
-      { ...this.data.otherBonuses },
+      { ...NO_BONUSES },
     );
   }
 
@@ -119,10 +116,6 @@ export class Equipment {
       );
     }
     return this.with({ armorClassBase });
-  }
-
-  withOtherBonuses(otherBonuses: ItemBonuses): Equipment {
-    return this.with({ otherBonuses });
   }
 
   /**

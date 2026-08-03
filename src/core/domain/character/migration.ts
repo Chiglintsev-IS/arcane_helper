@@ -141,6 +141,26 @@ function migrateItemCategories(state: unknown): unknown {
 }
 
 /**
+ * «Прибавки без вещи» жили в снаряжении; теперь это прочие прибавки самого персонажа.
+ *
+ * Работает и над состоянием, и над снимком отмены: у обоих одна и та же пара «снаряжение —
+ * персонаж», и снимок со старым полем возвращал бы прибавку туда, откуда она уехала.
+ */
+function migrateMiscBonuses(state: unknown): unknown {
+  if (state === null || typeof state !== "object") return state;
+  const { equipment, miscBonuses } = state as { equipment?: unknown; miscBonuses?: unknown };
+  if (equipment === null || typeof equipment !== "object" || !("otherBonuses" in equipment)) {
+    return state;
+  }
+  const { otherBonuses, ...rest } = equipment as Record<string, unknown>;
+  return {
+    ...state,
+    equipment: rest,
+    ...(miscBonuses === undefined ? { miscBonuses: otherBonuses } : {}),
+  };
+}
+
+/**
  * Имя, которым прежние версии опознавали поправку к КД среди активных эффектов. Заморожено на дате
  * приведения: нынешняя подпись поправки вправе меняться, а прошлые сохранения — нет.
  */
@@ -176,12 +196,12 @@ function migrateAdjustmentMarker(state: unknown): unknown {
  * новая модель не знает.
  */
 export function migrateUndoPatch(patch: unknown): unknown {
-  return migrateAdjustmentMarker(migrateItemCategories(patch));
+  return migrateAdjustmentMarker(migrateMiscBonuses(migrateItemCategories(patch)));
 }
 
 export function migrateCharacterState(raw: unknown): unknown {
   return migrateAdjustmentMarker(
-    migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw)))),
+    migrateMiscBonuses(migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw))))),
   );
 }
 

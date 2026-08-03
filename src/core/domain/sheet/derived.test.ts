@@ -20,12 +20,30 @@ describe("производные числа листа", () => {
     expect(sheet.savingThrow("intelligence")).toBe(8);
     expect(sheet.savingThrow("wisdom")).toBe(5);
     expect(sheet.savingThrow("strength")).toBe(0);
-    expect(sheet.armorClassParts).toEqual({ base: 10, dexterityModifier: 2, itemBonus: 2 });
+    expect(sheet.armorClassParts).toEqual({
+      base: 10,
+      dexterityModifier: 2,
+      itemBonus: 2,
+      miscBonus: 0,
+    });
     expect(sheet.skill("arcana")).toBe(7);
     expect(sheet.skill("investigation")).toBe(7);
     expect(sheet.skill("nature")).toBe(7);
     expect(sheet.skill("perception")).toBe(4);
     expect(sheet.passivePerception).toBe(14);
+  });
+
+  it("прочие прибавки персонажа складываются с надетым", () => {
+    const state = createThorne();
+    const blessed = sheetOf({
+      ...state,
+      miscBonuses: { spellcasting: 2, armorClass: 1, savingThrows: 1 },
+    });
+    // КС 16 = 8 + 3 + 4 + 1 (фокусировка); благословение +2 поверх.
+    expect(blessed.spellSaveDc).toBe(18);
+    // Спасбросок Телосложения 4 = 3 + 1 (плащ); дар +1 поверх.
+    expect(blessed.savingThrow("constitution")).toBe(5);
+    expect(blessed.armorClassParts.miscBonus).toBe(1);
   });
 
   it("инициатива двигается за Мудростью, а не только за Ловкостью", () => {

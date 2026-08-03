@@ -27,7 +27,8 @@ const rope: InventoryItem = { id: "rope", nameRu: "Верёвка", kind: "other
 const gear = () => Equipment.of(createThorne());
 
 describe("снаряжение", () => {
-  it("прибавка складывается из непривязанных и надетых вещей", () => {
+  it("прибавка считается только из надетых вещей", () => {
+    // Вещи Торна: фокусировка +1 к магии, мантия +1 и плащ +1 к защите, плащ +1 к спасброскам.
     expect(gear().bonuses).toEqual({ spellcasting: 1, armorClass: 2, savingThrows: 1 });
 
     const worn = gear().addItem(ring(true));
@@ -132,13 +133,6 @@ describe("снаряжение", () => {
     expect(gear().withArmorClassBase(15).armorClassBase).toBe(15);
     expect(() => gear().withArmorClassBase(0)).toThrow(DomainError);
     expect(() => gear().withArmorClassBase(1.5)).toThrow(DomainError);
-  });
-
-  it("прибавки без вещи складываются с надетыми вещами, а не заменяют их", () => {
-    const changed = gear().withOtherBonuses({ spellcasting: 2, armorClass: 0, savingThrows: 0 });
-    expect(changed.otherBonuses.spellcasting).toBe(2);
-    // Вещи Торна дают +1 к магии, +2 к защите и +1 к спасброскам.
-    expect(changed.bonuses).toEqual({ spellcasting: 3, armorClass: 2, savingThrows: 1 });
   });
 
   it("отсутствие записи о компонентах — не пустая сумка, а незнание", () => {
