@@ -99,6 +99,16 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   }));
   expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
 
+  // Пять вкладок режима на той же ширине: переключатель за краем экрана — переключатель,
+  // которого нет, и это верно для него так же, как для полосы фильтров.
+  const modes = await page.getByRole("radiogroup", { name: "Режим экрана" }).evaluate((node) => ({
+    scrollWidth: node.scrollWidth,
+    clientWidth: node.clientWidth,
+  }));
+  expect(modes.scrollWidth, "переключатель режима — все пять вкладок").toBeLessThanOrEqual(
+    modes.clientWidth,
+  );
+
   // В «Книге» бюджет другой: счётчик подготовки, фильтры и начало первой строки, а не строка
   // целиком: там читают и готовятся, и прокрутка нормальна.
   await switchMode(page, /^Книга/);
@@ -133,6 +143,15 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
     .getByRole("heading", { name: "Числа боя" })
     .evaluate((node) => Math.round(node.closest("section")?.getBoundingClientRect().bottom ?? 0));
   expect(firstBlockBottom, "первый блок «Листа» целиком").toBeLessThanOrEqual(viewport);
+
+  // «Привал»: шапка ресурсов и кнопки отдыха видны без прокрутки, список покупок может уйти
+  // за край — это не ключевая механика, а сверка того, что уже лежит в сумке.
+  await switchMode(page, /^Привал/);
+
+  const restBottom = await page
+    .getByRole("button", { name: /Долгий отдых/ })
+    .evaluate((node) => Math.round(node.getBoundingClientRect().bottom));
+  expect(restBottom, "кнопки отдыха «Привала» целиком").toBeLessThanOrEqual(viewport);
 });
 
 test("book mode shows only the book", async ({ page }) => {
@@ -347,16 +366,18 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: /Применение/ })).toBeVisible();
   await scan("мастер применения");
 
-  // Привал открывается кнопкой и только вне боя: отдых и покупки не помещаются на экран вместе
-  // со списком.
+  // Привал — отдельный режим, а не шторка поверх экрана: отдых и покупки не помещаются на экран
+  // вместе со списком заклинаний.
   await page.getByRole("button", { name: "Отмена" }).click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await page.getByRole("button", { name: "Окончить бой" }).click();
   await page.getByRole("button", { name: "Да, бой закончен" }).click();
-  await page.getByRole("button", { name: "Привал", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Привал" })).toBeVisible();
+  await switchMode(page, /^Привал/);
+  await expect(page.getByRole("button", { name: /Короткий отдых/ })).toBeVisible();
   await scan("привал");
-  await page.getByRole("button", { name: "Закрыть" }).click();
+
+  // «Реакции» стоит только в «Игре»: привал её не показывает — там читают отдых, а не ждут триггер.
+  await switchMode(page, /^Игра/);
 
   // Точное совпадение: строка «Электрошока» говорит, что цель «не может совершать реакции», и по
   // подстроке кнопка шапки перестала быть единственной.
@@ -382,12 +403,10 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("шторка правки листа");
   await page.getByRole("button", { name: "Отмена" }).click();
 
-  await switchMode(page, /^Игра/);
-  await page.getByRole("button", { name: "Привал", exact: true }).click();
+  await switchMode(page, /^Привал/);
 
   // Короткий отдых — предусловие правила: до него восстановление недоступно.
   await page.getByRole("button", { name: /Короткий отдых/ }).click();
-  await page.getByRole("button", { name: "Привал", exact: true }).click();
   await page.getByRole("button", { name: /Магическое восстановление/ }).click();
   await expect(page.getByRole("dialog", { name: "Магическое восстановление" })).toBeVisible();
   await scan("магическое восстановление");
@@ -477,9 +496,24 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await expect(page.getByLabel("Ресурсы", { exact: true })).not.toContainText("Раунд");
 
   // Долгий отдых уничтожает состояние боя, поэтому спрашивает.
-  await page.getByRole("button", { name: "Привал", exact: true }).click();
+  await switchMode(page, /^Привал/);
   await page.getByRole("button", { name: /Долгий отдых/ }).click();
   await page.getByRole("button", { name: "Отдохнуть" }).click();
+  await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
+});
+
+test("combat keeps camp mode reachable, but rest refuses with a reason", async ({ page }) => {
+  // Мода не является правилом: переключатель режима работает в бою так же, как вне его — а
+  // отдых внутри самого режима обязан отказать, а не притвориться, что кнопки не было.
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await switchMode(page, /^Привал/);
+
+  const shortRest = page.getByRole("button", { name: /Короткий отдых.*Не проходит во время боя/ });
+  await expect(shortRest).toBeDisabled();
+  const longRest = page.getByRole("button", { name: "Долгий отдых — Не проходит во время боя" });
+  await expect(longRest).toBeDisabled();
+
+  // Ячейки не тронуты: клик по выключенной кнопке в браузере не срабатывает вовсе.
   await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
 });
 

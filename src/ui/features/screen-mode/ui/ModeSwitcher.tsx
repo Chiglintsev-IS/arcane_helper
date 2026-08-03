@@ -9,10 +9,11 @@ import { SCREEN_MODES, type ScreenMode } from "@/core/shared/screenMode";
  * Боя среди режимов нет: он состояние игры, и отмечают его кнопкой внутри «Игры».
  */
 const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
-  play: { title: "Игра", hint: "то, чем ходят и чем восстанавливаются" },
+  play: { title: "Игра", hint: "то, чем ходят" },
   book: { title: "Книга", hint: "весь состав целиком, для чтения и сверки" },
   journal: { title: "Журнал", hint: "что случилось, что можно отменить и где взять копию" },
   sheet: { title: "Лист", hint: "кто он: уровень, характеристики, навыки, владения" },
+  rest: { title: "Привал", hint: "отдых, восстановление и покупки" },
 };
 
 export function ModeSwitcher({
@@ -26,7 +27,7 @@ export function ModeSwitcher({
     <div
       role="radiogroup"
       aria-label="Режим экрана"
-      className="flex flex-nowrap gap-1 overflow-x-auto rounded-xl bg-slate-100 p-0.5 dark:bg-slate-900"
+      className="flex flex-nowrap gap-0.5 overflow-x-auto rounded-xl bg-slate-100 p-0.5 dark:bg-slate-900"
     >
       {SCREEN_MODES.map((value) => {
         const selected = value === mode;
@@ -38,7 +39,7 @@ export function ModeSwitcher({
             aria-checked={selected}
             aria-label={`${LABELS[value].title}: ${LABELS[value].hint}`}
             onClick={() => onChange(value)}
-            className={`min-h-11 shrink-0 grow basis-auto rounded-lg px-2 text-sm font-medium ${
+            className={`min-h-11 shrink-0 grow basis-auto rounded-lg px-1 text-sm font-medium ${
               selected
                 ? "bg-white text-action-strong shadow-sm dark:bg-slate-800 dark:text-action"
                 : "text-slate-600 dark:text-slate-400"

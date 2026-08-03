@@ -3,15 +3,21 @@
  *
  * Отдых задевает сразу несколько агрегатов и потому живёт сценарием: ресурсы возвращаются, эффекты
  * короче отдыха закрываются, здоровье поднимается, снижённый максимум тает по часам.
+ *
+ * Ни одна из трёх операций не идёт во время боя: экран режима «Привал» доступен и в бою — переход
+ * в него не спрашивает про схватку, — а отказ обязан жить в сценарии, а не только в кнопке, которую
+ * можно и не увидеть.
  */
 
 import { Character } from "@/core/domain/character/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import type { SlotRecoveryPlan } from "@/core/domain/arcana/slots";
+import { DomainError } from "@/core/domain/shared/errors";
 import { LONG_REST_HOURS, maximumReductionAfterHours } from "@/core/domain/vitality/blood";
 import { hitDiceRegainedOnLongRest } from "@/core/domain/vitality/hitDice";
 import { commit, type Clock, type Session } from "@/core/application/session";
 import { hourNotes } from "./health";
+import { inFight } from "./turn";
 
 /**
  * Долгий отдых. Восстанавливает всё, включая руны и здоровье, и снимает концентрацию.
@@ -21,6 +27,9 @@ import { hourNotes } from "./health";
  * иначе персонаж вышел бы из отдыха с недобором, не видным ни на одном экране.
  */
 export function longRest(session: Session, clock: Clock): Session {
+  if (inFight(session)) {
+    throw new DomainError("Пока идёт бой, долгий отдых недоступен");
+  }
   const root = Character.of(session.character);
   const reduction = maximumReductionAfterHours(
     root.vitality.bloodReduction,
@@ -59,6 +68,9 @@ export function longRest(session: Session, clock: Clock): Session {
  * час» рядом с ним не должна значить больше, чем сам отдых.
  */
 export function shortRest(session: Session, clock: Clock): Session {
+  if (inFight(session)) {
+    throw new DomainError("Пока идёт бой, короткий отдых недоступен");
+  }
   const root = Character.of(session.character);
   const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
   const hadSpellPoints = root.arcana.spellPoints > 0;
@@ -93,6 +105,9 @@ export function useArcaneRecovery(
   plan: SlotRecoveryPlan,
   clock: Clock,
 ): Session {
+  if (inFight(session)) {
+    throw new DomainError("Пока идёт бой, магическое восстановление недоступно");
+  }
   const root = Character.of(session.character);
   const after = root.withArcana(root.arcana.useArcaneRecovery(plan, root.base.level));
   const returned = Object.entries(plan)

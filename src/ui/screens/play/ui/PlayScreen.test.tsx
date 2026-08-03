@@ -504,11 +504,11 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
   });
 });
 
-describe("операции привала (FR-202, FR-215)", () => {
+describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
   /**
    * Торн на привале, потративший ячейку первого уровня: восстанавливать есть что.
    *
-   * Привал открывается кнопкой: вместе со списком и фильтрами он на экран не помещается.
+   * Привал — режим экрана, а не шторка: переключается тем же радио, что и остальные четыре.
    */
   async function atCamp(character: CharacterState = createThorne()) {
     const spent = {
@@ -516,9 +516,22 @@ describe("операции привала (FR-202, FR-215)", () => {
       spellSlots: { ...character.spellSlots, 1: { maximum: 4, remaining: 2 } },
     };
     const rendered = await renderWithStores(<PlayScreen />, spent);
-    await userEvent.click(screen.getByRole("button", { name: "Привал" }));
+    await userEvent.click(screen.getByRole("radio", { name: /^Привал/ }));
     return rendered;
   }
+
+  it("показывает ресурсы и активные эффекты, но не список заклинаний (FR-237)", async () => {
+    await atCamp(concentrating());
+
+    expect(screen.getByLabelText("Ресурсы")).toBeDefined();
+    // Концентрация — часть блока действующего: она обязана быть видна на «Привале» так же, как
+    // и на «Игре», ведь долгий отдых её снимает.
+    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
+    expect(screen.queryByLabelText(/^Подготовлено/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /^(Начать бой|Окончить бой|Новый ход)/ })).toBeNull();
+  });
 
   it("короткий отдых доступен кнопкой и пишется в журнал", async () => {
     const user = userEvent.setup();
@@ -556,9 +569,9 @@ describe("операции привала (FR-202, FR-215)", () => {
     const user = userEvent.setup();
     const { stores } = await atCamp();
 
-    // Короткий отдых — предусловие правила: до него восстановление недоступно.
+    // Короткий отдых — предусловие правила: до него восстановление недоступно. Экран остаётся
+    // «Привалом» после отдыха — закрывать здесь нечего.
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
-    await user.click(screen.getByRole("button", { name: "Привал" }));
     await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
@@ -590,7 +603,6 @@ describe("операции привала (FR-202, FR-215)", () => {
     expect(blocked.hasAttribute("disabled")).toBe(true);
 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
-    await user.click(screen.getByRole("button", { name: "Привал" }));
     expect(
       screen.getByRole("button", { name: "Магическое восстановление" }).hasAttribute("disabled"),
     ).toBe(false);
@@ -607,7 +619,7 @@ describe("операции привала (FR-202, FR-215)", () => {
       reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
       await renderWithStores(<PlayScreen />, reduced);
 
-      await userEvent.click(screen.getByRole("button", { name: "Привал" }));
+      await userEvent.click(screen.getByRole("radio", { name: /^Привал/ }));
       expect(screen.getByRole("button", { name: "Прошёл час · максимум +3" })).toBeDefined();
     });
 
@@ -616,7 +628,7 @@ describe("операции привала (FR-202, FR-215)", () => {
       withPoints.spellPoints = { remaining: 5 };
       await renderWithStores(<PlayScreen />, withPoints);
 
-      await userEvent.click(screen.getByRole("button", { name: "Привал" }));
+      await userEvent.click(screen.getByRole("radio", { name: /^Привал/ }));
       expect(screen.getByRole("button", { name: "Прошёл час · сгорит 5 очков" })).toBeDefined();
     });
 
@@ -626,19 +638,19 @@ describe("операции привала (FR-202, FR-215)", () => {
       both.spellPoints = { remaining: 1 };
       await renderWithStores(<PlayScreen />, both);
 
-      await userEvent.click(screen.getByRole("button", { name: "Привал" }));
+      await userEvent.click(screen.getByRole("radio", { name: /^Привал/ }));
       expect(screen.getByRole("button", { name: "Прошёл час · максимум +3, сгорит 1 очко" })).toBeDefined();
     });
   });
 
-  it("«Прошёл час» возвращает часть снижённого максимума и гасит очки заклинаний (FR-173, FR-175)", async () => {
+  it("«Прошёл час» доступен в «Игре» и в «Привале» одной и той же кнопкой (FR-173, FR-175)", async () => {
     const user = userEvent.setup();
     const reduced = createThorne();
     reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
     reduced.spellPoints = { remaining: 3 };
     await renderWithStores(<PlayScreen />, reduced);
 
-    await user.click(screen.getByRole("button", { name: "Привал" }));
+    // Кнопка стоит прямо в «Игре»: входа в отдельный блок ей больше не нужно.
     await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
     // На 7 уровне возвращается 3 за час: максимум 51 → 54, текущие не растут.
     expect(screen.getByLabelText("Ресурсы").textContent).toContain("51/54");
@@ -651,8 +663,6 @@ describe("операции привала (FR-202, FR-215)", () => {
     reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
     await renderWithStores(<PlayScreen />, reduced);
 
-    await user.click(screen.getByRole("button", { name: "Привал" }));
-    // Бой начинается поверх уже открытого привала: кнопка боя стоит в общем ряду выше шторки.
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
 
     const button = screen.getByRole("button", {
@@ -670,24 +680,47 @@ describe("операции привала (FR-202, FR-215)", () => {
     expect(screen.getByLabelText("Ресурсы").textContent).not.toContain("Раунд");
   });
 
-  it("бой убирает вход в привал (FR-215)", async () => {
+  it("«Привал» остаётся доступным в бою, а отдых отказывает с причиной, а не пропадает (FR-215)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayScreen />);
 
-    expect(screen.getByRole("button", { name: "Привал" })).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    // Мода не спрашивает про бой: переключатель режима работает в бою так же, как вне его.
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+
+    const shortRest = screen.getByRole("button", {
+      name: "Короткий отдых · час — Не проходит во время боя",
+    });
+    expect(shortRest.hasAttribute("disabled")).toBe(true);
+
+    const longRest = screen.getByRole("button", { name: "Долгий отдых — Не проходит во время боя" });
+    expect(longRest.hasAttribute("disabled")).toBe(true);
+
+    const recovery = screen.getByRole("button", {
+      name: "Магическое восстановление — Не проходит во время боя",
+    });
+    expect(recovery.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("отключённая кнопка отдыха не меняет состояние по клику (FR-215)", async () => {
+    // Защита в два слоя: кнопка выключена атрибутом `disabled`, а сценарий отказал бы и без него.
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<PlayScreen />);
 
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
-    expect(screen.queryByRole("button", { name: "Привал" })).toBeNull();
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+    await user.click(
+      screen.getByRole("button", { name: "Долгий отдых — Не проходит во время боя" }),
+    );
 
-    await user.click(screen.getByRole("button", { name: "Окончить бой" }));
-    await user.click(screen.getByRole("button", { name: "Да, бой закончен" }));
-    expect(screen.getByRole("button", { name: "Привал" })).toBeDefined();
+    expect(stores.session.getState().session?.journal.at(-1)?.kind).not.toBe("long_rest");
+    expect(screen.queryByRole("dialog", { name: "Долгий отдых?" })).toBeNull();
   });
 
   it("в книге привала нет: там читают, а не отдыхают", async () => {
     await renderWithStores(<PlayScreen />, inBookMode());
-    expect(screen.queryByRole("button", { name: "Привал" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Долгий отдых/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Прошёл час/ })).toBeNull();
   });
 });
 

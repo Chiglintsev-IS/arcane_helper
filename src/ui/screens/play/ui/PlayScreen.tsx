@@ -35,7 +35,8 @@ import { useMemo, useState } from "react";
 import { ArcaneRecoverySheet } from "@/ui/features/arcane-recovery/ui/ArcaneRecoverySheet";
 import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
-import { CampSheet } from "@/ui/widgets/camp/ui/CampSheet";
+import { CampScreen } from "@/ui/widgets/camp/ui/CampScreen";
+import { HourMark } from "@/ui/features/rest/ui/HourMark";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { DataSheet } from "@/ui/features/data-exchange/ui/DataSheet";
@@ -115,6 +116,10 @@ function firstReason(
  * Отметки схватки стоят в «Игре» всегда: начало и конец боя — её собственные операции. Что внутри
  * «Игры» убирает сам бой — отдых и «Новый ход», — таблице не принадлежит: это состояние игры, а не
  * режима, и решается оно там, где стоит блок.
+ *
+ * «Прошёл час» стоит в «Игре» и в «Привале» одним и тем же блоком: строка `hour` в этих двух
+ * режимах истинна, а рисует его один компонент в одном и том же месте разметки — иначе два режима
+ * читались бы как две разные программы.
  */
 const SCREEN_PARTS: Record<
   ScreenMode,
@@ -129,21 +134,25 @@ const SCREEN_PARTS: Record<
     reactions: boolean;
     /** Счётчик подготовки и кнопки подготовки в строках. */
     preparation: boolean;
-    /** Отдых, восстановление, список покупок. */
-    camp: boolean;
+    /** «Прошёл час»: общий ряд кнопок «Игры» и «Привала». */
+    hour: boolean;
+    /** Короткий отдых, долгий отдых, магическое восстановление и список покупок. */
+    rest: boolean;
     journal: boolean;
     /** Лист персонажа целиком. */
     sheet: boolean;
   }
 > = {
   // prettier-ignore
-  play: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, camp: true, journal: false, sheet: false },
+  play: { resources: true, effects: true, spellList: true, encounter: true, reactions: true, preparation: false, hour: true, rest: false, journal: false, sheet: false },
   // prettier-ignore
-  book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, camp: false, journal: false, sheet: false },
+  book: { resources: false, effects: false, spellList: true, encounter: false, reactions: false, preparation: true, hour: false, rest: false, journal: false, sheet: false },
   // prettier-ignore
-  journal: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, camp: false, journal: true, sheet: false },
+  journal: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, hour: false, rest: false, journal: true, sheet: false },
   // prettier-ignore
-  sheet: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, camp: false, journal: false, sheet: true },
+  sheet: { resources: false, effects: false, spellList: false, encounter: false, reactions: false, preparation: false, hour: false, rest: false, journal: false, sheet: true },
+  // prettier-ignore
+  rest: { resources: true, effects: true, spellList: false, encounter: false, reactions: false, preparation: false, hour: true, rest: true, journal: false, sheet: false },
 };
 
 export function PlayScreen() {
@@ -161,7 +170,6 @@ export function PlayScreen() {
   const [bloodOpen, setBloodOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [damageOpen, setDamageOpen] = useState(false);
-  const [campOpen, setCampOpen] = useState(false);
   const [longRestOpen, setLongRestOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
@@ -345,7 +353,7 @@ export function PlayScreen() {
          * пустая обёртка всё равно забрала бы промежуток родителя — 8 пикселей, которых на
          * iPhone SE не бывает лишних.
          */}
-        {parts.preparation || parts.encounter || parts.reactions ? (
+        {parts.preparation || parts.encounter || parts.reactions || parts.hour ? (
           <div className="flex flex-wrap items-center gap-2">
             {/*
              * Счётчик подготовки: лимит — единственное жёсткое ограничение приложения, и
@@ -411,18 +419,18 @@ export function PlayScreen() {
               </button>
             ) : null}
             {/*
-             * Привал — кнопка, а не блок: отдых, восстановление и покупки вместе со списком и
-             * фильтрами не помещаются на 320 × 568, а первая карточка списка обязана быть видна
-             * целиком. Открывают его намеренно и ненадолго — как «Реакции».
+             * «Прошёл час» стоит в общем ряду и в «Игре», и в «Привале»: одно и то же место,
+             * один и тот же компонент, а не кнопка входа в отдельный блок — отдых и покупки
+             * получили собственный режим и не помещаются в этот ряд.
              */}
-            {parts.camp && !inFight ? (
-              <button
-                type="button"
-                onClick={() => setCampOpen(true)}
-                className="min-h-11 grow whitespace-nowrap rounded-xl border border-slate-300 px-1 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300"
-              >
-                Привал
-              </button>
+            {parts.hour ? (
+              <HourMark
+                character={character}
+                inFight={inFight}
+                onRecoverMaximum={() =>
+                  apply((current) => recoverHitPointMaximum(current, clock))
+                }
+              />
             ) : null}
           </div>
         ) : null}
@@ -471,6 +479,18 @@ export function PlayScreen() {
             entries={session.journal}
             onUndo={() => apply(undoLast)}
             onData={() => setDataOpen(true)}
+          />
+        ) : null}
+
+        {parts.rest ? (
+          <CampScreen
+            character={character}
+            inFight={inFight}
+            spells={spells}
+            onShortRest={() => apply((current) => shortRest(current, clock))}
+            onLongRest={() => setLongRestOpen(true)}
+            onArcaneRecovery={() => setRecoveryOpen(true)}
+            onToggleMaterial={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
           />
         ) : null}
 
@@ -639,37 +659,6 @@ export function PlayScreen() {
           onAdjustRunes={(delta) => apply((current) => adjustRunes(current, delta, clock))}
           onSunlight={(under) => apply((current) => setSunlight(current, under, clock))}
           onClose={() => setResourcesOpen(false)}
-        />
-      ) : null}
-
-      {/*
-       * Привал закрывается вместе с начатой операцией: её итог — ячейки, хиты и руны — виден в
-       * шапке, которую шторка закрывает собой. Список покупок закрытия не требует: он о том, что
-       * лежит в сумке, а не о числах шапки.
-       */}
-      {campOpen ? (
-        <CampSheet
-          character={character}
-          inFight={inFight}
-          spells={spells}
-          onShortRest={() => {
-            if (apply((current) => shortRest(current, clock)) === null) setCampOpen(false);
-          }}
-          onLongRest={() => {
-            setCampOpen(false);
-            setLongRestOpen(true);
-          }}
-          onArcaneRecovery={() => {
-            setCampOpen(false);
-            setRecoveryOpen(true);
-          }}
-          onRecoverMaximum={() => {
-            if (apply((current) => recoverHitPointMaximum(current, clock)) === null) {
-              setCampOpen(false);
-            }
-          }}
-          onToggleMaterial={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
-          onClose={() => setCampOpen(false)}
         />
       ) : null}
 
