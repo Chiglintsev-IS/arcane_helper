@@ -12,3 +12,6 @@ next-env.d.ts
 .DS_Store
 .env*.local
 .worktrees/
+
+# Рабочие каталоги агентов: изоляция на время задачи, в историю не попадает.
+.claude/worktrees/
