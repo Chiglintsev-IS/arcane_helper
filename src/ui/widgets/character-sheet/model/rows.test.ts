@@ -11,13 +11,12 @@ const byTab = (tab: string) =>
     .map((block) => block.id);
 
 describe("блоки листа", () => {
-  it("вкладка «Итог» держит то, что сложилось: числа боя, здоровье, отметки мастера", () => {
-    expect(byTab("total")).toEqual(["combatNumbers", "health", "marks"]);
-  });
-
-  it("вкладка «Персонаж» держит базу: кто он, шесть характеристик, владения", () => {
+  it("вкладка «Персонаж» идёт порядком бумажного листа и держит действующие числа", () => {
     expect(byTab("character")).toEqual([
       "identity",
+      "combatNumbers",
+      "health",
+      "marks",
       "ability:strength",
       "ability:dexterity",
       "ability:constitution",
@@ -28,9 +27,14 @@ describe("блоки листа", () => {
     ]);
   });
 
-  it("вещи и прибавки живут в своих вкладках, а не у персонажа", () => {
-    expect(byTab("equipment")).toEqual(["armorClassBase", "itemBonuses"]);
-    expect(byTab("inventory")).toEqual(["inventory"]);
+  it("вещи, доспех и прибавки живут одной вкладкой, а не тремя", () => {
+    expect(byTab("items")).toEqual(["inventory", "armorClassBase", "itemBonuses"]);
+  });
+
+  it("строка вещи открывает её саму, а кнопки правки у списка нет", () => {
+    expect(blockById("inventory")?.editable).toBe(false);
+    expect(blockById("inventory")?.quickAddLabelRu).toBe("Новая вещь");
+    expect(blockById("inventory")?.rows[0]?.openId).toBe("item:spellcasting-focus");
   });
 
   it("пустой инвентарь называется пустым, надетая вещь — своим вкладом", () => {
@@ -61,6 +65,7 @@ describe("блоки листа", () => {
       labelRu: "Кольцо защиты",
       value: "надето",
       hint: "защита +1, спасброски +1",
+      openId: "item:ring",
     });
   });
 
@@ -81,9 +86,14 @@ describe("блоки листа", () => {
         (block) => block.id === "inventory",
       )?.rows ?? [];
 
-    expect(rows).toContainEqual({ labelRu: "Посох", value: "в сумке", hint: "магия +1" });
+    expect(rows).toContainEqual({
+      labelRu: "Посох",
+      value: "в сумке",
+      hint: "магия +1",
+      openId: "item:staff",
+    });
     // Верёвка в счёте не участвует, и подсказки у неё нет вовсе.
-    expect(rows).toContainEqual({ labelRu: "Верёвка", value: "в сумке" });
+    expect(rows).toContainEqual({ labelRu: "Верёвка", value: "в сумке", openId: "item:rope" });
   });
 
   it("количество больше одной штуки и вид вещи показаны в «Инвентаре»", () => {
@@ -96,7 +106,12 @@ describe("блоки листа", () => {
         (block) => block.id === "inventory",
       )?.rows ?? [];
 
-    expect(rows).toContainEqual({ labelRu: "Зелье лечения", value: "в сумке ×3", hint: "Зелье" });
+    expect(rows).toContainEqual({
+      labelRu: "Зелье лечения",
+      value: "в сумке ×3",
+      hint: "Зелье",
+      openId: "item:healing-potion",
+    });
   });
 
   it("заметка вещи попадает в подсказку рядом с прибавками", () => {
@@ -105,11 +120,13 @@ describe("блоки листа", () => {
       labelRu: "Комплект болотной маскировки",
       value: "в сумке",
       hint: "1d4 к Скрытности в болотах",
+      openId: "item:swamp-camouflage-kit",
     });
     expect(rows).toContainEqual({
       labelRu: "Плащ защиты",
       value: "надето",
       hint: "защита +1, спасброски +1",
+      openId: "item:cloak-of-protection",
     });
   });
 
@@ -138,15 +155,32 @@ describe("блоки листа", () => {
     expect(rows).toContainEqual({ labelRu: "КС спасброска", value: "18", hint: "введено руками" });
   });
 
-  it("здоровье называет оба снижения", () => {
+  it("здоровье показывает действующее число, а снижения называет подсказкой", () => {
     const state = createThorne();
     const hurt = {
       ...state,
       hitPoints: { current: 30, maximumBase: 60, bloodReduction: 6, masterReduction: 4 },
     };
     const rows = sheetBlocks(hurt).find((block) => block.id === "health")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Действующий максимум", value: "50" });
-    expect(rows).toContainEqual({ labelRu: "Снижение мастера", value: "4" });
+    expect(rows).toContainEqual({ labelRu: "Хиты", value: "30 из 50" });
+    expect(rows).toContainEqual({
+      labelRu: "Максимум",
+      value: "50",
+      hint: "60 −6 кровью, −4 мастером",
+    });
+  });
+
+  it("целый максимум подсказки не несёт: объяснять нечего", () => {
+    const rows = blockById("health")?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "Максимум", value: "60" });
+  });
+
+  it("временные хиты видны на листе сразу, как только они есть", () => {
+    const state = createThorne();
+    const rows =
+      sheetBlocks({ ...state, temporaryHitPoints: 5 }).find((block) => block.id === "health")
+        ?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "Хиты", value: "60 из 60", hint: "+5 временных" });
   });
 
   it("состояние без Костей хитов называет их прочерком", () => {

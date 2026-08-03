@@ -120,10 +120,16 @@ export class Equipment {
     return this.with({ otherBonuses });
   }
 
-  /** Новая вещь идёт в конец: порядок ввода — единственный, который игрок помнит. */
+  /**
+   * Новая вещь идёт в конец: порядок ввода — единственный, который игрок помнит.
+   *
+   * Одноимённая складывается в количество, а не отвергается: второе зелье лечения — самая частая
+   * находка за столом, и отказ на ней означал бы, что запас пополняют удалением и вводом заново.
+   */
   addItem(item: InventoryItem): Equipment {
-    if (this.data.items.some((existing) => existing.id === item.id)) {
-      throw new DomainError(`Вещь «${item.id}» уже в инвентаре`);
+    const found = this.data.items.find((existing) => existing.id === item.id);
+    if (found !== undefined) {
+      return this.replaceItem({ ...found, count: found.count + item.count });
     }
     return this.with({ items: [...this.data.items, item] });
   }

@@ -67,9 +67,14 @@ describe("снаряжение", () => {
     ]);
   });
 
-  it("повтор, отсутствие вещи и порча данных отвергаются с причиной", () => {
-    const worn = gear().addItem(ring(true));
-    expect(() => worn.addItem(ring(true))).toThrow(DomainError);
+  it("одноимённая вещь пополняет запас, а не отвергается", () => {
+    const stacked = gear().addItem(potions(2)).addItem(potions(3));
+
+    expect(stacked.items.filter((item) => item.id === "healing-potion")).toHaveLength(1);
+    expect(stacked.items.find((item) => item.id === "healing-potion")?.count).toBe(5);
+  });
+
+  it("отсутствие вещи и порча данных отвергаются с причиной", () => {
     expect(() => gear().replaceItem(ring(true))).toThrow(DomainError);
     expect(() => gear().removeItem("ring")).toThrow(DomainError);
     expect(() => gear().toggleWorn("ring")).toThrow(DomainError);
