@@ -9,13 +9,15 @@
  * значило бы править характеристики.
  */
 
-import type { CharacterState, Equipment as EquipmentData, InventoryItem, Money } from "@/core/domain/character/state";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
-import { MAXIMUM_ITEM_COUNT } from "@/core/domain/character/state";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
+import { MAXIMUM_ITEM_COUNT } from "./schema";
+import type { EquipmentData, InventoryItem, Money } from "./schema";
 
-export type EquipmentState = Pick<CharacterState, "equipment">;
+export type { EquipmentData };
+
+export type EquipmentState = { equipment: EquipmentData };
 
 /** База Класса Доспеха без доспехов — правило игры, а не настройка. */
 export const UNARMORED_ARMOR_CLASS_BASE = 10;
