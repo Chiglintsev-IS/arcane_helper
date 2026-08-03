@@ -69,6 +69,7 @@ import {
   editArmorClassBase,
   editOtherBonuses,
   removeItem,
+  spendItem,
   toggleWorn,
 } from "@/core/application/useCases/equipment";
 import {
@@ -775,6 +776,7 @@ export function PlayScreen() {
           onAdd={(item) => apply((current) => addItem(current, item, clock))}
           onRemove={(id) => apply((current) => removeItem(current, id, clock))}
           onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}
+          onSpend={(id) => apply((current) => spendItem(current, id, clock))}
         />
       ) : null}
 

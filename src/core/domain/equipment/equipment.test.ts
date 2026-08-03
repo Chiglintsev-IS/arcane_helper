@@ -9,7 +9,16 @@ const ring = (worn: boolean): InventoryItem => ({
   id: "ring",
   nameRu: "Кольцо защиты",
   worn,
+  count: 1,
   bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+});
+
+const potions = (count: number): InventoryItem => ({
+  id: "healing-potion",
+  nameRu: "Зелье лечения",
+  worn: false,
+  count,
+  kind: "potion",
 });
 
 const gear = () => Equipment.of(createThorne());
@@ -27,7 +36,7 @@ describe("снаряжение", () => {
   });
 
   it("вещь без прибавки на числа не влияет", () => {
-    const rope = gear().addItem({ id: "rope", nameRu: "Верёвка", worn: true });
+    const rope = gear().addItem({ id: "rope", nameRu: "Верёвка", worn: true, count: 1 });
     expect(rope.bonuses).toEqual(gear().bonuses);
   });
 
@@ -48,7 +57,7 @@ describe("снаряжение", () => {
   it("правка одной вещи соседних не трогает", () => {
     const two = gear()
       .addItem(ring(true))
-      .addItem({ id: "rope", nameRu: "Верёвка", worn: false });
+      .addItem({ id: "rope", nameRu: "Верёвка", worn: false, count: 1 });
     const renamed = two.replaceItem({ ...ring(true), nameRu: "Кольцо защиты +1" });
 
     expect(renamed.items.map((item) => item.nameRu)).toEqual([
@@ -64,6 +73,21 @@ describe("снаряжение", () => {
     expect(() => gear().replaceItem(ring(true))).toThrow(DomainError);
     expect(() => gear().removeItem("ring")).toThrow(DomainError);
     expect(() => gear().toggleWorn("ring")).toThrow(DomainError);
+    expect(() => gear().spendItem("ring")).toThrow(DomainError);
+  });
+
+  it("вещь с несколькими экземплярами тратится по одной", () => {
+    const stacked = gear().addItem(potions(3));
+    const spent = stacked.spendItem("healing-potion");
+
+    expect(spent.items.find((item) => item.id === "healing-potion")?.count).toBe(2);
+  });
+
+  it("последний экземпляр расходуется вместе с вещью", () => {
+    const last = gear().addItem(potions(1));
+    const spent = last.spendItem("healing-potion");
+
+    expect(spent.items.some((item) => item.id === "healing-potion")).toBe(false);
   });
 
   it("база Класса Доспеха правится и проверяется", () => {

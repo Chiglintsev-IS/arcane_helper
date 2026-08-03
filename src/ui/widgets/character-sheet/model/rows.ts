@@ -13,6 +13,7 @@ import { Vitality } from "@/core/domain/vitality/vitality";
 import {
   ABILITY_LABELS,
   DERIVED_LABELS,
+  ITEM_KIND_LABELS,
   orDash,
   SIZE_LABELS,
   SKILL_LABELS,
@@ -199,12 +200,15 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
           ? [{ labelRu: "Пусто", value: "—" }]
           : character.equipment.items.map((item) => {
               const hint = [
+                ...(item.kind === undefined ? [] : [ITEM_KIND_LABELS[item.kind]]),
                 ...bonusParts(item.bonuses),
                 ...(item.note === undefined ? [] : [item.note]),
               ].join(", ");
+              const status = item.worn ? "надето" : "в сумке";
               return {
                 labelRu: item.nameRu,
-                value: item.worn ? "надето" : "в сумке",
+                // Одна штука не нуждается в счёте: цифра рядом с единственным кольцом — шум.
+                value: item.count > 1 ? `${status} ×${item.count}` : status,
                 ...(hint === "" ? {} : { hint }),
               };
             }),

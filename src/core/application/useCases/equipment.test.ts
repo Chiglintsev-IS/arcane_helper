@@ -8,6 +8,7 @@ import {
   editArmorClassBase,
   editOtherBonuses,
   removeItem,
+  spendItem,
   toggleWorn,
 } from "./equipment";
 
@@ -22,7 +23,14 @@ function testClock(): Clock {
 }
 
 const clock = testClock();
-const ring = { id: "ring", nameRu: "Кольцо защиты", worn: true, bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 } };
+const ring = {
+  id: "ring",
+  nameRu: "Кольцо защиты",
+  worn: true,
+  count: 1,
+  bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+};
+const potions = { id: "healing-potion", nameRu: "Зелье лечения", worn: false, count: 3, kind: "potion" as const };
 
 describe("правка снаряжения", () => {
   it("надетая вещь двигает КД и спасброски, но не характеристики", () => {
@@ -60,6 +68,28 @@ describe("правка снаряжения", () => {
   it("неизвестная вещь отвергается доменом, а подпись не выдумывает имени", () => {
     expect(() => removeItem(session(), "нет-такой", clock)).toThrow(/нет в инвентаре/);
     expect(() => toggleWorn(session(), "нет-такой", clock)).toThrow(/нет в инвентаре/);
+    expect(() => spendItem(session(), "нет-такой", clock)).toThrow(/нет в инвентаре/);
+  });
+
+  it("вещь тратится по одной, и это обратимо через журнал", () => {
+    const stacked = addItem(session(), potions, clock);
+    const spent = spendItem(stacked, "healing-potion", clock);
+
+    expect(spent.character.equipment.items.find((item) => item.id === "healing-potion")?.count).toBe(2);
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения");
+
+    const undone = undoLast(spent);
+    expect(undone.character.equipment.items.find((item) => item.id === "healing-potion")?.count).toBe(3);
+  });
+
+  it("последний экземпляр расходуется вместе с вещью, и отмена возвращает её", () => {
+    const single = addItem(session(), { ...potions, count: 1 }, clock);
+    const spent = spendItem(single, "healing-potion", clock);
+
+    expect(spent.character.equipment.items.some((item) => item.id === "healing-potion")).toBe(false);
+
+    const undone = undoLast(spent);
+    expect(undone.character.equipment.items.find((item) => item.id === "healing-potion")?.count).toBe(1);
   });
 
   it("база Класса Доспеха правится и доходит до итога", () => {

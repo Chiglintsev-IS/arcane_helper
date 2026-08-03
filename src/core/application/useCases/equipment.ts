@@ -73,3 +73,14 @@ export function toggleWorn(session: Session, id: string, clock: Clock): Session 
     clock,
   );
 }
+
+/** Расход одного экземпляра: зелье выпито, ингредиент ушёл в дело. Последний убирает вещь целиком. */
+export function spendItem(session: Session, id: string, clock: Clock): Session {
+  const item = session.character.equipment.items.find((existing) => existing.id === id);
+  return applied(
+    session,
+    (root) => root.withEquipment(root.equipment.spendItem(id)),
+    `Потрачено: ${item?.nameRu ?? id}`,
+    clock,
+  );
+}

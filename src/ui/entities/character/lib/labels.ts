@@ -2,7 +2,7 @@
 
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import type { Ability, SkillId } from "@/core/domain/character/skills";
-import type { CreatureSize } from "@/core/domain/character/state";
+import type { CreatureSize, ItemKind } from "@/core/domain/character/state";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   strength: "Сила",
@@ -53,6 +53,12 @@ export const SIZE_LABELS: Record<CreatureSize, string> = {
 };
 
 export const TRAINING_LABELS = { proficient: "владение", expert: "компетентность" } as const;
+
+export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
+  potion: "Зелье",
+  ingredient: "Ингредиент",
+  junk: "Хлам",
+};
 
 /** Пустое справочное поле — прочерк: ноль здесь читался бы как настоящий ноль. */
 export function orDash(value: string | number): string {
