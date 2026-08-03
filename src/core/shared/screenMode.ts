@@ -14,7 +14,7 @@
  * молча при первой же загрузке.
  */
 
-export const SCREEN_MODES = ["play", "book", "journal", "sheet", "rest"] as const;
+export const SCREEN_MODES = ["play", "book", "journal", "sheet", "bag", "rest"] as const;
 
 export type ScreenMode = (typeof SCREEN_MODES)[number];
 

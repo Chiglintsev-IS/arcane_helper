@@ -9,7 +9,8 @@
  * значило бы править характеристики.
  */
 
-import type { CharacterState, Equipment as EquipmentData, InventoryItem, ItemBonuses } from "@/core/domain/character/state";
+import type { CharacterState, Equipment as EquipmentData, InventoryItem, ItemBonuses, Money } from "@/core/domain/character/state";
+import { MAXIMUM_ITEM_COUNT } from "@/core/domain/character/state";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 
@@ -47,6 +48,10 @@ export class Equipment {
     return this.data.otherBonuses;
   }
 
+  get money(): Money {
+    return this.data.money;
+  }
+
   /**
    * Что снаряжение прибавляет к числам: непривязанные прибавки плюс надетые вещи.
    *
@@ -56,7 +61,7 @@ export class Equipment {
   get bonuses(): ItemBonuses {
     return this.data.items.reduce<ItemBonuses>(
       (total, item) =>
-        !item.worn || item.bonuses === undefined
+        item.kind !== "gear" || !item.worn || item.bonuses === undefined
           ? total
           : {
               spellcasting: total.spellcasting + item.bonuses.spellcasting,
@@ -123,15 +128,20 @@ export class Equipment {
   /**
    * Новая вещь идёт в конец: порядок ввода — единственный, который игрок помнит.
    *
-   * Одноимённая складывается в количество, а не отвергается: второе зелье лечения — самая частая
-   * находка за столом, и отказ на ней означал бы, что запас пополняют удалением и вводом заново.
+   * Одноимённая той же категории складывается в запас, а не отвергается: второе зелье лечения —
+   * самая частая находка за столом. Одноимённая другой категории отвергается с причиной: молча
+   * пополнить чужой раздел значит спрятать находку от игрока, который печатал её в свой.
    */
   addItem(item: InventoryItem): Equipment {
     const found = this.data.items.find((existing) => existing.id === item.id);
-    if (found !== undefined) {
-      return this.replaceItem({ ...found, count: found.count + item.count });
+    if (found === undefined) {
+      return this.with({ items: [...this.data.items, item] });
     }
-    return this.with({ items: [...this.data.items, item] });
+    if (found.kind !== item.kind) {
+      throw new DomainError(`«${found.nameRu}» уже лежит в сумке другой категорией`);
+    }
+    // Пополнение идёт тем же приращением, что и кнопка «+»: предел запаса один на оба входа.
+    return item.count === 0 ? this : this.adjustCount(item.id, item.count);
   }
 
   replaceItem(item: InventoryItem): Equipment {
@@ -151,17 +161,40 @@ export class Equipment {
     return this.with({ items });
   }
 
+  /** Надевается только экипировка: «надетое зелье» не участвует ни в одном правиле. */
   toggleWorn(id: string): Equipment {
     const found = this.data.items.find((item) => item.id === id);
     if (found === undefined) throw new DomainError(`Вещи «${id}» нет в инвентаре`);
+    if (found.kind !== "gear") {
+      throw new DomainError(`«${found.nameRu}» не экипировка и не надевается`);
+    }
     return this.replaceItem({ ...found, worn: !found.worn });
   }
 
-  /** Списывает один экземпляр; последний уходит из сумки вместе с вещью. */
-  spendItem(id: string): Equipment {
+  /**
+   * Меняет запас вещи на приращение — расход или пополнение.
+   *
+   * Ноль — состояние, а не отсутствие: кончившееся зелье остаётся строкой с нулём, чтобы было
+   * видно, что оно кончилось, а не забыто. Убирается вещь только явным удалением.
+   */
+  adjustCount(id: string, delta: number): Equipment {
+    if (!Number.isInteger(delta) || delta === 0) {
+      throw new DomainError(`Приращение запаса должно быть целым и ненулевым, получено: ${delta}`);
+    }
     const found = this.data.items.find((item) => item.id === id);
     if (found === undefined) throw new DomainError(`Вещи «${id}» нет в инвентаре`);
-    return found.count === 1 ? this.removeItem(id) : this.replaceItem({ ...found, count: found.count - 1 });
+    const count = found.count + delta;
+    if (count < 0) {
+      throw new DomainError(`«${found.nameRu}»: осталось ${found.count}, столько не потратить`);
+    }
+    if (count > MAXIMUM_ITEM_COUNT) {
+      throw new DomainError(`«${found.nameRu}»: больше ${MAXIMUM_ITEM_COUNT} не хранится`);
+    }
+    return this.replaceItem({ ...found, count });
+  }
+
+  withMoney(money: Money): Equipment {
+    return this.with({ money });
   }
 
   toState(): EquipmentState {

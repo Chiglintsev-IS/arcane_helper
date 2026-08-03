@@ -259,9 +259,8 @@ test("state survives a reload", async ({ page }) => {
 
 test("the sheet mode survives a reload and feeds the header", async ({ page }) => {
   await switchMode(page, /^Лист/);
-  // «Персонаж» — вкладка по умолчанию: числа боя стоят рядом с тем, из чего сложились.
+  // Лист — база персонажа одной колонкой, без вкладок.
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Числа боя" })).toBeVisible();
 
   await page.getByRole("button", { name: "Править: Уровень" }).click();
   const levelSheet = page.getByRole("dialog", { name: "Правка: Уровень" });
@@ -273,8 +272,7 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
 
   await page.reload();
   // Режим переживает перезапуск вместе с состоянием: приложение открывается там, где закрыто.
-  // Вкладка листа не хранится: он снова открывается персонажем.
-  await expect(page.getByRole("heading", { name: "Числа боя" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
   await expect(page.getByText("Волшебник, 8")).toBeVisible();
 
   // Новый уровень дошёл до ячеек: смена уровня — не только строка листа.
@@ -396,18 +394,23 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
   await scan("лист персонажа");
 
-  // Вещи — свой экран сверки: строки-кнопки, строка быстрого ввода и шторка одной вещи.
-  await page.getByRole("tab", { name: "Вещи" }).click();
-  await expect(page.getByRole("heading", { name: "Вещи", exact: true })).toBeVisible();
-  await scan("вещи листа");
+  // Сумка — свой экран сверки: кошелёк, разделы категорий, строки ввода и шторка одной вещи.
+  await switchMode(page, /^Сумка/);
+  await expect(page.getByRole("heading", { name: "Деньги" })).toBeVisible();
+  await scan("сумка");
 
-  await page.getByRole("textbox", { name: "Новая вещь" }).fill("Зелье лечения");
-  await page.getByRole("textbox", { name: "Новая вещь" }).press("Enter");
+  await page.getByRole("textbox", { name: "Новый расходник" }).fill("Зелье лечения");
+  await page.getByRole("textbox", { name: "Новый расходник" }).press("Enter");
   await page.getByRole("button", { name: "Открыть: Зелье лечения" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Зелье лечения" })).toBeVisible();
   await scan("шторка вещи");
   await page.getByRole("button", { name: "Отмена" }).click();
-  await page.getByRole("tab", { name: "Персонаж" }).click();
+
+  await page.getByRole("button", { name: "Править: Деньги" }).click();
+  await expect(page.getByRole("dialog", { name: "Правка: Деньги" })).toBeVisible();
+  await scan("шторка денег");
+  await page.getByRole("button", { name: "Отмена" }).click();
+  await switchMode(page, /^Лист/);
 
   await page.getByRole("button", { name: "Править: Интеллект" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();

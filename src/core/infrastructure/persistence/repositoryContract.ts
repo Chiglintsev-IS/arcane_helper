@@ -153,6 +153,39 @@ export function describeParsingContract(): void {
     expect(() => parsePersisted("строка")).toThrow(StorageCorruptedError);
   });
 
+  it("снимок отмены прежней формы приводится вместе с состоянием (FR-233)", () => {
+    const base = snapshot();
+    const stored = {
+      ...base,
+      journal: [
+        {
+          id: "old-entry",
+          at: SAVED_AT,
+          kind: "sheet_edited",
+          summaryRu: "Добавлено: Зелье",
+          undoPatch: {
+            equipment: {
+              ...base.character.equipment,
+              items: [{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true, count: 15000 }],
+            },
+          },
+        },
+      ],
+    };
+
+    const parsed = parsePersisted(stored);
+    const patch = parsed.journal[0]?.undoPatch as {
+      equipment: { items: { kind: string; worn: boolean; count: number }[] };
+    };
+    // Отмена старой записи обязана возвращать вещь новой формы: род переведён, надетость снята,
+    // счёт обрезан пределом.
+    expect(patch.equipment.items[0]).toMatchObject({ kind: "consumable", worn: false, count: 9999 });
+
+    // Запись, не являющаяся объектом со снимком, не приводится и не роняет разбор молча:
+    // её отвергнет схема с указанием поля.
+    expect(() => parsePersisted({ ...base, journal: ["не запись"] })).toThrow(StorageCorruptedError);
+  });
+
   it("сообщает, какое поле не прошло проверку", () => {
     const broken = { ...snapshot(), savedAt: "" };
     expect(() => parsePersisted(broken)).toThrow(/savedAt/);

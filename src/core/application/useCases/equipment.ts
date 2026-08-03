@@ -7,8 +7,15 @@
  */
 
 import { Character } from "@/core/domain/character/character";
-import type { InventoryItem, ItemBonuses } from "@/core/domain/character/state";
+import { CURRENCIES, type InventoryItem, type ItemBonuses, type Money } from "@/core/domain/character/state";
 import { commit, type Clock, type Session } from "@/core/application/session";
+
+/** Сокращения монет для журнала: полные имена — дело экрана, запись должна оставаться строкой. */
+const CURRENCY_ABBREVIATIONS: Record<(typeof CURRENCIES)[number], string> = {
+  gold: "зм",
+  silver: "см",
+  copper: "мм",
+};
 
 function applied(
   session: Session,
@@ -60,7 +67,7 @@ export function addItem(session: Session, item: InventoryItem, clock: Clock): Se
   );
 }
 
-/** Правка вещи: заметка, количество, вид и прибавки. Отдельно от надевания — то другое событие. */
+/** Правка вещи: категория, заметка, цена и прибавки. Отдельно от надевания — то другое событие. */
 export function editItem(session: Session, item: InventoryItem, clock: Clock): Session {
   return applied(
     session,
@@ -91,13 +98,32 @@ export function toggleWorn(session: Session, id: string, clock: Clock): Session 
   );
 }
 
-/** Расход одного экземпляра: зелье выпито, ингредиент ушёл в дело. Последний убирает вещь целиком. */
-export function spendItem(session: Session, id: string, clock: Clock): Session {
+/**
+ * Меняет запас вещи: минус — расход, плюс — пополнение. Журнал называет получившееся число,
+ * потому что «Потрачено: зелье» дважды подряд не отвечает, сколько осталось.
+ */
+export function adjustItemCount(session: Session, id: string, delta: number, clock: Clock): Session {
   const item = session.character.equipment.items.find((existing) => existing.id === id);
+  const verb = delta < 0 ? "Потрачено" : "Пополнено";
   return applied(
     session,
-    (root) => root.withEquipment(root.equipment.spendItem(id)),
-    `Потрачено: ${item?.nameRu ?? id}`,
+    (root) => root.withEquipment(root.equipment.adjustCount(id, delta)),
+    `${verb}: ${item?.nameRu ?? id} (осталось ${(item?.count ?? 0) + delta})`,
+    clock,
+  );
+}
+
+/** Правка кошелька. Журнал называет только сдвинувшиеся монеты: «зм 15 → 215». */
+export function editMoney(session: Session, money: Money, clock: Clock): Session {
+  const before = session.character.equipment.money;
+  const changes = CURRENCIES.filter((currency) => before[currency] !== money[currency]).map(
+    (currency) =>
+      `${CURRENCY_ABBREVIATIONS[currency]} ${before[currency]} → ${money[currency]}`,
+  );
+  return applied(
+    session,
+    (root) => root.withEquipment(root.equipment.withMoney(money)),
+    changes.length === 0 ? "Деньги: без изменений" : `Деньги: ${changes.join(", ")}`,
     clock,
   );
 }

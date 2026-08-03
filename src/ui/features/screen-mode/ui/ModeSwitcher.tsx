@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { SCREEN_MODES, type ScreenMode } from "@/core/shared/screenMode";
 
 /**
@@ -13,6 +15,7 @@ const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   book: { title: "Книга", hint: "весь состав целиком, для чтения и сверки" },
   journal: { title: "Журнал", hint: "что случилось, что можно отменить и где взять копию" },
   sheet: { title: "Лист", hint: "кто он: уровень, характеристики, навыки, владения" },
+  bag: { title: "Сумка", hint: "вещи по категориям и деньги" },
   rest: { title: "Привал", hint: "отдых, восстановление и покупки" },
 };
 
@@ -23,6 +26,15 @@ export function ModeSwitcher({
   mode: ScreenMode;
   onChange: (mode: ScreenMode) => void;
 }) {
+  const selectedRef = useRef<HTMLButtonElement | null>(null);
+
+  // Полоса прокручивается к текущему режиму сама: с шестью ярлыками узкий экран все не вмещает,
+  // а выбранный за краем читался бы как «режим не переключился».
+  useEffect(() => {
+    // Вызов необязательный: тестовый DOM прокрутки не знает, а падать из-за этого нельзя.
+    selectedRef.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [mode]);
+
   return (
     <div
       role="radiogroup"
@@ -34,6 +46,7 @@ export function ModeSwitcher({
         return (
           <button
             key={value}
+            ref={selected ? selectedRef : null}
             type="button"
             role="radio"
             aria-checked={selected}

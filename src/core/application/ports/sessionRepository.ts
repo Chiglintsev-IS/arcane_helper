@@ -8,7 +8,7 @@
 
 import { z } from "zod";
 
-import { migrateCharacterState } from "@/core/domain/character/migration";
+import { migrateCharacterState, migrateUndoPatch } from "@/core/domain/character/migration";
 import { characterStateSchema } from "@/core/domain/character/state";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { checkIntegrity } from "@/core/application/dataExchange";
@@ -120,13 +120,24 @@ export function parsePersisted(raw: unknown): PersistedSession {
     throw new StorageVersionError(version);
   }
 
+  const stored = raw as { character?: unknown; journal?: unknown } | null;
   const migrated =
     raw === null || typeof raw !== "object"
       ? raw
       : {
           ...(raw as object),
           schemaVersion: STORAGE_SCHEMA_VERSION,
-          character: migrateCharacterState((raw as { character?: unknown }).character),
+          character: migrateCharacterState(stored?.character),
+          // Снимки отмены несут снаряжение прежней формы: без приведения отмена вернула бы его.
+          ...(Array.isArray(stored?.journal)
+            ? {
+                journal: stored.journal.map((entry) =>
+                  entry !== null && typeof entry === "object" && "undoPatch" in entry
+                    ? { ...entry, undoPatch: migrateUndoPatch((entry as { undoPatch: unknown }).undoPatch) }
+                    : entry,
+                ),
+              }
+            : {}),
         };
 
   const result = persistedSessionSchema.safeParse(migrated);

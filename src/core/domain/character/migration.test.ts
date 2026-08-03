@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { migrateCharacterState } from "./migration";
+import { migrateCharacterState, migrateUndoPatch } from "./migration";
 import { characterStateSchema } from "./state";
 
 /** Лист Торна в том виде, в каком его писала версия 1. */
@@ -206,6 +206,93 @@ describe("приведение состояния версии 1", () => {
     it("не объекту приведение не нужно", () => {
       expect(migrateCharacterState(null)).toBeNull();
       expect(migrateCharacterState("не состояние")).toBe("не состояние");
+    });
+  });
+
+  describe("род вещи становится категорией", () => {
+    const withItems = (items: unknown[]) => {
+      const state = createThorne();
+      return { ...state, equipment: { ...state.equipment, items } };
+    };
+    const itemsOf = (migrated: unknown) =>
+      (migrated as { equipment: { items: Record<string, unknown>[] } }).equipment.items;
+
+    it("зелье — расходник, хлам — «другое», ингредиент остаётся собой", () => {
+      const migrated = migrateCharacterState(
+        withItems([
+          { id: "potion", nameRu: "Зелье", kind: "potion" },
+          { id: "junk", nameRu: "Черепок", kind: "junk" },
+          { id: "dust", nameRu: "Пыль", kind: "ingredient" },
+        ]),
+      );
+      expect(itemsOf(migrated).map((item) => item.kind)).toEqual([
+        "consumable",
+        "other",
+        "ingredient",
+      ]);
+    });
+
+    it("вещь без рода опознаётся по поведению: надетая или с прибавкой — экипировка", () => {
+      const migrated = migrateCharacterState(
+        withItems([
+          { id: "robe", nameRu: "Мантия", worn: true },
+          { id: "ring", nameRu: "Кольцо", worn: false, bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 } },
+          { id: "rope", nameRu: "Верёвка", worn: false },
+        ]),
+      );
+      expect(itemsOf(migrated).map((item) => item.kind)).toEqual(["gear", "gear", "other"]);
+    });
+
+    it("надетость вне экипировки снимается: надетое зелье не двигает числа", () => {
+      const migrated = migrateCharacterState(
+        withItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
+      );
+      expect(itemsOf(migrated)[0]).toMatchObject({ kind: "consumable", worn: false });
+    });
+
+    it("надетый ингредиент прежней сборки снимается и с уже верной категорией", () => {
+      const migrated = migrateCharacterState(
+        withItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
+      );
+      expect(itemsOf(migrated)[0]).toMatchObject({ kind: "ingredient", worn: false });
+    });
+
+    it("счёт выше предела обрезается пределом: старое сохранение обязано читаться", () => {
+      const migrated = migrateCharacterState(
+        withItems([{ id: "arrows", nameRu: "Стрелы", kind: "other", count: 15000 }]),
+      );
+      expect(itemsOf(migrated)[0]?.count).toBe(9999);
+    });
+
+    it("снимок отмены приводится так же, как состояние", () => {
+      const patch = {
+        equipment: {
+          armorClassBase: 10,
+          otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+          items: [{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }],
+        },
+      };
+      const migrated = migrateUndoPatch(patch) as typeof patch;
+      expect(migrated.equipment.items[0]).toMatchObject({ kind: "consumable", worn: false });
+      // Снимок без снаряжения проходит насквозь: приводить в нём нечего.
+      const bare = { hitPoints: { current: 1 } };
+      expect(migrateUndoPatch(bare)).toBe(bare);
+    });
+
+    it("состояние с новыми категориями проходит насквозь той же ссылкой", () => {
+      const fresh = createThorne();
+      expect(migrateCharacterState(fresh)).toBe(fresh);
+    });
+
+    it("порченые записи проходят как есть: их отвергнет схема, а не приведение", () => {
+      const state = withItems(["не вещь", null]);
+      expect(itemsOf(migrateCharacterState(state))).toEqual(["не вещь", null]);
+    });
+
+    it("состояние без списка вещей приведению не подлежит", () => {
+      const state = createThorne();
+      const broken = { ...state, equipment: { ...state.equipment, items: "не список" } };
+      expect(migrateCharacterState(broken)).toBe(broken);
     });
   });
 

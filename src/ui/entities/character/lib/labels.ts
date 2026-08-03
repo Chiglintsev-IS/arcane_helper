@@ -2,7 +2,7 @@
 
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import type { Ability, SkillId } from "@/core/domain/character/skills";
-import type { CreatureSize, ItemKind } from "@/core/domain/character/state";
+import type { CreatureSize, Currency, ItemKind } from "@/core/domain/character/state";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   strength: "Сила",
@@ -55,9 +55,24 @@ export const SIZE_LABELS: Record<CreatureSize, string> = {
 export const TRAINING_LABELS = { proficient: "владение", expert: "компетентность" } as const;
 
 export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
-  potion: "Зелье",
+  gear: "Экипировка",
+  consumable: "Расходник",
   ingredient: "Ингредиент",
-  junk: "Хлам",
+  other: "Другое",
+};
+
+/** Полные имена монет — для полей правки кошелька. */
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  gold: "Золото",
+  silver: "Серебро",
+  copper: "Медь",
+};
+
+/** Сокращения монет — для значков и цены: «50 зм» произносится, полное имя — нет. */
+export const CURRENCY_ABBR: Record<Currency, string> = {
+  gold: "зм",
+  silver: "см",
+  copper: "мм",
 };
 
 /** Пустое справочное поле — прочерк: ноль здесь читался бы как настоящий ноль. */
