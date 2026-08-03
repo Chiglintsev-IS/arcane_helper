@@ -6,7 +6,7 @@ import { ascensionTierRate, spellPointCost, hitPointCost } from "@/core/domain/a
 import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
 import { longCastingTimeRu, withPlural, type LongCastingUnit } from "@/core/shared/language";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
-import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
+import { CANTRIP_LEVEL, needsOwnComponent } from "@/core/domain/catalog/spell";
 
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
 export type TurnResource = "action" | "bonus_action" | "reaction";
@@ -286,8 +286,7 @@ function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
   const { components } = spell;
   if (!equipment.known || !components.material) return [];
 
-  const costly = components.costGp !== undefined || components.consumed === true;
-  if (costly) {
+  if (needsOwnComponent(components)) {
     if (equipment.hasMaterialFor(spell.id)) return [];
     const cost = components.costGp === undefined ? "" : ` (${components.costGp} зм)`;
     return [

@@ -484,3 +484,13 @@ export type Spell = z.infer<typeof spellSchema>;
 export type SpellRoleplay = z.infer<typeof roleplaySchema>;
 export type ArmorClassEffect = z.infer<typeof armorClassEffectSchema>;
 export type HitDiceCost = z.infer<typeof hitDiceCostSchema>;
+
+/**
+ * Компонент, который фокусировка не заменяет: со стоимостью или расходуемый.
+ *
+ * Правило про карточку и живёт у карточки: проверка доступности, шаг компонентов в мастере и список
+ * покупок спрашивают одно и то же, и три копии одного условия расходятся на первой же правке.
+ */
+export function needsOwnComponent(components: Spell["components"]): boolean {
+  return components.material && (components.costGp !== undefined || components.consumed === true);
+}

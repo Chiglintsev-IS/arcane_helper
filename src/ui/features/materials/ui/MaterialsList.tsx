@@ -1,15 +1,11 @@
 "use client";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import type { Spell } from "@/core/domain/catalog/spell";
+import { needsOwnComponent, type Spell } from "@/core/domain/catalog/spell";
 
-/** Компонент, который фокусировка не заменяет: со стоимостью или расходуемый. */
+/** Заклинания, которым нужен свой компонент: фокусировка их не заменяет. */
 export function costlyComponents(spells: readonly Spell[]): Spell[] {
-  return spells.filter(
-    (spell) =>
-      spell.components.material &&
-      (spell.components.costGp !== undefined || spell.components.consumed === true),
-  );
+  return spells.filter((spell) => needsOwnComponent(spell.components));
 }
 
 export function MaterialsList({

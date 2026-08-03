@@ -31,6 +31,7 @@ import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { CANTRIP_LEVEL, type Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
+import { isSpellReady } from "@/core/application/casting/castOptions";
 
 /** Цвет рамки по роли. «Другое» цвета не получает: серое и означает «ни то, ни другое». */
 const ROLE_BORDER = {
@@ -88,7 +89,7 @@ export function SpellCardCompact({
   // применение бывает нужно.
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
-  const ritualOnly = ritualOnlyBadge(spell, character.preparedSpellIds);
+  const ritualOnly = ritualOnlyBadge(spell, character);
   const resolution = resolutionBadge(spell.resolution, Sheet.of(character));
   const damage = damageLabel(spell, spell.level, character.level);
   const slotCost = slotCostLabel(spell);
@@ -118,7 +119,7 @@ export function SpellCardCompact({
   ];
 
   const preparable = onTogglePrepared !== undefined && spell.level !== CANTRIP_LEVEL;
-  const isPrepared = character.preparedSpellIds.includes(spell.id);
+  const isPrepared = isSpellReady(spell, character);
 
   return (
     <li className="flex items-stretch gap-1">

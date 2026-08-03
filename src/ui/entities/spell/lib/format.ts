@@ -15,7 +15,9 @@ import {
   type LongCastingUnit,
   type TimeUnit,
 } from "@/core/shared/language";
-import { effectiveDamage } from "@/core/domain/catalog/scaling";
+import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
+import { isSpellReady } from "@/core/application/casting/castOptions";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import { type Tone } from "@/ui/shared/ui/tone";
 
@@ -108,10 +110,10 @@ export function levelChipLabel(level: number): string {
  */
 export function slotCostLabel(spell: Spell): string {
   if (spell.level === CANTRIP_LEVEL) return "Без ячейки";
-  // «От» — обещание, что ячейка повыше что-то даст. Если повышать нечего, обещать нельзя: игрок
-  // потратит ячейку 3 уровня на заклинание, которое сработает ровно как с ячейки первой.
-  const scales = spell.damage?.scaling !== undefined || spell.higherLevelsRu !== undefined;
-  const slot = scales ? `Ячейка от ${spell.level} ур.` : `Ячейка ${spell.level} ур.`;
+  // «От» — обещание, что ячейка повыше что-то даст; даст ли, знает каталог.
+  const slot = benefitsFromHigherSlot(spell)
+    ? `Ячейка от ${spell.level} ур.`
+    : `Ячейка ${spell.level} ур.`;
   return spell.ritual ? `${slot} или ритуал` : slot;
 }
 
@@ -194,9 +196,9 @@ export function damageLabel(spell: Spell, slotLevel: number, characterLevel: num
  */
 export function ritualOnlyBadge(
   spell: Spell,
-  preparedSpellIds: readonly string[],
+  character: CharacterState,
 ): { label: string; icon: string; tone: Tone } | null {
-  if (spell.ritual && !preparedSpellIds.includes(spell.id)) {
+  if (spell.ritual && !isSpellReady(spell, character)) {
     return { label: "Ритуал", icon: "❖", tone: "muted" };
   }
   return null;

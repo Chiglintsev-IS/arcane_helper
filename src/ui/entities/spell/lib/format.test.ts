@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
 
 import {
   castingTimeLabel,
@@ -67,24 +69,30 @@ describe("ritualOnlyBadge (FR-219)", () => {
   const SPELLS = loadThorneSpells();
   const spell = (id: string) => SPELLS.find((candidate) => candidate.id === id)!;
 
+  /** Персонаж с ровно этим списком подготовленных: значок зависит только от него. */
+  const prepared = (...ids: string[]): CharacterState => ({
+    ...createThorne(),
+    preparedSpellIds: ids,
+  });
+
   it("подготовленное значка не получает: рядом нажатая кнопка подготовки", () => {
-    expect(ritualOnlyBadge(spell("mage-armor"), ["mage-armor"])).toBeNull();
+    expect(ritualOnlyBadge(spell("mage-armor"), prepared("mage-armor"))).toBeNull();
   });
 
   it("неподготовленное — тоже: причину скажет строка недоступности словами", () => {
-    expect(ritualOnlyBadge(spell("blink"), [])).toBeNull();
+    expect(ritualOnlyBadge(spell("blink"), prepared())).toBeNull();
   });
 
   it("заговор значка не получает: цену он называет строкой «Без ячейки»", () => {
-    expect(ritualOnlyBadge(spell("ray-of-frost"), [])).toBeNull();
+    expect(ritualOnlyBadge(spell("ray-of-frost"), prepared())).toBeNull();
   });
 
   it("неподготовленный ритуал остаётся: без подписи цена обещала бы ячейку", () => {
     // «Обнаружение магии» стоит «Ячейка 1 ур. или ритуал», но без подготовки способ один.
-    expect(ritualOnlyBadge(spell("detect-magic"), [])?.label).toBe("Ритуал");
+    expect(ritualOnlyBadge(spell("detect-magic"), prepared())?.label).toBe("Ритуал");
   });
 
   it("подготовленный ритуал молчит: ячейка ему доступна наравне с ритуалом", () => {
-    expect(ritualOnlyBadge(spell("detect-magic"), ["detect-magic"])).toBeNull();
+    expect(ritualOnlyBadge(spell("detect-magic"), prepared("detect-magic"))).toBeNull();
   });
 });

@@ -60,3 +60,16 @@ export function upcastChangesDamage(damage: DamageSpec, spellLevel: number, slot
   if (slotLevel <= spellLevel) return false;
   return damageAtSlotLevel(damage, slotLevel) !== damageAtSlotLevel(damage, spellLevel);
 }
+
+/**
+ * Даст ли ячейка выше уровня заклинания хоть что-нибудь.
+ *
+ * Обещать «ячейка от такого-то уровня» там, где повышать нечего, значит уговорить игрока потратить
+ * ячейку третьего уровня на заклинание, которое сработает ровно как с первой.
+ */
+export function benefitsFromHigherSlot(spell: {
+  damage?: { scaling?: unknown } | undefined;
+  higherLevelsRu?: string | undefined;
+}): boolean {
+  return spell.damage?.scaling !== undefined || spell.higherLevelsRu !== undefined;
+}
