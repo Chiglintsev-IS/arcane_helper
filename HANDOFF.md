@@ -83,6 +83,10 @@
   `a9c5c8c` вернул её: в перегенерированном файле нет уже убитых записей, и страж от этого строже.
 - `85cb36d` — задача 9: `JournalEntry<TState>` с состоянием параметром типа, список обратимых полей
   приходит в `Journal.of` аргументом, инстанцирует его прикладной слой. Долг 6/0 → 5/0.
+- `c8ce715` + `1403f88` + `2c59d77` — задача 10: каталог `src/core/domain/assembly/` (полная схема,
+  корень `Character`, приведение, ключи журнала), `character/schema.ts` со своим, `sheet/*` на
+  структурных входах, `withSheet` сужен до шестнадцати полей листа, 71 файл переведён на владельцев,
+  прогоны общей схемы разнесены по контекстам. Базлайн перегенерирован единственный раз: **0/0**.
 
 Прогон зелёный целиком: 1497 тестов, покрытие 100 %, typecheck, `check:docs
 --strict-link-remnants`, `check:layers` (долг 13 рёбер / 5 циклов), сборка и **все 19 e2e**.
@@ -92,87 +96,26 @@
 встаёт на 186…321 — целиком в экране. До переделки она кончалась на 612, а с концентрацией документ
 выходил на 584.
 
-## Целевая картина
+## Границы контекстов: сделано
 
-`scripts/layer-baseline.json` пустеет: ноль рёбер-долгов, ноль циклов. Фактические рёбра совпадают
-с целевой картой `docs/domains/README.md`, она же `ALLOWED_CONTEXT_EDGES` в
-`scripts/check-layers.py` — **их не править ни в одной задаче**, карта уже описывает финал:
-листья `catalog`, `character`, `equipment`, `vitality`, `journal`; `spellbook/arcana/effects →
-catalog`; `encounter → journal`; `sheet → character, equipment, effects, catalog`; сборка
-`assembly` знает все контексты, её не импортирует ни один.
+Долг закрыт: `scripts/layer-baseline.json` пуст, фактические рёбра совпадают с картой
+`docs/domains/README.md`, она же `ALLOWED_CONTEXT_EDGES` в `scripts/check-layers.py`. Правило на
+будущее: **карту не править походя** — новое ребро мимо неё теперь ошибка прогона, которой негде
+спрятаться, и добавление ребра стоит отдельного коммита и записи в ADR.
 
-Весь долг — два узла: `character/state.ts` (общая схема держит подсхемы всех контекстов, все её
-импортируют) и `character/character.ts` (корень знает пять агрегатов). Лечение: подсхема — в
-каталог владельца, полная схема и корень — в `src/core/domain/assembly/`.
+Что стоит помнить, трогая схемы состояния:
 
-Механика стража, на которую опирается порядок задач:
+- Полная схема собирается **спредом plain-объектов полей** (`*_FIELDS`) в один `z.object({...})`, а
+  не `.extend()`/`.merge()`: обёртки `.default()`/`.refine()` дают не-`ZodObject`, а
+  `MUTABLE_STATE_KEYS` читает `.shape` — без него журнал остался бы без ключей.
+- Инварианты, видные по нескольким полям сразу, живут доводчиками у владельцев (`refineSpellbook`,
+  `refineEffects`); сборка зовёт их в своём `superRefine`. Собственная схема контекста несёт доводчик
+  сама — на ней его и проверяют, а прогон полной схемы следит, что сборка звать не перестала.
+- Канарейка: `createThorne()` собирает Торна через `characterStateSchema.parse` и не перечисляет
+  поля со значениями по умолчанию — потерянный `.default()` всплывёт именно там.
+- `EXPORT_SCHEMA_VERSION` при переносе полей между модулями не поднимается: форма данных не меняется.
 
-- Запись базлайна, которой в коде больше нет, просто игнорируется — долг сокращается без
-  перегенерации, прогон остаётся зелёным.
-- Allowlist не освобождает от проверки **циклов**: законное ребро, замкнувшее кольцо, — ошибка.
-  Поэтому сначала умирает `catalog → arcana` (задача 2), и только потом появляются законные
-  `arcana → catalog`.
-- `.test.`-файлы, `core/application`, `core/infrastructure` и `src/ui` рёбер не создают — правка
-  путей импорта там бесплатна для счётчика.
-- Type-only импорт между контекстами — тоже ребро (`import type { CharacterState }` считается).
-- Сборка обязана быть **каталогом** `src/core/domain/assembly/`: плоский файл `assembly.ts` страж
-  не опознаёт, и правило «контекст не импортирует сборку» на нём не сработает.
-
-Общие подводные камни задач 4–10:
-
-- Полную схему собирать **спредом plain-объектов полей** в один `z.object({...})`, а не
-  `.extend()`/`.merge()`: обёртки `.default()`/`.refine()` дают не-`ZodObject`. `MUTABLE_STATE_KEYS`
-  читает `characterStateSchema.shape` — сборка обязана остаться `ZodObject`, иначе журнал
-  останется без ключей.
-- Четыре `superRefine`-инварианта корня внутриконтекстные (три — spellbook, один — effects):
-  контекст экспортирует функцию-доводчик, сборка вызывает её в своём `superRefine`. Покрытие
-  `src/core/**` — жёсткие 100 %: доводчикам нужны тесты всех веток.
-- `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`: необязательные поля
-  (`concentration`, `hitDice`, `shortRestSinceLongRest`, `components`, `price`, `bonuses`,
-  `armorBase`) при пересборке типов плывут между `T | undefined` и `?: T`;
-  `Character.withEffects` снимает ключ `concentration` явной деструктуризацией — намеренно.
-- Канарейка: `createThorne()` (`src/core/infrastructure/catalog/thorne/character.ts`) собирает
-  Торна через `characterStateSchema.parse` и не перечисляет поля со значениями по умолчанию —
-  потерянный `.default()` всплывёт именно там.
-- `EXPORT_SCHEMA_VERSION` при переносе подсхем **не поднимать**: форма данных не меняется.
-- На переходный период `character/state.ts` реэкспортирует перенесённое — потребители вне
-  `core/domain` не трогаются до задачи 10; реэкспорт не создаёт второго определения.
-
-## Задача 10 — рёбра к нулю
-
-### Задача 10 — сборка `assembly` и узкий `withSheet` · долг после: **0 / 0**
-
-Самая большая; всё остальное к ней уже подготовлено.
-
-1. Каталог `src/core/domain/assembly/` (именно каталог). Переезжают из `character/`:
-   полная схема (`characterStateSchema` — спред shape-объектов контекстов + вызовы доводчиков),
-   `exportFileSchema`, `EXPORT_SCHEMA_VERSION`, `UNRECORDED_KEYS`/`MUTABLE_STATE_KEYS`, тип
-   `CharacterState`, корень `Character` (`character.ts`), `migration.ts` вместе с
-   `migration.test.ts`.
-2. `character/schema.ts` — только своё: `id`, `name`, `className`, `level`, `species`,
-   `subclass`, `age`, `size`, `speed`, `abilities`, `saveProficiencies`, `skills`,
-   `proficiencies`, `overrides`, `miscBonuses`, `roleplayProfile`, `exhaustion`, `inspiration`
-   (+ `CREATURE_SIZES`, `abilitiesSchema`, `overridesSchema`, `roleplayProfileSchema`).
-   Решения по ничьим полям: `exhaustion`/`inspiration` — character («отметки», правятся с
-   «Листа»); `overrides` хранит character, считает sheet — ребро `character → sheet` не
-   заводить. Обе строки — в таблицу владения README тем же коммитом.
-3. `sheet/*` перестаёт знать `CharacterState`: входные типы — поля character + `EquipmentData` +
-   `ActiveEffect[]` (структурные, `Sheet.of(fullState)` из сборки продолжает компилироваться).
-4. `withSheet` сузить: `Partial<Pick<CharacterState, …>>` по явному списку из шестнадцати
-   листовых полей — `name, species, subclass, className, age, size, speed, proficiencies,
-   abilities, saveProficiencies, skills, overrides, miscBonuses, exhaustion, inspiration, level`.
-   Проверка: `useCases/sheet.ts` компилируется без правок; `withSheet({ spellSlots })` — ошибка
-   типов.
-5. Реэкспорты из `character/state.ts` умирают; пути в `core/application/**`,
-   `core/infrastructure/**`, `src/ui/**` (~45 файлов) переводятся на `assembly` или на схему
-   владельца — рёбер это не создаёт. `state.test.ts` распадается по владельцам
-   (`assembly/*.test.ts`, `character/schema.test.ts`, …).
-6. Финал: `python3 scripts/check-layers.py --write-baseline` — единственный раз; прочитать дифф
-   `scripts/layer-baseline.json` глазами (обе секции пустые), закоммитить. Документы тем же
-   коммитом: `docs/domains/README.md` (абзац про долг в базлайне больше не нужен, «Циклов нет»
-   становится правдой), `docs/glossary.md` (сборка, имена новых модулей).
-
-## Задача 11 — правила сотворения и тарифы: добить (после задачи 10 — общие файлы)
+## Задача 11 — правила сотворения и тарифы: добить
 
 Хвосты задачи 3 прежней редакции; по коммиту на пункт. Правит `core/application/useCases`,
 `core/application/casting`, `core/domain/{arcana,vitality}`, виджеты крови и мастера.
@@ -197,10 +140,9 @@ catalog`; `encounter → journal`; `sheet → character, equipment, effects, cat
   отброшены»; мёртвые поля из фикстур `state.test.ts`/`migration.test.ts` убрать;
   `docs/data-exchange.md` — приведения версий описаны только для v1/v2, дописать 3→6.
 
-## Задача 12 — типизированный протокол и тесты за экранами (добить ADR-0034; независима от 2–11)
+## Задача 12 — типизированный протокол и тесты за экранами (добить ADR-0034; независима)
 
-Правит только `src/ui/screens/**` и `src/ui/widgets/**` — можно параллельно с задачами 2–9 в
-worktree.
+Правит только `src/ui/screens/**` и `src/ui/widgets/**`.
 
 - Строковый протокол жив: `SheetScreen.tsx` (`useState<string | null>`, `ability:${…}` и семь
   строк-литералов), `BagScreen.tsx` (`item:${id}`), источник строк —
@@ -243,7 +185,7 @@ worktree.
   пересказывает переход по уровню → доменная функция предпросмотра рядом с `changeLevel`.
 - `availability.ts` — литерал «зм» дважды мимо `CURRENCY_ABBREVIATIONS`.
 
-## Задача 14 — хвосты документации (параллельна задаче 10: код не пересекается)
+## Задача 14 — хвосты документации (независима: код не пересекается)
 
 - Битые строки «Проверка» — тестов с такими именами нет: `screens.md:161,219` и
   `effects.md:127` (`combat-screen renders…` → `play-screen renders all resource blocks`);
@@ -290,6 +232,5 @@ worktree.
 
 ## Порядок
 
-10 → 11 → 13 → 15. Задача 12 независима (только UI-слой) — параллельно задаче 10
-в worktree; задача 14 независима (только docs) — параллельно им же. Задачи 11 и 13 — строго
-после 10: задача 10 переписывает пути импортов в тех же файлах use cases и UI. Задача 10 собирает всё, что разложили задачи 3–9.
+11 → 13 → 15. Задачи 12 (только UI-слой) и 14 (только docs) независимы и идут параллельно
+любой из них.
