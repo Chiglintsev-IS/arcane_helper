@@ -60,6 +60,12 @@ export const activeEffectSchema = z.object({
   // Копия вклада заклинания в КД: итог считается из одного состояния, без каталога.
   armorClass: armorClassEffectSchema.optional(),
 
+  /**
+   * Роль ручного эффекта, когда она есть: поправка к КД опознаётся этим признаком, а не строкой
+   * имени — переименование подписи не имеет права ломать опознание.
+   */
+  manualKind: z.literal("armorAdjustment").optional(),
+
   endConditionRu: nonEmpty,
   note: nonEmpty.optional(),
 });

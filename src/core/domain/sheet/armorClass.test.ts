@@ -5,7 +5,6 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
 import {
-  ARMOR_CLASS_ADJUSTMENT_NAME_RU,
   armorClassAdjustment,
   armorClassWithSpell,
   effectiveArmorClass,
@@ -120,36 +119,38 @@ describe("armorClassWithSpell: КД до подтверждения примен
 });
 
 describe("armorClassAdjustment: поправка к КД из шапки ресурсов", () => {
+  const manualEffect = (extra: Partial<ActiveEffect>): ActiveEffect => ({
+    id: "manual",
+    nameRu: "Поправка к КД",
+    type: "utility",
+    startedAt: "2026-07-31T12:00:00.000Z",
+    duration: { type: "special" },
+    isConcentration: false,
+    slotLevelUsed: 0,
+    endConditionRu: "Снимается вручную.",
+    ...extra,
+  });
+
   it("без заведённой поправки — 0", () => {
     expect(armorClassAdjustment(createThorne())).toBe(0);
   });
 
-  it("читает значение своего эффекта", () => {
-    const character = withEffects({
-      id: "adjustment",
-      nameRu: ARMOR_CLASS_ADJUSTMENT_NAME_RU,
-      type: "utility",
-      startedAt: "2026-07-31T12:00:00.000Z",
-      duration: { type: "special" },
-      isConcentration: false,
-      slotLevelUsed: 0,
-      armorClass: { kind: "bonus", value: -3 },
-      endConditionRu: "Снимается вручную.",
-    });
+  it("опознаётся признаком и читает значение своего эффекта", () => {
+    const character = withEffects(
+      manualEffect({ manualKind: "armorAdjustment", armorClass: { kind: "bonus", value: -3 } }),
+    );
     expect(armorClassAdjustment(character)).toBe(-3);
   });
 
-  it("не путает поправку со статусом того же имени без вклада в КД", () => {
-    const character = withEffects({
-      id: "namesake",
-      nameRu: ARMOR_CLASS_ADJUSTMENT_NAME_RU,
-      type: "utility",
-      startedAt: "2026-07-31T12:00:00.000Z",
-      duration: { type: "special" },
-      isConcentration: false,
-      slotLevelUsed: 0,
-      endConditionRu: "Снимается вручную.",
-    });
+  it("статус с тем же именем, но без признака поправкой не считается", () => {
+    const character = withEffects(
+      manualEffect({ id: "namesake", armorClass: { kind: "bonus", value: 2 } }),
+    );
+    expect(armorClassAdjustment(character)).toBe(0);
+  });
+
+  it("признак без вклада в КД даёт 0: порченые данные не двигают числа", () => {
+    const character = withEffects(manualEffect({ manualKind: "armorAdjustment" }));
     expect(armorClassAdjustment(character)).toBe(0);
   });
 });

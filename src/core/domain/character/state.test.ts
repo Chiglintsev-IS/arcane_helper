@@ -222,6 +222,13 @@ describe("схемы вложенных структур", () => {
     ).toBe(true);
   });
 
+  it("признак ручного эффекта — закрытый словарь: поправка к КД принимается, чужое слово нет", () => {
+    const { spellId: _omitted, ...manual } = WEB_EFFECT;
+    const withKind = (manualKind: string) => ({ ...manual, isConcentration: false, manualKind });
+    expect(activeEffectSchema.safeParse(withKind("armorAdjustment")).success).toBe(true);
+    expect(activeEffectSchema.safeParse(withKind("blessing")).success).toBe(false);
+  });
+
   it("профиль отыгрыша без тона отклоняется", () => {
     const profile = structuredClone(thorne()) as { roleplayProfile: Record<string, unknown> };
     profile.roleplayProfile.tone = [];

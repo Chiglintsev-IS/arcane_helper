@@ -1003,6 +1003,12 @@ describe("поправка к КД (FR-236)", () => {
     expect(after).toBe(session);
   });
 
+  it("несёт типизированный признак: опознание не зависит от подписи", () => {
+    const after = setArmorClassAdjustment(session, 2, clock);
+
+    expect(after.character.activeEffects[0]?.manualKind).toBe("armorAdjustment");
+  });
+
   it("отклоняет дробное значение", () => {
     expect(() => setArmorClassAdjustment(session, 1.5, clock)).toThrow(DomainError);
   });

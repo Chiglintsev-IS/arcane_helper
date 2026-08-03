@@ -13,12 +13,6 @@ import type { ActiveEffect, CharacterState } from "@/core/domain/character/state
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
 
 /**
- * Имя ручного эффекта, которым шапка ресурсов хранит временную поправку к КД. Фиксировано, потому
- * что это единственный способ узнать её среди активных эффектов — числа своего поля она не имеет.
- */
-export const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
-
-/**
  * КД по слагаемым состояния и произвольному набору вкладов.
  *
  * Замены базы не суммируются — действует наибольшая, включая собственную базу персонажа: надетые
@@ -54,7 +48,7 @@ export function effectiveArmorClass(character: CharacterState): number {
 /** Активный эффект временной поправки к КД, заведённый шапкой ресурсов, если он есть. */
 export function armorClassAdjustmentEffect(character: CharacterState): ActiveEffect | undefined {
   return character.activeEffects.find(
-    (effect) => effect.nameRu === ARMOR_CLASS_ADJUSTMENT_NAME_RU && effect.armorClass !== undefined,
+    (effect) => effect.manualKind === "armorAdjustment" && effect.armorClass !== undefined,
   );
 }
 

@@ -296,6 +296,58 @@ describe("приведение состояния версии 1", () => {
     });
   });
 
+  describe("поправка к КД получает типизированный признак", () => {
+    const legacyAdjustment = {
+      id: "adjustment",
+      nameRu: "Поправка к КД",
+      type: "utility",
+      startedAt: "2026-07-31T12:00:00.000Z",
+      duration: { type: "special" },
+      isConcentration: false,
+      slotLevelUsed: 0,
+      armorClass: { kind: "bonus", value: 2 },
+      endConditionRu: "Снимается вручную.",
+    };
+    const withEffects = (activeEffects: unknown[]) => ({ ...createThorne(), activeEffects });
+    const effectsOf = (migrated: unknown) =>
+      (migrated as { activeEffects: Record<string, unknown>[] }).activeEffects;
+
+    it("эффект прежней формы с именем и вкладом получает признак", () => {
+      const migrated = migrateCharacterState(withEffects([legacyAdjustment]));
+      expect(effectsOf(migrated)[0]?.manualKind).toBe("armorAdjustment");
+    });
+
+    it("статус того же имени без вклада в КД признака не получает", () => {
+      const { armorClass: _none, ...namesake } = legacyAdjustment;
+      const migrated = migrateCharacterState(withEffects([namesake]));
+      expect(effectsOf(migrated)[0]?.manualKind).toBeUndefined();
+    });
+
+    it("чужой эффект не трогается, эффект с признаком проходит насквозь той же ссылкой", () => {
+      const marked = withEffects([{ ...legacyAdjustment, manualKind: "armorAdjustment" }]);
+      expect(migrateCharacterState(marked)).toBe(marked);
+
+      const foreign = withEffects([{ ...legacyAdjustment, nameRu: "Прикрытие союзника" }]);
+      expect(effectsOf(migrateCharacterState(foreign))[0]?.manualKind).toBeUndefined();
+    });
+
+    it("порченая запись эффекта проходит как есть: её отвергнет схема, а не приведение", () => {
+      const migrated = migrateCharacterState(withEffects(["не эффект", null]));
+      expect(effectsOf(migrated)).toEqual(["не эффект", null]);
+    });
+
+    it("состояние без списка эффектов приведению не подлежит", () => {
+      const broken = { ...createThorne(), activeEffects: "не список" };
+      expect(migrateCharacterState(broken)).toBe(broken);
+    });
+
+    it("снимок отмены приводится так же, как состояние", () => {
+      const patch = { activeEffects: [legacyAdjustment] };
+      const migrated = migrateUndoPatch(patch) as { activeEffects: { manualKind?: string }[] };
+      expect(migrated.activeEffects[0]?.manualKind).toBe("armorAdjustment");
+    });
+  });
+
   describe("режимы «Бой» и «Вне боя» слились в «Игру»", () => {
     it("прежний режим читается как «Игра»", () => {
       for (const screenMode of ["combat", "camp"]) {

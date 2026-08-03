@@ -141,16 +141,48 @@ function migrateItemCategories(state: unknown): unknown {
 }
 
 /**
+ * Имя, которым прежние версии опознавали поправку к КД среди активных эффектов. Заморожено на дате
+ * приведения: нынешняя подпись поправки вправе меняться, а прошлые сохранения — нет.
+ */
+const LEGACY_ADJUSTMENT_NAME_RU = "Поправка к КД";
+
+/** Эффект прежней формы получает признак поправки: опознание по строке имени умерло. */
+function migrateAdjustmentEffect(effect: unknown): unknown {
+  if (effect === null || typeof effect !== "object") return effect;
+  const { nameRu, armorClass, manualKind } = effect as {
+    nameRu?: unknown;
+    armorClass?: unknown;
+    manualKind?: unknown;
+  };
+  if (nameRu !== LEGACY_ADJUSTMENT_NAME_RU || armorClass === undefined || manualKind !== undefined) {
+    return effect;
+  }
+  return { ...(effect as Record<string, unknown>), manualKind: "armorAdjustment" };
+}
+
+function migrateAdjustmentMarker(state: unknown): unknown {
+  if (state === null || typeof state !== "object") return state;
+  const { activeEffects } = state as { activeEffects?: unknown };
+  if (!Array.isArray(activeEffects)) return state;
+
+  const effects = activeEffects.map(migrateAdjustmentEffect);
+  if (effects.every((effect, index) => effect === activeEffects[index])) return state;
+  return { ...state, activeEffects: effects };
+}
+
+/**
  * Приведение снимка отмены. Снимок держит прежние значения изменяемых полей, включая снаряжение
  * прежней формы; без приведения отмена старой записи вернула бы в состояние рода вещей, которых
  * новая модель не знает.
  */
 export function migrateUndoPatch(patch: unknown): unknown {
-  return migrateItemCategories(patch);
+  return migrateAdjustmentMarker(migrateItemCategories(patch));
 }
 
 export function migrateCharacterState(raw: unknown): unknown {
-  return migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw))));
+  return migrateAdjustmentMarker(
+    migrateItemCategories(migrateArcaneRecovery(migrateScreenMode(migrateShape(raw)))),
+  );
 }
 
 function migrateShape(raw: unknown): unknown {
