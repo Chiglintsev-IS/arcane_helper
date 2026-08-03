@@ -14,7 +14,7 @@
 import { useState } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { armorClassWithSpell, effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import {

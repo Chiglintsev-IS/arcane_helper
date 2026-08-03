@@ -6,7 +6,7 @@
  * всё остальное.
  */
 
-import { Character } from "@/core/domain/character/character";
+import { Character } from "@/core/domain/assembly/character";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
 export function adjustRunes(session: Session, delta: number, clock: Clock): Session {

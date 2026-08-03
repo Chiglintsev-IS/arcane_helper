@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 

@@ -9,8 +9,8 @@
  * можно и не увидеть.
  */
 
-import { Character } from "@/core/domain/character/character";
-import type { CharacterState } from "@/core/domain/character/state";
+import { Character } from "@/core/domain/assembly/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { SlotRecoveryPlan } from "@/core/domain/arcana/slots";
 import { DomainError } from "@/core/domain/shared/errors";
 import { LONG_REST_HOURS, maximumReductionAfterHours } from "@/core/domain/vitality/blood";

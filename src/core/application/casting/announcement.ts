@@ -10,7 +10,7 @@
  */
 
 import { Sheet } from "@/core/domain/sheet/sheet";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
 import { armorClassWithSpell } from "@/core/domain/sheet/armorClass";

@@ -2,7 +2,7 @@
  * Книга: подготовка, компоненты, заметки.
  */
 
-import { Character } from "@/core/domain/character/character";
+import { Character } from "@/core/domain/assembly/character";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
 

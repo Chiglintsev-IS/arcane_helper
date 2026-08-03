@@ -1,5 +1,6 @@
 import { Sheet } from "@/core/domain/sheet/sheet";
-import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import {

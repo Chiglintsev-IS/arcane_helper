@@ -10,7 +10,7 @@
 
 "use client";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 
 function Stepper({
   label,

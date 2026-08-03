@@ -6,7 +6,7 @@ import type { TurnEconomy } from "@/core/application/useCases/turn";
 import { useState } from "react";
 
 import { WizardShell } from "@/ui/shared/ui/WizardShell";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { bloodExchangeAnnouncement, bloodExchangeInstructions } from "@/core/application/casting/announcement";
 import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 import { ascensionTierRate, MAXIMUM_PAYABLE_SPELL_LEVEL, spellPointCost } from "@/core/domain/arcana/slots";

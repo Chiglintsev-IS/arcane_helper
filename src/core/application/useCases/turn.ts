@@ -6,8 +6,8 @@
  * а не внутри одного из агрегатов.
  */
 
-import { Character } from "@/core/domain/character/character";
-import type { CharacterState } from "@/core/domain/character/state";
+import { Character } from "@/core/domain/assembly/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { Encounter, type TurnEconomy } from "@/core/domain/encounter/encounter";
 import { commit, type Clock, type Session } from "@/core/application/session";
 

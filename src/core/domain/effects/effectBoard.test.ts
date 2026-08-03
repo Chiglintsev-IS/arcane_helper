@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { EffectBoard } from "@/core/domain/effects/effectBoard";
 import { DomainError } from "@/core/domain/shared/errors";
-import type { ActiveEffect } from "@/core/domain/character/state";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 
 function emptyBoard(): EffectBoard {
   return EffectBoard.of({ activeEffects: [], concentration: undefined });

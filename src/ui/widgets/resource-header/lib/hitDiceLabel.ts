@@ -1,4 +1,4 @@
-import type { HitDice } from "@/core/domain/character/state";
+import type { HitDice } from "@/core/domain/vitality/schema";
 
 /** «7d6» при полном пуле, «5d6 из 7» после трат: два одинаковых числа сверять незачем. */
 export function hitDiceLabel(dice: HitDice | undefined): string {

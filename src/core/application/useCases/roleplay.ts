@@ -5,8 +5,9 @@
  * возврата ресурсов, а не история правок текста.
  */
 
-import { Character } from "@/core/domain/character/character";
-import type { CharacterState, RoleplayPreference } from "@/core/domain/character/state";
+import { Character } from "@/core/domain/assembly/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { RoleplayPreference } from "@/core/domain/spellbook/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ROLEPLAY_CATEGORIES, type RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import { DomainError } from "@/core/domain/shared/errors";

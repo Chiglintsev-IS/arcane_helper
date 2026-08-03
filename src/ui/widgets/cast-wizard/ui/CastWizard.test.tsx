@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
 

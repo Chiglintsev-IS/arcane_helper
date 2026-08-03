@@ -7,10 +7,10 @@
  * три разных вопроса, и дублирование чисел между ними заставляло бы сверять их взглядом.
  */
 
-import { Character } from "@/core/domain/character/character";
+import { Character } from "@/core/domain/assembly/character";
 import { ABILITIES, skillsOfAbility } from "@/core/domain/character/skills";
 import type { Ability } from "@/core/domain/character/skills";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import {

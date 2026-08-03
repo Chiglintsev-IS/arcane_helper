@@ -12,7 +12,7 @@
 
 "use client";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import { Arcana } from "@/core/domain/arcana/arcana";
 import { withPlural } from "@/core/shared/language";

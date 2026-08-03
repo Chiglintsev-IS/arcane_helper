@@ -1,13 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  activeEffectSchema,
-  characterStateSchema,
-  EXPORT_SCHEMA_VERSION,
-  exportFileSchema,
-  roleplayProfileSchema,
-  spellSlotsSchema,
-} from "@/core/domain/character/state";
+import { EXPORT_SCHEMA_VERSION, characterStateSchema, exportFileSchema } from "@/core/domain/assembly/state";
+import { roleplayProfileSchema } from "@/core/domain/character/schema";
+import { spellSlotsSchema } from "@/core/domain/arcana/schema";
+import { activeEffectSchema } from "@/core/domain/effects/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Equipment } from "@/core/domain/equipment/equipment";
 

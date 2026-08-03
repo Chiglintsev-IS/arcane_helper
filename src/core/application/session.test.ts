@@ -20,7 +20,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { characterStateSchema } from "@/core/domain/character/state";
+import { characterStateSchema } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { RoleplayCategory } from "@/ui/features/cast-spell/model/castDraftStore";
 import { createSession, JOURNAL_LIMIT, undoLast, type Session } from "@/core/application/session";

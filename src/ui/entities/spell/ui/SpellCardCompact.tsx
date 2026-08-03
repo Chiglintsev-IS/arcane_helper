@@ -28,7 +28,7 @@ import {
 import { rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { Sheet } from "@/core/domain/sheet/sheet";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { CANTRIP_LEVEL, type Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
 

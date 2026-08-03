@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DomainError } from "@/core/domain/shared/errors";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { InventoryItem } from "@/core/domain/character/state";
+import type { InventoryItem } from "@/core/domain/equipment/schema";
 
 const ring = (worn: boolean): InventoryItem => ({
   id: "ring",

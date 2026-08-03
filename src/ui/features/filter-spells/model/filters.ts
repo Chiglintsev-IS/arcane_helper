@@ -8,7 +8,7 @@
  * мастера применения — та ошибка, которая заставляет игрока перестать доверять приложению.
  */
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { TurnResource, TurnResources } from "@/core/application/casting/availability";
 import { canCastNow, isSpellReady, ritualAvailable } from "@/core/application/casting/castOptions";

@@ -1,6 +1,6 @@
 "use client";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 
 /** Компонент, который фокусировка не заменяет: со стоимостью или расходуемый. */

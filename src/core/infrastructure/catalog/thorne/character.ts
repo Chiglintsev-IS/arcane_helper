@@ -5,7 +5,7 @@
  * Производные значения записаны фактическими, а не вычисленными: предметы их сдвигают.
  */
 
-import { characterStateSchema, type CharacterState } from "@/core/domain/character/state";
+import { type CharacterState, characterStateSchema } from "@/core/domain/assembly/state";
 import { arcaneRecoveryBudget, spellSlotsForLevel } from "@/core/domain/arcana/slots";
 
 /** Ячейки берём из движка, чтобы таблица уровней жила в одном месте. */

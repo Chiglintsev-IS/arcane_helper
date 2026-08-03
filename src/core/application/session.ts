@@ -5,9 +5,9 @@
  * лежат в юз-кейсах рядом; правила, которые они применяют, — в домене.
  */
 
-import type { CharacterState } from "@/core/domain/character/state";
-import { MUTABLE_STATE_KEYS } from "@/core/domain/character/state";
-import { Character } from "@/core/domain/character/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import { MUTABLE_STATE_KEYS } from "@/core/domain/assembly/state";
+import { Character } from "@/core/domain/assembly/character";
 import { Journal, JOURNAL_LIMIT } from "@/core/domain/journal/journal";
 import type { JournalEntry, Recorded, TurnResource } from "@/core/domain/journal/entry";
 

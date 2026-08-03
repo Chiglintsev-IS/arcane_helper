@@ -19,7 +19,7 @@ import {
 } from "@/core/domain/character/abilities";
 import { ABILITIES, SKILL_ABILITY, SKILL_IDS, type Ability, type SkillId } from "@/core/domain/character/skills";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterFields } from "@/core/domain/character/schema";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 
 export type DerivedId =
@@ -48,7 +48,7 @@ export type DerivedNumber = { id: DerivedId; value: number; overridden: boolean 
  * графа зависимостей и не узнаёт ни про вещи, ни про инвентарь.
  */
 export type SheetInput = Pick<
-  CharacterState,
+  CharacterFields,
   "level" | "abilities" | "saveProficiencies" | "skills" | "overrides" | "miscBonuses"
 > & {
   bonuses: ItemBonuses;

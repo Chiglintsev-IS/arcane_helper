@@ -8,7 +8,7 @@ import {
   type SkillId,
   type SkillTraining,
 } from "@/core/domain/character/skills";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { ABILITY_LABELS, SKILL_LABELS, TRAINING_LABELS } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 

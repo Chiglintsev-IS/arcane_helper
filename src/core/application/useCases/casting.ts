@@ -5,8 +5,9 @@
  * живёт здесь, а не в домене: ни один агрегат не вправе знать про остальные.
  */
 
-import { Character } from "@/core/domain/character/character";
-import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
+import { Character } from "@/core/domain/assembly/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { DomainError } from "@/core/domain/shared/errors";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";

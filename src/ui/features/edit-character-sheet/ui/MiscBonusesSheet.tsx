@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import type { CharacterState, ItemBonuses } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /**

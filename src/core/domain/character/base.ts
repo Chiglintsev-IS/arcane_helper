@@ -10,12 +10,15 @@
 import { abilityModifier, preparedLimit, proficiencyBonus } from "./abilities";
 import { SPELLCASTING_ABILITY } from "./spellcasting";
 import type { Ability } from "./skills";
-import type { CharacterState } from "./state";
+import type { CharacterFields } from "./schema";
+
+/** База читает только своё: уровень и характеристики. Полное состояние ей подходит по форме. */
+type BaseState = Pick<CharacterFields, "level" | "abilities">;
 
 export class CharacterBase {
-  private constructor(private readonly state: CharacterState) {}
+  private constructor(private readonly state: BaseState) {}
 
-  static of(state: CharacterState): CharacterBase {
+  static of(state: BaseState): CharacterBase {
     return new CharacterBase(state);
   }
 

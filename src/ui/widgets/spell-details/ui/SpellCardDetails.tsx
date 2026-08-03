@@ -27,7 +27,7 @@ import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLab
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { Sheet } from "@/core/domain/sheet/sheet";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";

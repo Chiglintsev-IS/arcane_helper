@@ -13,7 +13,7 @@
 
 "use client";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { withPlural } from "@/core/shared/language";
 import { RestActionButton } from "./RestActionButton";
 

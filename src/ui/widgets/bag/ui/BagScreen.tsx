@@ -1,7 +1,8 @@
 "use client";
 
-import type { CharacterState, InventoryItem, ItemKind } from "@/core/domain/character/state";
-import { CURRENCIES } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { InventoryItem, ItemKind } from "@/core/domain/equipment/schema";
+import { CURRENCIES } from "@/core/domain/equipment/schema";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { CURRENCY_ABBR } from "@/ui/entities/character/lib/labels";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";

@@ -4,8 +4,8 @@
  * Проверку концентрации приложение здесь не запускает: сложность оно называет, а бросает игрок.
  */
 
-import { Character } from "@/core/domain/character/character";
-import type { CharacterState } from "@/core/domain/character/state";
+import { Character } from "@/core/domain/assembly/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ascensionTierRate, hitPointCost } from "@/core/domain/arcana/slots";
 import { commit, type Clock, type Session } from "@/core/application/session";

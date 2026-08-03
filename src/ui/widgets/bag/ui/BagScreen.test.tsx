@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { CharacterState, InventoryItem } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { InventoryItem } from "@/core/domain/equipment/schema";
 import { BagScreen, itemMeta } from "./BagScreen";
 
 afterEach(cleanup);

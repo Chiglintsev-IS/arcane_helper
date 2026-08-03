@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { EXPORT_SCHEMA_VERSION } from "@/core/domain/character/state";
+import { EXPORT_SCHEMA_VERSION } from "@/core/domain/assembly/state";
 
 import {
   applyImport,

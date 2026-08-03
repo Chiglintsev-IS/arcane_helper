@@ -8,10 +8,17 @@
  * карточка реакции. Расхождение этих чисел заставило бы перепроверять каждое.
  */
 
-import { Sheet } from "./sheet";
-import type { CharacterState } from "@/core/domain/character/state";
+import { Sheet, type SheetSource } from "./sheet";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
+
+/**
+ * Что нужно для итога КД: основания листа и то, что действует прямо сейчас.
+ *
+ * Тип структурный: полное состояние персонажа подходит по форме, а лист про остальные его поля
+ * по-прежнему не знает.
+ */
+export type ArmorClassSource = SheetSource & { activeEffects: readonly ActiveEffect[] };
 
 /**
  * КД по слагаемым состояния и произвольному набору вкладов.
@@ -20,7 +27,7 @@ import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
  * доспехи с базой выше 13 делают «Доспехи мага» бесполезными, и правило «работает только без
  * доспехов» получается из формулы само. Прибавки суммируются.
  */
-function total(character: CharacterState, contributions: ArmorClassEffect[]): number {
+function total(character: ArmorClassSource, contributions: ArmorClassEffect[]): number {
   const { base, dexterityModifier, itemBonus, miscBonus } = Sheet.of(character).armorClassParts;
 
   const effectiveBase = contributions
@@ -35,26 +42,26 @@ function total(character: CharacterState, contributions: ArmorClassEffect[]): nu
 }
 
 /** Вклады активных эффектов: эффект без вклада к КД отношения не имеет. */
-function contributionsOf(character: CharacterState): ArmorClassEffect[] {
+function contributionsOf(character: ArmorClassSource): ArmorClassEffect[] {
   return character.activeEffects
     .map((effect) => effect.armorClass)
     .filter((contribution): contribution is ArmorClassEffect => contribution !== undefined);
 }
 
 /** Итоговый КД персонажа с учётом того, что действует прямо сейчас. */
-export function effectiveArmorClass(character: CharacterState): number {
+export function effectiveArmorClass(character: ArmorClassSource): number {
   return total(character, contributionsOf(character));
 }
 
 /** Активный эффект временной поправки к КД, заведённый шапкой ресурсов, если он есть. */
-export function armorClassAdjustmentEffect(character: CharacterState): ActiveEffect | undefined {
+export function armorClassAdjustmentEffect(character: ArmorClassSource): ActiveEffect | undefined {
   return character.activeEffects.find(
     (effect) => effect.manualKind === "armorAdjustment" && effect.armorClass !== undefined,
   );
 }
 
 /** Значение временной поправки к КД: 0, если она не заведена. */
-export function armorClassAdjustment(character: CharacterState): number {
+export function armorClassAdjustment(character: ArmorClassSource): number {
   return armorClassAdjustmentEffect(character)?.armorClass?.value ?? 0;
 }
 
@@ -65,7 +72,7 @@ export function armorClassAdjustment(character: CharacterState): number {
  * Повторное применение того же заклинания вклад не удваивает: замена базы берётся наибольшей, а
  * прибавка второй раз не проходит — вклад того же заклинания уже учтён активным эффектом.
  */
-export function armorClassWithSpell(character: CharacterState, spell: Spell): number {
+export function armorClassWithSpell(character: ArmorClassSource, spell: Spell): number {
   const { armorClassEffect } = spell;
   if (armorClassEffect === undefined) return effectiveArmorClass(character);
 

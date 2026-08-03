@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { ActiveEffect } from "@/core/domain/character/state";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 
 import {

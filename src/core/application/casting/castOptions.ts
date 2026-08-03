@@ -5,8 +5,8 @@
  * мастер применения называют одну причину, иначе приложению перестают верить.
  */
 
-import { Character } from "@/core/domain/character/character";
-import type { CharacterState } from "@/core/domain/character/state";
+import { Character } from "@/core/domain/assembly/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
   checkAvailability,

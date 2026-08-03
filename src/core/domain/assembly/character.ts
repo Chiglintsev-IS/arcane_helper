@@ -12,7 +12,29 @@ import { Equipment } from "@/core/domain/equipment/equipment";
 import { Spellbook } from "@/core/domain/spellbook/spellbook";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import type { CharacterState } from "./state";
-import { CharacterBase } from "./base";
+import { CharacterBase } from "@/core/domain/character/base";
+
+/**
+ * Поля, которые правятся с «Листа»: кто персонаж сам по себе и отметки на нём. Ресурсы, здоровье,
+ * книга, вещи и эффекты сюда не входят — у каждого свой агрегат со своими правилами.
+ */
+type SheetField =
+  | "name"
+  | "species"
+  | "subclass"
+  | "className"
+  | "age"
+  | "size"
+  | "speed"
+  | "proficiencies"
+  | "abilities"
+  | "saveProficiencies"
+  | "skills"
+  | "overrides"
+  | "miscBonuses"
+  | "exhaustion"
+  | "inspiration"
+  | "level";
 
 export class Character {
   private constructor(private readonly state: CharacterState) {}
@@ -76,8 +98,13 @@ export class Character {
     });
   }
 
-  /** Правка через корень — единственный путь: отдельные поля снаружи не меняются. */
-  withSheet(change: Partial<CharacterState>): Character {
+  /**
+   * Правка листа персонажа: то, что за столом меняют руками, а не тратят.
+   *
+   * Список полей явный и узкий. Разрешив здесь любое поле состояния, корень отдал бы наружу и
+   * ячейки, и эффекты — мимо агрегатов, которые их стерегут, а значит мимо их инвариантов.
+   */
+  withSheet(change: Partial<Pick<CharacterState, SheetField>>): Character {
     return new Character({ ...this.state, ...change });
   }
 

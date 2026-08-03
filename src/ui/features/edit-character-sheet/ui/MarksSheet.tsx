@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { EditSheetFrame } from "./EditSheetFrame";
 
 const STEPS = [0, 1, 2, 3, 4, 5, 6];

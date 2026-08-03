@@ -7,7 +7,7 @@
  */
 
 import { proficiencyBonus } from "@/core/domain/character/abilities";
-import { Character } from "@/core/domain/character/character";
+import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import {
@@ -17,7 +17,8 @@ import {
   type SkillId,
   type SkillTraining,
 } from "@/core/domain/character/skills";
-import type { CharacterState, ItemBonuses } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
 
 /** Справочные поля: имени и возраста журнал не касается. */

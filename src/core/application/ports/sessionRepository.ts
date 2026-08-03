@@ -8,8 +8,8 @@
 
 import { z } from "zod";
 
-import { migrateCharacterState, migrateUndoPatch } from "@/core/domain/character/migration";
-import { characterStateSchema } from "@/core/domain/character/state";
+import { migrateCharacterState, migrateUndoPatch } from "@/core/domain/assembly/migration";
+import { characterStateSchema } from "@/core/domain/assembly/state";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { checkIntegrity } from "@/core/application/dataExchange";
 import type { Session } from "@/core/application/session";

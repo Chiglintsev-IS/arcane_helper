@@ -2,8 +2,9 @@
  * Концентрация и активные эффекты: завершение вручную, по провалу проверки и по замене.
  */
 
-import { Character } from "@/core/domain/character/character";
-import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
+import { Character } from "@/core/domain/assembly/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ArmorClassEffect } from "@/core/domain/catalog/spell";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
 import { armorClassAdjustmentEffect } from "@/core/domain/sheet/armorClass";

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
 import {
   armorClassAdjustment,

@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 

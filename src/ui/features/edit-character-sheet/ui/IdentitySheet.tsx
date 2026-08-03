@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { CREATURE_SIZES, type CharacterState, type CreatureSize } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import { CREATURE_SIZES, type CreatureSize } from "@/core/domain/character/schema";
 import type { Identity } from "@/core/application/useCases/sheet";
 import { SIZE_LABELS } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";

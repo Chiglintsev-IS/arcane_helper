@@ -15,7 +15,7 @@ import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
 import { Sheet } from "@/core/domain/sheet/sheet";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { armorClassAdjustment, effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import { signed } from "@/core/shared/language";

@@ -10,13 +10,8 @@
  * не умеет показать.
  */
 
-import {
-  characterStateSchema,
-  exportFileSchema,
-  EXPORT_SCHEMA_VERSION,
-  type CharacterState,
-} from "@/core/domain/character/state";
-import { migrateCharacterState } from "@/core/domain/character/migration";
+import { type CharacterState, EXPORT_SCHEMA_VERSION, characterStateSchema, exportFileSchema } from "@/core/domain/assembly/state";
+import { migrateCharacterState } from "@/core/domain/assembly/migration";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 
 export type ExportFile = {

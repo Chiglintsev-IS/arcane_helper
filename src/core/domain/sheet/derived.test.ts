@@ -4,7 +4,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Sheet } from "./sheet";
 import { abilityModifiers } from "./derived";
 import { Equipment } from "@/core/domain/equipment/equipment";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 
 const sheetOf = (state: CharacterState = createThorne()) => Sheet.of(state);
 

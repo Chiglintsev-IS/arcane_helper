@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 import { exchangeWarnings } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
 
 /** Экономия хода «всё цело»: тесты обмена интересуются не ходом, а хитами и очками. */

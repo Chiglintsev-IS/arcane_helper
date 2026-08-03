@@ -9,7 +9,7 @@
 
 "use client";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { CampActions } from "@/ui/features/rest/ui/CampActions";
 import { MaterialsList } from "@/ui/features/materials/ui/MaterialsList";

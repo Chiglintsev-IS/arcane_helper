@@ -11,8 +11,9 @@
 
 import { CharacterBase } from "@/core/domain/character/base";
 import type { Ability, SkillId } from "@/core/domain/character/skills";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterFields } from "@/core/domain/character/schema";
 import { Equipment } from "@/core/domain/equipment/equipment";
+import type { EquipmentData } from "@/core/domain/equipment/schema";
 import {
   DERIVED_IDS,
   deriveNumbers,
@@ -21,6 +22,17 @@ import {
   type DerivedNumbers,
   type SheetInput,
 } from "./derived";
+
+/**
+ * Что нужно листу, чтобы посчитать: поля персонажа и снаряжение.
+ *
+ * Тип структурный, а не «состояние персонажа целиком»: лист складывает базу с вещами и не обязан
+ * знать ни про ячейки, ни про книгу. Полное состояние подходит сюда по форме.
+ */
+export type SheetSource = Pick<
+  CharacterFields,
+  "level" | "abilities" | "saveProficiencies" | "skills" | "overrides" | "miscBonuses"
+> & { equipment: EquipmentData };
 
 export class Sheet {
   private readonly numbers: DerivedNumbers;
@@ -32,7 +44,7 @@ export class Sheet {
     this.numbers = deriveNumbers(input);
   }
 
-  static of(state: CharacterState): Sheet {
+  static of(state: SheetSource): Sheet {
     const equipment = Equipment.of(state);
     const sheet = CharacterBase.of(state);
     return new Sheet(

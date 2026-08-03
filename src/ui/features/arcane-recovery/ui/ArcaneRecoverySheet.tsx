@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import {
   ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL,
   arcaneRecoveryPlanCost,

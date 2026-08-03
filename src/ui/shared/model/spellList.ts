@@ -7,7 +7,7 @@
  */
 
 import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { type Spell } from "@/core/domain/catalog/spell";
 import type { CombatRole } from "@/core/domain/catalog/combatRole";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";

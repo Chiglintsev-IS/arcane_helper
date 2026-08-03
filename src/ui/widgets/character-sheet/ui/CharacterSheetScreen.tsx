@@ -1,6 +1,6 @@
 "use client";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { sheetBlocks } from "../model/rows";
 import { SheetBlock } from "./SheetBlock";
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { ALL_TURN_RESOURCES, checkAvailability, type TurnResources } from "@/core/application/casting/availability";
 import { bestCastPlan, canCastNow, castOptions } from "@/core/application/casting/castOptions";
 import { NO_FILTERS, filterSpells, matchesActionRow, matchesTraits, toggleValue, type SpellFilters } from "@/ui/features/filter-spells/model/filters";

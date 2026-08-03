@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { abilityModifier, preparedLimit, proficiencyBonus } from "@/core/domain/character/abilities";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { spellSlotsForLevel } from "@/core/domain/arcana/slots";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 

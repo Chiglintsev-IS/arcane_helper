@@ -6,9 +6,9 @@
  * потому обе правки одинаково попадают в журнал и отменяются.
  */
 
-import { Character } from "@/core/domain/character/character";
+import { Character } from "@/core/domain/assembly/character";
 import { Equipment } from "@/core/domain/equipment/equipment";
-import { CURRENCIES, type InventoryItem, type Money } from "@/core/domain/character/state";
+import { CURRENCIES, type InventoryItem, type Money } from "@/core/domain/equipment/schema";
 import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
 

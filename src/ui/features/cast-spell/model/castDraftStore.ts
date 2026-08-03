@@ -12,7 +12,7 @@
 import type { CastRequest } from "@/core/application/useCases/casting";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-import type { CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { checkAvailability, type TurnResources } from "@/core/application/casting/availability";
 import { bestCastPlan, castOptions, type CastOption } from "@/core/application/casting/castOptions";

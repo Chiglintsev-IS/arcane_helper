@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Sheet } from "@/core/domain/sheet/sheet";
-import { characterStateSchema } from "@/core/domain/character/state";
+import { characterStateSchema } from "@/core/domain/assembly/state";
 import { undoLast, type Clock } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {

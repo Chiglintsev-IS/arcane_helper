@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-import type { Currency, Money } from "@/core/domain/character/state";
-import { CURRENCIES, MAXIMUM_COIN_AMOUNT } from "@/core/domain/character/state";
+import type { Currency, Money } from "@/core/domain/equipment/schema";
+import { CURRENCIES, MAXIMUM_COIN_AMOUNT } from "@/core/domain/equipment/schema";
 import { CURRENCY_LABELS } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
