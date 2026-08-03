@@ -54,7 +54,7 @@ describe("режим «Лист»", () => {
     expect(screen.getByRole("button", { name: "Править: Уровень" })).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Править: Перебивки" }));
-    expect(onEdit).toHaveBeenCalledWith("combatNumbers");
+    expect(onEdit).toHaveBeenCalledWith({ block: "combatNumbers" });
   });
 
   it("подсказка стоит рядом со значением, а не вместо него", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { sheetBlocks } from "../model/rows";
+import { sheetBlocks, type SheetEdit } from "../model/rows";
 import { SheetBlock } from "./SheetBlock";
 
 /**
@@ -14,7 +14,7 @@ export function CharacterSheetScreen({
   onEdit,
 }: {
   character: CharacterState;
-  onEdit: (blockId: string) => void;
+  onEdit: (edit: SheetEdit) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -22,8 +22,8 @@ export function CharacterSheetScreen({
         <SheetBlock
           key={block.id}
           block={block}
-          onEdit={() => onEdit(block.editId)}
-          onSecondaryEdit={() => onEdit(block.secondary?.editId ?? block.editId)}
+          onEdit={() => onEdit(block.edit)}
+          onSecondaryEdit={() => onEdit(block.secondary?.edit ?? block.edit)}
         />
       ))}
     </div>

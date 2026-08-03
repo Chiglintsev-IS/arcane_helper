@@ -25,14 +25,34 @@ import { signed } from "@/core/shared/language";
 
 export type SheetRow = { labelRu: string; value: string; hint?: string };
 
+/**
+ * Что откроет «Править». Не строка: опечатка в одном из имён молча выключала бы шторку — блок
+ * рисуется, кнопка нажимается, и ничего не происходит, а компилятор про это не знает.
+ *
+ * Характеристика названа своим полем, а не приставкой в имени: разбирать строку обратно значит
+ * заводить второй разбор рядом с первым и однажды их рассогласовать.
+ */
+export type SheetEdit =
+  | {
+      block:
+        | "identity"
+        | "level"
+        | "health"
+        | "armorClassBase"
+        | "marks"
+        | "miscBonuses"
+        | "combatNumbers";
+    }
+  | { block: "ability"; ability: Ability };
+
 export type SheetBlockData = {
   id: string;
   titleRu: string;
   rows: SheetRow[];
   /** Какую шторку открывает «Править»: у блока характеристики она своя, а не общая. */
-  editId: string;
+  edit: SheetEdit;
   /** Вторая кнопка блока: у «Кто он» уровень правится отдельно — он тянет за собой ресурсы. */
-  secondary?: { labelRu: string; editId: string };
+  secondary?: { labelRu: string; edit: SheetEdit };
 };
 
 const OVERRIDDEN_HINT = "введено руками";
@@ -49,7 +69,7 @@ function armorClassBlock(character: CharacterState): SheetBlockData {
   return {
     id: "armorClass",
     titleRu: "Класс Доспеха",
-    editId: "armorClassBase",
+    edit: { block: "armorClassBase" },
     rows: [
       {
         labelRu: "База",
@@ -94,7 +114,7 @@ function abilityBlock(character: CharacterState, ability: Ability): SheetBlockDa
   return {
     id: `ability:${ability}`,
     titleRu: ABILITY_LABELS[ability],
-    editId: `ability:${ability}`,
+    edit: { block: "ability", ability },
     rows: [
       {
         labelRu: "Значение",
@@ -137,8 +157,8 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
     {
       id: "identity",
       titleRu: "Кто он",
-      editId: "identity",
-      secondary: { labelRu: "Уровень", editId: "level" },
+      edit: { block: "identity" },
+      secondary: { labelRu: "Уровень", edit: { block: "level" } },
       rows: [
         { labelRu: "Имя", value: orDash(character.name) },
         { labelRu: "Вид", value: orDash(character.species) },
@@ -152,7 +172,7 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
     {
       id: "health",
       titleRu: "Здоровье",
-      editId: "health",
+      edit: { block: "health" },
       rows: [
         {
           labelRu: "Хиты",
@@ -179,8 +199,8 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
     {
       id: "marks",
       titleRu: "Отметки мастера",
-      editId: "marks",
-      secondary: { labelRu: "Перебивки", editId: "combatNumbers" },
+      edit: { block: "marks" },
+      secondary: { labelRu: "Перебивки", edit: { block: "combatNumbers" } },
       rows: [
         {
           labelRu: "Истощение",
@@ -197,7 +217,7 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
     {
       id: "miscBonuses",
       titleRu: "Прочие прибавки",
-      editId: "miscBonuses",
+      edit: { block: "miscBonuses" },
       rows: [
         { labelRu: "К магии", value: signed(character.miscBonuses.spellcasting) },
         { labelRu: "К защите", value: signed(character.miscBonuses.armorClass) },
@@ -208,7 +228,7 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
     {
       id: "proficiencies",
       titleRu: "Снаряжение и языки",
-      editId: "identity",
+      edit: { block: "identity" },
       rows: [
         { labelRu: "Оружие", value: orDash(character.proficiencies.weapons.join(", ")) },
         { labelRu: "Доспехи", value: orDash(character.proficiencies.armor.join(", ")) },

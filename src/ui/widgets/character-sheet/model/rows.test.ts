@@ -27,7 +27,7 @@ describe("блоки листа", () => {
     const state = createThorne();
     const blessed = { ...state, miscBonuses: { spellcasting: 1, armorClass: -1, savingThrows: 0 } };
     const block = sheetBlocks(blessed).find((candidate) => candidate.id === "miscBonuses");
-    expect(block?.editId).toBe("miscBonuses");
+    expect(block?.edit).toEqual({ block: "miscBonuses" });
     expect(block?.rows).toEqual([
       { labelRu: "К магии", value: "+1" },
       { labelRu: "К защите", value: "−1" },
@@ -102,7 +102,7 @@ describe("блоки листа", () => {
   it("перебивки открываются второй кнопкой блока отметок", () => {
     expect(blockById("marks")?.secondary).toEqual({
       labelRu: "Перебивки",
-      editId: "combatNumbers",
+      edit: { block: "combatNumbers" },
     });
   });
 
@@ -195,10 +195,13 @@ describe("блоки листа", () => {
   });
 
   it("каждый блок называет свою шторку, а уровень правится второй кнопкой", () => {
-    expect(blockById("ability:wisdom")?.editId).toBe("ability:wisdom");
-    expect(blockById("identity")?.secondary).toEqual({ labelRu: "Уровень", editId: "level" });
+    expect(blockById("ability:wisdom")?.edit).toEqual({ block: "ability", ability: "wisdom" });
+    expect(blockById("identity")?.secondary).toEqual({
+      labelRu: "Уровень",
+      edit: { block: "level" },
+    });
     // Снаряжение и языки правятся тем же окном, что и «Кто он»: это одна запись листа.
-    expect(blockById("proficiencies")?.editId).toBe("identity");
+    expect(blockById("proficiencies")?.edit).toEqual({ block: "identity" });
   });
 
   it("пустой список владений называется прочерком", () => {
