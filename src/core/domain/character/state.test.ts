@@ -318,6 +318,18 @@ describe("лист персонажа", () => {
     expect(result.success).toBe(false);
   });
 
+  it("вещь без количества считается одной штукой: старое сохранение не лжёт о запасах", () => {
+    const legacy = {
+      ...createThorne(),
+      equipment: {
+        ...createThorne().equipment,
+        items: [{ id: "rope", nameRu: "Верёвка" }],
+      },
+    };
+    const parsed = characterStateSchema.parse(legacy);
+    expect(parsed.equipment.items[0]?.count).toBe(1);
+  });
+
   it("вещь без нулевого или отрицательного количества не существует", () => {
     const withCount = (count: number) => ({
       ...createThorne(),
