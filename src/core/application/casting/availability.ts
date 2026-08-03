@@ -2,8 +2,9 @@ import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { spellPointCost, hitPointCost } from "@/core/domain/arcana/slots";
-import { longCastingTimeRu, type LongCastingUnit } from "@/core/shared/language";
+import { ascensionTierRate, spellPointCost, hitPointCost } from "@/core/domain/arcana/slots";
+import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
+import { longCastingTimeRu, withPlural, type LongCastingUnit } from "@/core/shared/language";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
@@ -355,6 +356,39 @@ export function checkAvailability(input: AvailabilityInput): Availability {
     warnings,
     componentReminders: componentRequirements(input.spell.components),
   };
+}
+
+/**
+ * Причины, по которым обмен хитов на очки сейчас невозможен, — словами и с числами.
+ *
+ * `checkAvailability` сюда не подходит: она принимает заклинание, а обмен заклинанием не является.
+ * Общими у них остаются формулировки — «Действие уже израсходовано» обязано звучать одинаково в
+ * обоих мастерах, и берётся оно из одной таблицы.
+ */
+export function exchangeWarnings(character: CharacterState, turn: TurnResources): string[] {
+  const warnings: string[] = [];
+
+  if (!bloodMagicAvailable(character.suppression)) {
+    warnings.push(
+      character.suppression.firedUpon
+        ? "Кровавое колдовство подавлено уроном огнём до конца следующего хода"
+        : "Кровавое колдовство не действует под прямым солнечным светом",
+    );
+  }
+  // Вне боя действие не тратится вовсе, поэтому отдельной проверки на бой здесь нет: экономия
+  // хода сама отвечает «доступно», пока схватка не начата.
+  if (!turn.actionAvailable) {
+    warnings.push(ACTION_SPENT_MESSAGES.action);
+  }
+
+  const rate = ascensionTierRate(character.level);
+  if (character.hitPoints.current < rate) {
+    warnings.push(
+      `${withPlural(rate, ["хит", "хита", "хитов"])} за очко, в наличии ${character.hitPoints.current}`,
+    );
+  }
+
+  return warnings;
 }
 
 export function reasonsOf(availability: Availability, code: AvailabilityCode): string[] {

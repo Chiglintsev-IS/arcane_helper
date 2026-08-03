@@ -5,8 +5,10 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
+  ACTION_SPENT_MESSAGES,
   ALL_TURN_RESOURCES,
   checkAvailability,
+  exchangeWarnings,
   reasonsOf,
   withoutConsent,
   type AvailabilityInput,
@@ -571,5 +573,39 @@ describe("исполнение предупреждений по объявле�
     const { warnings } = check({ spell: secondLevel, payment: { kind: "slot", slotLevel: 1 } });
     expect(withoutConsent(warnings, {})?.code).toBe("slot_too_low");
     expect(withoutConsent(warnings, { gm_exception: true })).toBeUndefined();
+  });
+});
+
+describe("доступность обмена хитов на очки (FR-176, FR-143)", () => {
+  it("вне боя действие не тратится, и причины нет", () => {
+    // Экономия хода вне боя отвечает «всё доступно», и отдельной проверки на бой обмену не нужно.
+    expect(exchangeWarnings(createThorne(), ALL_TURN_RESOURCES)).toEqual([]);
+  });
+
+  it("подавление огнём и солнцем называется своими словами", () => {
+    const burned = createThorne();
+    burned.suppression = { firedUpon: true, underDirectSunlight: false };
+    expect(exchangeWarnings(burned, ALL_TURN_RESOURCES)).toEqual([
+      "Кровавое колдовство подавлено уроном огнём до конца следующего хода",
+    ]);
+
+    const sunlit = createThorne();
+    sunlit.suppression = { firedUpon: false, underDirectSunlight: true };
+    expect(exchangeWarnings(sunlit, ALL_TURN_RESOURCES)).toEqual([
+      "Кровавое колдовство не действует под прямым солнечным светом",
+    ]);
+  });
+
+  it("израсходованное действие названо теми же словами, что и у заклинания", () => {
+    const spent = { ...ALL_TURN_RESOURCES, inFight: true, actionAvailable: false };
+    expect(exchangeWarnings(createThorne(), spent)).toEqual([ACTION_SPENT_MESSAGES.action]);
+  });
+
+  it("хитов меньше курса — причина называет курс и наличное", () => {
+    const bleeding = createThorne();
+    bleeding.hitPoints = { ...bleeding.hitPoints, current: 2 };
+    expect(exchangeWarnings(bleeding, ALL_TURN_RESOURCES)).toEqual([
+      "3 хита за очко, в наличии 2",
+    ]);
   });
 });

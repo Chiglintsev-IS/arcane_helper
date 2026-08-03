@@ -8,14 +8,12 @@ import { useState } from "react";
 import { WizardShell } from "@/ui/shared/ui/WizardShell";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { bloodExchangeAnnouncement, bloodExchangeInstructions } from "@/core/application/casting/announcement";
-import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
+import { exchangeWarnings } from "@/core/application/casting/availability";
 import {
   affordableSpellLevels,
-  ascensionTierRate,
   hitPointsForPoints,
   maximumExchangePoints,
 } from "@/core/domain/arcana/slots";
-import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
 import { withPlural } from "@/core/shared/language";
 import { Vitality } from "@/core/domain/vitality/vitality";
 
@@ -36,40 +34,6 @@ const STEP_TITLES: Record<Step, string> = {
  * (rules-engine.md).
  */
 const DEFAULT_POINTS = 2;
-
-/**
- * Причины, по которым обмен сейчас невозможен, — словами и с числами.
- *
- * `checkAvailability` сюда не подходит: она принимает заклинание, а обмен заклинанием не является.
- * Общими у них остаются формулировки — `ACTION_SPENT_MESSAGES` берётся оттуда же, чтобы «Действие
- * уже израсходовано» звучало одинаково в обоих мастерах.
- */
-export function exchangeWarnings(character: CharacterState, economy: TurnEconomy): string[] {
-  const warnings: string[] = [];
-
-  if (!bloodMagicAvailable(character.suppression)) {
-    warnings.push(
-      character.suppression.firedUpon
-        ? "Кровавое колдовство подавлено уроном огнём до конца следующего хода"
-        : "Кровавое колдовство не действует под прямым солнечным светом",
-    );
-  }
-  // Вне боя действие не тратится вовсе, поэтому отдельной проверки на бой здесь нет: экономия
-  // хода сама отвечает «доступно», пока схватка не начата.
-  if (!economy.actionAvailable) {
-    warnings.push(ACTION_SPENT_MESSAGES.action);
-  }
-
-  const rate = ascensionTierRate(character.level);
-  if (character.hitPoints.current < rate) {
-    warnings.push(
-      `${withPlural(rate, ["хит", "хита", "хитов"])} за очко,` +
-        ` в наличии ${character.hitPoints.current}`,
-    );
-  }
-
-  return warnings;
-}
 
 /** Подсказка «на что хватит»: очки живут до долгого отдыха, поэтому остаток тоже считается. */
 function affordableHint(totalPoints: number): string {

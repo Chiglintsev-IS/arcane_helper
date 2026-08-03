@@ -12,7 +12,6 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { exchangeWarnings } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
@@ -259,13 +258,5 @@ describe("итоговый экран (FR-032, FR-174)", () => {
     // Бой не начат нарочно — см. комментарий в инварианте выше.
     await user.click(screen.getByRole("button", { name: "Далее" }));
     expect(screen.queryByLabelText("Отыгрыш")).toBeNull();
-  });
-});
-
-describe("обмен вне боя (FR-143)", () => {
-  it("вне боя действие не тратится, и причины нет", () => {
-    // Экономия хода вне боя отвечает «всё доступно», и отдельной проверки на бой мастеру не нужно.
-    const economy = { ...ALL_AVAILABLE_ECONOMY, inFight: false };
-    expect(exchangeWarnings(createThorne(), economy)).toEqual([]);
   });
 });
