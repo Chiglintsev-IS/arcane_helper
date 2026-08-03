@@ -10,13 +10,10 @@
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import type { CharacterState, RoleplayPreference } from "@/core/domain/character/state";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
+import type { RoleplayPreference, SpellbookState } from "./schema";
 
-export type SpellbookState = Pick<
-  CharacterState,
-  "cantripIds" | "spellbookSpellIds" | "preparedSpellIds" | "spellNotes" | "roleplayPreferences"
->;
+export type { SpellbookState };
 
 /** Пустые предпочтения: запись заводится, только когда игрок что-то пометил. */
 const NO_PREFERENCES: RoleplayPreference = {

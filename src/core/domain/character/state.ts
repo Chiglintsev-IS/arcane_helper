@@ -8,6 +8,11 @@
 import { z } from "zod";
 
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
+import {
+  refineSpellbook,
+  SPELLBOOK_FIELDS,
+  type RoleplayPreference,
+} from "@/core/domain/spellbook/schema";
 import { VITALITY_FIELDS, type HitDice } from "@/core/domain/vitality/schema";
 import {
   isoDateTime,
@@ -80,26 +85,6 @@ export const roleplayProfileSchema = z.object({
   preferredElements: z.array(nonEmpty),
   prohibitedThemes: z.array(nonEmpty),
   maximumPhraseLength: z.number().int().positive(),
-});
-
-/**
- * Пометки игрока на вариантах отыгрыша одного заклинания.
- *
- * Идентификатор готового варианта — категория и место в карточке (`short-0`), собственного — тот,
- * что выдан при создании. Счётчик использований ведёт ротацию: показывается реже других
- * использованный вариант.
- */
-const roleplayPreferenceSchema = z.object({
-  favoriteVariantIds: z.array(nonEmpty),
-  disabledVariantIds: z.array(nonEmpty),
-  customVariants: z.array(
-    z.object({
-      id: nonEmpty,
-      category: z.enum(["short", "atmospheric", "sarcastic"]),
-      text: nonEmpty,
-    }),
-  ),
-  usageCount: z.record(nonEmpty, z.number().int().nonnegative()),
 });
 
 /**
@@ -227,10 +212,6 @@ export const characterStateSchema = z
     exhaustion: z.number().int().min(0).max(6).default(0),
     inspiration: z.boolean().default(false),
 
-    cantripIds: z.array(nonEmpty),
-    spellbookSpellIds: z.array(nonEmpty),
-    preparedSpellIds: z.array(nonEmpty),
-
     spellSlots: spellSlotsSchema,
 
     concentration: z
@@ -312,49 +293,11 @@ export const characterStateSchema = z
       remaining: z.number().int().nonnegative(),
     }),
 
-    spellNotes: z.record(nonEmpty, nonEmpty),
-    roleplayPreferences: z.record(nonEmpty, roleplayPreferenceSchema),
-
+    ...SPELLBOOK_FIELDS,
     ...VITALITY_FIELDS,
   })
   .superRefine((character, context) => {
-    // Идентификаторы не дублируются ни в одной коллекции.
-    for (const field of ["cantripIds", "spellbookSpellIds", "preparedSpellIds"] as const) {
-      const ids = character[field];
-      if (new Set(ids).size !== ids.length) {
-        context.addIssue({
-          code: "custom",
-          path: [field],
-          message: "Список содержит повторяющиеся идентификаторы",
-        });
-      }
-    }
-
-    // Заговоры и книга заклинаний не пересекаются: заговор не занимает места в книге.
-    const cantrips = new Set(character.cantripIds);
-    for (const id of character.spellbookSpellIds) {
-      if (cantrips.has(id)) {
-        context.addIssue({
-          code: "custom",
-          path: ["spellbookSpellIds"],
-          message: `Заклинание «${id}» одновременно заговор и запись в книге`,
-        });
-        break;
-      }
-    }
-
-    // Подготовленные — подмножество книги.
-    const spellbook = new Set(character.spellbookSpellIds);
-    for (const id of character.preparedSpellIds) {
-      if (!spellbook.has(id)) {
-        context.addIssue({
-          code: "custom",
-          path: ["preparedSpellIds"],
-          message: `Подготовлено заклинание «${id}», которого нет в книге`,
-        });
-        break;
-      }
-    }
+    refineSpellbook(character, context);
 
     // Концентрация всегда сопровождается активным эффектом.
     if (character.concentration !== undefined) {
@@ -431,7 +374,8 @@ export type Overrides = z.infer<typeof overridesSchema>;
 export type SpellSlotsData = z.infer<typeof spellSlotsSchema>;
 export type ActiveEffect = z.infer<typeof activeEffectSchema>;
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
-export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;
+// Пометки отыгрыша — поле книги заклинаний: тип живёт у владельца.
+export type { RoleplayPreference };
 // Кости хитов — поле жизнеспособности: тип живёт у владельца.
 export type { HitDice };
 export type Equipment = z.infer<typeof characterStateSchema>["equipment"];
