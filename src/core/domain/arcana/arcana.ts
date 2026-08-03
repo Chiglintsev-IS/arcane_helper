@@ -8,7 +8,6 @@
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import type { CharacterState } from "@/core/domain/character/state";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
 import {
   applyArcaneRecovery,
@@ -23,8 +22,14 @@ import {
 } from "./slots";
 import { spellPointCost } from "./slots";
 
+import type { ArcanaStateData } from "./schema";
+
+/**
+ * Состояние, которым владеет агрегат. Признак короткого отдыха в него не входит: агрегат его не
+ * правит — отдых отмечает сценарий, а ресурсы только читают признак как предусловие.
+ */
 export type ArcanaState = Pick<
-  CharacterState,
+  ArcanaStateData,
   "spellSlots" | "runes" | "spellPoints" | "arcaneRecovery"
 >;
 

@@ -8,6 +8,7 @@
 import { z } from "zod";
 
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
+import { ARCANA_FIELDS, spellSlotsSchema, type SpellSlotsData } from "@/core/domain/arcana/schema";
 import {
   CURRENCIES,
   EQUIPMENT_FIELDS,
@@ -41,22 +42,6 @@ import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
 export const EXPORT_SCHEMA_VERSION = 6;
-
-const slotSchema = z
-  .object({
-    maximum: z.number().int().nonnegative(),
-    remaining: z.number().int(),
-  })
-  .refine((slot) => slot.remaining <= slot.maximum, {
-    message: "Осталось ячеек не может быть больше максимума",
-    path: ["remaining"],
-  });
-
-/** Ключи — уровни ячеек 1…9 в строковом виде: JSON других ключей не знает. */
-export const spellSlotsSchema = z.record(
-  z.coerce.number().int().min(1).max(MAXIMUM_SPELL_LEVEL),
-  slotSchema,
-);
 
 export const activeEffectSchema = z.object({
   id: nonEmpty,
@@ -171,8 +156,6 @@ export const characterStateSchema = z
     exhaustion: z.number().int().min(0).max(6).default(0),
     inspiration: z.boolean().default(false),
 
-    spellSlots: spellSlotsSchema,
-
     concentration: z
       .object({ spellId: nonEmpty, startedAt: isoDateTime })
       .optional(),
@@ -180,47 +163,7 @@ export const characterStateSchema = z
     activeEffects: z.array(activeEffectSchema),
     roleplayProfile: roleplayProfileSchema,
 
-    /**
-     * Дневной бюджет «Магического восстановления» уровнями ячеек: сколько всего и сколько осталось
-     * до следующего долгого отдыха. За столом его берут частями — остаток может быть нулём без
-     * долгого отдыха, а не только целиком доступен или целиком потрачен.
-     */
-    arcaneRecovery: z
-      .object({
-        maximum: z.number().int().nonnegative(),
-        remaining: z.number().int().nonnegative(),
-      })
-      .refine((value) => value.remaining <= value.maximum, {
-        message: "Бюджет магического восстановления не может остаться больше максимума",
-        path: ["remaining"],
-      }),
-    /**
-     * Был ли короткий отдых с последнего долгого.
-     *
-     * Необязательное намеренно: обязательное отвергло бы сохранения прежних версий, а обновление не
-     * имеет права терять данные. `undefined` читается как «отдыха не было» — это честнее
-     * молчаливого разрешения, а цена ошибки всего одно лишнее предупреждение.
-     */
-    shortRestSinceLongRest: z.boolean().optional(),
-
-    runes: z
-      .object({
-        maximum: z.number().int().nonnegative(),
-        remaining: z.number().int().nonnegative(),
-      })
-      .refine((value) => value.remaining <= value.maximum, {
-        message: "Рун не может остаться больше максимума",
-        path: ["remaining"],
-      }),
-
-    /**
-     * Очки заклинаний: только остаток. Время создания схема не хранит — гасит их не срок, а любой
-     * отмеченный час, независимо от того, когда они появились.
-     */
-    spellPoints: z.object({
-      remaining: z.number().int().nonnegative(),
-    }),
-
+    ...ARCANA_FIELDS,
     ...EQUIPMENT_FIELDS,
     ...SPELLBOOK_FIELDS,
     ...VITALITY_FIELDS,
@@ -309,7 +252,9 @@ export type CreatureSize = (typeof CREATURE_SIZES)[number];
 export type Abilities = z.infer<typeof abilitiesSchema>;
 export type Overrides = z.infer<typeof overridesSchema>;
 
-export type SpellSlotsData = z.infer<typeof spellSlotsSchema>;
+// Ячейки — поле магических ресурсов: схема и тип живут у владельца.
+export { spellSlotsSchema };
+export type { SpellSlotsData };
 export type ActiveEffect = z.infer<typeof activeEffectSchema>;
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
 // Пометки отыгрыша — поле книги заклинаний: тип живёт у владельца.
