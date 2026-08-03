@@ -36,7 +36,7 @@ import { ConcentrationPanel } from "@/ui/entities/concentration/ui/Concentration
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
-import { ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
+import { ResourceBadges, ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { dividingCategories } from "@/ui/features/filter-spells/model/filters";
 import { spellsForScreen } from "@/ui/shared/model/spellList";
@@ -88,11 +88,15 @@ export function RestScreen() {
       <div className="flex shrink-0 flex-col gap-2">
         <ResourceHeader
           character={character}
-          economy={economy}
-          bookCastingTimes={dividing.castingTimes}
           onOpenArmorClass={() => setArmorClassOpen(true)}
           onOpenHitPoints={() => setDamageOpen(true)}
           onEditResources={() => setResourcesOpen(true)}
+        />
+
+        <ResourceBadges
+          character={character}
+          economy={economy}
+          bookCastingTimes={dividing.castingTimes}
         />
 
         <ActiveEffects

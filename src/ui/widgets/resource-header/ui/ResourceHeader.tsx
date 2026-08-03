@@ -1,8 +1,9 @@
 /**
  * Шапка ресурсов: чем платить и сколько осталось.
  *
- * Стоит там, где тратят и восстанавливают, — в «Игре». Не прокручивается и потому обязана быть
- * плотной: на iPhone SE ключевая механика должна быть видна целиком. Имени, класса и уровня в ней
+ * Стоит там, где тратят и восстанавливают, — в «Игре». Хиты и ячейки закреплены и остаются на месте
+ * при прокрутке: на них смотрят в каждый ход. Прочие значки уезжают вместе со списком — иначе
+ * каждый новый значок отодвигал бы первую карточку за край экрана. Имени, класса и уровня в шапке
  * нет: за столом их не спрашивают, а место они занимают постоянно — их дом «Лист».
  *
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
@@ -147,18 +148,19 @@ function SlotCounter({
   );
 }
 
+/**
+ * Закреплённая часть: КД, хиты и ячейки по уровням.
+ *
+ * Экономии хода она не знает намеренно — то, что остаётся на месте при прокрутке, не должно
+ * перестраиваться от начала боя.
+ */
 export function ResourceHeader({
   character,
-  economy,
-  bookCastingTimes,
   onOpenArmorClass,
   onOpenHitPoints,
   onEditResources,
 }: {
   character: CharacterState;
-  economy: TurnEconomy;
-  /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
-  bookCastingTimes: ReadonlySet<CastingTimeType>;
   onOpenArmorClass: () => void;
   onOpenHitPoints: () => void;
   /** Ручная правка ячеек и рун. */
@@ -169,12 +171,8 @@ export function ResourceHeader({
     .sort((left, right) => left.level - right.level);
 
   // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок.
-  const totals = Sheet.of(character);
   const vitality = Vitality.of(character);
-  // Игроку важен разрыв с базой листа, а не то, чем он вызван: цифра одна.
-  const maximumReduction = vitality.bloodReduction + vitality.masterReduction;
   const armorClass = effectiveArmorClass(character);
-  const { inFight } = economy;
 
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
@@ -202,8 +200,32 @@ export function ResourceHeader({
           />
         ))}
       </ul>
+    </section>
+  );
+}
 
-      <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
+/**
+ * Прочие значки: чем ещё располагают и что мешает. Уезжают вместе со списком — их число растёт от
+ * ситуации, и закрепить их значило бы отдать прокрутке первую карточку.
+ */
+export function ResourceBadges({
+  character,
+  economy,
+  bookCastingTimes,
+}: {
+  character: CharacterState;
+  economy: TurnEconomy;
+  /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
+  bookCastingTimes: ReadonlySet<CastingTimeType>;
+}) {
+  const totals = Sheet.of(character);
+  const vitality = Vitality.of(character);
+  // Игроку важен разрыв с базой листа, а не то, чем он вызван: цифра одна.
+  const maximumReduction = vitality.bloodReduction + vitality.masterReduction;
+  const { inFight } = economy;
+
+  return (
+    <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
         {/*
          * Постоянная часть ряда идёт первой и одинаково в бою и вне его: кости хитов, пассивное
          * восприятие, руны, очки. Значок, исчезающий с началом боя, сдвинул бы соседей, и глаз
@@ -329,7 +351,6 @@ export function ResourceHeader({
             </li>
           </>
         ) : null}
-      </ul>
-    </section>
+    </ul>
   );
 }

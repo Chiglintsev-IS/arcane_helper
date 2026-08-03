@@ -78,19 +78,39 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   // обычную игру — после «Начать бой», а не до него.
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
 
-  // Список, в котором не видно целиком ни одной строки, не список, а щель: до любого заклинания
-  // нужно доскроллить, а в бою скроллят одной рукой под чужой ход.
-  const firstCardBottom = async (): Promise<number> =>
-    page.evaluate(() => {
-      const first = document.querySelector('[aria-label^="Заклинания"] li');
-      if (first === null) throw new Error("список пуст");
-      return Math.round(first.getBoundingClientRect().bottom);
-    });
-
   const viewport = page.viewportSize()?.height ?? 0;
   expect(viewport).toBeGreaterThan(0);
 
-  expect(await firstCardBottom(), "бой").toBeLessThanOrEqual(viewport);
+  // Список, в котором не видно целиком ни одной строки, не список, а щель. Мерить его нужно после
+  // прокрутки: закреплены только хиты и ячейки, остальное уезжает — и вопрос в том, хватает ли
+  // высоты под закреплённой полосой на строку целиком.
+  const pinned = await page.evaluate(() => {
+    const card = document.querySelector('[aria-label^="Заклинания"] li');
+    const hitPoints = document.querySelector('[aria-label^="Хиты"]');
+    const slots = document.querySelector('[aria-label="Ячейки заклинаний"]');
+    if (card === null || hitPoints === null || slots === null) throw new Error("нет узлов");
+    // Прокручиваемый предок: первый, чьё содержимое выше собственной высоты.
+    let area = card.parentElement;
+    while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
+    if (area === null) throw new Error("нет области прокрутки");
+    const pinnedBottom = (): number => Math.round(slots.getBoundingClientRect().bottom);
+    area.scrollTop += Math.round(card.getBoundingClientRect().top) - pinnedBottom();
+    return {
+      cardTop: Math.round(card.getBoundingClientRect().top),
+      cardBottom: Math.round(card.getBoundingClientRect().bottom),
+      pinnedBottom: pinnedBottom(),
+      hitPointsTop: Math.round(hitPoints.getBoundingClientRect().top),
+    };
+  });
+
+  expect(pinned.cardTop, "строка встала под закреплённой полосой").toBeGreaterThanOrEqual(
+    pinned.pinnedBottom - 1,
+  );
+  expect(pinned.cardBottom, "бой: строка целиком под закреплённой полосой").toBeLessThanOrEqual(
+    viewport,
+  );
+  // Хиты и ячейки прокрутка не уносит: на них смотрят в каждый ход.
+  expect(pinned.hitPointsTop, "хиты остались на месте").toBeGreaterThanOrEqual(0);
 
   // Полоса фильтров тоже вся на экране: переключатель за краем — переключатель, которого нет.
   const strip = await page.getByLabel("Фильтры").evaluate((node) => ({
@@ -99,15 +119,22 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   }));
   expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
 
-  // Пять вкладок режима на той же ширине: переключатель за краем экрана — переключатель,
-  // которого нет, и это верно для него так же, как для полосы фильтров.
-  const modes = await page.getByRole("radiogroup", { name: "Режим экрана" }).evaluate((node) => ({
-    scrollWidth: node.scrollWidth,
-    clientWidth: node.clientWidth,
-  }));
-  expect(modes.scrollWidth, "переключатель режима — все пять вкладок").toBeLessThanOrEqual(
-    modes.clientWidth,
-  );
+  // Шесть ярлыков режима в 320 пикселей не укладываются: полоса прокручивается и подводит к
+  // текущему. Проверяется не «влезли все», а «текущий виден целиком» — иначе игрок не знает, где он.
+  const currentMode = await page
+    .getByRole("radiogroup", { name: "Режим экрана" })
+    .evaluate((node) => {
+      const selected = node.querySelector('[aria-checked="true"]');
+      if (selected === null) throw new Error("режим не выбран");
+      const strip = node.getBoundingClientRect();
+      const box = selected.getBoundingClientRect();
+      return {
+        fromLeft: Math.round(box.left - strip.left),
+        fromRight: Math.round(strip.right - box.right),
+      };
+    });
+  expect(currentMode.fromLeft, "текущий режим не уехал за левый край").toBeGreaterThanOrEqual(0);
+  expect(currentMode.fromRight, "текущий режим не уехал за правый край").toBeGreaterThanOrEqual(0);
 
   // В «Книге» бюджет другой: счётчик подготовки, фильтры и начало первой строки, а не строка
   // целиком: там читают и готовятся, и прокрутка нормальна.

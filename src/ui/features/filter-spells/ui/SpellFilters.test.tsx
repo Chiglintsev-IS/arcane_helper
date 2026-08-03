@@ -96,10 +96,26 @@ describe("состав фильтров идёт от списка (FR-002)", ()
 
   it("роль без единой находки переключателя не получает", () => {
     // Список из одних защитных: предлагать «Боевое» значит обещать пустой результат.
-    renderFilters({ ...EVERYTHING, roles: ["defense"] });
+    renderFilters({ ...EVERYTHING, roles: ["defense"] }, { mode: "book" });
 
     expect(screen.getByRole("button", { name: "Защита" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Боевое" })).toBeNull();
+  });
+});
+
+describe("роль отбирает только в «Книге» (FR-002)", () => {
+  it("в «Книге» переключатели роли есть", () => {
+    renderFilters(EVERYTHING, { mode: "book" });
+
+    expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Защита" })).toBeDefined();
+  });
+
+  it("в «Игре» их нет: полоса обязана уложиться в один ряд", () => {
+    renderFilters(EVERYTHING);
+
+    expect(screen.queryByRole("button", { name: "Боевое" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Защита" })).toBeNull();
   });
 });
 

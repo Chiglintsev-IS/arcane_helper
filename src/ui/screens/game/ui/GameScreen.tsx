@@ -34,7 +34,7 @@ import { ConcentrationPanel } from "@/ui/entities/concentration/ui/Concentration
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
 import { ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
-import { ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
+import { ResourceBadges, ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
@@ -148,14 +148,28 @@ export function GameScreen() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-col gap-2">
-        <ResourceHeader
+      {/*
+       * Одна область прокрутки на весь экран: закреплены только хиты и ячейки — они уезжать не
+       * вправе. Всё остальное едет вместе со списком, иначе первая карточка не влезает целиком.
+       */}
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3">
+        {/*
+         * Фон у закреплённой полосы обязателен: без него уезжающие значки просвечивают сквозь неё.
+         * `Canvas` — системный цвет страницы, один и тот же в светлой и в тёмной теме.
+         */}
+        <div className="sticky top-0 z-10 bg-[Canvas] pb-1 pt-2">
+          <ResourceHeader
+            character={character}
+            onOpenArmorClass={() => setArmorClassOpen(true)}
+            onOpenHitPoints={() => setDamageOpen(true)}
+            onEditResources={() => setResourcesOpen(true)}
+          />
+        </div>
+
+        <ResourceBadges
           character={character}
           economy={economy}
           bookCastingTimes={dividing.castingTimes}
-          onOpenArmorClass={() => setArmorClassOpen(true)}
-          onOpenHitPoints={() => setDamageOpen(true)}
-          onEditResources={() => setResourcesOpen(true)}
         />
 
         <ActiveEffects
@@ -200,18 +214,14 @@ export function GameScreen() {
             }
           />
         </div>
-      </div>
 
-      <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
         <SpellFilters
           filters={filters}
           dividing={dividing}
           mode="play"
           onChange={setFilters}
         />
-      </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
         {rows.length > 0 ? (
           <ul aria-label={listLabel} className="flex flex-col gap-2">
             {rows}

@@ -511,15 +511,15 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayScreen />);
 
-    // Реакций, которые при этом боевые, у Торна нет: обе его реакции — защитные.
+    // Реакции, которую держат вниманием, у Торна нет: ни одна из его реакций не концентрационная.
     await user.click(screen.getByRole("button", { name: "Реакция" }));
-    await user.click(screen.getByRole("button", { name: "Боевое" }));
+    await user.click(screen.getByRole("button", { name: "Концентрация" }));
 
     expect(screen.getByText(/не подходит ни одно заклинание/)).toBeDefined();
-    // Кнопки сброса нет: выбранное снимают там же, где поставили, — полоса никуда не уехала.
+    // Кнопки сброса нет: выбранное снимают там же, где поставили.
     expect(screen.queryByRole("button", { name: /Сбросить/ })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Боевое" }));
+    await user.click(screen.getByRole("button", { name: "Концентрация" }));
     expect(screen.getByLabelText(/^Заклинания/)).toBeDefined();
   });
 
@@ -704,7 +704,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
     // На 7 уровне возвращается 3 за час: максимум 51 → 54, текущие не растут.
     expect(screen.getByLabelText("Ресурсы").textContent).toContain("51/54");
-    expect(screen.getByLabelText("Ресурсы").textContent).toContain("Очки 0");
+    expect(screen.getByLabelText("Прочие ресурсы").textContent).toContain("Очки 0");
   });
 
   it("бой запрещает час: кнопка остаётся видимой, но недоступной с причиной (FR-215)", async () => {
@@ -1148,7 +1148,8 @@ describe("магия крови в списке действий (FR-207)", () =
 
   it("её роль — «другое», и фильтр «Боевое» её тоже убирает", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<PlayScreen />);
+    // Отбор по роли живёт в «Книге»: в «Игре» полоса фильтров укладывается в один ряд без него.
+    await renderWithStores(<PlayScreen initialMode="book" />);
 
     await user.click(screen.getByRole("button", { name: "Боевое" }));
     expect(screen.queryByRole("button", { name: /Магия крови/ })).toBeNull();
@@ -1536,13 +1537,15 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     const user = userEvent.setup();
     await renderWithStores(<PlayScreen />);
 
-    const outOfFight = within(screen.getByRole("region", { name: "Ресурсы" }));
+    const outOfFight = within(screen.getByLabelText("Прочие ресурсы"));
+    expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
     expect(outOfFight.getByText(/Руны 3\/3/)).toBeDefined();
     expect(outOfFight.getByText(/Очки 0/)).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
 
-    const inFight = within(screen.getByRole("region", { name: "Ресурсы" }));
+    const inFight = within(screen.getByLabelText("Прочие ресурсы"));
+    expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
     expect(inFight.getByText(/Руны 3\/3/)).toBeDefined();
     expect(inFight.getByText(/Очки 0/)).toBeDefined();
   });
@@ -1575,8 +1578,8 @@ describe("«Знаки ограждения» вне боя (FR-153)", () => {
     await user.click(within(sheet).getByRole("button", { name: /Потратить руну/ }));
 
     expect(screen.getByLabelText(/Ячейки заклинаний/).textContent).toBeDefined();
-    const header = screen.getByRole("region", { name: "Ресурсы" });
-    expect(within(header).getByText(/Руны 2\/3/)).toBeDefined();
+    const badges = screen.getByLabelText("Прочие ресурсы");
+    expect(within(badges).getByText(/Руны 2\/3/)).toBeDefined();
   });
 });
 
