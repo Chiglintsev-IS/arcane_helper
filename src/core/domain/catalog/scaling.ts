@@ -5,7 +5,7 @@
  * в зависимости от уровня заклинания.
  */
 
-import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 export type DamageSpec = {
   dice: string;
