@@ -9,7 +9,7 @@ import { SheetBlock } from "./SheetBlock";
  * числа боя — в шапке «Игры». Правится здесь только база; ситуативное — статусы, поправки,
  * временные хиты — вводится там, где действует: в «Игре».
  */
-export function CharacterSheetScreen({
+export function CharacterSheet({
   character,
   onEdit,
 }: {

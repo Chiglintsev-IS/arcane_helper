@@ -30,7 +30,7 @@ import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
 import { ArcaneRecoverySheet } from "@/ui/features/arcane-recovery/ui/ArcaneRecoverySheet";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
-import { CampScreen } from "@/ui/widgets/camp/ui/CampScreen";
+import { Camp } from "@/ui/widgets/camp/ui/Camp";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
@@ -119,7 +119,7 @@ export function RestScreen() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-        <CampScreen
+        <Camp
           character={character}
           inFight={inFight}
           spells={spells}

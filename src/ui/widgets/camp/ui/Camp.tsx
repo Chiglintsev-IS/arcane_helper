@@ -5,6 +5,9 @@
  * своё место в переключателе режимов: за столом на привале успевает произойти больше одной
  * операции, и держать это поверх «Игры» стало тесно. «Прошёл час» сюда не входит: одна кнопка на
  * «Игру» и «Привал» стоит в общем ряду над этой областью, а не внутри неё.
+ *
+ * Экраном не называется, хотя занимает его целиком: экран владеет шторками и проводкой операций, а
+ * здесь — только разметка и обратные вызовы.
  */
 
 "use client";
@@ -14,7 +17,7 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import { CampActions } from "@/ui/features/rest/ui/CampActions";
 import { MaterialsList } from "@/ui/features/materials/ui/MaterialsList";
 
-export function CampScreen({
+export function Camp({
   character,
   inFight,
   spells,

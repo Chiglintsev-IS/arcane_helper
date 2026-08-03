@@ -7,7 +7,7 @@ import { exportFileName, exportSnapshot, parseImport } from "@/core/application/
 import { undoLast } from "@/core/application/session";
 
 import { DataSheet } from "@/ui/features/data-exchange/ui/DataSheet";
-import { JournalScreen as JournalWidget } from "@/ui/widgets/journal/ui/JournalScreen";
+import { Journal } from "@/ui/widgets/journal/ui/Journal";
 
 export function JournalScreen() {
   const { clock, session: sessionStore } = useStores();
@@ -23,7 +23,7 @@ export function JournalScreen() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-      <JournalWidget
+      <Journal
         entries={session.journal}
         onUndo={() => apply(undoLast)}
         onData={() => setDataOpen(true)}

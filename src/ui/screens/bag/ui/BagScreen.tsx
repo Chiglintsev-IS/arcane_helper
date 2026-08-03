@@ -12,7 +12,7 @@ import {
 } from "@/core/application/useCases/equipment";
 import { setArmorClassBaseOverride } from "@/core/application/useCases/sheet";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
-import { BagScreen as BagWidget } from "@/ui/widgets/bag/ui/BagScreen";
+import { Bag } from "@/ui/widgets/bag/ui/Bag";
 import { ArmorClassBaseSheet } from "@/ui/features/edit-character-sheet/ui/ArmorClassBaseSheet";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
@@ -39,7 +39,7 @@ export function BagScreen() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-      <BagWidget
+      <Bag
         character={character}
         onEditMoney={() => setOpen({ of: "money" })}
         onOpenItem={(id) => setOpen({ of: "item", id })}

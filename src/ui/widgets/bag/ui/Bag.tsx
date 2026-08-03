@@ -127,7 +127,7 @@ function ItemRow({
  * Компонент презентационный: состояние приходит параметрами, операции выбирает экран. Быстрый ввод
  * заводит вещь сразу в свою категорию — раздел и есть выбор категории, отдельного поля не нужно.
  */
-export function BagScreen({
+export function Bag({
   character,
   onEditMoney,
   onEditArmor,

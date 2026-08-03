@@ -19,7 +19,7 @@ import { useSession, useStores } from "@/ui/shared/model/storeContext";
 
 import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
 import { ArmorClassBaseSheet } from "@/ui/features/edit-character-sheet/ui/ArmorClassBaseSheet";
-import { CharacterSheetScreen } from "@/ui/widgets/character-sheet/ui/CharacterSheetScreen";
+import { CharacterSheet } from "@/ui/widgets/character-sheet/ui/CharacterSheet";
 import type { SheetEdit } from "@/ui/widgets/character-sheet/model/rows";
 import { HealthSheet } from "@/ui/features/edit-character-sheet/ui/HealthSheet";
 import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
@@ -50,7 +50,7 @@ export function SheetScreen() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-      <CharacterSheetScreen character={character} onEdit={setOpen} />
+      <CharacterSheet character={character} onEdit={setOpen} />
 
       {open?.block === "identity" ? (
         <IdentitySheet

@@ -4,13 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { CharacterSheetScreen } from "./CharacterSheetScreen";
+import { CharacterSheet } from "./CharacterSheet";
 
 afterEach(cleanup);
 
 describe("режим «Лист»", () => {
   it("одна колонка базы: без вкладок, без чисел боя, без вещей (FR-230)", () => {
-    render(<CharacterSheetScreen character={createThorne()} onEdit={() => {}} />);
+    render(<CharacterSheet character={createThorne()} onEdit={() => {}} />);
 
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Здоровье" })).toBeDefined();
@@ -28,7 +28,7 @@ describe("режим «Лист»", () => {
   it("здоровье показывает действующие числа, а не слагаемые (FR-240)", () => {
     const state = createThorne();
     render(
-      <CharacterSheetScreen
+      <CharacterSheet
         character={{
           ...state,
           temporaryHitPoints: 5,
@@ -48,7 +48,7 @@ describe("режим «Лист»", () => {
   it("у каждого блока есть кнопка правки с внятным именем, перебивки — у отметок", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
-    render(<CharacterSheetScreen character={createThorne()} onEdit={onEdit} />);
+    render(<CharacterSheet character={createThorne()} onEdit={onEdit} />);
 
     expect(screen.getByRole("button", { name: "Править: Интеллект" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Править: Уровень" })).toBeDefined();
@@ -60,7 +60,7 @@ describe("режим «Лист»", () => {
   it("подсказка стоит рядом со значением, а не вместо него", () => {
     const state = createThorne();
     render(
-      <CharacterSheetScreen
+      <CharacterSheet
         character={{ ...state, overrides: { ...state.overrides, initiative: 5 } }}
         onEdit={() => {}}
       />,
