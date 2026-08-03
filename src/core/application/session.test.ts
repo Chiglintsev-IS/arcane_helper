@@ -1,5 +1,10 @@
 import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
-import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
+import {
+  arcaneRecoveryUnavailability,
+  longRest,
+  shortRest,
+  useArcaneRecovery,
+} from "@/core/application/useCases/rest";
 import {
   endConcentration,
   endEffect,
@@ -819,7 +824,21 @@ describe("отдых и восстановление", () => {
     expect(current.character.arcaneRecovery.remaining).toBe(0);
 
     current = spendSpellSlot(current, 1, clock);
-    expect(() => useArcaneRecovery(current, { 1: 1 }, clock)).toThrow(/превышает остаток бюджета 0/);
+    expect(() => useArcaneRecovery(current, { 1: 1 }, clock)).toThrow(
+      /Дневной бюджет восстановления исчерпан/,
+    );
+  });
+
+  it("исчерпанный бюджет называется той же причиной, которой гаснет кнопка (FR-131)", () => {
+    let current = outOfCombat(session);
+    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, clock);
+    current = shortRest(current, clock);
+    current = useArcaneRecovery(current, { 1: 2 }, clock);
+    current = useArcaneRecovery(current, { 1: 2 }, clock);
+
+    const reason = arcaneRecoveryUnavailability(current.character);
+    expect(reason).toMatch(/Дневной бюджет восстановления исчерпан/);
+    expect(() => useArcaneRecovery(current, { 1: 1 }, clock)).toThrow(reason ?? "");
   });
 
   it("долгий отдых заполняет бюджет заново (FR-131)", () => {

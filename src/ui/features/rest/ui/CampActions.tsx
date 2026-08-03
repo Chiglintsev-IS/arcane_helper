@@ -14,6 +14,7 @@
 "use client";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { arcaneRecoveryUnavailability } from "@/core/application/useCases/rest";
 import { withPlural } from "@/core/shared/language";
 import { RestActionButton } from "./RestActionButton";
 
@@ -23,15 +24,12 @@ const COMBAT_REASON = "Не проходит во время боя";
  * Почему магическое восстановление сейчас недоступно. `null` — доступно.
  *
  * Бой перекрывает собственное предусловие: пока он идёт, называть «берётся после короткого
- * отдыха» бессмысленно — короткий отдых сейчас недоступен по той же причине.
+ * отдыха» бессмысленно — короткий отдых сейчас недоступен по той же причине. Остальные причины
+ * называет ядро — те же, которыми оно откажет при нажатии.
  */
 function arcaneRecoveryReason(character: CharacterState, inFight: boolean): string | null {
   if (inFight) return COMBAT_REASON;
-  if (character.arcaneRecovery.remaining <= 0) {
-    return "Дневной бюджет восстановления исчерпан до следующего долгого отдыха";
-  }
-  if (character.shortRestSinceLongRest !== true) return "Берётся после короткого отдыха";
-  return null;
+  return arcaneRecoveryUnavailability(character);
 }
 
 /**

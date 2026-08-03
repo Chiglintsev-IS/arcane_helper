@@ -93,6 +93,19 @@ export function shortRest(session: Session, clock: Clock): Session {
   );
 }
 
+/**
+ * Почему «Магическое восстановление» сейчас не берётся, кроме боя; `null` — берётся.
+ *
+ * Отметка короткого отдыха — не поле магических ресурсов, поэтому её достаёт отсюда сценарий и
+ * отдаёт агрегату вопросом. Экран спрашивает ту же причину, а не пересказывает правило:
+ * погашенная кнопка обязана называть ровно то, чем ответил бы отказ.
+ */
+export function arcaneRecoveryUnavailability(character: CharacterState): string | null {
+  return Character.of(character).arcana.arcaneRecoveryUnavailability(
+    character.shortRestSinceLongRest === true,
+  );
+}
+
 /** Магическое восстановление. Дневной бюджет уровней ячеек можно брать частями. */
 export function useArcaneRecovery(
   session: Session,
@@ -102,8 +115,9 @@ export function useArcaneRecovery(
   if (inFight(session)) {
     throw new DomainError("Пока идёт бой, магическое восстановление недоступно");
   }
-  if (session.character.shortRestSinceLongRest !== true) {
-    throw new DomainError("Берётся после короткого отдыха");
+  const unavailability = arcaneRecoveryUnavailability(session.character);
+  if (unavailability !== null) {
+    throw new DomainError(unavailability);
   }
   const root = Character.of(session.character);
   const after = root.withArcana(root.arcana.useArcaneRecovery(plan));
