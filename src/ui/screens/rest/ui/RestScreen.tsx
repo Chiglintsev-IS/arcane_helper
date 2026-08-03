@@ -84,7 +84,7 @@ export function RestScreen() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-col gap-2">
         <ResourceHeader
           character={character}
