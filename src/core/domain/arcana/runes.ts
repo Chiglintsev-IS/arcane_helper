@@ -64,3 +64,15 @@ export function runeEffect(rune: Rune, slotLevel: number): string {
       return `+${windRuneExtraSpeedFeet(slotLevel)} футов скорости себе и никаких атак по возможности до начала вашего следующего хода`;
   }
 }
+
+/**
+ * Причина, по которой руну сейчас не приложить; `null` — приложить можно.
+ *
+ * Руна прикладывается только к заклинанию, оплаченному ячейкой: очки заклинаний покупают само
+ * сотворение, а руна — особенность подкласса поверх потраченной ячейки.
+ */
+export function runeUnavailability(paidWithSlot: boolean, runesRemaining: number): string | null {
+  if (!paidWithSlot) return "При оплате кровью руна не применяется";
+  if (runesRemaining <= 0) return "Рун не осталось, вернутся долгим отдыхом";
+  return null;
+}

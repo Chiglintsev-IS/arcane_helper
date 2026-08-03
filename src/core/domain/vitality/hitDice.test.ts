@@ -6,6 +6,8 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   hitDiceHealing,
   hitDiceRegainedOnLongRest,
+  hitDiceRollRange,
+  isPossibleHitDiceRoll,
   maximumHitDiceForCast,
 } from "@/core/domain/vitality/hitDice";
 
@@ -74,5 +76,31 @@ describe("лечение по брошенным костям (FR-135, ADR-0021)
 
   it("заклинание без модификатора лечит ровно на выпавшее", () => {
     expect(hitDiceHealing({ ...cost, addsSpellcastingModifier: false }, 9, 4)).toBe(9);
+  });
+});
+
+describe("hitDiceRollRange", () => {
+  it("от числа костей до числа костей на грань", () => {
+    expect(hitDiceRollRange(2, 6)).toEqual({ minimum: 2, maximum: 12 });
+  });
+
+  it.each([0, -1, 1.5])("отклоняет число костей %s", (count) => {
+    expect(() => hitDiceRollRange(count, 6)).toThrow(DomainError);
+  });
+
+  it.each([0, -6, 6.5])("отклоняет грань %s", (size) => {
+    expect(() => hitDiceRollRange(2, size)).toThrow(DomainError);
+  });
+});
+
+describe("isPossibleHitDiceRoll", () => {
+  it("границы диапазона возможны", () => {
+    expect(isPossibleHitDiceRoll(2, 2, 6)).toBe(true);
+    expect(isPossibleHitDiceRoll(12, 2, 6)).toBe(true);
+  });
+
+  it("меньше числа костей и больше их суммы — невозможно", () => {
+    expect(isPossibleHitDiceRoll(1, 2, 6)).toBe(false);
+    expect(isPossibleHitDiceRoll(13, 2, 6)).toBe(false);
   });
 });

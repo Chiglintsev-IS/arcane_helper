@@ -33,6 +33,28 @@ export function maximumHitDiceForCast(
   return Math.min(allowedByCost, remaining);
 }
 
+/**
+ * Что вообще может выпасть на стольких костях: от числа костей до числа костей на грань.
+ *
+ * Приложение кубики не бросает и принимает результат от игрока — значит обязано знать, какой
+ * результат возможен: опечатка в вводе иначе уходит в состояние и в журнал.
+ */
+export function hitDiceRollRange(count: number, size: number): { minimum: number; maximum: number } {
+  if (!Number.isInteger(count) || count <= 0) {
+    throw new DomainError(`Костей должно быть хотя бы одна, получено ${count}`);
+  }
+  if (!Number.isInteger(size) || size <= 0) {
+    throw new DomainError(`У кости должна быть грань, получено ${size}`);
+  }
+  return { minimum: count, maximum: count * size };
+}
+
+/** Возможно ли такое выпавшее на стольких костях. */
+export function isPossibleHitDiceRoll(rolled: number, count: number, size: number): boolean {
+  const { minimum, maximum } = hitDiceRollRange(count, size);
+  return rolled >= minimum && rolled <= maximum;
+}
+
 /** Выпавшее на костях приходит от игрока: приложение кубики не бросает. */
 export function hitDiceHealing(
   cost: HitDiceCost,

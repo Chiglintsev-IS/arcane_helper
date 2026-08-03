@@ -1,7 +1,13 @@
 import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
-import { lifeRuneTemporaryHitPoints, RUNES, RUNE_LABEL, runeEffect } from "@/core/domain/arcana/runes";
+import {
+  lifeRuneTemporaryHitPoints,
+  RUNES,
+  RUNE_LABEL,
+  runeEffect,
+  runeUnavailability,
+} from "@/core/domain/arcana/runes";
 
 describe("runeEffect (FR-152)", () => {
   it.each([
@@ -58,5 +64,19 @@ describe("временные хиты руны жизни числом (FR-152)"
   it("уровень вне диапазона ячеек — ошибка, а не выдуманное число", () => {
     expect(() => lifeRuneTemporaryHitPoints(0)).toThrow(DomainError);
     expect(() => lifeRuneTemporaryHitPoints(10)).toThrow(DomainError);
+  });
+});
+
+describe("runeUnavailability", () => {
+  it("при оплате ячейкой и наличии рун — приложить можно", () => {
+    expect(runeUnavailability(true, 2)).toBeNull();
+  });
+
+  it("оплата кровью руну исключает", () => {
+    expect(runeUnavailability(false, 2)).toBe("При оплате кровью руна не применяется");
+  });
+
+  it("без рун называет, когда они вернутся", () => {
+    expect(runeUnavailability(true, 0)).toBe("Рун не осталось, вернутся долгим отдыхом");
   });
 });

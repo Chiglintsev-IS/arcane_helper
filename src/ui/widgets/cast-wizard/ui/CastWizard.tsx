@@ -17,7 +17,11 @@ import { castInstructions, renderAnnouncement } from "@/core/application/casting
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import { hitPointCost, spellPointCost } from "@/core/domain/arcana/slots";
 import { CharacterBase } from "@/core/domain/character/base";
-import { maximumHitDiceForCast } from "@/core/domain/vitality/hitDice";
+import {
+  hitDiceRollRange,
+  isPossibleHitDiceRoll,
+  maximumHitDiceForCast,
+} from "@/core/domain/vitality/hitDice";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import {
   visibleSteps,
@@ -32,6 +36,7 @@ import {
   RUNE_TARGET_LABEL,
   runeChoosesTarget,
   runeEffect,
+  runeUnavailability,
   type Rune,
   type RuneTarget,
 } from "@/core/domain/arcana/runes";
@@ -53,10 +58,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
  * пропавший блок читается как «руны в этой игре нет», а не как «не к этому сотворению».
  */
 function runeUnavailable(draft: CastDraft, character: CharacterState): string | null {
-  // Руна прикладывается только к заклинанию, оплаченному ячейкой.
-  if (draft.payment.kind !== "slot") return "При оплате кровью руна не применяется";
-  if (character.runes.remaining <= 0) return "Рун не осталось, вернутся долгим отдыхом";
-  return null;
+  return runeUnavailability(draft.payment.kind === "slot", character.runes.remaining);
 }
 
 /**
@@ -304,8 +306,9 @@ function HitDiceStep({
   const size = pool?.size ?? 0;
   const modifier = cost.addsSpellcastingModifier ? CharacterBase.of(character).spellcastingModifier : 0;
   const rolled = draft.hitDiceRolled;
+  const range = count === null ? null : hitDiceRollRange(count, size);
   const outOfRange =
-    count !== null && rolled !== null && (rolled < count || rolled > count * size);
+    count !== null && rolled !== null && !isPossibleHitDiceRoll(rolled, count, size);
 
   return (
     <div className="flex flex-col gap-3">
@@ -346,8 +349,8 @@ function HitDiceStep({
             aria-describedby="hit-dice-rolled-hint"
             type="number"
             inputMode="numeric"
-            min={count}
-            max={count * size}
+            min={range?.minimum}
+            max={range?.maximum}
             value={rolled ?? ""}
             onChange={(event) =>
               onRolled(event.target.value === "" ? null : Number(event.target.value))
@@ -356,7 +359,7 @@ function HitDiceStep({
           />
           {outOfRange ? (
             <span id="hit-dice-rolled-hint" className="text-xs text-danger">
-              На {count}d{size} может выпасть от {count} до {count * size}
+              На {count}d{size} может выпасть от {range?.minimum} до {range?.maximum}
             </span>
           ) : rolled === null ? (
             <span id="hit-dice-rolled-hint" className="text-xs opacity-80">
@@ -602,7 +605,7 @@ export function CastWizard({
     const { hitDiceCount: count, hitDiceRolled: rolled } = draft;
     if (count === null || rolled === null) return true;
     const size = character.hitDice?.size ?? 0;
-    return rolled < count || rolled > count * size;
+    return !isPossibleHitDiceRoll(rolled, count, size);
   })();
 
   const back = index > 0 ? { onBack: () => actions.back(steps) } : {};
