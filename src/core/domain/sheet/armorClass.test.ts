@@ -9,7 +9,7 @@ import {
   armorClassAdjustment,
   armorClassWithSpell,
   effectiveArmorClass,
-} from "@/core/domain/effects/armorClass";
+} from "@/core/domain/sheet/armorClass";
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 

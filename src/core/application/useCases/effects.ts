@@ -9,13 +9,13 @@ import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
 import {
   ARMOR_CLASS_ADJUSTMENT_NAME_RU,
   armorClassAdjustmentEffect,
-} from "@/core/domain/effects/armorClass";
+} from "@/core/domain/sheet/armorClass";
 import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
 export type { ConcentrationEnd };
-export { armorClassAdjustment } from "@/core/domain/effects/armorClass";
+export { armorClassAdjustment } from "@/core/domain/sheet/armorClass";
 
 /** Условие окончания ручного эффекта: игрок снимает его сам, приложение сроков не считает. */
 const MANUAL_EFFECT_END_CONDITION_RU = "Снимается вручную.";

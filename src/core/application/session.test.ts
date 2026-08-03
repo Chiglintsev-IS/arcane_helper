@@ -8,7 +8,7 @@ import {
   startManualEffect,
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
-import { effectiveArmorClass } from "@/core/domain/effects/armorClass";
+import { effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import { bloodCostFor, exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regenerationDue, startCombat } from "@/core/application/useCases/turn";
 import { adjustHitDice, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";

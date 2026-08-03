@@ -13,7 +13,7 @@ import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
-import { armorClassWithSpell } from "@/core/domain/effects/armorClass";
+import { armorClassWithSpell } from "@/core/domain/sheet/armorClass";
 import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
 import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/core/shared/language";
 import {
