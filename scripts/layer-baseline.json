@@ -1,0 +1,41 @@
+{
+  "edges": [
+    "arcana -> character",
+    "arcana -> vitality",
+    "catalog -> arcana",
+    "character -> arcana",
+    "character -> catalog",
+    "character -> effects",
+    "character -> equipment",
+    "character -> spellbook",
+    "character -> vitality",
+    "effects -> character",
+    "effects -> sheet",
+    "equipment -> character",
+    "journal -> character",
+    "spellbook -> arcana",
+    "spellbook -> character",
+    "vitality -> catalog",
+    "vitality -> character"
+  ],
+  "cycles": [
+    "arcana -> character -> arcana",
+    "arcana -> character -> catalog -> arcana",
+    "arcana -> character -> effects -> catalog -> arcana",
+    "arcana -> character -> spellbook -> arcana",
+    "arcana -> character -> spellbook -> catalog -> arcana",
+    "arcana -> character -> vitality -> catalog -> arcana",
+    "arcana -> vitality -> catalog -> arcana",
+    "arcana -> vitality -> character -> arcana",
+    "arcana -> vitality -> character -> catalog -> arcana",
+    "arcana -> vitality -> character -> effects -> catalog -> arcana",
+    "arcana -> vitality -> character -> spellbook -> arcana",
+    "arcana -> vitality -> character -> spellbook -> catalog -> arcana",
+    "character -> effects -> character",
+    "character -> effects -> sheet -> character",
+    "character -> effects -> sheet -> equipment -> character",
+    "character -> equipment -> character",
+    "character -> spellbook -> character",
+    "character -> vitality -> character"
+  ]
+}

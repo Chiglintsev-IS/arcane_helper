@@ -2,6 +2,7 @@
 """Проверка целостности спецификации.
 
     python3 scripts/check-docs.py
+    python3 scripts/check-docs.py --strict-link-remnants
 
 Что проверяется:
   1. Относительные ссылки между документами ведут на существующие файлы.
@@ -11,6 +12,8 @@
   5. Требования из ТЗ не потеряны.
   6. Статусы взяты из словаря CLAUDE.md.
   7. Имена из колонки «Имя в коде» глоссария существуют в src/.
+  8. Остатки удалённых ссылок: предлог, у которого пропал адресат, — «обоснование в », «инварианты
+     из ;». По умолчанию это предупреждения; флаг `--strict-link-remnants` делает их ошибками.
 
 Требования живут в доменных документах и в документах сквозных сценариев, экранов и обмена данными.
 Реестра фич больше нет: владельца требования задаёт файл, в котором оно определено, а не отдельная
@@ -58,6 +61,20 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 STATUS_LINE = re.compile(r"\*\*Статус:\*\*\s*([^·\n]+)")
 
 errors: list[str] = []
+warnings: list[str] = []
+
+# Предлоги, за которыми в этих документах стоит адресат-ссылка. Остаток находится по форме:
+# предлог, а сразу за ним пунктуация, двойной пробел или конец строки вместо адресата.
+PREPOSITION = r"(?:в|во|из|на|от|до|у|о|об|к|ко|с|со|по|для|при|про|через|см\.)"
+BEFORE = r"(?:^|[\s(«])"
+REMNANT_PUNCT = re.compile(rf"{BEFORE}{PREPOSITION}\s+[:;,.!?)]", re.IGNORECASE)
+REMNANT_GAP = re.compile(rf"{BEFORE}{PREPOSITION}  +\S", re.IGNORECASE)
+REMNANT_TRAIL = re.compile(rf"{BEFORE}{PREPOSITION}[ \t]+$", re.IGNORECASE)
+# Перенос строки на предлоге сам по себе законен: строки заворачиваются по ширине. Остаток — когда
+# следующая строка начинается с пунктуации, то есть адресат стоял на стыке и исчез.
+REMNANT_WRAP = re.compile(rf"{BEFORE}{PREPOSITION}$", re.IGNORECASE)
+PUNCT_START = re.compile(r"^\s*[:;,.!?)]")
+INLINE_CODE = re.compile(r"`[^`]+`")
 
 
 def markdown_files() -> list[pathlib.Path]:
@@ -164,6 +181,35 @@ def check_statuses(files: list[pathlib.Path]) -> None:
             errors.append(f"{path}: статус вне словаря — «{status}»")
 
 
+def check_link_remnants(files: list[pathlib.Path]) -> None:
+    """Ссылку удалили, а предлог с пунктуацией остались: «Запись ADR в :», «инварианты из ;».
+
+    Глазами такой хвост ловится хуже, чем образцом: фраза читается почти гладко, но адресата в ней
+    больше нет.
+    """
+    for path in files:
+        lines = path.read_text(encoding="utf-8").splitlines()
+        in_fence = False
+        for number, raw in enumerate(lines, start=1):
+            if raw.lstrip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            line = INLINE_CODE.sub("…", raw)
+            following = lines[number] if number < len(lines) else ""
+            remnant = (
+                REMNANT_PUNCT.search(line)
+                or REMNANT_GAP.search(line)
+                or REMNANT_TRAIL.search(line)
+                or (REMNANT_WRAP.search(line) and PUNCT_START.match(following))
+            )
+            if remnant:
+                warnings.append(
+                    f"{path}:{number}: предлог остался без адресата — «{raw.strip()[:70]}»"
+                )
+
+
 def main() -> int:
     if not os.path.isdir(DOCS):
         print("Запускать из корня репозитория", file=sys.stderr)
@@ -174,6 +220,18 @@ def main() -> int:
     check_requirements(files)
     check_glossary(pathlib.Path(DOCS))
     check_statuses(files)
+    check_link_remnants(files)
+
+    if "--strict-link-remnants" in sys.argv[1:]:
+        errors.extend(warnings)
+        warnings.clear()
+
+    if warnings:
+        print(f"Остатки удалённых ссылок: {len(warnings)} предупреждений "
+              "(ошибками их делает --strict-link-remnants)\n")
+        for warning in warnings:
+            print("  •", warning)
+        print()
 
     if errors:
         print(f"Проверка спецификации не прошла: {len(errors)} замечаний\n")
