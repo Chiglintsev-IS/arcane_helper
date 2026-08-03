@@ -2,8 +2,9 @@
  * Операции привала: короткий отдых, магическое восстановление и долгий отдых.
  *
  * Ни одна не идёт во время боя: короткий отдых — это час, а долгий разом уничтожает состояние
- * схватки, и оба предложения посреди раунда невыполнимы. Кнопка не исчезает, а гаснет и называет
- * причину словами — как магическое восстановление уже делает для своего предусловия.
+ * схватки, и оба предложения посреди раунда невыполнимы. Магическое восстановление гаснет ещё и по
+ * своим причинам: пока не было короткого отдыха и когда дневной бюджет исчерпан. Кнопка при этом не
+ * исчезает, а гаснет и называет причину словами: пропавшая не отвечает на вопрос «почему нельзя».
  *
  * Порядок рядов — по цене времени: короткий отдых и магическое восстановление, которое он
  * открывает, стоят рядом; долгий отдых — отдельной строкой, потому что он уничтожает состояние боя,
@@ -13,6 +14,7 @@
 "use client";
 
 import type { CharacterState } from "@/core/domain/character/state";
+import { withPlural } from "@/core/shared/language";
 import { RestActionButton } from "./RestActionButton";
 
 const COMBAT_REASON = "Не проходит во время боя";
@@ -25,10 +27,21 @@ const COMBAT_REASON = "Не проходит во время боя";
  */
 function arcaneRecoveryReason(character: CharacterState, inFight: boolean): string | null {
   if (inFight) return COMBAT_REASON;
-  if (!character.arcaneRecoveryAvailable) return "Уже использовано до следующего долгого отдыха";
+  if (character.arcaneRecovery.remaining <= 0) {
+    return "Дневной бюджет восстановления исчерпан до следующего долгого отдыха";
+  }
   if (character.shortRestSinceLongRest !== true) return "Берётся после короткого отдыха";
   return null;
 }
+
+/**
+ * Подпись кнопки восстановления: остаток бюджета виден до нажатия, а не после отказа — решение,
+ * сколько ячеек возвращать, требует знать остаток заранее.
+ */
+function arcaneRecoveryLabel(remaining: number): string {
+  return `Магическое восстановление · осталось ${withPlural(remaining, ["уровень", "уровня", "уровней"])}`;
+}
+
 
 export function CampActions({
   character,
@@ -61,7 +74,7 @@ export function CampActions({
          */}
         <RestActionButton
           onClick={onArcaneRecovery}
-          name="Магическое восстановление"
+          name={arcaneRecoveryLabel(character.arcaneRecovery.remaining)}
           {...(recoveryReason === null ? {} : { disabledReason: recoveryReason })}
         />
       </div>

@@ -228,7 +228,20 @@ export const characterStateSchema = z
      */
     temporaryHitPoints: z.number().int().nonnegative().default(0),
 
-    arcaneRecoveryAvailable: z.boolean(),
+    /**
+     * Дневной бюджет «Магического восстановления» уровнями ячеек: сколько всего и сколько осталось
+     * до следующего долгого отдыха. За столом его берут частями — остаток может быть нулём без
+     * долгого отдыха, а не только целиком доступен или целиком потрачен.
+     */
+    arcaneRecovery: z
+      .object({
+        maximum: z.number().int().nonnegative(),
+        remaining: z.number().int().nonnegative(),
+      })
+      .refine((value) => value.remaining <= value.maximum, {
+        message: "Бюджет магического восстановления не может остаться больше максимума",
+        path: ["remaining"],
+      }),
     /**
      * Был ли короткий отдых с последнего долгого.
      *

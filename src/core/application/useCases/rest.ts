@@ -99,7 +99,7 @@ export function shortRest(session: Session, clock: Clock): Session {
   );
 }
 
-/** Магическое восстановление. Один раз между долгими отдыхами. */
+/** Магическое восстановление. Дневной бюджет уровней ячеек можно брать частями. */
 export function useArcaneRecovery(
   session: Session,
   plan: SlotRecoveryPlan,
@@ -109,7 +109,7 @@ export function useArcaneRecovery(
     throw new DomainError("Пока идёт бой, магическое восстановление недоступно");
   }
   const root = Character.of(session.character);
-  const after = root.withArcana(root.arcana.useArcaneRecovery(plan, root.base.level));
+  const after = root.withArcana(root.arcana.useArcaneRecovery(plan));
   const returned = Object.entries(plan)
     .filter(([, count]) => count > 0)
     .map(([level, count]) => `${count}×${level} ур.`)

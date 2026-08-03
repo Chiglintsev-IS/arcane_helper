@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyArcaneRecovery,
   arcaneRecoveryBudget,
+  arcaneRecoveryPlanCost,
   castableSlotLevels,
   consumesSlot,
   hasSlotAvailable,
@@ -178,7 +179,7 @@ describe("validateArcaneRecovery", () => {
     4: { maximum: 1, remaining: 0 },
   });
 
-  // Допустимые наборы при бюджете 4 — примеры из.
+  // Допустимые наборы при остатке бюджета 4 — примеры из.
   const validPlans: ReadonlyArray<readonly [SlotRecoveryPlan, string]> = [
     [{ 4: 1 }, "одна ячейка 4 уровня"],
     [{ 3: 1, 1: 1 }, "ячейки 3 + 1"],
@@ -188,26 +189,37 @@ describe("validateArcaneRecovery", () => {
   ];
 
   it.each(validPlans)("принимает план: %s", (plan, description) => {
-    expect(validateArcaneRecovery(depletedIncludingFourth(), plan, 7), description).toEqual({
+    expect(validateArcaneRecovery(depletedIncludingFourth(), plan, 4), description).toEqual({
       valid: true,
     });
   });
 
-  it("отклоняет превышение бюджета", () => {
-    const result = validateArcaneRecovery(depleted(), { 3: 1, 2: 1 }, 7);
-    expect(result).toEqual({ valid: false, reason: expect.stringContaining("превышает бюджет 4") });
+  it("отклоняет превышение остатка бюджета", () => {
+    const result = validateArcaneRecovery(depleted(), { 3: 1, 2: 1 }, 4);
+    expect(result).toEqual({
+      valid: false,
+      reason: expect.stringContaining("превышает остаток бюджета 4"),
+    });
+  });
+
+  it("отклоняет план, не укладывающийся в частично потраченный остаток", () => {
+    const result = validateArcaneRecovery(depleted(), { 3: 1 }, 2);
+    expect(result).toEqual({
+      valid: false,
+      reason: expect.stringContaining("превышает остаток бюджета 2"),
+    });
   });
 
   it("отклоняет ячейку выше пятого уровня", () => {
     const slots: SpellSlots = { 6: { maximum: 1, remaining: 0 } };
-    const result = validateArcaneRecovery(slots, { 6: 1 }, 20);
+    const result = validateArcaneRecovery(slots, { 6: 1 }, 10);
     expect(result).toEqual({ valid: false, reason: expect.stringContaining("выше 5 уровня") });
   });
 
   it("отклоняет возврат сверх максимума по уровню", () => {
-    const result = validateArcaneRecovery(depleted(), { 1: 4, 2: 0 }, 20);
+    const result = validateArcaneRecovery(depleted(), { 1: 4, 2: 0 }, 10);
     expect(result).toEqual({ valid: true });
-    const excessive = validateArcaneRecovery(depleted(), { 1: 5 }, 20);
+    const excessive = validateArcaneRecovery(depleted(), { 1: 5 }, 10);
     expect(excessive).toEqual({
       valid: false,
       reason: expect.stringContaining("больше, чем потрачено"),
@@ -215,24 +227,34 @@ describe("validateArcaneRecovery", () => {
   });
 
   it("отклоняет уровень, которого у персонажа нет", () => {
-    const result = validateArcaneRecovery(depleted(), { 5: 1 }, 20);
+    const result = validateArcaneRecovery(depleted(), { 5: 1 }, 10);
     expect(result).toEqual({ valid: false, reason: expect.stringContaining("нет ячеек 5 уровня") });
   });
 
   it("отклоняет пустой план", () => {
-    expect(validateArcaneRecovery(depleted(), {}, 7)).toEqual({
+    expect(validateArcaneRecovery(depleted(), {}, 4)).toEqual({
       valid: false,
       reason: "План восстановления пуст",
     });
-    expect(validateArcaneRecovery(depleted(), { 1: 0 }, 7)).toEqual({
+    expect(validateArcaneRecovery(depleted(), { 1: 0 }, 4)).toEqual({
       valid: false,
       reason: "План восстановления пуст",
     });
   });
 
   it("отклоняет нецелое и отрицательное количество", () => {
-    expect(validateArcaneRecovery(depleted(), { 1: -1 }, 7).valid).toBe(false);
-    expect(validateArcaneRecovery(depleted(), { 1: 1.5 }, 7).valid).toBe(false);
+    expect(validateArcaneRecovery(depleted(), { 1: -1 }, 4).valid).toBe(false);
+    expect(validateArcaneRecovery(depleted(), { 1: 1.5 }, 4).valid).toBe(false);
+  });
+});
+
+describe("arcaneRecoveryPlanCost", () => {
+  it("складывает уровень, умноженный на количество", () => {
+    expect(arcaneRecoveryPlanCost({ 1: 2, 3: 1 })).toBe(5);
+  });
+
+  it("пустой план стоит ноль", () => {
+    expect(arcaneRecoveryPlanCost({})).toBe(0);
   });
 });
 
@@ -245,7 +267,7 @@ describe("applyArcaneRecovery", () => {
   });
 
   it("возвращает выбранные ячейки", () => {
-    expect(applyArcaneRecovery(depleted(), { 3: 1, 1: 1 }, 7)).toEqual({
+    expect(applyArcaneRecovery(depleted(), { 3: 1, 1: 1 }, 4)).toEqual({
       1: { maximum: 4, remaining: 1 },
       2: { maximum: 3, remaining: 0 },
       3: { maximum: 3, remaining: 2 },
@@ -255,16 +277,16 @@ describe("applyArcaneRecovery", () => {
 
   it("не мутирует исходное состояние", () => {
     const before = depleted();
-    applyArcaneRecovery(before, { 1: 2 }, 7);
+    applyArcaneRecovery(before, { 1: 2 }, 4);
     expect(before[1]).toEqual({ maximum: 4, remaining: 0 });
   });
 
   it("отклоняет некорректный план целиком, а не частично", () => {
-    expect(() => applyArcaneRecovery(depleted(), { 3: 2 }, 7)).toThrow(DomainError);
+    expect(() => applyArcaneRecovery(depleted(), { 3: 2 }, 4)).toThrow(DomainError);
   });
 
   it("игнорирует нулевые позиции плана", () => {
-    expect(applyArcaneRecovery(depleted(), { 1: 1, 2: 0 }, 7)[2]).toEqual({
+    expect(applyArcaneRecovery(depleted(), { 1: 1, 2: 0 }, 4)[2]).toEqual({
       maximum: 3,
       remaining: 0,
     });

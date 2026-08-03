@@ -16,7 +16,7 @@ import { useState } from "react";
 import type { CharacterState } from "@/core/domain/character/state";
 import {
   ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL,
-  arcaneRecoveryBudget,
+  arcaneRecoveryPlanCost,
   validateArcaneRecovery,
   type SlotRecoveryPlan,
 } from "@/core/domain/arcana/slots";
@@ -32,11 +32,10 @@ export function ArcaneRecoverySheet({
 }) {
   const [plan, setPlan] = useState<SlotRecoveryPlan>({});
 
-  const budget = arcaneRecoveryBudget(character.level);
-  const spentBudget = Object.entries(plan).reduce(
-    (sum, [level, count]) => sum + Number(level) * count,
-    0,
-  );
+  // Остаток дневного бюджета, а не полная формула по уровню: за столом его берут частями, и то,
+  // что доступно прямо сейчас, может быть меньше теоретического максимума.
+  const budget = character.arcaneRecovery.remaining;
+  const spentBudget = arcaneRecoveryPlanCost(plan);
 
   const recoverable = Object.entries(character.spellSlots)
     .map(([level, slot]) => ({ level: Number(level), ...slot }))
@@ -46,12 +45,12 @@ export function ArcaneRecoverySheet({
     )
     .sort((left, right) => left.level - right.level);
 
-  const validation = validateArcaneRecovery(character.spellSlots, plan, character.level);
+  const validation = validateArcaneRecovery(character.spellSlots, plan, budget);
 
   const change = (level: number, delta: number): void => {
     const next = { ...plan, [level]: Math.max(0, (plan[level] ?? 0) + delta) };
     // Проверяем до применения: кнопка «+» не должна уводить план за бюджет молча.
-    if (delta > 0 && !validateArcaneRecovery(character.spellSlots, next, character.level).valid) {
+    if (delta > 0 && !validateArcaneRecovery(character.spellSlots, next, budget).valid) {
       return;
     }
     setPlan(next);
