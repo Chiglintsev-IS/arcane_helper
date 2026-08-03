@@ -53,7 +53,6 @@ function thorne(): unknown {
       3: { maximum: 3, remaining: 3 },
       4: { maximum: 1, remaining: 1 },
     },
-    reactionAvailable: true,
     concentration: { spellId: "web", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [WEB_EFFECT],
     roleplayProfile: {
@@ -65,10 +64,8 @@ function thorne(): unknown {
       prohibitedThemes: ["огонь"],
       maximumPhraseLength: 15,
     },
-    turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: true },
     arcaneRecovery: { maximum: 4, remaining: 4 },
     hitPoints: { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 },
-    armorClass: { base: 10 },
     runes: { maximum: 3, remaining: 2 },
     spellPoints: { remaining: 3 },
     suppression: { firedUpon: false, underDirectSunlight: false },

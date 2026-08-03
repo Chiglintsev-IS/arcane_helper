@@ -407,4 +407,28 @@ describe("приведение состояния версии 1", () => {
       expect(migrateCharacterState(null)).toBeNull();
       expect(migrateCharacterState("не состояние")).toBe("не состояние");
     });
+
+  describe("поля, которые перестали принадлежать персонажу, читаются и отбрасываются", () => {
+    /** Версия 5 хранила экономию хода и режим экрана в состоянии; версия 6 их не знает. */
+    const legacy = {
+      ...createThorne(),
+      reactionAvailable: false,
+      turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: false },
+      screenMode: "book",
+    };
+
+    it("сохранение прежней версии открывается", () => {
+      expect(characterStateSchema.safeParse(migrateCharacterState(legacy)).success).toBe(true);
+    });
+
+    it("прочитанное состояние их не несёт: экономию хода считает журнал, режим держит оболочка", () => {
+      const state = characterStateSchema.parse(migrateCharacterState(legacy)) as Record<
+        string,
+        unknown
+      >;
+      expect(state).not.toHaveProperty("reactionAvailable");
+      expect(state).not.toHaveProperty("turnTracking");
+      expect(state).not.toHaveProperty("screenMode");
+    });
+  });
 });
