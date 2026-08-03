@@ -7,7 +7,7 @@
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { DomainError } from "@/core/domain/shared/errors";
-import { ascensionTierRate, hitPointCost } from "@/core/domain/arcana/slots";
+import { hitPointCost, hitPointsForPoints } from "@/core/domain/arcana/slots";
 import { commit, type Clock, type Session } from "@/core/application/session";
 import { inFight } from "./turn";
 
@@ -65,8 +65,7 @@ export function exchangeBlood(
   options: { allowAnyway?: boolean } = {},
 ): Session {
   const root = Character.of(session.character);
-  const rate = ascensionTierRate(root.base.level);
-  const hitPoints = spellPoints * rate;
+  const hitPoints = hitPointsForPoints(spellPoints, root.base.level);
   const { vitality, exchange } = root.vitality.exchangeBlood(hitPoints, spellPoints, options);
   const withPoints = root
     .withVitality(vitality)

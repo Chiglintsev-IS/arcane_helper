@@ -17,8 +17,8 @@ import { armorClassWithSpell } from "@/core/domain/sheet/armorClass";
 import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
 import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/core/shared/language";
 import {
-  ascensionTierRate,
   hitPointCost,
+  hitPointsForPoints,
   spellPointCost,
 } from "@/core/domain/arcana/slots";
 import {
@@ -292,7 +292,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
  * верным и после смены ступени возвышения.
  */
 export function bloodExchangeAnnouncement(points: number, character: CharacterState): string {
-  const spent = points * ascensionTierRate(character.level);
+  const spent = hitPointsForPoints(points, character.level);
   return (
     `Действием обмениваю ${withPlural(spent, ["хит", "хита", "хитов"])}` +
     ` на ${withPlural(points, ["очко", "очка", "очков"])} заклинаний.`
@@ -310,7 +310,7 @@ export function bloodExchangeAnnouncement(points: number, character: CharacterSt
  * стороны. Без активной концентрации оно молчит: напоминать было бы не о чем.
  */
 export function bloodExchangeInstructions(points: number, character: CharacterState): string[] {
-  const spent = points * ascensionTierRate(character.level);
+  const spent = hitPointsForPoints(points, character.level);
   const { hitPoints } = character;
   const after = hitPoints.current - spent;
 

@@ -317,7 +317,34 @@ export function ascensionTierRate(level: number): number {
   return tier.hitPointsPerPoint;
 }
 
-/** Стоимость заклинания в хитах: очки, умноженные на курс ступени. */
+/** Цена очков в хитах: очки, умноженные на курс ступени. */
+export function hitPointsForPoints(points: number, level: number): number {
+  if (!Number.isInteger(points) || points < 0) {
+    throw new DomainError(`Число очков должно быть целым неотрицательным, получено: ${points}`);
+  }
+  return points * ascensionTierRate(level);
+}
+
+/** Стоимость заклинания в хитах. */
 export function hitPointCost(spellLevel: number, level: number): number {
-  return spellPointCost(spellLevel) * ascensionTierRate(level);
+  return hitPointsForPoints(spellPointCost(spellLevel), level);
+}
+
+/**
+ * Потолок одного обмена: сколько очков покупается на текущие хиты.
+ *
+ * Не меньше одного даже при нехватке хитов: обмен до нуля разрешён и даёт раны, а запрещать его —
+ * решение за игрока. Нехватку называет отдельная проверка доступности.
+ */
+export function maximumExchangePoints(currentHitPoints: number, level: number): number {
+  return Math.max(1, Math.floor(currentHitPoints / ascensionTierRate(level)));
+}
+
+/** Уровни заклинаний, которые оплачиваются указанным числом очков. */
+export function affordableSpellLevels(points: number): number[] {
+  const levels: number[] = [];
+  for (let level = MINIMUM_SPELL_LEVEL; level <= MAXIMUM_PAYABLE_SPELL_LEVEL; level += 1) {
+    if (spellPointCost(level) <= points) levels.push(level);
+  }
+  return levels;
 }

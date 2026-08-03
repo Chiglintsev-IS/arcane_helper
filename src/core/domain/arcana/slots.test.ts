@@ -2,6 +2,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
 import {
+  affordableSpellLevels,
   applyArcaneRecovery,
   arcaneRecoveryBudget,
   arcaneRecoveryPlanCost,
@@ -11,6 +12,8 @@ import {
   hasSlotAvailable,
   highestSlotLevel,
   hitPointCost,
+  hitPointsForPoints,
+  maximumExchangePoints,
   refundSlot,
   restoreAllSlots,
   spellPointCost,
@@ -351,5 +354,49 @@ describe("hitPointCost", () => {
 
   it("на последней ступени дороже", () => {
     expect(hitPointCost(4, 20)).toBe(36);
+  });
+});
+
+describe("hitPointsForPoints", () => {
+  it("умножает очки на курс ступени", () => {
+    expect(hitPointsForPoints(2, 7)).toBe(6);
+    expect(hitPointsForPoints(2, 3)).toBe(4);
+  });
+
+  it("нулю очков соответствует ноль хитов", () => {
+    expect(hitPointsForPoints(0, 7)).toBe(0);
+  });
+
+  it.each([-1, 1.5])("отклоняет число очков %s", (points) => {
+    expect(() => hitPointsForPoints(points, 7)).toThrow(DomainError);
+  });
+});
+
+describe("maximumExchangePoints", () => {
+  it("считает целые очки по курсу ступени", () => {
+    expect(maximumExchangePoints(20, 7)).toBe(6);
+  });
+
+  it("остаток хитов очка не даёт", () => {
+    expect(maximumExchangePoints(8, 7)).toBe(2);
+  });
+
+  it("не опускается ниже одного очка: обмен до нуля разрешён", () => {
+    expect(maximumExchangePoints(1, 7)).toBe(1);
+    expect(maximumExchangePoints(0, 7)).toBe(1);
+  });
+});
+
+describe("affordableSpellLevels", () => {
+  it("называет уровни, которые оплачиваются очками", () => {
+    expect(affordableSpellLevels(5)).toEqual([1, 2, 3]);
+  });
+
+  it("одного очка не хватает ни на что", () => {
+    expect(affordableSpellLevels(1)).toEqual([]);
+  });
+
+  it("выше пятого уровня очками не платят, сколько бы их ни было", () => {
+    expect(affordableSpellLevels(100)).toEqual([1, 2, 3, 4, 5]);
   });
 });

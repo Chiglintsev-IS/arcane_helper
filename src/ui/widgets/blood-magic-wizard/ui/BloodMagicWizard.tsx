@@ -9,7 +9,12 @@ import { WizardShell } from "@/ui/shared/ui/WizardShell";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { bloodExchangeAnnouncement, bloodExchangeInstructions } from "@/core/application/casting/announcement";
 import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
-import { ascensionTierRate, MAXIMUM_PAYABLE_SPELL_LEVEL, spellPointCost } from "@/core/domain/arcana/slots";
+import {
+  affordableSpellLevels,
+  ascensionTierRate,
+  hitPointsForPoints,
+  maximumExchangePoints,
+} from "@/core/domain/arcana/slots";
 import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
 import { withPlural } from "@/core/shared/language";
 import { Vitality } from "@/core/domain/vitality/vitality";
@@ -66,18 +71,9 @@ export function exchangeWarnings(character: CharacterState, economy: TurnEconomy
   return warnings;
 }
 
-/** Уровни, которые оплачиваются указанным числом очков. Считается от суммы с уже имеющимися. */
-function affordableLevels(totalPoints: number): number[] {
-  const levels: number[] = [];
-  for (let level = 1; level <= MAXIMUM_PAYABLE_SPELL_LEVEL; level += 1) {
-    if (spellPointCost(level) <= totalPoints) levels.push(level);
-  }
-  return levels;
-}
-
 /** Подсказка «на что хватит»: очки живут до долгого отдыха, поэтому остаток тоже считается. */
 function affordableHint(totalPoints: number): string {
-  const levels = affordableLevels(totalPoints);
+  const levels = affordableSpellLevels(totalPoints);
   const last = levels.at(-1);
   if (last === undefined) return `Станет ${totalPoints} — на заклинание пока не хватает`;
   return (
@@ -97,7 +93,7 @@ function AmountStep({
   maximum: number;
   onChange: (points: number) => void;
 }) {
-  const spent = points * ascensionTierRate(character.level);
+  const spent = hitPointsForPoints(points, character.level);
   const { hitPoints } = character;
 
   return (
@@ -179,9 +175,7 @@ export function BloodMagicWizard({
   onCancel: () => void;
   error: string | null;
 }) {
-  const rate = ascensionTierRate(character.level);
-  // Обмен до нуля разрешён — он даёт раны, но это решение игрока.
-  const maximum = Math.max(1, Math.floor(character.hitPoints.current / rate));
+  const maximum = maximumExchangePoints(character.hitPoints.current, character.level);
 
   const [points, setPoints] = useState(Math.min(DEFAULT_POINTS, maximum));
   const [allowAnyway, setAllowAnyway] = useState(false);
