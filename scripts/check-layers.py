@@ -2,6 +2,7 @@
 """Проверка границ слоёв и чистоты комментариев.
 
     python3 scripts/check-layers.py
+    python3 scripts/check-layers.py --write-baseline
 
 Архитектура держится не договорённостью, а проверкой: договорённость забывают через месяц.
 
@@ -12,12 +13,20 @@
   4. Порядок слоёв FSD: app → screens → widgets → features → entities → shared, только вниз.
   5. Слайсы одного слоя не импортируют друг друга напрямую.
   6. Код не ссылается на документацию: ни путями `docs/…`, ни номерами требований и решений.
+  7. Рёбра между ограниченными контекстами внутри `core/domain/` — только из карты разрешённых.
+  8. Циклов между контекстами нет.
 
 Шестое правило — про хрупкость. Номер требования в комментарии превращает перенумерацию спеки в
 правку сотни файлов, а путь до документа ломается молча при первом же переносе. Связь спеки с кодом
 держат имена прогонов: они и так названы в разделе «Проверка» требования.
+
+Седьмое и восьмое терпят известный долг: контекст персонажа сегодня держит общую схему состояния, и
+рёбра вокруг него зафиксированы списком в `scripts/layer-baseline.json`. Ребро или цикл из базлайна
+считается долгом и называется счётчиком; новое ребро или новый цикл — ошибка. После законной
+структурной работы базлайн перегенерируется флагом `--write-baseline` — и только тогда.
 """
 
+import json
 import pathlib
 import re
 import sys
@@ -35,7 +44,32 @@ COMMENT = re.compile(r"/\*.*?\*/|//[^\n]*", re.S)
 
 FSD_ORDER = ["app", "screens", "widgets", "features", "entities", "shared"]
 
+BASELINE = pathlib.Path("scripts/layer-baseline.json")
+
+# Целевая карта рёбер между ограниченными контекстами. Ребро «A импортирует B» законно, только если
+# названо здесь; остальное — либо долг из базлайна, либо ошибка.
+ALLOWED_CONTEXT_EDGES = {
+    ("spellbook", "catalog"),
+    ("arcana", "catalog"),
+    ("effects", "catalog"),
+    ("encounter", "journal"),
+    ("sheet", "character"),
+    ("sheet", "equipment"),
+    ("sheet", "effects"),
+    ("sheet", "catalog"),
+}
+
+# Общее ядро доменной логики: его читают все контексты.
+SHARED_CONTEXT = "shared"
+
+# Сборка корня персонажа: она знает контексты, контексты её — нет. Каталога может ещё не быть,
+# правило заложено по имени и ждёт его появления.
+ASSEMBLY_CONTEXT = "assembly"
+
 errors: list[str] = []
+
+# Ребро «контекст → контекст» и файлы, которые его создают.
+context_edges: dict[tuple[str, str], set[str]] = {}
 
 
 def layer_of(path: str) -> tuple[str, str]:
@@ -50,6 +84,14 @@ def layer_of(path: str) -> tuple[str, str]:
     return parts[0], ""
 
 
+def domain_context(path: str) -> str | None:
+    """Ограниченный контекст модуля: каталог сразу под `core/domain/`."""
+    parts = path.split("/")
+    if len(parts) >= 3 and parts[0] == "core" and parts[1] == "domain" and "." not in parts[2]:
+        return parts[2]
+    return None
+
+
 def check_imports(path: pathlib.Path) -> None:
     # Тесты собирают слои намеренно: фикстура приходит из инфраструктуры, интеграционный прогон
     # поднимает экран целиком. Правило описывает рабочий код, а не то, чем его проверяют.
@@ -57,6 +99,7 @@ def check_imports(path: pathlib.Path) -> None:
         return
     relative = str(path.relative_to(SRC)).replace("\\", "/")
     source_layer, source_slice = layer_of(relative)
+    source_context = domain_context(relative)
 
     text = path.read_text(encoding="utf-8")
     # Импорт одного типа не создаёт зависимости времени выполнения: до сборки он исчезает. Внутри
@@ -65,6 +108,10 @@ def check_imports(path: pathlib.Path) -> None:
 
     for target in IMPORT.findall(text):
         target_layer, target_slice = layer_of(target)
+        target_context = domain_context(target)
+
+        if source_context and target_context and source_context != target_context:
+            context_edges.setdefault((source_context, target_context), set()).add(str(path))
 
         if source_layer.startswith("core") and (
             target_layer.startswith("ui") or target_layer == "app"
@@ -114,6 +161,113 @@ def check_comments(path: pathlib.Path) -> None:
             errors.append(f"{path}: номер спеки в коде — {match}")
 
 
+def edge_name(source: str, target: str) -> str:
+    return f"{source} -> {target}"
+
+
+def cycle_name(cycle: tuple[str, ...]) -> str:
+    return " -> ".join([*cycle, cycle[0]])
+
+
+def elementary_cycles(graph: dict[str, set[str]]) -> list[tuple[str, ...]]:
+    """Все простые циклы графа контекстов; каждый назван начиная с наименьшей вершины."""
+    nodes = sorted(set(graph) | {t for targets in graph.values() for t in targets})
+    found: set[tuple[str, ...]] = set()
+
+    def walk(start: str, node: str, path: tuple[str, ...], seen: frozenset[str]) -> None:
+        for step in sorted(graph.get(node, ())):
+            if step == start:
+                found.add(path)
+            elif step not in seen and step > start:
+                walk(start, step, path + (step,), seen | {step})
+
+    for start in nodes:
+        walk(start, start, (start,), frozenset({start}))
+    return sorted(found)
+
+
+def unmapped_edges() -> dict[tuple[str, str], set[str]]:
+    """Рёбра, которых нет в карте разрешённых: кандидаты в долг или в ошибку."""
+    return {
+        (source, target): files
+        for (source, target), files in context_edges.items()
+        if target != SHARED_CONTEXT
+        and source != ASSEMBLY_CONTEXT
+        and target != ASSEMBLY_CONTEXT
+        and (source, target) not in ALLOWED_CONTEXT_EDGES
+    }
+
+
+def load_baseline() -> tuple[set[str], set[str]]:
+    if not BASELINE.exists():
+        return set(), set()
+    payload = json.loads(BASELINE.read_text(encoding="utf-8"))
+    return set(payload.get("edges", [])), set(payload.get("cycles", []))
+
+
+def write_baseline() -> None:
+    payload = {
+        "edges": sorted(edge_name(a, b) for a, b in unmapped_edges()),
+        "cycles": sorted(cycle_name(c) for c in elementary_cycles(context_graph())),
+    }
+    BASELINE.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    print(
+        f"Базлайн переписан: {len(payload['edges'])} рёбер, "
+        f"{len(payload['cycles'])} циклов — {BASELINE}"
+    )
+
+
+def context_graph() -> dict[str, set[str]]:
+    graph: dict[str, set[str]] = {}
+    for source, target in context_edges:
+        graph.setdefault(source, set()).add(target)
+    return graph
+
+
+def check_contexts() -> tuple[int, int]:
+    """Рёбра и циклы контекстов против карты разрешённых и базлайна долгов.
+
+    Возвращает счётчики долга: сколько рёбер и циклов терпится по базлайну.
+    """
+    baseline_edges, baseline_cycles = load_baseline()
+
+    for (source, target), files in sorted(context_edges.items()):
+        if target == ASSEMBLY_CONTEXT and source != ASSEMBLY_CONTEXT:
+            for file in sorted(files):
+                errors.append(
+                    f"{file}: контекст импортирует сборку корня персонажа — "
+                    f"{source} → {target}, а знает контексты только сборка"
+                )
+
+    debt_edges = 0
+    for (source, target), files in sorted(unmapped_edges().items()):
+        if edge_name(source, target) in baseline_edges:
+            debt_edges += 1
+            continue
+        for file in sorted(files):
+            errors.append(
+                f"{file}: новое ребро контекстов — {source} → {target}; "
+                f"его нет ни в карте разрешённых рёбер, ни в базлайне долгов"
+            )
+
+    debt_cycles = 0
+    for cycle in elementary_cycles(context_graph()):
+        if cycle_name(cycle) in baseline_cycles:
+            debt_cycles += 1
+            continue
+        edges = list(zip(cycle, [*cycle[1:], cycle[0]]))
+        fresh = [
+            f"{a} → {b}" for a, b in edges if edge_name(a, b) not in baseline_edges
+        ]
+        shown = " → ".join([*cycle, cycle[0]])
+        detail = f" (рёбра вне базлайна: {', '.join(fresh)})" if fresh else ""
+        errors.append(f"новый цикл контекстов — {shown}{detail}")
+
+    return debt_edges, debt_cycles
+
+
 def main() -> int:
     if not SRC.is_dir():
         print("Запускать из корня репозитория", file=sys.stderr)
@@ -127,6 +281,11 @@ def main() -> int:
         for path in sorted([*root.rglob("*.ts")]):
             check_comments(path)
 
+    if "--write-baseline" in sys.argv[1:]:
+        write_baseline()
+
+    debt_edges, debt_cycles = check_contexts()
+
     if errors:
         print(f"Границы нарушены: {len(errors)} замечаний\n")
         for error in errors[:60]:
@@ -135,7 +294,10 @@ def main() -> int:
             print(f"  … и ещё {len(errors) - 60}")
         return 1
 
-    print(f"Границы соблюдены: {len(sources)} модулей")
+    summary = f"Границы соблюдены: {len(sources)} модулей"
+    if debt_edges or debt_cycles:
+        summary += f" · известных долгов: {debt_edges} рёбер, {debt_cycles} циклов"
+    print(summary)
     return 0
 
 
