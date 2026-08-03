@@ -15,7 +15,7 @@ import { checkAvailability, type Availability } from "@/core/application/casting
 import { castOptions, type CastOption } from "@/core/application/casting/castOptions";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
-import { hitPointCost, spellPointCost } from "@/core/domain/vitality/blood";
+import { hitPointCost, spellPointCost } from "@/core/domain/arcana/slots";
 import { CharacterBase } from "@/core/domain/character/base";
 import { maximumHitDiceForCast } from "@/core/domain/vitality/hitDice";
 import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";

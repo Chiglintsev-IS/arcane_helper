@@ -9,18 +9,6 @@
 import { DomainError } from "@/core/domain/shared/errors";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/character/abilities";
 
-/** Ступени возвышения: сколько хитов отдаётся за одно очко заклинаний. */
-const ASCENSION_TIERS: readonly { readonly upToLevel: number; readonly hitPointsPerPoint: number }[] = [
-  { upToLevel: 4, hitPointsPerPoint: 2 },
-  { upToLevel: 8, hitPointsPerPoint: 3 },
-  { upToLevel: 12, hitPointsPerPoint: 4 },
-  { upToLevel: 16, hitPointsPerPoint: 5 },
-  { upToLevel: 20, hitPointsPerPoint: 6 },
-];
-
-/** Стоимость сотворения в очках заклинаний по уровню заклинания. */
-const SPELL_POINT_COSTS: Readonly<Record<number, number>> = { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7 };
-
 /** Раны за обмен, опустивший здоровье до нуля: одна за сам факт и по одной за каждые три очка. */
 const WOUNDS_PER_POINTS = 3;
 
@@ -34,71 +22,28 @@ function assertLevel(level: number): void {
   }
 }
 
-/**
- * Курс обмена на данном уровне. Для Торна (7 уровень) — 3 хита за очко.
- *
- * Поиск ступени служит и проверкой уровня: нецелый, нулевой и запредельный уровень
- * не попадают ни в одну ступень.
- */
-export function ascensionTierRate(level: number): number {
-  const tier =
-    Number.isInteger(level) && level >= MINIMUM_CHARACTER_LEVEL
-      ? ASCENSION_TIERS.find((candidate) => level <= candidate.upToLevel)
-      : undefined;
-  if (tier === undefined) {
-    throw new DomainError(`Уровень персонажа вне допустимого диапазона: ${level}`);
-  }
-  return tier.hitPointsPerPoint;
-}
-
-/** Максимальный уровень заклинания, который вообще оплачивается очками. */
-export const MAXIMUM_PAYABLE_SPELL_LEVEL = 5;
-
-/** Стоимость заклинания в очках заклинаний. */
-export function spellPointCost(spellLevel: number): number {
-  const cost = SPELL_POINT_COSTS[spellLevel];
-  if (cost === undefined) {
-    throw new DomainError(
-      `Очками заклинаний оплачиваются только уровни 1…${MAXIMUM_PAYABLE_SPELL_LEVEL}, получено: ${spellLevel}`,
-    );
-  }
-  return cost;
-}
-
-/** Стоимость заклинания в хитах: очки, умноженные на курс ступени. */
-export function hitPointCost(spellLevel: number, level: number): number {
-  return spellPointCost(spellLevel) * ascensionTierRate(level);
-}
-
 export type Exchange = {
-  /** Сколько хитов будет потрачено — без остатка, не давшего очка. */
+  /** Сколько хитов будет потрачено. */
   hitPointsSpent: number;
   pointsCreated: number;
-  /** Остаток хитов, который не хватило до следующего очка: он не тратится. */
+  /** Остаток хитов, не давший очка: равен нулю, если хиты кратны курсу. */
   remainderIgnored: number;
 };
 
 /**
- * Обмен хитов на очки: даёт только целые очки, остаток не расходуется.
- * 10 хитов при курсе 3 дают 3 очка и оставляют 1 хит нетронутым.
+ * Обмен хитов на очки: принимает уже вычисленный курс (хитов за одно очко).
+ * Остаток в пределах курса не расходуется и не учитывается.
  */
-export function exchangeHitPoints(hitPoints: number, level: number): Exchange {
+export function exchangeHitPoints(hitPoints: number, rate: number): Exchange {
   if (!Number.isInteger(hitPoints) || hitPoints < 0) {
     throw new DomainError(`Количество хитов должно быть целым неотрицательным, получено: ${hitPoints}`);
   }
-  const rate = ascensionTierRate(level);
   const pointsCreated = Math.floor(hitPoints / rate);
   return {
     hitPointsSpent: pointsCreated * rate,
     pointsCreated,
     remainderIgnored: hitPoints - pointsCreated * rate,
   };
-}
-
-/** Обмен, достаточный для заклинания указанного уровня. */
-export function exchangeForSpellLevel(spellLevel: number, level: number): Exchange {
-  const hitPoints = hitPointCost(spellLevel, level);
-  return exchangeHitPoints(hitPoints, level);
 }
 
 /** Раны за обмен, опустивший здоровье до нуля. */

@@ -101,7 +101,7 @@ export function describeRepositoryContract(
         at: SAVED_AT,
         kind: "spell_cast",
         summaryRu: "Доспехи мага — ячейкой 1 уровня",
-        undoPatch: { reactionAvailable: true },
+        undoPatch: { inspiration: false },
         spellId: "mage-armor",
         slotLevel: 1,
         actionUsed: "action",

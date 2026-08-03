@@ -5,12 +5,15 @@ import {
   applyArcaneRecovery,
   arcaneRecoveryBudget,
   arcaneRecoveryPlanCost,
+  ascensionTierRate,
   castableSlotLevels,
   consumesSlot,
   hasSlotAvailable,
   highestSlotLevel,
+  hitPointCost,
   refundSlot,
   restoreAllSlots,
+  spellPointCost,
   spellSlotsForLevel,
   spendSlot,
   validateArcaneRecovery,
@@ -290,5 +293,63 @@ describe("applyArcaneRecovery", () => {
       maximum: 3,
       remaining: 0,
     });
+  });
+});
+
+describe("ascensionTierRate", () => {
+  it.each([
+    [1, 2],
+    [4, 2],
+    [5, 3],
+    [7, 3],
+    [8, 3],
+    [9, 4],
+    [12, 4],
+    [13, 5],
+    [16, 5],
+    [17, 6],
+    [20, 6],
+  ])("уровень %i даёт курс %i хитов за очко", (level, expected) => {
+    expect(ascensionTierRate(level)).toBe(expected);
+  });
+
+  it.each([0, 21, 7.5])("отклоняет уровень %s", (level) => {
+    expect(() => ascensionTierRate(level)).toThrow(DomainError);
+  });
+});
+
+describe("spellPointCost", () => {
+  it.each([
+    [1, 2],
+    [2, 3],
+    [3, 5],
+    [4, 6],
+    [5, 7],
+  ])("заклинание %i уровня стоит %i очков", (spellLevel, expected) => {
+    expect(spellPointCost(spellLevel)).toBe(expected);
+  });
+
+  it.each([0, 6, 9])("отклоняет уровень заклинания %i", (spellLevel) => {
+    expect(() => spellPointCost(spellLevel)).toThrow(DomainError);
+  });
+});
+
+describe("hitPointCost", () => {
+  it.each([
+    [1, 6],
+    [2, 9],
+    [3, 15],
+    [4, 18],
+  ])("заклинание %i уровня стоит %i хитов на уровне Торна", (spellLevel, expected) => {
+    expect(hitPointCost(spellLevel, 7)).toBe(expected);
+  });
+
+  it("на первой ступени то же заклинание дешевле", () => {
+    expect(hitPointCost(1, 3)).toBe(4);
+    expect(hitPointCost(3, 3)).toBe(10);
+  });
+
+  it("на последней ступени дороже", () => {
+    expect(hitPointCost(4, 20)).toBe(36);
   });
 });

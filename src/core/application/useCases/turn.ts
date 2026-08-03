@@ -61,11 +61,7 @@ function advanceTurn(
     .withEffects(board)
     .withVitality(root.vitality.clearFireSuppression().healUpTo(healed).vitality);
 
-  const restored: CharacterState = {
-    ...after.toState(),
-    reactionAvailable: true,
-    turnTracking: { actionAvailable: true, bonusActionAvailable: true },
-  };
+  const restored: CharacterState = after.toState();
 
   const notes = [
     ...(healed > 0 ? [`регенерация +${healed}`] : []),

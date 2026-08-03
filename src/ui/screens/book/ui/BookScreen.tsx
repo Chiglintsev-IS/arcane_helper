@@ -10,7 +10,6 @@ import { toCastRequest, type CastDraft } from "@/ui/features/cast-spell/model/ca
 import { castSpell } from "@/core/application/useCases/casting";
 import { setSpellNote, togglePreparation } from "@/core/application/useCases/library";
 import { Sheet } from "@/core/domain/sheet/sheet";
-import { ascensionTierRate } from "@/core/domain/vitality/blood";
 import { exchangeBlood } from "@/core/application/useCases/health";
 
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
@@ -144,9 +143,8 @@ export function BookScreen() {
           error={error}
           onCancel={() => setBloodOpen(false)}
           onConfirm={(points, allowAnyway) => {
-            const spent = points * ascensionTierRate(character.level);
             const failure = apply((current) =>
-              exchangeBlood(current, spent, clock, { allowAnyway }),
+              exchangeBlood(current, points, clock, { allowAnyway }),
             );
             if (failure === null) setBloodOpen(false);
           }}

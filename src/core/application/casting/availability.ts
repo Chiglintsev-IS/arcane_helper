@@ -2,7 +2,7 @@ import { Character } from "@/core/domain/character/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { spellPointCost, hitPointCost } from "@/core/domain/vitality/blood";
+import { spellPointCost, hitPointCost } from "@/core/domain/arcana/slots";
 import { longCastingTimeRu, type LongCastingUnit } from "@/core/shared/language";
 import { CANTRIP_LEVEL, consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
 

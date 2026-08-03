@@ -1,7 +1,6 @@
 {
   "edges": [
     "arcana -> character",
-    "arcana -> vitality",
     "catalog -> arcana",
     "character -> arcana",
     "character -> catalog",
@@ -23,11 +22,6 @@
     "arcana -> character -> spellbook -> arcana",
     "arcana -> character -> spellbook -> catalog -> arcana",
     "arcana -> character -> vitality -> catalog -> arcana",
-    "arcana -> vitality -> catalog -> arcana",
-    "arcana -> vitality -> character -> arcana",
-    "arcana -> vitality -> character -> catalog -> arcana",
-    "arcana -> vitality -> character -> spellbook -> arcana",
-    "arcana -> vitality -> character -> spellbook -> catalog -> arcana",
     "character -> effects -> character",
     "character -> equipment -> character",
     "character -> spellbook -> character",

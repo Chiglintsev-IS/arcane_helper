@@ -19,7 +19,8 @@ import { COMBAT_ROLE } from "@/ui/entities/spell/lib/format";
 import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/character/state";
-import { ascensionTierRate, bloodMagicAvailable } from "@/core/domain/vitality/blood";
+import { ascensionTierRate } from "@/core/domain/arcana/slots";
+import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
 import { withPlural } from "@/core/shared/language";
 import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 

@@ -19,8 +19,10 @@ import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/core/share
 import {
   ascensionTierRate,
   hitPointCost,
-  maximumRecoveryPerHour,
   spellPointCost,
+} from "@/core/domain/arcana/slots";
+import {
+  maximumRecoveryPerHour,
   woundsFromExchange,
 } from "@/core/domain/vitality/blood";
 import { MINIMUM_CONCENTRATION_DC } from "@/core/domain/effects/concentration";

@@ -12,7 +12,7 @@ import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catal
 import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
-export const EXPORT_SCHEMA_VERSION = 5;
+export const EXPORT_SCHEMA_VERSION = 6;
 
 const nonEmpty = z.string().trim().min(1);
 const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
@@ -238,7 +238,6 @@ export const characterStateSchema = z
     preparedSpellIds: z.array(nonEmpty),
 
     spellSlots: spellSlotsSchema,
-    reactionAvailable: z.boolean(),
 
     concentration: z
       .object({ spellId: nonEmpty, startedAt: isoDateTime })
@@ -248,21 +247,10 @@ export const characterStateSchema = z
     roleplayProfile: roleplayProfileSchema,
 
     /**
-     * Кэш экономии хода для интерфейса. Признака «включён» здесь нет: учёт ведётся ровно в режиме
-     * «Бой» и больше нигде — вне боя ходов не существует, и отдельный переключатель
-     * предлагал бы считать то, чего нет.
-     */
-    turnTracking: z.object({
-      actionAvailable: z.boolean(),
-      bonusActionAvailable: z.boolean(),
-    }),
-
-    /**
      * Временные хиты.
      *
      * Отдельным числом, а не прибавкой к текущим: сложенные вместе, они молча исказили бы и
-     * максимум, и КС проверки концентрации. Со значением по умолчанию — по той же причине, что и
-     * `screenMode`.
+     * максимум, и КС проверки концентрации.
      */
     temporaryHitPoints: z.number().int().nonnegative().default(0),
 

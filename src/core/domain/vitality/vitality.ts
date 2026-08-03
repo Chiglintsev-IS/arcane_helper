@@ -10,7 +10,6 @@ import { DomainError } from "@/core/domain/shared/errors";
 import type { CharacterState } from "@/core/domain/character/state";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
 import {
-  exchangeHitPoints,
   maximumRecoveryPerHour,
   regenerationPerTurn,
   traitsSuppressed,
@@ -177,7 +176,7 @@ export class Vitality {
   /** Обмен хитов на очки заклинаний: платит и максимум, и текущее здоровье. */
   exchangeBlood(
     hitPoints: number,
-    characterLevel: number,
+    spellPoints: number,
     options: { allowAnyway?: boolean } = {},
   ): { vitality: Vitality; exchange: Exchange } {
     if (this.suppressed && options.allowAnyway !== true) {
@@ -187,10 +186,10 @@ export class Vitality {
           : "Кровавое колдовство не действует под прямым солнечным светом",
       );
     }
-    const exchange = exchangeHitPoints(hitPoints, characterLevel);
-    if (exchange.pointsCreated === 0) {
-      throw new DomainError(`${hitPoints} хитов не хватает даже на одно очко заклинаний`);
+    if (spellPoints <= 0) {
+      throw new DomainError("Нужно хотя бы одно очко заклинаний");
     }
+    const exchange: Exchange = { hitPointsSpent: hitPoints, pointsCreated: spellPoints, remainderIgnored: 0 };
     if (exchange.hitPointsSpent > this.current && options.allowAnyway !== true) {
       throw new DomainError(`Нужно ${exchange.hitPointsSpent} хитов, в наличии ${this.current}`);
     }

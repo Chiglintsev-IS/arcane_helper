@@ -270,3 +270,54 @@ export function applyArcaneRecovery(
   }
   return recovered;
 }
+
+// ── Тариф кровавого колдовства ──────────────────────────────────────────────
+// Знание о стоимости очков принадлежит arcana: ячейки, очки и тариф — одно пространство.
+
+/** Максимальный уровень заклинания, который вообще оплачивается очками. */
+export const MAXIMUM_PAYABLE_SPELL_LEVEL = 5;
+
+/** Стоимость заклинания в очках заклинаний по уровню. */
+const SPELL_POINT_COSTS: Readonly<Record<number, number>> = { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7 };
+
+/** Ступени возвышения: сколько хитов отдаётся за одно очко заклинаний. */
+const ASCENSION_TIERS: readonly { readonly upToLevel: number; readonly hitPointsPerPoint: number }[] = [
+  { upToLevel: 4, hitPointsPerPoint: 2 },
+  { upToLevel: 8, hitPointsPerPoint: 3 },
+  { upToLevel: 12, hitPointsPerPoint: 4 },
+  { upToLevel: 16, hitPointsPerPoint: 5 },
+  { upToLevel: 20, hitPointsPerPoint: 6 },
+];
+
+/** Стоимость заклинания в очках заклинаний. */
+export function spellPointCost(spellLevel: number): number {
+  const cost = SPELL_POINT_COSTS[spellLevel];
+  if (cost === undefined) {
+    throw new DomainError(
+      `Очками заклинаний оплачиваются только уровни 1…${MAXIMUM_PAYABLE_SPELL_LEVEL}, получено: ${spellLevel}`,
+    );
+  }
+  return cost;
+}
+
+/**
+ * Курс обмена на данном уровне. Для Торна (7 уровень) — 3 хита за очко.
+ *
+ * Поиск ступени служит и проверкой уровня: нецелый, нулевой и запредельный уровень
+ * не попадают ни в одну ступень.
+ */
+export function ascensionTierRate(level: number): number {
+  const tier =
+    Number.isInteger(level) && level >= MINIMUM_CHARACTER_LEVEL
+      ? ASCENSION_TIERS.find((candidate) => level <= candidate.upToLevel)
+      : undefined;
+  if (tier === undefined) {
+    throw new DomainError(`Уровень персонажа вне допустимого диапазона: ${level}`);
+  }
+  return tier.hitPointsPerPoint;
+}
+
+/** Стоимость заклинания в хитах: очки, умноженные на курс ступени. */
+export function hitPointCost(spellLevel: number, level: number): number {
+  return spellPointCost(spellLevel) * ascensionTierRate(level);
+}

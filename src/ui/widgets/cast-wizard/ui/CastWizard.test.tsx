@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/character/state";
+import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
 
 // Художественный текст берётся из контента, а не переписывается в тесте: реплики правятся отдельно,
@@ -146,7 +147,7 @@ describe("подтверждение (FR-023, AC-11)", () => {
     // Две записи: «Бой начался» из `openWizard`, затем само применение.
     expect(session?.journal).toHaveLength(2);
     expect(session?.journal.at(-1)?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
-    expect(session?.character.turnTracking.actionAvailable).toBe(false);
+    expect(deriveTurnEconomy(stores.session.getState().session!).actionAvailable).toBe(false);
   });
 
   it("после подтверждения мастер закрывается", async () => {

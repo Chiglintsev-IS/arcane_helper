@@ -101,7 +101,6 @@ const RAW: unknown = {
   ],
 
   spellSlots: SLOTS,
-  reactionAvailable: true,
 
   activeEffects: [],
 
@@ -115,7 +114,6 @@ const RAW: unknown = {
     maximumPhraseLength: 15,
   },
 
-  turnTracking: { actionAvailable: true, bonusActionAvailable: true },
   arcaneRecovery: { maximum: ARCANE_RECOVERY_BUDGET, remaining: ARCANE_RECOVERY_BUDGET },
 
   hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },

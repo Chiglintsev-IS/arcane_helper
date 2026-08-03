@@ -13,7 +13,7 @@ import {
   type PaymentChoice,
   type TurnResources,
 } from "@/core/application/casting/availability";
-import { MAXIMUM_PAYABLE_SPELL_LEVEL } from "@/core/domain/vitality/blood";
+import { MAXIMUM_PAYABLE_SPELL_LEVEL } from "@/core/domain/arcana/slots";
 import { castableSlotLevels, CANTRIP_LEVEL, type CastMode } from "@/core/domain/arcana/slots";
 
 /** Способ сотворения: режим плюс оплата. */

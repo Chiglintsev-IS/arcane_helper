@@ -16,11 +16,11 @@ import {
   type Rune,
   type RuneTarget,
 } from "@/core/domain/arcana/runes";
-import { spellPointCost } from "@/core/domain/vitality/blood";
+import { spellPointCost } from "@/core/domain/arcana/slots";
 import { hitDiceHealing } from "@/core/domain/vitality/hitDice";
 import { durationWithRoundsRu } from "@/core/domain/effects/concentration";
 import {
-  ACTION_SPENT_MESSAGES,
+  checkAvailability,
   turnResourceFor,
   type PaymentChoice,
   type TurnResource,
@@ -54,45 +54,10 @@ export function actionUsedBy(spell: Spell): TurnResource | undefined {
   return turnResourceFor(spell.castingTime.type);
 }
 
-/**
- * Списывает потраченное внутри хода. Доступность считается по журналу, а флаги состояния
- * обновляются как кэш для интерфейса.
- */
-function spendAction(session: Session, spell: Spell, allowAnyway: boolean): CharacterState {
-  const { character } = session;
-  const used = actionUsedBy(spell);
-  if (used === undefined || !inFight(session)) return character;
-
-  const economy = deriveTurnEconomy(session);
-  const available =
-    used === "reaction"
-      ? economy.reactionAvailable
-      : used === "bonus_action"
-        ? economy.bonusActionAvailable
-        : economy.actionAvailable;
-
-  if (!available && !allowAnyway) {
-    throw new DomainError(ACTION_SPENT_MESSAGES[used]);
-  }
-
-  if (used === "reaction") return { ...character, reactionAvailable: false };
-  const turnTracking = { ...character.turnTracking };
-  if (used === "bonus_action") turnTracking.bonusActionAvailable = false;
-  else turnTracking.actionAvailable = false;
-  return { ...character, turnTracking };
-}
-
 function applyPayment(root: Character, request: CastRequest): Character {
   const { spell, mode, payment, allowAnyway = false } = request;
 
   if (!consumesSlot(spell.level, mode)) {
-    if (payment.kind !== "none") {
-      throw new DomainError(
-        spell.level === CANTRIP_LEVEL
-          ? "Заговор не расходует ячейку"
-          : "Ритуальное применение не расходует ячейку",
-      );
-    }
     return root;
   }
 
@@ -197,11 +162,27 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
 export function castSpell(session: Session, request: CastRequest, clock: Clock): Session {
   const { spell, allowAnyway = false } = request;
 
-  if (spell.concentration && session.character.concentration !== undefined && !allowAnyway) {
-    throw new DomainError("Уже идёт концентрация: замена требует отдельного подтверждения");
+  const turn = deriveTurnEconomy(session);
+  const { warnings } = checkAvailability({
+    spell,
+    character: session.character,
+    turn,
+    mode: request.mode,
+    payment: request.payment,
+  });
+  // Подготовку и остальные условия проверяет UI до вызова; здесь — только ресурсы хода и концентрация
+  const enforced = warnings.filter(
+    (w) =>
+      w.code === "concentration_busy" ||
+      w.code === "action_spent" ||
+      w.code === "bonus_action_spent" ||
+      w.code === "reaction_spent",
+  );
+  if (enforced.length > 0 && !allowAnyway) {
+    throw new DomainError(enforced[0]!.reasonRu);
   }
 
-  let root = Character.of(spendAction(session, spell, allowAnyway));
+  let root = Character.of(session.character);
   root = applyPayment(root, request);
   root = applyRune(root, request);
 

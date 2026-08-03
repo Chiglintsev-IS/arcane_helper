@@ -13,6 +13,7 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { exportSnapshot } from "@/core/application/dataExchange";
 import type { CharacterState } from "@/core/domain/character/state";
+import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
 import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
 
@@ -146,9 +147,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 
   it("израсходованная реакция видна ярлыком, а её состояние — доступным именем (FR-144)", async () => {
-    const character = createThorne();
-    character.reactionAvailable = false;
-    const { stores } = await renderWithStores(<PlayScreen />, character, IN_FIGHT);
+    const { stores } = await renderWithStores(<PlayScreen />, createThorne(), IN_FIGHT);
 
     // Реакция считается потраченной по журналу: отмечаем её расход применением «Щита».
     const user = userEvent.setup();
@@ -157,7 +156,8 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    expect(stores.session.getState().session?.character.reactionAvailable).toBe(false);
+    const session = stores.session.getState().session!;
+    expect(deriveTurnEconomy(session).reactionAvailable).toBe(false);
     const spent = screen.getByLabelText("Реакция израсходована");
     expect(within(spent).getByText("Реакция")).toBeDefined();
   });
@@ -970,14 +970,14 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
 
   it("провал спасброска отвечает руной, а не заклинанием (FR-153)", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<PlayScreen />);
+    const { stores } = await renderWithStores(<PlayScreen />, createThorne(), IN_FIGHT);
 
     await user.click(screen.getByRole("button", { name: "Реакции" }));
     await user.click(screen.getByRole("radio", { name: "Я провалил спасбросок" }));
     await user.click(screen.getByRole("button", { name: /Потратить руну/ }));
 
     expect(stores.session.getState().session?.character.runes.remaining).toBe(2);
-    expect(stores.session.getState().session?.character.reactionAvailable).toBe(false);
+    expect(deriveTurnEconomy(stores.session.getState().session!).reactionAvailable).toBe(false);
   });
 });
 
@@ -1321,7 +1321,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 
     await user.click(screen.getByRole("button", { name: "Новый ход" }));
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
-    expect(stores.session.getState().session?.character.turnTracking.actionAvailable).toBe(true);
+    expect(deriveTurnEconomy(stores.session.getState().session!).actionAvailable).toBe(true);
   });
 
   it("«Щит» сам исчезает с началом следующего хода, КД возвращается к 14 (FR-094)", async () => {

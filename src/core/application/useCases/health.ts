@@ -7,7 +7,7 @@
 import { Character } from "@/core/domain/character/character";
 import type { CharacterState } from "@/core/domain/character/state";
 import { DomainError } from "@/core/domain/shared/errors";
-import { hitPointCost } from "@/core/domain/vitality/blood";
+import { ascensionTierRate, hitPointCost } from "@/core/domain/arcana/slots";
 import { commit, type Clock, type Session } from "@/core/application/session";
 import { inFight } from "./turn";
 
@@ -54,26 +54,26 @@ export function grantTemporaryHitPoints(session: Session, amount: number, clock:
 }
 
 /**
- * Обмен хитов на очки заклинаний. Действие в свой ход; потеря хитов уроном не считается и проверку
- * концентрации не порождает — этот сценарий её и не запускает.
+ * Обмен хитов на очки заклинаний. Принимает количество очков; количество хитов вычисляется
+ * внутри по курсу ступени возвышения персонажа.
+ * Потеря хитов уроном не считается и проверку концентрации не порождает.
  */
 export function exchangeBlood(
   session: Session,
-  hitPoints: number,
+  spellPoints: number,
   clock: Clock,
   options: { allowAnyway?: boolean } = {},
 ): Session {
   const root = Character.of(session.character);
-  const { vitality, exchange } = root.vitality.exchangeBlood(hitPoints, root.base.level, options);
+  const rate = ascensionTierRate(root.base.level);
+  const hitPoints = spellPoints * rate;
+  const { vitality, exchange } = root.vitality.exchangeBlood(hitPoints, spellPoints, options);
   const withPoints = root
     .withVitality(vitality)
     .withArcana(root.arcana.gainSpellPoints(exchange.pointsCreated));
 
   const after: CharacterState = {
     ...withPoints.toState(),
-    ...(inFight(session)
-      ? { turnTracking: { ...session.character.turnTracking, actionAvailable: false } }
-      : {}),
   };
 
   return commit(

@@ -51,10 +51,8 @@ export function longRest(session: Session, clock: Clock): Session {
       .withArcana(root.arcana.restoredByLongRest())
       .withEffects(root.effects.afterLongRest())
       .toState(),
-    reactionAvailable: true,
     // Долгий отдых обнуляет отметку: следующее восстановление снова ждёт короткого отдыха.
     shortRestSinceLongRest: false,
-    turnTracking: { actionAvailable: true, bonusActionAvailable: true },
   };
 
   return commit(session, after, { kind: "long_rest", summaryRu: "Долгий отдых" }, clock);
@@ -80,11 +78,7 @@ export function shortRest(session: Session, clock: Clock): Session {
       .withVitality(vitality.clearFireSuppression())
       .withArcana(root.arcana.expireSpellPoints())
       .toState(),
-    reactionAvailable: true,
-    // Отметка нужна интерфейсу: сама операция восстановления её не проверяет — отдых мог случиться
-    // за столом без нажатия кнопки.
     shortRestSinceLongRest: true,
-    turnTracking: { actionAvailable: true, bonusActionAvailable: true },
   };
 
   const notes = hourNotes(returned, healed, hadSpellPoints);
@@ -107,6 +101,9 @@ export function useArcaneRecovery(
 ): Session {
   if (inFight(session)) {
     throw new DomainError("Пока идёт бой, магическое восстановление недоступно");
+  }
+  if (session.character.shortRestSinceLongRest !== true) {
+    throw new DomainError("Берётся после короткого отдыха");
   }
   const root = Character.of(session.character);
   const after = root.withArcana(root.arcana.useArcaneRecovery(plan));

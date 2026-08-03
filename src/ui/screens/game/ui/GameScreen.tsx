@@ -22,7 +22,6 @@ import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application
 import { exchangeBlood, grantTemporaryHitPoints, heal, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { Sheet } from "@/core/domain/sheet/sheet";
-import { ascensionTierRate } from "@/core/domain/vitality/blood";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
@@ -241,9 +240,8 @@ export function GameScreen() {
           error={error}
           onCancel={() => setBloodOpen(false)}
           onConfirm={(points, allowAnyway) => {
-            const spent = points * ascensionTierRate(character.level);
             const failure = apply((current) =>
-              exchangeBlood(current, spent, clock, { allowAnyway }),
+              exchangeBlood(current, points, clock, { allowAnyway }),
             );
             if (failure === null) setBloodOpen(false);
           }}
@@ -309,7 +307,7 @@ export function GameScreen() {
           spells={inMode}
           character={character}
           reactionAvailable={economy.reactionAvailable}
-          runeAvailable={wardingSigilAvailable(character)}
+          runeAvailable={wardingSigilAvailable(session)}
           onCast={(spell) => {
             setReactionsOpen(false);
             draftStore.getState().start(spell, context);
@@ -342,7 +340,7 @@ export function GameScreen() {
         <ConcentrationCheckCard
           check={pendingCheck}
           spellNameRu={concentrationSummary.nameRu}
-          runeAvailable={wardingSigilAvailable(character)}
+          runeAvailable={wardingSigilAvailable(session)}
           onSuccess={() => setPendingCheck(null)}
           onSpendRune={() => {
             if (apply((current) => spendRuneOnWardingSigil(current, clock)) === null) {

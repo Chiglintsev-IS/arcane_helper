@@ -21,7 +21,7 @@ import {
   type SlotRecoveryPlan,
   type SpellSlots,
 } from "./slots";
-import { spellPointCost } from "@/core/domain/vitality/blood";
+import { spellPointCost } from "./slots";
 
 export type ArcanaState = Pick<
   CharacterState,

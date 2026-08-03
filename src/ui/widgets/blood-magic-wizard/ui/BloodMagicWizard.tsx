@@ -9,12 +9,8 @@ import { WizardShell } from "@/ui/shared/ui/WizardShell";
 import type { CharacterState } from "@/core/domain/character/state";
 import { bloodExchangeAnnouncement, bloodExchangeInstructions } from "@/core/application/casting/announcement";
 import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
-import {
-  ascensionTierRate,
-  bloodMagicAvailable,
-  MAXIMUM_PAYABLE_SPELL_LEVEL,
-  spellPointCost,
-} from "@/core/domain/vitality/blood";
+import { ascensionTierRate, MAXIMUM_PAYABLE_SPELL_LEVEL, spellPointCost } from "@/core/domain/arcana/slots";
+import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
 import { withPlural } from "@/core/shared/language";
 import { Vitality } from "@/core/domain/vitality/vitality";
 
