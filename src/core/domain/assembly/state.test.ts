@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { EXPORT_SCHEMA_VERSION, characterStateSchema, exportFileSchema } from "@/core/domain/assembly/state";
-import { roleplayProfileSchema } from "@/core/domain/character/schema";
-import { spellSlotsSchema } from "@/core/domain/arcana/schema";
-import { activeEffectSchema } from "@/core/domain/effects/schema";
+import {
+  characterStateSchema,
+  exportFileSchema,
+  EXPORT_SCHEMA_VERSION,
+} from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { Equipment } from "@/core/domain/equipment/equipment";
 
+/**
+ * Полная схема состояния: что она собирает и что отвергает целиком.
+ *
+ * Инварианты контекстов проверяются у владельцев — здесь проверяется, что сборка их зовёт: доводчик,
+ * которого перестали вызывать, иначе умер бы молча.
+ */
 const WEB_EFFECT = {
   id: "effect-web",
   spellId: "web",
@@ -117,23 +123,6 @@ describe("characterStateSchema принимает корректное сост�
   });
 });
 
-describe("ячейки заклинаний", () => {
-  it("отклоняет остаток выше максимума", () => {
-    expect(
-      spellSlotsSchema.safeParse({ 1: { maximum: 4, remaining: 5 } }).success,
-    ).toBe(false);
-  });
-
-  it("допускает отрицательный остаток: долг после «Применить всё равно»", () => {
-    expect(spellSlotsSchema.safeParse({ 1: { maximum: 4, remaining: -1 } }).success).toBe(true);
-  });
-
-  it("отклоняет уровень ячейки вне 1…9", () => {
-    expect(spellSlotsSchema.safeParse({ 0: { maximum: 1, remaining: 1 } }).success).toBe(false);
-    expect(spellSlotsSchema.safeParse({ 10: { maximum: 1, remaining: 1 } }).success).toBe(false);
-  });
-});
-
 describe("целостность списков заклинаний", () => {
   it("отклоняет повторы в книге заклинаний", () => {
     expect(firstError(mutate((draft) => { draft.spellbookSpellIds = ["web", "web"]; })))
@@ -201,38 +190,6 @@ describe("инварианты концентрации", () => {
   });
 });
 
-describe("схемы вложенных структур", () => {
-  it("активный эффект без условия завершения отклоняется", () => {
-    const { endConditionRu: _omitted, ...withoutCondition } = WEB_EFFECT;
-    expect(activeEffectSchema.safeParse(withoutCondition).success).toBe(false);
-  });
-
-  it("активный эффект без повторяемого действия принимается", () => {
-    const { repeatableAction: _omitted, ...withoutAction } = WEB_EFFECT;
-    expect(activeEffectSchema.safeParse(withoutAction).success).toBe(true);
-  });
-
-  it("активный эффект без заклинания (ручной) принимается", () => {
-    const { spellId: _omitted, ...manual } = WEB_EFFECT;
-    expect(
-      activeEffectSchema.safeParse({ ...manual, isConcentration: false }).success,
-    ).toBe(true);
-  });
-
-  it("признак ручного эффекта — закрытый словарь: поправка к КД принимается, чужое слово нет", () => {
-    const { spellId: _omitted, ...manual } = WEB_EFFECT;
-    const withKind = (manualKind: string) => ({ ...manual, isConcentration: false, manualKind });
-    expect(activeEffectSchema.safeParse(withKind("armorAdjustment")).success).toBe(true);
-    expect(activeEffectSchema.safeParse(withKind("blessing")).success).toBe(false);
-  });
-
-  it("профиль отыгрыша без тона отклоняется", () => {
-    const profile = structuredClone(thorne()) as { roleplayProfile: Record<string, unknown> };
-    profile.roleplayProfile.tone = [];
-    expect(roleplayProfileSchema.safeParse(profile.roleplayProfile).success).toBe(false);
-  });
-});
-
 describe("exportFileSchema", () => {
   const file = () => ({
     schemaVersion: EXPORT_SCHEMA_VERSION,
@@ -258,51 +215,18 @@ describe("exportFileSchema", () => {
   });
 });
 
-describe("лист персонажа", () => {
-  it("Торн заполнен целиком", () => {
+
+describe("состояние целиком", () => {
+  it("Торн собирается схемой и не теряет полей со значением по умолчанию", () => {
     const thorneState = createThorne();
     expect(thorneState.species).toBe("Лунный тролль");
     expect(thorneState.subclass).toBe("Создатель рун");
     expect(thorneState.size).toBe("large");
     expect(thorneState.speed).toBe(30);
-    expect(thorneState.abilities).toEqual({
-      strength: 8,
-      dexterity: 14,
-      constitution: 16,
-      intelligence: 18,
-      wisdom: 12,
-      charisma: 8,
-    });
-    expect(thorneState.saveProficiencies).toEqual(["intelligence", "wisdom"]);
-    expect(thorneState.skills).toEqual({
-      arcana: "proficient",
-      investigation: "proficient",
-      nature: "proficient",
-      perception: "proficient",
-    });
-    expect(thorneState.miscBonuses).toEqual({
-      spellcasting: 0,
-      armorClass: 0,
-      savingThrows: 0,
-    });
-    expect(Equipment.of(thorneState).armorClassBase).toBe(10);
-    expect(thorneState.equipment.items.map((item) => item.nameRu)).toEqual([
-      "Магическая фокусировка +1",
-      "Мантия +1",
-      "Плащ защиты",
-      "Комплект болотной маскировки",
-    ]);
-
-    const kit = thorneState.equipment.items.at(-1);
-    expect(kit?.note).toBe("1d4 к Скрытности в болотах");
-    expect(kit?.bonuses).toBeUndefined();
-    expect(kit?.worn).toBe(false);
-    // Сохранение Торна не называло количества ни у одной вещи — старая запись читается как одна штука.
-    expect(kit?.count).toBe(1);
-    expect(kit?.kind).toBe("other");
     expect(thorneState.exhaustion).toBe(0);
     expect(thorneState.inspiration).toBe(false);
     expect(thorneState.overrides).toEqual({ saves: {}, skills: {} });
+    expect(thorneState.miscBonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
   });
 
   it("отсутствующие поля получают значение по умолчанию: обновление не теряет данных", () => {
@@ -314,78 +238,5 @@ describe("лист персонажа", () => {
     expect(parsed.species).toBe("");
     expect(parsed.skills).toEqual({});
     expect(parsed.exhaustion).toBe(0);
-  });
-
-  it("характеристика вне диапазона 1–30 отвергается", () => {
-    const broken = { ...createThorne(), abilities: { ...createThorne().abilities, strength: 0 } };
-    const result = characterStateSchema.safeParse(broken);
-    expect(result.success).toBe(false);
-  });
-
-  it("вещь без количества считается одной штукой: старое сохранение не лжёт о запасах", () => {
-    const legacy = {
-      ...createThorne(),
-      equipment: {
-        ...createThorne().equipment,
-        items: [{ id: "rope", nameRu: "Верёвка" }],
-      },
-    };
-    const parsed = characterStateSchema.parse(legacy);
-    expect(parsed.equipment.items[0]?.count).toBe(1);
-  });
-
-  it("счёт вещи — от нуля до предела: ноль хранится, отрицательное и перебор отвергаются", () => {
-    const withCount = (count: number) => ({
-      ...createThorne(),
-      equipment: {
-        ...createThorne().equipment,
-        items: [{ id: "healing-potion", nameRu: "Зелье лечения", count }],
-      },
-    });
-    expect(characterStateSchema.safeParse(withCount(0)).success).toBe(true);
-    expect(characterStateSchema.safeParse(withCount(-1)).success).toBe(false);
-    expect(characterStateSchema.safeParse(withCount(9999)).success).toBe(true);
-    expect(characterStateSchema.safeParse(withCount(10000)).success).toBe(false);
-  });
-
-  it("категория вещи ограничена четырьмя: экипировка, расходник, ингредиент, другое", () => {
-    const withKind = (kind: string) => ({
-      ...createThorne(),
-      equipment: {
-        ...createThorne().equipment,
-        items: [{ id: "thing", nameRu: "Штука", kind }],
-      },
-    });
-    expect(characterStateSchema.safeParse(withKind("gear")).success).toBe(true);
-    expect(characterStateSchema.safeParse(withKind("consumable")).success).toBe(true);
-    expect(characterStateSchema.safeParse(withKind("ingredient")).success).toBe(true);
-    expect(characterStateSchema.safeParse(withKind("other")).success).toBe(true);
-    // Прежние рода в живом состоянии не хранятся: их переводит приведение, а не схема.
-    expect(characterStateSchema.safeParse(withKind("potion")).success).toBe(false);
-  });
-
-  it("кошелёк по умолчанию пуст, отрицательная монета отвергается", () => {
-    const { money: _gone, ...equipment } = createThorne().equipment;
-    const parsed = characterStateSchema.parse({ ...createThorne(), equipment });
-    expect(parsed.equipment.money).toEqual({ gold: 0, silver: 0, copper: 0 });
-
-    const negative = {
-      ...createThorne(),
-      equipment: { ...createThorne().equipment, money: { ...parsed.equipment.money, gold: -1 } },
-    };
-    expect(characterStateSchema.safeParse(negative).success).toBe(false);
-  });
-
-  it("цена вещи необязательна, а заданная проверяется монетой и целым числом", () => {
-    const withPrice = (price: unknown) => ({
-      ...createThorne(),
-      equipment: {
-        ...createThorne().equipment,
-        items: [{ id: "thing", nameRu: "Штука", price }],
-      },
-    });
-    expect(characterStateSchema.safeParse(withPrice({ amount: 50, currency: "gold" })).success).toBe(true);
-    expect(characterStateSchema.safeParse(withPrice({ amount: -1, currency: "gold" })).success).toBe(false);
-    expect(characterStateSchema.safeParse(withPrice({ amount: 50, currency: "рубль" })).success).toBe(false);
   });
 });
