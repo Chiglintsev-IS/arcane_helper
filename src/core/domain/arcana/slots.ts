@@ -194,6 +194,23 @@ export function arcaneRecoveryPlanCost(plan: SlotRecoveryPlan): number {
   return Object.entries(plan).reduce((total, [level, count]) => total + Number(level) * count, 0);
 }
 
+/** Ячейка, которую «Магическое восстановление» вправе вернуть: её уровень и сколько потрачено. */
+export type RecoverableSlot = { level: number; maximum: number; remaining: number };
+
+/**
+ * Ячейки, которые восстановление вправе вернуть: не выше своего предела уровня и потраченные.
+ *
+ * Порядок — от младших к старшим: правило говорит о суммарном уровне, и выбирать удобнее снизу.
+ */
+export function recoverableSlots(slots: SpellSlots): RecoverableSlot[] {
+  return Object.entries(slots)
+    .map(([level, slot]) => ({ level: Number(level), ...slot }))
+    .filter(
+      (slot) => slot.level <= ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL && slot.remaining < slot.maximum,
+    )
+    .sort((left, right) => left.level - right.level);
+}
+
 /**
  * Проверяет план восстановления: суммарный уровень в пределах переданного остатка бюджета, уровень
  * ячейки не выше пятого, и ни по одному уровню не превышен максимум.

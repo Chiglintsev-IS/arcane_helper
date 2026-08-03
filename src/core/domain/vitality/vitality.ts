@@ -50,9 +50,14 @@ export class Vitality {
     return this.state.hitPoints.masterReduction;
   }
 
+  /** Насколько максимум урезан вообще: обе половины цены вместе. */
+  get maximumReduction(): number {
+    return this.bloodReduction + this.masterReduction;
+  }
+
   /** Действующий максимум: то, во что упирается лечение и от чего считается половина. */
   get maximum(): number {
-    return this.maximumBase - this.bloodReduction - this.masterReduction;
+    return this.maximumBase - this.maximumReduction;
   }
 
   get temporary(): number {

@@ -3,9 +3,9 @@
 import { useState } from "react";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { EXHAUSTION_STEPS } from "@/core/domain/character/abilities";
 import { EditSheetFrame } from "./EditSheetFrame";
 
-const STEPS = [0, 1, 2, 3, 4, 5, 6];
 
 export function MarksSheet({
   character,
@@ -26,7 +26,7 @@ export function MarksSheet({
       onSave={() => onSave({ exhaustion, inspiration })}
     >
       <div role="radiogroup" aria-label="Ступень истощения" className="flex flex-wrap gap-1">
-        {STEPS.map((step) => (
+        {EXHAUSTION_STEPS.map((step) => (
           <button
             key={step}
             type="button"

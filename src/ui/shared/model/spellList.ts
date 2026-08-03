@@ -11,33 +11,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { type Spell } from "@/core/domain/catalog/spell";
 import type { CombatRole } from "@/core/domain/catalog/combatRole";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
-import { isSpellReady, ritualAvailable } from "@/core/application/casting/castOptions";
-
-/** Виды времени накладывания, укладывающиеся в один ход. */
-const WITHIN_TURN = new Set<Spell["castingTime"]["type"]>(["action", "bonus_action", "reaction"]);
-
-/**
- * Творится ли заклинание внутри хода.
- *
- * Граница проходит по времени накладывания, а не по «боевому» смыслу: «Починка» за минуту в бою не
- * успевает независимо от того, насколько она полезна.
- */
-export function castableWithinTurn(spell: Spell): boolean {
-  return WITHIN_TURN.has(spell.castingTime.type);
-}
-
-/**
- * Может ли персонаж сотворить заклинание в этой ситуации.
- *
- * Вне боя это заговоры, подготовленные и ритуальные записи книги: ритуал творится из книги без
- * подготовки. С началом боя ритуальный способ исчезает, и неподготовленный ритуал уходит из списка
- * вовсе — ячейкой его не сотворить; остаётся только то, что укладывается в ход.
- */
-export function belongsToPlayList(spell: Spell, character: CharacterState, inFight: boolean): boolean {
-  const ready = isSpellReady(spell, character);
-  if (inFight) return ready && castableWithinTurn(spell);
-  return ready || ritualAvailable(spell, inFight);
-}
+import { castableInSituation } from "@/core/application/casting/castOptions";
 
 /** Порядок ролей внутри одной цены: сначала чем бить, потом чем закрыться, потом всё прочее. */
 const ROLE_ORDER: Record<CombatRole, number> = { offense: 0, defense: 1, other: 2 };
@@ -107,7 +81,7 @@ export function spellsForScreen(
       return [...spells];
     case "play":
       return orderForPlay(
-        spells.filter((spell) => belongsToPlayList(spell, character, inFight)),
+        spells.filter((spell) => castableInSituation(spell, character, inFight)),
         inFight,
       );
     default:

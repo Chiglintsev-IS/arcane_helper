@@ -2,40 +2,22 @@
 
 import { useState } from "react";
 
-import { abilityModifier, preparedLimit, proficiencyBonus } from "@/core/domain/character/abilities";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { spellSlotsForLevel } from "@/core/domain/arcana/slots";
+import { previewLevelChange, type LevelChange } from "@/core/application/useCases/sheet";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
-/** Среднее за уровень для кости d6 — половина плюс один. */
-const AVERAGE_PER_HIT_DIE = 4;
+/** Подпись сдвинутой величины: слово — дело отображения, числа приходят из ядра. */
+const CHANGE_LABELS: Record<Exclude<LevelChange["of"], "slots">, string> = {
+  runes: "Руны",
+  hitDice: "Кости хитов",
+  preparedLimit: "Лимит подготовки",
+};
 
-function changeLines(character: CharacterState, level: number): string[] {
-  const before = spellSlotsForLevel(character.level);
-  const after = spellSlotsForLevel(level);
-  const lines: string[] = [];
-
-  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-    const slotLevel = Number(key);
-    const was = before[slotLevel]?.maximum ?? 0;
-    const now = after[slotLevel]?.maximum ?? 0;
-    if (was !== now) lines.push(`Ячейки ${slotLevel} уровня: ${was} → ${now}`);
-  }
-
-  const runesBefore = proficiencyBonus(character.level);
-  const runesAfter = proficiencyBonus(level);
-  if (runesBefore !== runesAfter) lines.push(`Руны: ${runesBefore} → ${runesAfter}`);
-
-  if (character.hitDice !== undefined && character.hitDice.total !== level) {
-    lines.push(`Кости хитов: ${character.hitDice.total} → ${level}`);
-  }
-
-  const limitBefore = preparedLimit(character.abilities.intelligence, character.level);
-  const limitAfter = preparedLimit(character.abilities.intelligence, level);
-  if (limitBefore !== limitAfter) lines.push(`Лимит подготовки: ${limitBefore} → ${limitAfter}`);
-
-  return lines;
+function changeLine(change: LevelChange): string {
+  const label =
+    change.of === "slots" ? `Ячейки ${change.slotLevel} уровня` : CHANGE_LABELS[change.of];
+  return `${label}: ${change.before} → ${change.after}`;
 }
 
 export function LevelSheet({
@@ -55,7 +37,7 @@ export function LevelSheet({
   const levelValid =
     Number.isInteger(level) && level >= MINIMUM_CHARACTER_LEVEL && level <= MAXIMUM_CHARACTER_LEVEL;
   const valid = levelValid && Number.isInteger(maximum) && maximum > 0;
-  const constitution = abilityModifier(character.abilities.constitution);
+  const preview = previewLevelChange(character, levelValid ? level : character.level);
 
   return (
     <EditSheetFrame
@@ -79,15 +61,18 @@ export function LevelSheet({
       />
 
       {/* Кость бросает игрок: приложение называет среднее, но не подставляет его. */}
-      <p className="text-xs text-slate-600 dark:text-slate-400">
-        За взятый уровень среднее за уровень: +{AVERAGE_PER_HIT_DIE + constitution} (
-        {AVERAGE_PER_HIT_DIE} за d6 и {constitution} за Телосложение).
-      </p>
+      {preview.hitPoints === null ? null : (
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          За взятый уровень среднее за уровень: +{preview.hitPoints.total} (
+          {preview.hitPoints.perDie} за d{preview.hitPoints.dieSize} и{" "}
+          {preview.hitPoints.constitution} за Телосложение).
+        </p>
+      )}
 
       {levelValid ? (
         <ul className="flex flex-col gap-0.5 text-xs text-slate-600 dark:text-slate-400">
-          {changeLines(character, level).map((line) => (
-            <li key={line}>{line}</li>
+          {preview.changes.map((change) => (
+            <li key={changeLine(change)}>{changeLine(change)}</li>
           ))}
         </ul>
       ) : null}

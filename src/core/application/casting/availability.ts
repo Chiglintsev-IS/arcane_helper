@@ -4,7 +4,12 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ascensionTierRate, spellPointCost, hitPointCost } from "@/core/domain/arcana/slots";
 import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
-import { longCastingTimeRu, withPlural, type LongCastingUnit } from "@/core/shared/language";
+import {
+  CURRENCY_ABBREVIATIONS,
+  longCastingTimeRu,
+  withPlural,
+  type LongCastingUnit,
+} from "@/core/shared/language";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL, needsOwnComponent } from "@/core/domain/catalog/spell";
 
@@ -288,7 +293,8 @@ function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
 
   if (needsOwnComponent(components)) {
     if (equipment.hasMaterialFor(spell.id)) return [];
-    const cost = components.costGp === undefined ? "" : ` (${components.costGp} зм)`;
+    const cost =
+      components.costGp === undefined ? "" : ` (${components.costGp} ${CURRENCY_ABBREVIATIONS.gold})`;
     return [
       {
         code: "no_component",
@@ -318,7 +324,7 @@ export function componentRequirements(components: Spell["components"]): string[]
   if (components.material && components.materialText !== undefined) {
     const notes: string[] = [];
     if (components.costGp !== undefined) {
-      notes.push(`${components.costGp} зм, фокусировка не заменяет`);
+      notes.push(`${components.costGp} ${CURRENCY_ABBREVIATIONS.gold}, фокусировка не заменяет`);
     }
     if (components.consumed === true) notes.push("расходуется");
     const suffix = notes.length === 0 ? "" : ` — ${notes.join(", ")}`;

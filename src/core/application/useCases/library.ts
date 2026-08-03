@@ -3,22 +3,23 @@
  */
 
 import { Character } from "@/core/domain/assembly/character";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
 
-/** Переключение подготовки заклинания. */
-export function togglePreparation(
-  session: Session,
-  spell: Spell,
-  limit: number,
-  clock: Clock,
-): Session {
+/**
+ * Переключение подготовки заклинания.
+ *
+ * Лимит сценарий берёт у листа сам: он производное характеристики и уровня, и экран, передававший
+ * его аргументом, решал за книгу, сколько ей можно.
+ */
+export function togglePreparation(session: Session, spell: Spell, clock: Clock): Session {
   const root = Character.of(session.character);
   const { spellbook, prepared } = root.spellbook.togglePreparation(
     spell.id,
     spell.nameRu,
     spell.level,
-    limit,
+    Sheet.of(session.character).preparationLimit,
   );
   return commit(
     session,

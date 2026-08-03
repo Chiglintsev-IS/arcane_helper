@@ -221,7 +221,7 @@ export function ResourceBadges({
   const totals = Sheet.of(character);
   const vitality = Vitality.of(character);
   // Игроку важен разрыв с базой листа, а не то, чем он вызван: цифра одна.
-  const maximumReduction = vitality.bloodReduction + vitality.masterReduction;
+  const maximumReduction = vitality.maximumReduction;
   const { inFight } = economy;
 
   return (

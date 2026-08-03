@@ -15,8 +15,8 @@ import { useState } from "react";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import {
-  ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL,
   arcaneRecoveryPlanCost,
+  recoverableSlots,
   validateArcaneRecovery,
   type SlotRecoveryPlan,
 } from "@/core/domain/arcana/slots";
@@ -37,13 +37,7 @@ export function ArcaneRecoverySheet({
   const budget = character.arcaneRecovery.remaining;
   const spentBudget = arcaneRecoveryPlanCost(plan);
 
-  const recoverable = Object.entries(character.spellSlots)
-    .map(([level, slot]) => ({ level: Number(level), ...slot }))
-    .filter(
-      (slot) =>
-        slot.level <= ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL && slot.remaining < slot.maximum,
-    )
-    .sort((left, right) => left.level - right.level);
+  const recoverable = recoverableSlots(character.spellSlots);
 
   const validation = validateArcaneRecovery(character.spellSlots, plan, budget);
 

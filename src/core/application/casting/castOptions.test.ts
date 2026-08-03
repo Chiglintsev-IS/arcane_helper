@@ -5,7 +5,13 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { ALL_TURN_RESOURCES, checkAvailability, type TurnResources } from "@/core/application/casting/availability";
-import { bestCastPlan, canCastNow, castOptions } from "@/core/application/casting/castOptions";
+import {
+  bestCastPlan,
+  canCastNow,
+  castableWithinTurn,
+  castOptions,
+  slotPriceOf,
+} from "@/core/application/casting/castOptions";
 import { NO_FILTERS, filterSpells, matchesActionRow, matchesTraits, toggleValue, type SpellFilters } from "@/ui/features/filter-spells/model/filters";
 
 const allSpells = loadThorneSpells();
@@ -382,5 +388,30 @@ describe("toggleValue", () => {
   it("добавляет отсутствующее значение и убирает выбранное", () => {
     expect(toggleValue([1, 2], 3)).toEqual([1, 2, 3]);
     expect(toggleValue([1, 2, 3], 2)).toEqual([1, 3]);
+  });
+});
+
+describe("castableWithinTurn", () => {
+  it.each([
+    ["shocking-grasp", true], // действие
+    ["shield", true], // реакция
+    ["mending", false], // 1 минута
+    ["find-familiar", false], // 1 час
+  ])("«%s» — %s", (id, expected) => {
+    const spell = allSpells.find((candidate) => candidate.id === id);
+    expect(spell, id).toBeDefined();
+    expect(castableWithinTurn(spell!)).toBe(expected);
+  });
+});
+
+describe("slotPriceOf: цена сотворения прямо сейчас", () => {
+  it("цена — самый дешёвый способ прямо сейчас", () => {
+    const detectMagic = allSpells.find((spell) => spell.id === "detect-magic")!;
+    const shield = allSpells.find((spell) => spell.id === "shield")!;
+
+    expect(slotPriceOf(detectMagic, false)).toBe(0);
+    expect(slotPriceOf(detectMagic, true)).toBe(detectMagic.level);
+    // Повышаемое стоит наименьший уровень: платить больше — выбор игрока, а не цена.
+    expect(slotPriceOf(shield, true)).toBe(1);
   });
 });

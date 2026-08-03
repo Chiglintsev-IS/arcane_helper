@@ -9,11 +9,14 @@ import {
   type SkillTraining,
 } from "@/core/domain/character/skills";
 import type { CharacterState } from "@/core/domain/assembly/state";
+import {
+  MAXIMUM_ABILITY_SCORE,
+  MINIMUM_ABILITY_SCORE,
+} from "@/core/domain/character/abilities";
 import { ABILITY_LABELS, SKILL_LABELS, TRAINING_LABELS } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
-const MINIMUM = 1;
-const MAXIMUM = 30;
+
 
 type Skills = Partial<Record<SkillId, SkillTraining>>;
 
@@ -58,7 +61,7 @@ export function AbilitySheet({
   );
 
   const score = Number.parseInt(scoreText, 10);
-  const valid = Number.isInteger(score) && score >= MINIMUM && score <= MAXIMUM;
+  const valid = Number.isInteger(score) && score >= MINIMUM_ABILITY_SCORE && score <= MAXIMUM_ABILITY_SCORE;
 
   const setTraining = (id: SkillId, training: SkillTraining | undefined): void => {
     const { [id]: _dropped, ...rest } = skills;
@@ -76,8 +79,8 @@ export function AbilitySheet({
         labelRu="Значение"
         value={scoreText}
         onChange={setScoreText}
-        min={MINIMUM}
-        max={MAXIMUM}
+        min={MINIMUM_ABILITY_SCORE}
+        max={MAXIMUM_ABILITY_SCORE}
       />
 
       <button

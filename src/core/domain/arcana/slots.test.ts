@@ -14,6 +14,7 @@ import {
   hitPointCost,
   hitPointsForPoints,
   maximumExchangePoints,
+  recoverableSlots,
   refundSlot,
   restoreAllSlots,
   spellPointCost,
@@ -398,5 +399,28 @@ describe("affordableSpellLevels", () => {
 
   it("выше пятого уровня очками не платят, сколько бы их ни было", () => {
     expect(affordableSpellLevels(100)).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe("recoverableSlots", () => {
+  it("берёт только потраченные и от младших к старшим", () => {
+    const slots = {
+      1: { maximum: 4, remaining: 4 },
+      2: { maximum: 3, remaining: 1 },
+      3: { maximum: 3, remaining: 0 },
+    };
+    expect(recoverableSlots(slots).map((slot) => slot.level)).toEqual([2, 3]);
+  });
+
+  it("выше своего предела уровня не берёт: восстановление их не возвращает", () => {
+    const slots = {
+      5: { maximum: 1, remaining: 0 },
+      6: { maximum: 1, remaining: 0 },
+    };
+    expect(recoverableSlots(slots).map((slot) => slot.level)).toEqual([5]);
+  });
+
+  it("целым ячейкам возвращать нечего", () => {
+    expect(recoverableSlots(thorne())).toEqual([]);
   });
 });

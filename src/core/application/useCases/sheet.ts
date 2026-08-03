@@ -6,7 +6,9 @@
  * разложенная на четыре нажатия она оставила бы половину пересчитанной.
  */
 
-import { proficiencyBonus } from "@/core/domain/character/abilities";
+import { abilityModifier, preparedLimit, proficiencyBonus } from "@/core/domain/character/abilities";
+import { spellSlotsForLevel } from "@/core/domain/arcana/slots";
+import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { DerivedId } from "@/core/domain/sheet/derived";
@@ -180,6 +182,63 @@ export function editHealth(
  * Смена уровня. Максимумы ячеек, рун и Костей хитов идут за уровнем; базовый максимум хитов вводит
  * игрок — кость бросает он, а не приложение.
  */
+/** Что сдвинется при смене уровня: величина, её прежнее и новое значение. */
+export type LevelChange =
+  | { of: "slots"; slotLevel: number; before: number; after: number }
+  | { of: "runes"; before: number; after: number }
+  | { of: "hitDice"; before: number; after: number }
+  | { of: "preparedLimit"; before: number; after: number };
+
+/**
+ * Предпросмотр смены уровня: тот же набор правил, что и у самой смены, прочитанный вперёд.
+ *
+ * Прибавка хитов названа слагаемыми: «среднее за кость плюс Телосложение» — то, что игрок иначе
+ * считает в уме, глядя в книгу. Костей может не быть вовсе — тогда называть нечего.
+ */
+export type LevelPreview = {
+  changes: LevelChange[];
+  hitPoints: { perDie: number; dieSize: number; constitution: number; total: number } | null;
+};
+
+export function previewLevelChange(character: CharacterState, level: number): LevelPreview {
+  const before = spellSlotsForLevel(character.level);
+  const after = spellSlotsForLevel(level);
+  const changes: LevelChange[] = [];
+
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    const slotLevel = Number(key);
+    const was = before[slotLevel]?.maximum ?? 0;
+    const now = after[slotLevel]?.maximum ?? 0;
+    if (was !== now) changes.push({ of: "slots", slotLevel, before: was, after: now });
+  }
+
+  const runesBefore = proficiencyBonus(character.level);
+  const runesAfter = proficiencyBonus(level);
+  if (runesBefore !== runesAfter) {
+    changes.push({ of: "runes", before: runesBefore, after: runesAfter });
+  }
+
+  const { hitDice } = character;
+  if (hitDice !== undefined && hitDice.total !== level) {
+    changes.push({ of: "hitDice", before: hitDice.total, after: level });
+  }
+
+  const limitBefore = preparedLimit(character.abilities.intelligence, character.level);
+  const limitAfter = preparedLimit(character.abilities.intelligence, level);
+  if (limitBefore !== limitAfter) {
+    changes.push({ of: "preparedLimit", before: limitBefore, after: limitAfter });
+  }
+
+  const constitution = abilityModifier(character.abilities.constitution);
+  if (hitDice === undefined) return { changes, hitPoints: null };
+
+  const perDie = averagePerHitDie(hitDice.size);
+  return {
+    changes,
+    hitPoints: { perDie, dieSize: hitDice.size, constitution, total: perDie + constitution },
+  };
+}
+
 export function changeLevel(
   session: Session,
   next: { level: number; hitPointMaximumBase: number },

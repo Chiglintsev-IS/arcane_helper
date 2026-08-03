@@ -13,7 +13,8 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import type { TurnResource, TurnResources } from "@/core/application/casting/availability";
 import { canCastNow, isSpellReady, ritualAvailable } from "@/core/application/casting/castOptions";
 import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
-import { priceOf, traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
+import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
+import { slotPriceOf } from "@/core/application/casting/castOptions";
 
 /** Время накладывания как фильтр: минуты и часы в бою не выбирают. */
 export type CastingTimeFilter = TurnResource;
@@ -100,7 +101,7 @@ export function dividingCategories(
 
   return {
     castingTimes: valuesDividing((spell) => spell.castingTime.type),
-    prices: [...valuesDividing((spell) => priceOf(spell, inFight))].sort((a, b) => a - b),
+    prices: [...valuesDividing((spell) => slotPriceOf(spell, inFight))].sort((a, b) => a - b),
     roles: valuesDividing(combatRoleOf),
     concentration: divides(countOf((spell) => spell.concentration)),
     ritual: divides(countOf((spell) => ritualAvailable(spell, inFight))),

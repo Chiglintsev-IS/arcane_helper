@@ -1,4 +1,9 @@
-import { BLOOD_MAGIC_TRAITS, priceOf, traitsOf } from "@/ui/shared/model/actionTraits";
+import { BLOOD_MAGIC_TRAITS, traitsOf } from "@/ui/shared/model/actionTraits";
+import {
+  castableInSituation,
+  castableWithinTurn,
+  slotPriceOf,
+} from "@/core/application/casting/castOptions";
 import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
@@ -6,8 +11,6 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 import {
-  belongsToPlayList,
-  castableWithinTurn,
   compareTraits,
   orderForPlay,
   orderKey,
@@ -21,19 +24,6 @@ const SPELLS = loadThorneSpells();
 function playList(inFight: boolean): string[] {
   return spellsForScreen(SPELLS, createThorne(), "play", inFight).map((spell) => spell.id);
 }
-
-describe("castableWithinTurn", () => {
-  it.each([
-    ["shocking-grasp", true], // действие
-    ["shield", true], // реакция
-    ["mending", false], // 1 минута
-    ["find-familiar", false], // 1 час
-  ])("«%s» — %s", (id, expected) => {
-    const spell = SPELLS.find((candidate) => candidate.id === id);
-    expect(spell, id).toBeDefined();
-    expect(castableWithinTurn(spell!)).toBe(expected);
-  });
-});
 
 describe("вне боя: заговоры, подготовленные и ритуальные из книги (FR-209)", () => {
   it("ритуал из книги стоит в списке без подготовки", () => {
@@ -119,15 +109,6 @@ describe("порядок: сначала бесплатное, потом по �
     ]);
   });
 
-  it("цена — самый дешёвый способ прямо сейчас", () => {
-    const detectMagic = SPELLS.find((spell) => spell.id === "detect-magic")!;
-    const shield = SPELLS.find((spell) => spell.id === "shield")!;
-
-    expect(priceOf(detectMagic, false)).toBe(0);
-    expect(priceOf(detectMagic, true)).toBe(detectMagic.level);
-    // Повышаемое стоит наименьший уровень: платить больше — выбор игрока, а не цена.
-    expect(priceOf(shield, true)).toBe(1);
-  });
 
   it("ключ: цена, затем роль", () => {
     const reaction = { castingTime: "reaction", level: 4, concentration: false, role: "other" } as const;
@@ -221,7 +202,7 @@ describe("состав строки: цена считается тем же п�
       preparedSpellIds: [...character.preparedSpellIds, "detect-magic"],
     };
 
-    expect(belongsToPlayList(SPELLS.find((s) => s.id === "detect-magic")!, withRitual, true)).toBe(
+    expect(castableInSituation(SPELLS.find((s) => s.id === "detect-magic")!, withRitual, true)).toBe(
       true,
     );
   });

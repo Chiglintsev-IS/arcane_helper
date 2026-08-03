@@ -10,6 +10,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
   checkAvailability,
+  turnResourceFor,
   type Availability,
   type PaymentChoice,
   type TurnResources,
@@ -26,6 +27,46 @@ export function ritualAvailable(spell: Pick<Spell, "ritual">, inFight: boolean):
 /** Готово ли заклинание к сотворению без подготовки: заговоры — всегда, прочее — по книге. */
 export function isSpellReady(spell: Spell, character: CharacterState): boolean {
   return spell.level === CANTRIP_LEVEL || Character.of(character).spellbook.isPrepared(spell.id);
+}
+
+/**
+ * Творится ли заклинание внутри хода.
+ *
+ * Граница проходит по времени накладывания, а не по «боевому» смыслу: «Починка» за минуту в бою не
+ * успевает независимо от того, насколько она полезна. Ровно те виды времени, которые тратят ресурс
+ * хода, — второго перечня для этого не заводится.
+ */
+export function castableWithinTurn(spell: Pick<Spell, "castingTime">): boolean {
+  return turnResourceFor(spell.castingTime.type) !== undefined;
+}
+
+/**
+ * Может ли персонаж сотворить заклинание в этой обстановке.
+ *
+ * Вне боя это заговоры, подготовленные и ритуальные записи книги: ритуал творится из книги без
+ * подготовки. С началом боя ритуальный способ исчезает, и неподготовленный ритуал становится
+ * несотворимым вовсе — ячейкой его не сотворить; остаётся только то, что укладывается в ход.
+ */
+export function castableInSituation(
+  spell: Spell,
+  character: CharacterState,
+  inFight: boolean,
+): boolean {
+  const ready = isSpellReady(spell, character);
+  if (inFight) return ready && castableWithinTurn(spell);
+  return ready || ritualAvailable(spell, inFight);
+}
+
+/**
+ * Цена сотворения в уровнях ячейки: самый дешёвый способ прямо сейчас, ноль — ячейка не нужна.
+ *
+ * Вне боя ритуал стоит ноль: ритуальный способ ячейки не требует. С началом боя он из перечня
+ * способов уходит, и то же заклинание стоит свой уровень. Повышаемое стоит наименьший уровень, а не
+ * наибольший: платить больше — выбор игрока, а не цена.
+ */
+export function slotPriceOf(spell: Spell, inFight: boolean): number {
+  if (spell.level === CANTRIP_LEVEL) return 0;
+  return ritualAvailable(spell, inFight) ? 0 : spell.level;
 }
 
 /** Способ сотворения: режим плюс оплата. */

@@ -76,6 +76,23 @@ export type ConcentrationCheck = {
   minimumRoll: number;
 };
 
+/** Грани d20: спасбросок автоматических успехов и провалов по правилам 2014 не знает. */
+const D20_FACES = 20;
+
+/**
+ * Каким броском проверка решается: любым, никаким или начиная с определённого.
+ *
+ * Границы принадлежат правилу, а не подписи: натуральная 20 спасбросок не проходит сама по себе,
+ * и «не проходит даже 20» — вывод из этого, а не из вёрстки.
+ */
+export type CheckOutcome = "any_roll" | "impossible" | "threshold";
+
+export function checkOutcome(check: ConcentrationCheck): CheckOutcome {
+  if (check.minimumRoll <= 1) return "any_roll";
+  if (check.minimumRoll > D20_FACES) return "impossible";
+  return "threshold";
+}
+
 export function describeConcentrationCheck(
   damage: number,
   constitutionSaveModifier: number,

@@ -8,8 +8,7 @@
 
 import type { Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
-import { ritualAvailable } from "@/core/application/casting/castOptions";
-import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
+import { slotPriceOf } from "@/core/application/casting/castOptions";
 
 export type ActionTraits = {
   castingTime: Spell["castingTime"]["type"];
@@ -27,22 +26,10 @@ export const BLOOD_MAGIC_TRAITS: ActionTraits = {
   role: "other",
 };
 
-/**
- * Цена строки — самый дешёвый способ сотворить её прямо сейчас.
- *
- * Поэтому вне боя ритуал стоит ноль: ритуальный способ ячейки не требует. С началом боя он из
- * перечня способов уходит, и то же заклинание стоит свой уровень. Повышаемое стоит наименьший
- * уровень, а не наибольший: платить больше — выбор игрока, а не цена.
- */
-export function priceOf(spell: Spell, inFight: boolean): number {
-  if (spell.level === CANTRIP_LEVEL) return 0;
-  return ritualAvailable(spell, inFight) ? 0 : spell.level;
-}
-
 export function traitsOf(spell: Spell, inFight: boolean): ActionTraits {
   return {
     castingTime: spell.castingTime.type,
-    level: priceOf(spell, inFight),
+    level: slotPriceOf(spell, inFight),
     concentration: spell.concentration,
     role: combatRoleOf(spell),
   };

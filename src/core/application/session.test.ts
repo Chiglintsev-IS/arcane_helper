@@ -1761,73 +1761,72 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   }
 
   it("готовит и снимает подготовку, записывая каждое действие в журнал", () => {
-    const prepared = togglePreparation(withRoom(), spell("detect-magic"), LIMIT, clock);
+    const prepared = togglePreparation(withRoom(), spell("detect-magic"), clock);
     expect(prepared.character.preparedSpellIds).toContain("detect-magic");
     expect(prepared.journal.at(-1)?.summaryRu).toBe("Подготовлено: Обнаружение магии");
 
-    const dropped = togglePreparation(prepared, spell("detect-magic"), LIMIT, clock);
+    const dropped = togglePreparation(prepared, spell("detect-magic"), clock);
     expect(dropped.character.preparedSpellIds).not.toContain("detect-magic");
     expect(dropped.journal.at(-1)?.summaryRu).toBe("Снята подготовка: Обнаружение магии");
   });
 
   it("подготовка обратима (FR-111)", () => {
     const before = withRoom();
-    const prepared = togglePreparation(before, spell("detect-magic"), LIMIT, clock);
+    const prepared = togglePreparation(before, spell("detect-magic"), clock);
     expect(undoLast(prepared).character.preparedSpellIds).toEqual(
       before.character.preparedSpellIds,
     );
   });
 
-  it("лимит — жёсткое ограничение, а не предупреждение (FR-101)", () => {
-    // Единственное место, где приложение отказывает без «всё равно»: это правило подготовки, и
-    // мастер здесь исключений не делает.
-    const full: Session = {
+  /** Персонаж на пределе в три заклинания: предел перебит мастером, набор занят целиком. */
+  function atLimitOfThree(): Session {
+    return {
       ...session,
       character: {
         ...session.character,
+        overrides: { ...session.character.overrides, preparedLimit: 3 },
         preparedSpellIds: session.character.spellbookSpellIds.slice(0, 3),
       },
     };
-    expect(() => togglePreparation(full, spell("identify"), 3, clock)).toThrow(
+  }
+
+  it("лимит — жёсткое ограничение, а не предупреждение (FR-101)", () => {
+    // Единственное место, где приложение отказывает без «всё равно»: это правило подготовки, и
+    // мастер здесь исключений не делает.
+    expect(() => togglePreparation(atLimitOfThree(), spell("identify"), clock)).toThrow(
       /Подготовлено 3 из 3/,
     );
   });
 
   it("снять подготовку на пределе можно: иначе набор было бы не пересобрать", () => {
-    const full: Session = {
-      ...session,
-      character: {
-        ...session.character,
-        preparedSpellIds: session.character.spellbookSpellIds.slice(0, 3),
-      },
-    };
+    const full = atLimitOfThree();
     const first = full.character.preparedSpellIds[0]!;
-    const after = togglePreparation(full, spell(first), 3, clock);
+    const after = togglePreparation(full, spell(first), clock);
     expect(after.character.preparedSpellIds).toHaveLength(2);
   });
 
   it("набор Торна начинается ровно на пределе: 11 из 11 (FR-101)", () => {
     expect(session.character.preparedSpellIds).toHaveLength(LIMIT);
-    expect(() => togglePreparation(session, spell("blink"), LIMIT, clock)).toThrow(
+    expect(() => togglePreparation(session, spell("blink"), clock)).toThrow(
       /Подготовлено 11 из 11/,
     );
   });
 
   it("заговор не готовится: он вне лимита и доступен всегда (FR-102)", () => {
-    expect(() => togglePreparation(session, spell("ray-of-frost"), LIMIT, clock)).toThrow(
+    expect(() => togglePreparation(session, spell("ray-of-frost"), clock)).toThrow(
       /Заговор не готовится/,
     );
   });
 
   it("заклинания вне книги подготовить нельзя (FR-100)", () => {
     const foreign: Spell = { ...spell("mage-armor"), id: "fireball", nameRu: "Огненный шар" };
-    expect(() => togglePreparation(session, foreign, LIMIT, clock)).toThrow(/нет в книге/);
+    expect(() => togglePreparation(session, foreign, clock)).toThrow(/нет в книге/);
   });
 
   it("ритуал готовится как обычное заклинание (FR-103)", () => {
     // говорит, что ритуалом его можно творить и без подготовки, а не что готовить нельзя:
     // подготовленный ритуал в бою творится за ячейку обычным временем.
-    const after = togglePreparation(withRoom(), spell("identify"), LIMIT, clock);
+    const after = togglePreparation(withRoom(), spell("identify"), clock);
     expect(after.character.preparedSpellIds).toContain("identify");
   });
 });

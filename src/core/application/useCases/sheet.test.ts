@@ -6,6 +6,7 @@ import { undoLast, type Clock } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   changeLevel,
+  previewLevelChange,
   editAbility,
   editHealth,
   editIdentity,
@@ -27,6 +28,47 @@ function testClock(): Clock {
 }
 
 const clock = testClock();
+
+describe("предпросмотр смены уровня", () => {
+  it("называет всё, что сдвинется: ячейки, руны, кости, лимит подготовки", () => {
+    const preview = previewLevelChange(createThorne(), 9);
+
+    expect(preview.changes).toContainEqual({ of: "slots", slotLevel: 4, before: 1, after: 3 });
+    expect(preview.changes).toContainEqual({ of: "slots", slotLevel: 5, before: 0, after: 1 });
+    expect(preview.changes).toContainEqual({ of: "hitDice", before: 7, after: 9 });
+    expect(preview.changes).toContainEqual({ of: "preparedLimit", before: 11, after: 13 });
+  });
+
+  it("на своём уровне сдвигать нечего", () => {
+    expect(previewLevelChange(createThorne(), 7).changes).toEqual([]);
+  });
+
+  it("руны следуют бонусу мастерства, а не уровню", () => {
+    expect(previewLevelChange(createThorne(), 8).changes).not.toContainEqual(
+      expect.objectContaining({ of: "runes" }),
+    );
+    expect(previewLevelChange(createThorne(), 9).changes).toContainEqual({
+      of: "runes",
+      before: 3,
+      after: 4,
+    });
+  });
+
+  it("прибавка хитов названа слагаемыми: среднее за кость и Телосложение", () => {
+    // У Торна d6 (среднее 4) и Телосложение 16 (+3).
+    expect(previewLevelChange(createThorne(), 8).hitPoints).toEqual({
+      perDie: 4,
+      dieSize: 6,
+      constitution: 3,
+      total: 7,
+    });
+  });
+
+  it("без костей хитов прибавку назвать нечем: чужая выгрузка могла их не знать", () => {
+    const { hitDice: _absent, ...withoutDice } = createThorne();
+    expect(previewLevelChange(withoutDice, 8).hitPoints).toBeNull();
+  });
+});
 
 describe("смена уровня", () => {
   it("максимумы растут, новая ячейка приходит неистраченной", () => {

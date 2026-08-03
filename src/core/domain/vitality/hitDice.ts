@@ -10,6 +10,19 @@ export type HitDiceCost = {
   addsSpellcastingModifier: boolean;
 };
 
+/**
+ * Среднее за кость хитов при взятии уровня: половина грани плюс один.
+ *
+ * Правило «среднее вместо броска» из книги: у d6 это 4. Кость всё равно бросает игрок — приложение
+ * называет число, но не подставляет его.
+ */
+export function averagePerHitDie(size: number): number {
+  if (!Number.isInteger(size) || size <= 0) {
+    throw new DomainError(`У кости должна быть грань, получено ${size}`);
+  }
+  return Math.floor(size / 2) + 1;
+}
+
 export function hitDiceRegainedOnLongRest(total: number): number {
   if (!Number.isInteger(total) || total <= 0) {
     throw new DomainError(`Костей хитов должно быть хотя бы одна, получено ${total}`);

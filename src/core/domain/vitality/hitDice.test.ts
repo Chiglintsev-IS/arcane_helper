@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 import {
+  averagePerHitDie,
   hitDiceHealing,
   hitDiceRegainedOnLongRest,
   hitDiceRollRange,
@@ -102,5 +103,19 @@ describe("isPossibleHitDiceRoll", () => {
   it("меньше числа костей и больше их суммы — невозможно", () => {
     expect(isPossibleHitDiceRoll(1, 2, 6)).toBe(false);
     expect(isPossibleHitDiceRoll(13, 2, 6)).toBe(false);
+  });
+});
+
+describe("averagePerHitDie", () => {
+  it.each([
+    [6, 4],
+    [8, 5],
+    [12, 7],
+  ])("у d%i среднее за уровень %i", (size, expected) => {
+    expect(averagePerHitDie(size)).toBe(expected);
+  });
+
+  it.each([0, -6, 6.5])("отклоняет грань %s", (size) => {
+    expect(() => averagePerHitDie(size)).toThrow(DomainError);
   });
 });

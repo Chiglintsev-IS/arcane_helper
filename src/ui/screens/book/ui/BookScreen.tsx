@@ -65,7 +65,7 @@ export function BookScreen() {
       onOpen={() => setOpenSpellId(spell.id)}
       onTogglePrepared={
         !inFight
-          ? () => apply((current) => togglePreparation(current, spell, limit, clock))
+          ? () => apply((current) => togglePreparation(current, spell, clock))
           : undefined
       }
     />

@@ -1,9 +1,15 @@
-import type { ConcentrationCheck } from "@/core/domain/effects/concentration";
+import { checkOutcome, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 
-/** Натуральная 20 спасбросок не проходит, поэтому непроходимая проверка так и называется. */
+/** Подпись к проверке: вердикт приходит из правила, здесь остаётся выбор слов. */
 export function checkGuidanceRu(check: ConcentrationCheck): string {
-  if (check.minimumRoll <= 1) return "Проходит любой бросок d20";
-  if (check.minimumRoll > 20) return "Не проходит даже 20: концентрация держится только руной";
-  const dice = check.hasAdvantage ? "d20 с преимуществом" : "d20";
-  return `Бросьте ${dice}, нужно ${check.minimumRoll} и выше`;
+  switch (checkOutcome(check)) {
+    case "any_roll":
+      return "Проходит любой бросок d20";
+    case "impossible":
+      return "Не проходит даже 20: концентрация держится только руной";
+    case "threshold": {
+      const dice = check.hasAdvantage ? "d20 с преимуществом" : "d20";
+      return `Бросьте ${dice}, нужно ${check.minimumRoll} и выше`;
+    }
+  }
 }

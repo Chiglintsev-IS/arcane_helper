@@ -10,6 +10,17 @@ import type { SkillTraining } from "./skills";
  * сдвинула бы число, и расхождение с листом ничем себя не показало бы.
  */
 
+/**
+ * Границы значения характеристики. Тридцать — предел правил для существа любого рода, единица —
+ * низшее возможное: ноль означал бы отсутствие характеристики, а такого в правилах нет.
+ */
+export const MINIMUM_ABILITY_SCORE = 1;
+export const MAXIMUM_ABILITY_SCORE = 30;
+
+/** Ступени истощения: от «нет» до шестой, за которой смерть. */
+export const MAXIMUM_EXHAUSTION = 6;
+export const EXHAUSTION_STEPS: readonly number[] = [0, 1, 2, 3, 4, 5, 6];
+
 /** База КС спасброска от заклинаний. */
 const SAVE_DC_BASE = 8;
 

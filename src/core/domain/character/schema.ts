@@ -9,6 +9,11 @@
 import { z } from "zod";
 
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
+import {
+  MAXIMUM_ABILITY_SCORE,
+  MAXIMUM_EXHAUSTION,
+  MINIMUM_ABILITY_SCORE,
+} from "@/core/domain/character/abilities";
 import { itemBonusesSchema, nonEmpty, NO_ITEM_BONUSES } from "@/core/domain/shared/schema";
 
 import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
@@ -23,7 +28,7 @@ export const roleplayProfileSchema = z.object({
   maximumPhraseLength: z.number().int().positive(),
 });
 
-const abilityScore = z.number().int().min(1).max(30);
+const abilityScore = z.number().int().min(MINIMUM_ABILITY_SCORE).max(MAXIMUM_ABILITY_SCORE);
 
 /** Размер существа: из перечисления правил, потому что от него зависят правила захвата и укрытия. */
 export const CREATURE_SIZES = ["tiny", "small", "medium", "large", "huge", "gargantuan"] as const;
@@ -96,7 +101,7 @@ export const CHARACTER_FIELDS = {
   miscBonuses: itemBonusesSchema.default(NO_ITEM_BONUSES),
 
   /** Отметки на листе: их ставят и снимают там же, где смотрят, — на «Листе». */
-  exhaustion: z.number().int().min(0).max(6).default(0),
+  exhaustion: z.number().int().min(0).max(MAXIMUM_EXHAUSTION).default(0),
   inspiration: z.boolean().default(false),
 
   roleplayProfile: roleplayProfileSchema,
