@@ -1,7 +1,5 @@
 {
   "edges": [
-    "arcana -> character",
-    "catalog -> arcana",
     "character -> arcana",
     "character -> catalog",
     "character -> effects",
@@ -9,22 +7,9 @@
     "character -> spellbook",
     "character -> vitality",
     "effects -> character",
-    "equipment -> character",
-    "journal -> character",
-    "spellbook -> arcana",
-    "spellbook -> character",
-    "vitality -> catalog",
-    "vitality -> character"
+    "journal -> character"
   ],
   "cycles": [
-    "arcana -> character -> arcana",
-    "arcana -> character -> catalog -> arcana",
-    "arcana -> character -> spellbook -> arcana",
-    "arcana -> character -> spellbook -> catalog -> arcana",
-    "arcana -> character -> vitality -> catalog -> arcana",
-    "character -> effects -> character",
-    "character -> equipment -> character",
-    "character -> spellbook -> character",
-    "character -> vitality -> character"
+    "character -> effects -> character"
   ]
 }
