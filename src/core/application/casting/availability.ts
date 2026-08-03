@@ -4,7 +4,8 @@ import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { spellPointCost, hitPointCost } from "@/core/domain/arcana/slots";
 import { longCastingTimeRu, type LongCastingUnit } from "@/core/shared/language";
-import { CANTRIP_LEVEL, consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
+import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
 export type TurnResource = "action" | "bonus_action" | "reaction";

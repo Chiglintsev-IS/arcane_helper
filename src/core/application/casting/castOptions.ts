@@ -15,7 +15,8 @@ import {
   type TurnResources,
 } from "@/core/application/casting/availability";
 import { MAXIMUM_PAYABLE_SPELL_LEVEL } from "@/core/domain/arcana/slots";
-import { castableSlotLevels, CANTRIP_LEVEL, type CastMode } from "@/core/domain/arcana/slots";
+import { castableSlotLevels, type CastMode } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 /** Ритуальный способ существует только вне боя: он занимает на десять минут больше обычного. */
 export function ritualAvailable(spell: Pick<Spell, "ritual">, inFight: boolean): boolean {

@@ -1,5 +1,6 @@
 import { DomainError } from "@/core/domain/shared/errors";
-import { MAXIMUM_SPELL_LEVEL, MINIMUM_SPELL_LEVEL } from "@/core/domain/arcana/slots";
+import { MINIMUM_SPELL_LEVEL } from "@/core/domain/arcana/slots";
+import { MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 
 export const RUNES = ["life", "war", "wind"] as const;
 

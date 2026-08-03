@@ -17,7 +17,7 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import { checkAvailability, type TurnResources } from "@/core/application/casting/availability";
 import { bestCastPlan, castOptions, type CastOption } from "@/core/application/casting/castOptions";
 import { runeChoosesTarget, type Rune, type RuneTarget } from "@/core/domain/arcana/runes";
-import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 /**
  * Экраны мастера в порядке. Шаг, где нечего выбирать, не показывается.

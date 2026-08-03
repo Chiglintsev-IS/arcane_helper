@@ -11,7 +11,7 @@
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { CharacterState, RoleplayPreference } from "@/core/domain/character/state";
-import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 export type SpellbookState = Pick<
   CharacterState,

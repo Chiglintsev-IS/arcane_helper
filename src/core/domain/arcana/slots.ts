@@ -6,11 +6,11 @@
 
 import { DomainError } from "@/core/domain/shared/errors";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/character/abilities";
+import { CANTRIP_LEVEL, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
 
-export const CANTRIP_LEVEL = 0;
+/** Ячейки начинаются с первого уровня: заговор ячейки не занимает, и нулевой ячейки не бывает. */
 export const MINIMUM_SPELL_LEVEL = 1;
-export const MAXIMUM_SPELL_LEVEL = 9;
 
 /** Максимальный уровень ячейки, которую возвращает «Магическое восстановление». */
 export const ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL = 5;

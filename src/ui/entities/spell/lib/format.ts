@@ -16,7 +16,7 @@ import {
   type TimeUnit,
 } from "@/core/shared/language";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
-import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import { type Tone } from "@/ui/shared/ui/tone";
 
 /**

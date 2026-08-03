@@ -9,7 +9,7 @@
 import type { Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
 import { ritualAvailable } from "@/core/application/casting/castOptions";
-import { CANTRIP_LEVEL } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 export type ActionTraits = {
   castingTime: Spell["castingTime"]["type"];

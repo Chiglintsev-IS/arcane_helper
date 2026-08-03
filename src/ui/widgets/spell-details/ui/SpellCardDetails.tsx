@@ -31,7 +31,8 @@ import type { CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
-import { CANTRIP_LEVEL, type CastMode } from "@/core/domain/arcana/slots";
+import { type CastMode } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (

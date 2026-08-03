@@ -9,7 +9,8 @@ import { Character } from "@/core/domain/character/character";
 import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { DomainError } from "@/core/domain/shared/errors";
-import { CANTRIP_LEVEL, consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
+import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import {
   lifeRuneTemporaryHitPoints,
   RUNE_LABEL,
