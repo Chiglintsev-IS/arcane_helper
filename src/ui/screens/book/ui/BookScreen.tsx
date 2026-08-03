@@ -129,6 +129,7 @@ export function BookScreen() {
         <SpellCardDetails
           spell={openSpell}
           character={character}
+          economy={economy}
           note={character.spellNotes[openSpell.id]}
           onCast={() => draftStore.getState().start(openSpell, context)}
           onNoteChange={(note) => apply((current) => setSpellNote(current, openSpell.id, note))}

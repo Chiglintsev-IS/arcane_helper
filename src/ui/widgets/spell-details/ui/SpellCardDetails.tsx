@@ -31,7 +31,8 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
-import { type CastMode } from "@/core/domain/arcana/slots";
+import { bestCastPlan, type CastOption } from "@/core/application/casting/castOptions";
+import type { TurnResources } from "@/core/application/casting/availability";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -43,9 +44,20 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+/**
+ * Способ для карточки заклинания, которое сотворить нечем вовсе: уровень, до ячеек которого
+ * персонаж не дорос, и очками он не оплачивается. Объявление всё равно должно называть уровень —
+ * иначе карточка молчит о том, что читают ради него.
+ */
+function FALLBACK_OPTION(spell: Spell): CastOption {
+  if (spell.level === CANTRIP_LEVEL) return { mode: "cantrip", payment: { kind: "none" } };
+  return { mode: "normal", payment: { kind: "slot", slotLevel: spell.level } };
+}
+
 export function SpellCardDetails({
   spell,
   character,
+  economy,
   note,
   onCast,
   onNoteChange,
@@ -53,6 +65,8 @@ export function SpellCardDetails({
 }: {
   spell: Spell;
   character: CharacterState;
+  /** Признаки хода: способ сотворения зависит от них — в бою ритуала среди способов нет. */
+  economy: TurnResources;
   note: string | undefined;
   onCast: () => void;
   onNoteChange: (note: string) => void;
@@ -61,15 +75,10 @@ export function SpellCardDetails({
   const [diagramOpen, setDiagramOpen] = useState(false);
   const castingTime = CASTING_TIME[spell.castingTime.type];
   const slotCost = slotCostLabel(spell);
-  const mode: CastMode = spell.level === CANTRIP_LEVEL ? "cantrip" : spell.ritual ? "ritual" : "normal";
-  const announcementContext = {
-    character,
-    mode,
-    payment:
-      mode === "normal"
-        ? ({ kind: "slot", slotLevel: spell.level } as const)
-        : ({ kind: "none" } as const),
-  };
+  // Способ выбирает ядро — то же, что предложит мастер применения. Карточка, выбиравшая сама,
+  // показывала в бою ритуал, которого мастер уже не предлагает.
+  const option = bestCastPlan(spell, character, economy)?.option ?? FALLBACK_OPTION(spell);
+  const announcementContext = { character, ...option };
   const announcement = renderAnnouncement(spell, announcementContext);
   const instructions = castInstructions(spell, announcementContext);
   // Отсутствие цели — решение, а не пробел: мастер её не спрашивает.

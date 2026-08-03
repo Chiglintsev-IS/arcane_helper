@@ -210,6 +210,26 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     expect(within(card).getByText("Без броска: эффект применяется сразу")).toBeDefined();
   });
 
+  it("в бою карточка ритуала объявляет обычное сотворение: ритуала в бою нет (FR-208)", async () => {
+    const user = userEvent.setup();
+    // Способ выбирает ядро, а не карточка: в бою ритуального способа среди предложенных нет, и
+    // объявление обязано предупредить, что шаблон написан под ритуал.
+    await renderWithStores(<BookScreen />, createThorne(), { inFight: true });
+    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
+
+    const card = screen.getByRole("dialog", { name: /Опознание/ });
+    expect(within(card).getByText(/Шаблон написан для ритуального применения/)).toBeDefined();
+  });
+
+  it("вне боя ритуал остаётся способом по умолчанию: замечания о шаблоне нет", async () => {
+    const { user } = await inBookMode();
+    await user.click(screen.getByRole("button", { name: "Ритуал" }));
+    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
+
+    const card = screen.getByRole("dialog", { name: /Опознание/ });
+    expect(within(card).queryByText(/Шаблон написан для ритуального применения/)).toBeNull();
+  });
+
   it("строка «Разрешение» показывает общую подпись, не свою копию (FR-211)", async () => {
     const user = userEvent.setup();
     // Опознание разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
