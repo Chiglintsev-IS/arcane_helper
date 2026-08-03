@@ -3,7 +3,7 @@
  *
  * Отвечает на два вопроса, за которыми игрок иначе полез бы в книгу: как работает этот эффект и чем
  * он прерывается. Полные правила заклинания здесь не дублируются — к ним ведёт переход в его
- * карточку.
+ * карточку там, где карточка есть.
  *
  * Компонент презентационный: текст приходит готовым, состояние меняет экран боя.
  */
@@ -18,7 +18,8 @@ export function ConcentrationPanel({
   onClose,
 }: {
   summary: ConcentrationSummary;
-  onOpenSpell: () => void;
+  /** Переход к полным правилам. Нет перехода — нет и кнопки. */
+  onOpenSpell?: () => void;
   onTakeDamage: () => void;
   onDrop: () => void;
   onClose: () => void;
@@ -50,7 +51,7 @@ export function ConcentrationPanel({
           <h3 className="text-xs font-semibold uppercase text-slate-500">Как работает</h3>
           <p>{summary.shortRulesRu}</p>
           <p className="text-xs text-slate-600 dark:text-slate-400">{summary.mechanicsLabel}</p>
-          {summary.rulesAvailable ? (
+          {summary.rulesAvailable && onOpenSpell !== undefined ? (
             <button
               type="button"
               onClick={onOpenSpell}
