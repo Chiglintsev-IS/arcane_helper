@@ -151,6 +151,13 @@ export class Equipment {
     return this.replaceItem({ ...found, worn: !found.worn });
   }
 
+  /** Списывает один экземпляр; последний уходит из сумки вместе с вещью. */
+  spendItem(id: string): Equipment {
+    const found = this.data.items.find((item) => item.id === id);
+    if (found === undefined) throw new DomainError(`Вещи «${id}» нет в инвентаре`);
+    return found.count === 1 ? this.removeItem(id) : this.replaceItem({ ...found, count: found.count - 1 });
+  }
+
   toState(): EquipmentState {
     return this.state;
   }

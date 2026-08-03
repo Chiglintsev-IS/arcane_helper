@@ -50,6 +50,7 @@ describe("блоки листа", () => {
             id: "ring",
             nameRu: "Кольцо защиты",
             worn: true,
+            count: 1,
             bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
           },
         ],
@@ -66,8 +67,14 @@ describe("блоки листа", () => {
   it("подсказка называет только то, что вещь действительно даёт", () => {
     const state = createThorne();
     const items = [
-      { id: "staff", nameRu: "Посох", worn: false, bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 } },
-      { id: "rope", nameRu: "Верёвка", worn: false },
+      {
+        id: "staff",
+        nameRu: "Посох",
+        worn: false,
+        count: 1,
+        bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 },
+      },
+      { id: "rope", nameRu: "Верёвка", worn: false, count: 1 },
     ];
     const rows =
       sheetBlocks({ ...state, equipment: { ...state.equipment, items } }).find(
@@ -77,6 +84,19 @@ describe("блоки листа", () => {
     expect(rows).toContainEqual({ labelRu: "Посох", value: "в сумке", hint: "магия +1" });
     // Верёвка в счёте не участвует, и подсказки у неё нет вовсе.
     expect(rows).toContainEqual({ labelRu: "Верёвка", value: "в сумке" });
+  });
+
+  it("количество больше одной штуки и вид вещи показаны в «Инвентаре»", () => {
+    const state = createThorne();
+    const items = [
+      { id: "healing-potion", nameRu: "Зелье лечения", worn: false, count: 3, kind: "potion" as const },
+    ];
+    const rows =
+      sheetBlocks({ ...state, equipment: { ...state.equipment, items } }).find(
+        (block) => block.id === "inventory",
+      )?.rows ?? [];
+
+    expect(rows).toContainEqual({ labelRu: "Зелье лечения", value: "в сумке ×3", hint: "Зелье" });
   });
 
   it("заметка вещи попадает в подсказку рядом с прибавками", () => {

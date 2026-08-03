@@ -97,6 +97,9 @@ const roleplayPreferenceSchema = z.object({
 /** База Класса Доспеха без доспехов — правило, а не настройка снаряжения. */
 export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
+/** Род вещи: то немногое, что уже нужно отличить, не выдумывая правил алхимии. */
+export const ITEM_KINDS = ["potion", "ingredient", "junk"] as const;
+
 /**
  * Вещь в инвентаре.
  *
@@ -108,6 +111,10 @@ const inventoryItemSchema = z.object({
   nameRu: nonEmpty,
   /** Надето и потому действует. Лежащее в сумке к числам не прибавляется. */
   worn: z.boolean().default(false),
+  /** Сколько экземпляров лежит вместе. Меньше одного не бывает — расход убирает вещь целиком. */
+  count: z.number().int().positive().default(1),
+  /** Не задан у обычного снаряжения: род нужен только зелью, ингредиенту и хламу. */
+  kind: z.enum(ITEM_KINDS).optional(),
   note: nonEmpty.optional(),
   bonuses: z
     .object({
@@ -455,6 +462,7 @@ type CharacterStateShape = z.infer<typeof characterStateSchema>;
 
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
 export type ItemBonuses = NonNullable<InventoryItem["bonuses"]>;
+export type ItemKind = (typeof ITEM_KINDS)[number];
 export type CreatureSize = (typeof CREATURE_SIZES)[number];
 export type Abilities = z.infer<typeof abilitiesSchema>;
 export type Overrides = z.infer<typeof overridesSchema>;

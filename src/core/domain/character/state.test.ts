@@ -293,6 +293,9 @@ describe("лист персонажа", () => {
     expect(kit?.note).toBe("1d4 к Скрытности в болотах");
     expect(kit?.bonuses).toBeUndefined();
     expect(kit?.worn).toBe(false);
+    // Сохранение Торна не называло количества ни у одной вещи — старая запись читается как одна штука.
+    expect(kit?.count).toBe(1);
+    expect(kit?.kind).toBeUndefined();
     expect(thorneState.exhaustion).toBe(0);
     expect(thorneState.inspiration).toBe(false);
     expect(thorneState.overrides).toEqual({ saves: {}, skills: {} });
@@ -313,5 +316,44 @@ describe("лист персонажа", () => {
     const broken = { ...createThorne(), abilities: { ...createThorne().abilities, strength: 0 } };
     const result = characterStateSchema.safeParse(broken);
     expect(result.success).toBe(false);
+  });
+
+  it("вещь без количества считается одной штукой: старое сохранение не лжёт о запасах", () => {
+    const legacy = {
+      ...createThorne(),
+      equipment: {
+        ...createThorne().equipment,
+        items: [{ id: "rope", nameRu: "Верёвка" }],
+      },
+    };
+    const parsed = characterStateSchema.parse(legacy);
+    expect(parsed.equipment.items[0]?.count).toBe(1);
+  });
+
+  it("вещь без нулевого или отрицательного количества не существует", () => {
+    const withCount = (count: number) => ({
+      ...createThorne(),
+      equipment: {
+        ...createThorne().equipment,
+        items: [{ id: "healing-potion", nameRu: "Зелье лечения", count }],
+      },
+    });
+    expect(characterStateSchema.safeParse(withCount(0)).success).toBe(false);
+    expect(characterStateSchema.safeParse(withCount(-1)).success).toBe(false);
+    expect(characterStateSchema.safeParse(withCount(3)).success).toBe(true);
+  });
+
+  it("вид вещи ограничен зельем, ингредиентом и хламом", () => {
+    const withKind = (kind: string) => ({
+      ...createThorne(),
+      equipment: {
+        ...createThorne().equipment,
+        items: [{ id: "thing", nameRu: "Штука", kind }],
+      },
+    });
+    expect(characterStateSchema.safeParse(withKind("potion")).success).toBe(true);
+    expect(characterStateSchema.safeParse(withKind("ingredient")).success).toBe(true);
+    expect(characterStateSchema.safeParse(withKind("junk")).success).toBe(true);
+    expect(characterStateSchema.safeParse(withKind("weapon")).success).toBe(false);
   });
 });

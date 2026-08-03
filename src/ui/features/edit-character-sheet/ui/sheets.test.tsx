@@ -333,6 +333,7 @@ describe("шторки правки листа", () => {
         onAdd={onAdd}
         onRemove={() => {}}
         onToggleWorn={() => {}}
+        onSpend={() => {}}
         onCancel={() => {}}
       />,
     );
@@ -345,8 +346,75 @@ describe("шторки правки листа", () => {
       id: "сапоги-следопыта",
       nameRu: "Сапоги следопыта",
       worn: false,
+      count: 1,
       note: "1d4 к Скрытности в лесу",
     });
+  });
+
+  it("вещи: количество и вид сохраняются вместе с новой вещью", async () => {
+    const onAdd = vi.fn();
+    render(
+      <InventorySheet
+        character={createThorne()}
+        onAdd={onAdd}
+        onRemove={() => {}}
+        onToggleWorn={() => {}}
+        onSpend={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Новая вещь"), "Зелье лечения");
+    const countField = screen.getByLabelText("Количество");
+    await userEvent.clear(countField);
+    await userEvent.type(countField, "3");
+    await userEvent.click(screen.getByRole("radio", { name: "Зелье" }));
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onAdd.mock.calls[0]?.[0]).toEqual({
+      id: "зелье-лечения",
+      nameRu: "Зелье лечения",
+      worn: false,
+      count: 3,
+      kind: "potion",
+    });
+  });
+
+  it("вещи: нулевое количество не сохраняется", async () => {
+    render(
+      <InventorySheet
+        character={createThorne()}
+        onAdd={() => {}}
+        onRemove={() => {}}
+        onToggleWorn={() => {}}
+        onSpend={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.type(screen.getByLabelText("Новая вещь"), "Зелье лечения");
+    const countField = screen.getByLabelText("Количество");
+    await userEvent.clear(countField);
+    await userEvent.type(countField, "0");
+
+    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+  });
+
+  it("вещи: кнопка «Потратить» расходует вещь", async () => {
+    const onSpend = vi.fn();
+    render(
+      <InventorySheet
+        character={createThorne()}
+        onAdd={() => {}}
+        onRemove={() => {}}
+        onToggleWorn={() => {}}
+        onSpend={onSpend}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Потратить: Плащ защиты" }));
+    expect(onSpend).toHaveBeenCalledWith("cloak-of-protection");
   });
 
   it("прибавки предметов: отрицательная принимается", async () => {
