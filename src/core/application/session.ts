@@ -6,6 +6,7 @@
  */
 
 import type { CharacterState } from "@/core/domain/character/state";
+import { MUTABLE_STATE_KEYS } from "@/core/domain/character/state";
 import { Character } from "@/core/domain/character/character";
 import { Journal, JOURNAL_LIMIT } from "@/core/domain/journal/journal";
 import type { JournalEntry, Recorded, TurnResource } from "@/core/domain/journal/entry";
@@ -18,8 +19,18 @@ export type ActionUsed = TurnResource;
 
 export type Session = {
   character: CharacterState;
-  journal: JournalEntry[];
+  journal: JournalEntry<CharacterState>[];
 };
+
+/**
+ * Журнал персонажа: какие поля обратимы, знает состояние, а не журнал.
+ *
+ * Список приходит сюда, а не импортируется журналом: журнал — механизм обратимости чего угодно, и
+ * привязка к персонажу сделала бы его вторым местом, где перечислены поля листа.
+ */
+function characterJournal(entries: readonly JournalEntry<CharacterState>[]) {
+  return Journal.of(entries, MUTABLE_STATE_KEYS);
+}
 
 /** Время и идентификаторы приходят снаружи: чистые функции их не изобретают. */
 export type Clock = {
@@ -44,7 +55,7 @@ export function commit(
   clock: Clock,
 ): Session {
   const character = after instanceof Character ? after.toState() : after;
-  const journal = Journal.of(session.journal).append(session.character, character, recorded, {
+  const journal = characterJournal(session.journal).append(session.character, character, recorded, {
     id: clock.nextId(),
     at: clock.now(),
   });
@@ -58,8 +69,8 @@ export function withoutRecord(session: Session, character: Character): Session {
 
 /** Отмена последнего действия. */
 export function undoLast(session: Session): Session {
-  const { character, journal } = Journal.of(session.journal).undoLast(session.character);
-  return { character, journal: [...journal.list] };
+  const { state, journal } = characterJournal(session.journal).undoLast(session.character);
+  return { character: state, journal: [...journal.list] };
 }
 
 /**
