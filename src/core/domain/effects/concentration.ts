@@ -1,5 +1,5 @@
 import { DomainError } from "@/core/domain/shared/errors";
-import type { ActiveEffect } from "@/core/domain/character/state";
+import type { ActiveEffect } from "./schema";
 
 import { withPlural } from "@/core/shared/language";
 

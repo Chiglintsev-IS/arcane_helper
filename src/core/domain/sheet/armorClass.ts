@@ -9,7 +9,8 @@
  */
 
 import { Sheet } from "./sheet";
-import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
+import type { CharacterState } from "@/core/domain/character/state";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
 
 /**

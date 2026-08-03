@@ -7,8 +7,13 @@
 
 import { z } from "zod";
 
-import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { ARCANA_FIELDS, spellSlotsSchema, type SpellSlotsData } from "@/core/domain/arcana/schema";
+import {
+  activeEffectSchema,
+  EFFECTS_FIELDS,
+  refineEffects,
+  type ActiveEffect,
+} from "@/core/domain/effects/schema";
 import {
   CURRENCIES,
   EQUIPMENT_FIELDS,
@@ -42,40 +47,6 @@ import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
 export const EXPORT_SCHEMA_VERSION = 6;
-
-export const activeEffectSchema = z.object({
-  id: nonEmpty,
-  /** Отсутствует у эффекта, заведённого игроком вручную: статуса или чужого вклада в КД. */
-  spellId: nonEmpty.optional(),
-  nameRu: nonEmpty,
-
-  type: z.enum(["buff", "control", "utility", "summon"]),
-  startedAt: isoDateTime,
-
-  duration: z.object({
-    type: z.enum(["rounds", "minutes", "hours", "special"]),
-    value: z.number().int().positive().optional(),
-  }),
-
-  isConcentration: z.boolean(),
-  slotLevelUsed: z.number().int().min(0).max(MAXIMUM_SPELL_LEVEL),
-
-  repeatableAction: z
-    .object({ label: nonEmpty, description: nonEmpty })
-    .optional(),
-
-  // Копия вклада заклинания в КД: итог считается из одного состояния, без каталога.
-  armorClass: armorClassEffectSchema.optional(),
-
-  /**
-   * Роль ручного эффекта, когда она есть: поправка к КД опознаётся этим признаком, а не строкой
-   * имени — переименование подписи не имеет права ломать опознание.
-   */
-  manualKind: z.literal("armorAdjustment").optional(),
-
-  endConditionRu: nonEmpty,
-  note: nonEmpty.optional(),
-});
 
 export const roleplayProfileSchema = z.object({
   tone: z.array(z.enum(["serious", "mysterious", "sarcastic", "wild"])).min(1),
@@ -156,44 +127,17 @@ export const characterStateSchema = z
     exhaustion: z.number().int().min(0).max(6).default(0),
     inspiration: z.boolean().default(false),
 
-    concentration: z
-      .object({ spellId: nonEmpty, startedAt: isoDateTime })
-      .optional(),
-
-    activeEffects: z.array(activeEffectSchema),
     roleplayProfile: roleplayProfileSchema,
 
     ...ARCANA_FIELDS,
+    ...EFFECTS_FIELDS,
     ...EQUIPMENT_FIELDS,
     ...SPELLBOOK_FIELDS,
     ...VITALITY_FIELDS,
   })
   .superRefine((character, context) => {
     refineSpellbook(character, context);
-
-    // Концентрация всегда сопровождается активным эффектом.
-    if (character.concentration !== undefined) {
-      const matching = character.activeEffects.find(
-        (effect) => effect.isConcentration && effect.spellId === character.concentration?.spellId,
-      );
-      if (matching === undefined) {
-        context.addIssue({
-          code: "custom",
-          path: ["activeEffects"],
-          message: "Активная концентрация без соответствующего активного эффекта",
-        });
-      }
-    }
-
-    // Не более одного концентрационного эффекта одновременно.
-    const concentrationEffects = character.activeEffects.filter((effect) => effect.isConcentration);
-    if (concentrationEffects.length > 1) {
-      context.addIssue({
-        code: "custom",
-        path: ["activeEffects"],
-        message: `Одновременно активно ${concentrationEffects.length} концентрационных эффекта`,
-      });
-    }
+    refineEffects(character, context);
   });
 
 export const exportFileSchema = z.object({
@@ -255,7 +199,9 @@ export type Overrides = z.infer<typeof overridesSchema>;
 // Ячейки — поле магических ресурсов: схема и тип живут у владельца.
 export { spellSlotsSchema };
 export type { SpellSlotsData };
-export type ActiveEffect = z.infer<typeof activeEffectSchema>;
+// Активный эффект — поле доски эффектов: схема и тип живут у владельца.
+export { activeEffectSchema };
+export type { ActiveEffect };
 export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;
 // Пометки отыгрыша — поле книги заклинаний: тип живёт у владельца.
 export type { RoleplayPreference };

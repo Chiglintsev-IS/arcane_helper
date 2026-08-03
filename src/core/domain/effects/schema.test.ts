@@ -1,0 +1,68 @@
+import { describe, expect, it } from "vitest";
+
+import { effectsStateSchema, type ActiveEffect, type EffectsState } from "@/core/domain/effects/schema";
+
+/**
+ * Инварианты доски проверяются на самой доске: собирать ради них целого персонажа значило бы
+ * проверять заодно и его правила. Что сборка вызывает доводчик — отдельный прогон полной схемы.
+ */
+function effect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
+  return {
+    id: "effect-1",
+    spellId: "detect-magic",
+    nameRu: "Обнаружение магии",
+    type: "control",
+    startedAt: "2026-07-31T18:00:00.000Z",
+    duration: { type: "minutes", value: 10 },
+    isConcentration: true,
+    slotLevelUsed: 1,
+    endConditionRu: "До конца концентрации.",
+    ...overrides,
+  };
+}
+
+const HOLDING: EffectsState = {
+  activeEffects: [effect()],
+  concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+};
+
+function firstError(state: EffectsState): string {
+  const outcome = effectsStateSchema.safeParse(state);
+  if (outcome.success) throw new Error("состояние принято, а ожидался отказ");
+  return outcome.error.issues[0]?.message ?? "";
+}
+
+describe("инварианты доски эффектов", () => {
+  it("принимает концентрацию вместе с её эффектом", () => {
+    expect(effectsStateSchema.safeParse(HOLDING).success).toBe(true);
+  });
+
+  it("принимает доску без концентрации вовсе", () => {
+    expect(
+      effectsStateSchema.safeParse({
+        activeEffects: [effect({ isConcentration: false })],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("отклоняет концентрацию без своего активного эффекта", () => {
+    expect(firstError({ ...HOLDING, activeEffects: [] })).toContain(
+      "без соответствующего активного эффекта",
+    );
+  });
+
+  it("отклоняет концентрацию, чей эффект держит другое заклинание", () => {
+    expect(
+      firstError({ ...HOLDING, activeEffects: [effect({ spellId: "web" })] }),
+    ).toContain("без соответствующего активного эффекта");
+  });
+
+  it("отклоняет вторую концентрацию", () => {
+    expect(
+      firstError({
+        ...HOLDING,
+        activeEffects: [effect(), effect({ id: "effect-2", spellId: "web", nameRu: "Паутина" })],
+      }),
+    ).toContain("Одновременно активно 2 концентрационных эффекта");
+  });
+});

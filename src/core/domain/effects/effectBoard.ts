@@ -7,9 +7,9 @@
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import type { ActiveEffect, CharacterState } from "@/core/domain/character/state";
+import type { ActiveEffect, EffectsState } from "./schema";
 
-export type EffectBoardState = Pick<CharacterState, "activeEffects" | "concentration">;
+export type EffectBoardState = EffectsState;
 
 export type ConcentrationEnd = "manual" | "failed_check" | "replaced" | "long_rest";
 
