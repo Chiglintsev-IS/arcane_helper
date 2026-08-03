@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-import { SCREEN_MODES, type ScreenMode } from "@/core/shared/screenMode";
+import { SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
 
 /**
  * Подсказки не содержат слова «заклинания»: список на экране назван им же, и доступное имя кнопки

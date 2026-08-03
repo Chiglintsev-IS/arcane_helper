@@ -15,7 +15,7 @@
 import { TONE_CLASS } from "@/ui/shared/ui/tone";
 import { CASTING_TIME, COMBAT_ROLE, levelChipLabel } from "@/ui/entities/spell/lib/format";
 import type { CombatRole } from "@/core/domain/catalog/combatRole";
-import type { ScreenMode } from "@/core/shared/screenMode";
+import type { ScreenMode } from "@/ui/shared/model/screenMode";
 import { type SpellFilters as Filters, type DividingCategories } from "@/ui/features/filter-spells/model/filters";
 import { toggleValue, type CastingTimeFilter } from "@/ui/features/filter-spells/model/filters";
 

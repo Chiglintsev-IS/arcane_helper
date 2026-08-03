@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-import type { ScreenMode } from "@/core/shared/screenMode";
-import { DEFAULT_SCREEN_MODE, SCREEN_MODES } from "@/core/shared/screenMode";
+import { DEFAULT_SCREEN_MODE, SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
