@@ -9,6 +9,7 @@
 
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
+import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/equipment/schema";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 
 const UNKNOWN_ABILITY_SCORE = 10;
@@ -78,42 +79,36 @@ const ITEM_COUNT_CAP = 9999;
 
 /**
  * Одна вещь прежней формы — к новой: род становится категорией (зелье — расходник, хлам —
- * «другое», без рода — по поведению: надетая или с прибавкой была экипировкой и до слова),
+ * «другое», без рода — по поведению: заполненное свойство экипировки выдаёт экипировку и до слова),
  * свойства экипировки вне экипировки снимаются — прежняя сборка позволяла надеть зелье и дать ему
  * прибавку, — а счёт выше предела обрезается пределом: старая схема потолка не знала, и отказ схемы
  * запирал бы всё сохранение.
+ *
+ * Какие свойства принадлежат экипировке, знает её объявление, а не приведение: перечислить их здесь
+ * своим списком значило бы снимать не то, что отвергает схема.
  */
 function migrateItem(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
-  const { kind, worn, bonuses, armorBase, count } = item as {
-    kind?: unknown;
-    worn?: unknown;
-    bonuses?: unknown;
-    armorBase?: unknown;
-    count?: unknown;
-  };
+  const fields = item as Record<string, unknown>;
+  const { kind, count } = fields;
+  const gearOnly = filledGearOnlyFields(fields);
 
   const migratedKind =
     kind === "gear" || kind === "consumable" || kind === "ingredient" || kind === "other"
       ? kind
       : typeof kind === "string" && kind in LEGACY_ITEM_KINDS
         ? LEGACY_ITEM_KINDS[kind]
-        : worn === true || bonuses !== undefined
+        : gearOnly.length > 0
           ? "gear"
           : "other";
 
-  const gearOnlyOff =
-    migratedKind !== "gear" &&
-    (worn === true || bonuses !== undefined || armorBase !== undefined);
+  const gearOnlyOff = migratedKind !== "gear" && gearOnly.length > 0;
   const capped = typeof count === "number" && count > ITEM_COUNT_CAP;
   if (migratedKind === kind && !gearOnlyOff && !capped) return item;
 
-  const fields = item as Record<string, unknown>;
-  const { bonuses: _bonuses, armorBase: _armorBase, ...withoutGearOnly } = fields;
   return {
-    ...(gearOnlyOff ? withoutGearOnly : fields),
+    ...(gearOnlyOff ? withoutGearOnlyFields(fields) : fields),
     kind: migratedKind,
-    ...(gearOnlyOff ? { worn: false } : {}),
     ...(capped ? { count: ITEM_COUNT_CAP } : {}),
   };
 }

@@ -12,7 +12,13 @@
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import { assertInventoryItem, assertMoney, gearOnlyRefusal, MAXIMUM_ITEM_COUNT } from "./schema";
+import {
+  alignedInventoryItem,
+  assertInventoryItem,
+  assertMoney,
+  gearOnlyRefusal,
+  MAXIMUM_ITEM_COUNT,
+} from "./schema";
 import type { EquipmentData, InventoryItem, Money } from "./schema";
 
 
@@ -27,23 +33,10 @@ function contributes(bonuses: ItemBonuses | undefined): boolean {
   return bonuses !== undefined && Object.values(bonuses).some((value) => value !== 0);
 }
 
-/**
- * Вещь, приведённая к своей категории: свойства экипировки остаются только у экипировки, а прибавка
- * из одних нулей не хранится вовсе.
- *
- * Смена категории прочь от экипировки снимает вещь и убирает прибавки, а не отвергается: игрок
- * переложил зелье в свой раздел, а не ошибся полем.
- */
-function alignedToKind(item: InventoryItem): InventoryItem {
-  const { worn, bonuses, armorBase, ...rest } = item;
-  return item.kind === "gear"
-    ? {
-        ...rest,
-        worn,
-        ...(contributes(bonuses) ? { bonuses } : {}),
-        ...(armorBase === undefined ? {} : { armorBase }),
-      }
-    : { ...rest, worn: false };
+/** Прибавка из одних нулей не хранится вовсе: верёвка не участвует в счёте Класса Доспеха. */
+function withoutEmptyBonuses(item: InventoryItem): InventoryItem {
+  const { bonuses, ...rest } = item;
+  return contributes(bonuses) ? item : rest;
 }
 
 export class Equipment {
@@ -190,13 +183,12 @@ export class Equipment {
 
   /** Правка вещи целиком. Поля, которых её категории не положено, снимаются, а не отвергаются. */
   replaceItem(item: InventoryItem): Equipment {
-    const aligned = alignedToKind(item);
-    assertInventoryItem(aligned);
+    const stored = alignedInventoryItem(withoutEmptyBonuses(item));
     if (!this.data.items.some((existing) => existing.id === item.id)) {
       throw new DomainError(`Вещи «${item.id}» нет в инвентаре`);
     }
     return this.with({
-      items: this.data.items.map((existing) => (existing.id === item.id ? aligned : existing)),
+      items: this.data.items.map((existing) => (existing.id === item.id ? stored : existing)),
     });
   }
 
