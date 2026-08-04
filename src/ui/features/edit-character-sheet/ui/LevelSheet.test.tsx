@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { withSlotDebt } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { LevelSheet } from "./LevelSheet";
 
 afterEach(cleanup);
@@ -29,6 +30,33 @@ describe("шторка уровня", () => {
     await userEvent.type(field, "9");
 
     expect(screen.getByText(/Руны: 3 → 4/)).toBeDefined();
+  });
+
+  it("уровень: дневной бюджет восстановления назван в перечне сдвигов", async () => {
+    render(<LevelSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+
+    const field = screen.getByLabelText("Уровень");
+    await userEvent.clear(field);
+    await userEvent.type(field, "9");
+
+    expect(screen.getByText(/Магическое восстановление: 4 → 5/)).toBeDefined();
+  });
+
+  it("уровень: долг ячейки перечню сдвигов не мешает", async () => {
+    render(
+      <LevelSheet
+        character={withSlotDebt(createThorne(), 1)}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    const field = screen.getByLabelText("Уровень");
+    await userEvent.clear(field);
+    await userEvent.type(field, "9");
+
+    expect(screen.getByText(/Ячейки 5 уровня: 0 → 1/)).toBeDefined();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("уровень: вне диапазона 1–20 перечня изменений нет — считать нечего", async () => {

@@ -35,6 +35,16 @@ export function withoutSlots(character: CharacterState): CharacterState {
   );
 }
 
+/**
+ * Ячейка уровня списана в долг: свободных не осталось, а мастер разрешил сотворить всё равно.
+ *
+ * Состояние законное — долг виден остатком ниже нуля и возвращается отменой применения.
+ */
+export function withSlotDebt(character: CharacterState, level: number): CharacterState {
+  const drained = Character.of(withoutSlots(character));
+  return drained.withArcana(drained.arcana.spendSlot(level, { allowOverdraft: true })).toState();
+}
+
 /** Полученный урон: хиты падают тем же правилом, что и в бою. */
 export function withDamage(character: CharacterState, damage: number): CharacterState {
   const root = Character.of(character);

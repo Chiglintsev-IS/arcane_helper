@@ -5,12 +5,13 @@ import { useState } from "react";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { previewLevelChange, type LevelChange } from "@/core/application/useCases/sheet";
-import { DERIVED_LABELS } from "@/ui/entities/character/lib/labels";
+import { ARCANE_RECOVERY_LABEL, DERIVED_LABELS } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /** Подпись сдвинутой величины: слово — дело отображения, числа приходят из ядра. */
 const CHANGE_LABELS: Record<Exclude<LevelChange["of"], "slots">, string> = {
   runes: "Руны",
+  arcaneRecovery: ARCANE_RECOVERY_LABEL,
   hitDice: "Кости хитов",
   preparedLimit: DERIVED_LABELS.preparedLimit,
 };

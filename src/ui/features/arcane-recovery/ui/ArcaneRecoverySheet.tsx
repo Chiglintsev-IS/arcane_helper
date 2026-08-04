@@ -20,6 +20,7 @@ import {
   validateArcaneRecovery,
   type SlotRecoveryPlan,
 } from "@/core/domain/arcana/slots";
+import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
 
 export function ArcaneRecoverySheet({
   character,
@@ -54,7 +55,7 @@ export function ArcaneRecoverySheet({
     <section
       role="dialog"
       aria-modal="true"
-      aria-label="Магическое восстановление"
+      aria-label={ARCANE_RECOVERY_LABEL}
       className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
       <p className="text-sm">

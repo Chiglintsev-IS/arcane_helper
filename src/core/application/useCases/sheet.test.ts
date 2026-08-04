@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withSlotDebt, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { characterStateSchema } from "@/core/domain/assembly/state";
@@ -55,6 +55,36 @@ describe("предпросмотр смены уровня", () => {
     });
   });
 
+  it("дневной бюджет восстановления сдвигается вместе с ячейками", () => {
+    // Половина уровня вверх: 4 на седьмом, 5 на девятом.
+    expect(previewLevelChange(createThorne(), 9).changes).toContainEqual({
+      of: "arcaneRecovery",
+      before: 4,
+      after: 5,
+    });
+  });
+
+  it("перебитый лимит подготовки за уровнем не идёт, и сдвига ему не обещают", () => {
+    const overridden = setOverride(session(), "preparedLimit", 20, clock).character;
+
+    const preview = previewLevelChange(overridden, 9);
+
+    expect(preview.changes).not.toContainEqual(
+      expect.objectContaining({ of: "preparedLimit" }),
+    );
+    expect(preview.changes).toContainEqual({ of: "hitDice", before: 7, after: 9 });
+  });
+
+  it("долг ячейки перечню сдвигов не мешает: он законен, и уровень его не отменяет", () => {
+    const indebted = withSlotDebt(createThorne(), 1);
+
+    const preview = previewLevelChange(indebted, 9);
+
+    expect(preview.changes).toContainEqual({ of: "slots", slotLevel: 5, before: 0, after: 1 });
+    expect(preview.changes).toContainEqual({ of: "hitDice", before: 7, after: 9 });
+    expect(preview.hitPoints).toEqual({ perDie: 4, dieSize: 6, constitution: 3, total: 7 });
+  });
+
   it("прибавка хитов названа слагаемыми: среднее за кость и Телосложение", () => {
     // У Торна d6 (среднее 4) и Телосложение 16 (+3).
     expect(previewLevelChange(createThorne(), 8).hitPoints).toEqual({
@@ -83,6 +113,17 @@ describe("смена уровня", () => {
     expect(after.character.hitDice?.total).toBe(8);
     expect(after.character.hitPoints.maximumBase).toBe(66);
     expect(Sheet.of(after.character).preparationLimit).toBe(12);
+  });
+
+  it("долг ячейки переживает взятый уровень", () => {
+    const base = session();
+    const indebted = { ...base, character: withSlotDebt(base.character, 1) };
+
+    const after = changeLevel(indebted, { level: 9, hitPointMaximumBase: 72 }, clock);
+
+    // Максимум первого уровня не двигается — долг остаётся висеть; пятый приходит неистраченным.
+    expect(after.character.spellSlots[1]).toEqual({ maximum: 4, remaining: -1 });
+    expect(after.character.spellSlots[5]).toEqual({ maximum: 1, remaining: 1 });
   });
 
   it("понижение обрезает остаток и убирает исчезнувший уровень ячеек", () => {
