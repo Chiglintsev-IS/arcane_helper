@@ -433,6 +433,8 @@ describe("приведение состояния версии 1", () => {
 
   describe("поля, которые перестали принадлежать персонажу, читаются и отбрасываются", () => {
     const legacy = VERSION_FIVE;
+    /** Снимок отмены версии 5: он возвращал ровно те поля, которых состояние больше не знает. */
+    const forgotten = { turnTracking: legacy.turnTracking, reactionAvailable: legacy.reactionAvailable };
 
     it("сохранение прежней версии открывается", () => {
       expect(characterStateSchema.safeParse(migrateCharacterState(legacy)).success).toBe(true);
@@ -443,6 +445,20 @@ describe("приведение состояния версии 1", () => {
       expect(state).not.toHaveProperty("reactionAvailable");
       expect(state).not.toHaveProperty("turnTracking");
       expect(state).not.toHaveProperty("screenMode");
+    });
+
+    it("снимок отмены их теряет, а поля, которые состояние знает, оставляет", () => {
+      const patch = { ...forgotten, spellSlots: legacy.spellSlots };
+      expect(migrateUndoPatch(patch)).toEqual({ spellSlots: legacy.spellSlots });
+    });
+
+    it("снимок из одних забытых полей перестаёт быть снимком: возвращать по нему нечего", () => {
+      expect(migrateUndoPatch(forgotten)).toBeNull();
+    });
+
+    it("пустой снимок пустым и остаётся: событие ничего не стоило, и снимок не потерян", () => {
+      const nothingSpent = {};
+      expect(migrateUndoPatch(nothingSpent)).toBe(nothingSpent);
     });
   });
 });

@@ -10,6 +10,7 @@
 import { z } from "zod";
 
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
+import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
 import {
   filledGearOnlyFields,
@@ -237,13 +238,31 @@ function migrateAdjustmentMarker(state: unknown): unknown {
 }
 
 /**
+ * Снимает из снимка поля, которых состояние больше не знает: отменять поле, которого не существует,
+ * нечего. Если после этого возвращать нечего вовсе, снимка у записи не остаётся — она остаётся в
+ * журнале историей, а отмена по ней отвечает отказом.
+ *
+ * Какие поля состояние знает, отвечает его владелец: свой список здесь снимал бы не то, что
+ * отвергает объявление снимка.
+ */
+function withoutForgottenFields(patch: unknown): unknown {
+  const fields = fieldsOf(patch);
+  const known = Object.entries(fields).filter(([key]) => isStateField(key));
+  if (known.length === Object.keys(fields).length) return patch;
+  return known.length === 0 ? null : Object.fromEntries(known);
+}
+
+/**
  * Приведение снимка отмены. Снимок держит прежние значения изменяемых полей, включая снаряжение
  * прежней формы; без приведения отмена старой записи вернула бы в состояние рода вещей, которых
  * новая модель не знает.
+ *
+ * Забытые поля снимаются последними: приведение прежних форм само дописывает в снимок поля, и
+ * принадлежность проверяется у того набора ключей, который получился.
  */
 export function migrateUndoPatch(patch: unknown): unknown {
-  return migrateAdjustmentMarker(
-    migrateArmorBasePatch(migrateMiscBonuses(migrateItemCategories(patch))),
+  return withoutForgottenFields(
+    migrateAdjustmentMarker(migrateArmorBasePatch(migrateMiscBonuses(migrateItemCategories(patch)))),
   );
 }
 

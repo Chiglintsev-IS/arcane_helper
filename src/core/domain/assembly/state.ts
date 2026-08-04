@@ -40,6 +40,15 @@ export const characterStateSchema = z.object(STATE_FIELDS).superRefine((characte
 });
 
 /**
+ * Принадлежит ли ключ состоянию. Спрашивают у владельца полей и объявление снимка, и приведение
+ * прежних сохранений: свой список ключей разошёлся бы с этим на первой же правке контекста — и
+ * приведение снимало бы не то, что отвергает объявление.
+ */
+export function isStateField(key: string): boolean {
+  return key in STATE_FIELDS;
+}
+
+/**
  * Снимок отмены: подмножество полей состояния.
  *
  * Проверяется принадлежностью ключей, а не схемами значений, и причин две. Доводчики целого к части
@@ -52,7 +61,7 @@ export const characterStatePatchSchema = z.custom<Partial<CharacterState>>(
     typeof value === "object" &&
     value !== null &&
     !Array.isArray(value) &&
-    Object.keys(value).every((key) => key in STATE_FIELDS),
+    Object.keys(value).every(isStateField),
   { message: "Снимок отмены должен быть набором полей состояния" },
 );
 

@@ -90,6 +90,9 @@ export class Journal<TState extends object = Record<string, unknown>> {
     if (last === undefined) {
       throw new DomainError("Журнал пуст, отменять нечего");
     }
+    if (last.undoPatch === null) {
+      throw new DomainError("У записи нет снимка отмены: она осталась историей, возвращать нечего");
+    }
     return {
       state: { ...state, ...last.undoPatch },
       journal: new Journal(this.entries.slice(0, -1), this.mutableKeys),

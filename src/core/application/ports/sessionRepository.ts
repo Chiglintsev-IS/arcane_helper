@@ -28,9 +28,10 @@ const journalEntrySchema = z.object({
   summaryRu: z.string().min(1),
   /**
    * Снимок отмены — подмножество полей состояния, и проверяется он той же схемой: вид записи и форма
-   * снимка приходят от владельцев, поэтому прочитанное не нужно приводить к типу силой.
+   * снимка приходят от владельцев, поэтому прочитанное не нужно приводить к типу силой. Снимка может
+   * не быть: приведение снимает поля, которых состояние больше не знает, а запись остаётся.
    */
-  undoPatch: characterStatePatchSchema,
+  undoPatch: characterStatePatchSchema.nullable(),
   spellId: z.string().min(1).optional(),
   slotLevel: z.number().int().optional(),
   actionUsed: z.enum(["action", "bonus_action", "reaction"]).optional(),

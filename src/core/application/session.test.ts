@@ -1141,6 +1141,26 @@ describe("отмена последнего действия (FR-111)", () => {
     expect(corrupted.journal).toHaveLength(1);
   });
 
+  it("отмена записи без снимка называет причину, а не делает вид, что вернула состояние", () => {
+    const stored = toPersisted(spendSpellSlot(session, 1, clock), clock.now(), null);
+    // Так выглядит запись прежней версии: снимок возвращал учёт хода, которого состояние уже не
+    // знает, и приведение оставило запись без снимка.
+    const legacy = fromPersisted(
+      parsePersisted({
+        ...stored,
+        journal: stored.journal.map((entry) => ({
+          ...entry,
+          undoPatch: { turnTracking: { enabled: false } },
+        })),
+      }),
+    );
+
+    expect(() => undoLast(legacy)).toThrow(DomainError);
+    expect(() => undoLast(legacy)).toThrow(/снимка отмены/);
+    expect(legacy.journal).toHaveLength(1);
+    expect(legacy.character.spellSlots[1]?.remaining).toBe(3);
+  });
+
   it("многократная отмена идёт по одному действию назад", () => {
     let current = outOfCombat(session);
     const snapshots = [structuredClone(current.character)];

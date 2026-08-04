@@ -46,8 +46,12 @@ export type JournalEntry<TState = Record<string, unknown>> = {
   /**
    * Снимок затронутых полей ДО изменения — основа отмены. Состояние неизменяемо, поэтому снимок
    * держит те же значения, а не их копию.
+   *
+   * `null` — снимка нет вовсе, и это не то же самое, что пустой снимок: пустой говорит «событие
+   * ничего не стоило», а его отсутствие — «возвращать по этой записи нечего». Запись при этом
+   * остаётся: журнал ещё и история.
    */
-  readonly undoPatch: Partial<TState>;
+  readonly undoPatch: Partial<TState> | null;
   readonly spellId?: string | undefined;
   readonly slotLevel?: number | undefined;
   readonly actionUsed?: TurnResource | undefined;

@@ -184,7 +184,7 @@ export function describeParsingContract(): void {
     const parsed = parsePersisted(stored);
     // Отмена старой записи обязана возвращать вещь новой формы: род переведён, надетость снята,
     // счёт обрезан пределом.
-    expect(parsed.journal[0]?.undoPatch.equipment?.items[0]).toMatchObject({
+    expect(parsed.journal[0]?.undoPatch?.equipment?.items[0]).toMatchObject({
       kind: "consumable",
       worn: false,
       count: 9999,
