@@ -5,9 +5,8 @@
  */
 
 import { Character } from "@/core/domain/assembly/character";
-import type { CharacterState } from "@/core/domain/assembly/state";
 import { DomainError } from "@/core/domain/shared/errors";
-import { hitPointCost, hitPointsForPoints } from "@/core/domain/arcana/slots";
+import { hitPointsForPoints } from "@/core/domain/arcana/slots";
 import { commit, type Clock, type Session } from "@/core/application/session";
 import { inFight } from "./turn";
 

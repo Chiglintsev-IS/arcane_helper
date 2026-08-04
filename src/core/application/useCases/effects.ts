@@ -3,7 +3,6 @@
  */
 
 import { Character } from "@/core/domain/assembly/character";
-import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ArmorClassEffect } from "@/core/domain/catalog/spell";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";

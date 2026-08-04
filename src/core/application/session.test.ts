@@ -31,7 +31,6 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import { createSession, undoLast, type Session } from "@/core/application/session";
 import { fromPersisted, parsePersisted, toPersisted } from "@/core/application/ports/sessionRepository";
-import { JOURNAL_LIMIT } from "@/core/domain/journal/journal";
 import {
   withBloodExchange,
   withDamage,
@@ -97,6 +96,7 @@ describe("начальное состояние Торна", () => {
 
   it("каждый вызов даёт независимый объект", () => {
     const first = withDamage(createThorne(), 59);
+    expect(first.hitPoints.current).toBe(1);
     expect(createThorne().hitPoints.current).toBe(60);
   });
 
@@ -1186,7 +1186,7 @@ describe("журнал (FR-110, FR-112)", () => {
 
   it("не растёт бесконечно", () => {
     let current = outOfCombat(session);
-    for (let index = 0; index < JOURNAL_LIMIT + 15; index += 1) {
+    for (let index = 0; index < 100 + 15; index += 1) {
       current = castSpell(
         current,
         { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" }, targetLabel: `цель ${index}` },
@@ -1194,7 +1194,7 @@ describe("журнал (FR-110, FR-112)", () => {
       );
       current = { ...current, character: { ...current.character, activeEffects: [] } };
     }
-    expect(current.journal).toHaveLength(JOURNAL_LIMIT);
+    expect(current.journal).toHaveLength(100);
   });
 
   it("записи содержат идентификатор заклинания и уровень ячейки", () => {

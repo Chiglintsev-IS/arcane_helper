@@ -14,7 +14,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 import type { JournalEntry, Recorded } from "./entry";
 
 /** Глубина журнала: механизм обратимости, а не история кампании. */
-export const JOURNAL_LIMIT = 100;
+const JOURNAL_LIMIT = 100;
 
 /**
  * Поля, значения которых изменились. Сравнение по сериализации: состояние заведомо сериализуемо,

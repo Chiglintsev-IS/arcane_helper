@@ -45,7 +45,6 @@ async function inBookMode(character?: CharacterState) {
 
 describe("состав «Книги» (FR-217)", () => {
   it("книга не отбирает ничего", async () => {
-    const user = userEvent.setup();
     await renderWithStores(<BookScreen />);
 
     const list = within(screen.getByLabelText(/^Заклинания/));

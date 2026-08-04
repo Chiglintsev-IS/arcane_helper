@@ -5,7 +5,6 @@ import { useState, useMemo } from "react";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
-import { bestCastPlan } from "@/core/application/casting/castOptions";
 import { toCastRequest, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 import {
   endConcentration,
@@ -40,7 +39,6 @@ import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
-import type { Spell } from "@/core/domain/catalog/spell";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { setSpellNote } from "@/core/application/useCases/library";
 import { recoverHitPointMaximum } from "@/core/application/useCases/health";

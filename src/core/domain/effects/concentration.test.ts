@@ -1,41 +1,11 @@
 import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
-import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { ActiveEffect } from "@/core/domain/effects/schema";
-import type { Spell } from "@/core/domain/catalog/spell";
-
 import {
   describeConcentrationCheck,
   durationWithRoundsRu,
   startRound,
 } from "@/core/domain/effects/concentration";
-
-/**
- * Карточка по идентификатору прямо из контента.
- *
- * Помощник `spell` из `@/testing/stores` здесь не годится: он тянет `@testing-library/react`, а
- * тесты правил идут в окружении node без jsdom.
- */
-const CONTENT = new Map(loadThorneSpells().map((item) => [item.id, item]));
-
-function spell(id: string): Spell {
-  const found = CONTENT.get(id);
-  if (found === undefined) throw new Error(`нет карточки ${id}`);
-  return found;
-}
-
-/**
- * Карточка без области.
- *
- * Ключ убирается, а не присваивается `undefined`: при `exactOptionalPropertyTypes` явный `undefined`
- * в необязательное поле не проходит проверку типов.
- */
-function withoutArea(id: string): Omit<Spell, "area"> {
-  const { area: _area, ...rest } = spell(id);
-  return rest;
-}
 
 /** КС читается описанием проверки: своего входа у неё нет, и модификатор здесь ни при чём. */
 const dcFor = (damage: number): number => describeConcentrationCheck(damage, 0).dc;

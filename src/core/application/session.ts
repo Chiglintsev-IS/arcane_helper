@@ -9,12 +9,8 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { characterStateSchema, MUTABLE_STATE_KEYS } from "@/core/domain/assembly/state";
 import type { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
-import { Journal, JOURNAL_LIMIT } from "@/core/domain/journal/journal";
-import type { JournalEntry, Recorded, TurnResource } from "@/core/domain/journal/entry";
-
-
-/** Что потрачено внутри хода. Имя сохранено ради вызывающих: словарь один на журнал и на правила. */
-type ActionUsed = TurnResource;
+import { Journal } from "@/core/domain/journal/journal";
+import type { JournalEntry, Recorded } from "@/core/domain/journal/entry";
 
 export type Session = {
   character: CharacterState;

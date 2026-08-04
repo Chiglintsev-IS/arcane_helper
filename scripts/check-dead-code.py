@@ -75,6 +75,9 @@ ALLOWED_TEST_ONLY: set[tuple[str, str]] = {
     # Сторы на хранилище в памяти: реализация порта для прогонов и для помощников компонентных
     # прогонов. В браузере работает Dexie, и подменять её в рабочем коде нечем и незачем.
     ("src/core/infrastructure/persistence/memoryRepository.ts", "createMemoryRepository"),
+    # Форма ячеек заклинаний: рабочий путь всегда несёт её частью состояния персонажа, типизированного
+    # схемой, и называет её по имени только тест, строящий фикстуру уровня ячеек напрямую.
+    ("src/core/domain/arcana/slots.ts", "SpellSlots"),
 }
 
 EXPORT_DECLARATION = re.compile(

@@ -82,14 +82,6 @@ async function damage(
   await userEvent.click(screen.getByRole("button", { name: "Записать" }));
 }
 
-/** Выгрузка приложения, снятая с текущего состояния: её же и загружаем обратно. */
-async function openData(character: CharacterState = createThorne()) {
-  const user = userEvent.setup();
-  const rendered = await renderWithStores(<PlayShell initialMode="journal" />, character);
-  await user.click(screen.getByRole("button", { name: "Данные" }));
-  return { user, ...rendered };
-}
-
 describe("режим экрана переживает перезапуск (FR-204)", () => {
   it("открывает сохранённый режим", async () => {
     localStorage.setItem(STORAGE_KEY, "rest");

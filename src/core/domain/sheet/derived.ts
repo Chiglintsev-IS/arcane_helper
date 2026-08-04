@@ -7,7 +7,6 @@
  */
 
 import {
-  abilityModifier,
   initiativeModifier,
   passivePerception,
   preparedLimit,

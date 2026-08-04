@@ -18,9 +18,7 @@ export function ServiceWorkerUpdate() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    let registration: ServiceWorkerRegistration | null = null;
     const watch = (candidate: ServiceWorkerRegistration): void => {
-      registration = candidate;
       if (candidate.waiting !== null) setWaiting(candidate.waiting);
       candidate.addEventListener("updatefound", () => {
         const installing = candidate.installing;
@@ -38,10 +36,6 @@ export function ServiceWorkerUpdate() {
       // Регистрация не удалась — приложение работает как обычная страница. Это не ошибка,
       // о которой стоит сообщать: офлайна просто не будет до следующего удачного запуска.
     });
-
-    return () => {
-      registration = null;
-    };
   }, []);
 
   if (waiting === null) return null;

@@ -7,7 +7,6 @@
  * 18 хитов одним тапом, и цена ошибки была выше, чем у любого заклинания.
  */
 
-import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -17,15 +16,6 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
 import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
-
-/** Экономия хода «всё цело»: тесты обмена интересуются не ходом, а хитами и очками. */
-const ALL_AVAILABLE_ECONOMY: TurnEconomy = {
-  round: 1,
-  inFight: true,
-  actionAvailable: true,
-  bonusActionAvailable: true,
-  reactionAvailable: true,
-};
 
 async function openWizard(character: CharacterState = createThorne()) {
   const user = userEvent.setup();
@@ -139,7 +129,7 @@ describe("выбор объёма (FR-178)", () => {
 
   it("подсказывает, на что хватит, с учётом уже имеющихся очков", async () => {
     const saved = withSpellPoints(createThorne(), 3);
-    const { user } = await openWizard(saved);
+    await openWizard(saved);
     // Бой не начат нарочно — см. комментарий в инварианте выше.
 
     // 3 своих плюс 2 созданных — это пятое очко, то есть уже третий уровень.

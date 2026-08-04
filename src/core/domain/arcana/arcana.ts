@@ -18,7 +18,6 @@ import {
   restoreAllSlots,
   spendSlot,
   type SlotRecoveryPlan,
-  type SpellSlots,
 } from "./slots";
 import { spellPointCost } from "./slots";
 import { runesMaximum } from "./runes";

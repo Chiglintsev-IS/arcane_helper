@@ -16,8 +16,7 @@ import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
 
 describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист» показывает персонажа целиком и ничего из боя (FR-230)", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<SheetScreen />);
+    await renderWithStores(<SheetScreen />);
 
     // Лист — база персонажа одной колонкой: кто он и его здоровье.
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();

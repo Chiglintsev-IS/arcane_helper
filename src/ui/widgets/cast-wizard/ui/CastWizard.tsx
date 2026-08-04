@@ -13,7 +13,6 @@ import {
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import { CASTING_TIME, castingTimePhrase, levelLabel } from "@/ui/entities/spell/lib/format";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
-import { Badge } from "@/ui/shared/ui/Badge";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { checkAvailability, type Availability } from "@/core/application/casting/availability";
 import { castOptions, type CastOption } from "@/core/application/casting/castOptions";
