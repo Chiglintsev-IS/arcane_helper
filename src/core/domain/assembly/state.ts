@@ -67,7 +67,7 @@ export const exportFileSchema = z.object({
  * Поля, не попадающие в снимок отмены: справочные записи листа и состояние интерфейса. Их правка
  * ничего не расходует, и возвращать их журналом было бы нечего.
  */
-const UNRECORDED_KEYS = [
+const UNRECORDED_KEYS: readonly (keyof CharacterStateShape)[] = [
   "id",
   "name",
   "className",
@@ -78,7 +78,7 @@ const UNRECORDED_KEYS = [
   "speed",
   "proficiencies",
   "roleplayProfile",
-] as const satisfies readonly (keyof CharacterStateShape)[];
+];
 
 /**
  * Поля, попадающие в снимок отмены: всё, кроме справочных.
@@ -86,9 +86,9 @@ const UNRECORDED_KEYS = [
  * Выводится вычитанием, а не перечисляется руками. Ручной список требовал бы помнить про него при
  * каждом новом ресурсе, и забытая строка молча оставляла бы ресурс потраченным после отмены.
  */
-export const MUTABLE_STATE_KEYS = (
-  Object.keys(characterStateSchema.shape) as (keyof CharacterStateShape)[]
-).filter((key) => !(UNRECORDED_KEYS as readonly string[]).includes(key));
+export const MUTABLE_STATE_KEYS = characterStateSchema
+  .keyof()
+  .options.filter((key) => !UNRECORDED_KEYS.includes(key));
 
 type CharacterStateShape = z.infer<typeof characterStateSchema>;
 

@@ -50,7 +50,8 @@ describe("знаки и печати", () => {
   });
 
   it("огня среди стихий нет: его нет у персонажа (FR-052)", () => {
-    expect(GLYPH_IDS as readonly string[]).not.toContain("fire");
+    const names: readonly string[] = GLYPH_IDS;
+    expect(names).not.toContain("fire");
   });
 
   it("все четыре печати нарисованы", () => {

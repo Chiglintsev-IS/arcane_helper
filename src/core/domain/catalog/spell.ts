@@ -39,7 +39,7 @@ export const ANNOUNCEMENT_PLACEHOLDERS = [
 const PLACEHOLDER_PATTERN = /\{[^}]*\}/g;
 
 /** Минуты и часы — единственные типы, у которых число осмысленно: 1 минута ≠ 10 минут. */
-const LONG_CASTING_TYPES = ["minute", "hour"] as const;
+const LONG_CASTING_TYPES: readonly string[] = ["minute", "hour"];
 
 const castingTimeSchema = z
   .object({
@@ -63,7 +63,7 @@ const castingTimeSchema = z
   })
   .refine(
     (value) =>
-      !(LONG_CASTING_TYPES as readonly string[]).includes(value.type) || value.value !== undefined,
+      !LONG_CASTING_TYPES.includes(value.type) || value.value !== undefined,
     {
       message: "Накладывание в минутах или часах обязано указывать число",
       path: ["value"],
@@ -71,7 +71,7 @@ const castingTimeSchema = z
   )
   .refine(
     (value) =>
-      (LONG_CASTING_TYPES as readonly string[]).includes(value.type) || value.value === undefined,
+      LONG_CASTING_TYPES.includes(value.type) || value.value === undefined,
     {
       message: "Число ко времени накладывания «действие», «бонусное действие» и «реакция» не относится",
       path: ["value"],
