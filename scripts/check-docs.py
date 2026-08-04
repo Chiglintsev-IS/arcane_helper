@@ -14,7 +14,8 @@
   7. Имена из колонки «Имя в коде» глоссария существуют в src/.
   8. Остатки удалённых ссылок: предлог, у которого пропал адресат, — «обоснование в », «инварианты
      из ;». По умолчанию это предупреждения; флаг `--strict-link-remnants` делает их ошибками.
-  9. Каждое имя, названное в строке «Проверка», встречается в коде: `src/` или `e2e/`.
+  9. Каждое имя, названное в строке «Проверка», существует в коде: заголовком прогона или
+     объявленным идентификатором. Совпадение с прозой комментария не считается.
  10. Каждый прогон E2E назван требованием: его имя встречается в документах.
  11. Статус не обещает пустого: `Готово` и `Проверено` при «Проверка: —» — ошибка.
 
@@ -70,6 +71,12 @@ LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 STATUS_LINE = re.compile(r"\*\*Статус:\*\*\s*([^·\n]+)")
 VERIFICATION_LINE = re.compile(r"\*\*Проверка:\*\*(.*)$")
 NAMED_RUN = re.compile(r"`([^`]+)`")
+# Заголовок прогона: ближайшая строка после `describe`, `it` или `test`. Табличный прогон объявляет
+# набор случаев в скобках, и заголовок стоит за ними — поэтому ищется ближайшая строка, а не
+# непосредственный аргумент.
+RUN_TITLE = re.compile(r'\b(?:describe|it|test)\b[\s\S]{0,300}?"([^"\n]+)"')
+DECLARED_NAME = re.compile(r"\b(?:function|const|let|class|type|interface|enum)\s+(\w+)")
+METHOD_NAME = re.compile(r"^\s{2}(?:get |static |private |readonly )*(\w+)\s*[(:]", re.M)
 MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\([^)]*\)")
 E2E_TEST = re.compile(r'\btest\(\s*"([^"]+)"')
 EMPTY_VERIFICATION = {"", "—", "-"}
@@ -154,13 +161,24 @@ def check_requirements(files: list[pathlib.Path]) -> None:
 
 
 def code_text(roots: tuple[str, ...]) -> str:
-    """Код перечисленных корней одной строкой: имя прогона ищется в нём подстрокой."""
+    """Код перечисленных корней одной строкой."""
     return "\n".join(
         path.read_text(encoding="utf-8")
         for root in roots
         for path in sorted(pathlib.Path(root).rglob("*"))
         if path.suffix in CODE_SUFFIXES
     )
+
+
+def named_runs(code: str) -> tuple[list[str], set[str]]:
+    """Заголовки прогонов и объявленные идентификаторы: только они считаются существующими именами.
+
+    Проза не считается: фраза из комментария или из карточки заклинания находилась подстрокой и
+    делала переименованный прогон «существующим» — проверка молчала ровно там, где обязана кричать.
+    """
+    titles = RUN_TITLE.findall(code)
+    identifiers = set(DECLARED_NAME.findall(code)) | set(METHOD_NAME.findall(code))
+    return titles, identifiers
 
 
 def flat(text: str) -> str:
@@ -197,19 +215,22 @@ def verification_blocks(path: pathlib.Path) -> list[tuple[int, str, str]]:
     return blocks
 
 
-def check_named_runs(files: list[pathlib.Path], sources: str) -> int:
+def check_named_runs(files: list[pathlib.Path], code: str) -> int:
     """Имя, названное строкой «Проверка», обязано существовать в коде.
 
     Иначе строка обещает проверку, которой нет: прогон переименовали или удалили, а спека этого не
-    заметила.
+    заметила. Имя бывает двух родов: заголовок прогона — целиком или его начало — и идентификатор,
+    названный точно.
     """
+    titles, identifiers = named_runs(code)
     named = 0
     for path in files:
         for number, _status, text in verification_blocks(path):
             for name in NAMED_RUN.findall(MARKDOWN_LINK.sub("", text)):
                 named += 1
-                if name not in sources:
-                    errors.append(f"{path}:{number}: названного прогона нет в коде — «{name}»")
+                if name in identifiers or any(name in title for title in titles):
+                    continue
+                errors.append(f"{path}:{number}: названного прогона нет в коде — «{name}»")
     return named
 
 
