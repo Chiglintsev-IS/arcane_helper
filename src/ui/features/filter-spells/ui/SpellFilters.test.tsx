@@ -20,16 +20,16 @@ import { NO_FILTERS } from "@/ui/features/filter-spells/model/filters";
 
 afterEach(cleanup);
 
-function renderFilters(
-  dividing: {
-    castingTimes: CastingTimeType[];
-    prices: number[];
-    roles: CombatRole[];
-    concentration: boolean;
-    ritual: boolean;
-  },
-  options: { mode?: ScreenMode; filters?: Filters } = {},
-) {
+/** Чем список делится: состав подаётся параметром, а не выводится из книги. */
+type Dividing = {
+  castingTimes: CastingTimeType[];
+  prices: number[];
+  roles: CombatRole[];
+  concentration: boolean;
+  ritual: boolean;
+};
+
+function renderFilters(dividing: Dividing, options: { mode?: ScreenMode; filters?: Filters } = {}) {
   render(
     <SpellFilters
       filters={options.filters ?? NO_FILTERS}
@@ -44,10 +44,10 @@ function renderFilters(
   );
 }
 
-const EVERYTHING = {
-  castingTimes: ["action", "bonus_action", "reaction"] as CastingTimeType[],
+const EVERYTHING: Dividing = {
+  castingTimes: ["action", "bonus_action", "reaction"],
   prices: [0, 1, 2],
-  roles: ["offense", "defense", "other"] as CombatRole[],
+  roles: ["offense", "defense", "other"],
   concentration: true,
   ritual: true,
 };

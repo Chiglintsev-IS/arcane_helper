@@ -480,14 +480,14 @@ describe("ручной статус (FR-236)", () => {
   it("заводит статус без вклада в КД и его можно снять", async () => {
     await renderWithStores(<PlayShell />);
 
-    const field = screen.getByLabelText("Новый статус");
+    const field = screen.getByLabelText<HTMLInputElement>("Новый статус");
     await userEvent.type(field, "Опутанный{Enter}");
 
     const list = screen.getByLabelText("Активные эффекты");
     expect(within(list).getByText(/Опутанный/)).toBeDefined();
     expect(within(list).queryByText(/КД/)).toBeNull();
     // Поле готово к следующему статусу без лишнего нажатия.
-    expect((field as HTMLInputElement).value).toBe("");
+    expect(field.value).toBe("");
 
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Опутанный" }));
     expect(screen.queryByLabelText("Активные эффекты")).toBeNull();

@@ -78,7 +78,7 @@ describe("состояния Торна операциями", () => {
 
   it("состоянию без костей тратить нечего", () => {
     const { hitDice: _none, ...withoutPool } = createThorne();
-    expect(withoutHitDice(withoutPool as ReturnType<typeof createThorne>).hitDice).toBeUndefined();
+    expect(withoutHitDice(withoutPool).hitDice).toBeUndefined();
   });
 
   it("бюджет восстановления кончается, а ячейки при этом целы", () => {
