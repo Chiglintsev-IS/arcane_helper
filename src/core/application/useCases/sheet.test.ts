@@ -75,14 +75,14 @@ describe("предпросмотр смены уровня", () => {
     expect(preview.changes).toContainEqual({ of: "hitDice", before: 7, after: 9 });
   });
 
-  it("отказ владельца назван причиной: обещать при нём нечего", () => {
+  it("долг ячейки перечню сдвигов не мешает: он законен, и уровень его не отменяет", () => {
     const indebted = withSlotDebt(createThorne(), 1);
 
     const preview = previewLevelChange(indebted, 9);
 
-    expect(preview.refusal).toBe("Ячеек 1 уровня: осталось -1 при максимуме 4");
-    expect(preview.changes).toEqual([]);
-    expect(preview.hitPoints).toBeNull();
+    expect(preview.changes).toContainEqual({ of: "slots", slotLevel: 5, before: 0, after: 1 });
+    expect(preview.changes).toContainEqual({ of: "hitDice", before: 7, after: 9 });
+    expect(preview.hitPoints).toEqual({ perDie: 4, dieSize: 6, constitution: 3, total: 7 });
   });
 
   it("прибавка хитов названа слагаемыми: среднее за кость и Телосложение", () => {
@@ -113,6 +113,17 @@ describe("смена уровня", () => {
     expect(after.character.hitDice?.total).toBe(8);
     expect(after.character.hitPoints.maximumBase).toBe(66);
     expect(Sheet.of(after.character).preparationLimit).toBe(12);
+  });
+
+  it("долг ячейки переживает взятый уровень", () => {
+    const base = session();
+    const indebted = { ...base, character: withSlotDebt(base.character, 1) };
+
+    const after = changeLevel(indebted, { level: 9, hitPointMaximumBase: 72 }, clock);
+
+    // Максимум первого уровня не двигается — долг остаётся висеть; пятый приходит неистраченным.
+    expect(after.character.spellSlots[1]).toEqual({ maximum: 4, remaining: -1 });
+    expect(after.character.spellSlots[5]).toEqual({ maximum: 1, remaining: 1 });
   });
 
   it("понижение обрезает остаток и убирает исчезнувший уровень ячеек", () => {

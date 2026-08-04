@@ -42,7 +42,7 @@ describe("шторка уровня", () => {
     expect(screen.getByText(/Магическое восстановление: 4 → 5/)).toBeDefined();
   });
 
-  it("уровень: отказ владельца показан вместо перечня сдвигов", async () => {
+  it("уровень: долг ячейки перечню сдвигов не мешает", async () => {
     render(
       <LevelSheet
         character={withSlotDebt(createThorne(), 1)}
@@ -55,10 +55,8 @@ describe("шторка уровня", () => {
     await userEvent.clear(field);
     await userEvent.type(field, "9");
 
-    expect(screen.getByRole("alert").textContent).toBe(
-      "Ячеек 1 уровня: осталось -1 при максимуме 4",
-    );
-    expect(screen.queryByText(/Ячейки/)).toBeNull();
+    expect(screen.getByText(/Ячейки 5 уровня: 0 → 1/)).toBeDefined();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("уровень: вне диапазона 1–20 перечня изменений нет — считать нечего", async () => {

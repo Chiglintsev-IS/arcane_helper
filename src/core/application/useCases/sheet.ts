@@ -10,7 +10,7 @@ import { abilityModifier, proficiencyBonus } from "@/core/domain/character/abili
 import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
 import { Sheet } from "@/core/domain/sheet/sheet";
-import { DomainError, refusalReason } from "@/core/domain/shared/errors";
+import { DomainError } from "@/core/domain/shared/errors";
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import {
   ABILITIES,
@@ -197,8 +197,6 @@ export type LevelChange =
 type LevelPreview = {
   changes: LevelChange[];
   hitPoints: { perDie: number; dieSize: number; constitution: number; total: number } | null;
-  /** Почему сдвиги назвать нельзя: владелец отказался строить состояние нового уровня. */
-  refusal: string | null;
 };
 
 /**
@@ -258,27 +256,18 @@ function levelShifts(before: CharacterState, after: CharacterState): LevelChange
 
 export function previewLevelChange(character: CharacterState, level: number): LevelPreview {
   // Такого уровня не бывает — считать нечего. Отвечает объявление уровня, а не проверка на месте.
-  if (!isPossibleCharacterLevel(level)) return { changes: [], hitPoints: null, refusal: null };
+  if (!isPossibleCharacterLevel(level)) return { changes: [], hitPoints: null };
 
-  let next: CharacterState;
-  try {
-    next = leveled(character, level).toState();
-  } catch (error: unknown) {
-    // Спрашивают заранее, поэтому отказ владельца — ответ, а не падение: обещать при нём нечего.
-    return { changes: [], hitPoints: null, refusal: refusalReason(error) };
-  }
-
-  const changes = levelShifts(character, next);
+  const changes = levelShifts(character, leveled(character, level).toState());
 
   const { hitDice } = character;
   const constitution = abilityModifier(character.abilities.constitution);
-  if (hitDice === undefined) return { changes, hitPoints: null, refusal: null };
+  if (hitDice === undefined) return { changes, hitPoints: null };
 
   const perDie = averagePerHitDie(hitDice.size);
   return {
     changes,
     hitPoints: { perDie, dieSize: hitDice.size, constitution, total: perDie + constitution },
-    refusal: null,
   };
 }
 

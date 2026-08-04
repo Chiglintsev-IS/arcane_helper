@@ -10,14 +10,3 @@ export class DomainError extends Error {
     this.name = "DomainError";
   }
 }
-
-/**
- * Причина отказа словами — тому, кто спрашивает владельца заранее и обязан ответить, а не упасть.
- *
- * Отказ владельца входит в игру: его показывают там, где набирали. Всё остальное — сбой, и он идёт
- * дальше: сбой, названный причиной отказа, читался бы как правило игры.
- */
-export function refusalReason(error: unknown): string {
-  if (error instanceof DomainError) return error.message;
-  throw error;
-}

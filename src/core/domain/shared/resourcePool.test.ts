@@ -64,3 +64,33 @@ describe("смена максимума", () => {
     expect(spent.resized(1).toState()).toEqual({ maximum: 1, remaining: 0 });
   });
 });
+
+describe("пул с разрешённым перерасходом", () => {
+  const SLOT_RU = "Ячеек 1 уровня";
+
+  it("долг принимает: остаток ниже нуля разрешил владелец ресурса", () => {
+    const indebted = ResourcePool.overdraftable({ maximum: 4, remaining: -1 }, SLOT_RU);
+    expect(indebted.remaining).toBe(-1);
+    expect(indebted.depleted).toBe(true);
+  });
+
+  it("остаток выше максимума долгом не бывает: испорченное состояние отвергается", () => {
+    expect(() => ResourcePool.overdraftable({ maximum: 4, remaining: 5 }, SLOT_RU)).toThrow(
+      DomainError,
+    );
+    expect(() => ResourcePool.overdraftable({ maximum: 4, remaining: 5 }, SLOT_RU)).toThrow(
+      "Ячеек 1 уровня: осталось 5 при максимуме 4",
+    );
+  });
+
+  it("смена максимума долг не прощает и не углубляет", () => {
+    const indebted = ResourcePool.overdraftable({ maximum: 4, remaining: -1 }, SLOT_RU);
+    expect(indebted.resized(4).toState()).toEqual({ maximum: 4, remaining: -1 });
+    expect(indebted.resized(2).toState()).toEqual({ maximum: 2, remaining: -1 });
+  });
+
+  it("выросший максимум долг гасит: новая ячейка уходит на него", () => {
+    const indebted = ResourcePool.overdraftable({ maximum: 4, remaining: -1 }, SLOT_RU);
+    expect(indebted.resized(5).toState()).toEqual({ maximum: 5, remaining: 0 });
+  });
+});

@@ -13,6 +13,12 @@ type ResourcePoolState = {
   remaining: number;
 };
 
+/** Ниже нуля остаток не уходит: перерасход разрешает владелец ресурса, а не арифметика. */
+const NO_DEBT = 0;
+
+/** Разрешённому долгу предела нет: сколько мастер позволил истратить, столько и висит. */
+const ANY_DEBT = Number.NEGATIVE_INFINITY;
+
 export class ResourcePool {
   private constructor(
     readonly maximum: number,
@@ -21,7 +27,19 @@ export class ResourcePool {
 
   /** Пул из хранимого состояния. Нарушение границ здесь — испорченные данные, а не ход игры. */
   static from(state: ResourcePoolState, nameRu: string): ResourcePool {
-    if (state.remaining < 0 || state.remaining > state.maximum) {
+    return ResourcePool.read(state, nameRu, NO_DEBT);
+  }
+
+  /**
+   * Пул ресурса, перерасход которого вправе разрешить мастер: остаток ниже нуля — долг, объявленный
+   * владельцем ресурса, а не испорченные данные. Остаток выше максимума долгом не бывает и здесь.
+   */
+  static overdraftable(state: ResourcePoolState, nameRu: string): ResourcePool {
+    return ResourcePool.read(state, nameRu, ANY_DEBT);
+  }
+
+  private static read(state: ResourcePoolState, nameRu: string, debtFloor: number): ResourcePool {
+    if (state.remaining < debtFloor || state.remaining > state.maximum) {
       throw new DomainError(
         `${nameRu}: осталось ${state.remaining} при максимуме ${state.maximum}`,
       );
@@ -52,11 +70,13 @@ export class ResourcePool {
    * Новый максимум: остаток движется на ту же разницу.
    *
    * Правило одно на ячейки, руны и Кости хитов: взятый уровень отдаёт новую ячейку неистраченной, а
-   * потерянный забирает её, не трогая уже потраченное.
+   * потерянный забирает её, не трогая уже потраченное. Стоящий долг — тоже потраченное: смена
+   * максимума его не прощает и не углубляет, а выросший максимум его гасит.
    */
   resized(maximum: number): ResourcePool {
     const shifted = this.remaining + (maximum - this.maximum);
-    return new ResourcePool(maximum, Math.min(Math.max(0, shifted), maximum));
+    const standingDebt = Math.min(NO_DEBT, this.remaining);
+    return new ResourcePool(maximum, Math.min(Math.max(standingDebt, shifted), maximum));
   }
 
   /** Полное восстановление: долгий отдых возвращает пул целиком. */

@@ -45,8 +45,7 @@ export function LevelSheet({
   return (
     <EditSheetFrame
       titleRu="Уровень"
-      // Отказ владельца виден до нажатия так же, как после: причина одна, и она его же словами.
-      error={error ?? preview.refusal}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave({ level, hitPointMaximumBase: maximum })}
     >

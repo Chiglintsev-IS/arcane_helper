@@ -55,6 +55,9 @@ function assertSlotLevel(slotLevel: number): void {
 /**
  * Новая таблица ячеек при смене уровня: остаток движется на разницу максимумов, исчезнувшие уровни
  * уходят целиком.
+ *
+ * Ячейка — тот самый ресурс, перерасход которого разрешает мастер: долг тут законен, и смена уровня
+ * читает его как долг, а не как испорченное состояние.
  */
 export function resizeSlots(slots: SpellSlots, wizardLevel: number): SpellSlots {
   const table = spellSlotsForLevel(wizardLevel);
@@ -65,7 +68,9 @@ export function resizeSlots(slots: SpellSlots, wizardLevel: number): SpellSlots 
     resized[level] =
       current === undefined
         ? target
-        : ResourcePool.from(current, `Ячеек ${level} уровня`).resized(target.maximum).toState();
+        : ResourcePool.overdraftable(current, `Ячеек ${level} уровня`)
+            .resized(target.maximum)
+            .toState();
   }
   return resized;
 }
