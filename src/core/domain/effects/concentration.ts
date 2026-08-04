@@ -5,8 +5,8 @@ import { withPlural } from "@/core/shared/language";
 
 export const MINIMUM_CONCENTRATION_DC = 10;
 
-export const ROUNDS_PER_MINUTE = 10;
-export const ROUNDS_PER_HOUR = 600;
+const ROUNDS_PER_MINUTE = 10;
+const ROUNDS_PER_HOUR = 600;
 
 /** Дольше десяти раундов перевод перестаёт помогать: столько длится бой, и эффект доживёт в любом случае. */
 const MAXIMUM_USEFUL_ROUNDS = 10;
@@ -21,7 +21,7 @@ function roundsHint(rounds: number): string {
 /** Записи журнала в том объёме, который нужен для счёта раундов. */
 export type TurnMark = { at: string; kind: string };
 
-export type StartRound = {
+type StartRound = {
   round: number;
   /** Начало вытеснено из обрезанного журнала: число — нижняя граница, а не точное значение. */
   approximate: boolean;
@@ -85,7 +85,7 @@ const D20_FACES = 20;
  * Границы принадлежат правилу, а не подписи: натуральная 20 спасбросок не проходит сама по себе,
  * и «не проходит даже 20» — вывод из этого, а не из вёрстки.
  */
-export type CheckOutcome = "any_roll" | "impossible" | "threshold";
+type CheckOutcome = "any_roll" | "impossible" | "threshold";
 
 export function checkOutcome(check: ConcentrationCheck): CheckOutcome {
   if (check.minimumRoll <= 1) return "any_roll";

@@ -10,7 +10,7 @@ import { z } from "zod";
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { isoDateTime, nonEmpty } from "@/core/domain/shared/schema";
 
-export const activeEffectSchema = z.object({
+const activeEffectSchema = z.object({
   id: nonEmpty,
   /** Отсутствует у эффекта, заведённого игроком вручную: статуса или чужого вклада в КД. */
   spellId: nonEmpty.optional(),
@@ -44,7 +44,7 @@ export const activeEffectSchema = z.object({
 });
 
 /** Что держится вниманием прямо сейчас. Отсутствие записи означает, что не держится ничего. */
-export const concentrationSchema = z
+const concentrationSchema = z
   .object({ spellId: nonEmpty, startedAt: isoDateTime })
   .optional();
 
@@ -55,7 +55,7 @@ export const EFFECTS_FIELDS = {
 };
 
 export type ActiveEffect = z.infer<typeof activeEffectSchema>;
-export type Concentration = z.infer<typeof concentrationSchema>;
+type Concentration = z.infer<typeof concentrationSchema>;
 
 export type EffectsState = {
   activeEffects: ActiveEffect[];

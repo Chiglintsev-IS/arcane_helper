@@ -18,7 +18,7 @@ import type { ArmorClassEffect, Spell } from "@/core/domain/catalog/spell";
  * Тип структурный: полное состояние персонажа подходит по форме, а лист про остальные его поля
  * по-прежнему не знает.
  */
-export type ArmorClassSource = SheetSource & { activeEffects: readonly ActiveEffect[] };
+type ArmorClassSource = SheetSource & { activeEffects: readonly ActiveEffect[] };
 
 /**
  * КД по слагаемым состояния и произвольному набору вкладов.

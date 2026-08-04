@@ -16,7 +16,7 @@ import { MAXIMUM_ITEM_COUNT } from "./schema";
 import type { EquipmentData, InventoryItem, Money } from "./schema";
 
 
-export type EquipmentState = { equipment: EquipmentData };
+type EquipmentState = { equipment: EquipmentData };
 
 /** База Класса Доспеха без доспехов — правило игры, а не настройка. */
 export const UNARMORED_ARMOR_CLASS_BASE = 10;

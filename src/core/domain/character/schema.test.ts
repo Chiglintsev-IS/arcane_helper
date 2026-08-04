@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { characterSchema, roleplayProfileSchema } from "@/core/domain/character/schema";
+import { z } from "zod";
+
+import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 /**
@@ -9,22 +11,22 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
  */
 describe("подсхема персонажа", () => {
   it("принимает Торна", () => {
-    expect(characterSchema.safeParse(createThorne()).success).toBe(true);
+    expect(z.object(CHARACTER_FIELDS).safeParse(createThorne()).success).toBe(true);
   });
 
   it("характеристика вне диапазона 1–30 отвергается", () => {
     const broken = { ...createThorne(), abilities: { ...createThorne().abilities, strength: 0 } };
-    expect(characterSchema.safeParse(broken).success).toBe(false);
+    expect(z.object(CHARACTER_FIELDS).safeParse(broken).success).toBe(false);
   });
 
   it("уровень персонажа вне диапазона 1–20 отвергается", () => {
-    expect(characterSchema.safeParse({ ...createThorne(), level: 0 }).success).toBe(false);
-    expect(characterSchema.safeParse({ ...createThorne(), level: 21 }).success).toBe(false);
+    expect(z.object(CHARACTER_FIELDS).safeParse({ ...createThorne(), level: 0 }).success).toBe(false);
+    expect(z.object(CHARACTER_FIELDS).safeParse({ ...createThorne(), level: 21 }).success).toBe(false);
   });
 
   it("ступень истощения ограничена шестью", () => {
-    expect(characterSchema.safeParse({ ...createThorne(), exhaustion: 6 }).success).toBe(true);
-    expect(characterSchema.safeParse({ ...createThorne(), exhaustion: 7 }).success).toBe(false);
+    expect(z.object(CHARACTER_FIELDS).safeParse({ ...createThorne(), exhaustion: 6 }).success).toBe(true);
+    expect(z.object(CHARACTER_FIELDS).safeParse({ ...createThorne(), exhaustion: 7 }).success).toBe(false);
   });
 
   it("лист Торна заполнен целиком", () => {
@@ -48,6 +50,6 @@ describe("подсхема персонажа", () => {
 
   it("профиль отыгрыша без тона отклоняется", () => {
     const profile = { ...createThorne().roleplayProfile, tone: [] };
-    expect(roleplayProfileSchema.safeParse(profile).success).toBe(false);
+    expect(CHARACTER_FIELDS.roleplayProfile.safeParse(profile).success).toBe(false);
   });
 });

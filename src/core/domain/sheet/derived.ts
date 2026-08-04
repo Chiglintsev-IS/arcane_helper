@@ -130,9 +130,3 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
 export function overriddenIds(sheet: SheetInput): Set<DerivedId> {
   return new Set(DERIVED_IDS.filter((id) => sheet.overrides[id] !== undefined));
 }
-
-export function abilityModifiers(sheet: SheetInput): Record<Ability, number> {
-  const modifiers = {} as Record<Ability, number>;
-  for (const ability of ABILITIES) modifiers[ability] = abilityModifier(sheet.abilities[ability]);
-  return modifiers;
-}

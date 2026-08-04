@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { spellbookStateSchema, type SpellbookState } from "@/core/domain/spellbook/schema";
+import { z } from "zod";
+
+import {
+  SPELLBOOK_FIELDS,
+  refineSpellbook,
+  type SpellbookState,
+} from "@/core/domain/spellbook/schema";
+
+/** Книга целиком: те же поля и тот же доводчик, что собирает в полную схему сборка состояния. */
+const book = z.object(SPELLBOOK_FIELDS).superRefine(refineSpellbook);
 
 /**
  * Инварианты книги проверяются на состоянии самой книги: собирать ради них целого персонажа значило
@@ -15,14 +24,14 @@ const BOOK: SpellbookState = {
 };
 
 function firstError(state: SpellbookState): string {
-  const outcome = spellbookStateSchema.safeParse(state);
+  const outcome = book.safeParse(state);
   if (outcome.success) throw new Error("состояние принято, а ожидался отказ");
   return outcome.error.issues[0]?.message ?? "";
 }
 
 describe("инварианты книги заклинаний", () => {
   it("принимает целую книгу", () => {
-    expect(spellbookStateSchema.safeParse(BOOK).success).toBe(true);
+    expect(book.safeParse(BOOK).success).toBe(true);
   });
 
   it("отклоняет повторы среди заговоров", () => {

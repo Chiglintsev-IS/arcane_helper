@@ -18,7 +18,7 @@ import { itemBonusesSchema, nonEmpty, NO_ITEM_BONUSES } from "@/core/domain/shar
 
 import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
-export const roleplayProfileSchema = z.object({
+const roleplayProfileSchema = z.object({
   tone: z.array(z.enum(["serious", "mysterious", "sarcastic", "wild"])).min(1),
   magicThemes: z.array(nonEmpty),
   speechStyle: nonEmpty,
@@ -33,7 +33,7 @@ const abilityScore = z.number().int().min(MINIMUM_ABILITY_SCORE).max(MAXIMUM_ABI
 /** Размер существа: из перечисления правил, потому что от него зависят правила захвата и укрытия. */
 export const CREATURE_SIZES = ["tiny", "small", "medium", "large", "huge", "gargantuan"] as const;
 
-export const abilitiesSchema = z.object({
+const abilitiesSchema = z.object({
   strength: abilityScore,
   dexterity: abilityScore,
   constitution: abilityScore,
@@ -48,7 +48,7 @@ export const abilitiesSchema = z.object({
  * Хранит их персонаж, а считает лист: введённое руками — свойство этого Торна, а не формулы. Ребра к
  * листу отсюда нет и быть не должно — перебивка знает только своё число.
  */
-export const overridesSchema = z
+const overridesSchema = z
   .object({
     proficiencyBonus: z.number().int().optional(),
     spellSaveDc: z.number().int().optional(),
@@ -107,10 +107,7 @@ export const CHARACTER_FIELDS = {
   roleplayProfile: roleplayProfileSchema,
 };
 
-export const characterSchema = z.object(CHARACTER_FIELDS);
+const characterSchema = z.object(CHARACTER_FIELDS);
 
 export type CharacterFields = z.infer<typeof characterSchema>;
 export type CreatureSize = (typeof CREATURE_SIZES)[number];
-export type Abilities = z.infer<typeof abilitiesSchema>;
-export type Overrides = z.infer<typeof overridesSchema>;
-export type RoleplayProfile = z.infer<typeof roleplayProfileSchema>;

@@ -82,7 +82,7 @@ export function skillModifier(input: {
   return abilityModifier(input.score) + trained + doubled;
 }
 
-export const PASSIVE_BASE = 10;
+const PASSIVE_BASE = 10;
 
 export function passivePerception(input: Parameters<typeof skillModifier>[0]): number {
   return PASSIVE_BASE + skillModifier(input);

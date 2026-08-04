@@ -17,7 +17,7 @@ import { nonEmpty } from "@/core/domain/shared/schema";
  * что выдан при создании. Счётчик использований ведёт ротацию: показывается реже других
  * использованный вариант.
  */
-export const roleplayPreferenceSchema = z.object({
+const roleplayPreferenceSchema = z.object({
   favoriteVariantIds: z.array(nonEmpty),
   disabledVariantIds: z.array(nonEmpty),
   customVariants: z.array(
@@ -45,7 +45,7 @@ export const SPELLBOOK_FIELDS = {
  * Полная схема состояния персонажа собирается не из этой схемы, а из `SPELLBOOK_FIELDS` и вызова
  * доводчика — обёртка проверки не даёт `ZodObject`, а сборке нужен именно он.
  */
-export const spellbookStateSchema = z.object(SPELLBOOK_FIELDS).superRefine(refineSpellbook);
+const spellbookStateSchema = z.object(SPELLBOOK_FIELDS).superRefine(refineSpellbook);
 
 export type SpellbookState = z.infer<typeof spellbookStateSchema>;
 export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;

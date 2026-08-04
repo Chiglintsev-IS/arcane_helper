@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 
+import { z } from "zod";
+
 import {
-  activeEffectSchema,
-  effectsStateSchema,
+  EFFECTS_FIELDS,
+  refineEffects,
   type ActiveEffect,
   type EffectsState,
 } from "@/core/domain/effects/schema";
+
+/** Доска целиком: те же поля и тот же доводчик, что собирает в полную схему сборка состояния. */
+const board = z.object(EFFECTS_FIELDS).superRefine(refineEffects);
+/** Одна запись доски: массив эффектов состоит из неё. */
+const entry = EFFECTS_FIELDS.activeEffects.element;
 
 /**
  * Инварианты доски проверяются на самой доске: собирать ради них целого персонажа значило бы
@@ -31,19 +38,19 @@ const HOLDING: EffectsState = {
 };
 
 function firstError(state: EffectsState): string {
-  const outcome = effectsStateSchema.safeParse(state);
+  const outcome = board.safeParse(state);
   if (outcome.success) throw new Error("состояние принято, а ожидался отказ");
   return outcome.error.issues[0]?.message ?? "";
 }
 
 describe("инварианты доски эффектов", () => {
   it("принимает концентрацию вместе с её эффектом", () => {
-    expect(effectsStateSchema.safeParse(HOLDING).success).toBe(true);
+    expect(board.safeParse(HOLDING).success).toBe(true);
   });
 
   it("принимает доску без концентрации вовсе", () => {
     expect(
-      effectsStateSchema.safeParse({
+      board.safeParse({
         activeEffects: [effect({ isConcentration: false })],
       }).success,
     ).toBe(true);
@@ -89,23 +96,23 @@ describe("схема активного эффекта", () => {
 
   it("эффект без условия завершения отклоняется", () => {
     const { endConditionRu: _omitted, ...withoutCondition } = WEB_EFFECT;
-    expect(activeEffectSchema.safeParse(withoutCondition).success).toBe(false);
+    expect(entry.safeParse(withoutCondition).success).toBe(false);
   });
 
   it("эффект без повторяемого действия принимается", () => {
     const { repeatableAction: _omitted, ...withoutAction } = WEB_EFFECT;
-    expect(activeEffectSchema.safeParse(withoutAction).success).toBe(true);
+    expect(entry.safeParse(withoutAction).success).toBe(true);
   });
 
   it("эффект без заклинания (ручной) принимается", () => {
     const { spellId: _omitted, ...manual } = WEB_EFFECT;
-    expect(activeEffectSchema.safeParse({ ...manual, isConcentration: false }).success).toBe(true);
+    expect(entry.safeParse({ ...manual, isConcentration: false }).success).toBe(true);
   });
 
   it("признак ручного эффекта — закрытый словарь: поправка к КД принимается, чужое слово нет", () => {
     const { spellId: _omitted, ...manual } = WEB_EFFECT;
     const withKind = (manualKind: string) => ({ ...manual, isConcentration: false, manualKind });
-    expect(activeEffectSchema.safeParse(withKind("armorAdjustment")).success).toBe(true);
-    expect(activeEffectSchema.safeParse(withKind("blessing")).success).toBe(false);
+    expect(entry.safeParse(withKind("armorAdjustment")).success).toBe(true);
+    expect(entry.safeParse(withKind("blessing")).success).toBe(false);
   });
 });

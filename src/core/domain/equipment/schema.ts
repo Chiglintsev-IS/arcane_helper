@@ -26,16 +26,16 @@ export const MAXIMUM_COIN_AMOUNT = 999_999;
 
 const coinAmount = z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT);
 
-export const moneySchema = z.object({
+const moneySchema = z.object({
   gold: coinAmount.default(0),
   silver: coinAmount.default(0),
   copper: coinAmount.default(0),
 });
 
-export const NO_MONEY = { gold: 0, silver: 0, copper: 0 };
+const NO_MONEY = { gold: 0, silver: 0, copper: 0 };
 
 /** Цена вещи. Необязательна: у находки из подземелья её может не назвать и мастер. */
-export const priceSchema = z.object({
+const priceSchema = z.object({
   amount: z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT),
   currency: z.enum(CURRENCIES),
 });
@@ -46,7 +46,7 @@ export const priceSchema = z.object({
  * Прибавка необязательна: большая часть вещей на числа не влияет, и нулевые поля у каждой верёвки
  * означали бы, что верёвка участвует в счёте Класса Доспеха.
  */
-export const inventoryItemSchema = z.object({
+const inventoryItemSchema = z.object({
   id: nonEmpty,
   nameRu: nonEmpty,
   /** Категория без явного выбора — «другое»: неопознанную находку не заставляют классифицировать. */
@@ -71,7 +71,7 @@ export const inventoryItemSchema = z.object({
  * Числа отсюда, а не с листа персонажа: «+1 к магии» — свойство предмета, а не Торна. Поле со
  * значениями по умолчанию, а не обязательное: сохранение прежней версии обязано читаться.
  */
-export const equipmentSchema = z
+const equipmentSchema = z
   .object({
     items: z.array(inventoryItemSchema).default([]),
 
@@ -105,6 +105,5 @@ export const EQUIPMENT_FIELDS = {
 export type EquipmentData = z.infer<typeof equipmentSchema>;
 export type InventoryItem = z.infer<typeof inventoryItemSchema>;
 export type ItemKind = (typeof ITEM_KINDS)[number];
-export type ItemPrice = z.infer<typeof priceSchema>;
 export type Currency = (typeof CURRENCIES)[number];
 export type Money = z.infer<typeof moneySchema>;

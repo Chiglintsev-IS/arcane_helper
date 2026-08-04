@@ -45,6 +45,19 @@ ALLOWED_TEST_ONLY: set[tuple[str, str]] = {
     # Общий набор проверок обеих реализаций хранилища: сам по себе — прогоны, лежащие обычным
     # модулем, чтобы память и Dexie проверялись одним текстом.
     ("src/core/infrastructure/persistence/repositoryContract.ts", "describeParsingContract"),
+    # Реестр запретов кампании и вредные виду типы урона: запрет — данные с причиной, а не
+    # отсутствие записи. Рабочий код их не читает по построению — запрещённого в контенте просто
+    # нет, — и единственный законный читатель реестра это проверка контента.
+    ("src/core/infrastructure/catalog/thorne/index.ts", "BANNED_SPELLS"),
+    ("src/core/infrastructure/catalog/thorne/index.ts", "HARMFUL_DAMAGE_TYPES"),
+    # Разбор карточек списком и его отказ: параметр существует ради проверки защитных ветвей на
+    # битых данных. Рабочий путь идёт через `loadThorneSpells`, которому подать битое нечем, и без
+    # этой пары ветви отказа никогда не исполнялись бы.
+    ("src/core/infrastructure/catalog/thorne/index.ts", "parseSpells"),
+    ("src/core/infrastructure/catalog/thorne/index.ts", "ContentError"),
+    # Сторы на хранилище в памяти: реализация порта для прогонов и для помощников компонентных
+    # прогонов. В браузере работает Dexie, и подменять её в рабочем коде нечем и незачем.
+    ("src/core/infrastructure/persistence/memoryRepository.ts", "createMemoryRepository"),
 }
 
 EXPORT_DECLARATION = re.compile(

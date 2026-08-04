@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { equipmentSchema } from "@/core/domain/equipment/schema";
+import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 /**
@@ -8,17 +8,17 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
  * проверять заодно и его правила.
  */
 function withItem(item: unknown) {
-  return equipmentSchema.safeParse({ items: [item] });
+  return EQUIPMENT_FIELDS.equipment.safeParse({ items: [item] });
 }
 
 describe("подсхема снаряжения", () => {
   it("принимает снаряжение Торна", () => {
-    const parsed = equipmentSchema.safeParse(createThorne().equipment);
+    const parsed = EQUIPMENT_FIELDS.equipment.safeParse(createThorne().equipment);
     expect(parsed.success).toBe(true);
   });
 
   it("вещь без количества считается одной штукой: старое сохранение не лжёт о запасах", () => {
-    const parsed = equipmentSchema.parse({ items: [{ id: "rope", nameRu: "Верёвка" }] });
+    const parsed = EQUIPMENT_FIELDS.equipment.parse({ items: [{ id: "rope", nameRu: "Верёвка" }] });
     expect(parsed.items[0]?.count).toBe(1);
     expect(parsed.items[0]?.kind).toBe("other");
     expect(parsed.items[0]?.worn).toBe(false);
@@ -49,14 +49,14 @@ describe("подсхема снаряжения", () => {
   });
 
   it("кошелёк по умолчанию пуст, отрицательная монета отвергается", () => {
-    expect(equipmentSchema.parse({ items: [] }).money).toEqual({ gold: 0, silver: 0, copper: 0 });
+    expect(EQUIPMENT_FIELDS.equipment.parse({ items: [] }).money).toEqual({ gold: 0, silver: 0, copper: 0 });
     expect(
-      equipmentSchema.safeParse({ items: [], money: { gold: -1, silver: 0, copper: 0 } }).success,
+      EQUIPMENT_FIELDS.equipment.safeParse({ items: [], money: { gold: -1, silver: 0, copper: 0 } }).success,
     ).toBe(false);
   });
 
   it("база КД доспеха выводится из надетого, а не хранится у персонажа", () => {
-    const parsed = equipmentSchema.parse({
+    const parsed = EQUIPMENT_FIELDS.equipment.parse({
       items: [{ id: "chain-mail", nameRu: "Кольчуга", worn: true, armorBase: 16 }],
     });
     expect(parsed.items[0]?.armorBase).toBe(16);

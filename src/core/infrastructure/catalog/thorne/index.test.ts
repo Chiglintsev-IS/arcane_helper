@@ -93,19 +93,30 @@ describe("книга заклинаний Торна", () => {
     expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(10);
   });
 
-  it("не содержит запрещённых мастером заклинаний", () => {
-    const bannedNames = new Set(BANNED_SPELLS.map((banned) => banned.nameEn));
-    for (const spell of spells) {
-      expect(bannedNames.has(spell.nameEn), `${spell.nameRu} запрещено мастером`).toBe(false);
+});
+
+describe("реестр запретов (FR-160, FR-161)", () => {
+  it("запрещённого нет в книге ни под русским, ни под английским названием", () => {
+    for (const ban of BANNED_SPELLS) {
+      expect(spells.some((spell) => spell.nameEn === ban.nameEn), ban.nameRu).toBe(false);
+      expect(spells.some((spell) => spell.nameRu === ban.nameRu), ban.nameRu).toBe(false);
     }
   });
 
-  it("не содержит урона типов, вредных виду персонажа", () => {
+  it("огонь запрещён данными, а не перечислением", () => {
+    // Перечислить всю огненную школу руками нельзя, а пропущенное заклинание было бы ошибкой в
+    // пользу опасного для тролля выбора.
+    expect(HARMFUL_DAMAGE_TYPES).toContain("огонь");
     for (const spell of spells) {
-      if (spell.damage === undefined) continue;
       for (const harmful of HARMFUL_DAMAGE_TYPES) {
-        expect(spell.damage.type.includes(harmful), `${spell.nameRu} наносит ${harmful}`).toBe(false);
+        expect(spell.damage?.type.includes(harmful) ?? false, spell.nameRu).toBe(false);
       }
+    }
+  });
+
+  it("у каждого запрета есть причина словами", () => {
+    for (const ban of BANNED_SPELLS) {
+      expect(ban.explanationRu.length, ban.nameRu).toBeGreaterThan(20);
     }
   });
 });

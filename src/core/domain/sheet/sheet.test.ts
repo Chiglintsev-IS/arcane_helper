@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Sheet } from "./sheet";
-import { abilityModifiers } from "./derived";
-import { Equipment } from "@/core/domain/equipment/equipment";
 import type { CharacterState } from "@/core/domain/assembly/state";
 
 const sheetOf = (state: CharacterState = createThorne()) => Sheet.of(state);
@@ -124,24 +122,6 @@ describe("производные числа листа", () => {
     expect(smarter.spellSaveDc).toBe(17);
     expect(smarter.spellAttackModifier).toBe(9);
     expect(smarter.preparationLimit).toBe(12);
-  });
-
-  it("модификаторы всех шести характеристик считаются разом", () => {
-    const state = createThorne();
-    expect(
-      abilityModifiers({
-        ...state,
-        bonuses: Equipment.of(state).bonuses,
-        armorClassBase: Equipment.of(state).armorClassBase,
-      }),
-    ).toEqual({
-      strength: -1,
-      dexterity: 2,
-      constitution: 3,
-      intelligence: 4,
-      wisdom: 1,
-      charisma: -1,
-    });
   });
 
   it("перечень производных называет, какие из них перебиты", () => {

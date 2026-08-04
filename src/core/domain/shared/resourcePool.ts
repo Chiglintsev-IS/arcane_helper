@@ -8,7 +8,7 @@
 
 import { DomainError } from "./errors";
 
-export type ResourcePoolState = {
+type ResourcePoolState = {
   maximum: number;
   remaining: number;
 };
