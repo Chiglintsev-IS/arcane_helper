@@ -96,6 +96,21 @@ describe("правка листа проходит объявления поле
     ).toBe(-1);
   });
 
+  it("перебивка базы КД: целое положительное принимается, иное отклоняется владельцем с причиной", () => {
+    expect(
+      Character.of(createThorne())
+        .withSheet({ overrides: { saves: {}, skills: {}, armorClassBase: 14 } })
+        .toState().overrides.armorClassBase,
+    ).toBe(14);
+
+    const nonInteger = refusal({ overrides: { saves: {}, skills: {}, armorClassBase: 10.5 } });
+    expect(nonInteger).toContain("overrides");
+    expect(nonInteger).toContain("целым положительным числом");
+    expect(refusal({ overrides: { saves: {}, skills: {}, armorClassBase: -1 } })).toContain(
+      "целым положительным числом",
+    );
+  });
+
   it("правка, прошедшая объявления, доходит до состояния", () => {
     expect(Character.of(createThorne()).withSheet({ age: 142 }).toState().age).toBe(142);
   });
