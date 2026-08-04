@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { Character } from "@/core/domain/assembly/character";
+import { DomainError } from "@/core/domain/shared/errors";
 
 /**
  * Поля самого Торна: кто он без вещей, ресурсов и заклинаний. Схема контекста лишнее отбрасывает,
@@ -51,5 +53,48 @@ describe("подсхема персонажа", () => {
   it("профиль отыгрыша без тона отклоняется", () => {
     const profile = { ...createThorne().roleplayProfile, tone: [] };
     expect(CHARACTER_FIELDS.roleplayProfile.safeParse(profile).success).toBe(false);
+  });
+});
+
+describe("правка листа проходит объявления полей", () => {
+  const refusal = (patch: Record<string, unknown>): string => {
+    try {
+      Character.of(createThorne()).withSheet(patch);
+    } catch (error: unknown) {
+      return error instanceof DomainError ? error.message : String(error);
+    }
+    throw new Error("правка принята, а ожидался отказ");
+  };
+
+  it("характеристика вне диапазона не сохраняется", () => {
+    const thorne = createThorne();
+    expect(refusal({ abilities: { ...thorne.abilities, strength: 31 } })).toContain("abilities");
+  });
+
+  it("уровень вне диапазона и дробный не сохраняются", () => {
+    expect(refusal({ level: 21 })).toContain("level");
+    expect(refusal({ level: 7.5 })).toContain("level");
+  });
+
+  it("пустое имя не сохраняется", () => {
+    expect(refusal({ name: "" })).toContain("name");
+  });
+
+  it("отрицательные возраст и скорость не сохраняются", () => {
+    expect(refusal({ age: -1 })).toContain("age");
+    expect(refusal({ speed: -5 })).toContain("speed");
+  });
+
+  it("дробная перебивка не сохраняется, а отрицательная сохраняется: минус бывает", () => {
+    expect(refusal({ overrides: { saves: {}, skills: {}, initiative: 1.5 } })).toContain("overrides");
+    expect(
+      Character.of(createThorne())
+        .withSheet({ overrides: { saves: {}, skills: {}, initiative: -1 } })
+        .toState().overrides.initiative,
+    ).toBe(-1);
+  });
+
+  it("правка, прошедшая объявления, доходит до состояния", () => {
+    expect(Character.of(createThorne()).withSheet({ age: 142 }).toState().age).toBe(142);
   });
 });

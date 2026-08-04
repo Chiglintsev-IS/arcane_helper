@@ -16,7 +16,10 @@ export function ArmorClassBaseSheet({
   character,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   character: CharacterState;
   onSave: (value: number | null) => void;
   onCancel: () => void;
@@ -32,7 +35,7 @@ export function ArmorClassBaseSheet({
   return (
     <EditSheetFrame
       titleRu="База Класса Доспеха"
-      canSave={Number.isInteger(value) && value > 0}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave(value)}
     >

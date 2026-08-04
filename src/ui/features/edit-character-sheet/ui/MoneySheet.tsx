@@ -17,7 +17,10 @@ export function MoneySheet({
   money,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   money: Money;
   onSave: (money: Money) => void;
   onCancel: () => void;
@@ -34,14 +37,11 @@ export function MoneySheet({
     (currency) =>
       [currency, values[currency].trim() === "" ? Number.NaN : Number(values[currency])] as const,
   );
-  const valid = parsed.every(
-    ([, amount]) => Number.isInteger(amount) && amount >= 0 && amount <= MAXIMUM_COIN_AMOUNT,
-  );
 
   return (
     <EditSheetFrame
       titleRu="Деньги"
-      canSave={valid}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave(Object.fromEntries(parsed) as Money)}
     >

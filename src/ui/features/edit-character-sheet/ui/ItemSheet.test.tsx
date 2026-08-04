@@ -120,11 +120,12 @@ describe("шторка вещи", () => {
     });
   });
 
-  it("вещь: дробная цена не сохраняется", async () => {
+  it("вещь: дробная цена уходит владельцу — отказывает он", async () => {
+    const onSave = vi.fn();
     render(
       <ItemSheet
         item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 1 }}
-        onSave={() => {}}
+        onSave={onSave}
         onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
@@ -132,7 +133,10 @@ describe("шторка вещи", () => {
     );
 
     await userEvent.type(screen.getByLabelText("Цена"), "1.5");
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Дробную цену отвергает снаряжение: шторка передаёт набранное как есть.
+    expect(onSave.mock.calls[0]?.[0].price).toEqual({ amount: 1.5, currency: "gold" });
   });
 
   it("вещь: пустая прибавка экипировки не сохраняется полем нулей", async () => {
@@ -151,11 +155,12 @@ describe("шторка вещи", () => {
     expect(onSave).toHaveBeenCalledWith({ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 });
   });
 
-  it("вещь: пустое поле прибавки у экипировки не сохраняется", async () => {
+  it("вещь: пустое поле прибавки уходит владельцу — отказывает он", async () => {
+    const onSave = vi.fn();
     render(
       <ItemSheet
         item={{ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 }}
-        onSave={() => {}}
+        onSave={onSave}
         onAdjustCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
@@ -163,7 +168,9 @@ describe("шторка вещи", () => {
     );
 
     await userEvent.clear(screen.getByLabelText("К защите"));
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onSave.mock.calls[0]?.[0].bonuses.armorClass).toBeNaN();
   });
 
   it("вещь: удаление стоит в её же шторке (FR-241)", async () => {

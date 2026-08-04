@@ -25,7 +25,10 @@ export function LevelSheet({
   character,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   character: CharacterState;
   onSave: (next: { level: number; hitPointMaximumBase: number }) => void;
   onCancel: () => void;
@@ -35,15 +38,13 @@ export function LevelSheet({
 
   const level = Number.parseInt(levelText, 10);
   const maximum = Number.parseInt(maximumText, 10);
-  const levelValid =
-    Number.isInteger(level) && level >= MINIMUM_CHARACTER_LEVEL && level <= MAXIMUM_CHARACTER_LEVEL;
-  const valid = levelValid && Number.isInteger(maximum) && maximum > 0;
-  const preview = previewLevelChange(character, levelValid ? level : character.level);
+  // Что изменится, считает сценарий; пустой перечень означает «считать нечего».
+  const preview = previewLevelChange(character, level);
 
   return (
     <EditSheetFrame
       titleRu="Уровень"
-      canSave={valid}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave({ level, hitPointMaximumBase: maximum })}
     >
@@ -70,7 +71,7 @@ export function LevelSheet({
         </p>
       )}
 
-      {levelValid ? (
+      {preview.changes.length > 0 ? (
         <ul className="flex flex-col gap-0.5 text-xs text-slate-600 dark:text-slate-400">
           {preview.changes.map((change) => (
             <li key={changeLine(change)}>{changeLine(change)}</li>

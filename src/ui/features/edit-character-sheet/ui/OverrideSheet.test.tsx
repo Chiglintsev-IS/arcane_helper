@@ -45,19 +45,21 @@ describe("шторка перебивки", () => {
     expect(onSave).toHaveBeenCalledWith(18);
   });
 
-  it("перебивка: пустое поле не сохраняется", async () => {
+  it("перебивка: пустое поле уходит владельцу — отказывает он", async () => {
+    const onSave = vi.fn();
     render(
       <OverrideSheet
         id="initiative"
         formulaValue={2}
         currentValue={2}
-        onSave={() => {}}
+        onSave={onSave}
         onCancel={() => {}}
       />,
     );
 
     await userEvent.clear(screen.getByLabelText("Значение"));
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    expect(onSave.mock.calls[0]?.[0]).toBeNaN();
   });
 });

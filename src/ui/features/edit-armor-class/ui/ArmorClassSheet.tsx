@@ -10,7 +10,10 @@ export function ArmorClassSheet({
   value,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   value: number;
   onSave: (value: number) => void;
   onCancel: () => void;
@@ -18,7 +21,6 @@ export function ArmorClassSheet({
   const [text, setText] = useState(value === 0 ? "" : String(value));
   const trimmed = text.trim();
   const parsed = trimmed === "" ? 0 : Number(trimmed);
-  const valid = trimmed === "" || Number.isInteger(parsed);
 
   return (
     <section
@@ -42,12 +44,17 @@ export function ArmorClassSheet({
         Складывается с прочими вкладами в Класс Доспеха. Ноль снимает поправку.
       </p>
 
+      {error === null ? null : (
+        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+          {error}
+        </p>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={!valid}
           onClick={() => onSave(parsed)}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
         >
           Записать
         </button>

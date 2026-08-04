@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { DomainError } from "@/core/domain/shared/errors";
+import { assertInventoryItem, assertMoney } from "@/core/domain/equipment/schema";
 
 /**
  * Пределы и словари снаряжения на самом снаряжении: собирать ради них целого персонажа значило бы
@@ -60,5 +62,44 @@ describe("подсхема снаряжения", () => {
       items: [{ id: "chain-mail", nameRu: "Кольчуга", worn: true, armorBase: 16 }],
     });
     expect(parsed.items[0]?.armorBase).toBe(16);
+  });
+});
+
+describe("правка вещи и кошелька проходит объявления", () => {
+  const reason = (attempt: () => unknown): string => {
+    try {
+      attempt();
+    } catch (error: unknown) {
+      return error instanceof DomainError ? error.message : String(error);
+    }
+    throw new Error("правка принята, а ожидался отказ");
+  };
+
+  const potion = { id: "potion", nameRu: "Зелье", kind: "consumable", worn: false, count: 1 };
+
+  it("дробная цена не сохраняется", () => {
+    expect(reason(() => assertInventoryItem({ ...potion, price: { amount: 1.5, currency: "gold" } })))
+      .toContain("price");
+  });
+
+  it("отрицательная монета не сохраняется", () => {
+    expect(reason(() => assertMoney({ gold: -1, silver: 0, copper: 0 }))).toContain("gold");
+  });
+
+  it("дробная прибавка экипировки не сохраняется", () => {
+    expect(
+      reason(() =>
+        assertInventoryItem({
+          ...potion,
+          kind: "gear",
+          bonuses: { spellcasting: 0.5, armorClass: 0, savingThrows: 0 },
+        }),
+      ),
+    ).toContain("bonuses");
+  });
+
+  it("прошедшее объявления принимается молча", () => {
+    expect(() => assertInventoryItem(potion)).not.toThrow();
+    expect(() => assertMoney({ gold: 15, silver: 3, copper: 0 })).not.toThrow();
   });
 });

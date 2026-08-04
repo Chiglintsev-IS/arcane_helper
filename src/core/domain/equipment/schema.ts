@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 
+import { DomainError } from "@/core/domain/shared/errors";
+
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 import { itemBonusesSchema, nonEmpty } from "@/core/domain/shared/schema";
@@ -98,6 +100,28 @@ const equipmentSchema = z
     items: [],
     money: NO_MONEY,
   });
+
+/**
+ * Отвергает вещь или кошелёк, которые не проходят своих объявлений, — с причиной словами.
+ *
+ * Спрашивает те же схемы, которыми проверяется сохранённое состояние: числа вещи и монеты
+ * проверяются в одном месте, а экран передаёт набранное как есть.
+ */
+export function assertInventoryItem(item: unknown): void {
+  assertParsed(inventoryItemSchema.safeParse(item), "вещь");
+}
+
+export function assertMoney(money: unknown): void {
+  assertParsed(moneySchema.safeParse(money), "кошелёк");
+}
+
+function assertParsed(result: z.ZodSafeParseResult<unknown>, subject: string): void {
+  if (result.success) return;
+  const reasons = result.error.issues
+    .map((issue) => `поле «${issue.path.join(".")}»: ${issue.message}`)
+    .join("; ");
+  throw new DomainError(`Не годится ${subject} — ${reasons}`);
+}
 
 /** Поля контекста для сборки полной схемы состояния. */
 export const EQUIPMENT_FIELDS = {

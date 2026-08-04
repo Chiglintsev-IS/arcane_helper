@@ -102,4 +102,21 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(stores.session.getState().session?.journal).toHaveLength(0);
   });
 
+
+  it("«Лист»: отказ владельца остаётся в шторке причиной, а состояние не трогает", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<SheetScreen />);
+    const before = stores.session.getState().session?.character.hitPoints;
+
+    await user.click(screen.getByRole("button", { name: "Править: Здоровье" }));
+    const field = screen.getByLabelText("Базовый максимум");
+    await user.clear(field);
+    await user.type(field, "0");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Шторка не решала, годится ли ноль: она передала его и показывает ответ жизнеспособности.
+    expect(screen.getByRole("alert").textContent).toContain("Максимум хитов");
+    expect(screen.getByRole("dialog", { name: /Правка: Здоровье/ })).toBeDefined();
+    expect(stores.session.getState().session?.character.hitPoints).toEqual(before);
+  });
 });

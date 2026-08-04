@@ -25,7 +25,10 @@ export function IdentitySheet({
   character,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   character: CharacterState;
   onSave: (patch: Identity) => void;
   onCancel: () => void;
@@ -44,18 +47,11 @@ export function IdentitySheet({
 
   const age = Number.parseInt(ageText, 10);
   const speed = Number.parseInt(speedText, 10);
-  const valid =
-    name.trim() !== "" &&
-    className.trim() !== "" &&
-    Number.isInteger(age) &&
-    age >= 0 &&
-    Number.isInteger(speed) &&
-    speed >= 0;
 
   return (
     <EditSheetFrame
       titleRu="Кто он"
-      canSave={valid}
+      error={error}
       onCancel={onCancel}
       onSave={() =>
         onSave({

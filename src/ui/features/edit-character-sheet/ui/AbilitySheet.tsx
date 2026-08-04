@@ -38,7 +38,10 @@ export function AbilitySheet({
   character,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   ability: Ability;
   character: CharacterState;
   onSave: (change: {
@@ -61,7 +64,6 @@ export function AbilitySheet({
   );
 
   const score = Number.parseInt(scoreText, 10);
-  const valid = Number.isInteger(score) && score >= MINIMUM_ABILITY_SCORE && score <= MAXIMUM_ABILITY_SCORE;
 
   const setTraining = (id: SkillId, training: SkillTraining | undefined): void => {
     const { [id]: _dropped, ...rest } = skills;
@@ -71,7 +73,7 @@ export function AbilitySheet({
   return (
     <EditSheetFrame
       titleRu={ABILITY_LABELS[ability]}
-      canSave={valid}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave({ ability, score, saveProficient, skills })}
     >

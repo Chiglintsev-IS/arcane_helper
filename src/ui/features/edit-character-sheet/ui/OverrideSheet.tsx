@@ -12,7 +12,10 @@ export function OverrideSheet({
   currentValue,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   id: DerivedId;
   /** Что даёт формула: игрок обязан видеть, от чего отступает. */
   formulaValue: number;
@@ -26,7 +29,7 @@ export function OverrideSheet({
   return (
     <EditSheetFrame
       titleRu={DERIVED_LABELS[id]}
-      canSave={Number.isInteger(value)}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave(value)}
     >

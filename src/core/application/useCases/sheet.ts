@@ -22,6 +22,7 @@ import {
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
+import { isPossibleCharacterLevel } from "@/core/domain/character/schema";
 
 /** Справочные поля: имени и возраста журнал не касается. */
 export type Identity = Partial<
@@ -201,6 +202,9 @@ type LevelPreview = {
 };
 
 export function previewLevelChange(character: CharacterState, level: number): LevelPreview {
+  // Такого уровня не бывает — считать нечего. Отвечает объявление уровня, а не проверка на месте.
+  if (!isPossibleCharacterLevel(level)) return { changes: [], hitPoints: null };
+
   const before = spellSlotsForLevel(character.level);
   const after = spellSlotsForLevel(level);
   const changes: LevelChange[] = [];

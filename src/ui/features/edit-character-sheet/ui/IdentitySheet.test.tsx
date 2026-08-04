@@ -33,11 +33,14 @@ describe("шторка «кто он»", () => {
     expect(onSave.mock.calls[0]?.[0].age).toBe(142);
   });
 
-  it("кто он: пустое имя не сохраняется", async () => {
-    render(<IdentitySheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+  it("кто он: пустое имя уходит владельцу — отказывает он", async () => {
+    const onSave = vi.fn();
+    render(<IdentitySheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText("Имя"));
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    // Пустое имя отвергает персонаж — шторка о его правилах не знает.
+    expect(onSave).not.toHaveBeenCalledWith(expect.objectContaining({ name: "Торн" }));
   });
 });

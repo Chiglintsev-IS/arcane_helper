@@ -12,7 +12,7 @@
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import { MAXIMUM_ITEM_COUNT } from "./schema";
+import { assertInventoryItem, assertMoney, MAXIMUM_ITEM_COUNT } from "./schema";
 import type { EquipmentData, InventoryItem, Money } from "./schema";
 
 
@@ -165,6 +165,7 @@ export class Equipment {
   }
 
   replaceItem(item: InventoryItem): Equipment {
+    assertInventoryItem(item);
     if (!this.data.items.some((existing) => existing.id === item.id)) {
       throw new DomainError(`Вещи «${item.id}» нет в инвентаре`);
     }
@@ -214,6 +215,7 @@ export class Equipment {
   }
 
   withMoney(money: Money): Equipment {
+    assertMoney(money);
     return this.with({ money });
   }
 

@@ -26,21 +26,18 @@ describe("шторка денег", () => {
     expect(onSave).toHaveBeenCalledWith({ gold: 215, silver: 30, copper: 12 });
   });
 
-  it("деньги: отрицательное и пустое не сохраняются", async () => {
+  it("деньги: отрицательное и пустое уходят владельцу — отказывает он", async () => {
+    const onSave = vi.fn();
     render(
-      <MoneySheet money={{ gold: 15, silver: 0, copper: 0 }} onSave={() => {}} onCancel={() => {}} />,
+      <MoneySheet money={{ gold: 15, silver: 0, copper: 0 }} onSave={onSave} onCancel={() => {}} />,
     );
 
     const gold = screen.getByLabelText("Золото");
     await userEvent.clear(gold);
     await userEvent.type(gold, "-5");
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    await userEvent.clear(gold);
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
-
-    // Дробное не усечётся молча: «12.5» — отказ, а не двенадцать.
-    await userEvent.type(gold, "12.5");
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    // Набранное уходит кошельку как есть: дробное и отрицательное отвергает он, а не шторка.
+    expect(onSave.mock.calls[0]?.[0]).toEqual({ gold: -5, silver: 0, copper: 0 });
   });
 });

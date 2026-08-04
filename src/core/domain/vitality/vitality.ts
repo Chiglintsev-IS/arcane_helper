@@ -276,8 +276,17 @@ export class Vitality {
    *
    * Спрашивается до сохранения, поэтому отвечает числом, а не новым состоянием: собирать
    * изменённый агрегат ради одного числа значило бы держать в экране правку, которой не было.
+   *
+   * `null` — такого максимума не бывает. Отвечает так же он: экран не решает, годится ли набранное,
+   * и не повторяет ни одного его условия.
    */
-  maximumWith(change: { maximumBase: number; masterReduction: number }): number {
+  maximumWith(change: { maximumBase: number; masterReduction: number }): number | null {
+    if (
+      !isPossibleHitPointMaximum(change.maximumBase) ||
+      !isPossibleReduction(change.masterReduction)
+    ) {
+      return null;
+    }
     return this.withMaximumBase(change.maximumBase)
       .withMasterReduction(change.masterReduction)
       .maximum;

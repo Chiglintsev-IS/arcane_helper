@@ -31,15 +31,15 @@ describe("шторка уровня", () => {
     expect(screen.getByText(/Руны: 3 → 4/)).toBeDefined();
   });
 
-  it("уровень: вне диапазона 1–20 перечня изменений нет и сохранить нельзя", async () => {
+  it("уровень: вне диапазона 1–20 перечня изменений нет — считать нечего", async () => {
     render(<LevelSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
 
     const field = screen.getByLabelText("Уровень");
     await userEvent.clear(field);
     await userEvent.type(field, "21");
 
+    // Перечня изменений нет: считать по невозможному уровню нечего, а отказ придёт от владельца.
     expect(screen.queryByText(/Ячейки/)).toBeNull();
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
   });
 
   it("уровень: максимум хитов подсказывает среднее, но не подставляет", () => {

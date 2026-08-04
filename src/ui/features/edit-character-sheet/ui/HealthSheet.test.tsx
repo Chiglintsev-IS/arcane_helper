@@ -19,15 +19,18 @@ describe("шторка здоровья", () => {
     expect(screen.queryByLabelText("Снижение кровью")).toBeNull();
   });
 
-  it("здоровье: максимум ниже уже снятого кровью не сохраняется", async () => {
+  it("здоровье: набранный максимум уходит владельцу, отказ приходит от него", async () => {
     // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
+    const onSave = vi.fn();
     const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
-    render(<HealthSheet character={hurt} onSave={() => {}} onCancel={() => {}} />);
+    render(<HealthSheet character={hurt} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));
     await userEvent.type(screen.getByLabelText("Базовый максимум"), "6");
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    // Меньше уже снятого кровью — отказ жизнеспособности, а не решение шторки.
+    expect(onSave).toHaveBeenCalledWith({ maximumBase: 6, masterReduction: 0 });
   });
 
   it("здоровье: пустое поле показывает прочерк вместо действующего максимума", async () => {

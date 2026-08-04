@@ -21,11 +21,14 @@ describe("шторка прочих прибавок", () => {
     expect(onSave).toHaveBeenCalledWith({ spellcasting: 0, armorClass: -1, savingThrows: 0 });
   });
 
-  it("прочие прибавки: пустое поле не сохраняется", async () => {
-    render(<MiscBonusesSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+  it("прочие прибавки: пустое поле уходит владельцу — отказывает он", async () => {
+    const onSave = vi.fn();
+    render(<MiscBonusesSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText("К магии"));
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    // Пустое поле — не ноль: набранное уходит владельцу, и отказывает он.
+    expect(onSave.mock.calls[0]?.[0].spellcasting).toBeNaN();
   });
 });

@@ -38,21 +38,26 @@ describe("шторка характеристики", () => {
     });
   });
 
-  it("характеристика: значение вне диапазона не сохраняется", async () => {
+  it("характеристика: набранное уходит владельцу, а причина отказа приходит от него", async () => {
+    const onSave = vi.fn();
     render(
       <AbilitySheet
         ability="strength"
         character={createThorne()}
-        onSave={() => {}}
+        error="Поле «abilities» не годится"
+        onSave={onSave}
         onCancel={() => {}}
       />,
     );
 
+    // Годится ли 31, шторка не решает: она передаёт набранное и показывает ответ владельца.
     const field = screen.getByLabelText("Значение");
     await userEvent.clear(field);
     await userEvent.type(field, "31");
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(screen.getByRole("button", { name: "Сохранить" })).toHaveProperty("disabled", true);
+    expect(onSave.mock.calls[0]?.[0].score).toBe(31);
+    expect(screen.getByRole("alert").textContent).toContain("не годится");
   });
 
   it("характеристика: владение спасброском снимается переключателем", async () => {

@@ -20,7 +20,10 @@ export function ItemSheet({
   onAdjustCount,
   onRemove,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   item: InventoryItem;
   onSave: (item: InventoryItem) => void;
   /** Немедленный расход и пополнение — не черновик: применяется нажатием, как кнопки на строке. */
@@ -49,14 +52,8 @@ export function ItemSheet({
   // Пустая цена — вещь без цены, а не цена ноль: у находки её может не назвать и мастер.
   // Number, а не parseInt: «1.5» обязано отвергнуться, а не молча стать единицей.
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
-  const priceValid =
-    amount === undefined ||
-    (Number.isInteger(amount) && amount >= 0 && amount <= MAXIMUM_COIN_AMOUNT);
-  const bonusesValid =
-    kind !== "gear" || Object.values(numbers).every((value) => Number.isInteger(value));
   // Пустая база — вещь не доспех: кольцо защищает прибавкой, а не заменой базы.
   const base = armorBase.trim() === "" ? undefined : Number(armorBase);
-  const baseValid = kind !== "gear" || base === undefined || (Number.isInteger(base) && base > 0);
   // Пустая прибавка не хранится вовсе: верёвка не участвует в счёте Класса Доспеха.
   const contributes = Object.values(numbers).some((value) => value !== 0);
 
@@ -64,7 +61,7 @@ export function ItemSheet({
     <EditSheetFrame
       // Счёт стоит в заголовке, а не полем: его меняют расход и пополнение на строке сумки.
       titleRu={item.count === 1 ? item.nameRu : `${item.nameRu} ×${item.count}`}
-      canSave={priceValid && bonusesValid && baseValid}
+      error={error}
       onCancel={onCancel}
       onSave={() =>
         onSave({

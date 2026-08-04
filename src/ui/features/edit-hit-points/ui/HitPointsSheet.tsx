@@ -21,7 +21,10 @@ export function HitPointsSheet({
   onHeal,
   onTemporary,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   onDamage: (damage: number, fire: boolean) => void;
   onHeal: (amount: number) => void;
   onTemporary: (amount: number) => void;
@@ -31,7 +34,6 @@ export function HitPointsSheet({
   const [value, setValue] = useState("");
   const [fire, setFire] = useState(false);
   const amount = Number.parseInt(value, 10);
-  const valid = Number.isInteger(amount) && amount > 0;
 
   const submit = (): void => {
     if (kind === "damage") return onDamage(amount, fire);
@@ -94,12 +96,17 @@ export function HitPointsSheet({
         </label>
       ) : null}
 
+      {error === null ? null : (
+        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+          {error}
+        </p>
+      )}
+
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={!valid}
           onClick={submit}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
         >
           Записать
         </button>

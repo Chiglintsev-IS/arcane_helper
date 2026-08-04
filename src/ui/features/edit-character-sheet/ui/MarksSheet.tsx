@@ -11,7 +11,10 @@ export function MarksSheet({
   character,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   character: CharacterState;
   onSave: (marks: { exhaustion: number; inspiration: boolean }) => void;
   onCancel: () => void;
@@ -22,6 +25,7 @@ export function MarksSheet({
   return (
     <EditSheetFrame
       titleRu="Отметки мастера"
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave({ exhaustion, inspiration })}
     >

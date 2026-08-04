@@ -45,6 +45,8 @@ import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext"
 import { setSpellNote } from "@/core/application/useCases/library";
 import { recoverHitPointMaximum } from "@/core/application/useCases/health";
 import { spellListLabel, unavailabilityReason } from "@/ui/shared/lib/spellLabels";
+import type { Session } from "@/core/application/session";
+import { applyEdit } from "@/ui/shared/model/editing";
 
 export function GameScreen() {
   const { clock, draft: draftStore, session: sessionStore } = useStores();
@@ -66,6 +68,14 @@ export function GameScreen() {
 
   const { character } = session;
   const apply = sessionStore.getState().apply;
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
+  const saveEdit = (operation: (current: Session) => Session, close: () => void): void => {
+    const reason = applyEdit(sessionStore, operation);
+    setRefusal(reason);
+    if (reason === null) close();
+  };
   const economy = deriveTurnEconomy(session);
   const { inFight } = economy;
   const context = { character, turn: economy };
@@ -270,11 +280,16 @@ export function GameScreen() {
       {armorClassOpen ? (
         <ArmorClassSheet
           value={armorClassAdjustment(character)}
-          onCancel={() => setArmorClassOpen(false)}
-          onSave={(value) => {
-            const failure = apply((current) => setArmorClassAdjustment(current, value, clock));
-            if (failure === null) setArmorClassOpen(false);
+          error={refusal}
+          onCancel={() => {
+            setRefusal(null);
+            setArmorClassOpen(false);
           }}
+          onSave={(value) =>
+            saveEdit((current) => setArmorClassAdjustment(current, value, clock), () =>
+              setArmorClassOpen(false),
+            )
+          }
         />
       ) : null}
 
@@ -325,16 +340,20 @@ export function GameScreen() {
 
       {damageOpen ? (
         <HitPointsSheet
-          onCancel={() => setDamageOpen(false)}
+          error={refusal}
+          onCancel={() => {
+            setRefusal(null);
+            setDamageOpen(false);
+          }}
           onDamage={recordDamage}
-          onHeal={(amount) => {
-            if (apply((current) => heal(current, amount, clock)) === null) setDamageOpen(false);
-          }}
-          onTemporary={(amount) => {
-            if (apply((current) => grantTemporaryHitPoints(current, amount, clock)) === null) {
-              setDamageOpen(false);
-            }
-          }}
+          onHeal={(amount) =>
+            saveEdit((current) => heal(current, amount, clock), () => setDamageOpen(false))
+          }
+          onTemporary={(amount) =>
+            saveEdit((current) => grantTemporaryHitPoints(current, amount, clock), () =>
+              setDamageOpen(false),
+            )
+          }
         />
       ) : null}
 

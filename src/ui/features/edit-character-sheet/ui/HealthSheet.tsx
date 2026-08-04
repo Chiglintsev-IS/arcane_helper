@@ -10,7 +10,10 @@ export function HealthSheet({
   character,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   character: CharacterState;
   onSave: (change: { maximumBase: number; masterReduction: number }) => void;
   onCancel: () => void;
@@ -21,19 +24,13 @@ export function HealthSheet({
 
   const maximumBase = Number.parseInt(baseText, 10);
   const masterReduction = Number.parseInt(masterText, 10);
-  const both = Number.isInteger(maximumBase) && Number.isInteger(masterReduction);
-  // Предпросмотр спрашивает агрегат, а не повторяет его формулу; гуард повторяет только
-  // собственную проверку агрегата, чтобы не ловить его ошибку.
-  const canPreview = both && maximumBase > 0 && masterReduction >= 0;
-  const effective = canPreview
-    ? Vitality.of(character).maximumWith({ maximumBase, masterReduction })
-    : undefined;
-  const valid = effective !== undefined && effective > 0;
+  // Каким станет действующий максимум, знает жизнеспособность; `null` — такого максимума не бывает.
+  const effective = Vitality.of(character).maximumWith({ maximumBase, masterReduction });
 
   return (
     <EditSheetFrame
       titleRu="Здоровье"
-      canSave={valid}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave({ maximumBase, masterReduction })}
     >

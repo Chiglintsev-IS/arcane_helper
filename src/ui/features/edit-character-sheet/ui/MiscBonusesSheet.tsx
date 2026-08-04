@@ -17,7 +17,10 @@ export function MiscBonusesSheet({
   character,
   onSave,
   onCancel,
+  error = null,
 }: {
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   character: CharacterState;
   onSave: (miscBonuses: ItemBonuses) => void;
   onCancel: () => void;
@@ -31,12 +34,11 @@ export function MiscBonusesSheet({
     armorClass: Number.parseInt(armorClass, 10),
     savingThrows: Number.parseInt(savingThrows, 10),
   };
-  const valid = Object.values(parsed).every((value) => Number.isInteger(value));
 
   return (
     <EditSheetFrame
       titleRu="Прочие прибавки"
-      canSave={valid}
+      error={error}
       onCancel={onCancel}
       onSave={() => onSave(parsed)}
     >

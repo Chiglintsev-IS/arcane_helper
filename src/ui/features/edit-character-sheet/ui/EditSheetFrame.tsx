@@ -3,10 +3,14 @@
 import type { ReactNode } from "react";
 
 /**
- * Рамка шторки правки: заголовок, содержимое, «Сохранить» и «Отмена».
+ * Рамка шторки правки: заголовок, содержимое, «Сохранить», «Отмена» и причина отказа.
  *
  * Одна на восемь шторок — иначе кнопка «Сохранить» рано или поздно поехала бы в одной из них, и
  * пришлось бы проверять каждую.
+ *
+ * Годится ли набранное, шторка не знает и не спрашивает: она передаёт числа владельцу и показывает
+ * его ответ. Своя проверка здесь была бы вторым правилом о том же — и разошлась бы с настоящим при
+ * первой же правке предела.
  *
  * Прокручивается только содержимое: главное действие стоит внизу экрана и остаётся на месте. Пока
  * прокручивалась шторка целиком, на 320 × 568 «Сохранить» у длинной шторки уходило за край, и
@@ -15,13 +19,14 @@ import type { ReactNode } from "react";
 export function EditSheetFrame({
   titleRu,
   children,
-  canSave = true,
+  error = null,
   onSave,
   onCancel,
 }: {
   titleRu: string;
   children: ReactNode;
-  canSave?: boolean;
+  /** Причина отказа от владельца: почему набранное не сохранилось. */
+  error?: string | null;
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -34,12 +39,16 @@ export function EditSheetFrame({
     >
       <h2 className="text-sm font-semibold">{titleRu}</h2>
       <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">{children}</div>
+      {error === null ? null : (
+        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+          {error}
+        </p>
+      )}
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={!canSave}
           onClick={onSave}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
         >
           Сохранить
         </button>

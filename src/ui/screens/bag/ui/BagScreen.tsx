@@ -16,6 +16,8 @@ import { Bag } from "@/ui/widgets/bag/ui/Bag";
 import { ArmorClassBaseSheet } from "@/ui/features/edit-character-sheet/ui/ArmorClassBaseSheet";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
+import type { Session } from "@/core/application/session";
+import { applyEdit } from "@/ui/shared/model/editing";
 
 /**
  * Что открыто поверх сумки. Вещь названа своим полем, а не приставкой в строке: строка требует
@@ -28,9 +30,27 @@ export function BagScreen() {
   const session = useSession((state) => state.session)!;
 
   const [open, setOpen] = useState<BagEdit | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const { character } = session;
   const apply = sessionStore.getState().apply;
+
+  /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
+  const save = (operation: (current: Session) => Session): void => {
+    const reason = applyEdit(sessionStore, operation);
+    setRefusal(reason);
+    if (reason === null) setOpen(null);
+  };
+
+  const openSheet = (edit: BagEdit): void => {
+    setRefusal(null);
+    setOpen(edit);
+  };
+
+  const closeSheet = (): void => {
+    setRefusal(null);
+    setOpen(null);
+  };
 
   const openedItem =
     open?.of !== "item"
@@ -41,12 +61,12 @@ export function BagScreen() {
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
       <Bag
         character={character}
-        onEditMoney={() => setOpen({ of: "money" })}
-        onOpenItem={(id) => setOpen({ of: "item", id })}
+        onEditMoney={() => openSheet({ of: "money" })}
+        onOpenItem={(id) => openSheet({ of: "item", id })}
         onAddItem={(kind, nameRu) =>
           apply((current) => addItem(current, { nameRu, kind, worn: false, count: 1 }, clock))
         }
-        onEditArmor={() => setOpen({ of: "armorClassBase" })}
+        onEditArmor={() => openSheet({ of: "armorClassBase" })}
         onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}
         onAdjustCount={(id, delta) =>
           apply((current) => adjustItemCount(current, id, delta, clock))
@@ -56,24 +76,18 @@ export function BagScreen() {
       {open?.of === "money" ? (
         <MoneySheet
           money={character.equipment.money}
-          onCancel={() => setOpen(null)}
-          onSave={(money) => {
-            if (apply((current) => editMoney(current, money, clock)) === null) {
-              setOpen(null);
-            }
-          }}
+          error={refusal}
+          onCancel={closeSheet}
+          onSave={(money) => save((current) => editMoney(current, money, clock))}
         />
       ) : null}
 
       {open?.of === "armorClassBase" ? (
         <ArmorClassBaseSheet
           character={character}
-          onCancel={() => setOpen(null)}
-          onSave={(value) => {
-            if (apply((current) => setArmorClassBaseOverride(current, value, clock)) === null) {
-              setOpen(null);
-            }
-          }}
+          error={refusal}
+          onCancel={closeSheet}
+          onSave={(value) => save((current) => setArmorClassBaseOverride(current, value, clock))}
         />
       ) : null}
 
@@ -81,10 +95,9 @@ export function BagScreen() {
         <ItemSheet
           key={openedItem.id}
           item={openedItem}
-          onCancel={() => setOpen(null)}
-          onSave={(item) => {
-            if (apply((current) => editItem(current, item, clock)) === null) setOpen(null);
-          }}
+          error={refusal}
+          onCancel={closeSheet}
+          onSave={(item) => save((current) => editItem(current, item, clock))}
           onAdjustCount={(delta) =>
             apply((current) => adjustItemCount(current, openedItem.id, delta, clock))
           }

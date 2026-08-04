@@ -8,6 +8,8 @@
 
 import { z } from "zod";
 
+import { DomainError } from "@/core/domain/shared/errors";
+
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
@@ -77,6 +79,34 @@ const overridesSchema = z
     skills: z.partialRecord(z.enum(SKILL_IDS), overrideValue).default({}),
   })
   .default({ saves: {}, skills: {} });
+
+/** Бывает ли такой уровень: отвечает то же объявление, которым проверяется состояние. */
+export function isPossibleCharacterLevel(level: number): boolean {
+  return characterLevel.safeParse(level).success;
+}
+
+/**
+ * Отвергает правку, которая не проходит объявления полей, — с причиной словами.
+ *
+ * Проверяет ровно те поля, что пришли: значение по умолчанию отсутствующего поля правкой не является.
+ * Другого места, где эти числа проверяются, нет: экран передаёт набранное как есть и получает либо
+ * новое состояние, либо отказ.
+ */
+export function assertCharacterFields(
+  patch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>>,
+): void {
+  for (const [key, value] of Object.entries(patch)) {
+    const parsed = CHARACTER_FIELDS[key as keyof typeof CHARACTER_FIELDS].safeParse(value);
+    if (!parsed.success) {
+      throw new DomainError(`Поле «${key}» не годится: ${reasonsOf(parsed.error)}`);
+    }
+  }
+}
+
+/** Причины отказа словами: их называет само объявление поля. */
+function reasonsOf(error: z.ZodError): string {
+  return error.issues.map((issue) => issue.message).join("; ");
+}
 
 /** Поля контекста для сборки полной схемы состояния. */
 export const CHARACTER_FIELDS = {
