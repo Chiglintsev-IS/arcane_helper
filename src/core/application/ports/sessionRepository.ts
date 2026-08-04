@@ -13,6 +13,7 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 import { migrateCharacterState, migrateUndoPatch } from "@/core/domain/assembly/migration";
 import { characterStatePatchSchema, characterStateSchema } from "@/core/domain/assembly/state";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
+import { fieldsOf } from "@/core/domain/shared/fields";
 import { checkIntegrity } from "@/core/application/dataExchange";
 import { JOURNAL_KINDS } from "@/core/domain/journal/entry";
 import type { Session } from "@/core/application/session";
@@ -122,25 +123,25 @@ export function fromPersisted(persisted: PersistedSession): Session {
  * лежит в базе, и подняться с подготовленным заклинанием без карточки нельзя — открыть его нечем.
  */
 export function parsePersisted(raw: unknown): PersistedSession {
-  const version = (raw as { schemaVersion?: unknown } | null)?.schemaVersion;
+  const stored = fieldsOf(raw);
+  const version = stored.schemaVersion;
   if (typeof version === "number" && version > STORAGE_SCHEMA_VERSION) {
     throw new StorageVersionError(version);
   }
 
-  const stored = raw as { character?: unknown; journal?: unknown } | null;
   const migrated =
     raw === null || typeof raw !== "object"
       ? raw
       : {
-          ...(raw as object),
+          ...stored,
           schemaVersion: STORAGE_SCHEMA_VERSION,
-          character: migrateCharacterState(stored?.character),
+          character: migrateCharacterState(stored.character),
           // Снимки отмены несут снаряжение прежней формы: без приведения отмена вернула бы его.
-          ...(Array.isArray(stored?.journal)
+          ...(Array.isArray(stored.journal)
             ? {
                 journal: stored.journal.map((entry) =>
                   entry !== null && typeof entry === "object" && "undoPatch" in entry
-                    ? { ...entry, undoPatch: migrateUndoPatch((entry as { undoPatch: unknown }).undoPatch) }
+                    ? { ...entry, undoPatch: migrateUndoPatch(entry.undoPatch) }
                     : entry,
                 ),
               }

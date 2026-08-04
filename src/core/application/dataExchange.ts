@@ -13,6 +13,7 @@
 import { type CharacterState, EXPORT_SCHEMA_VERSION, characterStateSchema, exportFileSchema } from "@/core/domain/assembly/state";
 import { migrateCharacterState } from "@/core/domain/assembly/migration";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
+import { fieldsOf } from "@/core/domain/shared/fields";
 
 export type ExportFile = {
   schemaVersion: number;
@@ -77,7 +78,8 @@ export function parseImport(raw: string): ImportOutcome {
     return { ok: false, reasonRu: "Это не JSON: файл не разбирается как текст данных." };
   }
 
-  const version = (parsed as { schemaVersion?: unknown } | null)?.schemaVersion;
+  const fields = fieldsOf(parsed);
+  const version = fields.schemaVersion;
   if (typeof version === "number" && version > EXPORT_SCHEMA_VERSION) {
     return {
       ok: false,
@@ -89,9 +91,9 @@ export function parseImport(raw: string): ImportOutcome {
     parsed === null || typeof parsed !== "object"
       ? parsed
       : {
-          ...(parsed as object),
+          ...fields,
           schemaVersion: EXPORT_SCHEMA_VERSION,
-          character: migrateCharacterState((parsed as { character?: unknown }).character),
+          character: migrateCharacterState(fields.character),
         };
 
   const file = exportFileSchema.safeParse(migrated);
