@@ -408,13 +408,7 @@ describe("приведение состояния версии 1", () => {
     });
 
   describe("поля, которые перестали принадлежать персонажу, читаются и отбрасываются", () => {
-    /** Версия 5 хранила экономию хода и режим экрана в состоянии; версия 6 их не знает. */
-    const legacy = {
-      ...createThorne(),
-      reactionAvailable: false,
-      turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: false },
-      screenMode: "book",
-    };
+    const legacy = VERSION_FIVE;
 
     it("сохранение прежней версии открывается", () => {
       expect(characterStateSchema.safeParse(migrateCharacterState(legacy)).success).toBe(true);
@@ -429,5 +423,106 @@ describe("приведение состояния версии 1", () => {
       expect(state).not.toHaveProperty("turnTracking");
       expect(state).not.toHaveProperty("screenMode");
     });
+  });
+});
+
+/** Части сохранения, не менявшиеся от версии к версии: кто он, книга, ячейки, руны, отыгрыш. */
+const {
+  intelligence: _derivedIntelligence,
+  spellSaveDc: _derivedSaveDc,
+  spellAttackModifier: _derivedAttack,
+  constitutionSaveModifier: _derivedSave,
+  armorClass: _derivedArmorClass,
+  arcaneRecoveryAvailable: _recoveryFlag,
+  hitPoints: _oneMaximum,
+  ...UNCHANGED
+} = VERSION_ONE;
+
+/** Хиты в форме, появившейся вместе с характеристиками: база и снижение кровью раздельно. */
+const SPLIT_HIT_POINTS = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
+
+/** Компоненты: единственное, что знало плоское снаряжение версии 2. */
+const COMPONENTS = { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: ["identify"] };
+
+/** Версия 2: характеристики появились, снаряжение ещё плоское, прибавки лежат у персонажа. */
+const VERSION_TWO = {
+  ...UNCHANGED,
+  abilities: createThorne().abilities,
+  itemBonuses: { spellcasting: 0, armorClass: 2, savingThrows: 0 },
+  armorClass: { base: 10 },
+  equipment: COMPONENTS,
+  arcaneRecoveryAvailable: true,
+  hitPoints: SPLIT_HIT_POINTS,
+};
+
+/** Версия 3: у снаряжения появился инвентарь, и вещи носили прежние рода. */
+const VERSION_THREE = {
+  ...UNCHANGED,
+  abilities: createThorne().abilities,
+  arcaneRecovery: { maximum: 4, remaining: 4 },
+  hitPoints: SPLIT_HIT_POINTS,
+  equipment: {
+    otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+    items: [
+      { id: "healing-potion", nameRu: "Зелье лечения", kind: "potion", count: 2 },
+      { id: "rope", nameRu: "Верёвка", kind: "junk", worn: true, count: 1 },
+    ],
+    components: COMPONENTS,
+  },
+};
+
+/** Версия 4: снаряжение хранило базу Класса Доспеха числом, без имени доспеха. */
+const VERSION_FOUR = {
+  ...UNCHANGED,
+  abilities: createThorne().abilities,
+  arcaneRecovery: { maximum: 4, remaining: 4 },
+  hitPoints: SPLIT_HIT_POINTS,
+  equipment: {
+    armorClassBase: 16,
+    otherBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+    items: [{ id: "chain-mail", nameRu: "Кольчуга", kind: "gear", worn: true, count: 1 }],
+    components: COMPONENTS,
+  },
+};
+
+/** Версия 5: форма нынешняя, но экономию хода и режим экрана состояние ещё держало само. */
+const VERSION_FIVE = {
+  ...createThorne(),
+  reactionAvailable: false,
+  turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: false },
+  screenMode: "book",
+};
+
+/** Версия 6: то, что пишет приложение сегодня. */
+const VERSION_SIX = createThorne();
+
+describe("сохранение каждой версии открывается целиком, и числа за столом не едут", () => {
+  it.each([
+    ["1", VERSION_ONE, { current: 51, maximumBase: 60, base: 10, overridden: false, saveDc: 16 }],
+    // У версий 2–4 перебивки КС нет: число считается от характеристик, и прибавки предмета к магии
+    // в этих сохранениях не было — 8 + 3 + 4.
+    ["2", VERSION_TWO, { current: 51, maximumBase: 60, base: 10, overridden: false, saveDc: 15 }],
+    ["3", VERSION_THREE, { current: 51, maximumBase: 60, base: 10, overridden: false, saveDc: 15 }],
+    ["4", VERSION_FOUR, { current: 51, maximumBase: 60, base: 16, overridden: true, saveDc: 15 }],
+    ["5", VERSION_FIVE, { current: 60, maximumBase: 60, base: 10, overridden: false, saveDc: 16 }],
+    ["6", VERSION_SIX, { current: 60, maximumBase: 60, base: 10, overridden: false, saveDc: 16 }],
+  ])("версия %s", (_version, save, expected) => {
+    const state = characterStateSchema.parse(migrateCharacterState(save));
+    const sheet = Sheet.of(state);
+
+    expect(state.hitPoints.current).toBe(expected.current);
+    expect(state.hitPoints.maximumBase).toBe(expected.maximumBase);
+    expect(state.spellSlots[1]?.remaining).toBe(4);
+    expect(sheet.spellSaveDc).toBe(expected.saveDc);
+    expect(sheet.armorClassParts.base).toBe(expected.base);
+    expect(sheet.armorClassParts.baseOverridden).toBe(expected.overridden);
+  });
+
+  it("рода вещей версии 3 становятся категориями, надетость вне экипировки снимается", () => {
+    const state = characterStateSchema.parse(migrateCharacterState(VERSION_THREE));
+    expect(state.equipment.items.map((item) => [item.kind, item.worn])).toEqual([
+      ["consumable", false],
+      ["other", false],
+    ]);
   });
 });

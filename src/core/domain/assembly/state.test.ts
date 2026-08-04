@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -5,6 +6,12 @@ import {
   exportFileSchema,
   EXPORT_SCHEMA_VERSION,
 } from "@/core/domain/assembly/state";
+import { ARCANA_FIELDS } from "@/core/domain/arcana/schema";
+import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
+import { EFFECTS_FIELDS } from "@/core/domain/effects/schema";
+import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
+import { SPELLBOOK_FIELDS } from "@/core/domain/spellbook/schema";
+import { VITALITY_FIELDS } from "@/core/domain/vitality/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 /**
@@ -91,6 +98,79 @@ function firstError(input: unknown): string {
   expect(result.success, "ожидалась ошибка валидации").toBe(false);
   return result.success ? "" : result.error.issues.map((issue) => issue.message).join(" | ");
 }
+
+/**
+ * Та же сборка, но без снисхождения к лишнему ключу.
+ *
+ * Обычная схема лишнее срезает молча, и мёртвое поле в фикстуре жило годами: тест «состояние
+ * принято» проходил, а поля в состоянии не было. Строгая копия отвечает на другой вопрос — не «можно
+ * ли это прочитать», а «то ли это самое состояние».
+ */
+const strictStateSchema = z.strictObject({
+  ...CHARACTER_FIELDS,
+  ...ARCANA_FIELDS,
+  ...EFFECTS_FIELDS,
+  ...EQUIPMENT_FIELDS,
+  ...SPELLBOOK_FIELDS,
+  ...VITALITY_FIELDS,
+});
+
+describe("форма состояния", () => {
+  it("ключи верхнего уровня — те, что названы владельцами", () => {
+    // Правишь список — реши, меняется ли форма выгрузки и нужен ли новый EXPORT_SCHEMA_VERSION.
+    // Перенос поля между владельцами формы не меняет: ключ остаётся тем же, меняется только то, чья
+    // подсхема его объявляет.
+    expect(Object.keys(characterStateSchema.shape).sort()).toEqual([
+      "abilities",
+      "activeEffects",
+      "age",
+      "arcaneRecovery",
+      "cantripIds",
+      "className",
+      "concentration",
+      "equipment",
+      "exhaustion",
+      "hitDice",
+      "hitPoints",
+      "id",
+      "inspiration",
+      "level",
+      "miscBonuses",
+      "name",
+      "overrides",
+      "preparedSpellIds",
+      "proficiencies",
+      "roleplayPreferences",
+      "roleplayProfile",
+      "runes",
+      "saveProficiencies",
+      "shortRestSinceLongRest",
+      "size",
+      "skills",
+      "species",
+      "speed",
+      "spellNotes",
+      "spellPoints",
+      "spellSlots",
+      "spellbookSpellIds",
+      "subclass",
+      "suppression",
+      "temporaryHitPoints",
+    ]);
+  });
+
+  it("фикстура состоит только из живых полей: лишний ключ — падение, а не молчание", () => {
+    expect(strictStateSchema.safeParse(thorne()).success).toBe(true);
+    expect(strictStateSchema.safeParse(createThorne()).success).toBe(true);
+  });
+
+  it("строгая копия ловит поле, которого у состояния нет", () => {
+    const outdated = mutate((draft) => {
+      draft.screenMode = "play";
+    });
+    expect(strictStateSchema.safeParse(outdated).success).toBe(false);
+  });
+});
 
 describe("characterStateSchema принимает корректное состояние", () => {
   it("состояние Торна", () => {
