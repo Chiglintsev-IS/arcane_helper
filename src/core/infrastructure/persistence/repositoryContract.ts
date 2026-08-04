@@ -224,6 +224,7 @@ export function describeParsingContract(): void {
     expect(totals.armorClassParts).toEqual({
       base: 10,
       baseOverridden: false,
+      baseFormula: 10,
       dexterityModifier: 2,
       itemBonus: 0,
       miscBonus: 2,

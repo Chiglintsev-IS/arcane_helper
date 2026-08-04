@@ -12,8 +12,7 @@ import {
   setArmorClassBaseOverride,
   setOverride,
 } from "@/core/application/useCases/sheet";
-import { deriveNumbers, type DerivedId } from "@/core/domain/sheet/derived";
-import { Equipment } from "@/core/domain/equipment/equipment";
+import type { DerivedId } from "@/core/domain/sheet/derived";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 
@@ -60,12 +59,7 @@ export function SheetScreen() {
 
   const editedAbility = open?.block === "ability" ? open.ability : null;
   const derivedNumbers = Sheet.of(character).derived();
-  const formulaNumbers = deriveNumbers({
-    ...character,
-    bonuses: Equipment.of(character).bonuses,
-    armorClassBase: Equipment.of(character).armorClassBase,
-    overrides: { saves: {}, skills: {} },
-  });
+  const openOverride = derivedNumbers.find((number) => number.id === openOverrideId) ?? null;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
@@ -140,7 +134,7 @@ export function SheetScreen() {
         />
       ) : null}
 
-      {open?.block === "combatNumbers" && openOverrideId === null ? (
+      {open?.block === "combatNumbers" && openOverride === null ? (
         <OverridePickerSheet
           numbers={derivedNumbers}
           onCancel={closeSheet}
@@ -148,18 +142,18 @@ export function SheetScreen() {
         />
       ) : null}
 
-      {openOverrideId === null ? null : (
+      {openOverride === null ? null : (
         <OverrideSheet
-          id={openOverrideId}
-          formulaValue={formulaNumbers[openOverrideId]}
-          currentValue={derivedNumbers.find((number) => number.id === openOverrideId)?.value ?? 0}
+          id={openOverride.id}
+          formulaValue={openOverride.formula}
+          currentValue={openOverride.value}
           error={refusal}
           onCancel={() => {
             setRefusal(null);
             setOpenOverrideId(null);
           }}
           onSave={(value) =>
-            save((current) => setOverride(current, openOverrideId, value, clock), () => {
+            save((current) => setOverride(current, openOverride.id, value, clock), () => {
               setOpenOverrideId(null);
               closeSheet();
             })

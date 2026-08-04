@@ -72,6 +72,7 @@ describe("правка снаряжения", () => {
     expect(sheet.armorClassParts).toEqual({
       base: 10,
       baseOverridden: false,
+      baseFormula: 10,
       dexterityModifier: 2,
       itemBonus: 3,
       miscBonus: 0,

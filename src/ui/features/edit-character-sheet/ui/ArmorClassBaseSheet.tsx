@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Equipment } from "@/core/domain/equipment/equipment";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /**
@@ -24,12 +25,9 @@ export function ArmorClassBaseSheet({
   onSave: (value: number | null) => void;
   onCancel: () => void;
 }) {
-  const equipment = Equipment.of(character);
-  const derivedBase = equipment.armorClassBase;
-  const wornArmorNameRu = equipment.wornArmor?.nameRu;
-  const [text, setText] = useState(
-    String(character.overrides.armorClassBase ?? derivedBase),
-  );
+  const { base, baseFormula } = Sheet.of(character).armorClassParts;
+  const wornArmorNameRu = Equipment.of(character).wornArmor?.nameRu;
+  const [text, setText] = useState(String(base));
   const value = Number.parseInt(text, 10);
 
   return (
@@ -42,7 +40,7 @@ export function ArmorClassBaseSheet({
       <NumberField labelRu="Значение" value={text} onChange={setText} min={1} />
 
       <p className="text-xs text-slate-600 dark:text-slate-400">
-        По надетому — {derivedBase} ({wornArmorNameRu ?? "без доспехов"}). Ловкость и прибавки
+        По надетому — {baseFormula} ({wornArmorNameRu ?? "без доспехов"}). Ловкость и прибавки
         считаются сверху сами.
       </p>
 

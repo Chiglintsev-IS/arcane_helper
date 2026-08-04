@@ -63,6 +63,8 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.click(screen.getByRole("button", { name: "Править: Перебивки" }));
     await user.click(screen.getByRole("button", { name: /^КС спасброска/ }));
 
+    // Формулу шторке отдаёт лист: экран не собирает её вход заново, чтобы узнать счёт.
+    expect(screen.getByText("По формуле — 16.")).toBeDefined();
     const field = screen.getByLabelText("Значение");
     await user.clear(field);
     await user.type(field, "18");
