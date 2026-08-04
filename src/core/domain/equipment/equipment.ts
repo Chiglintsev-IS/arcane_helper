@@ -23,6 +23,29 @@ export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
 const NO_BONUSES: ItemBonuses = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
+function contributes(bonuses: ItemBonuses | undefined): boolean {
+  return bonuses !== undefined && Object.values(bonuses).some((value) => value !== 0);
+}
+
+/**
+ * Вещь, приведённая к своей категории: свойства экипировки остаются только у экипировки, а прибавка
+ * из одних нулей не хранится вовсе.
+ *
+ * Смена категории прочь от экипировки снимает вещь и убирает прибавки, а не отвергается: игрок
+ * переложил зелье в свой раздел, а не ошибся полем.
+ */
+function alignedToKind(item: InventoryItem): InventoryItem {
+  const { worn, bonuses, armorBase, ...rest } = item;
+  return item.kind === "gear"
+    ? {
+        ...rest,
+        worn,
+        ...(contributes(bonuses) ? { bonuses } : {}),
+        ...(armorBase === undefined ? {} : { armorBase }),
+      }
+    : { ...rest, worn: false };
+}
+
 export class Equipment {
   private static readonly KEYS = ["equipment"] as const satisfies readonly (keyof EquipmentState)[];
 
@@ -165,13 +188,15 @@ export class Equipment {
     return item.count === 0 ? this : this.adjustCount(id, item.count);
   }
 
+  /** Правка вещи целиком. Поля, которых её категории не положено, снимаются, а не отвергаются. */
   replaceItem(item: InventoryItem): Equipment {
-    assertInventoryItem(item);
+    const aligned = alignedToKind(item);
+    assertInventoryItem(aligned);
     if (!this.data.items.some((existing) => existing.id === item.id)) {
       throw new DomainError(`Вещи «${item.id}» нет в инвентаре`);
     }
     return this.with({
-      items: this.data.items.map((existing) => (existing.id === item.id ? item : existing)),
+      items: this.data.items.map((existing) => (existing.id === item.id ? aligned : existing)),
     });
   }
 

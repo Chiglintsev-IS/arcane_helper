@@ -69,6 +69,34 @@ describe("снаряжение", () => {
     expect(worn.removeItem("ring").items.some((item) => item.id === "ring")).toBe(false);
   });
 
+  it("правка со сменой категории снимает вещь и убирает прибавки (FR-238)", () => {
+    const worn = gear().addItem(ring(true));
+    const moved = worn.replaceItem({ ...ring(true), kind: "other" });
+
+    expect(moved.items.find((item) => item.id === "ring")).toEqual({
+      id: "ring",
+      nameRu: "Кольцо защиты",
+      kind: "other",
+      worn: false,
+      count: 1,
+    });
+    expect(moved.bonuses).toEqual(gear().bonuses);
+  });
+
+  it("прибавка из одних нулей не хранится: верёвка не участвует в счёте (FR-238)", () => {
+    const zeroed = gear()
+      .addItem(ring(true))
+      .replaceItem({ ...ring(true), bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 } });
+
+    expect(zeroed.items.find((item) => item.id === "ring")).toEqual({
+      id: "ring",
+      nameRu: "Кольцо защиты",
+      kind: "gear",
+      worn: true,
+      count: 1,
+    });
+  });
+
   it("правка одной вещи соседних не трогает", () => {
     const two = gear().addItem(ring(true)).addItem(rope);
     const renamed = two.replaceItem({ ...ring(true), nameRu: "Кольцо защиты +1" });
