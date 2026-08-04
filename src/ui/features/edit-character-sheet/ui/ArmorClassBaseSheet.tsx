@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Sheet } from "@/core/domain/sheet/sheet";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /**
@@ -28,7 +29,7 @@ export function ArmorClassBaseSheet({
   const { base, baseFormula } = Sheet.of(character).armorClassParts;
   const wornArmorNameRu = Equipment.of(character).wornArmor?.nameRu;
   const [text, setText] = useState(String(base));
-  const value = Number.parseInt(text, 10);
+  const value = requiredFieldNumber(text);
 
   return (
     <EditSheetFrame

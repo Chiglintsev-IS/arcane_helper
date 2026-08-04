@@ -3,8 +3,9 @@
 import { useState } from "react";
 
 import type { Currency, Money } from "@/core/domain/equipment/schema";
-import { CURRENCIES, MAXIMUM_COIN_AMOUNT } from "@/core/domain/equipment/schema";
+import { CURRENCIES } from "@/core/domain/equipment/schema";
 import { CURRENCY_LABELS } from "@/ui/entities/character/lib/labels";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /**
@@ -31,19 +32,20 @@ export function MoneySheet({
     copper: String(money.copper),
   });
 
-  // Number, а не parseInt: «12.5» обязано отвергнуться, а не молча стать двенадцатью.
-  // Пустое поле — не ноль, а незаполненное: Number("") молча дал бы ноль.
-  const parsed = CURRENCIES.map(
-    (currency) =>
-      [currency, values[currency].trim() === "" ? Number.NaN : Number(values[currency])] as const,
-  );
+  // Монеты стола известны и перечислены владельцем: значение собирается по имени, а не сборкой из
+  // списка, — тип сходится без каста, и умолчание объявления не может молча дописать пропущенную.
+  const nextMoney: Money = {
+    gold: requiredFieldNumber(values.gold),
+    silver: requiredFieldNumber(values.silver),
+    copper: requiredFieldNumber(values.copper),
+  };
 
   return (
     <EditSheetFrame
       titleRu="Деньги"
       error={error}
       onCancel={onCancel}
-      onSave={() => onSave(Object.fromEntries(parsed) as Money)}
+      onSave={() => onSave(nextMoney)}
     >
       {CURRENCIES.map((currency) => (
         <NumberField

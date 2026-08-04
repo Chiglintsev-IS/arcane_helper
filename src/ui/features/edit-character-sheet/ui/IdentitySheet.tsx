@@ -6,6 +6,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { CREATURE_SIZES, type CreatureSize } from "@/core/domain/character/schema";
 import type { Identity } from "@/core/application/useCases/sheet";
 import { SIZE_LABELS } from "@/ui/entities/character/lib/labels";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
 /**
@@ -45,8 +46,8 @@ export function IdentitySheet({
   const [tools, setTools] = useState(character.proficiencies.tools.join(", "));
   const [languages, setLanguages] = useState(character.proficiencies.languages.join(", "));
 
-  const age = Number.parseInt(ageText, 10);
-  const speed = Number.parseInt(speedText, 10);
+  const age = requiredFieldNumber(ageText);
+  const speed = requiredFieldNumber(speedText);
 
   return (
     <EditSheetFrame

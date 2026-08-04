@@ -121,4 +121,22 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(screen.getByRole("dialog", { name: /Правка: Здоровье/ })).toBeDefined();
     expect(stores.session.getState().session?.character.hitPoints).toEqual(before);
   });
+
+  it("«Лист»: дробное число из шторки уходит владельцу как есть — отказ по-русски, состояние не трогает", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<SheetScreen />);
+    const before = stores.session.getState().session?.character.hitPoints;
+
+    await user.click(screen.getByRole("button", { name: "Править: Здоровье" }));
+    const field = screen.getByLabelText("Базовый максимум");
+    await user.clear(field);
+    await user.type(field, "12.5");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // «12.5» не округляется и не обрезается в шторке: доходит до владельца дробным, и целость
+    // числа проверяет уже он, словами по-русски, а не молчаливым «12».
+    expect(screen.getByRole("alert").textContent).toContain("целым");
+    expect(screen.getByRole("dialog", { name: /Правка: Здоровье/ })).toBeDefined();
+    expect(stores.session.getState().session?.character.hitPoints).toEqual(before);
+  });
 });

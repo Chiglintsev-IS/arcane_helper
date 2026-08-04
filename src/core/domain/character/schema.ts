@@ -18,7 +18,12 @@ import {
   MAXIMUM_EXHAUSTION,
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
-import { itemBonusesSchema, nonEmpty, NO_ITEM_BONUSES } from "@/core/domain/shared/schema";
+import {
+  itemBonusesSchema,
+  nonEmpty,
+  NO_ITEM_BONUSES,
+  russianSchemaErrors,
+} from "@/core/domain/shared/schema";
 
 import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
 
@@ -103,7 +108,7 @@ export function assertCharacterFields(
   const parsedPatch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>> = {};
   for (const [key, value] of Object.entries(patch)) {
     const field = key as keyof typeof CHARACTER_FIELDS;
-    const parsed = CHARACTER_FIELDS[field].safeParse(value);
+    const parsed = CHARACTER_FIELDS[field].safeParse(value, { error: russianSchemaErrors });
     if (!parsed.success) {
       throw new DomainError(`Поле «${key}» не годится: ${reasonsOf(parsed.error)}`);
     }
