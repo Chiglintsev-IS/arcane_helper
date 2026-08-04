@@ -9,11 +9,20 @@ import {
   ALL_TURN_RESOURCES,
   checkAvailability,
   exchangeWarnings,
-  reasonsOf,
   withoutConsent,
-  type AvailabilityInput,
-  type AvailabilityWarning,
+  type Availability,
 } from "@/core/application/casting/availability";
+
+/** Вход проверки и одно её предупреждение: формы называет подпись, отдельных имён им не нужно. */
+type AvailabilityInput = Parameters<typeof checkAvailability>[0];
+type AvailabilityWarning = Availability["warnings"][number];
+
+/** Причины одного кода: проверка возвращает все предупреждения, а прогон спрашивает про одно. */
+function reasonsOf(availability: Availability, code: AvailabilityWarning["code"]): string[] {
+  return availability.warnings
+    .filter((warning) => warning.code === code)
+    .map((warning) => warning.reasonRu);
+}
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 

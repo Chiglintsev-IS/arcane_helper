@@ -23,6 +23,9 @@
 Прогоном считается файл с `.test.` или `.spec.` в имени, а также обычный модуль, импортирующий
 `vitest`: общий набор проверок хранилища лежит обычным модулем, но состоит из прогонов.
 
+Реэкспорты здесь не разбираются: посредник, пересдающий чужой символ, запрещён проверкой границ, и
+единственный путь к символу — прямой импорт у владельца.
+
 Базлайна у проверки нет. Единственная форма исключения — `ALLOWED_TEST_ONLY` ниже, и каждая запись
 в нём несёт обоснование.
 """
@@ -55,6 +58,11 @@ ALLOWED_TEST_ONLY: set[tuple[str, str]] = {
     # этой пары ветви отказа никогда не исполнялись бы.
     ("src/core/infrastructure/catalog/thorne/index.ts", "parseSpells"),
     ("src/core/infrastructure/catalog/thorne/index.ts", "ContentError"),
+    # Объявленные виды сбоя порта хранилища: битые данные и версия из будущего. Рабочий путь
+    # показывает игроку причину словами, а различие видов — контракт, который держат обе
+    # реализации, и проверяется он общим набором.
+    ("src/core/application/ports/sessionRepository.ts", "StorageCorruptedError"),
+    ("src/core/application/ports/sessionRepository.ts", "StorageVersionError"),
     # Сторы на хранилище в памяти: реализация порта для прогонов и для помощников компонентных
     # прогонов. В браузере работает Dexie, и подменять её в рабочем коде нечем и незачем.
     ("src/core/infrastructure/persistence/memoryRepository.ts", "createMemoryRepository"),
@@ -142,18 +150,6 @@ def collect() -> tuple[dict[tuple[str, str], int], set[tuple[str, str]]]:
                     name = imported_name(clause)
                     if name is not None:
                         imports.add((target, name))
-
-        # Реэкспорт — тоже импорт: символ уходит наружу через посредника и жив.
-        for names, specifier in EXPORT_LIST.findall(text):
-            if not specifier:
-                continue
-            target = resolve(specifier, path)
-            if target is None:
-                continue
-            for clause in names.split(","):
-                name = imported_name(clause)
-                if name is not None and not run:
-                    imports.add((target, name))
 
         if run or CORE not in path.parents:
             continue

@@ -8,8 +8,10 @@ import {
   bloodExchangeInstructions,
   castInstructions,
   renderAnnouncement,
-  type AnnouncementContext,
 } from "@/core/application/casting/announcement";
+
+/** Обстановка объявления: форму называет сама подпись, отдельного имени ей не нужно. */
+type AnnouncementContext = Parameters<typeof renderAnnouncement>[1];
 
 const allSpells = loadThorneSpells();
 const spells = new Map(allSpells.map((spell) => [spell.id, spell]));

@@ -36,7 +36,7 @@ export function isSpellReady(spell: Spell, character: CharacterState): boolean {
  * успевает независимо от того, насколько она полезна. Ровно те виды времени, которые тратят ресурс
  * хода, — второго перечня для этого не заводится.
  */
-export function castableWithinTurn(spell: Pick<Spell, "castingTime">): boolean {
+function castableWithinTurn(spell: Pick<Spell, "castingTime">): boolean {
   return turnResourceFor(spell.castingTime.type) !== undefined;
 }
 
@@ -107,7 +107,7 @@ export function castOptions(
 }
 
 /** Способ сотворения вместе с его проверкой доступности. */
-export type CastPlan = { option: CastOption; availability: Availability };
+type CastPlan = { option: CastOption; availability: Availability };
 
 /**
  * Способ, которому мешает меньше всего: доступный, если он есть, иначе с наименьшим числом

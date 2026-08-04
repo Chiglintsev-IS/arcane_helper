@@ -195,7 +195,7 @@ export type LevelChange =
  * Прибавка хитов названа слагаемыми: «среднее за кость плюс Телосложение» — то, что игрок иначе
  * считает в уме, глядя в книгу. Костей может не быть вовсе — тогда называть нечего.
  */
-export type LevelPreview = {
+type LevelPreview = {
   changes: LevelChange[];
   hitPoints: { perDie: number; dieSize: number; constitution: number; total: number } | null;
 };

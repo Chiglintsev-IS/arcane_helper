@@ -138,11 +138,6 @@ export function recoverHitPointMaximum(session: Session, clock: Clock): Session 
   );
 }
 
-/** Сколько хитов стоит заклинание указанного уровня для этого персонажа. */
-export function bloodCostFor(character: CharacterState, spellLevel: number): number {
-  return hitPointCost(spellLevel, character.level);
-}
-
 /** Признак прямого солнечного света переключается вручную. */
 export function setSunlight(session: Session, underSunlight: boolean, clock: Clock): Session {
   const root = Character.of(session.character);

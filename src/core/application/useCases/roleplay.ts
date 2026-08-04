@@ -31,7 +31,7 @@ export type RoleplayVariant = {
  * Не сам текст: правка опечатки стирала бы и «любимое», и счётчик ротации. Обратная сторона
  * честная — перестановка вариантов в карточке оставит пометки на местах, а не на текстах.
  */
-export function roleplayVariantId(category: RoleplayCategory, index: number): string {
+function roleplayVariantId(category: RoleplayCategory, index: number): string {
   return `${category}-${index}`;
 }
 

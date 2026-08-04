@@ -33,7 +33,7 @@ import { commit, type Clock, type Session } from "@/core/application/session";
 import { deriveTurnEconomy, inFight } from "./turn";
 
 /** Способ оплаты определён правилами — здесь только его применение к состоянию. */
-export type Payment = PaymentChoice;
+type Payment = PaymentChoice;
 
 export type CastRequest = {
   spell: Spell;
@@ -59,7 +59,7 @@ export type CastRequest = {
 };
 
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
-export function actionUsedBy(spell: Spell): TurnResource | undefined {
+function actionUsedBy(spell: Spell): TurnResource | undefined {
   return turnResourceFor(spell.castingTime.type);
 }
 

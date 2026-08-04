@@ -1,9 +1,5 @@
 import { BLOOD_MAGIC_TRAITS, traitsOf } from "@/ui/shared/model/actionTraits";
-import {
-  castableInSituation,
-  castableWithinTurn,
-  slotPriceOf,
-} from "@/core/application/casting/castOptions";
+import { castableInSituation, slotPriceOf } from "@/core/application/casting/castOptions";
 import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";

@@ -13,7 +13,7 @@ import type { JournalEntry, Recorded, TurnResource } from "@/core/domain/journal
 
 
 /** Что потрачено внутри хода. Имя сохранено ради вызывающих: словарь один на журнал и на правила. */
-export type ActionUsed = TurnResource;
+type ActionUsed = TurnResource;
 
 export type Session = {
   character: CharacterState;

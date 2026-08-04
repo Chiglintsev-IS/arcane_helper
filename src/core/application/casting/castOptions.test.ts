@@ -6,7 +6,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { ALL_TURN_RESOURCES } from "@/core/application/casting/availability";
 import {
   bestCastPlan,
-  castableWithinTurn,
+  castableInSituation,
   castOptions,
   slotPriceOf,
 } from "@/core/application/casting/castOptions";
@@ -113,7 +113,7 @@ describe("bestCastPlan", () => {
   });
 });
 
-describe("castableWithinTurn", () => {
+describe("в бою творится только то, что укладывается в ход", () => {
   it.each([
     ["shocking-grasp", true], // действие
     ["shield", true], // реакция
@@ -122,7 +122,7 @@ describe("castableWithinTurn", () => {
   ])("«%s» — %s", (id, expected) => {
     const spell = allSpells.find((candidate) => candidate.id === id);
     expect(spell, id).toBeDefined();
-    expect(castableWithinTurn(spell!)).toBe(expected);
+    expect(castableInSituation(spell!, createThorne(), true)).toBe(expected);
   });
 });
 

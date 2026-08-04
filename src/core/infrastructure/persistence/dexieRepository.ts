@@ -27,7 +27,7 @@ class ArcaneHelperDatabase extends Dexie {
   }
 }
 
-export const DATABASE_NAME = "arcane-helper";
+const DATABASE_NAME = "arcane-helper";
 
 /**
  * Создаёт браузерное хранилище. Имя базы — параметр, чтобы тесты не мешали друг другу

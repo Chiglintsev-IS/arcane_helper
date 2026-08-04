@@ -14,11 +14,11 @@ import {
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
 import { effectiveArmorClass } from "@/core/domain/sheet/armorClass";
-import { bloodCostFor, exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
-import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, regenerationDue, startCombat } from "@/core/application/useCases/turn";
-import { adjustHitDice, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
-import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariantId, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, useRoleplayVariant } from "@/core/application/useCases/roleplay";
-import { actionUsedBy, castSpell } from "@/core/application/useCases/casting";
+import { exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
+import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
+import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
+import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, useRoleplayVariant } from "@/core/application/useCases/roleplay";
+import { castSpell } from "@/core/application/useCases/casting";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { DomainError } from "@/core/domain/shared/errors";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -26,6 +26,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { characterStateSchema } from "@/core/domain/assembly/state";
+import { Vitality } from "@/core/domain/vitality/vitality";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import { createSession, undoLast, type Session } from "@/core/application/session";
@@ -614,11 +615,6 @@ describe("руна жизни начисляет временные хиты (FR
 });
 
 describe("кровавое колдовство (FR-170…FR-174)", () => {
-  it("цена заклинания в хитах соответствует ступени Торна", () => {
-    expect(bloodCostFor(session.character, 1)).toBe(6);
-    expect(bloodCostFor(session.character, 3)).toBe(15);
-  });
-
   it("обменивает хиты на очки и снижает максимум", () => {
     const after = exchangeBlood(session, 3, clock);
     expect(after.character.spellPoints.remaining).toBe(3);
@@ -713,21 +709,21 @@ describe("урон, подавление и регенерация (FR-180…FR-
   });
 
   it("регенерация действует только ниже половины максимума и без подавления", () => {
-    expect(regenerationDue(session.character)).toBe(0);
+    expect(Vitality.of(session.character).regenerationDue(session.character.level)).toBe(0);
     const wounded = takeDamage(session, 40, clock);
-    expect(regenerationDue(wounded.character)).toBe(3);
+    expect(Vitality.of(wounded.character).regenerationDue(wounded.character.level)).toBe(3);
     const burned = takeDamage(wounded, 1, clock, { fire: true });
-    expect(regenerationDue(burned.character)).toBe(0);
+    expect(Vitality.of(burned.character).regenerationDue(burned.character.level)).toBe(0);
     const downed = takeDamage(wounded, 100, clock);
-    expect(regenerationDue(downed.character)).toBe(0);
+    expect(Vitality.of(downed.character).regenerationDue(downed.character.level)).toBe(0);
   });
 
   it("порог регенерации считается от снижённого максимума", () => {
     const exchanged = exchangeBlood(session, 10, clock);
     // Максимум стал 30, текущее 30 — половина не пройдена.
-    expect(regenerationDue(exchanged.character)).toBe(0);
+    expect(Vitality.of(exchanged.character).regenerationDue(exchanged.character.level)).toBe(0);
     const wounded = takeDamage(exchanged, 20, clock);
-    expect(regenerationDue(wounded.character)).toBe(3);
+    expect(Vitality.of(wounded.character).regenerationDue(wounded.character.level)).toBe(3);
   });
 });
 
@@ -1299,16 +1295,6 @@ describe("экономия хода выводится из журнала (ADR-
       );
     }
   });
-
-  it("actionUsedBy определяет вид траты по времени накладывания", () => {
-    expect(actionUsedBy(spell("shield"))).toBe("reaction");
-    expect(actionUsedBy(spell("mage-armor"))).toBe("action");
-    expect(actionUsedBy(spell("find-familiar"))).toBeUndefined();
-    expect(actionUsedBy({ ...spell("mage-armor"), castingTime: { type: "bonus_action" } })).toBe(
-      "bonus_action",
-    );
-    expect(actionUsedBy({ ...spell("mending"), castingTime: { type: "minute" } })).toBeUndefined();
-  });
 });
 
 describe("регенерация тролля начисляется в начале хода (FR-182)", () => {
@@ -1573,18 +1559,32 @@ describe("предпочтения отыгрыша (FR-053)", () => {
     };
   })();
 
-  const short0 = roleplayVariantId("short", 0);
-  const short1 = roleplayVariantId("short", 1);
-  const short2 = roleplayVariantId("short", 2);
+  /** Идентификатор варианта берётся у самого варианта: его форму знает отыгрыш, а не прогон. */
+  function variantId(
+    current: Session,
+    index: number,
+    category: RoleplayCategory = "short",
+  ): string {
+    const variant = roleplayVariants(current.character, card, category)[index];
+    if (variant === undefined) throw new Error(`нет варианта ${category} №${index}`);
+    return variant.id;
+  }
+
+  // Своя сессия: ярлыки вариантов нужны при сборке прогонов, когда общая ещё не заведена.
+  const pristine = createSession(createThorne());
+  const short0 = variantId(pristine, 0);
+  const short1 = variantId(pristine, 1);
+  const short2 = variantId(pristine, 2);
 
   function texts(current: Session, category: RoleplayCategory = "short"): string[] {
     return roleplayVariants(current.character, card, category).map((variant) => variant.text);
   }
 
   function disableAll(current: Session, category: RoleplayCategory): Session {
+    // Ярлыки берутся у целого списка заранее: отключённый вариант меняет порядок показа.
     let next = current;
     for (const [index] of card.roleplay.completeVariants[category].entries()) {
-      next = toggleRoleplayDisabled(next, card, roleplayVariantId(category, index));
+      next = toggleRoleplayDisabled(next, card, variantId(pristine, index, category));
     }
     return next;
   }
@@ -1639,7 +1639,7 @@ describe("предпочтения отыгрыша (FR-053)", () => {
     current = disableAll(current, "atmospheric");
     expect(roleplayCategories(current.character, card)).toEqual(["sarcastic"]);
 
-    expect(() => toggleRoleplayDisabled(current, card, roleplayVariantId("sarcastic", 0))).toThrow(
+    expect(() => toggleRoleplayDisabled(current, card, variantId(pristine, 0, "sarcastic"))).toThrow(
       /Последний вариант отыгрыша/,
     );
   });
@@ -1836,44 +1836,12 @@ describe("дорогие компоненты (FR-030)", () => {
 });
 
 describe("кости хитов (FR-134)", () => {
-  it("тратятся и возвращаются по одной, обе правки в журнале", () => {
-    const spent = adjustHitDice(session, -1, clock);
-    expect(spent.character.hitDice?.remaining).toBe(6);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачена кость хитов: осталось 6");
-
-    const returned = adjustHitDice(spent, 1, clock);
-    expect(returned.character.hitDice?.remaining).toBe(7);
-    expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена кость хитов: 7");
-  });
-
-  it("трата кости отменяется (FR-111)", () => {
-    const spent = adjustHitDice(session, -1, clock);
-    expect(undoLast(spent).character.hitDice?.remaining).toBe(7);
-  });
-
-  it("за пределы пула не выходит ни вверх, ни вниз", () => {
-    expect(() => adjustHitDice(session, 1, clock)).toThrow(/от 0 до 7/);
-    const empty = Array.from({ length: 7 }).reduce<Session>(
-      (current) => adjustHitDice(current, -1, clock),
-      session,
-    );
-    expect(empty.character.hitDice?.remaining).toBe(0);
-    expect(() => adjustHitDice(empty, -1, clock)).toThrow(/от 0 до 7/);
-  });
-
-  it("состоянию без костей отвечает причиной, а не падением на undefined", () => {
-    const { hitDice: _none, ...withoutDice } = session.character;
-    expect(() => adjustHitDice(createSession(withoutDice), -1, clock)).toThrow(
-      /не заведены кости хитов/,
-    );
-  });
-
   it("долгий отдых возвращает половину костей, округляя вниз (FR-134)", () => {
-    const spent = Array.from({ length: 5 }).reduce<Session>(
-      (current) => adjustHitDice(current, -1, clock),
-      session,
-    );
-    expect(spent.character.hitDice?.remaining).toBe(2);
+    // Кости тратит заклинание своим применением; здесь важен возврат, поэтому пул задан сразу.
+    const spent = createSession({
+      ...session.character,
+      hitDice: { total: 7, size: 6, remaining: 2 },
+    });
     // Половина от семи — три: 2 + 3 = 5, а не все семь. Долгий бой обязан стоить.
     expect(longRest(spent, clock).character.hitDice?.remaining).toBe(5);
   });

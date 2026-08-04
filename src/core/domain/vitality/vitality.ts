@@ -156,15 +156,6 @@ export class Vitality {
     return this.with({ hitDice: { ...hitDice, remaining: pool.remaining - count } });
   }
 
-  shiftHitDice(delta: number): Vitality {
-    const pool = this.hitDice;
-    const { hitDice } = this.state;
-    if (pool === null || hitDice === undefined) {
-      throw new DomainError("У персонажа не заведены кости хитов");
-    }
-    return this.with({ hitDice: { ...hitDice, remaining: pool.shift(delta, HIT_DICE_RU).remaining } });
-  }
-
   restoreHitDice(count: number): Vitality {
     const { hitDice } = this.state;
     if (hitDice === undefined) return this;

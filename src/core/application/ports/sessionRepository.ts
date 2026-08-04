@@ -15,7 +15,7 @@ import { checkIntegrity } from "@/core/application/dataExchange";
 import type { Session } from "@/core/application/session";
 
 /** Версия формата хранения. Читать чужое будущее приложение не берётся. */
-export const STORAGE_SCHEMA_VERSION = 2;
+const STORAGE_SCHEMA_VERSION = 2;
 
 const journalEntrySchema = z.object({
   id: z.string().min(1),
@@ -29,7 +29,7 @@ const journalEntrySchema = z.object({
   actionUsed: z.enum(["action", "bonus_action", "reaction"]).optional(),
 });
 
-export const persistedSessionSchema = z.object({
+const persistedSessionSchema = z.object({
   schemaVersion: z.literal(STORAGE_SCHEMA_VERSION),
   savedAt: z.string().min(1),
   character: characterStateSchema,

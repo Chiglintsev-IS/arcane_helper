@@ -12,7 +12,7 @@ import { Encounter, type TurnEconomy } from "@/core/domain/encounter/encounter";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
 
-export function encounterOf(session: Session): Encounter {
+function encounterOf(session: Session): Encounter {
   return Encounter.fromJournal(session.journal);
 }
 
@@ -23,12 +23,6 @@ export function inFight(session: Session): boolean {
 
 export function deriveTurnEconomy(session: Session): TurnEconomy {
   return encounterOf(session).economy;
-}
-
-/** Действует ли регенерация прямо сейчас и на сколько. */
-export function regenerationDue(character: CharacterState): number {
-  const root = Character.of(character);
-  return root.vitality.regenerationDue(root.base.level);
 }
 
 /**

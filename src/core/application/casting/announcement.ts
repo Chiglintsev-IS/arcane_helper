@@ -31,21 +31,21 @@ import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import type { CastMode } from "@/core/domain/arcana/slots";
 import { Vitality } from "@/core/domain/vitality/vitality";
 
-export type AnnouncementPlaceholder = (typeof ANNOUNCEMENT_PLACEHOLDERS)[number];
+type AnnouncementPlaceholder = (typeof ANNOUNCEMENT_PLACEHOLDERS)[number];
 
 /** Незаполненная подстановка либо замечание о режиме применения. Причина — словами. */
-export type AnnouncementGap = {
+type AnnouncementGap = {
   placeholder?: AnnouncementPlaceholder;
   reasonRu: string;
 };
 
-export type Announcement = {
+type Announcement = {
   /** Готовая к произнесению вслух формулировка. */
   text: string;
   gaps: AnnouncementGap[];
 };
 
-export type AnnouncementContext = {
+type AnnouncementContext = {
   character: CharacterState;
   mode: CastMode;
   payment: PaymentChoice;

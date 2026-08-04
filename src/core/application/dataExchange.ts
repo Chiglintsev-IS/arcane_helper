@@ -22,9 +22,9 @@ export type ExportFile = {
 };
 
 /** Что делать с существующими данными: заменить всё или обновить только карточки. */
-export type ImportMode = "replace" | "spells_only";
+type ImportMode = "replace" | "spells_only";
 
-export type ImportOutcome =
+type ImportOutcome =
   | { ok: true; file: ExportFile }
   | { ok: false; reasonRu: string };
 

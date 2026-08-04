@@ -18,9 +18,9 @@ import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 const MANUAL_EFFECT_END_CONDITION_RU = "Снимается вручную.";
 
 /** Подпись поправки к КД в списке эффектов. Опознаётся поправка признаком, а не этой строкой. */
-export const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
+const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
-export type ManualEffectInput = {
+type ManualEffectInput = {
   nameRu: string;
   /** Прикрытие союзника и подобные вклады; статус без числа поле не заполняет. */
   armorClass?: ArmorClassEffect;

@@ -44,7 +44,7 @@ export type PaymentChoice =
   | { kind: "spell_points" }
   | { kind: "none" };
 
-export type AvailabilityCode =
+type AvailabilityCode =
   | "not_in_spellbook"
   | "not_prepared"
   | "not_ritual"
@@ -68,12 +68,12 @@ export type AvailabilityCode =
  * согласие на оба означало бы, что игрок, бросивший прежнее заклинание, заодно молча разрешил себе
  * перерасход ячейки.
  */
-export type Enforcement = "advisory" | "gm_exception" | "ending_concentration";
+type Enforcement = "advisory" | "gm_exception" | "ending_concentration";
 
 /** Согласие игрока или мастера, полученное до подтверждения. */
-export type Consent = Exclude<Enforcement, "advisory">;
+type Consent = Exclude<Enforcement, "advisory">;
 
-export type AvailabilityWarning = {
+type AvailabilityWarning = {
   code: AvailabilityCode;
   reasonRu: string;
   /** Чем снимается. Список кодов у сценария не заводится: он расходится с объявлением. */
@@ -99,7 +99,7 @@ export function withoutConsent(
   );
 }
 
-export type AvailabilityInput = {
+type AvailabilityInput = {
   spell: Spell;
   character: CharacterState;
   turn: TurnResources;
@@ -394,10 +394,4 @@ export function exchangeWarnings(character: CharacterState, turn: TurnResources)
   }
 
   return warnings;
-}
-
-export function reasonsOf(availability: Availability, code: AvailabilityCode): string[] {
-  return availability.warnings
-    .filter((warning) => warning.code === code)
-    .map((warning) => warning.reasonRu);
 }
