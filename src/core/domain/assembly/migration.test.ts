@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 
+import { z } from "zod";
+
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { fieldsOf } from "@/core/domain/shared/fields";
 import { migrateCharacterState, migrateUndoPatch } from "./migration";
 import { characterStateSchema } from "./state";
+
+/** Список приведённого снимка: чего прогон ждёт увидеть, он объявляет сам. */
+const listOf = (value: unknown): unknown[] => z.array(z.unknown()).parse(value);
 
 /** Лист Торна в том виде, в каком его писала версия 1. */
 const VERSION_ONE = {
@@ -79,9 +85,7 @@ describe("приведение состояния версии 1", () => {
         charisma: 8,
       },
     };
-    expect((migrateCharacterState(already) as { abilities: unknown }).abilities).toEqual(
-      already.abilities,
-    );
+    expect(fieldsOf(migrateCharacterState(already)).abilities).toEqual(already.abilities);
   });
 
   it("максимум разбирается на базу и снижение кровью", () => {
@@ -165,53 +169,49 @@ describe("приведение состояния версии 1", () => {
       armorClass: undefined,
       hitPoints: undefined,
     };
-    const migrated = migrateCharacterState(bare) as {
-      abilities: { intelligence: number; dexterity: number };
-      miscBonuses: { armorClass: number };
-      overrides: { spellSaveDc?: number; armorClassBase?: number; saves: Record<string, number> };
-    };
-    expect(migrated.abilities.intelligence).toBe(10);
-    expect(migrated.abilities.dexterity).toBe(10);
-    expect(migrated.overrides.armorClassBase).toBeUndefined();
-    expect(migrated.miscBonuses.armorClass).toBe(0);
-    expect(migrated.overrides.spellSaveDc).toBeUndefined();
-    expect(migrated.overrides.saves).toEqual({});
+    const migrated = fieldsOf(migrateCharacterState(bare));
+    const abilities = fieldsOf(migrated.abilities);
+    const overrides = fieldsOf(migrated.overrides);
+    expect(abilities.intelligence).toBe(10);
+    expect(abilities.dexterity).toBe(10);
+    expect(overrides.armorClassBase).toBeUndefined();
+    expect(fieldsOf(migrated.miscBonuses).armorClass).toBe(0);
+    expect(overrides.spellSaveDc).toBeUndefined();
+    expect(overrides.saves).toEqual({});
   });
 
   describe("признак магического восстановления становится дневным бюджетом", () => {
     const budget = arcaneRecoveryBudget(VERSION_ONE.level);
 
     it("доступный флаг переносится как полный бюджет", () => {
-      const migrated = migrateCharacterState({
-        ...VERSION_ONE,
-        arcaneRecoveryAvailable: true,
-      }) as { arcaneRecovery: { maximum: number; remaining: number } };
+      const migrated = fieldsOf(
+        migrateCharacterState({ ...VERSION_ONE, arcaneRecoveryAvailable: true }),
+      );
       expect(migrated.arcaneRecovery).toEqual({ maximum: budget, remaining: budget });
     });
 
     it("потраченный флаг переносится как нулевой остаток — тот же бюджет, но исчерпанный", () => {
-      const migrated = migrateCharacterState({
-        ...VERSION_ONE,
-        arcaneRecoveryAvailable: false,
-      }) as { arcaneRecovery: { maximum: number; remaining: number } };
+      const migrated = fieldsOf(
+        migrateCharacterState({ ...VERSION_ONE, arcaneRecoveryAvailable: false }),
+      );
       expect(migrated.arcaneRecovery).toEqual({ maximum: budget, remaining: 0 });
     });
 
     it("уже приведённое состояние не трогается", () => {
       const already = { ...VERSION_ONE, arcaneRecovery: { maximum: 4, remaining: 2 } };
-      const migrated = migrateCharacterState(already) as { arcaneRecovery: unknown };
+      const migrated = fieldsOf(migrateCharacterState(already));
       expect(migrated.arcaneRecovery).toEqual({ maximum: 4, remaining: 2 });
     });
 
     it("испорченный уровень получает нулевой бюджет вместо падения", () => {
       const corrupted = { ...VERSION_ONE, level: "семь" };
-      const migrated = migrateCharacterState(corrupted) as { arcaneRecovery: unknown };
+      const migrated = fieldsOf(migrateCharacterState(corrupted));
       expect(migrated.arcaneRecovery).toEqual({ maximum: 0, remaining: 0 });
     });
 
     it("сохранение вовсе без признака приведению не подлежит", () => {
       const { arcaneRecoveryAvailable: _omitted, ...withoutFlag } = VERSION_ONE;
-      const migrated = migrateCharacterState(withoutFlag) as { arcaneRecovery?: unknown };
+      const migrated = fieldsOf(migrateCharacterState(withoutFlag));
       expect(migrated.arcaneRecovery).toBeUndefined();
     });
 
@@ -226,8 +226,8 @@ describe("приведение состояния версии 1", () => {
       const state = createThorne();
       return { ...state, equipment: { ...state.equipment, items } };
     };
-    const itemsOf = (migrated: unknown) =>
-      (migrated as { equipment: { items: Record<string, unknown>[] } }).equipment.items;
+    const itemsOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(fieldsOf(migrated).equipment).items);
 
     it("зелье — расходник, хлам — «другое», ингредиент остаётся собой", () => {
       const migrated = migrateCharacterState(
@@ -237,7 +237,7 @@ describe("приведение состояния версии 1", () => {
           { id: "dust", nameRu: "Пыль", kind: "ingredient" },
         ]),
       );
-      expect(itemsOf(migrated).map((item) => item.kind)).toEqual([
+      expect(itemsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
         "consumable",
         "other",
         "ingredient",
@@ -253,9 +253,14 @@ describe("приведение состояния версии 1", () => {
           { id: "rope", nameRu: "Верёвка", worn: false },
         ]),
       );
-      expect(itemsOf(migrated).map((item) => item.kind)).toEqual(["gear", "gear", "gear", "other"]);
+      expect(itemsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
+        "gear",
+        "gear",
+        "gear",
+        "other",
+      ]);
       // База доспеха у экипировки остаётся: снимать её значило бы терять доспех игрока.
-      expect(itemsOf(migrated)[2]?.armorBase).toBe(14);
+      expect(fieldsOf(itemsOf(migrated)[2]).armorBase).toBe(14);
     });
 
     it("надетость вне экипировки снимается: надетое зелье не двигает числа", () => {
@@ -298,7 +303,7 @@ describe("приведение состояния версии 1", () => {
       const migrated = migrateCharacterState(
         withItems([{ id: "arrows", nameRu: "Стрелы", kind: "other", count: 15000 }]),
       );
-      expect(itemsOf(migrated)[0]?.count).toBe(9999);
+      expect(fieldsOf(itemsOf(migrated)[0]).count).toBe(9999);
     });
 
     it("снимок отмены приводится так же, как состояние", () => {
@@ -309,8 +314,10 @@ describe("приведение состояния версии 1", () => {
           items: [{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }],
         },
       };
-      const migrated = migrateUndoPatch(patch) as typeof patch;
-      expect(migrated.equipment.items[0]).toMatchObject({ kind: "consumable", worn: false });
+      expect(itemsOf(migrateUndoPatch(patch))[0]).toMatchObject({
+        kind: "consumable",
+        worn: false,
+      });
       // Снимок без снаряжения проходит насквозь: приводить в нём нечего.
       const bare = { hitPoints: { current: 1 } };
       expect(migrateUndoPatch(bare)).toBe(bare);
@@ -337,28 +344,23 @@ describe("приведение состояния версии 1", () => {
     const bonuses = { spellcasting: 1, armorClass: 2, savingThrows: 0 };
     /** Сохранение версии 3: прибавки лежат в снаряжении, а поля прочих прибавок ещё нет. */
     const legacyState = () => {
-      const { miscBonuses: _absent, ...state } = createThorne() as Record<string, unknown> & {
-        miscBonuses: unknown;
-      };
+      const { miscBonuses: _absent, ...state } = fieldsOf(createThorne());
       return {
         ...state,
-        equipment: { ...(state.equipment as object), otherBonuses: bonuses },
+        equipment: { ...fieldsOf(state.equipment), otherBonuses: bonuses },
       };
     };
 
     it("прибавки переезжают из снаряжения к персонажу", () => {
-      const migrated = migrateCharacterState(legacyState()) as {
-        miscBonuses: unknown;
-        equipment: Record<string, unknown>;
-      };
+      const migrated = fieldsOf(migrateCharacterState(legacyState()));
       expect(migrated.miscBonuses).toEqual(bonuses);
-      expect("otherBonuses" in migrated.equipment).toBe(false);
+      expect("otherBonuses" in fieldsOf(migrated.equipment)).toBe(false);
     });
 
     it("уже заведённые прочие прибавки не затираются прежним полем", () => {
       const both = { ...legacyState(), miscBonuses: { spellcasting: 9, armorClass: 0, savingThrows: 0 } };
-      const migrated = migrateCharacterState(both) as { miscBonuses: { spellcasting: number } };
-      expect(migrated.miscBonuses.spellcasting).toBe(9);
+      const migrated = fieldsOf(migrateCharacterState(both));
+      expect(fieldsOf(migrated.miscBonuses).spellcasting).toBe(9);
     });
 
     it("состояние без прежнего поля проходит насквозь той же ссылкой", () => {
@@ -368,12 +370,9 @@ describe("приведение состояния версии 1", () => {
 
     it("снимок отмены приводится так же, как состояние", () => {
       const patch = { equipment: { items: [], otherBonuses: bonuses } };
-      const migrated = migrateUndoPatch(patch) as {
-        miscBonuses: unknown;
-        equipment: Record<string, unknown>;
-      };
+      const migrated = fieldsOf(migrateUndoPatch(patch));
       expect(migrated.miscBonuses).toEqual(bonuses);
-      expect("otherBonuses" in migrated.equipment).toBe(false);
+      expect("otherBonuses" in fieldsOf(migrated.equipment)).toBe(false);
     });
   });
 
@@ -389,18 +388,18 @@ describe("приведение состояния версии 1", () => {
       endConditionRu: "Снимается вручную.",
     };
     const withEffects = (activeEffects: unknown[]) => ({ ...createThorne(), activeEffects });
-    const effectsOf = (migrated: unknown) =>
-      (migrated as { activeEffects: Record<string, unknown>[] }).activeEffects;
+    const effectsOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(migrated).activeEffects);
 
     it("эффект прежней формы с именем и вкладом получает признак", () => {
       const migrated = migrateCharacterState(withEffects([legacyAdjustment]));
-      expect(effectsOf(migrated)[0]?.manualKind).toBe("armorAdjustment");
+      expect(fieldsOf(effectsOf(migrated)[0]).manualKind).toBe("armorAdjustment");
     });
 
     it("статус того же имени без вклада в КД признака не получает", () => {
       const { armorClass: _none, ...namesake } = legacyAdjustment;
       const migrated = migrateCharacterState(withEffects([namesake]));
-      expect(effectsOf(migrated)[0]?.manualKind).toBeUndefined();
+      expect(fieldsOf(effectsOf(migrated)[0]).manualKind).toBeUndefined();
     });
 
     it("чужой эффект не трогается, эффект с признаком проходит насквозь той же ссылкой", () => {
@@ -408,7 +407,7 @@ describe("приведение состояния версии 1", () => {
       expect(migrateCharacterState(marked)).toBe(marked);
 
       const foreign = withEffects([{ ...legacyAdjustment, nameRu: "Прикрытие союзника" }]);
-      expect(effectsOf(migrateCharacterState(foreign))[0]?.manualKind).toBeUndefined();
+      expect(fieldsOf(effectsOf(migrateCharacterState(foreign))[0]).manualKind).toBeUndefined();
     });
 
     it("порченая запись эффекта проходит как есть: её отвергнет схема, а не приведение", () => {
@@ -423,8 +422,7 @@ describe("приведение состояния версии 1", () => {
 
     it("снимок отмены приводится так же, как состояние", () => {
       const patch = { activeEffects: [legacyAdjustment] };
-      const migrated = migrateUndoPatch(patch) as { activeEffects: { manualKind?: string }[] };
-      expect(migrated.activeEffects[0]?.manualKind).toBe("armorAdjustment");
+      expect(fieldsOf(effectsOf(migrateUndoPatch(patch))[0]).manualKind).toBe("armorAdjustment");
     });
   });
 
@@ -441,10 +439,7 @@ describe("приведение состояния версии 1", () => {
     });
 
     it("прочитанное состояние их не несёт: экономию хода считает журнал, режим держит оболочка", () => {
-      const state = characterStateSchema.parse(migrateCharacterState(legacy)) as Record<
-        string,
-        unknown
-      >;
+      const state = characterStateSchema.parse(migrateCharacterState(legacy));
       expect(state).not.toHaveProperty("reactionAvailable");
       expect(state).not.toHaveProperty("turnTracking");
       expect(state).not.toHaveProperty("screenMode");
