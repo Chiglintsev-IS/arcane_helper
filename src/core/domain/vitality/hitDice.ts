@@ -4,7 +4,7 @@ import { DomainError } from "@/core/domain/shared/errors";
  * Во что заклинанию обходятся Кости хитов. Форма описана здесь, а не взята у каталога: карточку
  * жизнеспособность не знает, а поля совпадают — вызывающий передаёт цену прямо из карточки.
  */
-export type HitDiceCost = {
+type HitDiceCost = {
   maximumDice: number;
   extraDicePerSlotLevel: number;
   addsSpellcastingModifier: boolean;

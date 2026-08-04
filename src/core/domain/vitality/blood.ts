@@ -70,7 +70,7 @@ export function maximumReductionAfterHours(
   return Math.max(0, reduction - maximumRecoveryPerHour(level) * hours);
 }
 
-export type SuppressionState = {
+type SuppressionState = {
   /** Урон огнём получен: особенности не работают до конца следующего хода. */
   firedUpon: boolean;
   underDirectSunlight: boolean;

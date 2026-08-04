@@ -16,8 +16,6 @@ import {
 } from "./blood";
 import type { VitalityState } from "./schema";
 
-export type { VitalityState };
-
 const HIT_DICE_RU = "Костей хитов";
 
 export class Vitality {

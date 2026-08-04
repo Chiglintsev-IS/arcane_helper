@@ -12,7 +12,7 @@ import { z } from "zod";
  * Одно поле «максимум, уже уменьшенный кровью» смешивало два факта, и правка базы требовала
  * вычесть снижение руками.
  */
-export const hitPointsSchema = z
+const hitPointsSchema = z
   .object({
     current: z.number().int(),
     maximumBase: z.number().int().positive(),
@@ -33,7 +33,7 @@ export const hitPointsSchema = z
  * Отдельным числом, а не прибавкой к текущим: сложенные вместе, они молча исказили бы и максимум,
  * и КС проверки концентрации.
  */
-export const temporaryHitPointsSchema = z.number().int().nonnegative().default(0);
+const temporaryHitPointsSchema = z.number().int().nonnegative().default(0);
 
 /**
  * Кости хитов: по одной за уровень, размер задаёт класс — у волшебника d6.
@@ -41,7 +41,7 @@ export const temporaryHitPointsSchema = z.number().int().nonnegative().default(0
  * Поле необязательное: той же схемой проверяется импорт чужих данных, и выгрузка прежней версии не
  * обязана его знать. У Торна оно есть — этого требует тест контента.
  */
-export const hitDiceSchema = z
+const hitDiceSchema = z
   .object({
     total: z.number().int().positive(),
     size: z.number().int().positive(),
@@ -54,7 +54,7 @@ export const hitDiceSchema = z
   .optional();
 
 /** Что подавляет расовые особенности: урон огнём до конца следующего хода и прямое солнце. */
-export const suppressionSchema = z.object({
+const suppressionSchema = z.object({
   firedUpon: z.boolean(),
   underDirectSunlight: z.boolean(),
 });
@@ -67,8 +67,7 @@ export const VITALITY_FIELDS = {
   suppression: suppressionSchema,
 };
 
-export const vitalityStateSchema = z.object(VITALITY_FIELDS);
+const vitalityStateSchema = z.object(VITALITY_FIELDS);
 
 export type VitalityState = z.infer<typeof vitalityStateSchema>;
 export type HitDice = NonNullable<z.infer<typeof hitDiceSchema>>;
-export type Suppression = z.infer<typeof suppressionSchema>;
