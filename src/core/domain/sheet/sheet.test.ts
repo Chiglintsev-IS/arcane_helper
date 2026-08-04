@@ -104,6 +104,9 @@ describe("производные числа листа", () => {
     // Бонус мастерства перебит — спасбросок с владением считается по новому бонусу.
     expect(overridden.savingThrow("intelligence")).toBe(10);
     expect(overridden.skill("arcana")).toBe(9);
+    // КС и атака заклинаний тоже читают перебитый бонус, а не пересчитывают его из уровня.
+    expect(overridden.spellSaveDc).toBe(18);
+    expect(overridden.spellAttackModifier).toBe(10);
   });
 
   it("перебивка навыка перекрывает счёт по владению", () => {

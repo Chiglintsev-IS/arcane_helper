@@ -53,14 +53,17 @@ describe("abilityModifier", () => {
 
 describe("производные характеристики Торна", () => {
   const level = 7;
+  const proficiency = 3;
   const intelligence = 18;
 
   it("КС спасброска без прибавки предмета равна 15", () => {
-    expect(spellSaveDc({ level, score: intelligence, itemBonus: 0 })).toBe(15);
+    expect(spellSaveDc({ proficiencyBonus: proficiency, score: intelligence, itemBonus: 0 })).toBe(15);
   });
 
   it("модификатор атаки заклинанием без прибавки предмета равен +7", () => {
-    expect(spellAttackModifier({ level, score: intelligence, itemBonus: 0 })).toBe(7);
+    expect(spellAttackModifier({ proficiencyBonus: proficiency, score: intelligence, itemBonus: 0 })).toBe(
+      7,
+    );
   });
 
   it("лимит подготовки равен 11", () => {
@@ -99,8 +102,8 @@ describe("производные числа листа", () => {
   });
 
   it("КС и атака включают прибавку предмета к магии", () => {
-    expect(spellSaveDc({ level: 7, score: 18, itemBonus: 1 })).toBe(16);
-    expect(spellAttackModifier({ level: 7, score: 18, itemBonus: 1 })).toBe(8);
+    expect(spellSaveDc({ proficiencyBonus: 3, score: 18, itemBonus: 1 })).toBe(16);
+    expect(spellAttackModifier({ proficiencyBonus: 3, score: 18, itemBonus: 1 })).toBe(8);
   });
 });
 

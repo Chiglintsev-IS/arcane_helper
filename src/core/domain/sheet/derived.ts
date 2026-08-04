@@ -96,14 +96,14 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
     spellSaveDc:
       overrides.spellSaveDc ??
       spellSaveDc({
-        level: sheet.level,
+        proficiencyBonus: bonus,
         score: spellcastingScore,
         itemBonus: spellcastingBonus,
       }),
     spellAttackModifier:
       overrides.spellAttackModifier ??
       spellAttackModifier({
-        level: sheet.level,
+        proficiencyBonus: bonus,
         score: spellcastingScore,
         itemBonus: spellcastingBonus,
       }),
