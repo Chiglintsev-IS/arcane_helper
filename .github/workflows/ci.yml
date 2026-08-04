@@ -22,25 +22,17 @@ jobs:
       # разница в том, что install дописывает недостающее под платформу, а не отказывается.
       - run: npm install --no-audit --no-fund
 
-      # Целостность спецификации: ссылки, якоря, покрытие требований.
-      - name: Проверка спецификации
-        run: python3 scripts/check-docs.py
-
-      - name: Проверка типов
-        run: npm run typecheck
-
-      # Движок правил и схемы покрываются полностью — порог 100% задан в vitest.config.ts.
-      - name: Тесты и покрытие
-        run: npm run test:coverage
-
-      - name: Сборка статического экспорта
-        run: npm run build
+      # Один вход, как и локально: спецификация, границы, мёртвый код, правила владения, типы,
+      # тесты с покрытием, сборка. Новый страж попадает в CI правкой package.json, а не этого файла.
+      - name: Проверка репозитория
+        run: npm run verify
 
       # E2E на WebKit: это движок Safari на iOS, то есть та же среда, что на телефоне игрока.
       - name: Установка браузера для E2E
         run: npx playwright install --with-deps webkit
 
-      # Сценарий UC-01 в viewport iPhone SE плюс проверка доступности axe-core.
+      # Сценарий UC-01 в viewport iPhone SE плюс проверка доступности axe-core — поверх сборки,
+      # которую уже сделал verify.
       - name: E2E и доступность
         run: npx playwright test
 

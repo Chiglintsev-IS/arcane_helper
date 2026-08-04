@@ -46,12 +46,14 @@ jobs:
       - uses: actions/configure-pages@v5
         id: pages
 
-      # Публикуется только то, что прошло проверки: спека, типы, тесты.
-      - run: npm run check:docs
-      - run: npm run typecheck
-      - run: npm run test:coverage
+      # Публикуется только то, что прошло тот же вход, что и локально.
+      - name: Проверка репозитория
+        run: npm run verify
 
-      - run: npm run build
+      # Отдельная сборка для публикации: BASE_PATH нужен только здесь — сборка внутри verify выше
+      # уже проверила, что приложение собирается, и собрала с путём по умолчанию.
+      - name: Сборка для Pages
+        run: npm run build
         env:
           BASE_PATH: ${{ steps.pages.outputs.base_path }}
 
