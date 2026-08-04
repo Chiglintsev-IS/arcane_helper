@@ -5,7 +5,11 @@
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { useState } from "react";
 
-import { WizardShell } from "@/ui/shared/ui/WizardShell";
+import {
+  ANNOUNCEMENT_LABEL,
+  WIZARD_STEP_TITLES,
+  WizardShell,
+} from "@/ui/shared/ui/WizardShell";
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import { CASTING_TIME, castingTimePhrase, levelLabel } from "@/ui/entities/spell/lib/format";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
@@ -43,12 +47,12 @@ import {
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
 
 const STEP_TITLES: Record<WizardStep, string> = {
-  availability: "Проверьте условия",
+  availability: WIZARD_STEP_TITLES.availability,
   slot: "Чем сотворить",
   hitDice: "Кости хитов",
   components: "Компоненты",
   concentration: "Концентрация",
-  summary: "Объявление и подтверждение",
+  summary: WIZARD_STEP_TITLES.summary,
 };
 
 /**
@@ -508,7 +512,7 @@ function SummaryStep({
         </ol>
       </section>
 
-      <section aria-label="Объявление мастеру" className="flex flex-col gap-2">
+      <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
           Сказать мастеру
         </h3>

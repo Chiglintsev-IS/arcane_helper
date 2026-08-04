@@ -44,16 +44,7 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { setSpellNote } from "@/core/application/useCases/library";
 import { recoverHitPointMaximum } from "@/core/application/useCases/health";
-
-function firstReason(
-  spell: Spell,
-  character: Parameters<typeof bestCastPlan>[1],
-  turn: Parameters<typeof bestCastPlan>[2],
-): string | null {
-  const plan = bestCastPlan(spell, character, turn);
-  if (plan === null) return "нет доступного способа сотворения";
-  return plan.availability.warnings[0]?.reasonRu ?? null;
-}
+import { spellListLabel, unavailabilityReason } from "@/ui/shared/lib/spellLabels";
 
 export function GameScreen() {
   const { clock, draft: draftStore, session: sessionStore } = useStores();
@@ -101,7 +92,7 @@ export function GameScreen() {
       key={spell.id}
       spell={spell}
       character={character}
-      unavailableReason={firstReason(spell, character, economy)}
+      unavailableReason={unavailabilityReason(spell, character, economy)}
       onOpen={() => setOpenSpellId(spell.id)}
     />
   ));
@@ -115,7 +106,7 @@ export function GameScreen() {
       />
     ));
   }
-  const listLabel = bloodShown ? "Заклинания и действия" : "Заклинания";
+  const listLabel = spellListLabel(bloodShown);
 
   const recordDamage = (damage: number, fire: boolean): void => {
     if (apply((current) => takeDamage(current, damage, clock, { fire })) !== null) return;

@@ -3,7 +3,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ascensionTierRate, spellPointCost, hitPointCost } from "@/core/domain/arcana/slots";
-import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
+import { suppressionReason } from "@/core/domain/vitality/blood";
 import {
   CURRENCY_ABBREVIATIONS,
   longCastingTimeRu,
@@ -373,12 +373,9 @@ export function checkAvailability(input: AvailabilityInput): Availability {
 export function exchangeWarnings(character: CharacterState, turn: TurnResources): string[] {
   const warnings: string[] = [];
 
-  if (!bloodMagicAvailable(character.suppression)) {
-    warnings.push(
-      character.suppression.firedUpon
-        ? "Кровавое колдовство подавлено уроном огнём до конца следующего хода"
-        : "Кровавое колдовство не действует под прямым солнечным светом",
-    );
+  const suppression = suppressionReason(character.suppression);
+  if (suppression !== null) {
+    warnings.push(suppression);
   }
   // Вне боя действие не тратится вовсе, поэтому отдельной проверки на бой здесь нет: экономия
   // хода сама отвечает «доступно», пока схватка не начата.

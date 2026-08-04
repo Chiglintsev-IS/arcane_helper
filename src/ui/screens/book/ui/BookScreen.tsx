@@ -21,16 +21,7 @@ import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
-
-function firstReason(
-  spell: Spell,
-  character: Parameters<typeof bestCastPlan>[1],
-  turn: Parameters<typeof bestCastPlan>[2],
-): string | null {
-  const plan = bestCastPlan(spell, character, turn);
-  if (plan === null) return "нет доступного способа сотворения";
-  return plan.availability.warnings[0]?.reasonRu ?? null;
-}
+import { spellListLabel, unavailabilityReason } from "@/ui/shared/lib/spellLabels";
 
 export function BookScreen() {
   const { clock, draft: draftStore, session: sessionStore } = useStores();
@@ -61,7 +52,7 @@ export function BookScreen() {
       key={spell.id}
       spell={spell}
       character={character}
-      unavailableReason={firstReason(spell, character, economy)}
+      unavailableReason={unavailabilityReason(spell, character, economy)}
       onOpen={() => setOpenSpellId(spell.id)}
       onTogglePrepared={
         !inFight
@@ -80,7 +71,7 @@ export function BookScreen() {
       />
     ));
   }
-  const listLabel = bloodShown ? "Заклинания и действия" : "Заклинания";
+  const listLabel = spellListLabel(bloodShown);
 
   const confirm = (confirmed: CastDraft): void => {
     const failure = apply((current) => castSpell(current, toCastRequest(confirmed), clock));

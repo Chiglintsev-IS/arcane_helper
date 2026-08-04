@@ -12,6 +12,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
+import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 
 
 /** Условие окончания ручного эффекта: игрок снимает его сам, приложение сроков не считает. */
@@ -72,7 +73,7 @@ export function spendRuneOnWardingSigil(session: Session, clock: Clock): Session
     throw new DomainError(
       Character.of(character).arcana.runes.depleted
         ? "Рун не осталось"
-        : "Реакция уже израсходована",
+        : ACTION_SPENT_MESSAGES.reaction,
     );
   }
   const root = Character.of(character);

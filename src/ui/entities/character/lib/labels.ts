@@ -56,6 +56,13 @@ export const SIZE_LABELS: Record<CreatureSize, string> = {
 
 export const TRAINING_LABELS = { proficient: "владение", expert: "компетентность" } as const;
 
+/** Ярлыки прибавок: их называют и лист, и шторка вещи, и шторка прочих прибавок. */
+export const BONUS_LABELS = {
+  spellcasting: "К магии",
+  armorClass: "К защите",
+  savingThrows: "Ко всем спасброскам",
+} as const;
+
 export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
   gear: "Экипировка",
   consumable: "Расходник",

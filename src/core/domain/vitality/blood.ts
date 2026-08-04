@@ -85,3 +85,19 @@ export function traitsSuppressed(state: SuppressionState): boolean {
 export function bloodMagicAvailable(suppression: SuppressionState): boolean {
   return !traitsSuppressed(suppression);
 }
+
+/**
+ * Почему кровавое колдовство сейчас не действует; `null` — действует.
+ *
+ * Фраза одна и та же, кто бы ни спрашивал: отказ агрегата и предупреждение мастера обязаны звучать
+ * одинаково, иначе игрок читает их как два разных запрета.
+ */
+export function suppressionReason(state: SuppressionState): string | null {
+  if (state.firedUpon) {
+    return "Кровавое колдовство подавлено уроном огнём до конца следующего хода";
+  }
+  if (state.underDirectSunlight) {
+    return "Кровавое колдовство не действует под прямым солнечным светом";
+  }
+  return null;
+}

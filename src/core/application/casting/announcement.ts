@@ -309,15 +309,35 @@ export function bloodExchangeAnnouncement(points: number, character: CharacterSt
  * считается, и за столом ошибаются в обе
  * стороны. Без активной концентрации оно молчит: напоминать было бы не о чем.
  */
+/**
+ * Числа обмена до подтверждения: во что он обойдётся и что останется.
+ *
+ * Мастер обмена показывает те же числа, что потом называет инструкция, и считать их дважды нельзя:
+ * второй вычислитель того же факта расходится с первым на первой же правке тарифа.
+ */
+export function bloodExchangePreview(
+  points: number,
+  character: CharacterState,
+): { hitPointsSpent: number; hitPointsAfter: number; maximumAfter: number; pointsAfter: number } {
+  const hitPointsSpent = hitPointsForPoints(points, character.level);
+  return {
+    hitPointsSpent,
+    hitPointsAfter: character.hitPoints.current - hitPointsSpent,
+    maximumAfter: Vitality.of(character).maximum - hitPointsSpent,
+    pointsAfter: character.spellPoints.remaining + points,
+  };
+}
+
 export function bloodExchangeInstructions(points: number, character: CharacterState): string[] {
-  const spent = hitPointsForPoints(points, character.level);
-  const { hitPoints } = character;
-  const after = hitPoints.current - spent;
+  const { hitPointsSpent: spent, hitPointsAfter: after, maximumAfter } = bloodExchangePreview(
+    points,
+    character,
+  );
 
   const steps = [
     `Отметьте ${withPlural(spent, ["хит", "хита", "хитов"])}:` +
-      ` было ${hitPoints.current}, станет ${after}`,
-    `Максимум тоже ${Vitality.of(character).maximum - spent} — лечение выше не поднимет,` +
+      ` было ${character.hitPoints.current}, станет ${after}`,
+    `Максимум тоже ${maximumAfter} — лечение выше не поднимет,` +
       ` вернуть можно только по ${maximumRecoveryPerHour(character.level)} за полный час`,
   ];
 

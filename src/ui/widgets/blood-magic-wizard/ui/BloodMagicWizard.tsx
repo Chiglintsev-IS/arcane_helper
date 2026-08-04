@@ -5,17 +5,23 @@
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { useState } from "react";
 
-import { WizardShell } from "@/ui/shared/ui/WizardShell";
+import {
+  ANNOUNCEMENT_LABEL,
+  WIZARD_STEP_TITLES,
+  WizardShell,
+} from "@/ui/shared/ui/WizardShell";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { bloodExchangeAnnouncement, bloodExchangeInstructions } from "@/core/application/casting/announcement";
+import {
+  bloodExchangeAnnouncement,
+  bloodExchangeInstructions,
+  bloodExchangePreview,
+} from "@/core/application/casting/announcement";
 import { exchangeWarnings } from "@/core/application/casting/availability";
 import {
   affordableSpellLevels,
-  hitPointsForPoints,
   maximumExchangePoints,
 } from "@/core/domain/arcana/slots";
 import { withPlural } from "@/core/shared/language";
-import { Vitality } from "@/core/domain/vitality/vitality";
 
 /** Шаги мастера обмена. Шага «чем оплатить» здесь нет: оплата у обмена одна — хиты. */
 const STEPS = ["availability", "amount", "summary"] as const;
@@ -23,9 +29,9 @@ const STEPS = ["availability", "amount", "summary"] as const;
 type Step = (typeof STEPS)[number];
 
 const STEP_TITLES: Record<Step, string> = {
-  availability: "Проверьте условия",
+  availability: WIZARD_STEP_TITLES.availability,
   amount: "Сколько очков",
-  summary: "Объявление и подтверждение",
+  summary: WIZARD_STEP_TITLES.summary,
 };
 
 /**
@@ -57,8 +63,7 @@ function AmountStep({
   maximum: number;
   onChange: (points: number) => void;
 }) {
-  const spent = hitPointsForPoints(points, character.level);
-  const { hitPoints } = character;
+  const preview = bloodExchangePreview(points, character);
 
   return (
     <section aria-label="Сколько очков создать" className="flex flex-col gap-3">
@@ -75,7 +80,7 @@ function AmountStep({
         <p className="flex flex-col items-center">
           <span className="text-2xl font-semibold tabular-nums leading-tight">{points}</span>
           <span className="text-xs text-slate-600 dark:text-slate-400">
-            {withPlural(spent, ["хит", "хита", "хитов"])}
+            {withPlural(preview.hitPointsSpent, ["хит", "хита", "хитов"])}
           </span>
         </p>
         <button
@@ -89,11 +94,11 @@ function AmountStep({
         </button>
       </div>
 
-      <p className="text-sm">{affordableHint(character.spellPoints.remaining + points)}</p>
+      <p className="text-sm">{affordableHint(preview.pointsAfter)}</p>
       {/* Максимум назван вместе с текущими: без него непонятно, почему лечение потом упрётся. */}
       <p className="text-xs text-slate-600 dark:text-slate-400">
-        Хиты {hitPoints.current} → {hitPoints.current - spent}, максимум тоже{" "}
-        {Vitality.of(character).maximum - spent}
+        Хиты {character.hitPoints.current} → {preview.hitPointsAfter}, максимум тоже{" "}
+        {preview.maximumAfter}
       </p>
     </section>
   );
@@ -113,7 +118,7 @@ function SummaryStep({ character, points }: { character: CharacterState; points:
         </ol>
       </section>
 
-      <section aria-label="Объявление мастеру" className="flex flex-col gap-2">
+      <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
           Сказать мастеру
         </h3>

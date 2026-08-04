@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { Currency, InventoryItem, ItemKind } from "@/core/domain/equipment/schema";
 import { CURRENCIES, ITEM_KINDS, MAXIMUM_COIN_AMOUNT } from "@/core/domain/equipment/schema";
-import { CURRENCY_ABBR, ITEM_KIND_LABELS } from "@/ui/entities/character/lib/labels";
+import { BONUS_LABELS, CURRENCY_ABBR, ITEM_KIND_LABELS } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
 /**
@@ -154,9 +154,9 @@ export function ItemSheet({
       {/* Прибавки и база доспеха — свойства экипировки: зелье действует, когда его пьют. */}
       {kind === "gear" ? (
         <>
-          <NumberField labelRu="К магии" value={spellcasting} onChange={setSpellcasting} />
-          <NumberField labelRu="К защите" value={armorClass} onChange={setArmorClass} />
-          <NumberField labelRu="Ко всем спасброскам" value={savingThrows} onChange={setSavingThrows} />
+          <NumberField labelRu={BONUS_LABELS.spellcasting} value={spellcasting} onChange={setSpellcasting} />
+          <NumberField labelRu={BONUS_LABELS.armorClass} value={armorClass} onChange={setArmorClass} />
+          <NumberField labelRu={BONUS_LABELS.savingThrows} value={savingThrows} onChange={setSavingThrows} />
           <NumberField labelRu="База КД доспеха" value={armorBase} onChange={setArmorBase} min={1} />
           <p className="text-xs text-slate-600 dark:text-slate-400">
             База — только у доспеха: у кольчуги 16, у кольца поля нет. Надетый доспех задаёт базу

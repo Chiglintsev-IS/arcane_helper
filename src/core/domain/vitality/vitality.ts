@@ -11,6 +11,7 @@ import { ResourcePool } from "@/core/domain/shared/resourcePool";
 import {
   maximumRecoveryPerHour,
   regenerationPerTurn,
+  suppressionReason,
   traitsSuppressed,
   type Exchange,
 } from "./blood";
@@ -170,12 +171,9 @@ export class Vitality {
     spellPoints: number,
     options: { allowAnyway?: boolean } = {},
   ): { vitality: Vitality; exchange: Exchange } {
-    if (this.suppressed && options.allowAnyway !== true) {
-      throw new DomainError(
-        this.state.suppression.firedUpon
-          ? "Кровавое колдовство подавлено уроном огнём"
-          : "Кровавое колдовство не действует под прямым солнечным светом",
-      );
+    const suppression = suppressionReason(this.state.suppression);
+    if (suppression !== null && options.allowAnyway !== true) {
+      throw new DomainError(suppression);
     }
     if (spellPoints <= 0) {
       throw new DomainError("Нужно хотя бы одно очко заклинаний");

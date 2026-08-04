@@ -19,6 +19,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { armorClassAdjustment, effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import { signed } from "@/core/shared/language";
+import { slotsInOrder } from "@/core/domain/arcana/slots";
 
 /**
  * Ярлык ресурса хода. Подпись одна и та же в обоих состояниях: израсходованность несут знак и
@@ -166,9 +167,7 @@ export function ResourceHeader({
   /** Ручная правка ячеек и рун. */
   onEditResources: () => void;
 }) {
-  const slots = Object.entries(character.spellSlots)
-    .map(([level, slot]) => ({ level: Number.parseInt(level, 10), ...slot }))
-    .sort((left, right) => left.level - right.level);
+  const slots = slotsInOrder(character.spellSlots);
 
   // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок.
   const vitality = Vitality.of(character);

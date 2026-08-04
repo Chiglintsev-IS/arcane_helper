@@ -15,6 +15,20 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
 
+/**
+ * Заголовки шагов, общих у обоих мастеров.
+ *
+ * Мастера звучат одинаково намеренно: игрок проходит их одним и тем же движением, и разные слова на
+ * одном и том же шаге читались бы как разные шаги.
+ */
+export const WIZARD_STEP_TITLES = {
+  availability: "Проверьте условия",
+  summary: "Объявление и подтверждение",
+} as const;
+
+/** Ярлык блока объявления: что произносят вслух мастеру. */
+export const ANNOUNCEMENT_LABEL = "Объявление мастеру";
+
 export type WizardFooter = {
   /** Кнопка «Назад»: нет её — нет и первого шага позади. */
   onBack?: () => void;

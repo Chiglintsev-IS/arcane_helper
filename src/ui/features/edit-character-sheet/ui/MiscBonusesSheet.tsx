@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
+import { BONUS_LABELS } from "@/ui/entities/character/lib/labels";
 
 /**
  * Прочие прибавки персонажа: благословение, дар, обучение — вклад, у которого нет вещи.
@@ -39,9 +40,9 @@ export function MiscBonusesSheet({
       onCancel={onCancel}
       onSave={() => onSave(parsed)}
     >
-      <NumberField labelRu="К магии" value={spellcasting} onChange={setSpellcasting} />
-      <NumberField labelRu="К защите" value={armorClass} onChange={setArmorClass} />
-      <NumberField labelRu="Ко всем спасброскам" value={savingThrows} onChange={setSavingThrows} />
+      <NumberField labelRu={BONUS_LABELS.spellcasting} value={spellcasting} onChange={setSpellcasting} />
+      <NumberField labelRu={BONUS_LABELS.armorClass} value={armorClass} onChange={setArmorClass} />
+      <NumberField labelRu={BONUS_LABELS.savingThrows} value={savingThrows} onChange={setSavingThrows} />
     </EditSheetFrame>
   );
 }

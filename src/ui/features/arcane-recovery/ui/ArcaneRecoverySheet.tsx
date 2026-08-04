@@ -75,7 +75,7 @@ export function ArcaneRecoverySheet({
               <span>
                 {slot.level} ур.{" "}
                 <span className="text-slate-600 dark:text-slate-400">
-                  потрачено {slot.maximum - slot.remaining}
+                  потрачено {slot.spent}
                 </span>
               </span>
               <span className="flex items-center gap-1">

@@ -181,21 +181,39 @@ export function arcaneRecoveryPlanCost(plan: SlotRecoveryPlan): number {
   return Object.entries(plan).reduce((total, [level, count]) => total + Number(level) * count, 0);
 }
 
-/** Ячейка, которую «Магическое восстановление» вправе вернуть: её уровень и сколько потрачено. */
-type RecoverableSlot = { level: number; maximum: number; remaining: number };
+/** Ячейка списком: уровень рядом с числами, потраченное — готовым числом, а не разностью. */
+type SlotInOrder = {
+  level: number;
+  maximum: number;
+  remaining: number;
+  spent: number;
+};
+
+/**
+ * Ячейки от младшего уровня к старшему.
+ *
+ * Порядок — свойство ресурса, а не экрана: ключи состояния хранит запись, и всякий, кому нужен
+ * список, иначе заводил бы свою сортировку и своё вычитание потраченного.
+ */
+export function slotsInOrder(slots: SpellSlots): SlotInOrder[] {
+  return Object.entries(slots)
+    .map(([level, slot]) => ({
+      level: Number(level),
+      ...slot,
+      spent: slot.maximum - slot.remaining,
+    }))
+    .sort((left, right) => left.level - right.level);
+}
 
 /**
  * Ячейки, которые восстановление вправе вернуть: не выше своего предела уровня и потраченные.
  *
  * Порядок — от младших к старшим: правило говорит о суммарном уровне, и выбирать удобнее снизу.
  */
-export function recoverableSlots(slots: SpellSlots): RecoverableSlot[] {
-  return Object.entries(slots)
-    .map(([level, slot]) => ({ level: Number(level), ...slot }))
-    .filter(
-      (slot) => slot.level <= ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL && slot.remaining < slot.maximum,
-    )
-    .sort((left, right) => left.level - right.level);
+export function recoverableSlots(slots: SpellSlots): SlotInOrder[] {
+  return slotsInOrder(slots).filter(
+    (slot) => slot.level <= ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL && slot.spent > 0,
+  );
 }
 
 /**

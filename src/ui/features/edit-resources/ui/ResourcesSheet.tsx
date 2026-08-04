@@ -11,6 +11,7 @@
 "use client";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { slotsInOrder } from "@/core/domain/arcana/slots";
 
 function Stepper({
   label,
@@ -71,9 +72,7 @@ export function ResourcesSheet({
   onSunlight: (under: boolean) => void;
   onClose: () => void;
 }) {
-  const slots = Object.entries(character.spellSlots)
-    .map(([level, slot]) => ({ level: Number(level), ...slot }))
-    .sort((left, right) => left.level - right.level);
+  const slots = slotsInOrder(character.spellSlots);
 
   return (
     <section

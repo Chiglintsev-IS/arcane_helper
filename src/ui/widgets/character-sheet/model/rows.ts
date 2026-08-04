@@ -14,6 +14,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import {
+  BONUS_LABELS,
   ABILITY_LABELS,
   DERIVED_LABELS,
   orDash,
@@ -219,9 +220,9 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
       titleRu: "Прочие прибавки",
       edit: { block: "miscBonuses" },
       rows: [
-        { labelRu: "К магии", value: signed(character.miscBonuses.spellcasting) },
-        { labelRu: "К защите", value: signed(character.miscBonuses.armorClass) },
-        { labelRu: "Ко всем спасброскам", value: signed(character.miscBonuses.savingThrows) },
+        { labelRu: BONUS_LABELS.spellcasting, value: signed(character.miscBonuses.spellcasting) },
+        { labelRu: BONUS_LABELS.armorClass, value: signed(character.miscBonuses.armorClass) },
+        { labelRu: BONUS_LABELS.savingThrows, value: signed(character.miscBonuses.savingThrows) },
       ],
     },
     ...ABILITIES.map((ability) => abilityBlock(character, ability)),

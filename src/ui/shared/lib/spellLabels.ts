@@ -10,7 +10,36 @@
 
 import type { Sheet } from "@/core/domain/sheet/sheet";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { AREA_SHAPES_RU, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed } from "@/core/shared/language";
+import { bestCastPlan } from "@/core/application/casting/castOptions";
+import {
+  AREA_SHAPES_RU,
+  CHECK_DIE_RU,
+  NO_ROLL_RU,
+  plural,
+  SAVING_THROW_NAMES,
+  signed,
+} from "@/core/shared/language";
+
+/** Заголовок списка: строка обмена стоит среди заклинаний, но заклинанием не является. */
+export function spellListLabel(withActions: boolean): string {
+  return withActions ? "Заклинания и действия" : "Заклинания";
+}
+
+/**
+ * Почему заклинание сейчас недоступно, одной фразой; `null` — доступно.
+ *
+ * Спрашивают её оба списка, «Игры» и «Книги», и ответ обязан быть одним: разные слова о том же
+ * запрете читаются как разные запреты.
+ */
+export function unavailabilityReason(
+  spell: Spell,
+  character: Parameters<typeof bestCastPlan>[1],
+  turn: Parameters<typeof bestCastPlan>[2],
+): string | null {
+  const plan = bestCastPlan(spell, character, turn);
+  if (plan === null) return "нет доступного способа сотворения";
+  return plan.availability.warnings[0]?.reasonRu ?? null;
+}
 
 /** Числа персонажа, из которых собирается подпись разрешения. Считает их лист. */
 export type ResolutionNumbers = Pick<Sheet, "spellSaveDc" | "spellAttackModifier">;
@@ -29,7 +58,10 @@ export function resolutionBadge(
 ): { label: string; icon: string } {
   switch (resolution.type) {
     case "spell_attack":
-      return { label: `Атака d20${signed(numbers.spellAttackModifier)}`, icon: "✶" };
+      return {
+        label: `Атака ${CHECK_DIE_RU}${signed(numbers.spellAttackModifier)}`,
+        icon: "✶",
+      };
     case "saving_throw": {
       // Схема требует характеристику при спасброске; без неё состояние испорчено, и назвать один
       // порог честнее, чем выдумать характеристику.
