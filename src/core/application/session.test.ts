@@ -30,6 +30,7 @@ import { Vitality } from "@/core/domain/vitality/vitality";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import { createSession, undoLast, type Session } from "@/core/application/session";
+import { fromPersisted, parsePersisted, toPersisted } from "@/core/application/ports/sessionRepository";
 import { JOURNAL_LIMIT } from "@/core/domain/journal/journal";
 import {
   withBloodExchange,
@@ -1120,6 +1121,24 @@ describe("отмена последнего действия (FR-111)", () => {
 
   it("пустой журнал отменять нечего", () => {
     expect(() => undoLast(session)).toThrow(/Журнал пуст/);
+  });
+
+  it("испорченный снимок отмены не становится состоянием", () => {
+    const spent = spendSpellSlot(session, 1, clock);
+    const stored = toPersisted(spent, clock.now(), null);
+    // Хранилище проверяет у снимка принадлежность ключей, а не значения: такая запись доживает до
+    // отмены.
+    const corrupted = fromPersisted(
+      parsePersisted({
+        ...stored,
+        journal: stored.journal.map((entry) => ({ ...entry, undoPatch: { hitPoints: "banana" } })),
+      }),
+    );
+
+    expect(() => undoLast(corrupted)).toThrow(DomainError);
+    expect(() => undoLast(corrupted)).toThrow(/hitPoints/);
+    expect(corrupted.character.spellSlots[1]?.remaining).toBe(3);
+    expect(corrupted.journal).toHaveLength(1);
   });
 
   it("многократная отмена идёт по одному действию назад", () => {

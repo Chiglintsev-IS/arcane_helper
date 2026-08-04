@@ -45,15 +45,10 @@ export function longRest(session: Session, clock: Clock): Session {
     // Половина костей, округляя вниз. Персонажу без костей отдых их не выдумывает.
     .restoreHitDice(dice === undefined ? 0 : hitDiceRegainedOnLongRest(dice.total));
 
-  const after: CharacterState = {
-    ...root
-      .withVitality(vitality)
-      .withArcana(root.arcana.restoredByLongRest())
-      .withEffects(root.effects.afterLongRest())
-      .toState(),
-    // Долгий отдых обнуляет отметку: следующее восстановление снова ждёт короткого отдыха.
-    shortRestSinceLongRest: false,
-  };
+  const after = root
+    .withVitality(vitality)
+    .withArcana(root.arcana.restoredByLongRest())
+    .withEffects(root.effects.afterLongRest());
 
   return commit(session, after, { kind: "long_rest", summaryRu: "Долгий отдых" }, clock);
 }
@@ -73,13 +68,9 @@ export function shortRest(session: Session, clock: Clock): Session {
   const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
   const hadSpellPoints = root.arcana.spellPoints > 0;
 
-  const after: CharacterState = {
-    ...root
-      .withVitality(vitality.clearFireSuppression())
-      .withArcana(root.arcana.expireSpellPoints())
-      .toState(),
-    shortRestSinceLongRest: true,
-  };
+  const after = root
+    .withVitality(vitality.clearFireSuppression())
+    .withArcana(root.arcana.expireSpellPoints().markShortRest());
 
   const notes = hourNotes(returned, healed, hadSpellPoints);
   return commit(
@@ -96,14 +87,11 @@ export function shortRest(session: Session, clock: Clock): Session {
 /**
  * Почему «Магическое восстановление» сейчас не берётся, кроме боя; `null` — берётся.
  *
- * Отметка короткого отдыха — не поле магических ресурсов, поэтому её достаёт отсюда сценарий и
- * отдаёт агрегату вопросом. Экран спрашивает ту же причину, а не пересказывает правило:
+ * Экран спрашивает ту же причину, которой откажет само применение, а не пересказывает правило:
  * погашенная кнопка обязана называть ровно то, чем ответил бы отказ.
  */
 export function arcaneRecoveryUnavailability(character: CharacterState): string | null {
-  return Character.of(character).arcana.arcaneRecoveryUnavailability(
-    character.shortRestSinceLongRest === true,
-  );
+  return Character.of(character).arcana.arcaneRecoveryUnavailability();
 }
 
 /** Магическое восстановление. Дневной бюджет уровней ячеек можно брать частями. */
