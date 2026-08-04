@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { fieldsOf } from "@/core/domain/shared/fields";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 
 /** Заготовка «Паутины»: концентрация, куб, спасбросок Ловкости, повторяемое действие. */
@@ -76,10 +77,32 @@ function rayOfFrost(): unknown {
 }
 
 function mutate(base: unknown, change: (draft: Record<string, unknown>) => void): unknown {
-  const draft = structuredClone(base) as Record<string, unknown>;
+  const draft = fieldsOf(structuredClone(base));
   change(draft);
   return draft;
 }
+
+/**
+ * Правка вложенного слоя карточки: слой читается полями и возвращается на место целиком — правка
+ * копии, оставленной без присваивания, до заклинания бы не дошла.
+ */
+function mutateLayer(
+  base: unknown,
+  key: string,
+  change: (layer: Record<string, unknown>) => void,
+): unknown {
+  return mutate(base, (draft) => {
+    const layer = fieldsOf(draft[key]);
+    change(layer);
+    draft[key] = layer;
+  });
+}
+
+const withRoleplay = (change: (roleplay: Record<string, unknown>) => void): unknown =>
+  mutateLayer(web(), "roleplay", change);
+
+const withDiagram = (change: (diagram: Record<string, unknown>) => void): unknown =>
+  mutateLayer(ritualCard(), "ritualDiagram", change);
 
 /** Заготовка ритуального заклинания со схемой: минимальный набор слоёв. */
 function ritualCard(): unknown {
@@ -211,8 +234,7 @@ describe("минимум художественного контента (FR-050
   it("отклоняет менее трёх вариантов отыгрыша", () => {
     expect(
       firstError(
-        mutate(web(), (draft) => {
-          const roleplay = draft.roleplay as Record<string, unknown>;
+        withRoleplay((roleplay) => {
           roleplay.completeVariants = { short: ["Один."], atmospheric: [], sarcastic: [] };
         }),
       ),
@@ -222,8 +244,7 @@ describe("минимум художественного контента (FR-050
   it("отклоняет пустую реплику", () => {
     expect(
       spellSchema.safeParse(
-        mutate(web(), (draft) => {
-          const roleplay = draft.roleplay as Record<string, unknown>;
+        withRoleplay((roleplay) => {
           roleplay.incantation = "   ";
         }),
       ).success,
@@ -233,8 +254,7 @@ describe("минимум художественного контента (FR-050
   it("отклоняет список реплик: реплика ровно одна (FR-050)", () => {
     expect(
       spellSchema.safeParse(
-        mutate(web(), (draft) => {
-          const roleplay = draft.roleplay as Record<string, unknown>;
+        withRoleplay((roleplay) => {
           roleplay.incantation = ["Стой.", "Холодно."];
         }),
       ).success,
@@ -301,8 +321,7 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   it("отклоняет кольца не по убыванию", () => {
     expect(
       firstError(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.rings = [0.7, 1];
         }),
       ),
@@ -312,8 +331,7 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   it("отклоняет внешнее кольцо меньше единицы", () => {
     expect(
       firstError(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.rings = [0.9, 0.5];
         }),
       ),
@@ -323,8 +341,7 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   it("отклоняет skip, не дающий звезды", () => {
     expect(
       firstError(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.star = { points: 6, skip: 3, radius: 0.6 };
         }),
       ),
@@ -334,8 +351,7 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   it("отклоняет число знаков, не равное числу вершин на том же радиусе", () => {
     expect(
       firstError(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.star = { points: 7, skip: 3, radius: 0.6 };
           diagram.radialGlyphs = { glyphs: ["sun", "moon", "mars"], radius: 0.6 };
         }),
@@ -344,18 +360,16 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   });
 
   it("принимает знаки на своём радиусе без звезды", () => {
-    const withGlyphs = mutate(ritualCard(), (draft) => {
-      const diagram = draft.ritualDiagram as Record<string, unknown>;
-      diagram.radialGlyphs = { glyphs: ["sun", "moon", "mars", "venus"], radius: 0.6 };
-    });
+    const withGlyphs = withDiagram((diagram) => {
+   diagram.radialGlyphs = { glyphs: ["sun", "moon", "mars", "venus"], radius: 0.6 };
+ });
     expect(spellSchema.safeParse(withGlyphs).success).toBe(true);
   });
 
   it("отклоняет неизвестный знак", () => {
     expect(
       spellSchema.safeParse(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.radialGlyphs = { glyphs: ["sun", "moon", "phlogiston"], radius: 0.6 };
         }),
       ).success,
@@ -365,8 +379,7 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   it("отклоняет надпись с символом вне футарка", () => {
     expect(
       firstError(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.inscription = { runes: "ᚨжᚢ", meaningRu: "проверка", radius: 0.9 };
         }),
       ),
@@ -374,18 +387,16 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   });
 
   it("принимает надпись из рун", () => {
-    const withInscription = mutate(ritualCard(), (draft) => {
-      const diagram = draft.ritualDiagram as Record<string, unknown>;
-      diagram.inscription = { runes: "ᚨᛚᚢ", meaningRu: "«алу» — освящение", radius: 0.9 };
-    });
+    const withInscription = withDiagram((diagram) => {
+   diagram.inscription = { runes: "ᚨᛚᚢ", meaningRu: "«алу» — освящение", radius: 0.9 };
+ });
     expect(spellSchema.safeParse(withInscription).success).toBe(true);
   });
 
   it("отклоняет немагический числовой квадрат", () => {
     expect(
       firstError(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.magicSquare = { rows: [[1, 2, 3], [4, 5, 6], [7, 8, 9]], radius: 0.44 };
           diagram.centralSeal = { kind: "eye", radius: 0.14 };
         }),
@@ -394,19 +405,17 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   });
 
   it("принимает квадрат Сатурна", () => {
-    const withSquare = mutate(ritualCard(), (draft) => {
-      const diagram = draft.ritualDiagram as Record<string, unknown>;
-      diagram.magicSquare = { rows: [[4, 9, 2], [3, 5, 7], [8, 1, 6]], radius: 0.44 };
-      diagram.centralSeal = { kind: "eye", radius: 0.14 };
-    });
+    const withSquare = withDiagram((diagram) => {
+   diagram.magicSquare = { rows: [[4, 9, 2], [3, 5, 7], [8, 1, 6]], radius: 0.44 };
+   diagram.centralSeal = { kind: "eye", radius: 0.14 };
+ });
     expect(spellSchema.safeParse(withSquare).success).toBe(true);
   });
 
   it("отклоняет печать, не влезающую в центральную клетку квадрата", () => {
     expect(
       firstError(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.magicSquare = { rows: [[4, 9, 2], [3, 5, 7], [8, 1, 6]], radius: 0.44 };
           diagram.centralSeal = { kind: "eye", radius: 0.4 };
         }),
@@ -417,8 +426,7 @@ describe("схема ритуала (FR-190, FR-191)", () => {
   it("отклоняет угловые знаки числом, отличным от четырёх", () => {
     expect(
       spellSchema.safeParse(
-        mutate(ritualCard(), (draft) => {
-          const diagram = draft.ritualDiagram as Record<string, unknown>;
+        withDiagram((diagram) => {
           diagram.cornerMarks = ["air", "water", "earth"];
         }),
       ).success,
@@ -479,7 +487,7 @@ describe("расход костей хитов (FR-135)", () => {
 
 describe("вклад в Класс Доспеха (FR-093)", () => {
   const withEffect = (value: number): unknown => ({
-    ...(web() as object),
+    ...fieldsOf(web()),
     armorClassEffect: { kind: "bonus", value },
   });
 

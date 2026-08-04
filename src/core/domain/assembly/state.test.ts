@@ -12,6 +12,7 @@ import { EFFECTS_FIELDS } from "@/core/domain/effects/schema";
 import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
 import { SPELLBOOK_FIELDS } from "@/core/domain/spellbook/schema";
 import { VITALITY_FIELDS } from "@/core/domain/vitality/schema";
+import { fieldsOf } from "@/core/domain/shared/fields";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 /**
@@ -88,7 +89,7 @@ function thorne(): unknown {
 }
 
 function mutate(change: (draft: Record<string, unknown>) => void): unknown {
-  const draft = structuredClone(thorne()) as Record<string, unknown>;
+  const draft = fieldsOf(structuredClone(thorne()));
   change(draft);
   return draft;
 }
