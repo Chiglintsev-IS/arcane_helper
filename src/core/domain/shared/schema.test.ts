@@ -6,7 +6,7 @@ import { russianSchemaErrors } from "./schema";
 
 /**
  * Причина отказа синтетической схемы, собранная в одну строку — так же, как её собирают
- * `assertCharacterFields` и `parsedOrRefused`, которые и передают `russianSchemaErrors` разбору.
+ * `parsedCharacterFields` и `parsedOrRefused`, которые и передают `russianSchemaErrors` разбору.
  */
 function refusalOf(schema: z.ZodType, value: unknown): string {
   const result = schema.safeParse(value, { error: russianSchemaErrors });

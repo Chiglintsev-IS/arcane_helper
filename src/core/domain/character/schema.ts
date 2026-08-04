@@ -93,28 +93,26 @@ export function isPossibleCharacterLevel(level: number): boolean {
 }
 
 /**
- * Отвергает правку, которая не проходит объявления полей, — с причиной словами; принятую возвращает
- * разобранной.
+ * Поля листа с наложенной правкой — разобранные объявлениями, или отказ с причиной словами.
  *
- * Проверяет ровно те поля, что пришли: значение по умолчанию отсутствующего поля правкой не является.
- * Возвращённый патч несёт те же ключи, но со значениями после умолчаний поля — записывать в
- * состояние положено его, а не сырой ввод: умолчания, дописанные разбором, иначе оседают в
- * отброшенном результате, а не в персонаже. Другого места, где эти числа проверяются, нет: экран
- * передаёт набранное как есть и получает либо новое состояние, либо отказ.
+ * Правка приходит непроверенной: экран передаёт набранное как есть. Разбирается персонаж целиком, а
+ * не пришедшие поля по одному, потому что целым он и хранится — умолчания объявлений попадают в
+ * состояние, а не в отброшенный результат проверки, и после правки лист заведомо цел. Другого места,
+ * где эти числа проверяются, нет: экран получает либо новое состояние, либо отказ.
  */
-export function assertCharacterFields(
+export function parsedCharacterFields(
+  fields: CharacterFields,
   patch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>>,
-): Partial<CharacterFields> {
-  const parsedPatch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>> = {};
-  for (const [key, value] of Object.entries(patch)) {
-    const field = key as keyof typeof CHARACTER_FIELDS;
-    const parsed = CHARACTER_FIELDS[field].safeParse(value, { error: russianSchemaErrors });
-    if (!parsed.success) {
-      throw new DomainError(`Поле «${key}» не годится: ${reasonsOf(parsed.error)}`);
-    }
-    parsedPatch[field] = parsed.data;
-  }
-  return parsedPatch as Partial<CharacterFields>;
+): CharacterFields {
+  const parsed = characterSchema.safeParse({ ...fields, ...patch }, { error: russianSchemaErrors });
+  if (!parsed.success) throw new DomainError(refusalOf(parsed.error));
+  return parsed.data;
+}
+
+/** Отказ называет поле и причину словами объявления: их показывают там, где набирали. */
+function refusalOf(error: z.ZodError): string {
+  const [field] = error.issues.map((issue) => String(issue.path[0]));
+  return `Поле «${field}» не годится: ${reasonsOf(error)}`;
 }
 
 /** Причины отказа словами: их называет само объявление поля. */

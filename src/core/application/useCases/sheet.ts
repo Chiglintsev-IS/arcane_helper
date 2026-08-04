@@ -13,6 +13,7 @@ import { Sheet } from "@/core/domain/sheet/sheet";
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import {
   ABILITIES,
+  SKILL_IDS,
   skillsOfAbility,
   type Ability,
   type SkillId,
@@ -55,9 +56,13 @@ export function editAbility(
 ): Session {
   const { character } = session;
   const owned = new Set(skillsOfAbility(change.ability));
-  const skills = Object.fromEntries(
-    Object.entries(character.skills).filter(([id]) => !owned.has(id as SkillId)),
-  ) as Partial<Record<SkillId, SkillTraining>>;
+  // Владения правимой характеристики приходят правкой целиком, поэтому прежние здесь снимаются.
+  const skills: Partial<Record<SkillId, SkillTraining>> = {};
+  for (const id of SKILL_IDS) {
+    const training = character.skills[id];
+    if (owned.has(id) || training === undefined) continue;
+    skills[id] = training;
+  }
 
   return commit(
     session,

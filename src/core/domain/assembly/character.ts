@@ -13,7 +13,7 @@ import { Spellbook } from "@/core/domain/spellbook/spellbook";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import type { CharacterState } from "./state";
 import { CharacterBase } from "@/core/domain/character/base";
-import { assertCharacterFields } from "@/core/domain/character/schema";
+import { parsedCharacterFields } from "@/core/domain/character/schema";
 
 /**
  * Поля, которые правятся с «Листа»: кто персонаж сам по себе и отметки на нём. Ресурсы, здоровье,
@@ -108,7 +108,7 @@ export class Character {
    * отброшенный результат проверки.
    */
   withSheet(change: Partial<Pick<CharacterState, SheetField>>): Character {
-    return new Character({ ...this.state, ...assertCharacterFields(change) });
+    return new Character({ ...this.state, ...parsedCharacterFields(this.state, change) });
   }
 
   toState(): CharacterState {

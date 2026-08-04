@@ -6,7 +6,7 @@ import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
-import { NO_ITEM_BONUSES, type ItemBonuses } from "@/core/domain/shared/schema";
+import { NO_ITEM_BONUSES } from "@/core/domain/shared/schema";
 import { Sheet } from "@/core/domain/sheet/sheet";
 
 /**
@@ -135,10 +135,8 @@ describe("правка листа проходит объявления поле
   it("частичная прибавка доходит до состояния разобранной, а не куском", () => {
     // Тип объявляет три поля, но патч, минующий типизированный вызов (импорт, ручная миграция),
     // способен принести и меньше — тот самый случай, который здесь проверяется.
-    const partialMiscBonuses = { spellcasting: 3 } as ItemBonuses;
-    const state = Character.of(createThorne())
-      .withSheet({ miscBonuses: partialMiscBonuses })
-      .toState();
+    const partial: Record<string, unknown> = { miscBonuses: { spellcasting: 3 } };
+    const state = Character.of(createThorne()).withSheet(partial).toState();
     expect(state.miscBonuses).toEqual({ ...NO_ITEM_BONUSES, spellcasting: 3 });
 
     const sheet = Sheet.of(state);
