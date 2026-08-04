@@ -12,7 +12,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { PlayShell as PlayScreen } from "@/ui/app/PlayShell";
+import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
@@ -28,7 +28,7 @@ const ALL_AVAILABLE_ECONOMY: TurnEconomy = {
 
 async function openWizard(character: CharacterState = createThorne()) {
   const user = userEvent.setup();
-  const rendered = await renderWithStores(<PlayScreen />, character);
+  const rendered = await renderWithStores(<GameScreen />, character);
   await user.click(screen.getByRole("button", { name: /Магия крови/ }));
   return { user, ...rendered };
 }
