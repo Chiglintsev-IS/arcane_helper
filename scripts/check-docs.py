@@ -18,6 +18,8 @@
      объявленным идентификатором. Совпадение с прозой комментария не считается.
  10. Каждый прогон E2E назван требованием: его имя встречается в документах.
  11. Статус не обещает пустого: `Готово` и `Проверено` при «Проверка: —» — ошибка.
+ 12. Отвеченный вопрос не цитируется как живой: ссылка на закрытую запись остаётся только у самого
+     реестра вопросов и у записи решения, которое вопрос закрыло.
 
 Требования живут в доменных документах и в документах сквозных сценариев, экранов и обмена данными.
 Реестра фич больше нет: владельца требования задаёт файл, в котором оно определено, а не отдельная
@@ -62,8 +64,17 @@ QUESTION_STATUSES = {"Открыт", "Закрыт", "Частично закр�
 QUESTION_STATUS_PREFIX = "Решено"
 DECISION_STATUS_PREFIX = "Заменено ADR-"
 
+# Реестр вопросов и статус вопроса, у которого ответ уже есть.
+QUESTIONS = "open-questions.md"
+ANSWERED_QUESTION = "Закрыт"
+# Отвеченный вопрос нужен двум документам: самому реестру и записи решения, которое его закрыло.
+# Остальным ответ достаётся фактом в тексте — ссылка на запись звала бы за нерешённым.
+QUESTION_CITERS = ("docs/open-questions.md", "docs/decisions.md")
+
 FENCE = re.compile(r"^```.*?^```", re.M | re.S)
 REQUIREMENT = re.compile(r"\b((?:N?FR)-\d{3})\b")
+QUESTION_RECORD = re.compile(r"^##\s+(OQ-\d{2})\s*$", re.M)
+QUESTION_LINK = re.compile(r"\[[^\]]*\]\([^)]*#oq-(\d{2})\)")
 DEFINITION = re.compile(r"^#{2,4} ((?:N?FR)-\d{3}) — (.+)$", re.M)
 HEADING = re.compile(r"^#{1,6}\s+(.*)$", re.M)
 HTML_ANCHOR = re.compile(r'<a\s+id="([^"]+)"')
@@ -135,13 +146,20 @@ def check_links(files: list[pathlib.Path]) -> None:
                 errors.append(f"{path}: якорь не найден — {target}")
 
 
+def blanked_fences(text: str) -> str:
+    """Блок кода, вычеркнутый пустыми строками: нумерация сохраняется, образец оформления — нет.
+
+    Образец оформления требования — не его определение, и ссылка в образце — не ссылка спеки.
+    """
+    return FENCE.sub(lambda block: "\n" * block.group(0).count("\n"), text)
+
+
 def check_requirements(files: list[pathlib.Path]) -> None:
     defined: dict[str, list[str]] = {}
     mentioned: set[str] = set()
 
     for path in files:
-        # Блоки кода вырезаются: образец оформления требования — не его определение.
-        text = FENCE.sub("", path.read_text(encoding="utf-8"))
+        text = blanked_fences(path.read_text(encoding="utf-8"))
         owned = str(path).startswith(OWNERS)
         for requirement, _name in DEFINITION.findall(text):
             defined.setdefault(requirement, []).append(str(path))
@@ -280,6 +298,38 @@ def check_glossary(root: pathlib.Path, sources: str) -> None:
                 errors.append(f"{glossary}: имени `{name}` нет в коде — {cells[0]}")
 
 
+def question_statuses(register: pathlib.Path) -> dict[str, str]:
+    """Статус каждого вопроса из его записи: другого места у статуса нет."""
+    if not register.exists():
+        return {}
+    parts = QUESTION_RECORD.split(register.read_text(encoding="utf-8"))
+    statuses: dict[str, str] = {}
+    for question, body in zip(parts[1::2], parts[2::2]):
+        status = STATUS_LINE.search(body)
+        statuses[question] = status.group(1).strip().rstrip(".") if status else ""
+    return statuses
+
+
+def check_answered_questions(files: list[pathlib.Path], statuses: dict[str, str]) -> None:
+    """Отвеченный вопрос не цитируется как живой: иначе спека спорит сама с собой.
+
+    Ссылка переживает ответ: вопрос закрывают, а требование, куда ответ лёг, продолжает звать за
+    решением в реестр — и пришедший по ссылке находит решение непринятым.
+    """
+    for path in files:
+        if str(path).startswith(QUESTION_CITERS):
+            continue
+        text = blanked_fences(path.read_text(encoding="utf-8"))
+        for number, line in enumerate(text.splitlines(), start=1):
+            for digits in QUESTION_LINK.findall(line):
+                question = f"OQ-{digits}"
+                if statuses.get(question) == ANSWERED_QUESTION:
+                    errors.append(
+                        f"{path}:{number}: вопрос {question} отвечен — ответ стоит фактом в тексте, "
+                        "а ссылка на запись зовёт за нерешённым"
+                    )
+
+
 def check_statuses(files: list[pathlib.Path]) -> None:
     for path in files:
         for status in STATUS_LINE.findall(path.read_text(encoding="utf-8")):
@@ -334,6 +384,7 @@ def main() -> int:
     check_requirements(files)
     check_glossary(pathlib.Path(DOCS), code_text(("src",)))
     check_statuses(files)
+    check_answered_questions(files, question_statuses(pathlib.Path(DOCS) / QUESTIONS))
     check_link_remnants(files)
     named = check_named_runs(files, code_text(CODE_ROOTS))
     e2e_runs = check_e2e_ownership(files)
