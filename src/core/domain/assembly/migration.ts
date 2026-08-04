@@ -7,6 +7,8 @@
  * руками.
  */
 
+import { z } from "zod";
+
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
 import {
@@ -14,21 +16,43 @@ import {
   MAXIMUM_ITEM_COUNT,
   withoutGearOnlyFields,
 } from "@/core/domain/equipment/schema";
+import { fieldsOf } from "@/core/domain/shared/fields";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 
 const UNKNOWN_ABILITY_SCORE = 10;
 
-type LegacyShape = {
-  equipment?: { spellcastingFocus?: boolean; armorClassBase?: number };
-  itemBonuses?: { spellcasting: number; armorClass: number; savingThrows: number };
-  abilities?: unknown;
-  intelligence?: number;
-  spellSaveDc?: number;
-  spellAttackModifier?: number;
-  constitutionSaveModifier?: number;
-  armorClass?: { base: number; dexterityModifier?: number; itemBonus?: number };
-  hitPoints?: { current: number; maximum: number; maximumReduction: number };
-};
+const NO_LEGACY_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
+
+/**
+ * Прежние формы объявлены, а не обещаны: приведение читает числа, поэтому числами они и обязаны
+ * быть. Объявления открытые — всё, чего прежние версии не меняли, проходит сквозь них как есть.
+ */
+const legacyArmorClass = z.looseObject({
+  base: z.number(),
+  dexterityModifier: z.number().optional(),
+  itemBonus: z.number().optional(),
+});
+
+/** Версия 1 держала один максимум хитов и снижение кровью отдельным числом. */
+const versionOneShape = z.looseObject({
+  intelligence: z.number().optional(),
+  spellSaveDc: z.number().optional(),
+  spellAttackModifier: z.number().optional(),
+  constitutionSaveModifier: z.number().optional(),
+  armorClass: legacyArmorClass.optional(),
+  hitPoints: z
+    .looseObject({ current: z.number(), maximum: z.number(), maximumReduction: z.number() })
+    .optional(),
+  equipment: z.unknown().optional(),
+});
+
+/** Версия 2 узнаётся по характеристикам: снаряжение у неё плоское, а прибавки лежат у персонажа. */
+const versionTwoShape = z.looseObject({
+  abilities: z.unknown().optional(),
+  itemBonuses: z.unknown().optional(),
+  armorClass: z.looseObject({ base: z.number() }).optional(),
+  equipment: z.looseObject({ spellcastingFocus: z.boolean().optional() }).optional(),
+});
 
 /** Значение характеристики по модификатору: чётное, потому что 14 и 15 дают один и тот же +2. */
 function scoreFor(modifier: number): number {
@@ -39,12 +63,12 @@ function scoreFor(modifier: number): number {
  * Версия 2 держала снаряжение плоским объектом с компонентами, а прибавки предметов и базу Класса
  * Доспеха — на листе персонажа. Теперь всё это принадлежит снаряжению.
  */
-function migrateEquipment(state: LegacyShape, armorClassBase: number): unknown {
+function migrateEquipment(state: z.infer<typeof versionTwoShape>, armorClassBase: number): unknown {
   const { equipment } = state;
   const known = equipment !== undefined && equipment.spellcastingFocus !== undefined;
   return {
     armorClassBase,
-    otherBonuses: state.itemBonuses ?? { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+    otherBonuses: state.itemBonuses ?? NO_LEGACY_BONUSES,
     items: [],
     ...(known ? { components: equipment } : {}),
   };
@@ -55,12 +79,8 @@ function migrateEquipment(state: LegacyShape, armorClassBase: number): unknown {
  * потерь, потому что оба его состояния — ровно полный бюджет или ровно нулевой остаток.
  */
 function migrateArcaneRecovery(state: unknown): unknown {
-  if (state === null || typeof state !== "object") return state;
-  const { arcaneRecoveryAvailable, arcaneRecovery, level } = state as {
-    arcaneRecoveryAvailable?: unknown;
-    arcaneRecovery?: unknown;
-    level?: unknown;
-  };
+  const fields = fieldsOf(state);
+  const { arcaneRecoveryAvailable, arcaneRecovery, level } = fields;
   if (arcaneRecovery !== undefined || typeof arcaneRecoveryAvailable !== "boolean") return state;
 
   const maximum =
@@ -71,7 +91,7 @@ function migrateArcaneRecovery(state: unknown): unknown {
       ? arcaneRecoveryBudget(level)
       : 0;
 
-  const { arcaneRecoveryAvailable: _omitted, ...rest } = state as Record<string, unknown>;
+  const { arcaneRecoveryAvailable: _omitted, ...rest } = fields;
   return { ...rest, arcaneRecovery: { maximum, remaining: arcaneRecoveryAvailable ? maximum : 0 } };
 }
 
@@ -90,7 +110,7 @@ const LEGACY_ITEM_KINDS: Record<string, string> = { potion: "consumable", junk: 
  */
 function migrateItem(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
-  const fields = item as Record<string, unknown>;
+  const fields = fieldsOf(item);
   const { kind, count } = fields;
   const gearOnly = filledGearOnlyFields(fields);
 
@@ -115,15 +135,15 @@ function migrateItem(item: unknown): unknown {
 }
 
 function migrateItemCategories(state: unknown): unknown {
-  if (state === null || typeof state !== "object") return state;
-  const { equipment } = state as { equipment?: { items?: unknown } };
-  const stored = equipment?.items;
+  const fields = fieldsOf(state);
+  const equipment = fieldsOf(fields.equipment);
+  const stored = equipment.items;
   if (!Array.isArray(stored)) return state;
 
   const items = stored.map(migrateItem);
   // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
   if (items.every((item, index) => item === stored[index])) return state;
-  return { ...state, equipment: { ...equipment, items } };
+  return { ...fields, equipment: { ...equipment, items } };
 }
 
 /**
@@ -137,18 +157,15 @@ function migrateArmorBase(state: unknown): unknown {
   const split = splitArmorBase(state);
   if (split === null) return state;
 
-  const overrides = (state as { overrides?: unknown }).overrides;
-  const known =
-    overrides !== null && typeof overrides === "object"
-      ? (overrides as Record<string, unknown>)
-      : {};
+  const fields = fieldsOf(state);
+  const known = fieldsOf(fields.overrides);
   const keepDerived =
     typeof split.base !== "number" ||
     split.base === UNARMORED_ARMOR_CLASS_BASE ||
     known.armorClassBase !== undefined;
 
   return {
-    ...(state as Record<string, unknown>),
+    ...fields,
     equipment: split.equipment,
     ...(keepDerived ? {} : { overrides: { ...known, armorClassBase: split.base } }),
   };
@@ -161,19 +178,16 @@ function migrateArmorBase(state: unknown): unknown {
 function migrateArmorBasePatch(patch: unknown): unknown {
   const split = splitArmorBase(patch);
   if (split === null) return patch;
-  return { ...(patch as Record<string, unknown>), equipment: split.equipment };
+  return { ...fieldsOf(patch), equipment: split.equipment };
 }
 
 /** Снимает хранимую базу со снаряжения; `null` — приводить нечего. */
 function splitArmorBase(
   state: unknown,
 ): { equipment: Record<string, unknown>; base: unknown } | null {
-  if (state === null || typeof state !== "object") return null;
-  const { equipment } = state as { equipment?: unknown };
-  if (equipment === null || typeof equipment !== "object" || !("armorClassBase" in equipment)) {
-    return null;
-  }
-  const { armorClassBase, ...bare } = equipment as Record<string, unknown>;
+  const equipment = fieldsOf(fieldsOf(state).equipment);
+  if (!("armorClassBase" in equipment)) return null;
+  const { armorClassBase, ...bare } = equipment;
   return { equipment: bare, base: armorClassBase };
 }
 
@@ -184,16 +198,15 @@ function splitArmorBase(
  * персонаж», и снимок со старым полем возвращал бы прибавку туда, откуда она уехала.
  */
 function migrateMiscBonuses(state: unknown): unknown {
-  if (state === null || typeof state !== "object") return state;
-  const { equipment, miscBonuses } = state as { equipment?: unknown; miscBonuses?: unknown };
-  if (equipment === null || typeof equipment !== "object" || !("otherBonuses" in equipment)) {
-    return state;
-  }
-  const { otherBonuses, ...rest } = equipment as Record<string, unknown>;
+  const fields = fieldsOf(state);
+  const equipment = fieldsOf(fields.equipment);
+  if (!("otherBonuses" in equipment)) return state;
+
+  const { otherBonuses, ...rest } = equipment;
   return {
-    ...state,
+    ...fields,
     equipment: rest,
-    ...(miscBonuses === undefined ? { miscBonuses: otherBonuses } : {}),
+    ...(fields.miscBonuses === undefined ? { miscBonuses: otherBonuses } : {}),
   };
 }
 
@@ -205,26 +218,22 @@ const LEGACY_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
 /** Эффект прежней формы получает признак поправки: опознание по строке имени умерло. */
 function migrateAdjustmentEffect(effect: unknown): unknown {
-  if (effect === null || typeof effect !== "object") return effect;
-  const { nameRu, armorClass, manualKind } = effect as {
-    nameRu?: unknown;
-    armorClass?: unknown;
-    manualKind?: unknown;
-  };
+  const fields = fieldsOf(effect);
+  const { nameRu, armorClass, manualKind } = fields;
   if (nameRu !== LEGACY_ADJUSTMENT_NAME_RU || armorClass === undefined || manualKind !== undefined) {
     return effect;
   }
-  return { ...(effect as Record<string, unknown>), manualKind: "armorAdjustment" };
+  return { ...fields, manualKind: "armorAdjustment" };
 }
 
 function migrateAdjustmentMarker(state: unknown): unknown {
-  if (state === null || typeof state !== "object") return state;
-  const { activeEffects } = state as { activeEffects?: unknown };
+  const fields = fieldsOf(state);
+  const { activeEffects } = fields;
   if (!Array.isArray(activeEffects)) return state;
 
   const effects = activeEffects.map(migrateAdjustmentEffect);
   if (effects.every((effect, index) => effect === activeEffects[index])) return state;
-  return { ...state, activeEffects: effects };
+  return { ...fields, activeEffects: effects };
 }
 
 /**
@@ -249,26 +258,33 @@ export function migrateCharacterState(raw: unknown): unknown {
 }
 
 function migrateShape(raw: unknown): unknown {
-  if (raw === null || typeof raw !== "object") return raw;
-
-  const state = raw as LegacyShape;
   // Версии 3 и 4 узнаются по снаряжению, знающему про инвентарь либо хранимую базу защиты;
   // версия 2 — по характеристикам.
-  const equipment = state.equipment as { armorClassBase?: number; items?: unknown } | undefined;
-  if (equipment?.armorClassBase !== undefined || equipment?.items !== undefined) {
+  const equipment = fieldsOf(fieldsOf(raw).equipment);
+  if (equipment.armorClassBase !== undefined || equipment.items !== undefined) {
     return raw;
   }
 
-  if (state.abilities !== undefined) {
-    const { itemBonuses: _moved, armorClass, ...rest } = state as LegacyShape & {
-      armorClass?: { base: number };
-    };
-    return {
-      ...rest,
-      equipment: migrateEquipment(state, armorClass?.base ?? UNARMORED_ARMOR_CLASS_BASE),
-    };
+  const withAbilities = versionTwoShape.safeParse(raw);
+  if (withAbilities.success && withAbilities.data.abilities !== undefined) {
+    return migrateVersionTwo(withAbilities.data);
   }
 
+  const versionOne = versionOneShape.safeParse(raw);
+  // Испорченное сохранение приведению не поддаётся: его отвергнет схема, назвав поле и причину.
+  if (!versionOne.success) return raw;
+  return migrateVersionOne(versionOne.data);
+}
+
+function migrateVersionTwo(state: z.infer<typeof versionTwoShape>): unknown {
+  const { itemBonuses: _moved, armorClass, ...rest } = state;
+  return {
+    ...rest,
+    equipment: migrateEquipment(state, armorClass?.base ?? UNARMORED_ARMOR_CLASS_BASE),
+  };
+}
+
+function migrateVersionOne(state: z.infer<typeof versionOneShape>): unknown {
   const { armorClass } = state;
   const dexterityModifier = armorClass?.dexterityModifier ?? 0;
   const itemBonus = armorClass?.itemBonus ?? 0;
