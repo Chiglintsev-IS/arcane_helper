@@ -46,29 +46,52 @@ const priceSchema = z.object({
 });
 
 /**
+ * Отказ хранить свойства экипировки не у экипировки.
+ *
+ * Одна фраза у объявления вещи и у переключения надетости: копия разошлась бы с оригиналом на
+ * первой же правке, и молча.
+ */
+export function gearOnlyRefusal(nameRu: string): string {
+  return `«${nameRu}» не экипировка: надетости, прибавок и базы доспеха у неё не бывает`;
+}
+
+/**
  * Вещь в инвентаре.
  *
  * Прибавка необязательна: большая часть вещей на числа не влияет, и нулевые поля у каждой верёвки
  * означали бы, что верёвка участвует в счёте Класса Доспеха.
+ *
+ * Надетость, прибавки и база доспеха бывают только у экипировки: «надетое зелье» не участвует ни в
+ * одном правиле, и хранимым состоянием оно быть не может.
  */
-const inventoryItemSchema = z.object({
-  id: nonEmpty,
-  nameRu: nonEmpty,
-  /** Категория без явного выбора — «другое»: неопознанную находку не заставляют классифицировать. */
-  kind: z.enum(ITEM_KINDS).default("other"),
-  /** Надето и потому действует. Лежащее в сумке к числам не прибавляется. */
-  worn: z.boolean().default(false),
-  /** Сколько экземпляров лежит вместе. Ноль остаётся в сумке: кончилось — не то же, что выброшено. */
-  count: z.number().int().min(0).max(MAXIMUM_ITEM_COUNT).default(1),
-  price: priceSchema.optional(),
-  note: nonEmpty.optional(),
-  bonuses: itemBonusesSchema.optional(),
-  /**
-   * База КД доспеха: у кольчуги 16, у кольца поля нет. База персонажа выводится из надетого —
-   * наибольшая из баз, без доспеха действует база без доспехов.
-   */
-  armorBase: armorBase.optional(),
-});
+const inventoryItemSchema = z
+  .object({
+    id: nonEmpty,
+    nameRu: nonEmpty,
+    /** Категория без явного выбора — «другое»: неопознанную находку не заставляют классифицировать. */
+    kind: z.enum(ITEM_KINDS).default("other"),
+    /** Надето и потому действует. Лежащее в сумке к числам не прибавляется. */
+    worn: z.boolean().default(false),
+    /** Сколько экземпляров лежит вместе. Ноль остаётся в сумке: кончилось — не то же, что выброшено. */
+    count: z.number().int().min(0).max(MAXIMUM_ITEM_COUNT).default(1),
+    price: priceSchema.optional(),
+    note: nonEmpty.optional(),
+    bonuses: itemBonusesSchema.optional(),
+    /**
+     * База КД доспеха: у кольчуги 16, у кольца поля нет. База персонажа выводится из надетого —
+     * наибольшая из баз, без доспеха действует база без доспехов.
+     */
+    armorBase: armorBase.optional(),
+  })
+  .superRefine((item, context) => {
+    if (item.kind === "gear") return;
+    const refuse = (field: string): void => {
+      context.addIssue({ code: "custom", path: [field], message: gearOnlyRefusal(item.nameRu) });
+    };
+    if (item.worn) refuse("worn");
+    if (item.bonuses !== undefined) refuse("bonuses");
+    if (item.armorBase !== undefined) refuse("armorBase");
+  });
 
 /**
  * Снаряжение: чем персонаж располагает вещественно.

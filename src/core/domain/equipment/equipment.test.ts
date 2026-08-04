@@ -40,12 +40,14 @@ describe("снаряжение", () => {
   });
 
   it("вещь без прибавки на числа не влияет", () => {
-    expect(gear().addItem({ ...rope, worn: true }).bonuses).toEqual(gear().bonuses);
+    const helmet: InventoryItem = { id: "helmet", nameRu: "Шлем", kind: "gear", worn: true, count: 1 };
+    expect(gear().addItem(helmet).bonuses).toEqual(gear().bonuses);
   });
 
-  it("прибавка не экипировки не считается даже надетой: порченые данные не двигают числа", () => {
-    const strange = gear().addItem({ ...potions(1), worn: true, bonuses: { spellcasting: 0, armorClass: 5, savingThrows: 0 } });
-    expect(strange.bonuses).toEqual(gear().bonuses);
+  it("заведение надетого расходника с прибавкой отвергается: такой вещи не бывает (FR-238)", () => {
+    expect(() =>
+      gear().addItem({ ...potions(1), worn: true, bonuses: { spellcasting: 0, armorClass: 5, savingThrows: 0 } }),
+    ).toThrow(DomainError);
   });
 
   it("надевание и снятие переключают вклад", () => {

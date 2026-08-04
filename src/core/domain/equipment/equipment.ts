@@ -12,7 +12,7 @@
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import { assertInventoryItem, assertMoney, MAXIMUM_ITEM_COUNT } from "./schema";
+import { assertInventoryItem, assertMoney, gearOnlyRefusal, MAXIMUM_ITEM_COUNT } from "./schema";
 import type { EquipmentData, InventoryItem, Money } from "./schema";
 
 
@@ -188,7 +188,7 @@ export class Equipment {
     const found = this.data.items.find((item) => item.id === id);
     if (found === undefined) throw new DomainError(`Вещи «${id}» нет в инвентаре`);
     if (found.kind !== "gear") {
-      throw new DomainError(`«${found.nameRu}» не экипировка и не надевается`);
+      throw new DomainError(gearOnlyRefusal(found.nameRu));
     }
     return this.replaceItem({ ...found, worn: !found.worn });
   }

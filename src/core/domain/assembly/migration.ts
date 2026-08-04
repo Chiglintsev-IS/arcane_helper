@@ -79,15 +79,17 @@ const ITEM_COUNT_CAP = 9999;
 /**
  * Одна вещь прежней формы — к новой: род становится категорией (зелье — расходник, хлам —
  * «другое», без рода — по поведению: надетая или с прибавкой была экипировкой и до слова),
- * надетость вне экипировки снимается — расходник не бывает надет, — а счёт выше предела
- * обрезается пределом: старая схема потолка не знала, и отказ схемы запирал бы всё сохранение.
+ * свойства экипировки вне экипировки снимаются — прежняя сборка позволяла надеть зелье и дать ему
+ * прибавку, — а счёт выше предела обрезается пределом: старая схема потолка не знала, и отказ схемы
+ * запирал бы всё сохранение.
  */
 function migrateItem(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
-  const { kind, worn, bonuses, count } = item as {
+  const { kind, worn, bonuses, armorBase, count } = item as {
     kind?: unknown;
     worn?: unknown;
     bonuses?: unknown;
+    armorBase?: unknown;
     count?: unknown;
   };
 
@@ -100,14 +102,18 @@ function migrateItem(item: unknown): unknown {
           ? "gear"
           : "other";
 
-  const wornOff = migratedKind !== "gear" && worn === true;
+  const gearOnlyOff =
+    migratedKind !== "gear" &&
+    (worn === true || bonuses !== undefined || armorBase !== undefined);
   const capped = typeof count === "number" && count > ITEM_COUNT_CAP;
-  if (migratedKind === kind && !wornOff && !capped) return item;
+  if (migratedKind === kind && !gearOnlyOff && !capped) return item;
 
+  const fields = item as Record<string, unknown>;
+  const { bonuses: _bonuses, armorBase: _armorBase, ...withoutGearOnly } = fields;
   return {
-    ...(item as Record<string, unknown>),
+    ...(gearOnlyOff ? withoutGearOnly : fields),
     kind: migratedKind,
-    ...(wornOff ? { worn: false } : {}),
+    ...(gearOnlyOff ? { worn: false } : {}),
     ...(capped ? { count: ITEM_COUNT_CAP } : {}),
   };
 }

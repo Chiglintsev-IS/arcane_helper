@@ -261,6 +261,26 @@ describe("приведение состояния версии 1", () => {
       expect(itemsOf(migrated)[0]).toMatchObject({ kind: "consumable", worn: false });
     });
 
+    it("прибавка и база доспеха вне экипировки снимаются, а сохранение читается (FR-238)", () => {
+      const migrated = migrateCharacterState(
+        withItems([
+          {
+            id: "potion",
+            nameRu: "Зелье",
+            kind: "potion",
+            bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+            armorBase: 16,
+          },
+        ]),
+      );
+      expect(itemsOf(migrated)[0]).toEqual({
+        id: "potion",
+        nameRu: "Зелье",
+        kind: "consumable",
+        worn: false,
+      });
+    });
+
     it("надетый ингредиент прежней сборки снимается и с уже верной категорией", () => {
       const migrated = migrateCharacterState(
         withItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
