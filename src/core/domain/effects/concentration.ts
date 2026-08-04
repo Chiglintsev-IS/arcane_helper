@@ -59,7 +59,7 @@ export function durationWithRoundsRu(duration: ActiveEffect["duration"]): string
   }
 }
 
-export function concentrationCheckDc(damage: number): number {
+function concentrationCheckDc(damage: number): number {
   if (!Number.isInteger(damage) || damage < 0) {
     throw new DomainError(`Полученный урон должен быть целым неотрицательным, получено: ${damage}`);
   }

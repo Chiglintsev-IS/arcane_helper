@@ -18,7 +18,7 @@ export const CANTRIP_LEVEL = 0;
 export const MAXIMUM_SPELL_LEVEL = 9;
 
 /** Минимум художественного контента на заклинание. */
-export const MINIMUM_COMPLETE_VARIANTS = 3;
+const MINIMUM_COMPLETE_VARIANTS = 3;
 
 /**
  * Закрытый словарь подстановок объявления мастеру.
@@ -162,7 +162,7 @@ export const armorClassEffectSchema = z.object({
  * — прибавка за каждый уровень ячейки выше. Модификатор заклинательной характеристики прибавляется
  * один раз на всё сотворение, а не на кость, поэтому это флаг, а не число.
  */
-export const hitDiceCostSchema = z.object({
+const hitDiceCostSchema = z.object({
   maximumDice: z.number().int().positive(),
   extraDicePerSlotLevel: z.number().int().nonnegative(),
   addsSpellcastingModifier: z.boolean(),
@@ -197,7 +197,7 @@ const magicSquareSchema = z.object({
  * Слои перечисляются снаружи внутрь — этот же порядок игрок повторяет на бумаге. Обязательны только
  * кольца, печать и подпись: остальное набирается по вкусу ритуала.
  */
-export const ritualDiagramSchema = z.object({
+const ritualDiagramSchema = z.object({
   rings: z.array(diagramRadius).min(2).max(4),
   tickRing: z.object({ count: z.union([z.literal(36), z.literal(72)]), radius: diagramRadius }).optional(),
   inscription: z
@@ -491,9 +491,7 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
 });
 
 export type Spell = z.infer<typeof spellSchema>;
-export type SpellRoleplay = z.infer<typeof roleplaySchema>;
 export type ArmorClassEffect = z.infer<typeof armorClassEffectSchema>;
-export type HitDiceCost = z.infer<typeof hitDiceCostSchema>;
 
 /**
  * Компонент, который фокусировка не заменяет: со стоимостью или расходуемый.

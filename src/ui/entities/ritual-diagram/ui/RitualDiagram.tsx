@@ -23,7 +23,7 @@ import {
 } from "@/core/domain/catalog/diagram/geometry";
 import { GLYPHS, SEALS, type GlyphId, type SealKind } from "@/core/domain/catalog/diagram/glyphs";
 import { RUNES, RUNE_BY_CHAR } from "@/core/domain/catalog/diagram/futhark";
-import type { Stroke } from "@/core/domain/catalog/diagram/strokes";
+import { BOX, BOX_CENTER, type Stroke } from "@/core/domain/catalog/diagram/strokes";
 
 const DASH = "10 8";
 
@@ -76,9 +76,9 @@ function Shape({
   size: number;
   rotation?: number;
 }) {
-  const scale = size / 100;
+  const scale = size / BOX;
   return (
-    <g transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale}) translate(-50 -50)`}>
+    <g transform={`translate(${x} ${y}) rotate(${rotation}) scale(${scale}) translate(-${BOX_CENTER} -${BOX_CENTER})`}>
       {strokes.map((stroke, index) => (
         <StrokeShape key={index} stroke={stroke} />
       ))}

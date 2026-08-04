@@ -6,7 +6,7 @@
  * экрану, схватке — нужны время, вид и подпись, а не устройство снимка.
  */
 
-export type JournalKind =
+type JournalKind =
   | "spell_cast"
   | "reaction_cast"
   | "slot_spent"

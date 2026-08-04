@@ -10,10 +10,10 @@ import { RUNES, RUNE_IDS, type RuneId } from "@/core/domain/catalog/diagram/futh
 import { line, type Stroke } from "@/core/domain/catalog/diagram/strokes";
 
 /** Семь металлов алхимии: они же планетарные знаки. Порядок — от Сатурна к Луне. */
-export const METAL_IDS = ["saturn", "jupiter", "mars", "sun", "venus", "mercury", "moon"] as const;
+const METAL_IDS = ["saturn", "jupiter", "mars", "sun", "venus", "mercury", "moon"] as const;
 
 /** Стихии и темы персонажа. */
-export const ELEMENT_IDS = ["air", "water", "earth", "lightning", "frost"] as const;
+const ELEMENT_IDS = ["air", "water", "earth", "lightning", "frost"] as const;
 
 export const GLYPH_IDS = [...METAL_IDS, ...ELEMENT_IDS, ...RUNE_IDS] as const;
 

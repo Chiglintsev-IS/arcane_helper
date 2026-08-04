@@ -7,10 +7,10 @@
  */
 
 export const CENTER = 500;
-export const OUTER_RADIUS = 460;
+const OUTER_RADIUS = 460;
 export const VIEW_BOX = "0 0 1000 1000";
 
-export type Point = { x: number; y: number };
+type Point = { x: number; y: number };
 
 /** Два знака после запятой: в разметке лишняя точность только мешает читать. */
 function round(value: number): number {

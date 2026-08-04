@@ -93,11 +93,3 @@ export function refineEffects(value: EffectsState, context: z.core.$RefinementCt
     });
   }
 }
-
-/**
- * Состояние доски само по себе: поля и оба её инварианта.
- *
- * Полная схема состояния собирается не из этой схемы, а из `EFFECTS_FIELDS` и вызова доводчика:
- * обёртка проверки не даёт `ZodObject`, а сборке нужен именно он.
- */
-export const effectsStateSchema = z.object(EFFECTS_FIELDS).superRefine(refineEffects);

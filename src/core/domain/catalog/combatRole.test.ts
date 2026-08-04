@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { Spell } from "@/core/domain/catalog/spell";
 
-import { combatRoleOf, rolesPresent } from "@/core/domain/catalog/combatRole";
+import { combatRoleOf } from "@/core/domain/catalog/combatRole";
 
 const SPELLS = loadThorneSpells();
 
@@ -32,20 +32,5 @@ describe("combatRoleOf (FR-213)", () => {
     // Так выглядит карточка из чужой выгрузки: схема её пропускает, роли в ней нет.
     const { combatRole: _absent, ...imported } = byId("ray-of-frost");
     expect(combatRoleOf(imported)).toBe("other");
-  });
-});
-
-describe("rolesPresent", () => {
-  it("перечисляет роли, встречающиеся в списке", () => {
-    expect([...rolesPresent(SPELLS)].sort()).toEqual(["defense", "offense", "other"]);
-  });
-
-  it("на списке из одних защитных возвращает одну роль: фильтру «Боевое» нечего искать", () => {
-    const defensive = SPELLS.filter((spell) => combatRoleOf(spell) === "defense");
-    expect([...rolesPresent(defensive)]).toEqual(["defense"]);
-  });
-
-  it("на пустом списке ролей нет", () => {
-    expect(rolesPresent([]).size).toBe(0);
   });
 });

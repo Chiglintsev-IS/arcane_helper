@@ -21,6 +21,12 @@ export type Stroke =
 
 export const BOX = 100;
 
+/** Центр бокса: вокруг него знак рисуется и вокруг него же поворачивается. */
+export const BOX_CENTER = BOX / 2;
+
+/** Отступ стебля от края бокса: знак не упирается в границу. */
+const STEM_INSET = 8;
+
 /** Отрезок: самая частая форма, руны состоят только из них. */
 export function line(x1: number, y1: number, x2: number, y2: number): Stroke {
   return { kind: "line", x1, y1, x2, y2 };
@@ -28,5 +34,5 @@ export function line(x1: number, y1: number, x2: number, y2: number): Stroke {
 
 /** Вертикальный стебель руны: общая часть большинства знаков футарка. */
 export function stem(): Stroke {
-  return line(50, 8, 50, 92);
+  return line(BOX_CENTER, STEM_INSET, BOX_CENTER, BOX - STEM_INSET);
 }

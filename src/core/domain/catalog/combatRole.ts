@@ -22,8 +22,3 @@ export type CombatRole = (typeof COMBAT_ROLES)[number];
 export function combatRoleOf(spell: Spell): CombatRole {
   return spell.combatRole ?? "other";
 }
-
-/** Роли, которые вообще встречаются в списке: фильтр без единой находки не показывается. */
-export function rolesPresent(spells: readonly Spell[]): Set<CombatRole> {
-  return new Set(spells.map(combatRoleOf));
-}

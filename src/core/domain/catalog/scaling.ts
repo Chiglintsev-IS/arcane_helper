@@ -7,7 +7,7 @@
 
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
-export type DamageSpec = {
+type DamageSpec = {
   dice: string;
   type: string;
   /** `undefined` допустимо явно: поле карточки заклинания необязательно (exactOptionalPropertyTypes). */
@@ -18,7 +18,7 @@ export type DamageSpec = {
  * Формула урона заклинания уровня 1 и выше при сотворении ячейкой `slotLevel`.
  * Ключи `scaling` — уровни ячейки; при отсутствии ключа берётся базовая формула.
  */
-export function damageAtSlotLevel(damage: DamageSpec, slotLevel: number): string {
+function damageAtSlotLevel(damage: DamageSpec, slotLevel: number): string {
   return damage.scaling?.[slotLevel] ?? damage.dice;
 }
 
@@ -27,7 +27,7 @@ export function damageAtSlotLevel(damage: DamageSpec, slotLevel: number): string
  * Ключи `scaling` — пороги уровня персонажа (в 5e это 5, 11 и 17);
  * берётся наибольший ключ, не превышающий уровень персонажа.
  */
-export function cantripDamageAtCharacterLevel(damage: DamageSpec, characterLevel: number): string {
+function cantripDamageAtCharacterLevel(damage: DamageSpec, characterLevel: number): string {
   let highestReached = Number.NEGATIVE_INFINITY;
   let formula: string | undefined;
 
@@ -53,12 +53,6 @@ export function effectiveDamage(
   return context.spellLevel === CANTRIP_LEVEL
     ? cantripDamageAtCharacterLevel(damage, context.characterLevel)
     : damageAtSlotLevel(damage, context.slotLevel);
-}
-
-/** Даёт ли повышение уровня видимый эффект — нужно на шаге выбора ячейки. */
-export function upcastChangesDamage(damage: DamageSpec, spellLevel: number, slotLevel: number): boolean {
-  if (slotLevel <= spellLevel) return false;
-  return damageAtSlotLevel(damage, slotLevel) !== damageAtSlotLevel(damage, spellLevel);
 }
 
 /**

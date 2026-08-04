@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   CENTER,
-  OUTER_RADIUS,
   absolute,
   arcPath,
   inscriptionPlacements,
@@ -14,8 +13,9 @@ import {
 
 describe("единицы и точки", () => {
   it("доля внешнего радиуса переводится в единицы схемы", () => {
-    expect(absolute(1)).toBe(OUTER_RADIUS);
-    expect(absolute(0.5)).toBe(OUTER_RADIUS / 2);
+    // Само число радиуса — дело геометрии; наружу видна только пропорция.
+    expect(absolute(0.5)).toBe(absolute(1) / 2);
+    expect(absolute(0)).toBe(0);
   });
 
   it("отсчёт идёт от верха по часовой стрелке", () => {

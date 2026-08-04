@@ -7,7 +7,6 @@ import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 
 import {
-  concentrationCheckDc,
   describeConcentrationCheck,
   durationWithRoundsRu,
   startRound,
@@ -38,7 +37,10 @@ function withoutArea(id: string): Omit<Spell, "area"> {
   return rest;
 }
 
-describe("concentrationCheckDc", () => {
+/** КС читается описанием проверки: своего входа у неё нет, и модификатор здесь ни при чём. */
+const dcFor = (damage: number): number => describeConcentrationCheck(damage, 0).dc;
+
+describe("КС проверки концентрации", () => {
   // Таблица из — граница проходит между 21 и 22.
   it.each([
     [0, 10],
@@ -52,11 +54,11 @@ describe("concentrationCheckDc", () => {
     [40, 20],
     [99, 49],
   ])("урон %i даёт КС %i", (damage, expected) => {
-    expect(concentrationCheckDc(damage)).toBe(expected);
+    expect(dcFor(damage)).toBe(expected);
   });
 
   it.each([-1, 3.5, Number.NaN])("отклоняет недопустимый урон %s", (damage) => {
-    expect(() => concentrationCheckDc(damage)).toThrow(DomainError);
+    expect(() => dcFor(damage)).toThrow(DomainError);
   });
 });
 

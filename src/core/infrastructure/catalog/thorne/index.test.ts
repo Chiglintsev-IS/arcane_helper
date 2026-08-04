@@ -7,7 +7,7 @@ import {
   loadThorneSpells,
   parseSpells,
 } from "./index";
-import { CANTRIP_LEVEL, MINIMUM_COMPLETE_VARIANTS } from "@/core/domain/catalog/spell";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 const spells = loadThorneSpells();
 
@@ -203,17 +203,6 @@ describe("соответствие профилю отыгрыша (FR-052)", ()
       expect(words.length, `${spell.nameRu}: «${spell.roleplay.incantation}»`).toBeLessThanOrEqual(
         MAXIMUM_PHRASE_WORDS,
       );
-    },
-  );
-
-  it.each(spells.map((spell) => [spell.nameRu, spell] as const))(
-    "«%s» имеет минимум контента по FR-050",
-    (_name, spell) => {
-      const variants =
-        spell.roleplay.completeVariants.short.length +
-        spell.roleplay.completeVariants.atmospheric.length +
-        spell.roleplay.completeVariants.sarcastic.length;
-      expect(variants).toBeGreaterThanOrEqual(MINIMUM_COMPLETE_VARIANTS);
     },
   );
 });

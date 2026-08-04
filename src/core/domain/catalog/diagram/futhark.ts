@@ -123,4 +123,3 @@ export function isRune(char: string): boolean {
 }
 
 /** Полный футарк в каноническом порядке — надпись сама по себе (камень из Кюльвера). */
-export const FULL_FUTHARK: string = RUNE_IDS.map((id) => RUNES[id].char).join("");

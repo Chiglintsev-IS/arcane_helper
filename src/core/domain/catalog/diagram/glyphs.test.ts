@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GLYPHS, GLYPH_IDS, SEALS, SEAL_KINDS } from "@/core/domain/catalog/diagram/glyphs";
 import { BOX, type Stroke } from "@/core/domain/catalog/diagram/strokes";
-import { FULL_FUTHARK, RUNES, RUNE_BY_CHAR, RUNE_IDS, isRune } from "@/core/domain/catalog/diagram/futhark";
+import { RUNES, RUNE_BY_CHAR, RUNE_IDS, isRune } from "@/core/domain/catalog/diagram/futhark";
 
 /** Все координаты штриха: любой знак обязан жить в своём боксе. */
 function coordinates(stroke: Stroke): number[] {
@@ -31,8 +31,8 @@ describe("старший футарк", () => {
     expect(isRune("ж")).toBe(false);
   });
 
-  it("полный футарк — строка из 24 рун", () => {
-    expect([...FULL_FUTHARK]).toHaveLength(24);
+  it("полный футарк — 24 руны", () => {
+    expect(RUNE_IDS).toHaveLength(24);
   });
 });
 
