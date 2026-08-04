@@ -131,7 +131,6 @@ export function loadThorneSpells(): Spell[] {
  *
  * Тип живёт в движке правил: реестр — данные конкретного персонажа, а понятие запрета общее.
  */
-export type { BanCategory as BanReason, BannedSpell } from "@/core/domain/spellbook/restrictions";
 
 /**
  * Реестр запретов. Огонь определяется по типу урона в данных заклинания и здесь не перечисляется

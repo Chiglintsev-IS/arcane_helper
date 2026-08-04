@@ -19,6 +19,14 @@
  10. Прогон импортирует свой предмет: `Foo.test.ts` — модуль `Foo` из своего каталога.
  11. Псевдонима предмета в прогоне нет: `import { X as Y }` для значения из `src/` — ошибка.
  12. Слайс состоит не из одних прогонов, а имя с суффиксом `Screen` носит только экран.
+ 13. Реэкспортов нет: наружу модуля ведёт явный путь до владельца символа.
+
+Тринадцатое — про видимость протечек. Реэкспорт пересдаёт чужой символ под своим адресом: импортёр
+берёт тип домена у сценария, ярлык интерфейса у провайдера, и по списку импортов больше не видно, на
+какой слой он на самом деле сходил. Ошибка при этом не в импортёре — он честно взял то, что ему
+предложили, — а в посреднике: пока путь ведёт к владельцу, каждое пересечение границы названо в
+самом импорте, и лишнее пересечение видно сразу. Барели по той же причине не заводятся: каталог,
+пересдающий содержимое соседей, прячет ровно то, за чем следит эта проверка.
 
 Правила 9–12 описывают прогоны, и до них проверялся только рабочий код. Слои прогон собирает
 намеренно — фикстура приходит из инфраструктуры, интеграционный прогон поднимает экран целиком, —
@@ -49,6 +57,10 @@ IMPORT = re.compile(r'(?:from|import)\s+["\']@/([^"\']+)["\']')
 TYPE_IMPORT = re.compile(r'import\s+type\s+[^;]*?["\']@/([^"\']+)["\']', re.S)
 ANY_IMPORT = re.compile(r'(?:from|import)\s+["\'](@/[^"\']+|\.[^"\']*)["\']')
 NAMED_IMPORT = re.compile(r'import\s+(type\s+)?\{([^}]*)\}\s*from\s*["\']([^"\']+)["\']', re.S)
+REEXPORT_FROM = re.compile(
+    r'^export\s+(?:type\s+)?(?:\*|\{[^}]*\})\s*(?:as\s+\w+\s*)?from\s*["\']([^"\']+)["\']', re.M
+)
+EXPORT_LIST = re.compile(r"^export\s+(?:type\s+)?\{([^}]*)\}\s*;", re.M | re.S)
 SCREEN_EXPORT = re.compile(r"export\s+(?:function|const)\s+([A-Z]\w*Screen)\b")
 SCREENS_LAYER = "ui/screens/"
 DOCS_PATH = re.compile(r"docs/[\w./-]+\.md")
@@ -148,6 +160,25 @@ def check_screen_names(path: pathlib.Path) -> None:
         return
     for name in SCREEN_EXPORT.findall(path.read_text(encoding="utf-8")):
         errors.append(f"{path}: имя экрана вне слоя экранов — {name}")
+
+
+def check_reexports(path: pathlib.Path) -> None:
+    """Символ выдаёт наружу его владелец: посредник прячет пересечение границы."""
+    text = path.read_text(encoding="utf-8")
+    for source in REEXPORT_FROM.findall(text):
+        errors.append(f"{path}: реэкспорт вместо явного пути — {source}")
+
+    imported = {
+        name.strip().removeprefix("type ").strip().partition(" as ")[0].strip()
+        for _type_only, names, _source in NAMED_IMPORT.findall(text)
+        for name in names.split(",")
+        if name.strip()
+    }
+    for names in EXPORT_LIST.findall(text):
+        for name in names.split(","):
+            visible = name.strip().removeprefix("type ").strip().partition(" as ")[0].strip()
+            if visible and visible in imported:
+                errors.append(f"{path}: пересдача импортированного символа — {visible}")
 
 
 def check_test_only_slices() -> None:
@@ -343,6 +374,7 @@ def main() -> int:
         else:
             check_imports(path)
             check_screen_names(path)
+            check_reexports(path)
         check_comments(path)
     check_test_only_slices()
     for root in EXTRA:

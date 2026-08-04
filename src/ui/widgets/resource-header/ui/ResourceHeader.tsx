@@ -9,7 +9,7 @@
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
 
-import type { TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";

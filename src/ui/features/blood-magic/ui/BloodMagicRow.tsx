@@ -11,7 +11,7 @@
  */
 
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
-import type { TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { Fragment } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";

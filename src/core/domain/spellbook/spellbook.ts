@@ -13,7 +13,6 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import type { RoleplayPreference, SpellbookState } from "./schema";
 
-export type { SpellbookState };
 
 /** Пустые предпочтения: запись заводится, только когда игрок что-то пометил. */
 const NO_PREFERENCES: RoleplayPreference = {

@@ -11,8 +11,6 @@ import { Character } from "@/core/domain/assembly/character";
 import { Journal, JOURNAL_LIMIT } from "@/core/domain/journal/journal";
 import type { JournalEntry, Recorded, TurnResource } from "@/core/domain/journal/entry";
 
-export { JOURNAL_LIMIT };
-export type { JournalEntry, JournalKind, Recorded } from "@/core/domain/journal/entry";
 
 /** Что потрачено внутри хода. Имя сохранено ради вызывающих: словарь один на журнал и на правила. */
 export type ActionUsed = TurnResource;

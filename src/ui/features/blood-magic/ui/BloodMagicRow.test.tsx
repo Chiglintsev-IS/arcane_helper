@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.

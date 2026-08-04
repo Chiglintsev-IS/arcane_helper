@@ -2,7 +2,7 @@
 
 "use client";
 
-import type { TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { useState } from "react";
 
 import { WizardShell } from "@/ui/shared/ui/WizardShell";

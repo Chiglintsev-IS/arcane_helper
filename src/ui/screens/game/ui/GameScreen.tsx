@@ -8,7 +8,6 @@ import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "
 import { bestCastPlan } from "@/core/application/casting/castOptions";
 import { toCastRequest, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 import {
-  armorClassAdjustment,
   endConcentration,
   endEffect,
   setArmorClassAdjustment,
@@ -20,6 +19,7 @@ import { castSpell } from "@/core/application/useCases/casting";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { exchangeBlood, grantTemporaryHitPoints, heal, setSunlight, takeDamage } from "@/core/application/useCases/health";
+import { armorClassAdjustment } from "@/core/domain/sheet/armorClass";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { Sheet } from "@/core/domain/sheet/sheet";
 

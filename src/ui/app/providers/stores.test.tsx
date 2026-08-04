@@ -9,14 +9,8 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { createTestStores, spell } from "@/ui/app/testing/stores";
-import {
-  createBrowserStores,
-  StoreProvider,
-  systemClock,
-  useDraft,
-  useSession,
-  useStores,
-} from "@/ui/app/providers/stores";
+import { createBrowserStores, StoreProvider, systemClock } from "@/ui/app/providers/stores";
+import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 
 function Slots() {
   const remaining = useSession((state) => state.session?.character.spellSlots[1]?.remaining ?? null);

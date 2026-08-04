@@ -17,7 +17,8 @@ import { createCastDraftStore } from "@/ui/features/cast-spell/model/castDraftSt
 import { createMemoryRepository } from "@/core/infrastructure/persistence/memoryRepository";
 import type { Clock } from "@/core/application/session";
 import { createSessionStore } from "@/ui/entities/session/model/sessionStore";
-import { StoreProvider, type AppStores } from "@/ui/app/providers/stores";
+import { StoreProvider } from "@/ui/app/providers/stores";
+import type { AppStores } from "@/ui/shared/model/storeContext";
 import { startCombat } from "@/core/application/useCases/turn";
 
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.

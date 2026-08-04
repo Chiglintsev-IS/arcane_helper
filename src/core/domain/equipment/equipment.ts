@@ -15,7 +15,6 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { MAXIMUM_ITEM_COUNT } from "./schema";
 import type { EquipmentData, InventoryItem, Money } from "./schema";
 
-export type { EquipmentData };
 
 export type EquipmentState = { equipment: EquipmentData };
 
@@ -223,4 +222,3 @@ export class Equipment {
   }
 }
 
-export { NO_BONUSES };

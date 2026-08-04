@@ -14,7 +14,6 @@ import { toggleMaterial } from "@/core/application/useCases/library";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import {
-  armorClassAdjustment,
   endConcentration,
   endEffect,
   setArmorClassAdjustment,
@@ -22,6 +21,7 @@ import {
   startManualEffect,
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
+import { armorClassAdjustment } from "@/core/domain/sheet/armorClass";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";

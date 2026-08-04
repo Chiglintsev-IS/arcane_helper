@@ -7,7 +7,7 @@
  * 18 хитов одним тапом, и цена ошибки была выше, чем у любого заклинания.
  */
 
-import type { TurnEconomy } from "@/core/application/useCases/turn";
+import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";

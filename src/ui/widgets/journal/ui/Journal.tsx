@@ -8,7 +8,7 @@
  * Компонент презентационный: записи приходят параметром, отмена и выгрузка — обратными вызовами.
  */
 
-import type { JournalEntry } from "@/core/application/session";
+import type { JournalEntry } from "@/core/domain/journal/entry";
 
 /**
  * Время записи как «ЧЧ:ММ». Дата не показывается: журнал глубиной 100 живёт одну игру за столом, а

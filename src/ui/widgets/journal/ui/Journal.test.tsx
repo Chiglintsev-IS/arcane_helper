@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Journal } from "@/ui/widgets/journal/ui/Journal";
-import type { JournalEntry } from "@/core/application/session";
+import type { JournalEntry } from "@/core/domain/journal/entry";
 
 afterEach(cleanup);
 

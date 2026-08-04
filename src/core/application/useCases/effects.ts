@@ -13,8 +13,6 @@ import { signed } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 
-export type { ConcentrationEnd };
-export { armorClassAdjustment } from "@/core/domain/sheet/armorClass";
 
 /** Условие окончания ручного эффекта: игрок снимает его сам, приложение сроков не считает. */
 const MANUAL_EFFECT_END_CONDITION_RU = "Снимается вручную.";

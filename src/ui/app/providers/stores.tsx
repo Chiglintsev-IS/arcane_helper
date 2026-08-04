@@ -17,8 +17,6 @@ import { createSessionStore } from "@/ui/entities/session/model/sessionStore";
 import { createCastDraftStore } from "@/ui/features/cast-spell/model/castDraftStore";
 import { StoresContext, type AppStores } from "@/ui/shared/model/storeContext";
 
-export type { AppStores };
-export { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 
 /** Часы приложения. Идентификаторы — `crypto.randomUUID`: он есть и в браузере, и в Node. */
 export function systemClock(): Clock {

@@ -11,7 +11,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { Encounter, type TurnEconomy } from "@/core/domain/encounter/encounter";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
-export type { TurnEconomy };
 
 export function encounterOf(session: Session): Encounter {
   return Encounter.fromJournal(session.journal);

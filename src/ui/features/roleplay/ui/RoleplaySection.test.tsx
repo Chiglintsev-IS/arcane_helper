@@ -18,7 +18,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { Spell } from "@/core/domain/catalog/spell";
-import type { AppStores } from "@/ui/app/providers/stores";
+import type { AppStores } from "@/ui/shared/model/storeContext";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
 import { RoleplaySection } from "./RoleplaySection";
 

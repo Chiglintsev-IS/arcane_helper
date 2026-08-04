@@ -13,8 +13,6 @@ import { ROLEPLAY_CATEGORIES, type RoleplayCategory } from "@/core/domain/catalo
 import { DomainError } from "@/core/domain/shared/errors";
 import { withoutRecord, type Clock, type Session } from "@/core/application/session";
 
-export { ROLEPLAY_CATEGORIES };
-export type { RoleplayCategory };
 
 export type RoleplayVariant = {
   id: string;
