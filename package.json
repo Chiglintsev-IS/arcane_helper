@@ -17,7 +17,9 @@
     "test:e2e:only": "playwright test",
     "check:layers": "python3 scripts/check-layers.py",
     "check:dead": "python3 scripts/check-dead-code.py",
-    "check:rules": "python3 scripts/check-rules.py"
+    "check:rules": "python3 scripts/check-rules.py",
+    "verify": "npm run check:docs && npm run check:layers && npm run check:dead && npm run check:rules && npm run typecheck && npm run test:coverage && npm run build",
+    "verify:full": "npm run verify && npm run test:e2e:only"
   },
   "dependencies": {
     "dexie": "^4.4.4",
