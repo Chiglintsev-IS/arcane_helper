@@ -73,7 +73,7 @@ export function exchangeBlood(
 
   return commit(
     session,
-    withPoints.toState(),
+    withPoints,
     {
       kind: "blood_exchange",
       summaryRu: `Кровавое колдовство: ${exchange.hitPointsSpent} хитов → ${exchange.pointsCreated} очков`,

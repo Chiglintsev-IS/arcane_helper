@@ -54,15 +54,13 @@ function advanceTurn(
     .withEffects(board)
     .withVitality(root.vitality.clearFireSuppression().healUpTo(healed).vitality);
 
-  const restored: CharacterState = after.toState();
-
   const notes = [
     ...(healed > 0 ? [`регенерация +${healed}`] : []),
     ...expired.map((effect) => `«${effect.nameRu}» истёк`),
   ];
   return commit(
     session,
-    restored,
+    after,
     { kind, summaryRu: notes.length === 0 ? title : `${title} · ${notes.join(", ")}` },
     clock,
   );

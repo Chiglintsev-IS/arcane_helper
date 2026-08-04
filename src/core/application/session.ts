@@ -7,7 +7,7 @@
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { characterStateSchema, MUTABLE_STATE_KEYS } from "@/core/domain/assembly/state";
-import { Character } from "@/core/domain/assembly/character";
+import type { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import { Journal, JOURNAL_LIMIT } from "@/core/domain/journal/journal";
 import type { JournalEntry, Recorded, TurnResource } from "@/core/domain/journal/entry";
@@ -44,16 +44,16 @@ export function createSession(character: CharacterState): Session {
 /**
  * Оформляет переход состояния в запись журнала. Одно действие — одна запись.
  *
- * Принимает и агрегат, и голое состояние: часть операций собирает результат по кускам, и заставлять
- * их заворачивать его обратно значило бы добавить обряд без смысла.
+ * Принимает только корень: голое состояние было бы дверью мимо агрегата, а дописанное к нему поле
+ * затрёт владелец при следующей правке.
  */
 export function commit(
   session: Session,
-  after: Character | CharacterState,
+  after: Character,
   recorded: Recorded,
   clock: Clock,
 ): Session {
-  const character = after instanceof Character ? after.toState() : after;
+  const character = after.toState();
   const journal = characterJournal(session.journal).append(session.character, character, recorded, {
     id: clock.nextId(),
     at: clock.now(),
