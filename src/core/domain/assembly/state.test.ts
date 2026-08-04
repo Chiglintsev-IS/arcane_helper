@@ -5,6 +5,7 @@ import {
   characterStateSchema,
   exportFileSchema,
   EXPORT_SCHEMA_VERSION,
+  isStateField,
 } from "@/core/domain/assembly/state";
 import { ARCANA_FIELDS } from "@/core/domain/arcana/schema";
 import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
@@ -170,6 +171,13 @@ describe("форма состояния", () => {
       draft.screenMode = "play";
     });
     expect(strictStateSchema.safeParse(outdated).success).toBe(false);
+  });
+
+  it("поле состояния — своё поле, а не любое доступное объекту имя", () => {
+    expect(isStateField("spellSlots")).toBe(true);
+    expect(isStateField("turnTracking")).toBe(false);
+    // Имена из прототипа доступны каждому объекту: поиском по цепочке они прошли бы за поля.
+    expect(isStateField("toString")).toBe(false);
   });
 });
 

@@ -43,9 +43,12 @@ export const characterStateSchema = z.object(STATE_FIELDS).superRefine((characte
  * Принадлежит ли ключ состоянию. Спрашивают у владельца полей и объявление снимка, и приведение
  * прежних сохранений: свой список ключей разошёлся бы с этим на первой же правке контекста — и
  * приведение снимало бы не то, что отвергает объявление.
+ *
+ * Спрашивается своё поле, а не любое доступное: имена вроде `toString` есть у каждого объекта, и
+ * поиском по цепочке прототипов они прошли бы за поля состояния.
  */
 export function isStateField(key: string): boolean {
-  return key in STATE_FIELDS;
+  return Object.hasOwn(STATE_FIELDS, key);
 }
 
 /**
