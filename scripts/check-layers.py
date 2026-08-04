@@ -15,6 +15,17 @@
   6. Код не ссылается на документацию: ни путями `docs/…`, ни номерами требований и решений.
   7. Рёбра между ограниченными контекстами внутри `core/domain/` — только из карты разрешённых.
   8. Циклов между контекстами нет.
+  9. Прогон ядра не знает про отображение: `core/**/*.test.*` не импортирует ни `ui/`, ни `app/`.
+ 10. Прогон импортирует свой предмет: `Foo.test.ts` — модуль `Foo` из своего каталога.
+ 11. Псевдонима предмета в прогоне нет: `import { X as Y }` для значения из `src/` — ошибка.
+ 12. Слайс состоит не из одних прогонов, а имя с суффиксом `Screen` носит только экран.
+
+Правила 9–12 описывают прогоны, и до них проверялся только рабочий код. Слои прогон собирает
+намеренно — фикстура приходит из инфраструктуры, интеграционный прогон поднимает экран целиком, —
+но собирать он вправе не любое: прогон ядра, потянувший интерфейс, делает домен зависимым от экрана
+через собственную проверку, а прогон, названный одним предметом и проверяющий другой, приписывает
+покрытие не тому. Псевдоним — способ сделать второе незаметным: файл называется одним компонентом,
+а рендерит другой под его именем.
 
 Шестое правило — про хрупкость. Номер требования в комментарии превращает перенумерацию спеки в
 правку сотни файлов, а путь до документа ломается молча при первом же переносе. Связь спеки с кодом
@@ -36,6 +47,10 @@ EXTRA = [pathlib.Path("e2e")]
 
 IMPORT = re.compile(r'(?:from|import)\s+["\']@/([^"\']+)["\']')
 TYPE_IMPORT = re.compile(r'import\s+type\s+[^;]*?["\']@/([^"\']+)["\']', re.S)
+ANY_IMPORT = re.compile(r'(?:from|import)\s+["\'](@/[^"\']+|\.[^"\']*)["\']')
+NAMED_IMPORT = re.compile(r'import\s+(type\s+)?\{([^}]*)\}\s*from\s*["\']([^"\']+)["\']', re.S)
+SCREEN_EXPORT = re.compile(r"export\s+(?:function|const)\s+([A-Z]\w*Screen)\b")
+SCREENS_LAYER = "ui/screens/"
 DOCS_PATH = re.compile(r"docs/[\w./-]+\.md")
 SPEC_ID = re.compile(r"\b(?:FR-\d{3}|NFR-\d{3}|ADR-\d{4}|OQ-\d{2}|AC-\d{2}|M-\d{2})\b")
 
@@ -92,11 +107,59 @@ def domain_context(path: str) -> str | None:
     return None
 
 
-def check_imports(path: pathlib.Path) -> None:
-    # Тесты собирают слои намеренно: фикстура приходит из инфраструктуры, интеграционный прогон
-    # поднимает экран целиком. Правило описывает рабочий код, а не то, чем его проверяют.
-    if ".test." in path.name:
+def subject_of(path: pathlib.Path) -> str:
+    """Предмет прогона: имя файла до первой точки.
+
+    Суффикс-аспект разрешён: `GameScreen.blood.test.tsx` проверяет тот же `GameScreen`, что и
+    `GameScreen.test.tsx`, — большому экрану нужен не один файл, но предмет у них один.
+    """
+    return path.name.split(".")[0]
+
+
+def check_test_placement(path: pathlib.Path) -> None:
+    """Прогон живёт рядом со своим предметом и импортирует именно его."""
+    relative = str(path.relative_to(SRC)).replace("\\", "/")
+    text = path.read_text(encoding="utf-8")
+    targets = ANY_IMPORT.findall(text)
+
+    if relative.startswith("core/"):
+        for target in targets:
+            layer, _slice_name = layer_of(target.removeprefix("@/"))
+            if layer.startswith("ui") or layer == "app":
+                errors.append(f"{path}: прогон ядра тянет отображение — {target}")
+
+    subject = subject_of(path)
+    if not any(target.rpartition("/")[2] == subject for target in targets):
+        errors.append(f"{path}: прогон не импортирует свой предмет — {subject}")
+
+    for type_only, names, source in NAMED_IMPORT.findall(text):
+        if type_only or not source.startswith(("@/", ".")):
+            continue
+        for name in names.split(","):
+            name = name.strip()
+            if " as " in name and not name.startswith("type "):
+                errors.append(f"{path}: предмет переименован псевдонимом — {name} из {source}")
+
+
+def check_screen_names(path: pathlib.Path) -> None:
+    """Суффикс `Screen` носит экран, а не виджет: имя обещает место, а не предмет."""
+    relative = str(path.relative_to(SRC)).replace("\\", "/")
+    if relative.startswith(SCREENS_LAYER):
         return
+    for name in SCREEN_EXPORT.findall(path.read_text(encoding="utf-8")):
+        errors.append(f"{path}: имя экрана вне слоя экранов — {name}")
+
+
+def check_test_only_slices() -> None:
+    """Каталог из одних прогонов — слайс-призрак: проверяется то, чего здесь нет."""
+    directories = {path.parent for path in (SRC / "ui").rglob("*") if path.is_file()}
+    for directory in sorted(directories):
+        files = [path for path in directory.iterdir() if path.is_file()]
+        if files and all(".test." in path.name for path in files):
+            errors.append(f"{directory}: слайс без реализации — в каталоге одни прогоны")
+
+
+def check_imports(path: pathlib.Path) -> None:
     relative = str(path.relative_to(SRC)).replace("\\", "/")
     source_layer, source_slice = layer_of(relative)
     source_context = domain_context(relative)
@@ -275,8 +338,13 @@ def main() -> int:
 
     sources = sorted([*SRC.rglob("*.ts"), *SRC.rglob("*.tsx")])
     for path in sources:
-        check_imports(path)
+        if ".test." in path.name:
+            check_test_placement(path)
+        else:
+            check_imports(path)
+            check_screen_names(path)
         check_comments(path)
+    check_test_only_slices()
     for root in EXTRA:
         for path in sorted([*root.rglob("*.ts")]):
             check_comments(path)
