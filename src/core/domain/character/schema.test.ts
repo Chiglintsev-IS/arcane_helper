@@ -78,6 +78,12 @@ describe("правка листа проходит объявления поле
     expect(refusal({ level: 7.5 })).toContain("level");
   });
 
+  it("причина дробного отказа звучит по-русски, а не текстом библиотеки", () => {
+    const reason = refusal({ level: 7.5 });
+    expect(reason).toContain("Неверный ввод");
+    expect(reason).not.toContain("Invalid input");
+  });
+
   it("пустое имя не сохраняется", () => {
     expect(refusal({ name: "" })).toContain("name");
   });

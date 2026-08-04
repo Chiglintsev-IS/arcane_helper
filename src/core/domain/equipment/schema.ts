@@ -11,7 +11,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
-import { itemBonusesSchema, nonEmpty } from "@/core/domain/shared/schema";
+import { itemBonusesSchema, nonEmpty, russianSchemaErrors } from "@/core/domain/shared/schema";
 
 /**
  * Категория вещи — четыре ответа на вопрос «что с этим делают»: экипировку надевают, расходник
@@ -26,7 +26,7 @@ export const CURRENCIES = ["gold", "silver", "copper"] as const;
 export const MAXIMUM_ITEM_COUNT = 9999;
 
 /** Верхний предел одной монеты в кошельке. */
-export const MAXIMUM_COIN_AMOUNT = 999_999;
+const MAXIMUM_COIN_AMOUNT = 999_999;
 
 const coinAmount = z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT);
 const armorBase = z.number().int().positive();
@@ -165,11 +165,11 @@ const equipmentSchema = z
  * проверяются в одном месте, а экран передаёт набранное как есть.
  */
 export function assertInventoryItem(item: unknown): void {
-  parsedOrRefused(inventoryItemSchema.safeParse(item), "вещь");
+  parsedOrRefused(inventoryItemSchema, item, "вещь");
 }
 
 export function assertMoney(money: unknown): void {
-  parsedOrRefused(moneySchema.safeParse(money), "кошелёк");
+  parsedOrRefused(moneySchema, money, "кошелёк");
 }
 
 /**
@@ -180,10 +180,11 @@ export function assertMoney(money: unknown): void {
  */
 export function alignedInventoryItem(item: InventoryItem): InventoryItem {
   const aligned = item.kind === "gear" ? item : withoutGearOnlyFields(item);
-  return parsedOrRefused(inventoryItemSchema.safeParse(aligned), "вещь");
+  return parsedOrRefused(inventoryItemSchema, aligned, "вещь");
 }
 
-function parsedOrRefused<TValue>(result: z.ZodSafeParseResult<TValue>, subject: string): TValue {
+function parsedOrRefused<TValue>(schema: z.ZodType<TValue>, value: unknown, subject: string): TValue {
+  const result = schema.safeParse(value, { error: russianSchemaErrors });
   if (result.success) return result.data;
   const reasons = result.error.issues
     .map((issue) => `поле «${issue.path.join(".")}»: ${issue.message}`)

@@ -109,6 +109,12 @@ describe("правка вещи и кошелька проходит объяв�
     ).toContain("bonuses");
   });
 
+  it("причина дробного отказа звучит по-русски, а не текстом библиотеки", () => {
+    const withFraction = reason(() => assertMoney({ gold: 12.5, silver: 0, copper: 0 }));
+    expect(withFraction).toContain("Неверный ввод");
+    expect(withFraction).not.toContain("Invalid input");
+  });
+
   it("«надетое зелье» не сохраняется, и отказ называет вещь (FR-238)", () => {
     const refused = reason(() => assertInventoryItem({ ...potion, worn: true }));
     expect(refused).toContain("Зелье");
