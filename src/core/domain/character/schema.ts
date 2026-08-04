@@ -45,7 +45,9 @@ const characterLevel = z
 const age = z.number().int().nonnegative();
 const speedFeet = z.number().int().nonnegative();
 const overrideValue = z.number().int();
-const positiveOverride = z.number().int().positive();
+const positiveOverride = z.number().refine((value) => Number.isInteger(value) && value > 0, {
+  message: "Перебивка должна быть целым положительным числом",
+});
 
 /** Размер существа: из перечисления правил, потому что от него зависят правила захвата и укрытия. */
 export const CREATURE_SIZES = ["tiny", "small", "medium", "large", "huge", "gargantuan"] as const;

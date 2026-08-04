@@ -10,7 +10,6 @@ import { abilityModifier, proficiencyBonus } from "@/core/domain/character/abili
 import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
 import { Sheet } from "@/core/domain/sheet/sheet";
-import { DomainError } from "@/core/domain/shared/errors";
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import {
   ABILITIES,
@@ -112,9 +111,6 @@ export function setArmorClassBaseOverride(
   value: number | null,
   clock: Clock,
 ): Session {
-  if (value !== null && (!Number.isInteger(value) || value <= 0)) {
-    throw new DomainError(`База Класса Доспеха должна быть целым положительным, получено: ${value}`);
-  }
   const { overrides } = session.character;
   const { armorClassBase: _dropped, ...rest } = overrides;
   const next: CharacterState["overrides"] =
