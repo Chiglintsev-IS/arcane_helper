@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { BANNED_SPELLS, ContentError, HARMFUL_DAMAGE_TYPES, loadThorneSpells, parseSpells } from ".";
+import {
+  BANNED_SPELLS,
+  ContentError,
+  HARMFUL_DAMAGE_TYPES,
+  loadThorneSpells,
+  parseSpells,
+} from "./index";
 import { CANTRIP_LEVEL, MINIMUM_COMPLETE_VARIANTS } from "@/core/domain/catalog/spell";
 
 const spells = loadThorneSpells();
