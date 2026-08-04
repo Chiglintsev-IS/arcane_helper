@@ -9,6 +9,7 @@
 
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
+import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 
 const UNKNOWN_ABILITY_SCORE = 10;
@@ -73,9 +74,6 @@ function migrateArcaneRecovery(state: unknown): unknown {
 /** Прежние рода вещей, у которых в четырёх категориях есть прямой наследник. */
 const LEGACY_ITEM_KINDS: Record<string, string> = { potion: "consumable", junk: "other" };
 
-/** Верхний предел счёта вещи — тот же, что в схеме; сюда продублирован против цикла импортов. */
-const ITEM_COUNT_CAP = 9999;
-
 /**
  * Одна вещь прежней формы — к новой: род становится категорией (зелье — расходник, хлам —
  * «другое», без рода — по поведению: надетая или с прибавкой была экипировкой и до слова),
@@ -101,14 +99,14 @@ function migrateItem(item: unknown): unknown {
           : "other";
 
   const wornOff = migratedKind !== "gear" && worn === true;
-  const capped = typeof count === "number" && count > ITEM_COUNT_CAP;
+  const capped = typeof count === "number" && count > MAXIMUM_ITEM_COUNT;
   if (migratedKind === kind && !wornOff && !capped) return item;
 
   return {
     ...(item as Record<string, unknown>),
     kind: migratedKind,
     ...(wornOff ? { worn: false } : {}),
-    ...(capped ? { count: ITEM_COUNT_CAP } : {}),
+    ...(capped ? { count: MAXIMUM_ITEM_COUNT } : {}),
   };
 }
 
