@@ -8,6 +8,7 @@
 
 import { abilityModifier, preparedLimit, proficiencyBonus } from "@/core/domain/character/abilities";
 import { spellSlotsForLevel } from "@/core/domain/arcana/slots";
+import { runesMaximum } from "@/core/domain/arcana/runes";
 import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -216,8 +217,8 @@ export function previewLevelChange(character: CharacterState, level: number): Le
     if (was !== now) changes.push({ of: "slots", slotLevel, before: was, after: now });
   }
 
-  const runesBefore = proficiencyBonus(character.level);
-  const runesAfter = proficiencyBonus(level);
+  const runesBefore = runesMaximum(proficiencyBonus(character.level));
+  const runesAfter = runesMaximum(proficiencyBonus(level));
   if (runesBefore !== runesAfter) {
     changes.push({ of: "runes", before: runesBefore, after: runesAfter });
   }

@@ -7,11 +7,15 @@
 
 import { type CharacterState, characterStateSchema } from "@/core/domain/assembly/state";
 import { arcaneRecoveryBudget, spellSlotsForLevel } from "@/core/domain/arcana/slots";
+import { runesMaximum } from "@/core/domain/arcana/runes";
+import { proficiencyBonus } from "@/core/domain/character/abilities";
 
 /** Ячейки берём из движка, чтобы таблица уровней жила в одном месте. */
 const SLOTS = spellSlotsForLevel(7);
 /** Дневной бюджет восстановления из той же формулы, что и у движка. */
 const ARCANE_RECOVERY_BUDGET = arcaneRecoveryBudget(7);
+/** Максимум рун из той же формулы, что и у движка. */
+const RUNES_MAXIMUM = runesMaximum(proficiencyBonus(7));
 
 const RAW: unknown = {
   id: "thorne",
@@ -154,8 +158,7 @@ const RAW: unknown = {
   // Одна кость за уровень, размер по классу: волшебник — d6. Расовые «11 очков здоровья»
   // на счёт костей не влияют: это надбавка к максимуму, а не замена кости.
   hitDice: { total: 7, size: 6, remaining: 7 },
-  // Рун столько же, сколько бонус мастерства.
-  runes: { maximum: 3, remaining: 3 },
+  runes: { maximum: RUNES_MAXIMUM, remaining: RUNES_MAXIMUM },
   spellPoints: { remaining: 0 },
   suppression: { firedUpon: false, underDirectSunlight: false },
 

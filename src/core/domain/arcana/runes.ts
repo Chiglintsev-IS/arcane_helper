@@ -22,6 +22,11 @@ export const RUNE_TARGET_LABEL: Record<RuneTarget, string> = {
   other: "Другому",
 };
 
+/** Максимум пула рун равен бонусу мастерства. */
+export function runesMaximum(proficiencyBonus: number): number {
+  return proficiencyBonus;
+}
+
 function assertSlotLevel(slotLevel: number): void {
   if (
     !Number.isInteger(slotLevel) ||
