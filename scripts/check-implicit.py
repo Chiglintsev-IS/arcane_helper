@@ -77,7 +77,9 @@ def code_of(text: str) -> str:
     """Только код: строковые литералы и комментарии заменены пробелами.
 
     Подстановка шаблонной строки остаётся кодом — приведение внутри `${…}` ничем не отличается от
-    любого другого. Номера строк и смещения при замене не двигаются.
+    любого другого. Кавычка тоже остаётся кодом, пока у неё нет пары на строке: литерал в кавычках
+    перевод строки не переносит, поэтому апостроф в тексте разметки и кавычка в наборе символов
+    регулярного выражения ничего не открывают. Номера строк и смещения при замене не двигаются.
     """
     result = list(text)
 
@@ -89,10 +91,12 @@ def code_of(text: str) -> str:
     def quoted(index: int) -> int:
         quote = text[index]
         end = index + 1
-        while end < len(text) and text[end] != quote:
+        while end < len(text) and text[end] not in (quote, "\n"):
             end += 2 if text[end] == "\\" else 1
+        if end >= len(text) or text[end] == "\n":
+            return index + 1
         hide(index, end + 1)
-        return min(end + 1, len(text))
+        return end + 1
 
     def template(index: int) -> int:
         start = index
