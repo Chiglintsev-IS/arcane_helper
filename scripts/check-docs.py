@@ -14,10 +14,19 @@
   7. Имена из колонки «Имя в коде» глоссария существуют в src/.
   8. Остатки удалённых ссылок: предлог, у которого пропал адресат, — «обоснование в », «инварианты
      из ;». По умолчанию это предупреждения; флаг `--strict-link-remnants` делает их ошибками.
+  9. Каждое имя, названное в строке «Проверка», встречается в коде: `src/` или `e2e/`.
+ 10. Каждый прогон E2E назван требованием: его имя встречается в документах.
+ 11. Статус не обещает пустого: `Готово` и `Проверено` при «Проверка: —» — ошибка.
 
 Требования живут в доменных документах и в документах сквозных сценариев, экранов и обмена данными.
 Реестра фич больше нет: владельца требования задаёт файл, в котором оно определено, а не отдельная
 таблица, которая с этим файлом расходится.
+
+Правила 9–11 держат единственную живую связь спеки с кодом. Номеров требований в коде нет — значит
+имя прогона в строке «Проверка» и есть эта связь, и она рвётся молча: тест переименовали, строка
+осталась обещанием несуществующего. Обратную проверку («каждый прогон назван требованием») делает
+только E2E: сценарий целиком обязан следовать из требования, а unit-прогонов на одно требование
+приходится десяток, и требовать имени для каждого — шум.
 """
 
 import os
@@ -59,6 +68,14 @@ HEADING = re.compile(r"^#{1,6}\s+(.*)$", re.M)
 HTML_ANCHOR = re.compile(r'<a\s+id="([^"]+)"')
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 STATUS_LINE = re.compile(r"\*\*Статус:\*\*\s*([^·\n]+)")
+VERIFICATION_LINE = re.compile(r"\*\*Проверка:\*\*(.*)$")
+NAMED_RUN = re.compile(r"`([^`]+)`")
+MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\([^)]*\)")
+E2E_TEST = re.compile(r'\btest\(\s*"([^"]+)"')
+EMPTY_VERIFICATION = {"", "—", "-"}
+PROMISING_STATUSES = {"Готово", "Проверено"}
+CODE_ROOTS = ("src", "e2e")
+CODE_SUFFIXES = (".ts", ".tsx")
 
 errors: list[str] = []
 warnings: list[str] = []
@@ -136,11 +153,91 @@ def check_requirements(files: list[pathlib.Path]) -> None:
         errors.append(f"требование ТЗ {requirement} потеряно")
 
 
+def code_text(roots: tuple[str, ...]) -> str:
+    """Код перечисленных корней одной строкой: имя прогона ищется в нём подстрокой."""
+    return "\n".join(
+        path.read_text(encoding="utf-8")
+        for root in roots
+        for path in sorted(pathlib.Path(root).rglob("*"))
+        if path.suffix in CODE_SUFFIXES
+    )
+
+
+def flat(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def verification_blocks(path: pathlib.Path) -> list[tuple[int, str, str]]:
+    """Строки «Проверка» документа: номер строки, статус рядом с ней и склеенный текст.
+
+    Имя прогона переносится на следующую строку по ширине абзаца, поэтому текст склеивается до
+    пустой строки: сравнение по одной строке теряет каждое перенесённое имя. Блоки кода пропущены —
+    там образец оформления, а не обещание проверки.
+    """
+    blocks: list[tuple[int, str, str]] = []
+    lines = path.read_text(encoding="utf-8").splitlines()
+    in_fence = False
+    for number, raw in enumerate(lines, start=1):
+        if raw.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        head = VERIFICATION_LINE.search(raw)
+        if not head:
+            continue
+        tail = []
+        for following in lines[number:]:
+            if not following.strip():
+                break
+            tail.append(following)
+        status = STATUS_LINE.search(raw)
+        text = flat(head.group(1) + " " + " ".join(tail))
+        blocks.append((number, status.group(1).strip() if status else "", text))
+    return blocks
+
+
+def check_named_runs(files: list[pathlib.Path], sources: str) -> int:
+    """Имя, названное строкой «Проверка», обязано существовать в коде.
+
+    Иначе строка обещает проверку, которой нет: прогон переименовали или удалили, а спека этого не
+    заметила.
+    """
+    named = 0
+    for path in files:
+        for number, _status, text in verification_blocks(path):
+            for name in NAMED_RUN.findall(MARKDOWN_LINK.sub("", text)):
+                named += 1
+                if name not in sources:
+                    errors.append(f"{path}:{number}: названного прогона нет в коде — «{name}»")
+    return named
+
+
+def check_e2e_ownership(files: list[pathlib.Path]) -> int:
+    """Каждый прогон E2E назван требованием: иначе сценарий проверяет то, чего никто не просил."""
+    documents = "\n".join(flat(path.read_text(encoding="utf-8")) for path in files)
+    runs = 0
+    for path in sorted(pathlib.Path("e2e").rglob("*.spec.ts")):
+        for name in E2E_TEST.findall(path.read_text(encoding="utf-8")):
+            runs += 1
+            if name not in documents:
+                errors.append(f"{path}: прогон не назван ни одним требованием — «{name}»")
+    return runs
+
+
+def check_promised_verification(files: list[pathlib.Path]) -> None:
+    """`Готово` и `Проверено` без названной проверки — обещание без покрытия."""
+    for path in files:
+        for number, status, text in verification_blocks(path):
+            if status in PROMISING_STATUSES and text in EMPTY_VERIFICATION:
+                errors.append(f"{path}:{number}: статус «{status}» без названной проверки")
+
+
 CODE_NAME = re.compile(r"`([A-Za-z][A-Za-z0-9_]*)`")
 NAMING_CONVENTIONS = {"camelCase", "SCREAMING_SNAKE_CASE"}
 
 
-def check_glossary(root: pathlib.Path) -> None:
+def check_glossary(root: pathlib.Path, sources: str) -> None:
     """Имя из колонки «Имя в коде» обязано существовать в коде.
 
     Глоссарий — единственное место, где документация называет идентификаторы, и без проверки он
@@ -149,10 +246,6 @@ def check_glossary(root: pathlib.Path) -> None:
     glossary = root / "glossary.md"
     if not glossary.exists():
         return
-    sources = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in pathlib.Path("src").rglob("*.ts*")
-    )
     for line in glossary.read_text(encoding="utf-8").splitlines():
         if not line.startswith("|"):
             continue
@@ -218,9 +311,12 @@ def main() -> int:
     files = markdown_files()
     check_links(files)
     check_requirements(files)
-    check_glossary(pathlib.Path(DOCS))
+    check_glossary(pathlib.Path(DOCS), code_text(("src",)))
     check_statuses(files)
     check_link_remnants(files)
+    named = check_named_runs(files, code_text(CODE_ROOTS))
+    e2e_runs = check_e2e_ownership(files)
+    check_promised_verification(files)
 
     if "--strict-link-remnants" in sys.argv[1:]:
         errors.extend(warnings)
@@ -239,7 +335,10 @@ def main() -> int:
             print("  •", error)
         return 1
 
-    print(f"Спецификация цела: {len(files)} документов, {len(SPEC_REQUIREMENTS)} требований ТЗ на месте")
+    print(
+        f"Спецификация цела: {len(files)} документов, {len(SPEC_REQUIREMENTS)} требований ТЗ "
+        f"на месте, {named} названных прогонов существуют, {e2e_runs} E2E принадлежат требованиям"
+    )
     return 0
 
 
