@@ -47,17 +47,21 @@ export function abilityModifier(score: number): number {
 }
 
 /** КС спасброска от заклинаний. Торн: 8 + 3 + 4 + 1 = 16. */
-export function spellSaveDc(input: { level: number; score: number; itemBonus: number }): number {
-  return SAVE_DC_BASE + proficiencyBonus(input.level) + abilityModifier(input.score) + input.itemBonus;
+export function spellSaveDc(input: {
+  proficiencyBonus: number;
+  score: number;
+  itemBonus: number;
+}): number {
+  return SAVE_DC_BASE + input.proficiencyBonus + abilityModifier(input.score) + input.itemBonus;
 }
 
 /** Модификатор атаки заклинанием. Торн: 3 + 4 + 1 = +8. */
 export function spellAttackModifier(input: {
-  level: number;
+  proficiencyBonus: number;
   score: number;
   itemBonus: number;
 }): number {
-  return proficiencyBonus(input.level) + abilityModifier(input.score) + input.itemBonus;
+  return input.proficiencyBonus + abilityModifier(input.score) + input.itemBonus;
 }
 
 export function savingThrowModifier(input: {

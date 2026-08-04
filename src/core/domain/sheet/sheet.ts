@@ -17,7 +17,7 @@ import type { EquipmentData } from "@/core/domain/equipment/schema";
 import {
   DERIVED_IDS,
   deriveNumbers,
-  overriddenIds,
+  derivedValue,
   type DerivedNumber,
   type DerivedNumbers,
   type SheetInput,
@@ -63,46 +63,48 @@ export class Sheet {
   }
 
   get proficiencyBonus(): number {
-    return this.numbers.proficiencyBonus;
+    return this.numbers.proficiencyBonus.value;
   }
 
   get spellSaveDc(): number {
-    return this.numbers.spellSaveDc;
+    return this.numbers.spellSaveDc.value;
   }
 
   get spellAttackModifier(): number {
-    return this.numbers.spellAttackModifier;
+    return this.numbers.spellAttackModifier.value;
   }
 
   get preparationLimit(): number {
-    return this.numbers.preparedLimit;
+    return this.numbers.preparedLimit.value;
   }
 
   get initiative(): number {
-    return this.numbers.initiative;
+    return this.numbers.initiative.value;
   }
 
   get passivePerception(): number {
-    return this.numbers.passivePerception;
+    return this.numbers.passivePerception.value;
   }
 
   /**
    * Слагаемые КД без учёта эффектов: их вклады прибавляет итоговый расчёт.
    *
-   * База — из надетого доспеха, если игрок не перебил её руками; признак перебивки экран обязан
-   * показать, иначе введённое выглядит счётом.
+   * База — из надетого доспеха, если игрок не перебил её руками; признак перебивки и база по
+   * надетому идут рядом с ней, иначе введённое выглядит счётом, а отступать не от чего.
    */
   get armorClassParts(): {
     base: number;
     baseOverridden: boolean;
+    baseFormula: number;
     dexterityModifier: number;
     itemBonus: number;
     miscBonus: number;
   } {
-    const override = this.input.overrides.armorClassBase;
+    const base = derivedValue(this.input.overrides.armorClassBase, this.input.armorClassBase);
     return {
-      base: override ?? this.input.armorClassBase,
-      baseOverridden: override !== undefined,
+      base: base.value,
+      baseOverridden: base.overridden,
+      baseFormula: base.formula,
       dexterityModifier: this.dexterityModifier,
       itemBonus: this.input.bonuses.armorClass,
       miscBonus: this.input.miscBonuses.armorClass,
@@ -117,13 +119,13 @@ export class Sheet {
     return this.numbers.skills[id];
   }
 
-  /** Перечень для экрана: числа и признак «введено руками». Подписи — дело интерфейса. */
+  /**
+   * Перечень для экрана: действующее число, признак «введено руками» и значение по формуле.
+   *
+   * Подписи — дело интерфейса, но собирать вход счёта заново, чтобы узнать формулу, экрану нечем:
+   * второй сборщик того же входа расходится с этим молча.
+   */
   derived(): DerivedNumber[] {
-    const overridden = overriddenIds(this.input);
-    return DERIVED_IDS.map((id) => ({
-      id,
-      value: this.numbers[id],
-      overridden: overridden.has(id),
-    }));
+    return DERIVED_IDS.map((id) => ({ id, ...this.numbers[id] }));
   }
 }

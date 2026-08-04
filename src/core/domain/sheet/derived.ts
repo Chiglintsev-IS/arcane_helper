@@ -39,7 +39,20 @@ export const DERIVED_IDS: readonly DerivedId[] = [
   "passivePerception",
 ];
 
-export type DerivedNumber = { id: DerivedId; value: number; overridden: boolean };
+/**
+ * Одно производное число: что действует, введено ли это руками и что даёт формула.
+ *
+ * Формула отдаётся рядом с действующим значением, потому что спрашивают их вместе: перебивку
+ * набирают, глядя на то, от чего отступают, а снимают возвратом к формуле.
+ */
+type DerivedValue = { value: number; overridden: boolean; formula: number };
+
+export type DerivedNumber = DerivedValue & { id: DerivedId };
+
+/** Перебивка поверх формулы: её отсутствие и означает счёт. */
+export function derivedValue(override: number | undefined, formula: number): DerivedValue {
+  return { value: override ?? formula, overridden: override !== undefined, formula };
+}
 
 /**
  * Основания счёта: база персонажа, его прочие прибавки и вклад снаряжения.
@@ -55,14 +68,15 @@ export type SheetInput = Pick<
   armorClassBase: number;
 };
 
-export type DerivedNumbers = Record<DerivedId, number> & {
+export type DerivedNumbers = Record<DerivedId, DerivedValue> & {
   saves: Record<Ability, number>;
   skills: Record<SkillId, number>;
 };
 
 export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
   const { overrides } = sheet;
-  const bonus = overrides.proficiencyBonus ?? proficiencyBonus(sheet.level);
+  const proficiency = derivedValue(overrides.proficiencyBonus, proficiencyBonus(sheet.level));
+  const bonus = proficiency.value;
   const spellcastingScore = sheet.abilities[SPELLCASTING_ABILITY];
   // Вклад надетых вещей и прочие прибавки персонажа складываются: источники разные, правило одно.
   const spellcastingBonus = sheet.bonuses.spellcasting + sheet.miscBonuses.spellcasting;
@@ -92,41 +106,43 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
   }
 
   return {
-    proficiencyBonus: bonus,
-    spellSaveDc:
-      overrides.spellSaveDc ??
+    proficiencyBonus: proficiency,
+    spellSaveDc: derivedValue(
+      overrides.spellSaveDc,
       spellSaveDc({
-        level: sheet.level,
+        proficiencyBonus: bonus,
         score: spellcastingScore,
         itemBonus: spellcastingBonus,
       }),
-    spellAttackModifier:
-      overrides.spellAttackModifier ??
+    ),
+    spellAttackModifier: derivedValue(
+      overrides.spellAttackModifier,
       spellAttackModifier({
-        level: sheet.level,
+        proficiencyBonus: bonus,
         score: spellcastingScore,
         itemBonus: spellcastingBonus,
       }),
-    preparedLimit: overrides.preparedLimit ?? preparedLimit(spellcastingScore, sheet.level),
-    initiative:
-      overrides.initiative ??
+    ),
+    preparedLimit: derivedValue(
+      overrides.preparedLimit,
+      preparedLimit(spellcastingScore, sheet.level),
+    ),
+    initiative: derivedValue(
+      overrides.initiative,
       initiativeModifier({
         dexterity: sheet.abilities.dexterity,
         wisdom: sheet.abilities.wisdom,
       }),
-    passivePerception:
-      overrides.passivePerception ??
+    ),
+    passivePerception: derivedValue(
+      overrides.passivePerception,
       passivePerception({
         score: sheet.abilities.wisdom,
         training: sheet.skills.perception,
         proficiencyBonus: bonus,
       }),
+    ),
     saves,
     skills,
   };
-}
-
-/** Что из перечисленного введено руками: экран обязан это показать, иначе число выглядит счётом. */
-export function overriddenIds(sheet: SheetInput): Set<DerivedId> {
-  return new Set(DERIVED_IDS.filter((id) => sheet.overrides[id] !== undefined));
 }

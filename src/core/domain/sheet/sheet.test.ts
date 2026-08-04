@@ -21,6 +21,7 @@ describe("производные числа листа", () => {
     expect(sheet.armorClassParts).toEqual({
       base: 10,
       baseOverridden: false,
+      baseFormula: 10,
       dexterityModifier: 2,
       itemBonus: 2,
       miscBonus: 0,
@@ -53,6 +54,8 @@ describe("производные числа листа", () => {
     });
     expect(overridden.armorClassParts.baseOverridden).toBe(true);
     expect(overridden.armorClassParts.base).toBe(14);
+    // База по надетому идёт рядом с перебитой: отступают от неё, к ней и возвращаются.
+    expect(overridden.armorClassParts.baseFormula).toBe(10);
   });
 
   it("инициатива двигается за Мудростью, а не только за Ловкостью", () => {
@@ -104,6 +107,9 @@ describe("производные числа листа", () => {
     // Бонус мастерства перебит — спасбросок с владением считается по новому бонусу.
     expect(overridden.savingThrow("intelligence")).toBe(10);
     expect(overridden.skill("arcana")).toBe(9);
+    // КС и атака заклинаний тоже читают перебитый бонус, а не пересчитывают его из уровня.
+    expect(overridden.spellSaveDc).toBe(18);
+    expect(overridden.spellAttackModifier).toBe(10);
   });
 
   it("перебивка навыка перекрывает счёт по владению", () => {
@@ -124,10 +130,21 @@ describe("производные числа листа", () => {
     expect(smarter.preparationLimit).toBe(12);
   });
 
-  it("перечень производных называет, какие из них перебиты", () => {
+  it("перечень производных называет перебитые и несёт формулу рядом с перебитым", () => {
     const state = createThorne();
     const list = sheetOf({ ...state, overrides: { ...state.overrides, initiative: 5 } }).derived();
-    expect(list).toContainEqual({ id: "initiative", value: 5, overridden: true });
-    expect(list).toContainEqual({ id: "spellSaveDc", value: 16, overridden: false });
+    expect(list).toContainEqual({ id: "initiative", value: 5, overridden: true, formula: 1 });
+    expect(list).toContainEqual({ id: "spellSaveDc", value: 16, overridden: false, formula: 16 });
+  });
+
+  it("значение по формуле считается по действующим основаниям, а не мимо перебивок", () => {
+    const state = createThorne();
+    const list = sheetOf({
+      ...state,
+      overrides: { ...state.overrides, proficiencyBonus: 5, spellSaveDc: 20 },
+    }).derived();
+    // Бонус мастерства перебит, и формула КС читает его: 8 + 5 + 4 + 1. Иначе шторка называла бы
+    // число, которого на листе нет ни у одного соседа.
+    expect(list).toContainEqual({ id: "spellSaveDc", value: 20, overridden: true, formula: 18 });
   });
 });
