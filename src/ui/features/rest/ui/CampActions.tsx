@@ -16,6 +16,7 @@
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { arcaneRecoveryUnavailability } from "@/core/application/useCases/rest";
 import { withPlural } from "@/core/shared/language";
+import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
 import { RestActionButton } from "./RestActionButton";
 
 const COMBAT_REASON = "Не проходит во время боя";
@@ -37,7 +38,7 @@ function arcaneRecoveryReason(character: CharacterState, inFight: boolean): stri
  * сколько ячеек возвращать, требует знать остаток заранее.
  */
 function arcaneRecoveryLabel(remaining: number): string {
-  return `Магическое восстановление · осталось ${withPlural(remaining, ["уровень", "уровня", "уровней"])}`;
+  return `${ARCANE_RECOVERY_LABEL} · осталось ${withPlural(remaining, ["уровень", "уровня", "уровней"])}`;
 }
 
 

@@ -45,6 +45,9 @@ export const DERIVED_LABELS: Record<DerivedId, string> = {
   passivePerception: "Пассивное восприятие",
 };
 
+/** Имя особенности волшебника: его называет и своя шторка, и привал, и предпросмотр смены уровня. */
+export const ARCANE_RECOVERY_LABEL = "Магическое восстановление";
+
 export const SIZE_LABELS: Record<CreatureSize, string> = {
   tiny: "Крошечный",
   small: "Маленький",

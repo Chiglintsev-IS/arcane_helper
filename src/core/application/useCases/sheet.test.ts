@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withSlotDebt, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { characterStateSchema } from "@/core/domain/assembly/state";
@@ -53,6 +53,36 @@ describe("предпросмотр смены уровня", () => {
       before: 3,
       after: 4,
     });
+  });
+
+  it("дневной бюджет восстановления сдвигается вместе с ячейками", () => {
+    // Половина уровня вверх: 4 на седьмом, 5 на девятом.
+    expect(previewLevelChange(createThorne(), 9).changes).toContainEqual({
+      of: "arcaneRecovery",
+      before: 4,
+      after: 5,
+    });
+  });
+
+  it("перебитый лимит подготовки за уровнем не идёт, и сдвига ему не обещают", () => {
+    const overridden = setOverride(session(), "preparedLimit", 20, clock).character;
+
+    const preview = previewLevelChange(overridden, 9);
+
+    expect(preview.changes).not.toContainEqual(
+      expect.objectContaining({ of: "preparedLimit" }),
+    );
+    expect(preview.changes).toContainEqual({ of: "hitDice", before: 7, after: 9 });
+  });
+
+  it("отказ владельца назван причиной: обещать при нём нечего", () => {
+    const indebted = withSlotDebt(createThorne(), 1);
+
+    const preview = previewLevelChange(indebted, 9);
+
+    expect(preview.refusal).toBe("Ячеек 1 уровня: осталось -1 при максимуме 4");
+    expect(preview.changes).toEqual([]);
+    expect(preview.hitPoints).toBeNull();
   });
 
   it("прибавка хитов названа слагаемыми: среднее за кость и Телосложение", () => {

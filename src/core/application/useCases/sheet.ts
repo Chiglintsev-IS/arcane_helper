@@ -2,16 +2,15 @@
  * Правка листа персонажа.
  *
  * Что меняет число — идёт в журнал и отменяется; справочное поле не идёт: журнал возвращает
- * ресурсы, а не текст. Смена уровня — один сценарий, потому что тянет максимумы трёх ресурсов, и
- * разложенная на четыре нажатия она оставила бы половину пересчитанной.
+ * ресурсы, а не текст. Смена уровня — один сценарий, потому что тянет максимумы всех ресурсов, что
+ * идут за уровнем, и разложенная на нажатие за ресурс оставила бы половину пересчитанной.
  */
 
-import { abilityModifier, preparedLimit, proficiencyBonus } from "@/core/domain/character/abilities";
-import { spellSlotsForLevel } from "@/core/domain/arcana/slots";
-import { runesMaximum } from "@/core/domain/arcana/runes";
+import { abilityModifier, proficiencyBonus } from "@/core/domain/character/abilities";
 import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
-import { DomainError } from "@/core/domain/shared/errors";
+import { Sheet } from "@/core/domain/sheet/sheet";
+import { DomainError, refusalReason } from "@/core/domain/shared/errors";
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import {
   ABILITIES,
@@ -180,19 +179,17 @@ export function editHealth(
   );
 }
 
-/**
- * Смена уровня. Максимумы ячеек, рун и Костей хитов идут за уровнем; базовый максимум хитов вводит
- * игрок — кость бросает он, а не приложение.
- */
+/** Величина, которая идёт за уровнем одним числом: пул ресурса или производное число листа. */
+type LeveledValue = "runes" | "arcaneRecovery" | "hitDice" | "preparedLimit";
+
 /** Что сдвинется при смене уровня: величина, её прежнее и новое значение. */
 export type LevelChange =
   | { of: "slots"; slotLevel: number; before: number; after: number }
-  | { of: "runes"; before: number; after: number }
-  | { of: "hitDice"; before: number; after: number }
-  | { of: "preparedLimit"; before: number; after: number };
+  | { of: LeveledValue; before: number; after: number };
 
 /**
- * Предпросмотр смены уровня: тот же набор правил, что и у самой смены, прочитанный вперёд.
+ * Предпросмотр смены уровня: то же состояние, что построит сама смена, названное сравнением с
+ * нынешним. Считать последствия отдельным кодом значило бы обещать одно, а делать другое.
  *
  * Прибавка хитов названа слагаемыми: «среднее за кость плюс Телосложение» — то, что игрок иначе
  * считает в уме, глядя в книгу. Костей может не быть вовсе — тогда называть нечего.
@@ -200,47 +197,88 @@ export type LevelChange =
 type LevelPreview = {
   changes: LevelChange[];
   hitPoints: { perDie: number; dieSize: number; constitution: number; total: number } | null;
+  /** Почему сдвиги назвать нельзя: владелец отказался строить состояние нового уровня. */
+  refusal: string | null;
 };
 
-export function previewLevelChange(character: CharacterState, level: number): LevelPreview {
-  // Такого уровня не бывает — считать нечего. Отвечает объявление уровня, а не проверка на месте.
-  if (!isPossibleCharacterLevel(level)) return { changes: [], hitPoints: null };
+/**
+ * Персонаж на взятом уровне: максимумы ячеек, рун, бюджета восстановления и Костей хитов идут за
+ * уровнем. Базовый максимум хитов сюда не входит — кость бросает игрок, а не приложение.
+ */
+function leveled(character: CharacterState, level: number): Character {
+  const root = Character.of(character).withSheet({ level });
+  return root
+    .withArcana(root.arcana.resizedForLevel(level, proficiencyBonus(level)))
+    .withVitality(root.vitality.resizedHitDice(level));
+}
 
-  const before = spellSlotsForLevel(character.level);
-  const after = spellSlotsForLevel(level);
+/** Сдвиг называется только тогда, когда число другое: «11 → 11» игроку сказать нечего. */
+function shifted(of: LeveledValue, before: number, after: number): LevelChange[] {
+  return before === after ? [] : [{ of, before, after }];
+}
+
+function slotShifts(
+  before: CharacterState["spellSlots"],
+  after: CharacterState["spellSlots"],
+): LevelChange[] {
   const changes: LevelChange[] = [];
-
   for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
     const slotLevel = Number(key);
     const was = before[slotLevel]?.maximum ?? 0;
     const now = after[slotLevel]?.maximum ?? 0;
     if (was !== now) changes.push({ of: "slots", slotLevel, before: was, after: now });
   }
+  return changes;
+}
 
-  const runesBefore = runesMaximum(proficiencyBonus(character.level));
-  const runesAfter = runesMaximum(proficiencyBonus(level));
-  if (runesBefore !== runesAfter) {
-    changes.push({ of: "runes", before: runesBefore, after: runesAfter });
+/** Костей хитов может не быть вовсе: чужая выгрузка могла их не знать — тогда и сдвигать нечего. */
+function hitDiceShifts(
+  before: CharacterState["hitDice"],
+  after: CharacterState["hitDice"],
+): LevelChange[] {
+  if (before === undefined || after === undefined) return [];
+  return shifted("hitDice", before.total, after.total);
+}
+
+/** Все сдвиги пулов и производных чисел разом: сравнение прежнего состояния с состоянием уровня. */
+function levelShifts(before: CharacterState, after: CharacterState): LevelChange[] {
+  return [
+    ...slotShifts(before.spellSlots, after.spellSlots),
+    ...shifted("runes", before.runes.maximum, after.runes.maximum),
+    ...shifted("arcaneRecovery", before.arcaneRecovery.maximum, after.arcaneRecovery.maximum),
+    ...hitDiceShifts(before.hitDice, after.hitDice),
+    // Действующее число листа, а не формула класса: перебитое руками за уровнем не идёт.
+    ...shifted(
+      "preparedLimit",
+      Sheet.of(before).preparationLimit,
+      Sheet.of(after).preparationLimit,
+    ),
+  ];
+}
+
+export function previewLevelChange(character: CharacterState, level: number): LevelPreview {
+  // Такого уровня не бывает — считать нечего. Отвечает объявление уровня, а не проверка на месте.
+  if (!isPossibleCharacterLevel(level)) return { changes: [], hitPoints: null, refusal: null };
+
+  let next: CharacterState;
+  try {
+    next = leveled(character, level).toState();
+  } catch (error: unknown) {
+    // Спрашивают заранее, поэтому отказ владельца — ответ, а не падение: обещать при нём нечего.
+    return { changes: [], hitPoints: null, refusal: refusalReason(error) };
   }
+
+  const changes = levelShifts(character, next);
 
   const { hitDice } = character;
-  if (hitDice !== undefined && hitDice.total !== level) {
-    changes.push({ of: "hitDice", before: hitDice.total, after: level });
-  }
-
-  const limitBefore = preparedLimit(character.abilities.intelligence, character.level);
-  const limitAfter = preparedLimit(character.abilities.intelligence, level);
-  if (limitBefore !== limitAfter) {
-    changes.push({ of: "preparedLimit", before: limitBefore, after: limitAfter });
-  }
-
   const constitution = abilityModifier(character.abilities.constitution);
-  if (hitDice === undefined) return { changes, hitPoints: null };
+  if (hitDice === undefined) return { changes, hitPoints: null, refusal: null };
 
   const perDie = averagePerHitDie(hitDice.size);
   return {
     changes,
     hitPoints: { perDie, dieSize: hitDice.size, constitution, total: perDie + constitution },
+    refusal: null,
   };
 }
 
@@ -249,16 +287,11 @@ export function changeLevel(
   next: { level: number; hitPointMaximumBase: number },
   clock: Clock,
 ): Session {
-  const root = Character.of(session.character);
-  const withLevel = root.withSheet({ level: next.level });
-  const arcana = withLevel.arcana.resizedForLevel(next.level, proficiencyBonus(next.level));
-  const vitality = withLevel.vitality
-    .resizedHitDice(next.level)
-    .withMaximumBase(next.hitPointMaximumBase);
+  const atLevel = leveled(session.character, next.level);
 
   return commit(
     session,
-    withLevel.withArcana(arcana).withVitality(vitality),
+    atLevel.withVitality(atLevel.vitality.withMaximumBase(next.hitPointMaximumBase)),
     { kind: "sheet_edited", summaryRu: `Уровень: ${next.level}` },
     clock,
   );
