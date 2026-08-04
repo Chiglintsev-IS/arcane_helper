@@ -26,9 +26,9 @@ import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import {
   visibleSteps,
   type CastDraft,
-  type RoleplayCategory,
   type WizardStep,
 } from "@/ui/features/cast-spell/model/castDraftStore";
+import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import {
   RUNES,
   RUNE_LABEL,

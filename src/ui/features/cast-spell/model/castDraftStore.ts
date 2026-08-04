@@ -18,6 +18,7 @@ import { checkAvailability, type TurnResources } from "@/core/application/castin
 import { bestCastPlan, castOptions, type CastOption } from "@/core/application/casting/castOptions";
 import { runeChoosesTarget, type Rune, type RuneTarget } from "@/core/domain/arcana/runes";
 import { CANTRIP_LEVEL, needsOwnComponent } from "@/core/domain/catalog/spell";
+import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 
 /**
  * Экраны мастера в порядке. Шаг, где нечего выбирать, не показывается.
@@ -44,9 +45,6 @@ export const LAST_STEP = "summary" satisfies WizardStep;
 const OPTIONAL_STEPS = WIZARD_STEPS.filter(
   (step): step is Exclude<WizardStep, typeof LAST_STEP> => step !== LAST_STEP,
 );
-
-/** Категории готовых вариантов отыгрыша. */
-export type RoleplayCategory = "short" | "atmospheric" | "sarcastic";
 
 /** Сколько недавних целей помнить: ввод текста в бою — самая медленная операция. */
 export const RECENT_TARGETS_LIMIT = 5;
