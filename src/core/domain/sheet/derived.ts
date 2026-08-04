@@ -18,6 +18,7 @@ import {
 } from "@/core/domain/character/abilities";
 import { ABILITIES, SKILL_ABILITY, SKILL_IDS, type Ability, type SkillId } from "@/core/domain/character/skills";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
+import { recordOf } from "@/core/domain/shared/records";
 import type { CharacterFields } from "@/core/domain/character/schema";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 
@@ -81,28 +82,28 @@ export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
   const spellcastingBonus = sheet.bonuses.spellcasting + sheet.miscBonuses.spellcasting;
   const savingThrowBonus = sheet.bonuses.savingThrows + sheet.miscBonuses.savingThrows;
 
-  const saves = {} as Record<Ability, number>;
-  for (const ability of ABILITIES) {
-    saves[ability] =
+  const saves = recordOf(
+    ABILITIES,
+    (ability) =>
       overrides.saves[ability] ??
       savingThrowModifier({
         score: sheet.abilities[ability],
         proficient: sheet.saveProficiencies.includes(ability),
         proficiencyBonus: bonus,
         itemBonus: savingThrowBonus,
-      });
-  }
+      }),
+  );
 
-  const skills = {} as Record<SkillId, number>;
-  for (const id of SKILL_IDS) {
-    skills[id] =
+  const skills = recordOf(
+    SKILL_IDS,
+    (id) =>
       overrides.skills[id] ??
       skillModifier({
         score: sheet.abilities[SKILL_ABILITY[id]],
         training: sheet.skills[id],
         proficiencyBonus: bonus,
-      });
-  }
+      }),
+  );
 
   return {
     proficiencyBonus: proficiency,

@@ -6,8 +6,9 @@
  * темы Торна.
  */
 
-import { RUNES, RUNE_IDS, type RuneId } from "@/core/domain/catalog/diagram/futhark";
+import { RUNES, RUNE_IDS } from "@/core/domain/catalog/diagram/futhark";
 import { line, type Stroke } from "@/core/domain/catalog/diagram/strokes";
+import { recordOf } from "@/core/domain/shared/records";
 
 /** Семь металлов алхимии: они же планетарные знаки. Порядок — от Сатурна к Луне. */
 const METAL_IDS = ["saturn", "jupiter", "mars", "sun", "venus", "mercury", "moon"] as const;
@@ -75,9 +76,7 @@ const ELEMENTS: Record<(typeof ELEMENT_IDS)[number], Stroke[]> = {
   ],
 };
 
-const RUNE_GLYPHS = Object.fromEntries(
-  RUNE_IDS.map((id) => [id, RUNES[id].strokes]),
-) as Record<RuneId, Stroke[]>;
+const RUNE_GLYPHS = recordOf(RUNE_IDS, (id) => RUNES[id].strokes);
 
 export const GLYPHS: Record<GlyphId, Stroke[]> = { ...METALS, ...ELEMENTS, ...RUNE_GLYPHS };
 

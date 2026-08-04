@@ -35,7 +35,7 @@ export const RUNE_IDS = [
   "rune-othala",
 ] as const;
 
-export type RuneId = (typeof RUNE_IDS)[number];
+type RuneId = (typeof RUNE_IDS)[number];
 
 export const RUNES: Record<RuneId, { char: string; strokes: Stroke[] }> = {
   "rune-fehu": { char: "ᚠ", strokes: [stem(), line(50, 22, 84, 8), line(50, 52, 84, 38)] },
