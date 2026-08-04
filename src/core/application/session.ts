@@ -6,8 +6,9 @@
  */
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { MUTABLE_STATE_KEYS } from "@/core/domain/assembly/state";
+import { characterStateSchema, MUTABLE_STATE_KEYS } from "@/core/domain/assembly/state";
 import { Character } from "@/core/domain/assembly/character";
+import { DomainError } from "@/core/domain/shared/errors";
 import { Journal, JOURNAL_LIMIT } from "@/core/domain/journal/journal";
 import type { JournalEntry, Recorded, TurnResource } from "@/core/domain/journal/entry";
 
@@ -65,10 +66,23 @@ export function withoutRecord(session: Session, character: Character): Session {
   return { character: character.toState(), journal: session.journal };
 }
 
-/** Отмена последнего действия. */
+/**
+ * Отмена последнего действия.
+ *
+ * Собранное состояние проверяется целиком, до записи: журнал по замыслу всеяден и значений снимка не
+ * знает, а испорченная запись из хранилища иначе стала бы состоянием персонажа одним нажатием.
+ * Проверяется именно целое — доводчики и умолчания к части состояния не применимы.
+ */
 export function undoLast(session: Session): Session {
   const { state, journal } = characterJournal(session.journal).undoLast(session.character);
-  return { character: state, journal: [...journal.list] };
+  const restored = characterStateSchema.safeParse(state);
+  if (!restored.success) {
+    const reasons = restored.error.issues
+      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+      .join("; ");
+    throw new DomainError(`Снимок отмены не складывается в состояние персонажа — ${reasons}`);
+  }
+  return { character: restored.data, journal: [...journal.list] };
 }
 
 /**
