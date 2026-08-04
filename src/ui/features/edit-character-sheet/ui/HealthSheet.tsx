@@ -26,7 +26,7 @@ export function HealthSheet({
   // собственную проверку агрегата, чтобы не ловить его ошибку.
   const canPreview = both && maximumBase > 0 && masterReduction >= 0;
   const effective = canPreview
-    ? Vitality.of(character).withMaximumBase(maximumBase).withMasterReduction(masterReduction).maximum
+    ? Vitality.of(character).maximumWith({ maximumBase, masterReduction })
     : undefined;
   const valid = effective !== undefined && effective > 0;
 

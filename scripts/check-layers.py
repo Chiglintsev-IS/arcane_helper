@@ -20,6 +20,15 @@
  11. Псевдонима предмета в прогоне нет: `import { X as Y }` для значения из `src/` — ошибка.
  12. Слайс состоит не из одних прогонов, а имя с суффиксом `Screen` носит только экран.
  13. Реэкспортов нет: наружу модуля ведёт явный путь до владельца символа.
+ 14. Сценарий не дописывает поля к состоянию: спред с добавкой — только по названному владению.
+ 15. Отображение не меняет состояние: ни `commit`, ни `with…` на агрегате.
+ 16. Полная схема состояния состоит только из спредов владельцев: поле без владельца недопустимо.
+ 17. Агрегат объявляет, чем владеет: класс с состоянием и `toState` вызывает `ownedFields`.
+
+Правила 14–17 держат единственную дверь мутации. Состояние персонажа меняется только через корень
+агрегата: дописанное поле мимо владельца затирается соседом при следующей правке, а посчитанное
+отображением расходится с ядром. Дверь одна — сценарий поверх корня, — и проверка следит, что второй
+не появилось.
 
 Тринадцатое — про видимость протечек. Реэкспорт пересдаёт чужой символ под своим адресом: импортёр
 берёт тип домена у сценария, ярлык интерфейса у провайдера, и по списку импортов больше не видно, на
@@ -57,6 +66,25 @@ IMPORT = re.compile(r'(?:from|import)\s+["\']@/([^"\']+)["\']')
 TYPE_IMPORT = re.compile(r'import\s+type\s+[^;]*?["\']@/([^"\']+)["\']', re.S)
 ANY_IMPORT = re.compile(r'(?:from|import)\s+["\'](@/[^"\']+|\.[^"\']*)["\']')
 NAMED_IMPORT = re.compile(r'import\s+(type\s+)?\{([^}]*)\}\s*from\s*["\']([^"\']+)["\']', re.S)
+SPREAD = re.compile(r"\.\.\.(?=[\w(])")
+STATE_SPREADS = ("session.character", "current.character")
+STATE_SPREAD_TAIL = ".toState()"
+LITERAL_FIELD = re.compile(r"^\s*(\w+):", re.M)
+COMMIT_IMPORT = re.compile(r"import\s*\{[^}]*\bcommit\b[^}]*\}\s*from\s*[\"']@/core/application/session[\"']", re.S)
+AGGREGATE_MUTATION = re.compile(r"\.with[A-Z]\w*\(")
+STATE_CLASS = re.compile(r"private constructor\(private readonly state:")
+OWNED_FIELDS = "ownedFields("
+FULL_SCHEMA = pathlib.Path("src/core/domain/assembly/state.ts")
+FULL_SCHEMA_NAME = "characterStateSchema"
+
+# Поля, которые сценарий ставит сам, потому что событие принадлежит ему, а не агрегату. Каждая
+# запись — с обоснованием.
+OWNED_SCENARIO_FIELDS = {
+    # Отметку «короткий отдых был» ставит отдых: ресурсы читают её только как предусловие
+    # магического восстановления и сами не правят — иначе агрегат ресурсов знал бы про отдых.
+    ("src/core/application/useCases/rest.ts", "shortRestSinceLongRest"),
+}
+
 REEXPORT_FROM = re.compile(
     r'^export\s+(?:type\s+)?(?:\*|\{[^}]*\})\s*(?:as\s+\w+\s*)?from\s*["\']([^"\']+)["\']', re.M
 )
@@ -160,6 +188,114 @@ def check_screen_names(path: pathlib.Path) -> None:
         return
     for name in SCREEN_EXPORT.findall(path.read_text(encoding="utf-8")):
         errors.append(f"{path}: имя экрана вне слоя экранов — {name}")
+
+
+def enclosing_literal(text: str, position: int) -> str:
+    """Тело объектного литерала, внутри которого стоит позиция: от его `{` до парной `}`."""
+    depth = 0
+    start = position
+    while start > 0:
+        start -= 1
+        if text[start] == "}":
+            depth += 1
+        elif text[start] == "{":
+            if depth == 0:
+                break
+            depth -= 1
+    depth = 0
+    for end in range(start + 1, len(text)):
+        if text[end] == "{":
+            depth += 1
+        elif text[end] == "}":
+            if depth == 0:
+                return text[start + 1 : end]
+            depth -= 1
+    return text[start + 1 :]
+
+
+def spread_end(text: str, start: int) -> int:
+    """Конец выражения спреда: запятая или закрывающая скобка на нулевой глубине."""
+    depth = 0
+    for position in range(start, len(text)):
+        symbol = text[position]
+        if symbol in "([{":
+            depth += 1
+        elif symbol in ")]}":
+            if depth == 0:
+                return position
+            depth -= 1
+        elif symbol == "," and depth == 0:
+            return position
+    return len(text)
+
+
+def check_state_spread(path: pathlib.Path) -> None:
+    """Сценарий не дописывает поля к состоянию: дописанное затрёт владелец при следующей правке.
+
+    Выражение спреда читается целиком, потому что цепочка правок переносится по строкам: сравнение
+    по одной строке пропускало `...root` с продолжением на следующей.
+    """
+    relative = str(path.relative_to(SRC)).replace("\\", "/")
+    if not relative.startswith("core/application/"):
+        return
+    text = path.read_text(encoding="utf-8")
+    for match in SPREAD.finditer(text):
+        end = spread_end(text, match.end())
+        expression = re.sub(r"\s+", "", text[match.end() : end])
+        if expression not in STATE_SPREADS and not expression.endswith(STATE_SPREAD_TAIL):
+            continue
+        body = enclosing_literal(text, match.start())
+        after = body[body.index("...") + 3 :]
+        for field in LITERAL_FIELD.findall(after):
+            if (str(path), field) in OWNED_SCENARIO_FIELDS:
+                continue
+            errors.append(
+                f"{path}: поле дописано к состоянию мимо владельца — {field}; "
+                f"его ставит агрегат, а не сценарий"
+            )
+
+
+def check_display_mutation(path: pathlib.Path) -> None:
+    """Отображение состояние не меняет: дверь одна — сценарий поверх корня агрегата."""
+    if not str(path.relative_to(SRC)).replace("\\", "/").startswith("ui/"):
+        return
+    text = path.read_text(encoding="utf-8")
+    if COMMIT_IMPORT.search(text):
+        errors.append(f"{path}: отображение коммитит состояние само")
+    for number, line in enumerate(text.splitlines(), start=1):
+        if AGGREGATE_MUTATION.search(line):
+            errors.append(
+                f"{path}:{number}: отображение правит агрегат — {line.strip()[:70]}"
+            )
+
+
+def check_full_schema() -> None:
+    """Полная схема состояния — только спреды владельцев: инлайн-поле значит поле без владельца."""
+    if not FULL_SCHEMA.is_file():
+        return
+    text = FULL_SCHEMA.read_text(encoding="utf-8")
+    start = text.find(f"{FULL_SCHEMA_NAME} = z")
+    if start < 0:
+        errors.append(f"{FULL_SCHEMA}: полной схемы состояния нет под своим именем")
+        return
+    body = enclosing_literal(text, text.index("{", start) + 1)
+    for line in body.splitlines():
+        line = line.strip()
+        if line and not line.startswith("...") and not line.startswith("//"):
+            errors.append(
+                f"{FULL_SCHEMA}: поле в сборке вместо владельца — {line[:60]}"
+            )
+
+
+def check_owned_fields(path: pathlib.Path) -> None:
+    """Агрегат называет свои ключи: забывший про них затирает правки соседнего контекста."""
+    relative = str(path.relative_to(SRC)).replace("\\", "/")
+    context = domain_context(relative)
+    if context is None or context in (ASSEMBLY_CONTEXT, SHARED_CONTEXT):
+        return
+    text = path.read_text(encoding="utf-8")
+    if STATE_CLASS.search(text) and "toState()" in text and OWNED_FIELDS not in text:
+        errors.append(f"{path}: агрегат не объявил, чем владеет — нет вызова ownedFields")
 
 
 def check_reexports(path: pathlib.Path) -> None:
@@ -375,8 +511,12 @@ def main() -> int:
             check_imports(path)
             check_screen_names(path)
             check_reexports(path)
+            check_state_spread(path)
+            check_display_mutation(path)
+            check_owned_fields(path)
         check_comments(path)
     check_test_only_slices()
+    check_full_schema()
     for root in EXTRA:
         for path in sorted([*root.rglob("*.ts")]):
             check_comments(path)

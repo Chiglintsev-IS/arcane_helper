@@ -266,6 +266,18 @@ export class Vitality {
   }
 
   /** Правка базового максимума с листа. Текущее здоровье обрезается новым потолком. */
+  /**
+   * Каким станет действующий максимум при таких числах листа: предпросмотр правки здоровья.
+   *
+   * Спрашивается до сохранения, поэтому отвечает числом, а не новым состоянием: собирать
+   * изменённый агрегат ради одного числа значило бы держать в экране правку, которой не было.
+   */
+  maximumWith(change: { maximumBase: number; masterReduction: number }): number {
+    return this.withMaximumBase(change.maximumBase)
+      .withMasterReduction(change.masterReduction)
+      .maximum;
+  }
+
   withMaximumBase(maximumBase: number): Vitality {
     if (!Number.isInteger(maximumBase) || maximumBase <= 0) {
       throw new DomainError(

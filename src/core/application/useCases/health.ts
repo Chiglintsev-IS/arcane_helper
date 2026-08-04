@@ -71,13 +71,9 @@ export function exchangeBlood(
     .withVitality(vitality)
     .withArcana(root.arcana.gainSpellPoints(exchange.pointsCreated));
 
-  const after: CharacterState = {
-    ...withPoints.toState(),
-  };
-
   return commit(
     session,
-    after,
+    withPoints.toState(),
     {
       kind: "blood_exchange",
       summaryRu: `Кровавое колдовство: ${exchange.hitPointsSpent} хитов → ${exchange.pointsCreated} очков`,
