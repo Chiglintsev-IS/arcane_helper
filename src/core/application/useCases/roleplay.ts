@@ -113,7 +113,7 @@ function change(
   return withoutRecord(session, root.withSpellbook(root.spellbook.changePreferences(spellId, edit)));
 }
 
-function toggledId(ids: string[], id: string): string[] {
+function toggledId(ids: readonly string[], id: string): string[] {
   return ids.includes(id) ? ids.filter((candidate) => candidate !== id) : [...ids, id];
 }
 

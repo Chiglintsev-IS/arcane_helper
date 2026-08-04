@@ -18,21 +18,22 @@ import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 
 /** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
-  const character = createThorne();
-  character.concentration = { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" };
-  character.activeEffects = [
-    {
-      id: "effect-1",
-      spellId: "detect-magic",
-      nameRu: "Обнаружение магии",
-      startedAt: "2026-07-31T18:00:00.000Z",
-      duration: { type: "minutes", value: 10 },
-      isConcentration: true,
-      slotLevelUsed: 1,
-      endConditionRu: "До конца концентрации или истечения длительности.",
-    },
-  ];
-  return character;
+  return {
+    ...createThorne(),
+    concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+    activeEffects: [
+      {
+        id: "effect-1",
+        spellId: "detect-magic",
+        nameRu: "Обнаружение магии",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "minutes", value: 10 },
+        isConcentration: true,
+        slotLevelUsed: 1,
+        endConditionRu: "До конца концентрации или истечения длительности.",
+      },
+    ],
+  };
 }
 
 /** Рендер книги: виден весь состав, а не то, чем можно сходить прямо сейчас. */

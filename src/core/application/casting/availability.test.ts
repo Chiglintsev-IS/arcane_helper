@@ -4,6 +4,8 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
+import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
 import {
   ACTION_SPENT_MESSAGES,
   ALL_TURN_RESOURCES,
@@ -210,12 +212,12 @@ describe("checkAvailability: накладывание дольше хода (FR-
 });
 
 describe("checkAvailability: оплата (FR-030, FR-070)", () => {
+  /** Ячейки этого уровня истрачены: тратит их то же правило, что за столом. */
   function withoutSlots(level: number): CharacterState {
     const character = createThorne();
     const slot = character.spellSlots[level];
     if (slot === undefined) throw new Error(`нет ячеек ${level} уровня`);
-    character.spellSlots = { ...character.spellSlots, [level]: { ...slot, remaining: 0 } };
-    return character;
+    return withSpentSlots(character, level, slot.remaining);
   }
 
   it("предупреждает об отсутствии свободной ячейки", () => {
@@ -250,8 +252,7 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
   });
 
   it("оплата очками доступна, когда очков хватает", () => {
-    const character = createThorne();
-    character.spellPoints = { remaining: 3 };
+    const character = withSpellPoints(createThorne(), 3);
     const availability = check({
       spell: mageArmor,
       character,
@@ -282,21 +283,22 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
 
 describe("checkAvailability: концентрация (FR-030, FR-081)", () => {
   function concentrating(): CharacterState {
-    const character = createThorne();
-    character.concentration = { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" };
-    character.activeEffects = [
-      {
-        id: "effect-1",
-        spellId: "detect-magic",
-        nameRu: "Обнаружение магии",
-        startedAt: "2026-07-31T18:00:00.000Z",
-        duration: { type: "minutes", value: 10 },
-        isConcentration: true,
-        slotLevelUsed: 1,
-        endConditionRu: "До конца концентрации или истечения длительности.",
-      },
-    ];
-    return character;
+    return {
+      ...createThorne(),
+      concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+      activeEffects: [
+        {
+          id: "effect-1",
+          spellId: "detect-magic",
+          nameRu: "Обнаружение магии",
+          startedAt: "2026-07-31T18:00:00.000Z",
+          duration: { type: "minutes", value: 10 },
+          isConcentration: true,
+          slotLevelUsed: 1,
+          endConditionRu: "До конца концентрации или истечения длительности.",
+        },
+      ],
+    };
   }
 
   it("предупреждает о замене концентрации и называет текущий эффект", () => {
@@ -323,8 +325,10 @@ describe("checkAvailability: концентрация (FR-030, FR-081)", () => {
   });
 
   it("на испорченном состоянии без эффекта называет заклинание по идентификатору", () => {
-    const broken = concentrating();
-    broken.activeEffects = [];
+    const broken = {
+      ...concentrating(),
+      activeEffects: [],
+    };
     const availability = check({
       spell: detectMagic,
       character: broken,
@@ -591,14 +595,18 @@ describe("доступность обмена хитов на очки (FR-176, 
   });
 
   it("подавление огнём и солнцем называется своими словами", () => {
-    const burned = createThorne();
-    burned.suppression = { firedUpon: true, underDirectSunlight: false };
+    const burned = {
+      ...createThorne(),
+      suppression: { firedUpon: true, underDirectSunlight: false },
+    };
     expect(exchangeWarnings(burned, ALL_TURN_RESOURCES)).toEqual([
       "Кровавое колдовство подавлено уроном огнём до конца следующего хода",
     ]);
 
-    const sunlit = createThorne();
-    sunlit.suppression = { firedUpon: false, underDirectSunlight: true };
+    const sunlit = {
+      ...createThorne(),
+      suppression: { firedUpon: false, underDirectSunlight: true },
+    };
     expect(exchangeWarnings(sunlit, ALL_TURN_RESOURCES)).toEqual([
       "Кровавое колдовство не действует под прямым солнечным светом",
     ]);
@@ -610,8 +618,7 @@ describe("доступность обмена хитов на очки (FR-176, 
   });
 
   it("хитов меньше курса — причина называет курс и наличное", () => {
-    const bleeding = createThorne();
-    bleeding.hitPoints = { ...bleeding.hitPoints, current: 2 };
+    const bleeding = withDamage(createThorne(), 58);
     expect(exchangeWarnings(bleeding, ALL_TURN_RESOURCES)).toEqual([
       "3 хита за очко, в наличии 2",
     ]);

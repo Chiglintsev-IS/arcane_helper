@@ -4,6 +4,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { ALL_TURN_RESOURCES } from "@/core/application/casting/availability";
+import { withForeignSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 import {
   bestCastPlan,
   castableInSituation,
@@ -46,8 +47,11 @@ describe("castOptions", () => {
   it("не предлагает оплату кровью там, где её цена неизвестна", () => {
     const mageArmor = allSpells.find((spell) => spell.id === "mage-armor")!;
     const sixthLevel = { ...mageArmor, level: 6 };
-    const character = createThorne();
-    character.spellSlots = { ...character.spellSlots, 6: { maximum: 1, remaining: 1 } };
+    // Ячейка шестого уровня Торну недоступна: состояние пришло чужой выгрузкой.
+    const character = withForeignSlots(createThorne(), {
+      ...createThorne().spellSlots,
+      6: { maximum: 1, remaining: 1 },
+    });
 
     expect(castOptions(sixthLevel, character, { inCombat: true })).toEqual([
       { mode: "normal", payment: { kind: "slot", slotLevel: 6 } },
@@ -94,8 +98,10 @@ describe("bestCastPlan", () => {
   it("объясняет недоступность причиной лучшего способа, а не первого попавшегося", () => {
     // Ритуалу подготовка не нужна, поэтому мешает ему только занятая концентрация. Причина
     // «не подготовлено» пришла бы от ячейки — способа, которым это заклинание и не творят.
-    const character = outsideCombat();
-    character.concentration = { spellId: "web", startedAt: "2026-07-31T18:00:00.000Z" };
+    const character = {
+      ...outsideCombat(),
+      concentration: { spellId: "web", startedAt: "2026-07-31T18:00:00.000Z" },
+    };
 
     const plan = bestCastPlan(detectMagic, character, ALL_TURN_RESOURCES);
 
@@ -105,8 +111,7 @@ describe("bestCastPlan", () => {
   });
 
   it("без способов сотворения возвращает null", () => {
-    const character = createThorne();
-    character.spellSlots = {};
+    const character = withForeignSlots(createThorne(), {});
     const sixthLevel = { ...mageArmor, level: 6 };
 
     expect(bestCastPlan(sixthLevel, character, ALL_TURN_RESOURCES)).toBeNull();

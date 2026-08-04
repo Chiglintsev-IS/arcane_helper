@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 /**
  * Здоровье тремя слагаемыми: база с листа и два снижения. Действующий максимум считается.
  * Одно поле «максимум, уже уменьшенный кровью» смешивало два факта, и правка базы требовала
@@ -69,5 +71,5 @@ export const VITALITY_FIELDS = {
 
 const vitalityStateSchema = z.object(VITALITY_FIELDS);
 
-export type VitalityState = z.infer<typeof vitalityStateSchema>;
-export type HitDice = NonNullable<z.infer<typeof hitDiceSchema>>;
+export type VitalityState = DeepReadonly<z.infer<typeof vitalityStateSchema>>;
+export type HitDice = DeepReadonly<NonNullable<z.infer<typeof hitDiceSchema>>>;

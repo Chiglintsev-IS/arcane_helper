@@ -16,24 +16,26 @@ import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
+import { withoutRunes } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
-  const character = createThorne();
-  character.concentration = { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" };
-  character.activeEffects = [
-    {
-      id: "effect-1",
-      spellId: "detect-magic",
-      nameRu: "Обнаружение магии",
-      startedAt: "2026-07-31T18:00:00.000Z",
-      duration: { type: "minutes", value: 10 },
-      isConcentration: true,
-      slotLevelUsed: 1,
-      endConditionRu: "До конца концентрации или истечения длительности.",
-    },
-  ];
-  return character;
+  return {
+    ...createThorne(),
+    concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+    activeEffects: [
+      {
+        id: "effect-1",
+        spellId: "detect-magic",
+        nameRu: "Обнаружение магии",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "minutes", value: 10 },
+        isConcentration: true,
+        slotLevelUsed: 1,
+        endConditionRu: "До конца концентрации или истечения длительности.",
+      },
+    ],
+  };
 }
 
 /** Лист концентрации открывается с карточки в шапке. */
@@ -167,8 +169,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
   });
 
   it("без руны провал завершает концентрацию сразу", async () => {
-    const character = concentrating();
-    character.runes = { remaining: 0, maximum: 3 };
+    const character = withoutRunes(concentrating());
     await damage("24", character);
 
     await userEvent.click(screen.getByRole("button", { name: "Провал" }));

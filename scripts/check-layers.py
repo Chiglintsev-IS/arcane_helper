@@ -75,7 +75,7 @@ AGGREGATE_MUTATION = re.compile(r"\.with[A-Z]\w*\(")
 STATE_CLASS = re.compile(r"private constructor\(private readonly state:")
 OWNED_FIELDS = "ownedFields("
 FULL_SCHEMA = pathlib.Path("src/core/domain/assembly/state.ts")
-FULL_SCHEMA_NAME = "characterStateSchema"
+FULL_SCHEMA_NAME = "STATE_FIELDS"
 
 # Поля, которые сценарий ставит сам, потому что событие принадлежит ему, а не агрегату. Каждая
 # запись — с обоснованием.
@@ -274,9 +274,9 @@ def check_full_schema() -> None:
     if not FULL_SCHEMA.is_file():
         return
     text = FULL_SCHEMA.read_text(encoding="utf-8")
-    start = text.find(f"{FULL_SCHEMA_NAME} = z")
+    start = text.find(f"{FULL_SCHEMA_NAME} = {{")
     if start < 0:
-        errors.append(f"{FULL_SCHEMA}: полной схемы состояния нет под своим именем")
+        errors.append(f"{FULL_SCHEMA}: перечня полей состояния нет под своим именем")
         return
     body = enclosing_literal(text, text.index("{", start) + 1)
     for line in body.splitlines():

@@ -28,7 +28,7 @@ function changedFields<TState extends object>(
   const patch: Partial<TState> = {};
   for (const key of mutableKeys) {
     if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
-      Object.assign(patch, { [key]: structuredClone(before[key]) });
+      Object.assign(patch, { [key]: before[key] });
     }
   }
   return patch;
@@ -91,7 +91,7 @@ export class Journal<TState extends object = Record<string, unknown>> {
       throw new DomainError("Журнал пуст, отменять нечего");
     }
     return {
-      state: { ...state, ...structuredClone(last.undoPatch) },
+      state: { ...state, ...last.undoPatch },
       journal: new Journal(this.entries.slice(0, -1), this.mutableKeys),
     };
   }

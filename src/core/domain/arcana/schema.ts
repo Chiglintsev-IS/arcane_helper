@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 import { MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { MINIMUM_SPELL_LEVEL } from "@/core/domain/arcana/slots";
 
@@ -88,4 +90,4 @@ export const ARCANA_FIELDS = {
 
 const arcanaStateSchema = z.object(ARCANA_FIELDS);
 
-export type ArcanaStateData = z.infer<typeof arcanaStateSchema>;
+export type ArcanaStateData = DeepReadonly<z.infer<typeof arcanaStateSchema>>;

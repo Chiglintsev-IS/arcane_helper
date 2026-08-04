@@ -15,6 +15,7 @@ import {
   StorageCorruptedError,
   StorageVersionError,
   toPersisted,
+  type PersistedSession,
   type SessionRepository,
 } from "@/core/application/ports/sessionRepository";
 import { createSession } from "@/core/application/session";
@@ -47,10 +48,13 @@ export function describeRepositoryContract(
 
   it("повторная запись заменяет прежнюю", async () => {
     const repository = await createRepository();
-    await repository.save(snapshot());
+    const stored = snapshot();
+    await repository.save(stored);
 
-    const wounded = snapshot();
-    wounded.character.hitPoints.current = 12;
+    const wounded = {
+      ...stored,
+      character: { ...stored.character, hitPoints: { ...stored.character.hitPoints, current: 12 } },
+    };
     await repository.save(wounded);
 
     const loaded = await repository.load();
@@ -71,42 +75,35 @@ export function describeRepositoryContract(
 
   it("изменение объекта после записи не меняет сохранённое", async () => {
     const repository = await createRepository();
-    const stored = snapshot();
-    await repository.save(stored);
-    stored.character.hitPoints.current = 1;
+    // Свой изменяемый объект: тип состояния править на месте не даёт, а хранилище обязано держаться
+    // и против того, кто пришёл из нетипизированного кода — браузерная база сериализует переданное.
+    const hitPoints = { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 };
+    const base = snapshot();
+    await repository.save({ ...base, character: { ...base.character, hitPoints } });
+
+    hitPoints.current = 1;
+
     const loaded = await repository.load();
     expect(loaded?.character.hitPoints.current).toBe(60);
   });
 
-  it("повреждённое содержимое не загружается и не затирается", async () => {
-    const repository = await createRepository();
-    await repository.save(snapshot());
-    // Портим уже сохранённое так, как это сделала бы неудачная миграция.
-    await repository.save({ ...snapshot(), character: { id: "thorne" } } as never);
-    await expect(repository.load()).rejects.toThrow(StorageCorruptedError);
-  });
-
-  it("сохранение более новой версии отклоняется отдельной ошибкой", async () => {
-    const repository = await createRepository();
-    await repository.save({ ...snapshot(), schemaVersion: 99 } as never);
-    await expect(repository.load()).rejects.toThrow(StorageVersionError);
-  });
-
   it("журнал переживает запись и чтение", async () => {
     const repository = await createRepository();
-    const stored = snapshot();
-    stored.journal = [
-      {
-        id: "id-1",
-        at: SAVED_AT,
-        kind: "spell_cast",
-        summaryRu: "Доспехи мага — ячейкой 1 уровня",
-        undoPatch: { inspiration: false },
-        spellId: "mage-armor",
-        slotLevel: 1,
-        actionUsed: "action",
-      },
-    ];
+    const stored = {
+      ...snapshot(),
+      journal: [
+        {
+          id: "id-1",
+          at: SAVED_AT,
+          kind: "spell_cast",
+          summaryRu: "Доспехи мага — ячейкой 1 уровня",
+          undoPatch: { inspiration: false },
+          spellId: "mage-armor",
+          slotLevel: 1,
+          actionUsed: "action",
+        },
+      ],
+    } satisfies PersistedSession;
     await repository.save(stored);
     expect((await repository.load())?.journal).toEqual(stored.journal);
   });
@@ -148,6 +145,17 @@ export function describeRepositoryContract(
 
 /** Проверки самого разбора, не зависящие от реализации. */
 export function describeParsingContract(): void {
+  it("порченое состояние отвергает целиком: молча начать с чистого листа — потерять игру", () => {
+    // Так выглядело бы содержимое после неудачной миграции: снимок на месте, состояния в нём нет.
+    expect(() => parsePersisted({ ...snapshot(), character: { id: "thorne" } })).toThrow(
+      StorageCorruptedError,
+    );
+  });
+
+  it("версию новее отклоняет отдельной ошибкой: старое приложение, новые данные", () => {
+    expect(() => parsePersisted({ ...snapshot(), schemaVersion: 99 })).toThrow(StorageVersionError);
+  });
+
   it("отклоняет null и не объект", () => {
     expect(() => parsePersisted(null)).toThrow(StorageCorruptedError);
     expect(() => parsePersisted("строка")).toThrow(StorageCorruptedError);
@@ -174,12 +182,13 @@ export function describeParsingContract(): void {
     };
 
     const parsed = parsePersisted(stored);
-    const patch = parsed.journal[0]?.undoPatch as {
-      equipment: { items: { kind: string; worn: boolean; count: number }[] };
-    };
     // Отмена старой записи обязана возвращать вещь новой формы: род переведён, надетость снята,
     // счёт обрезан пределом.
-    expect(patch.equipment.items[0]).toMatchObject({ kind: "consumable", worn: false, count: 9999 });
+    expect(parsed.journal[0]?.undoPatch.equipment?.items[0]).toMatchObject({
+      kind: "consumable",
+      worn: false,
+      count: 9999,
+    });
 
     // Запись, не являющаяся объектом со снимком, не приводится и не роняет разбор молча:
     // её отвергнет схема с указанием поля.

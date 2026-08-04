@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 import { GLYPH_IDS, SEAL_KINDS } from "@/core/domain/catalog/diagram/glyphs";
 import { isRune } from "@/core/domain/catalog/diagram/futhark";
 import { COMBAT_ROLES } from "@/core/domain/catalog/combatRole";
@@ -218,7 +220,7 @@ const ritualDiagramSchema = z.object({
   captionRu: nonEmpty,
 });
 
-export type RitualDiagram = z.infer<typeof ritualDiagramSchema>;
+export type RitualDiagram = DeepReadonly<z.infer<typeof ritualDiagramSchema>>;
 
 /**
  * Сумма строки, столбца и диагонали у магического квадрата одна и та же.
@@ -227,7 +229,7 @@ export type RitualDiagram = z.infer<typeof ritualDiagramSchema>;
  * `noUncheckedIndexedAccess` такую запись не пропускает, а обкладывать её `?? 0` значило бы завести
  * ветки, недостижимые для теста — размер 3×3 уже гарантирован схемой.
  */
-function isMagicSquare(rows: number[][]): boolean {
+function isMagicSquare(rows: readonly (readonly number[])[]): boolean {
   const columns: number[][] = [];
   const main: number[] = [];
   const anti: number[] = [];
@@ -490,7 +492,8 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
   }
 });
 
-export type Spell = z.infer<typeof spellSchema>;
+/** Карточка неизменяема: контент приходит сборкой или выгрузкой игрока, а не правкой на месте. */
+export type Spell = DeepReadonly<z.infer<typeof spellSchema>>;
 export type ArmorClassEffect = z.infer<typeof armorClassEffectSchema>;
 
 /**

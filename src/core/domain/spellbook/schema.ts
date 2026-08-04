@@ -8,6 +8,8 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 import { nonEmpty } from "@/core/domain/shared/schema";
 
 /**
@@ -47,8 +49,8 @@ export const SPELLBOOK_FIELDS = {
  */
 const spellbookStateSchema = z.object(SPELLBOOK_FIELDS).superRefine(refineSpellbook);
 
-export type SpellbookState = z.infer<typeof spellbookStateSchema>;
-export type RoleplayPreference = z.infer<typeof roleplayPreferenceSchema>;
+export type SpellbookState = DeepReadonly<z.infer<typeof spellbookStateSchema>>;
+export type RoleplayPreference = DeepReadonly<z.infer<typeof roleplayPreferenceSchema>>;
 
 /**
  * Инварианты книги, которые видны только по нескольким полям сразу.

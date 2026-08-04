@@ -10,6 +10,7 @@ import { createMemoryRepository } from "@/core/infrastructure/persistence/memory
 import { toPersisted, type SessionRepository } from "@/core/application/ports/sessionRepository";
 import { createSession, undoLast, type Clock } from "@/core/application/session";
 import { createSessionStore } from "@/ui/entities/session/model/sessionStore";
+import { withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 const mageArmor = spells.get("mage-armor")!;
@@ -50,8 +51,10 @@ function renamedCatalogFile(): ExportFile {
 const HOMEBREW: Spell = { ...mageArmor, id: "thorne-signature", nameRu: "Подпись Торна" };
 
 function homebrewCatalogFile(): ExportFile {
-  const character = createThorne();
-  character.spellbookSpellIds = [...character.spellbookSpellIds, HOMEBREW.id];
+  const character = {
+    ...createThorne(),
+    spellbookSpellIds: [...createThorne().spellbookSpellIds, HOMEBREW.id],
+  };
   return exportSnapshot(character, [...loadThorneSpells(), HOMEBREW], NOW);
 }
 
@@ -73,8 +76,7 @@ describe("загрузка состояния", () => {
   });
 
   it("читает сохранённое состояние вместо создания нового", async () => {
-    const wounded = createThorne();
-    wounded.hitPoints.current = 17;
+    const wounded = withDamage(createThorne(), 43);
     const repository = createMemoryRepository(
       toPersisted(createSession(wounded), NOW, null),
     );
@@ -340,8 +342,7 @@ describe("каталог заклинаний (FR-123)", () => {
   });
 
   it("сохранение, сделанное до FR-123, открывается со встроенным каталогом (NFR-003)", async () => {
-    const wounded = createThorne();
-    wounded.hitPoints.current = 17;
+    const wounded = withDamage(createThorne(), 43);
     const store = makeStore(createMemoryRepository(toPersisted(createSession(wounded), NOW, null)));
     await store.getState().hydrate();
 

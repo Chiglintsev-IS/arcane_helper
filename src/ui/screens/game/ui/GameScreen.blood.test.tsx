@@ -16,6 +16,7 @@ import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
+import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Экономия хода «всё цело»: тесты обмена интересуются не ходом, а хитами и очками. */
 const ALL_AVAILABLE_ECONOMY: TurnEconomy = {
@@ -33,15 +34,10 @@ async function openWizard(character: CharacterState = createThorne()) {
   return { user, ...rendered };
 }
 
-function hitPoints(current: number): Partial<CharacterState> {
-  return {
-    hitPoints: {
-      current,
-      maximumBase: 60,
-      bloodReduction: 0,
-      masterReduction: 0,
-    },
-  };
+/** Торн с такими хитами: урон получен тем же правилом, что в бою. Максимум цел. */
+function wounded(current: number): CharacterState {
+  const thorne = createThorne();
+  return withDamage(thorne, thorne.hitPoints.current - current);
 }
 
 describe("инвариант FR-022 для обмена (FR-177)", () => {
@@ -142,8 +138,7 @@ describe("выбор объёма (FR-178)", () => {
   });
 
   it("подсказывает, на что хватит, с учётом уже имеющихся очков", async () => {
-    const saved = createThorne();
-    saved.spellPoints = { remaining: 3 };
+    const saved = withSpellPoints(createThorne(), 3);
     const { user } = await openWizard(saved);
     // Бой не начат нарочно — см. комментарий в инварианте выше.
 
@@ -155,7 +150,7 @@ describe("выбор объёма (FR-178)", () => {
   });
 
   it("потолок счётчика — сколько хитов есть", async () => {
-    const { user } = await openWizard({ ...createThorne(), ...hitPoints(7) });
+    const { user } = await openWizard(wounded(7));
 
     // Бой не начат нарочно: у этого персонажа хиты уже занижены для теста, и «Начать
     // бой» означал бы ещё и первый ход — а с ним, возможно, регенерацию, которая испортила бы
@@ -190,10 +185,7 @@ describe("выбор объёма (FR-178)", () => {
 
 describe("предупреждения (FR-031, FR-175, FR-176)", () => {
   it("обмен в ноль предупреждает о ранах, но не запрещает", async () => {
-    const { user, stores } = await openWizard({
-      ...createThorne(),
-      ...hitPoints(6),
-    });
+    const { user, stores } = await openWizard(wounded(6));
 
     // Бой не начат нарочно: хиты занижены для этого теста, и «Начать бой» рисковал бы
     // их регенерацией — см. комментарий в «потолок счётчика» выше.
@@ -207,8 +199,10 @@ describe("предупреждения (FR-031, FR-175, FR-176)", () => {
   });
 
   it("подавление солнцем названо причиной и проходится «Применить всё равно»", async () => {
-    const sunlit = createThorne();
-    sunlit.suppression = { firedUpon: false, underDirectSunlight: true };
+    const sunlit = {
+      ...createThorne(),
+      suppression: { firedUpon: false, underDirectSunlight: true },
+    };
     const { user, stores } = await openWizard(sunlit);
 
     expect(
@@ -231,7 +225,7 @@ describe("предупреждения (FR-031, FR-175, FR-176)", () => {
   });
 
   it("нехватка хитов на одно очко названа числами", async () => {
-    await openWizard({ ...createThorne(), ...hitPoints(2) });
+    await openWizard(wounded(2));
 
     expect(screen.getByText("3 хита за очко, в наличии 2")).toBeDefined();
   });

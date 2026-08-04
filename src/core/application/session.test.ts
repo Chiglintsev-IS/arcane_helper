@@ -31,6 +31,13 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import { createSession, undoLast, type Session } from "@/core/application/session";
 import { JOURNAL_LIMIT } from "@/core/domain/journal/journal";
+import {
+  withBloodExchange,
+  withDamage,
+  withMasterReduction,
+  withSpellPoints,
+  withSpentHitDice,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 
@@ -88,8 +95,7 @@ describe("начальное состояние Торна", () => {
   });
 
   it("каждый вызов даёт независимый объект", () => {
-    const first = createThorne();
-    first.hitPoints.current = 1;
+    const first = withDamage(createThorne(), 59);
     expect(createThorne().hitPoints.current).toBe(60);
   });
 
@@ -516,10 +522,7 @@ describe("руна при сотворении (FR-151)", () => {
   it("не применяется к оплате кровью", () => {
     const withPoints: Session = {
       ...session,
-      character: {
-        ...session.character,
-        spellPoints: { remaining: 5 },
-      },
+      character: withSpellPoints(session.character, 5),
     };
     expect(() =>
       castSpell(
@@ -640,10 +643,7 @@ describe("кровавое колдовство (FR-170…FR-174)", () => {
   it("отклоняет обмен дороже текущего здоровья", () => {
     const weak: Session = {
       ...session,
-      character: {
-        ...session.character,
-        hitPoints: { current: 5, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
-      },
+      character: withDamage(session.character, 55),
     };
     expect(() => exchangeBlood(weak, 3, clock)).toThrow(/в наличии 5/);
   });
@@ -1335,23 +1335,14 @@ describe("регенерация тролля начисляется в нача
   });
 
   it("не превышает максимум", () => {
-    const nearlyFull: Session = {
-      ...session,
-      character: {
-        ...session.character,
-        hitPoints: { current: 2, maximumBase: 60, bloodReduction: 56, masterReduction: 0 },
-      },
-    };
+    // 18 очков кровью сняли 54 хита максимума, мастер снял ещё два: действующий максимум — 4.
+    const weakened = withMasterReduction(withBloodExchange(session.character, 18), 2);
+
+    const nearlyFull: Session = { ...session, character: withDamage(weakened, 2) };
     // 2 из 4 — не ниже половины, регенерация не идёт.
     expect(beginTurn(nearlyFull, clock).character.hitPoints.current).toBe(2);
 
-    const low: Session = {
-      ...session,
-      character: {
-        ...session.character,
-        hitPoints: { current: 1, maximumBase: 60, bloodReduction: 56, masterReduction: 0 },
-      },
-    };
+    const low: Session = { ...session, character: withDamage(weakened, 3) };
     expect(beginTurn(low, clock).character.hitPoints.current).toBe(4);
   });
 
@@ -1838,10 +1829,7 @@ describe("дорогие компоненты (FR-030)", () => {
 describe("кости хитов (FR-134)", () => {
   it("долгий отдых возвращает половину костей, округляя вниз (FR-134)", () => {
     // Кости тратит заклинание своим применением; здесь важен возврат, поэтому пул задан сразу.
-    const spent = createSession({
-      ...session.character,
-      hitDice: { total: 7, size: 6, remaining: 2 },
-    });
+    const spent = createSession(withSpentHitDice(session.character, 5));
     // Половина от семи — три: 2 + 3 = 5, а не все семь. Долгий бой обязан стоить.
     expect(longRest(spent, clock).character.hitDice?.remaining).toBe(5);
   });
@@ -2050,10 +2038,7 @@ describe("почасовое восстановление максимума х�
   it("одна регенерация тоже оправдывает час — без снижения максимума и без очков", () => {
     const injured: Session = {
       ...session,
-      character: {
-        ...session.character,
-        hitPoints: { current: 10, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
-      },
+      character: withDamage(session.character, 50),
     };
     const recovered = recoverHitPointMaximum(injured, clock);
     expect(recovered.character.hitPoints.current).toBe(30);
@@ -2179,8 +2164,7 @@ describe("сотворённое вне боя не переносится в б
 describe("расход костей хитов заклинанием (FR-135)", () => {
   /** Раненый Торн: 30 из 60, все семь костей целы. */
   function wounded() {
-    const character = createThorne();
-    character.hitPoints.current = 30;
+    const character = withDamage(createThorne(), 30);
     return createSession(character);
   }
 
@@ -2268,8 +2252,7 @@ describe("расход костей хитов заклинанием (FR-135)",
   });
 
   it("костей меньше запрошенного — отказ, это несогласованность, а не выбор игрока", () => {
-    const character = createThorne();
-    character.hitDice = { total: 7, size: 6, remaining: 1 };
+    const character = withSpentHitDice(createThorne(), 6);
     expect(() =>
       castSpell(
         createSession(character),

@@ -15,24 +15,33 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
+import { withBloodExchange, withSpellPointsSpent } from "@/core/infrastructure/catalog/thorne/fixtures";
+import {
+  withBloodSpent,
+  withDamage,
+  withSpellPoints,
+  withSpentSlots,
+  withoutArcaneRecovery,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
-  const character = createThorne();
-  character.concentration = { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" };
-  character.activeEffects = [
-    {
-      id: "effect-1",
-      spellId: "detect-magic",
-      nameRu: "Обнаружение магии",
-      startedAt: "2026-07-31T18:00:00.000Z",
-      duration: { type: "minutes", value: 10 },
-      isConcentration: true,
-      slotLevelUsed: 1,
-      endConditionRu: "До конца концентрации или истечения длительности.",
-    },
-  ];
-  return character;
+  return {
+    ...createThorne(),
+    concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+    activeEffects: [
+      {
+        id: "effect-1",
+        spellId: "detect-magic",
+        nameRu: "Обнаружение магии",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "minutes", value: 10 },
+        isConcentration: true,
+        slotLevelUsed: 1,
+        endConditionRu: "До конца концентрации или истечения длительности.",
+      },
+    ],
+  };
 }
 
 describe("шторки «Привала» (FR-205, FR-237)", () => {
@@ -122,11 +131,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
   /** Торн на привале, потративший ячейку первого уровня: восстанавливать есть что. */
   async function atCamp(character: CharacterState = createThorne()) {
-    const spent = {
-      ...character,
-      spellSlots: { ...character.spellSlots, 1: { maximum: 4, remaining: 2 } },
-    };
-    return renderWithStores(<RestScreen />, spent);
+    return renderWithStores(<RestScreen />, withSpentSlots(character, 1, 2));
   }
   it("показывает ресурсы и активные эффекты, но не список заклинаний (FR-237)", async () => {
     await atCamp(concentrating());
@@ -191,7 +196,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   it("исчерпанный бюджет гаснет, но остаётся с причиной (FR-131)", async () => {
     // Раньше кнопка исчезала. Пропавшая кнопка не отвечает на вопрос «почему нельзя», а за столом
     // он возникает раньше, чем игрок вспомнит правило, — требование это изменило.
-    await atCamp({ ...createThorne(), arcaneRecovery: { maximum: 4, remaining: 0 } });
+    await atCamp(withoutArcaneRecovery(createThorne()));
     const button = screen.getByRole("button", {
       name: "Магическое восстановление · осталось 0 уровней — Дневной бюджет восстановления исчерпан до следующего долгого отдыха",
     });
@@ -200,9 +205,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
   it("без короткого отдыха восстановление недоступно, но остаток бюджета виден заранее (FR-131)", async () => {
     const user = userEvent.setup();
-    const spent = createThorne();
-    spent.spellSlots[1] = { maximum: 4, remaining: 3 };
-    await atCamp(spent);
+    await atCamp(withSpentSlots(createThorne(), 1, 1));
 
     // Причина названа словами на самой кнопке, и лечится она соседней — в том же ряду. Остаток
     // бюджета виден в подписи ещё до того, как отдых его открыл.
@@ -236,35 +239,34 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
     it("только снижение максимума — называет только его", async () => {
-      const reduced = createThorne();
-      reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
+      // Три очка кровью уже израсходованы: час вернёт только максимум.
+      const reduced = withBloodSpent(createThorne(), 3);
       await renderWithStores(<RestScreen />, reduced);
 
       expect(screen.getByRole("button", { name: "Прошёл час · максимум +3" })).toBeDefined();
     });
 
     it("только непогашенные очки — называет их числом, а не намёком", async () => {
-      const withPoints = createThorne();
-      withPoints.spellPoints = { remaining: 5 };
+      const withPoints = withSpellPoints(createThorne(), 5);
       await renderWithStores(<RestScreen />, withPoints);
 
       expect(screen.getByRole("button", { name: "Прошёл час · сгорит 5 очков" })).toBeDefined();
     });
 
     it("одна регенерация тоже называется: кнопка обещает всё, что случится", async () => {
-      const wounded = createThorne();
       // Хиты ниже половины и максимум цел: возвращать нечего, а час доводит регенерацией до
       // половины — с 20 до 30.
-      wounded.hitPoints = { current: 20, maximumBase: 60, bloodReduction: 0, masterReduction: 0 };
+      const wounded = withDamage(createThorne(), 40);
       await renderWithStores(<RestScreen />, wounded);
 
       expect(screen.getByRole("button", { name: "Прошёл час · регенерация +10" })).toBeDefined();
     });
 
     it("снижение и очки вместе — называет оба факта", async () => {
-      const both = createThorne();
-      both.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
-      both.spellPoints = { remaining: 1 };
+      // Три очка созданы кровью, два из них ушли на заклинание первого уровня.
+      const both = {
+        ...withSpellPointsSpent(withBloodExchange(createThorne(), 3), 1),
+      };
       await renderWithStores(<RestScreen />, both);
 
       expect(screen.getByRole("button", { name: "Прошёл час · максимум +3, сгорит 1 очко" })).toBeDefined();

@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 import { itemBonusesSchema, nonEmpty } from "@/core/domain/shared/schema";
 
 /**
@@ -102,8 +104,8 @@ export const EQUIPMENT_FIELDS = {
 };
 
 /** Данные снаряжения. Имя `Equipment` занято агрегатом: класс и его состояние — не одно и то же. */
-export type EquipmentData = z.infer<typeof equipmentSchema>;
-export type InventoryItem = z.infer<typeof inventoryItemSchema>;
+export type EquipmentData = DeepReadonly<z.infer<typeof equipmentSchema>>;
+export type InventoryItem = DeepReadonly<z.infer<typeof inventoryItemSchema>>;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 export type Currency = (typeof CURRENCIES)[number];
-export type Money = z.infer<typeof moneySchema>;
+export type Money = DeepReadonly<z.infer<typeof moneySchema>>;

@@ -17,7 +17,7 @@ type ActionUsed = TurnResource;
 
 export type Session = {
   character: CharacterState;
-  journal: JournalEntry<CharacterState>[];
+  journal: readonly JournalEntry<CharacterState>[];
 };
 
 /**

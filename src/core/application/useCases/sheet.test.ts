@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { characterStateSchema } from "@/core/domain/assembly/state";
-import { undoLast, type Clock } from "@/core/application/session";
+import { undoLast, type Clock, type Session } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   changeLevel,
@@ -72,8 +73,8 @@ describe("предпросмотр смены уровня", () => {
 
 describe("смена уровня", () => {
   it("максимумы растут, новая ячейка приходит неистраченной", () => {
-    const spent = session();
-    spent.character.spellSlots[4] = { maximum: 1, remaining: 0 };
+    const base = session();
+    const spent = { ...base, character: withSpentSlots(base.character, 4, 1) };
 
     const after = changeLevel(spent, { level: 8, hitPointMaximumBase: 66 }, clock);
 
@@ -113,8 +114,10 @@ describe("смена уровня", () => {
   });
 
   it("частично потраченный бюджет двигается на разницу максимумов, а не сбрасывается", () => {
-    const spent = session();
-    spent.character.arcaneRecovery = { maximum: 4, remaining: 1 };
+    const spent = {
+      ...session(),
+      character: { ...session().character, arcaneRecovery: { maximum: 4, remaining: 1 } },
+    };
     const after = changeLevel(spent, { level: 9, hitPointMaximumBase: 72 }, clock);
     expect(after.character.arcaneRecovery).toEqual({ maximum: 5, remaining: 2 });
   });
@@ -142,8 +145,11 @@ describe("правка листа", () => {
   });
 
   it("правка одной характеристики не трогает соседние и чужие навыки", () => {
-    const before = session();
-    before.character.skills = { stealth: "proficient" };
+    const base = session();
+    const before: Session = {
+      ...base,
+      character: { ...base.character, skills: { stealth: "proficient" } },
+    };
 
     const after = editAbility(
       before,

@@ -1,8 +1,9 @@
 /**
  * Хранилище в памяти: реализация порта для тестов и для окружения без IndexedDB.
  *
- * Ведёт себя как настоящее: возвращает копии, чтобы никто не смог изменить сохранённое,
- * держа ссылку на переданный объект.
+ * Ведёт себя как настоящее: запись сохраняет копию — браузерная база тоже сериализует переданное, и
+ * подмена, работающая по ссылке, вела бы себя иначе, чем та, которую она подменяет. Чтение копии не
+ * делает: разбор прочитанного и так собирает новые объекты.
  */
 
 import {
@@ -17,7 +18,7 @@ export function createMemoryRepository(initial?: unknown): SessionRepository {
   return {
     async load(): Promise<PersistedSession | null> {
       if (stored === null || stored === undefined) return null;
-      return parsePersisted(structuredClone(stored));
+      return parsePersisted(stored);
     },
 
     async save(session: PersistedSession): Promise<void> {

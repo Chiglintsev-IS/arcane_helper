@@ -7,6 +7,8 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { isoDateTime, nonEmpty } from "@/core/domain/shared/schema";
 
@@ -54,13 +56,13 @@ export const EFFECTS_FIELDS = {
   concentration: concentrationSchema,
 };
 
-export type ActiveEffect = z.infer<typeof activeEffectSchema>;
+export type ActiveEffect = DeepReadonly<z.infer<typeof activeEffectSchema>>;
 type Concentration = z.infer<typeof concentrationSchema>;
 
-export type EffectsState = {
+export type EffectsState = DeepReadonly<{
   activeEffects: ActiveEffect[];
   concentration?: Concentration;
-};
+}>;
 
 /**
  * Инварианты доски: концентрация и эффекты согласованы между собой.

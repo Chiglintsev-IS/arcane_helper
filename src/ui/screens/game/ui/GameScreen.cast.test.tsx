@@ -15,6 +15,13 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
+import {
+  withDamage,
+  withSpellPoints,
+  withoutHitDice,
+  withoutRunes,
+  withoutSlots,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 
 // Художественный текст берётся из контента, а не переписывается в тесте: реплики правятся отдельно,
 // и тест не должен падать от смены формулировки.
@@ -33,34 +40,29 @@ function withTurnTracking(): CharacterState {
   return { ...createThorne() };
 }
 
-function withoutSlots(): CharacterState {
-  const character = withTurnTracking();
-  character.spellSlots = {
-    1: { maximum: 4, remaining: 0 },
-    2: { maximum: 3, remaining: 0 },
-    3: { maximum: 3, remaining: 0 },
-    4: { maximum: 1, remaining: 0 },
-  };
-  return character;
+/** Свободных ячеек нет: их тратит правило ресурсов, а не фикстура. */
+function spentSlots(): CharacterState {
+  return withoutSlots(withTurnTracking());
 }
 
 function concentrating(): CharacterState {
-  const character = createThorne();
-  character.preparedSpellIds = [...character.preparedSpellIds, "detect-magic"];
-  character.concentration = { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" };
-  character.activeEffects = [
-    {
-      id: "effect-1",
-      spellId: "detect-magic",
-      nameRu: "Обнаружение магии",
-      startedAt: "2026-07-31T18:00:00.000Z",
-      duration: { type: "minutes", value: 10 },
-      isConcentration: true,
-      slotLevelUsed: 1,
-      endConditionRu: "До конца концентрации или истечения длительности.",
-    },
-  ];
-  return character;
+  return {
+    ...createThorne(),
+    preparedSpellIds: [...createThorne().preparedSpellIds, "detect-magic"],
+    concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+    activeEffects: [
+      {
+        id: "effect-1",
+        spellId: "detect-magic",
+        nameRu: "Обнаружение магии",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "minutes", value: 10 },
+        isConcentration: true,
+        slotLevelUsed: 1,
+        endConditionRu: "До конца концентрации или истечения длительности.",
+      },
+    ],
+  };
 }
 
 /**
@@ -202,7 +204,7 @@ describe("объявление мастеру (FR-041, AC-12)", () => {
 
 describe("предупреждение вместо запрета (FR-031)", () => {
   it("без свободных ячеек показывает причину и не пускает дальше без разрешения", async () => {
-    await renderWithStores(<GameScreen />, withoutSlots());
+    await renderWithStores(<GameScreen />, spentSlots());
     const user = await openWizard(/Доспехи мага/);
 
     expect(screen.getByText("Нет свободной ячейки 1 уровня")).toBeDefined();
@@ -213,7 +215,7 @@ describe("предупреждение вместо запрета (FR-031)", ()
   });
 
   it("«Применить всё равно» доводит применение до конца и показывает долг ячейки", async () => {
-    const { stores } = await renderWithStores(<GameScreen />, withoutSlots());
+    const { stores } = await renderWithStores(<GameScreen />, spentSlots());
     const user = await openWizard(/Доспехи мага/);
 
     await user.click(screen.getByRole("button", { name: "Применить всё равно" }));
@@ -296,8 +298,7 @@ describe("обязательность в блоке отыгрыша (ADR-0011)
 describe("недоступность руны названа причиной (FR-151, OQ-17)", () => {
   it("при оплате кровью руна не применяется и говорит почему", async () => {
     const user = userEvent.setup();
-    const rich = withTurnTracking();
-    rich.spellPoints = { remaining: 6 };
+    const rich = withSpellPoints(withTurnTracking(), 6);
     await renderWithStores(<GameScreen />, rich);
     await openWizard(/^Паутина/);
 
@@ -309,8 +310,7 @@ describe("недоступность руны названа причиной (F
   });
 
   it("без рун объясняет, когда они вернутся", async () => {
-    const spent = withTurnTracking();
-    spent.runes = { maximum: 3, remaining: 0 };
+    const spent = withoutRunes(withTurnTracking());
     await renderWithStores(<GameScreen />, spent);
     await openWizard(/^Паутина/);
 
@@ -367,10 +367,8 @@ describe("шаг костей хитов (FR-135)", () => {
    * заговоры и подготовленное, а в книге Торна это заклинание по умолчанию не подготовлено.
    */
   function woundedThorne(): CharacterState {
-    const character = withTurnTracking();
-    character.hitPoints.current = 30;
-    character.preparedSpellIds = [...character.preparedSpellIds, "arcane-vigor"];
-    return character;
+    const wounded = withDamage(withTurnTracking(), 30);
+    return { ...wounded, preparedSpellIds: [...wounded.preparedSpellIds, "arcane-vigor"] };
   }
 
   /** До костей мастер проходит через выбор ячейки: он идёт первым и от него зависит максимум. */
@@ -438,8 +436,7 @@ describe("шаг костей хитов (FR-135)", () => {
   });
 
   it("без костей шаг объясняет, а не прячется", async () => {
-    const spent = woundedThorne();
-    spent.hitDice = { total: 7, size: 6, remaining: 0 };
+    const spent = withoutHitDice(woundedThorne());
     await renderWithStores(<GameScreen />, spent);
     await openHitDiceStep();
     expect(screen.getByText(/бросать нечего/)).toBeTruthy();

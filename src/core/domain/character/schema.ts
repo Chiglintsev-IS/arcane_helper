@@ -8,6 +8,8 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import {
   MAXIMUM_ABILITY_SCORE,
@@ -109,5 +111,5 @@ export const CHARACTER_FIELDS = {
 
 const characterSchema = z.object(CHARACTER_FIELDS);
 
-export type CharacterFields = z.infer<typeof characterSchema>;
+export type CharacterFields = DeepReadonly<z.infer<typeof characterSchema>>;
 export type CreatureSize = (typeof CREATURE_SIZES)[number];

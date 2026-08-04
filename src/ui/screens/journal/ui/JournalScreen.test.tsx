@@ -17,6 +17,7 @@ import { exportSnapshot } from "@/core/application/dataExchange";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
 import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
+import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Выгрузка приложения, снятая с текущего состояния: её же и загружаем обратно. */
 async function openData(character: CharacterState = createThorne()) {
@@ -41,8 +42,7 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
   it("своя выгрузка загружается обратно и восстанавливает ресурсы (FR-120)", async () => {
     const saved = exportSnapshot(createThorne(), loadThorneSpells(), "2026-07-31T18:00:00.000Z");
 
-    const spent: CharacterState = createThorne();
-    spent.spellSlots = { ...spent.spellSlots, 1: { maximum: 4, remaining: 0 } };
+    const spent = withSpentSlots(createThorne(), 1, 4);
     const { user, stores } = await openData(spent);
 
     // `type` посимвольно на длинном JSON слишком медленный: вставляем как из буфера.

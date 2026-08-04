@@ -8,10 +8,13 @@
 
 import { z } from "zod";
 
+import type { DeepReadonly } from "@/core/domain/shared/readonly";
+
 import { migrateCharacterState, migrateUndoPatch } from "@/core/domain/assembly/migration";
-import { characterStateSchema } from "@/core/domain/assembly/state";
+import { characterStatePatchSchema, characterStateSchema } from "@/core/domain/assembly/state";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { checkIntegrity } from "@/core/application/dataExchange";
+import { JOURNAL_KINDS } from "@/core/domain/journal/entry";
 import type { Session } from "@/core/application/session";
 
 /** Версия формата хранения. Читать чужое будущее приложение не берётся. */
@@ -20,10 +23,13 @@ const STORAGE_SCHEMA_VERSION = 2;
 const journalEntrySchema = z.object({
   id: z.string().min(1),
   at: z.string().min(1),
-  kind: z.string().min(1),
+  kind: z.enum(JOURNAL_KINDS),
   summaryRu: z.string().min(1),
-  // Снимок отмены — произвольное подмножество полей состояния, поэтому проверяется как объект.
-  undoPatch: z.record(z.string(), z.unknown()),
+  /**
+   * Снимок отмены — подмножество полей состояния, и проверяется он той же схемой: вид записи и форма
+   * снимка приходят от владельцев, поэтому прочитанное не нужно приводить к типу силой.
+   */
+  undoPatch: characterStatePatchSchema,
   spellId: z.string().min(1).optional(),
   slotLevel: z.number().int().optional(),
   actionUsed: z.enum(["action", "bonus_action", "reaction"]).optional(),
@@ -43,7 +49,8 @@ const persistedSessionSchema = z.object({
   spellCatalog: z.array(spellSchema).optional(),
 });
 
-export type PersistedSession = z.infer<typeof persistedSessionSchema>;
+/** Снимок неизменяем, как и само состояние: в хранилище уходит то же, что лежит в сессии. */
+export type PersistedSession = DeepReadonly<z.infer<typeof persistedSessionSchema>>;
 
 /**
  * Хранилище сессии. Реализации взаимозаменяемы и проходят один набор тестов
@@ -102,7 +109,7 @@ export function toPersisted(
 export function fromPersisted(persisted: PersistedSession): Session {
   return {
     character: persisted.character,
-    journal: persisted.journal as Session["journal"],
+    journal: persisted.journal,
   };
 }
 

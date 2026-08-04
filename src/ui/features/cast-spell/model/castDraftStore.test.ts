@@ -1,4 +1,5 @@
 import { castSpell } from "@/core/application/useCases/casting";
+import { withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -291,21 +292,16 @@ describe("запоминание выбора", () => {
     store.getState().cancel();
 
     // Персонаж потерял ячейки 4 уровня — например, состояние пришло из другого сохранения.
-    const weaker = createThorne();
-    const { 4: _lost, ...rest } = weaker.spellSlots;
-    weaker.spellSlots = rest;
+    const thorne = createThorne();
+    const { 4: _lost, ...withoutFourth } = thorne.spellSlots;
+    const weaker = { ...thorne, spellSlots: withoutFourth };
 
     store.getState().start(mageArmor, context(weaker));
     expect(draftOf().payment).toEqual({ kind: "slot", slotLevel: 1 });
   });
 
   it("без свободных ячеек предлагает ячейку своего уровня, чтобы шаг доступности объяснил причину", () => {
-    const spent = createThorne();
-    const empty: CharacterState["spellSlots"] = {};
-    for (const [level, slot] of Object.entries(spent.spellSlots)) {
-      empty[Number(level)] = { ...slot, remaining: 0 };
-    }
-    spent.spellSlots = empty;
+    const spent = withoutSlots(createThorne());
 
     store.getState().start(mageArmor, context(spent));
     expect(draftOf().payment).toEqual({ kind: "slot", slotLevel: 1 });

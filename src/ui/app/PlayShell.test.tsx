@@ -15,6 +15,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { PlayShell } from "@/ui/app/PlayShell";
 import { renderWithStores } from "@/ui/app/testing/stores";
+import { withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Бой отмечен начатым: только тогда ведётся учёт хода. */
 const IN_FIGHT = { inFight: true } as const;
@@ -31,29 +32,29 @@ async function openJournal(user: ReturnType<typeof userEvent.setup>): Promise<vo
   await user.click(screen.getByRole("radio", { name: /^Журнал/ }));
 }
 
+/** Торн с 12 хитами: урон получен так же, как в бою. */
 function wounded(): CharacterState {
-  const character = createThorne();
-  character.hitPoints = { current: 12, maximumBase: 60, bloodReduction: 0, masterReduction: 0 };
-  return character;
+  return withDamage(createThorne(), 48);
 }
 
 /** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
-  const character = createThorne();
-  character.concentration = { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" };
-  character.activeEffects = [
-    {
-      id: "effect-1",
-      spellId: "detect-magic",
-      nameRu: "Обнаружение магии",
-      startedAt: "2026-07-31T18:00:00.000Z",
-      duration: { type: "minutes", value: 10 },
-      isConcentration: true,
-      slotLevelUsed: 1,
-      endConditionRu: "До конца концентрации или истечения длительности.",
-    },
-  ];
-  return character;
+  return {
+    ...createThorne(),
+    concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+    activeEffects: [
+      {
+        id: "effect-1",
+        spellId: "detect-magic",
+        nameRu: "Обнаружение магии",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "minutes", value: 10 },
+        isConcentration: true,
+        slotLevelUsed: 1,
+        endConditionRu: "До конца концентрации или истечения длительности.",
+      },
+    ],
+  };
 }
 
 const STORAGE_KEY = "playScreenMode";
@@ -454,19 +455,21 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
 describe("завершение активного эффекта (FR-091)", () => {
   it("закрывает неконцентрационный эффект и пишет это в журнал", async () => {
-    const character = createThorne();
-    character.activeEffects = [
-      {
-        id: "effect-2",
-        spellId: "mage-armor",
-        nameRu: "Доспехи мага",
-        startedAt: "2026-07-31T18:00:00.000Z",
-        duration: { type: "hours", value: 8 },
-        isConcentration: false,
-        slotLevelUsed: 1,
-        endConditionRu: "До истечения длительности.",
-      },
-    ];
+    const character: CharacterState = {
+      ...createThorne(),
+      activeEffects: [
+        {
+          id: "effect-2",
+          spellId: "mage-armor",
+          nameRu: "Доспехи мага",
+          startedAt: "2026-07-31T18:00:00.000Z",
+          duration: { type: "hours", value: 8 },
+          isConcentration: false,
+          slotLevelUsed: 1,
+          endConditionRu: "До истечения длительности.",
+        },
+      ],
+    };
     await renderWithStores(<PlayShell />, character);
 
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Доспехи мага" }));

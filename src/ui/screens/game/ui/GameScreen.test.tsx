@@ -17,26 +17,34 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { renderWithStores, spell } from "@/ui/app/testing/stores";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
+import {
+  withBloodExchange,
+  withBloodSpent,
+  withDamage,
+  withSpentSlots,
+  withoutSlots,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Бой отмечен начатым: только тогда ведётся учёт хода. */
 const IN_FIGHT = { inFight: true } as const;
 
 function concentrating(): CharacterState {
-  const character = createThorne();
-  character.concentration = { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" };
-  character.activeEffects = [
-    {
-      id: "effect-1",
-      spellId: "detect-magic",
-      nameRu: "Обнаружение магии",
-      startedAt: "2026-07-31T18:00:00.000Z",
-      duration: { type: "minutes", value: 10 },
-      isConcentration: true,
-      slotLevelUsed: 1,
-      endConditionRu: "До конца концентрации или истечения длительности.",
-    },
-  ];
-  return character;
+  return {
+    ...createThorne(),
+    concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
+    activeEffects: [
+      {
+        id: "effect-1",
+        spellId: "detect-magic",
+        nameRu: "Обнаружение магии",
+        startedAt: "2026-07-31T18:00:00.000Z",
+        duration: { type: "minutes", value: 10 },
+        isConcentration: true,
+        slotLevelUsed: 1,
+        endConditionRu: "До конца концентрации или истечения длительности.",
+      },
+    ],
+  };
 }
 
 describe("состав экрана (FR-001, AC-14)", () => {
@@ -79,8 +87,10 @@ describe("состав экрана (FR-001, AC-14)", () => {
 
   it("вида действия, которого в списке нет, в шапке тоже нет (FR-001)", async () => {
     // Снимаем «Туманный шаг» с подготовки — бонусных заклинаний в бою не остаётся.
-    const character = createThorne();
-    character.preparedSpellIds = character.preparedSpellIds.filter((id) => id !== "misty-step");
+    const character = {
+      ...createThorne(),
+      preparedSpellIds: createThorne().preparedSpellIds.filter((id) => id !== "misty-step"),
+    };
     await renderWithStores(<GameScreen />, character);
 
     expect(screen.queryByLabelText("Бонусное действие доступно")).toBeNull();
@@ -191,16 +201,20 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
   });
 
   it("истощение видно значком со ступенью (FR-232)", async () => {
-    const marked = createThorne();
-    marked.exhaustion = 3;
+    const marked = {
+      ...createThorne(),
+      exhaustion: 3,
+    };
     await renderWithStores(<GameScreen />, marked);
 
     expect(screen.getByLabelText("Истощение: ступень 3")).toBeDefined();
   });
 
   it("вдохновение видно, когда оно есть (FR-232)", async () => {
-    const marked = createThorne();
-    marked.inspiration = true;
+    const marked = {
+      ...createThorne(),
+      inspiration: true,
+    };
     await renderWithStores(<GameScreen />, marked);
 
     expect(screen.getByLabelText("Вдохновение")).toBeDefined();
@@ -274,9 +288,8 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
   it("«Прошёл час» доступен в «Игре» и в «Привале» одной и той же кнопкой (FR-173, FR-175)", async () => {
     const user = userEvent.setup();
-    const reduced = createThorne();
-    reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
-    reduced.spellPoints = { remaining: 3 };
+    // Три очка кровью: 9 хитов и столько же максимума ушли, очки на месте.
+    const reduced = withBloodExchange(createThorne(), 3);
     await renderWithStores(<GameScreen />, reduced);
 
     // Кнопка стоит прямо в «Игре»: входа в отдельный блок ей больше не нужно.
@@ -288,8 +301,8 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
   it("бой запрещает час: кнопка остаётся видимой, но недоступной с причиной (FR-215)", async () => {
     const user = userEvent.setup();
-    const reduced = createThorne();
-    reduced.hitPoints = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
+    // Очки уже израсходованы: час вернёт только максимум, и подпись кнопки говорит ровно это.
+    const reduced = withBloodSpent(createThorne(), 3);
     await renderWithStores(<GameScreen />, reduced);
 
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
@@ -346,8 +359,7 @@ describe("повторяемое действие эффекта (FR-092)", () =
 describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", () => {
   it("плитка ячейки открывает правку и возвращает списанное", async () => {
     const user = userEvent.setup();
-    const character = createThorne();
-    character.spellSlots = { ...character.spellSlots, 1: { maximum: 4, remaining: 2 } };
+    const character = withSpentSlots(createThorne(), 1, 2);
     const { stores } = await renderWithStores(<GameScreen />, character);
 
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня: 2 из 4/ }));
@@ -458,9 +470,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
 
 describe("конец боя (FR-216, FR-221)", () => {
   function wounded(): CharacterState {
-    const character = createThorne();
-    character.hitPoints = { current: 12, maximumBase: 60, bloodReduction: 0, masterReduction: 0 };
-    return character;
+    return withDamage(createThorne(), 48);
   }
 
   it("кнопка конца боя восстанавливает до половины максимума", async () => {
@@ -605,13 +615,7 @@ describe("краткая карточка (FR-010)", () => {
   it("недоступное заклинание объясняет причину словами", async () => {
     // Ячейки 1 уровня не хватило бы: заклинание можно поднять до 4 уровня или оплатить кровью,
     // поэтому недоступным оно становится только когда не осталось ни одного способа.
-    const character = createThorne();
-    character.spellSlots = {
-      1: { maximum: 4, remaining: 0 },
-      2: { maximum: 3, remaining: 0 },
-      3: { maximum: 3, remaining: 0 },
-      4: { maximum: 1, remaining: 0 },
-    };
+    const character = withoutSlots(createThorne());
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />, character);
     // Бой начат: тест проверяет причину нехватки ячеек, а не причину — иначе она заслонила
@@ -735,8 +739,10 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
   });
 
   it("включённый признак виден значком в шапке, а не только внутри листа", async () => {
-    const sunlit = createThorne();
-    sunlit.suppression = { firedUpon: false, underDirectSunlight: true };
+    const sunlit = {
+      ...createThorne(),
+      suppression: { firedUpon: false, underDirectSunlight: true },
+    };
     await renderWithStores(<GameScreen />, sunlit);
 
     const resources = screen.getByLabelText("Прочие ресурсы");
@@ -747,8 +753,10 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
 
   it("выключается тем же переключателем", async () => {
     const user = userEvent.setup();
-    const sunlit = createThorne();
-    sunlit.suppression = { firedUpon: false, underDirectSunlight: true };
+    const sunlit = {
+      ...createThorne(),
+      suppression: { firedUpon: false, underDirectSunlight: true },
+    };
     const { stores } = await renderWithStores(<GameScreen />, sunlit);
 
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));

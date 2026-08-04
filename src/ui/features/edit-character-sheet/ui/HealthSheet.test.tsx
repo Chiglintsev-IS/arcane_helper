@@ -5,16 +5,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { HealthSheet } from "./HealthSheet";
+import { withBloodExchange, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 afterEach(cleanup);
 
 describe("шторка здоровья", () => {
   it("здоровье: снижение кровью показано, но не правится", () => {
-    const state = createThorne();
-    const hurt = {
-      ...state,
-      hitPoints: { current: 40, maximumBase: 60, bloodReduction: 6, masterReduction: 0 },
-    };
+    // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
+    const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
     render(<HealthSheet character={hurt} onSave={() => {}} onCancel={() => {}} />);
 
     expect(screen.getByText(/Снижение кровью — 6/)).toBeDefined();
@@ -22,11 +20,8 @@ describe("шторка здоровья", () => {
   });
 
   it("здоровье: максимум ниже уже снятого кровью не сохраняется", async () => {
-    const state = createThorne();
-    const hurt = {
-      ...state,
-      hitPoints: { current: 40, maximumBase: 60, bloodReduction: 6, masterReduction: 0 },
-    };
+    // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
+    const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
     render(<HealthSheet character={hurt} onSave={() => {}} onCancel={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));

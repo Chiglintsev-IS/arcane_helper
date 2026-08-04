@@ -98,7 +98,13 @@ function Seal({ kind, radius }: { kind: SealKind; radius: number }) {
   );
 }
 
-function MagicSquare({ rows, radius }: { rows: number[][]; radius: number }) {
+function MagicSquare({
+  rows,
+  radius,
+}: {
+  rows: readonly (readonly number[])[];
+  radius: number;
+}) {
   const side = squareSide(absolute(radius));
   const cell = side / 3;
   const left = CENTER - side / 2;

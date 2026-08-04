@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import {
   NO_FILTERS,
@@ -28,6 +29,7 @@ import {
 import { canCastNow, castOptions } from "@/core/application/casting/castOptions";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { spellsForScreen } from "@/ui/shared/model/spellList";
+import { withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 const SPELLS = loadThorneSpells();
 
@@ -60,14 +62,9 @@ function context(overrides: { character?: CharacterState; turn?: TurnResources }
 /** Идёт бой: счёт ходов ведётся. Раньше это следовало из режима экрана, теперь — из хода. */
 const IN_COMBAT_TURN = { ...ALL_TURN_RESOURCES, inFight: true };
 
-function withoutSlots(): CharacterState {
-  const character = createThorne();
-  const empty: CharacterState["spellSlots"] = {};
-  for (const [level, slot] of Object.entries(character.spellSlots)) {
-    empty[Number(level)] = { ...slot, remaining: 0 };
-  }
-  character.spellSlots = empty;
-  return character;
+/** Свободных ячеек нет: тратит их правило ресурсов, а не фикстура. */
+function spentThorne(): CharacterState {
+  return withoutSlots(createThorne());
 }
 
 describe("dividingCategories", () => {
@@ -181,8 +178,10 @@ describe("filterSpells: концентрация и подготовка", () =>
   });
 
   it("фильтр «подготовлено» скрывает снятое с подготовки, но не заговоры (AC-05)", () => {
-    const character = createThorne();
-    character.preparedSpellIds = character.preparedSpellIds.filter((id) => id !== "shield");
+    const character = {
+      ...createThorne(),
+      preparedSpellIds: createThorne().preparedSpellIds.filter((id) => id !== "shield"),
+    };
 
     const shown = ids(filterSpells(SPELLS, filters({ prepared: true }), context({ character })));
     expect(shown).not.toContain("shield");
@@ -197,7 +196,7 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
       filterSpells(
         SPELLS,
         filters({ availableNow: true }),
-        context({ character: withoutSlots(), turn: IN_COMBAT_TURN }),
+        context({ character: spentThorne(), turn: IN_COMBAT_TURN }),
       ),
     );
     // «Починки» здесь нет, хотя она заговор: минута не укладывается в ход, а режим — «Бой».
@@ -214,8 +213,7 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
   });
 
   it("оплата кровью делает заклинание доступным без ячеек", () => {
-    const character = withoutSlots();
-    character.spellPoints = { remaining: 2 };
+    const character = withSpellPoints(spentThorne(), 2);
 
     expect(
       ids(filterSpells(SPELLS, filters({ availableNow: true }), context({ character }))),
@@ -237,7 +235,7 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
   });
 
   it("согласован с проверкой доступности мастера применения (FR-030)", () => {
-    const character = withoutSlots();
+    const character = spentThorne();
     const turn = ALL_TURN_RESOURCES;
     const hidden = SPELLS.filter((spell) => !canCastNow(spell, character, turn));
 

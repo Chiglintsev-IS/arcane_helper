@@ -15,9 +15,14 @@
      Экран спрашивает готовое число у сценария или агрегата — формулы живут в ядре.
   3. Сокращения монет и мер, а также размер кости строкой, стоят только у своего владельца: словарь
      языка знает «зм», «см», «мм», а размер кости приходит из состояния, а не из текста.
+  4. Состояние персонажа не собирается числами руками: поле, которым владеет правило, меняет
+     операция контекста, а не словарь в литерале. Правило действует и в прогонах — фикстура,
+     набранная руками, повторяет правило и расходится с ним ровно так же, как рабочий код.
 
-Прогоны не проверяются: фикстура повторяет фразу нарочно — прогон и обязан называть то, что
-проверяет, словом, а не ссылкой на константу.
+Первые три правила прогонов не касаются: фикстура повторяет фразу нарочно — прогон обязан называть
+то, что проверяет, словом, а не ссылкой на константу. Четвёртое касается: `{ maximum: 4, remaining: 1 }`
+в фикстуре говорит «так выглядят поля», а не «истрачены три ячейки», и переживает правку тарифа
+молча. Операции состояния для прогонов живут рядом с самим персонажем.
 
 Базлайна у проверки нет. Единственная форма исключения — словари ниже, и каждая запись в них несёт
 обоснование.
@@ -37,7 +42,37 @@ ALLOWED_REPEATS: set[str] = set()
 # Владелец сокращений монет и мер: единственная таблица, с которой их сверяют.
 LANGUAGE_OWNER = "src/core/shared/language.ts"
 
+# Поля состояния, чьи числа следуют правилам своих контекстов: их меняет операция, а не литерал.
+RULED_STATE_FIELDS = (
+    "spellSlots",
+    "hitPoints",
+    "temporaryHitPoints",
+    "hitDice",
+    "runes",
+    "spellPoints",
+    "arcaneRecovery",
+)
+
+# Файлы, которым форма состояния и есть предмет проверки. Каждая запись — с обоснованием.
+STATE_SHAPE_OWNERS = {
+    # Начальные числа Торна: это его содержимое, и объявляет их он сам.
+    "src/core/infrastructure/catalog/thorne/character.ts",
+    # Операции над состоянием Торна для прогонов: они и есть законный способ его собрать.
+    "src/core/infrastructure/catalog/thorne/fixtures.ts",
+    # Полная схема состояния: прогон проверяет, что она принимает и что отвергает, — форма и есть
+    # его предмет.
+    "src/core/domain/assembly/state.test.ts",
+    # Приведение сохранений: прежние версии существуют только как данные прежней формы.
+    "src/core/domain/assembly/migration.test.ts",
+    # Разбор прочитанного из хранилища: снимок приходит данными, а не операцией.
+    "src/core/infrastructure/persistence/repositoryContract.ts",
+}
+
 CYRILLIC = re.compile(r"[А-Яа-яЁё]")
+# Спред состояния персонажа: по нему видно, что литерал собирает состояние целиком, а не данные
+# одного контекста. Слова «персонаж» и «Торн» в выражении спреда — единственный надёжный признак:
+# внутри своего контекста те же поля пишет их владелец, и там числа на месте.
+STATE_SPREAD = re.compile(r"\.\.\.[\w.()]*(?:[Cc]haracter|[Tt]horne)[\w.()]*\s*,")
 LITERAL = re.compile(rf'"([^"\\\n]{{{MINIMUM_SHARED_LENGTH},}})"' + rf"|`([^`$\\\n]{{{MINIMUM_SHARED_LENGTH},}})`")
 ANY_LITERAL = re.compile(r'"([^"\\\n]*)"' + r"|`([^`$\\\n]*)`")
 MEASURE = re.compile(r"(?<![А-Яа-яЁё])(зм|см|мм)(?![А-Яа-яЁё])")
@@ -59,6 +94,34 @@ def sources() -> list[pathlib.Path]:
         for path in SRC.rglob("*")
         if path.suffix in SUFFIXES and ".test." not in path.name
     )
+
+
+def all_paths() -> list[pathlib.Path]:
+    """Все модули, включая прогоны: фикстура подчиняется владению так же, как рабочий код."""
+    return sorted(path for path in SRC.rglob("*") if path.suffix in SUFFIXES)
+
+
+def enclosing_literal(text: str, position: int) -> str:
+    """Тело объектного литерала, внутри которого стоит позиция: от его `{` до парной `}`."""
+    depth = 0
+    start = position
+    while start > 0:
+        start -= 1
+        if text[start] == "}":
+            depth += 1
+        elif text[start] == "{":
+            if depth == 0:
+                break
+            depth -= 1
+    depth = 0
+    for end in range(start + 1, len(text)):
+        if text[end] == "{":
+            depth += 1
+        elif text[end] == "}":
+            if depth == 0:
+                return text[start + 1 : end]
+            depth -= 1
+    return text[start + 1 :]
 
 
 def literals_of(text: str, pattern: re.Pattern[str]) -> list[tuple[int, str]]:
@@ -102,6 +165,39 @@ def check_rules_in_ui(paths: list[pathlib.Path]) -> None:
                 )
 
 
+def check_state_by_operations(paths: list[pathlib.Path]) -> None:
+    """Поле, которым владеет правило, меняет операция контекста, а не словарь в литерале.
+
+    Признак сборки состояния — спред персонажа рядом: `{ ...createThorne(), spellSlots: {…} }`
+    говорит «состояние такое», хотя за столом оно таким становится расходом. Литерал без спреда
+    состояния не трогаем: это данные своего контекста, и там числа на месте.
+    """
+    found: set[tuple[str, int, str]] = set()
+    for path in paths:
+        if str(path) in STATE_SHAPE_OWNERS:
+            continue
+        text = path.read_text(encoding="utf-8")
+        offset = 0
+        for number, line in enumerate(text.splitlines(), start=1):
+            start = offset
+            offset += len(line) + 1
+            spread = STATE_SPREAD.search(line)
+            if spread is None:
+                continue
+            body = enclosing_literal(text, start + spread.start())
+            for field in RULED_STATE_FIELDS:
+                if re.search(rf"^\s*{field}: \{{", body, re.M):
+                    found.add((str(path), number, field))
+    report_state_findings(found)
+
+
+def report_state_findings(found: set[tuple[str, int, str]]) -> None:
+    for path, number, field in sorted(found):
+        errors.append(
+            f"{path}:{number}: состояние собрано числами — {field}; его меняет операция контекста"
+        )
+
+
 def check_owned_literals(paths: list[pathlib.Path]) -> None:
     """Сокращение монеты и размер кости приходят от владельца, а не набираются буквами."""
     for path in paths:
@@ -122,6 +218,7 @@ def main() -> int:
     phrases = check_shared_phrases(paths)
     check_rules_in_ui(paths)
     check_owned_literals(paths)
+    check_state_by_operations(all_paths())
 
     if errors:
         print(f"Владение нарушено: {len(errors)} замечаний\n")
