@@ -30,7 +30,20 @@ const roleplayProfileSchema = z.object({
   maximumPhraseLength: z.number().int().positive(),
 });
 
+/**
+ * Величины персонажа объявлены по одному разу: то же объявление проверяет и сохранённое состояние, и
+ * правку с экрана. Второй проверки того же факта в приложении нет — разойтись им было бы нечем.
+ */
 const abilityScore = z.number().int().min(MINIMUM_ABILITY_SCORE).max(MAXIMUM_ABILITY_SCORE);
+const characterLevel = z
+  .number()
+  .int()
+  .min(MINIMUM_CHARACTER_LEVEL)
+  .max(MAXIMUM_CHARACTER_LEVEL);
+const age = z.number().int().nonnegative();
+const speedFeet = z.number().int().nonnegative();
+const overrideValue = z.number().int();
+const positiveOverride = z.number().int().positive();
 
 /** Размер существа: из перечисления правил, потому что от него зависят правила захвата и укрытия. */
 export const CREATURE_SIZES = ["tiny", "small", "medium", "large", "huge", "gargantuan"] as const;
@@ -52,16 +65,16 @@ const abilitiesSchema = z.object({
  */
 const overridesSchema = z
   .object({
-    proficiencyBonus: z.number().int().optional(),
-    spellSaveDc: z.number().int().optional(),
-    spellAttackModifier: z.number().int().optional(),
-    preparedLimit: z.number().int().positive().optional(),
-    initiative: z.number().int().optional(),
-    passivePerception: z.number().int().optional(),
+    proficiencyBonus: overrideValue.optional(),
+    spellSaveDc: overrideValue.optional(),
+    spellAttackModifier: overrideValue.optional(),
+    preparedLimit: positiveOverride.optional(),
+    initiative: overrideValue.optional(),
+    passivePerception: overrideValue.optional(),
     /** Перебивка базы КД: действует вместо выведенной из надетого доспеха. */
-    armorClassBase: z.number().int().positive().optional(),
-    saves: z.partialRecord(z.enum(ABILITIES), z.number().int()).default({}),
-    skills: z.partialRecord(z.enum(SKILL_IDS), z.number().int()).default({}),
+    armorClassBase: positiveOverride.optional(),
+    saves: z.partialRecord(z.enum(ABILITIES), overrideValue).default({}),
+    skills: z.partialRecord(z.enum(SKILL_IDS), overrideValue).default({}),
   })
   .default({ saves: {}, skills: {} });
 
@@ -70,7 +83,7 @@ export const CHARACTER_FIELDS = {
   id: nonEmpty,
   name: nonEmpty,
   className: nonEmpty,
-  level: z.number().int().min(MINIMUM_CHARACTER_LEVEL).max(MAXIMUM_CHARACTER_LEVEL),
+  level: characterLevel,
 
   /**
    * Справочные поля листа. Со значением по умолчанию, а не обязательные: сохранение, сделанное до
@@ -78,9 +91,9 @@ export const CHARACTER_FIELDS = {
    */
   species: nonEmpty.or(z.literal("")).default(""),
   subclass: nonEmpty.or(z.literal("")).default(""),
-  age: z.number().int().nonnegative().default(0),
+  age: age.default(0),
   size: z.enum(CREATURE_SIZES).default("medium"),
-  speed: z.number().int().nonnegative().default(30),
+  speed: speedFeet.default(30),
 
   abilities: abilitiesSchema,
   saveProficiencies: z.array(z.enum(ABILITIES)).default([]),

@@ -15,7 +15,12 @@ import {
   traitsSuppressed,
   type Exchange,
 } from "./blood";
-import type { VitalityState } from "./schema";
+import {
+  isPossibleHitPointChange,
+  isPossibleHitPointMaximum,
+  isPossibleReduction,
+  type VitalityState,
+} from "./schema";
 
 const HIT_DICE_RU = "Костей хитов";
 
@@ -81,7 +86,7 @@ export class Vitality {
    * игрок видит «получено 12», а здоровье упало на 4.
    */
   takeDamage(damage: number, options: { fire?: boolean } = {}): { vitality: Vitality; absorbed: number } {
-    if (!Number.isInteger(damage) || damage <= 0) {
+    if (!isPossibleHitPointChange(damage)) {
       throw new DomainError(`Урон должен быть целым положительным, получено: ${damage}`);
     }
     const absorbed = Math.min(this.temporary, damage);
@@ -103,7 +108,7 @@ export class Vitality {
    * снижение второй раз значило бы уронить максимум дважды.
    */
   heal(amount: number): { vitality: Vitality; restored: number } {
-    if (!Number.isInteger(amount) || amount <= 0) {
+    if (!isPossibleHitPointChange(amount)) {
       throw new DomainError(`Лечение должно быть целым положительным, получено: ${amount}`);
     }
     const current = Math.min(this.maximum, this.current + amount);
@@ -131,7 +136,7 @@ export class Vitality {
 
   /** Ручное начисление отказывает на меньшем числе: игрок ввёл его сам и вправе узнать результат. */
   grantTemporaryExplicitly(amount: number): Vitality {
-    if (!Number.isInteger(amount) || amount <= 0) {
+    if (!isPossibleHitPointChange(amount)) {
       throw new DomainError(`Временные хиты должны быть целым положительным, получено: ${amount}`);
     }
     if (amount <= this.temporary) {
@@ -279,7 +284,7 @@ export class Vitality {
   }
 
   withMaximumBase(maximumBase: number): Vitality {
-    if (!Number.isInteger(maximumBase) || maximumBase <= 0) {
+    if (!isPossibleHitPointMaximum(maximumBase)) {
       throw new DomainError(
         `Максимум хитов должен быть целым положительным, получено: ${maximumBase}`,
       );
@@ -289,7 +294,7 @@ export class Vitality {
 
   /** Понижение максимума мастером: часовое восстановление и отдых его не трогают. */
   withMasterReduction(masterReduction: number): Vitality {
-    if (!Number.isInteger(masterReduction) || masterReduction < 0) {
+    if (!isPossibleReduction(masterReduction)) {
       throw new DomainError(
         `Снижение должно быть целым неотрицательным, получено: ${masterReduction}`,
       );

@@ -14,12 +14,34 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
  * Одно поле «максимум, уже уменьшенный кровью» смешивало два факта, и правка базы требовала
  * вычесть снижение руками.
  */
+const maximumBase = z.number().int().positive();
+const reduction = z.number().int().nonnegative();
+
+/** Правка хитов руками: урон, лечение и временные хиты называются положительным числом. */
+const hitPointChange = z.number().int().positive();
+
+/**
+ * Годится ли введённое руками. Отвечают те же объявления, которыми проверяется сохранённое
+ * состояние: второго правила о тех же числах не существует.
+ */
+export function isPossibleHitPointMaximum(maximum: number): boolean {
+  return maximumBase.safeParse(maximum).success;
+}
+
+export function isPossibleReduction(amount: number): boolean {
+  return reduction.safeParse(amount).success;
+}
+
+export function isPossibleHitPointChange(amount: number): boolean {
+  return hitPointChange.safeParse(amount).success;
+}
+
 const hitPointsSchema = z
   .object({
     current: z.number().int(),
-    maximumBase: z.number().int().positive(),
-    bloodReduction: z.number().int().nonnegative(),
-    masterReduction: z.number().int().nonnegative().default(0),
+    maximumBase,
+    bloodReduction: reduction,
+    masterReduction: reduction.default(0),
   })
   .refine(
     (value) => value.current <= value.maximumBase - value.bloodReduction - value.masterReduction,
@@ -35,7 +57,7 @@ const hitPointsSchema = z
  * Отдельным числом, а не прибавкой к текущим: сложенные вместе, они молча исказили бы и максимум,
  * и КС проверки концентрации.
  */
-const temporaryHitPointsSchema = z.number().int().nonnegative().default(0);
+const temporaryHitPointsSchema = reduction.default(0);
 
 /**
  * Кости хитов: по одной за уровень, размер задаёт класс — у волшебника d6.

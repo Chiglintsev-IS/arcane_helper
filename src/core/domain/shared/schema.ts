@@ -16,11 +16,13 @@ export const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse
   message: "Ожидается дата и время в формате ISO 8601",
 });
 
+const itemBonus = z.number().int();
+
 /** Прибавки к магии, защите и спасброскам: одна форма у вещи и у прочих прибавок персонажа. */
 export const itemBonusesSchema = z.object({
-  spellcasting: z.number().int().default(0),
-  armorClass: z.number().int().default(0),
-  savingThrows: z.number().int().default(0),
+  spellcasting: itemBonus.default(0),
+  armorClass: itemBonus.default(0),
+  savingThrows: itemBonus.default(0),
 });
 
 export const NO_ITEM_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };

@@ -27,6 +27,7 @@ export const MAXIMUM_ITEM_COUNT = 9999;
 export const MAXIMUM_COIN_AMOUNT = 999_999;
 
 const coinAmount = z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT);
+const armorBase = z.number().int().positive();
 
 const moneySchema = z.object({
   gold: coinAmount.default(0),
@@ -64,7 +65,7 @@ const inventoryItemSchema = z.object({
    * База КД доспеха: у кольчуги 16, у кольца поля нет. База персонажа выводится из надетого —
    * наибольшая из баз, без доспеха действует база без доспехов.
    */
-  armorBase: z.number().int().positive().optional(),
+  armorBase: armorBase.optional(),
 });
 
 /**
