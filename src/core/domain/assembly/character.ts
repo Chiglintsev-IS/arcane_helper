@@ -103,11 +103,12 @@ export class Character {
    * Правка листа персонажа: то, что за столом меняют руками, а не тратят.
    *
    * Список полей явный и узкий. Разрешив здесь любое поле состояния, корень отдал бы наружу и
-   * ячейки, и эффекты — мимо агрегатов, которые их стерегут, а значит мимо их инвариантов.
+   * ячейки, и эффекты — мимо агрегатов, которые их стерегут, а значит мимо их инвариантов. В
+   * состояние идёт разобранный патч, а не сырой: умолчания полей обязаны попасть персонажу, а не в
+   * отброшенный результат проверки.
    */
   withSheet(change: Partial<Pick<CharacterState, SheetField>>): Character {
-    assertCharacterFields(change);
-    return new Character({ ...this.state, ...change });
+    return new Character({ ...this.state, ...assertCharacterFields(change) });
   }
 
   toState(): CharacterState {

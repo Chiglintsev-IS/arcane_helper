@@ -6,6 +6,8 @@ import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
+import { NO_ITEM_BONUSES, type ItemBonuses } from "@/core/domain/shared/schema";
+import { Sheet } from "@/core/domain/sheet/sheet";
 
 /**
  * Поля самого Торна: кто он без вещей, ресурсов и заклинаний. Схема контекста лишнее отбрасывает,
@@ -96,5 +98,19 @@ describe("правка листа проходит объявления поле
 
   it("правка, прошедшая объявления, доходит до состояния", () => {
     expect(Character.of(createThorne()).withSheet({ age: 142 }).toState().age).toBe(142);
+  });
+
+  it("частичная прибавка доходит до состояния разобранной, а не куском", () => {
+    // Тип объявляет три поля, но патч, минующий типизированный вызов (импорт, ручная миграция),
+    // способен принести и меньше — тот самый случай, который здесь проверяется.
+    const partialMiscBonuses = { spellcasting: 3 } as ItemBonuses;
+    const state = Character.of(createThorne())
+      .withSheet({ miscBonuses: partialMiscBonuses })
+      .toState();
+    expect(state.miscBonuses).toEqual({ ...NO_ITEM_BONUSES, spellcasting: 3 });
+
+    const sheet = Sheet.of(state);
+    expect(Number.isNaN(sheet.spellSaveDc)).toBe(false);
+    expect(Number.isNaN(sheet.savingThrow("strength"))).toBe(false);
   });
 });

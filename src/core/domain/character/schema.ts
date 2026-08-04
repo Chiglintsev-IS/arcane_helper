@@ -86,21 +86,28 @@ export function isPossibleCharacterLevel(level: number): boolean {
 }
 
 /**
- * Отвергает правку, которая не проходит объявления полей, — с причиной словами.
+ * Отвергает правку, которая не проходит объявления полей, — с причиной словами; принятую возвращает
+ * разобранной.
  *
  * Проверяет ровно те поля, что пришли: значение по умолчанию отсутствующего поля правкой не является.
- * Другого места, где эти числа проверяются, нет: экран передаёт набранное как есть и получает либо
- * новое состояние, либо отказ.
+ * Возвращённый патч несёт те же ключи, но со значениями после умолчаний поля — записывать в
+ * состояние положено его, а не сырой ввод: умолчания, дописанные разбором, иначе оседают в
+ * отброшенном результате, а не в персонаже. Другого места, где эти числа проверяются, нет: экран
+ * передаёт набранное как есть и получает либо новое состояние, либо отказ.
  */
 export function assertCharacterFields(
   patch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>>,
-): void {
+): Partial<CharacterFields> {
+  const parsedPatch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>> = {};
   for (const [key, value] of Object.entries(patch)) {
-    const parsed = CHARACTER_FIELDS[key as keyof typeof CHARACTER_FIELDS].safeParse(value);
+    const field = key as keyof typeof CHARACTER_FIELDS;
+    const parsed = CHARACTER_FIELDS[field].safeParse(value);
     if (!parsed.success) {
       throw new DomainError(`Поле «${key}» не годится: ${reasonsOf(parsed.error)}`);
     }
+    parsedPatch[field] = parsed.data;
   }
+  return parsedPatch as Partial<CharacterFields>;
 }
 
 /** Причины отказа словами: их называет само объявление поля. */
