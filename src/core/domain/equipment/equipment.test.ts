@@ -90,6 +90,10 @@ describe("снаряжение", () => {
     expect(() => stocked.addItem({ ...rope, kind: "gear" })).toThrow(/другой категорией/);
   });
 
+  it("заведение вещи с отрицательным счётом отвергается с причиной (FR-235)", () => {
+    expect(() => gear().addItem(potions(-5))).toThrow(DomainError);
+  });
+
   it("пополнение через находку не пробивает предел запаса (FR-238)", () => {
     const full = gear().addItem(potions(9999));
     expect(() => full.addItem(potions(1))).toThrow(DomainError);

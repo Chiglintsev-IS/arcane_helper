@@ -153,6 +153,7 @@ export class Equipment {
   addItem(item: Omit<InventoryItem, "id"> & { id?: string }): Equipment {
     const id = item.id ?? Equipment.idFromName(item.nameRu);
     const withId: InventoryItem = { ...item, id };
+    assertInventoryItem(withId);
     const found = this.data.items.find((existing) => existing.id === id);
     if (found === undefined) {
       return this.with({ items: [...this.data.items, withId] });
