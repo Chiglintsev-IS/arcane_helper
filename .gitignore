@@ -8,6 +8,7 @@ coverage/
 test-results/
 playwright-report/
 *.tsbuildinfo
+__pycache__/
 next-env.d.ts
 .DS_Store
 .env*.local
