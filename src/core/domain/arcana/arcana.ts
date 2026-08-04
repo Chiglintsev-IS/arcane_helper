@@ -21,6 +21,7 @@ import {
   type SpellSlots,
 } from "./slots";
 import { spellPointCost } from "./slots";
+import { runesMaximum } from "./runes";
 
 import type { ArcanaStateData } from "./schema";
 
@@ -132,10 +133,10 @@ export class Arcana {
   }
 
   /** Смена уровня: ячейки по таблице, руны по бонусу мастерства, бюджет восстановления по формуле. */
-  resizedForLevel(wizardLevel: number, runesMaximum: number): Arcana {
+  resizedForLevel(wizardLevel: number, proficiencyBonus: number): Arcana {
     return this.with({
       spellSlots: resizeSlots(this.state.spellSlots, wizardLevel),
-      runes: this.runes.resized(runesMaximum).toState(),
+      runes: this.runes.resized(runesMaximum(proficiencyBonus)).toState(),
       arcaneRecovery: ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU)
         .resized(arcaneRecoveryBudget(wizardLevel))
         .toState(),
