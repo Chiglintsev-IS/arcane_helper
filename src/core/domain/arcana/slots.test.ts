@@ -9,8 +9,6 @@ import {
   ascensionTierRate,
   castableSlotLevels,
   consumesSlot,
-  hasSlotAvailable,
-  highestSlotLevel,
   hitPointCost,
   hitPointsForPoints,
   maximumExchangePoints,
@@ -49,14 +47,6 @@ describe("spellSlotsForLevel", () => {
       expected.map((_, index) => index + 1),
     );
     expect(expected.map((_, index) => slots[index + 1]?.maximum)).toEqual(expected);
-  });
-
-  it("наивысший доступный уровень ячейки Торна — четвёртый", () => {
-    expect(highestSlotLevel(thorne())).toBe(4);
-  });
-
-  it("считает нулём наивысший уровень при отсутствии ячеек", () => {
-    expect(highestSlotLevel({})).toBe(0);
   });
 
   it.each([0, 21, 2.5])("отклоняет недопустимый уровень %s", (level) => {
@@ -127,14 +117,7 @@ describe("spendSlot и refundSlot", () => {
   });
 });
 
-describe("hasSlotAvailable и castableSlotLevels", () => {
-  it("сообщает о наличии свободной ячейки", () => {
-    const spent = spendSlot(thorne(), 4);
-    expect(hasSlotAvailable(thorne(), 4)).toBe(true);
-    expect(hasSlotAvailable(spent, 4)).toBe(false);
-    expect(hasSlotAvailable(thorne(), 5)).toBe(false);
-  });
-
+describe("castableSlotLevels", () => {
   it("перечисляет уровни от собственного уровня заклинания и выше", () => {
     expect(castableSlotLevels(thorne(), 2)).toEqual([2, 3, 4]);
     expect(castableSlotLevels(thorne(), 4)).toEqual([4]);

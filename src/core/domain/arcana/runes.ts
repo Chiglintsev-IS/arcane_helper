@@ -38,12 +38,12 @@ export function lifeRuneTemporaryHitPoints(slotLevel: number): number {
   return 5 * slotLevel;
 }
 
-export function warRuneAttackBonus(slotLevel: number): number {
+function warRuneAttackBonus(slotLevel: number): number {
   assertSlotLevel(slotLevel);
   return Math.max(1, Math.ceil(slotLevel / 2));
 }
 
-export function windRuneExtraSpeedFeet(slotLevel: number): number {
+function windRuneExtraSpeedFeet(slotLevel: number): number {
   assertSlotLevel(slotLevel);
   return 5 * slotLevel;
 }

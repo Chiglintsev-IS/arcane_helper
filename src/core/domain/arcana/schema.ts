@@ -16,7 +16,7 @@ import { MINIMUM_SPELL_LEVEL } from "@/core/domain/arcana/slots";
  * Отрицательный остаток допускается: это долг, разрешённый мастером через «Применить всё равно», и
  * запрет на него превратил бы разрешённое исключение в испорченное состояние.
  */
-export const slotSchema = z
+const slotSchema = z
   .object({
     maximum: z.number().int().nonnegative(),
     remaining: z.number().int(),
@@ -27,7 +27,7 @@ export const slotSchema = z
   });
 
 /** Ключи — уровни ячеек 1…9 в строковом виде: JSON других ключей не знает. */
-export const spellSlotsSchema = z.record(
+const spellSlotsSchema = z.record(
   z.coerce.number().int().min(MINIMUM_SPELL_LEVEL).max(MAXIMUM_SPELL_LEVEL),
   slotSchema,
 );
@@ -37,7 +37,7 @@ export const spellSlotsSchema = z.record(
  * до следующего долгого отдыха. За столом его берут частями — остаток может быть нулём без
  * долгого отдыха, а не только целиком доступен или целиком потрачен.
  */
-export const arcaneRecoverySchema = z
+const arcaneRecoverySchema = z
   .object({
     maximum: z.number().int().nonnegative(),
     remaining: z.number().int().nonnegative(),
@@ -47,7 +47,7 @@ export const arcaneRecoverySchema = z
     path: ["remaining"],
   });
 
-export const runesSchema = z
+const runesSchema = z
   .object({
     maximum: z.number().int().nonnegative(),
     remaining: z.number().int().nonnegative(),
@@ -61,7 +61,7 @@ export const runesSchema = z
  * Очки заклинаний: только остаток. Время создания схема не хранит — гасит их не срок, а любой
  * отмеченный час, независимо от того, когда они появились.
  */
-export const spellPointsSchema = z.object({
+const spellPointsSchema = z.object({
   remaining: z.number().int().nonnegative(),
 });
 
@@ -75,7 +75,7 @@ export const spellPointsSchema = z.object({
  * имеет права терять данные. `undefined` читается как «отдыха не было» — это честнее
  * молчаливого разрешения, а цена ошибки всего одно лишнее предупреждение.
  */
-export const shortRestSinceLongRestSchema = z.boolean().optional();
+const shortRestSinceLongRestSchema = z.boolean().optional();
 
 /** Поля контекста для сборки полной схемы состояния. */
 export const ARCANA_FIELDS = {
@@ -86,7 +86,6 @@ export const ARCANA_FIELDS = {
   spellPoints: spellPointsSchema,
 };
 
-export const arcanaStateSchema = z.object(ARCANA_FIELDS);
+const arcanaStateSchema = z.object(ARCANA_FIELDS);
 
-export type SpellSlotsData = z.infer<typeof spellSlotsSchema>;
 export type ArcanaStateData = z.infer<typeof arcanaStateSchema>;

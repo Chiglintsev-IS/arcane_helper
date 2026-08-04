@@ -13,7 +13,7 @@ import { ResourcePool } from "@/core/domain/shared/resourcePool";
 export const MINIMUM_SPELL_LEVEL = 1;
 
 /** Максимальный уровень ячейки, которую возвращает «Магическое восстановление». */
-export const ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL = 5;
+const ARCANE_RECOVERY_MAXIMUM_SLOT_LEVEL = 5;
 
 export type SpellSlots = Record<number, { maximum: number; remaining: number }>;
 
@@ -87,12 +87,6 @@ export function spellSlotsForLevel(wizardLevel: number): SpellSlots {
   return slots;
 }
 
-/** Наивысший уровень ячейки, доступный персонажу. Для 7 уровня — 4. */
-export function highestSlotLevel(slots: SpellSlots): number {
-  const levels = Object.keys(slots).map(Number);
-  return levels.length === 0 ? 0 : Math.max(...levels);
-}
-
 export type CastMode = "normal" | "ritual" | "cantrip";
 
 /**
@@ -102,13 +96,6 @@ export type CastMode = "normal" | "ritual" | "cantrip";
 export function consumesSlot(spellLevel: number, mode: CastMode): boolean {
   if (spellLevel === CANTRIP_LEVEL) return false;
   return mode === "normal";
-}
-
-/** Есть ли свободная ячейка указанного уровня. */
-export function hasSlotAvailable(slots: SpellSlots, slotLevel: number): boolean {
-  assertSlotLevel(slotLevel);
-  const slot = slots[slotLevel];
-  return slot !== undefined && slot.remaining > 0;
 }
 
 /**
@@ -185,7 +172,7 @@ export function arcaneRecoveryBudget(wizardLevel: number): number {
 /** Сколько ячеек каждого уровня вернуть: «уровень ячейки → количество». */
 export type SlotRecoveryPlan = Record<number, number>;
 
-export type RecoveryValidation =
+type RecoveryValidation =
   | { valid: true }
   | { valid: false; reason: string };
 
@@ -195,7 +182,7 @@ export function arcaneRecoveryPlanCost(plan: SlotRecoveryPlan): number {
 }
 
 /** Ячейка, которую «Магическое восстановление» вправе вернуть: её уровень и сколько потрачено. */
-export type RecoverableSlot = { level: number; maximum: number; remaining: number };
+type RecoverableSlot = { level: number; maximum: number; remaining: number };
 
 /**
  * Ячейки, которые восстановление вправе вернуть: не выше своего предела уровня и потраченные.
