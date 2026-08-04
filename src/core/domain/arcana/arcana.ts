@@ -1,9 +1,9 @@
 /**
  * Магические ресурсы: чем платят за сотворение.
  *
- * Агрегат владеет ячейками, рунами, очками заклинаний и признаком магического восстановления.
- * Снаружи их не правят напрямую — иначе проверка границ пришлось бы повторять у каждого
- * вызывающего, и однажды её бы забыли.
+ * Агрегат владеет ячейками, рунами, очками заклинаний, дневным бюджетом магического восстановления
+ * и отметкой короткого отдыха, которая его открывает. Снаружи их не правят напрямую — иначе проверка
+ * границ пришлось бы повторять у каждого вызывающего, и однажды её бы забыли.
  */
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
@@ -24,13 +24,10 @@ import { spellPointCost } from "./slots";
 
 import type { ArcanaStateData } from "./schema";
 
-/**
- * Состояние, которым владеет агрегат. Признак короткого отдыха в него не входит: агрегат его не
- * правит — отдых отмечает сценарий, а ресурсы только читают признак как предусловие.
- */
+/** Состояние, которым владеет агрегат. */
 type ArcanaState = Pick<
   ArcanaStateData,
-  "spellSlots" | "runes" | "spellPoints" | "arcaneRecovery"
+  "spellSlots" | "runes" | "spellPoints" | "arcaneRecovery" | "shortRestSinceLongRest"
 >;
 
 const RUNES_RU = "Рун";
@@ -40,7 +37,13 @@ export class Arcana {
   private constructor(private readonly state: ArcanaState) {}
 
   /** Владеет только своими полями: иначе агрегат затирал бы правки соседа. */
-  private static readonly KEYS = ["spellSlots", "runes", "spellPoints", "arcaneRecovery"] as const satisfies readonly (keyof ArcanaState)[];
+  private static readonly KEYS = [
+    "spellSlots",
+    "runes",
+    "spellPoints",
+    "arcaneRecovery",
+    "shortRestSinceLongRest",
+  ] as const satisfies readonly (keyof ArcanaState)[];
 
   static of(state: ArcanaState): Arcana {
     return new Arcana(ownedFields(state, Arcana.KEYS));
@@ -97,18 +100,21 @@ export class Arcana {
     return this.with({ spellPoints: { remaining: 0 } });
   }
 
+  /** Короткий отдых был: отметка держится до долгого отдыха, который её и снимает. */
+  markShortRest(): Arcana {
+    return this.with({ shortRestSinceLongRest: true });
+  }
+
   /**
    * Почему «Магическое восстановление» сейчас не берётся; `null` — берётся.
    *
-   * Отметку короткого отдыха агрегат не хранит и не правит: её ставит отдых, а сюда она приходит
-   * ответом на вопрос «был ли он». Причина названа словами, потому что и отказ, и погашенная
-   * кнопка обязаны говорить одно и то же.
+   * Причина названа словами, потому что и отказ, и погашенная кнопка обязаны говорить одно и то же.
    */
-  arcaneRecoveryUnavailability(shortRestTaken: boolean): string | null {
+  arcaneRecoveryUnavailability(): string | null {
     if (this.state.arcaneRecovery.remaining <= 0) {
       return "Дневной бюджет восстановления исчерпан до следующего долгого отдыха";
     }
-    if (!shortRestTaken) return "Берётся после короткого отдыха";
+    if (this.state.shortRestSinceLongRest !== true) return "Берётся после короткого отдыха";
     return null;
   }
 
@@ -136,13 +142,17 @@ export class Arcana {
     });
   }
 
-  /** Долгий отдых возвращает всё разом; очки при этом гаснут — тот же итог, что и у любого часа. */
+  /**
+   * Долгий отдых возвращает всё разом; очки при этом гаснут — тот же итог, что и у любого часа.
+   * Отметка короткого отдыха снимается: восстановление снова ждёт короткого.
+   */
   restoredByLongRest(): Arcana {
     return this.with({
       spellSlots: restoreAllSlots(this.state.spellSlots),
       runes: this.runes.restored().toState(),
       arcaneRecovery: ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU).restored().toState(),
       spellPoints: { remaining: 0 },
+      shortRestSinceLongRest: false,
     });
   }
 
