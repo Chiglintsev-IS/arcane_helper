@@ -46,28 +46,85 @@ const priceSchema = z.object({
 });
 
 /**
+ * Отказ хранить свойства экипировки не у экипировки.
+ *
+ * Одна фраза у объявления вещи и у переключения надетости: копия разошлась бы с оригиналом на
+ * первой же правке, и молча.
+ */
+export function gearOnlyRefusal(nameRu: string): string {
+  return `«${nameRu}» не экипировка: надетости, прибавок и базы доспеха у неё не бывает`;
+}
+
+/**
  * Вещь в инвентаре.
  *
  * Прибавка необязательна: большая часть вещей на числа не влияет, и нулевые поля у каждой верёвки
  * означали бы, что верёвка участвует в счёте Класса Доспеха.
+ *
+ * Надетость, прибавки и база доспеха бывают только у экипировки: «надетое зелье» не участвует ни в
+ * одном правиле, и хранимым состоянием оно быть не может.
  */
-const inventoryItemSchema = z.object({
-  id: nonEmpty,
-  nameRu: nonEmpty,
-  /** Категория без явного выбора — «другое»: неопознанную находку не заставляют классифицировать. */
-  kind: z.enum(ITEM_KINDS).default("other"),
-  /** Надето и потому действует. Лежащее в сумке к числам не прибавляется. */
-  worn: z.boolean().default(false),
-  /** Сколько экземпляров лежит вместе. Ноль остаётся в сумке: кончилось — не то же, что выброшено. */
-  count: z.number().int().min(0).max(MAXIMUM_ITEM_COUNT).default(1),
-  price: priceSchema.optional(),
-  note: nonEmpty.optional(),
-  bonuses: itemBonusesSchema.optional(),
-  /**
-   * База КД доспеха: у кольчуги 16, у кольца поля нет. База персонажа выводится из надетого —
-   * наибольшая из баз, без доспеха действует база без доспехов.
-   */
-  armorBase: armorBase.optional(),
+const inventoryItemFields = z
+  .object({
+    id: nonEmpty,
+    nameRu: nonEmpty,
+    /** Категория без явного выбора — «другое»: неопознанную находку не заставляют классифицировать. */
+    kind: z.enum(ITEM_KINDS).default("other"),
+    /** Надето и потому действует. Лежащее в сумке к числам не прибавляется. */
+    worn: z.boolean().default(false),
+    /** Сколько экземпляров лежит вместе. Ноль остаётся в сумке: кончилось — не то же, что выброшено. */
+    count: z.number().int().min(0).max(MAXIMUM_ITEM_COUNT).default(1),
+    price: priceSchema.optional(),
+    note: nonEmpty.optional(),
+    bonuses: itemBonusesSchema.optional(),
+    /**
+     * База КД доспеха: у кольчуги 16, у кольца поля нет. База персонажа выводится из надетого —
+     * наибольшая из баз, без доспеха действует база без доспехов.
+     */
+    armorBase: armorBase.optional(),
+  });
+
+type ItemFields = z.infer<typeof inventoryItemFields>;
+
+/**
+ * Свойства экипировки — каждое со своим снятым видом: надетость снимается ложью, прибавка и база
+ * доспеха — отсутствием поля.
+ *
+ * Список один на всё ядро: по нему объявление отказывает чужой категории, по нему же правка вещи и
+ * приведение прежнего сохранения эти свойства снимают. Второе перечисление разошлось бы с первым
+ * молча — и сохранение, где новое свойство лежит у расходника, перестало бы проходить объявление
+ * целиком, то есть обновление потеряло бы данные игрока.
+ */
+const GEAR_ONLY_FIELDS = [
+  ["worn", false],
+  ["bonuses", undefined],
+  ["armorBase", undefined],
+] as const satisfies readonly (readonly [keyof ItemFields, unknown])[];
+
+/** Свойства экипировки, заполненные у вещи: значение в снятом виде заполненным не считается. */
+export function filledGearOnlyFields(item: Readonly<Record<string, unknown>>): readonly string[] {
+  return GEAR_ONLY_FIELDS.filter(
+    ([field, cleared]) => item[field] !== cleared && item[field] !== undefined,
+  ).map(([field]) => field);
+}
+
+/** Та же вещь со снятыми свойствами экипировки: у прочих категорий их не бывает. */
+export function withoutGearOnlyFields(
+  item: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...item };
+  for (const [field, cleared] of GEAR_ONLY_FIELDS) {
+    if (cleared === undefined) delete rest[field];
+    else rest[field] = cleared;
+  }
+  return rest;
+}
+
+const inventoryItemSchema = inventoryItemFields.superRefine((item, context) => {
+  if (item.kind === "gear") return;
+  for (const field of filledGearOnlyFields(item)) {
+    context.addIssue({ code: "custom", path: [field], message: gearOnlyRefusal(item.nameRu) });
+  }
 });
 
 /**
@@ -108,15 +165,26 @@ const equipmentSchema = z
  * проверяются в одном месте, а экран передаёт набранное как есть.
  */
 export function assertInventoryItem(item: unknown): void {
-  assertParsed(inventoryItemSchema.safeParse(item), "вещь");
+  parsedOrRefused(inventoryItemSchema.safeParse(item), "вещь");
 }
 
 export function assertMoney(money: unknown): void {
-  assertParsed(moneySchema.safeParse(money), "кошелёк");
+  parsedOrRefused(moneySchema.safeParse(money), "кошелёк");
 }
 
-function assertParsed(result: z.ZodSafeParseResult<unknown>, subject: string): void {
-  if (result.success) return;
+/**
+ * Вещь, годная к хранению: приведённая к своей категории и проверенная объявлением.
+ *
+ * Свойства экипировки вне экипировки снимаются, а не отвергают правку: игрок переложил зелье в свой
+ * раздел, а не ошибся полем. Остальное объявление действует как обычно, и отказ называет причину.
+ */
+export function alignedInventoryItem(item: InventoryItem): InventoryItem {
+  const aligned = item.kind === "gear" ? item : withoutGearOnlyFields(item);
+  return parsedOrRefused(inventoryItemSchema.safeParse(aligned), "вещь");
+}
+
+function parsedOrRefused<TValue>(result: z.ZodSafeParseResult<TValue>, subject: string): TValue {
+  if (result.success) return result.data;
   const reasons = result.error.issues
     .map((issue) => `поле «${issue.path.join(".")}»: ${issue.message}`)
     .join("; ");

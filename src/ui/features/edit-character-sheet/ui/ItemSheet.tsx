@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { Currency, InventoryItem, ItemKind } from "@/core/domain/equipment/schema";
-import { CURRENCIES, ITEM_KINDS, MAXIMUM_COIN_AMOUNT } from "@/core/domain/equipment/schema";
+import { CURRENCIES, ITEM_KINDS } from "@/core/domain/equipment/schema";
 import { BONUS_LABELS, CURRENCY_ABBR, ITEM_KIND_LABELS } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
@@ -54,8 +54,6 @@ export function ItemSheet({
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
   // Пустая база — вещь не доспех: кольцо защищает прибавкой, а не заменой базы.
   const base = armorBase.trim() === "" ? undefined : Number(armorBase);
-  // Пустая прибавка не хранится вовсе: верёвка не участвует в счёте Класса Доспеха.
-  const contributes = Object.values(numbers).some((value) => value !== 0);
 
   return (
     <EditSheetFrame
@@ -68,13 +66,12 @@ export function ItemSheet({
           id: item.id,
           nameRu: item.nameRu,
           kind,
-          // Надевается только экипировка: смена категории снимает вещь.
-          worn: kind === "gear" ? item.worn : false,
+          worn: item.worn,
           count: item.count,
           ...(amount === undefined ? {} : { price: { amount, currency } }),
           ...(note.trim() === "" ? {} : { note: note.trim() }),
-          ...(kind === "gear" && contributes ? { bonuses: numbers } : {}),
-          ...(kind === "gear" && base !== undefined ? { armorBase: base } : {}),
+          bonuses: numbers,
+          ...(base === undefined ? {} : { armorBase: base }),
         })
       }
     >

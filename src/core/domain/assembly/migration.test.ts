@@ -244,15 +244,18 @@ describe("приведение состояния версии 1", () => {
       ]);
     });
 
-    it("вещь без рода опознаётся по поведению: надетая или с прибавкой — экипировка", () => {
+    it("вещь без рода опознаётся по свойствам экипировки, и база доспеха среди них", () => {
       const migrated = migrateCharacterState(
         withItems([
           { id: "robe", nameRu: "Мантия", worn: true },
           { id: "ring", nameRu: "Кольцо", worn: false, bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 } },
+          { id: "breastplate", nameRu: "Кираса", worn: false, armorBase: 14 },
           { id: "rope", nameRu: "Верёвка", worn: false },
         ]),
       );
-      expect(itemsOf(migrated).map((item) => item.kind)).toEqual(["gear", "gear", "other"]);
+      expect(itemsOf(migrated).map((item) => item.kind)).toEqual(["gear", "gear", "gear", "other"]);
+      // База доспеха у экипировки остаётся: снимать её значило бы терять доспех игрока.
+      expect(itemsOf(migrated)[2]?.armorBase).toBe(14);
     });
 
     it("надетость вне экипировки снимается: надетое зелье не двигает числа", () => {
@@ -260,6 +263,28 @@ describe("приведение состояния версии 1", () => {
         withItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
       );
       expect(itemsOf(migrated)[0]).toMatchObject({ kind: "consumable", worn: false });
+    });
+
+    it("прибавка и база доспеха вне экипировки снимаются, а сохранение читается (FR-238)", () => {
+      const migrated = migrateCharacterState(
+        withItems([
+          {
+            id: "potion",
+            nameRu: "Зелье",
+            kind: "potion",
+            bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+            armorBase: 16,
+          },
+        ]),
+      );
+      expect(itemsOf(migrated)[0]).toEqual({
+        id: "potion",
+        nameRu: "Зелье",
+        kind: "consumable",
+        worn: false,
+      });
+      // Приведённое проходит объявление целиком: снимается ровно то, чего объявление не примет.
+      expect(characterStateSchema.safeParse(migrated).success).toBe(true);
     });
 
     it("надетый ингредиент прежней сборки снимается и с уже верной категорией", () => {

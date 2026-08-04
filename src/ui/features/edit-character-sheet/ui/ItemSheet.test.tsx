@@ -34,10 +34,12 @@ describe("шторка вещи", () => {
       count: 1,
       price: { amount: 150, currency: "gold" },
       note: "3 уровень, КС 15",
+      // Набранное уходит как есть, включая нули: что из этого хранить, решает владелец.
+      bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
     });
   });
 
-  it("вещь: прибавки видны только у экипировки, и смена категории снимает вещь (FR-238)", async () => {
+  it("вещь: прибавки видны только у экипировки, набранное уходит владельцу как есть (FR-238)", async () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
@@ -63,12 +65,14 @@ describe("шторка вещи", () => {
     expect(screen.queryByLabelText("К защите")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    // Надетость и прибавки уходят набранными: снимает их владелец, а не шторка.
     expect(onSave).toHaveBeenCalledWith({
       id: "кольцо",
       nameRu: "Кольцо защиты",
       kind: "other",
-      worn: false,
+      worn: true,
       count: 1,
+      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
     });
   });
 
@@ -117,6 +121,7 @@ describe("шторка вещи", () => {
       kind: "consumable",
       worn: false,
       count: 1,
+      bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
     });
   });
 
@@ -137,22 +142,6 @@ describe("шторка вещи", () => {
 
     // Дробную цену отвергает снаряжение: шторка передаёт набранное как есть.
     expect(onSave.mock.calls[0]?.[0].price).toEqual({ amount: 1.5, currency: "gold" });
-  });
-
-  it("вещь: пустая прибавка экипировки не сохраняется полем нулей", async () => {
-    const onSave = vi.fn();
-    render(
-      <ItemSheet
-        item={{ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 }}
-        onSave={onSave}
-        onAdjustCount={() => {}}
-        onRemove={() => {}}
-        onCancel={() => {}}
-      />,
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-    expect(onSave).toHaveBeenCalledWith({ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 });
   });
 
   it("вещь: пустое поле прибавки уходит владельцу — отказывает он", async () => {

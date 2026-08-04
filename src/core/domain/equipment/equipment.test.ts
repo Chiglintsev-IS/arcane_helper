@@ -40,12 +40,14 @@ describe("снаряжение", () => {
   });
 
   it("вещь без прибавки на числа не влияет", () => {
-    expect(gear().addItem({ ...rope, worn: true }).bonuses).toEqual(gear().bonuses);
+    const helmet: InventoryItem = { id: "helmet", nameRu: "Шлем", kind: "gear", worn: true, count: 1 };
+    expect(gear().addItem(helmet).bonuses).toEqual(gear().bonuses);
   });
 
-  it("прибавка не экипировки не считается даже надетой: порченые данные не двигают числа", () => {
-    const strange = gear().addItem({ ...potions(1), worn: true, bonuses: { spellcasting: 0, armorClass: 5, savingThrows: 0 } });
-    expect(strange.bonuses).toEqual(gear().bonuses);
+  it("заведение надетого расходника с прибавкой отвергается: такой вещи не бывает (FR-238)", () => {
+    expect(() =>
+      gear().addItem({ ...potions(1), worn: true, bonuses: { spellcasting: 0, armorClass: 5, savingThrows: 0 } }),
+    ).toThrow(DomainError);
   });
 
   it("надевание и снятие переключают вклад", () => {
@@ -65,6 +67,34 @@ describe("снаряжение", () => {
 
     expect(renamed.items.find((item) => item.id === "ring")?.nameRu).toBe("Кольцо защиты +1");
     expect(worn.removeItem("ring").items.some((item) => item.id === "ring")).toBe(false);
+  });
+
+  it("правка со сменой категории снимает вещь и убирает прибавки (FR-238)", () => {
+    const worn = gear().addItem(ring(true));
+    const moved = worn.replaceItem({ ...ring(true), kind: "other" });
+
+    expect(moved.items.find((item) => item.id === "ring")).toEqual({
+      id: "ring",
+      nameRu: "Кольцо защиты",
+      kind: "other",
+      worn: false,
+      count: 1,
+    });
+    expect(moved.bonuses).toEqual(gear().bonuses);
+  });
+
+  it("прибавка из одних нулей не хранится: верёвка не участвует в счёте (FR-238)", () => {
+    const zeroed = gear()
+      .addItem(ring(true))
+      .replaceItem({ ...ring(true), bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 } });
+
+    expect(zeroed.items.find((item) => item.id === "ring")).toEqual({
+      id: "ring",
+      nameRu: "Кольцо защиты",
+      kind: "gear",
+      worn: true,
+      count: 1,
+    });
   });
 
   it("правка одной вещи соседних не трогает", () => {

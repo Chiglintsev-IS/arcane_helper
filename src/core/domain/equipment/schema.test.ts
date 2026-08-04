@@ -59,9 +59,20 @@ describe("подсхема снаряжения", () => {
 
   it("база КД доспеха выводится из надетого, а не хранится у персонажа", () => {
     const parsed = EQUIPMENT_FIELDS.equipment.parse({
-      items: [{ id: "chain-mail", nameRu: "Кольчуга", worn: true, armorBase: 16 }],
+      items: [{ id: "chain-mail", nameRu: "Кольчуга", kind: "gear", worn: true, armorBase: 16 }],
     });
     expect(parsed.items[0]?.armorBase).toBe(16);
+  });
+
+  it("надетость, прибавки и база доспеха бывают только у экипировки (FR-238)", () => {
+    const potion = { id: "potion", nameRu: "Зелье", kind: "consumable" };
+    const bonuses = { spellcasting: 0, armorClass: 1, savingThrows: 0 };
+    expect(withItem({ ...potion, worn: true }).success).toBe(false);
+    expect(withItem({ ...potion, bonuses }).success).toBe(false);
+    expect(withItem({ ...potion, armorBase: 16 }).success).toBe(false);
+    expect(withItem({ ...potion, worn: false }).success).toBe(true);
+    // Та же запись экипировкой проходит: запрещено не поле, а его несовместимость с категорией.
+    expect(withItem({ ...potion, kind: "gear", worn: true, bonuses, armorBase: 16 }).success).toBe(true);
   });
 });
 
@@ -96,6 +107,12 @@ describe("правка вещи и кошелька проходит объяв�
         }),
       ),
     ).toContain("bonuses");
+  });
+
+  it("«надетое зелье» не сохраняется, и отказ называет вещь (FR-238)", () => {
+    const refused = reason(() => assertInventoryItem({ ...potion, worn: true }));
+    expect(refused).toContain("Зелье");
+    expect(refused).toContain("не экипировка");
   });
 
   it("прошедшее объявления принимается молча", () => {

@@ -12,7 +12,13 @@
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import { assertInventoryItem, assertMoney, MAXIMUM_ITEM_COUNT } from "./schema";
+import {
+  alignedInventoryItem,
+  assertInventoryItem,
+  assertMoney,
+  gearOnlyRefusal,
+  MAXIMUM_ITEM_COUNT,
+} from "./schema";
 import type { EquipmentData, InventoryItem, Money } from "./schema";
 
 
@@ -22,6 +28,16 @@ type EquipmentState = { equipment: EquipmentData };
 export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
 const NO_BONUSES: ItemBonuses = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
+
+function contributes(bonuses: ItemBonuses | undefined): boolean {
+  return bonuses !== undefined && Object.values(bonuses).some((value) => value !== 0);
+}
+
+/** Прибавка из одних нулей не хранится вовсе: верёвка не участвует в счёте Класса Доспеха. */
+function withoutEmptyBonuses(item: InventoryItem): InventoryItem {
+  const { bonuses, ...rest } = item;
+  return contributes(bonuses) ? item : rest;
+}
 
 export class Equipment {
   private static readonly KEYS = ["equipment"] as const satisfies readonly (keyof EquipmentState)[];
@@ -165,13 +181,14 @@ export class Equipment {
     return item.count === 0 ? this : this.adjustCount(id, item.count);
   }
 
+  /** Правка вещи целиком. Поля, которых её категории не положено, снимаются, а не отвергаются. */
   replaceItem(item: InventoryItem): Equipment {
-    assertInventoryItem(item);
+    const stored = alignedInventoryItem(withoutEmptyBonuses(item));
     if (!this.data.items.some((existing) => existing.id === item.id)) {
       throw new DomainError(`Вещи «${item.id}» нет в инвентаре`);
     }
     return this.with({
-      items: this.data.items.map((existing) => (existing.id === item.id ? item : existing)),
+      items: this.data.items.map((existing) => (existing.id === item.id ? stored : existing)),
     });
   }
 
@@ -188,7 +205,7 @@ export class Equipment {
     const found = this.data.items.find((item) => item.id === id);
     if (found === undefined) throw new DomainError(`Вещи «${id}» нет в инвентаре`);
     if (found.kind !== "gear") {
-      throw new DomainError(`«${found.nameRu}» не экипировка и не надевается`);
+      throw new DomainError(gearOnlyRefusal(found.nameRu));
     }
     return this.replaceItem({ ...found, worn: !found.worn });
   }
