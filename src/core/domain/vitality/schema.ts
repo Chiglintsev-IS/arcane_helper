@@ -36,6 +36,14 @@ export function isPossibleHitPointChange(amount: number): boolean {
   return hitPointChange.safeParse(amount).success;
 }
 
+/** Слагаемые действующего максимума: с листа и оба снижения. */
+type HitPointCaps = { maximumBase: number; bloodReduction: number; masterReduction: number };
+
+/** Действующий максимум: база минус оба снижения. Схема и агрегат читают одну функцию. */
+export function effectiveMaximum({ maximumBase, bloodReduction, masterReduction }: HitPointCaps): number {
+  return maximumBase - bloodReduction - masterReduction;
+}
+
 const hitPointsSchema = z
   .object({
     current: z.number().int(),
@@ -43,13 +51,10 @@ const hitPointsSchema = z
     bloodReduction: reduction,
     masterReduction: reduction.default(0),
   })
-  .refine(
-    (value) => value.current <= value.maximumBase - value.bloodReduction - value.masterReduction,
-    {
-      message: "Текущее здоровье не может превышать действующий максимум",
-      path: ["current"],
-    },
-  );
+  .refine((value) => value.current <= effectiveMaximum(value), {
+    message: "Текущее здоровье не может превышать действующий максимум",
+    path: ["current"],
+  });
 
 /**
  * Временные хиты.

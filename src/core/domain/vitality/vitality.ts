@@ -16,6 +16,7 @@ import {
   type Exchange,
 } from "./blood";
 import {
+  effectiveMaximum,
   isPossibleHitPointChange,
   isPossibleHitPointMaximum,
   isPossibleReduction,
@@ -61,7 +62,7 @@ export class Vitality {
 
   /** Действующий максимум: то, во что упирается лечение и от чего считается половина. */
   get maximum(): number {
-    return this.maximumBase - this.maximumReduction;
+    return effectiveMaximum(this.state.hitPoints);
   }
 
   get temporary(): number {
@@ -253,7 +254,11 @@ export class Vitality {
    * Снижение мастера остаётся — отдыхом оно не снимается.
    */
   restoredByLongRest(bloodReduction: number): Vitality {
-    const maximum = this.maximumBase - bloodReduction - this.masterReduction;
+    const maximum = effectiveMaximum({
+      maximumBase: this.maximumBase,
+      bloodReduction,
+      masterReduction: this.masterReduction,
+    });
     return this.with({
       hitPoints: { ...this.state.hitPoints, current: maximum, bloodReduction },
     });
@@ -312,7 +317,7 @@ export class Vitality {
   }
 
   private clamped(hitPoints: VitalityState["hitPoints"]): Vitality {
-    const maximum = hitPoints.maximumBase - hitPoints.bloodReduction - hitPoints.masterReduction;
+    const maximum = effectiveMaximum(hitPoints);
     return this.with({ hitPoints: { ...hitPoints, current: Math.min(hitPoints.current, maximum) } });
   }
 
