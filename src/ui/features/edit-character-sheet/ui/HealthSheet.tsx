@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Vitality } from "@/core/domain/vitality/vitality";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 export function HealthSheet({
@@ -22,8 +23,8 @@ export function HealthSheet({
   const [baseText, setBaseText] = useState(String(hitPoints.maximumBase));
   const [masterText, setMasterText] = useState(String(hitPoints.masterReduction));
 
-  const maximumBase = Number.parseInt(baseText, 10);
-  const masterReduction = Number.parseInt(masterText, 10);
+  const maximumBase = requiredFieldNumber(baseText);
+  const masterReduction = requiredFieldNumber(masterText);
   // Каким станет действующий максимум, знает жизнеспособность; `null` — такого максимума не бывает.
   const effective = Vitality.of(character).maximumWith({ maximumBase, masterReduction });
 

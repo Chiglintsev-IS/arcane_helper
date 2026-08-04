@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Currency, InventoryItem, ItemKind } from "@/core/domain/equipment/schema";
 import { CURRENCIES, ITEM_KINDS } from "@/core/domain/equipment/schema";
 import { BONUS_LABELS, CURRENCY_ABBR, ITEM_KIND_LABELS } from "@/ui/entities/character/lib/labels";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
 /**
@@ -45,12 +46,11 @@ export function ItemSheet({
   );
 
   const numbers = {
-    spellcasting: Number.parseInt(spellcasting, 10),
-    armorClass: Number.parseInt(armorClass, 10),
-    savingThrows: Number.parseInt(savingThrows, 10),
+    spellcasting: requiredFieldNumber(spellcasting),
+    armorClass: requiredFieldNumber(armorClass),
+    savingThrows: requiredFieldNumber(savingThrows),
   };
   // Пустая цена — вещь без цены, а не цена ноль: у находки её может не назвать и мастер.
-  // Number, а не parseInt: «1.5» обязано отвергнуться, а не молча стать единицей.
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
   // Пустая база — вещь не доспех: кольцо защищает прибавкой, а не заменой базы.
   const base = armorBase.trim() === "" ? undefined : Number(armorBase);

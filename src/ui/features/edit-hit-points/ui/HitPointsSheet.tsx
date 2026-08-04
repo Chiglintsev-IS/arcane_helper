@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+
 type Kind = "damage" | "heal" | "temporary";
 
 const TABS: { kind: Kind; label: string }[] = [
@@ -33,7 +35,7 @@ export function HitPointsSheet({
   const [kind, setKind] = useState<Kind>("damage");
   const [value, setValue] = useState("");
   const [fire, setFire] = useState(false);
-  const amount = Number.parseInt(value, 10);
+  const amount = requiredFieldNumber(value);
 
   const submit = (): void => {
     if (kind === "damage") return onDamage(amount, fire);

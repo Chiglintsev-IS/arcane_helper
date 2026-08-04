@@ -14,6 +14,7 @@ import {
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
 import { ABILITY_LABELS, SKILL_LABELS, TRAINING_LABELS } from "@/ui/entities/character/lib/labels";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 
@@ -63,7 +64,7 @@ export function AbilitySheet({
     ),
   );
 
-  const score = Number.parseInt(scoreText, 10);
+  const score = requiredFieldNumber(scoreText);
 
   const setTraining = (id: SkillId, training: SkillTraining | undefined): void => {
     const { [id]: _dropped, ...rest } = skills;

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 import { BONUS_LABELS } from "@/ui/entities/character/lib/labels";
 
@@ -30,9 +31,9 @@ export function MiscBonusesSheet({
   const [savingThrows, setSavingThrows] = useState(String(character.miscBonuses.savingThrows));
 
   const parsed = {
-    spellcasting: Number.parseInt(spellcasting, 10),
-    armorClass: Number.parseInt(armorClass, 10),
-    savingThrows: Number.parseInt(savingThrows, 10),
+    spellcasting: requiredFieldNumber(spellcasting),
+    armorClass: requiredFieldNumber(armorClass),
+    savingThrows: requiredFieldNumber(savingThrows),
   };
 
   return (

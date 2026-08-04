@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import { DERIVED_LABELS } from "@/ui/entities/character/lib/labels";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 export function OverrideSheet({
@@ -24,7 +25,7 @@ export function OverrideSheet({
   onCancel: () => void;
 }) {
   const [text, setText] = useState(String(currentValue));
-  const value = Number.parseInt(text, 10);
+  const value = requiredFieldNumber(text);
 
   return (
     <EditSheetFrame

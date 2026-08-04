@@ -6,6 +6,7 @@ import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { previewLevelChange, type LevelChange } from "@/core/application/useCases/sheet";
 import { ARCANE_RECOVERY_LABEL, DERIVED_LABELS } from "@/ui/entities/character/lib/labels";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /** Подпись сдвинутой величины: слово — дело отображения, числа приходят из ядра. */
@@ -37,8 +38,8 @@ export function LevelSheet({
   const [levelText, setLevelText] = useState(String(character.level));
   const [maximumText, setMaximumText] = useState(String(character.hitPoints.maximumBase));
 
-  const level = Number.parseInt(levelText, 10);
-  const maximum = Number.parseInt(maximumText, 10);
+  const level = requiredFieldNumber(levelText);
+  const maximum = requiredFieldNumber(maximumText);
   // Что изменится, считает сценарий; пустой перечень означает «считать нечего».
   const preview = previewLevelChange(character, level);
 
