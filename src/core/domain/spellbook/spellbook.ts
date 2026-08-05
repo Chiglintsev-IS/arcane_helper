@@ -34,7 +34,7 @@ function isEmptyPreference(preference: RoleplayPreference): boolean {
 export class Spellbook {
   private constructor(private readonly state: SpellbookState) {}
 
-  /** Владеет только своими полями: иначе агрегат затирал бы правки соседа. */
+  /** Владеет только своими полями: иначе объект-значение затирал бы правки соседа. */
   private static readonly KEYS = [
     "cantripIds",
     "spellbookSpellIds",

@@ -39,7 +39,7 @@ export function isPossibleHitPointChange(amount: number): boolean {
 /** Слагаемые действующего максимума: с листа и оба снижения. */
 type HitPointCaps = { maximumBase: number; bloodReduction: number; masterReduction: number };
 
-/** Действующий максимум: база минус оба снижения. Схема и агрегат читают одну функцию. */
+/** Действующий максимум: база минус оба снижения. Схема и объект-значение читают одну функцию. */
 export function effectiveMaximum({ maximumBase, bloodReduction, masterReduction }: HitPointCaps): number {
   return maximumBase - bloodReduction - masterReduction;
 }

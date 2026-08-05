@@ -2,7 +2,7 @@
  * Жизнеспособность: здоровье персонажа и всё, чем оно платит.
  *
  * Хиты, временные хиты, снижённый кровавым колдовством максимум, Кости хитов и подавление расовых
- * особенностей меняются вместе — потому это один агрегат, а не четыре поля рядом.
+ * особенностей меняются вместе — потому это один объект-значение, а не четыре поля рядом.
  */
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
@@ -28,7 +28,7 @@ const HIT_DICE_RU = "Костей хитов";
 export class Vitality {
   private constructor(private readonly state: VitalityState) {}
 
-  /** Владеет только своими полями: иначе агрегат затирал бы правки соседа. */
+  /** Владеет только своими полями: иначе объект-значение затирал бы правки соседа. */
   private static readonly KEYS = ["hitPoints", "temporaryHitPoints", "hitDice", "suppression"] as const satisfies readonly (keyof VitalityState)[];
 
   static of(state: VitalityState): Vitality {

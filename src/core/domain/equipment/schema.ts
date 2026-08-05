@@ -197,7 +197,7 @@ export const EQUIPMENT_FIELDS = {
   equipment: equipmentSchema,
 };
 
-/** Данные снаряжения. Имя `Equipment` занято агрегатом: класс и его состояние — не одно и то же. */
+/** Данные снаряжения. Имя `Equipment` занято объектом-значением: класс и его состояние — не одно и то же. */
 export type EquipmentData = DeepReadonly<z.infer<typeof equipmentSchema>>;
 export type InventoryItem = DeepReadonly<z.infer<typeof inventoryItemSchema>>;
 export type ItemKind = (typeof ITEM_KINDS)[number];

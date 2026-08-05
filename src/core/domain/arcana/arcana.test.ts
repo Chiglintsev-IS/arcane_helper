@@ -20,7 +20,7 @@ describe("отметка короткого отдыха у ресурсов (FR
     );
   });
 
-  it("отметка переживает пересборку агрегата: следующая правка ячеек её не теряет", () => {
+  it("отметка переживает пересборку объекта-значения: следующая правка ячеек её не теряет", () => {
     const marked = arcana().markShortRest().toState();
     expect(Arcana.of(marked).spendSlot(1).arcaneRecoveryUnavailability()).toBeNull();
   });
