@@ -9,6 +9,7 @@
 import { Arcana } from "@/core/domain/arcana/arcana";
 import { EffectBoard } from "@/core/domain/effects/effectBoard";
 import { Equipment } from "@/core/domain/equipment/equipment";
+import { Items } from "@/core/domain/items/items";
 import { Spellbook } from "@/core/domain/spellbook/spellbook";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import type { CharacterState } from "./state";
@@ -69,6 +70,10 @@ export class Character {
     return Equipment.of(this.state);
   }
 
+  get items(): Items {
+    return Items.of(this.state);
+  }
+
   withArcana(arcana: Arcana): Character {
     return new Character({ ...this.state, ...arcana.toState() });
   }
@@ -83,6 +88,10 @@ export class Character {
 
   withEquipment(equipment: Equipment): Character {
     return new Character({ ...this.state, ...equipment.toState() });
+  }
+
+  withItems(items: Items): Character {
+    return new Character({ ...this.state, ...items.toState() });
   }
 
   /**

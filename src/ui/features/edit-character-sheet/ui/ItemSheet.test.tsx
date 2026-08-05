@@ -12,9 +12,12 @@ describe("шторка вещи", () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "свиток", nameRu: "Свиток огненного шара", kind: "other", worn: false, count: 1 }}
+        item={{ id: "свиток", nameRu: "Свиток огненного шара", kind: "other" }}
+        bagCount={1}
+        wornCount={0}
         onSave={onSave}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -30,8 +33,6 @@ describe("шторка вещи", () => {
       id: "свиток",
       nameRu: "Свиток огненного шара",
       kind: "consumable",
-      worn: false,
-      count: 1,
       price: { amount: 150, currency: "gold" },
       note: "3 уровень, КС 15",
       // Набранное уходит как есть, включая нули: что из этого хранить, решает владелец.
@@ -47,12 +48,13 @@ describe("шторка вещи", () => {
           id: "кольцо",
           nameRu: "Кольцо защиты",
           kind: "gear",
-          worn: true,
-          count: 1,
           bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
         }}
+        bagCount={0}
+        wornCount={1}
         onSave={onSave}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -65,23 +67,24 @@ describe("шторка вещи", () => {
     expect(screen.queryByLabelText("К защите")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-    // Надетость и прибавки уходят набранными: снимает их владелец, а не шторка.
+    // Прибавки уходят набранными: снимает их владелец, а не шторка.
     expect(onSave).toHaveBeenCalledWith({
       id: "кольцо",
       nameRu: "Кольцо защиты",
       kind: "other",
-      worn: true,
-      count: 1,
       bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
     });
   });
 
-  it("вещь: счёт полем не правится — он живёт расходом и пополнением на строке (FR-241)", () => {
+  it("вещь: запас полем не правится — он живёт расходом и пополнением на строке (FR-241)", () => {
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 2 }}
+        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
+        bagCount={2}
+        wornCount={0}
         onSave={() => {}}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -89,8 +92,8 @@ describe("шторка вещи", () => {
 
     // Поля нет вовсе: набранное до расхода число вернуло бы потраченный экземпляр обратно.
     expect(screen.queryByLabelText("Количество")).toBeNull();
-    // Запас при этом виден: он стоит в заголовке шторки.
-    expect(screen.getByRole("dialog", { name: "Правка: Зелье лечения ×2" })).toBeDefined();
+    // Заголовок шторки числа не называет: запас виден строкой «В сумке» рядом со счётчиком.
+    expect(screen.getByRole("dialog", { name: "Правка: Зелье лечения" })).toBeDefined();
   });
 
   it("вещь: пустая цена — вещь без цены, а не цена ноль", async () => {
@@ -101,12 +104,13 @@ describe("шторка вещи", () => {
           id: "зелье",
           nameRu: "Зелье лечения",
           kind: "consumable",
-          worn: false,
-          count: 1,
           price: { amount: 50, currency: "gold" },
         }}
+        bagCount={1}
+        wornCount={0}
         onSave={onSave}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -119,8 +123,6 @@ describe("шторка вещи", () => {
       id: "зелье",
       nameRu: "Зелье лечения",
       kind: "consumable",
-      worn: false,
-      count: 1,
       bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
     });
   });
@@ -129,9 +131,12 @@ describe("шторка вещи", () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 1 }}
+        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
+        bagCount={1}
+        wornCount={0}
         onSave={onSave}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -148,9 +153,12 @@ describe("шторка вещи", () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "шлем", nameRu: "Шлем", kind: "gear", worn: false, count: 1 }}
+        item={{ id: "шлем", nameRu: "Шлем", kind: "gear" }}
+        bagCount={1}
+        wornCount={0}
         onSave={onSave}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
@@ -162,13 +170,16 @@ describe("шторка вещи", () => {
     expect(onSave.mock.calls[0]?.[0].bonuses.armorClass).toBeNaN();
   });
 
-  it("вещь: удаление стоит в её же шторке (FR-241)", async () => {
+  it("вещь: удаление стоит в её же шторке, включено только при пустом запасе (FR-241)", async () => {
     const onRemove = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable", worn: false, count: 2 }}
+        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
+        bagCount={0}
+        wornCount={0}
         onSave={() => {}}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={onRemove}
         onCancel={() => {}}
       />,
@@ -178,37 +189,100 @@ describe("шторка вещи", () => {
     expect(onRemove).toHaveBeenCalled();
   });
 
-  it("вещь: запас меняется кнопками в шторке — единственный способ уменьшить стопку экипировки", async () => {
-    const onAdjustCount = vi.fn();
+  it("вещь: удаление выключено, пока в сумке или на теле остаётся запас", () => {
     render(
       <ItemSheet
-        item={{ id: "кинжал", nameRu: "Кинжал", kind: "gear", worn: false, count: 2 }}
+        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
+        bagCount={2}
+        wornCount={0}
         onSave={() => {}}
-        onAdjustCount={onAdjustCount}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Потратить один: Кинжал" }));
-    await userEvent.click(screen.getByRole("button", { name: "Добавить один: Кинжал" }));
-    expect(onAdjustCount).toHaveBeenNthCalledWith(1, -1);
-    expect(onAdjustCount).toHaveBeenNthCalledWith(2, 1);
+    expect(screen.getByRole("button", { name: "Убрать: Зелье лечения" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("вещь: запас в сумке меняется кнопками в шторке — единственный способ уменьшить стопку", async () => {
+    const onAdjustBagCount = vi.fn();
+    render(
+      <ItemSheet
+        item={{ id: "кинжал", nameRu: "Кинжал", kind: "gear" }}
+        bagCount={2}
+        wornCount={0}
+        onSave={() => {}}
+        onAdjustBagCount={onAdjustBagCount}
+        onAdjustWornCount={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Потратить один из сумки: Кинжал" }));
+    await userEvent.click(screen.getByRole("button", { name: "Добавить один в сумку: Кинжал" }));
+    expect(onAdjustBagCount).toHaveBeenNthCalledWith(1, -1);
+    expect(onAdjustBagCount).toHaveBeenNthCalledWith(2, 1);
   });
 
   it("вещь: расход в шторке выключен на нуле — ноль состояние, а не отсутствие", () => {
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье", kind: "consumable", worn: false, count: 0 }}
+        item={{ id: "зелье", nameRu: "Зелье", kind: "consumable" }}
+        bagCount={0}
+        wornCount={0}
         onSave={() => {}}
-        onAdjustCount={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
         onRemove={() => {}}
         onCancel={() => {}}
       />,
     );
-    expect(screen.getByRole("button", { name: "Потратить один: Зелье" })).toHaveProperty(
+    expect(screen.getByRole("button", { name: "Потратить один из сумки: Зелье" })).toHaveProperty(
       "disabled",
       true,
     );
+  });
+
+  it("вещь: строка «Надето» видна только у экипировки, кнопки надевают и снимают", async () => {
+    const onAdjustWornCount = vi.fn();
+    render(
+      <ItemSheet
+        item={{ id: "кинжал", nameRu: "Кинжал", kind: "gear" }}
+        bagCount={1}
+        wornCount={1}
+        onSave={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={onAdjustWornCount}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Надеть один: Кинжал" }));
+    await userEvent.click(screen.getByRole("button", { name: "Снять один: Кинжал" }));
+    expect(onAdjustWornCount).toHaveBeenNthCalledWith(1, 1);
+    expect(onAdjustWornCount).toHaveBeenNthCalledWith(2, -1);
+  });
+
+  it("вещь: у не-экипировки строки «Надето» нет", () => {
+    render(
+      <ItemSheet
+        item={{ id: "зелье", nameRu: "Зелье", kind: "consumable" }}
+        bagCount={1}
+        wornCount={0}
+        onSave={() => {}}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(screen.queryByText("Надето")).toBeNull();
   });
 });

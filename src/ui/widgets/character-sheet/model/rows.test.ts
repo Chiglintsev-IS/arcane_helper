@@ -124,12 +124,13 @@ describe("блоки листа", () => {
     const state = createThorne();
     const withArmor = {
       ...state,
+      itemDefinitions: [
+        ...state.itemDefinitions,
+        { id: "scale-mail", nameRu: "Чешуйчатый доспех", kind: "gear" as const, armorBase: 14 },
+      ],
       equipment: {
         ...state.equipment,
-        items: [
-          ...state.equipment.items,
-          { id: "scale-mail", nameRu: "Чешуйчатый доспех", kind: "gear" as const, worn: true, count: 1, armorBase: 14 },
-        ],
+        worn: [...state.equipment.worn, { itemId: "scale-mail", count: 1 }],
       },
     };
     const rows = sheetBlocks(withArmor).find((block) => block.id === "armorClass")?.rows ?? [];

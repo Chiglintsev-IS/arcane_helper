@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { Equipment } from "@/core/domain/equipment/equipment";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
@@ -26,8 +25,7 @@ export function ArmorClassBaseSheet({
   onSave: (value: number | null) => void;
   onCancel: () => void;
 }) {
-  const { base, baseFormula } = Sheet.of(character).armorClassParts;
-  const wornArmorNameRu = Equipment.of(character).wornArmor?.nameRu;
+  const { base, baseFormula, wornArmorNameRu } = Sheet.of(character).armorClassParts;
   const [text, setText] = useState(String(base));
   const value = requiredFieldNumber(text);
 

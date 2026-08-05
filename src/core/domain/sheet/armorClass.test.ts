@@ -76,12 +76,13 @@ describe("effectiveArmorClass: как складываются вклады", ()
   it("замена ниже собственной базы не ухудшает КД", () => {
     const armored: CharacterState = {
       ...createThorne(),
+      itemDefinitions: [
+        ...createThorne().itemDefinitions,
+        { id: "chainmail", nameRu: "Кольчуга", kind: "gear" as const, armorBase: 15 },
+      ],
       equipment: {
         ...createThorne().equipment,
-        items: [
-          ...createThorne().equipment.items,
-          { id: "chainmail", nameRu: "Кольчуга", kind: "gear" as const, worn: true, count: 1, armorBase: 15 },
-        ],
+        worn: [...createThorne().equipment.worn, { itemId: "chainmail", count: 1 }],
       },
       activeEffects: [effect("mage-armor", MAGE_ARMOR)],
     };

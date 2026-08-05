@@ -9,6 +9,8 @@
 
 import { z } from "zod";
 
+import { DomainError } from "./errors";
+
 const russianLocaleError = z.locales.ru().localeError;
 
 /**
@@ -92,3 +94,27 @@ export const itemBonusesSchema = z.object({
 export const NO_ITEM_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
 export type ItemBonuses = z.infer<typeof itemBonusesSchema>;
+
+/**
+ * Монеты стола: золото, серебро, медь. Платину и электрум стол не использует — решение игрока.
+ *
+ * Общая у кошелька и у цены вещи: снаряжение и вещи друг о друге не знают, и объявить словарь монет
+ * в одном из них значило бы завести между ними ребро ради самого словаря, а не ради факта, который
+ * у него один владелец.
+ */
+export const CURRENCIES = ["gold", "silver", "copper"] as const;
+
+/**
+ * Отвергает значение, не прошедшее объявление, — с причиной словами.
+ *
+ * Одна функция на все контексты: разбор схемы и текст отказа — способ проверки, а не правило игры,
+ * и дублировать его в каждом контексте значило бы разойтись в формулировке при первой же правке.
+ */
+export function parsedOrRefused<TValue>(schema: z.ZodType<TValue>, value: unknown, subject: string): TValue {
+  const result = schema.safeParse(value, { error: russianSchemaErrors });
+  if (result.success) return result.data;
+  const reasons = result.error.issues
+    .map((issue) => `поле «${issue.path.join(".")}»: ${issue.message}`)
+    .join("; ");
+  throw new DomainError(`Не годится ${subject} — ${reasons}`);
+}

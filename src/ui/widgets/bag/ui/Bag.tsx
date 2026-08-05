@@ -1,7 +1,8 @@
 "use client";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import type { InventoryItem, ItemKind } from "@/core/domain/equipment/schema";
+import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
+import { Items } from "@/core/domain/items/items";
 import { CURRENCIES } from "@/core/domain/equipment/schema";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { CURRENCY_ABBR } from "@/ui/entities/character/lib/labels";
@@ -19,14 +20,14 @@ const SECTIONS: { kind: ItemKind; titleRu: string; addLabelRu: string }[] = [
   { kind: "other", titleRu: "Другое", addLabelRu: "Новая вещь" },
 ];
 
-/** Категории, чей запас меняют прямо со строки: расходуют и пополняют счётом. */
-const COUNTABLE_KINDS: readonly ItemKind[] = ["consumable", "ingredient", "other"];
+/** Вещь вместе со своим запасом у конкретного персонажа — соединение для одной строки списка. */
+type BagRow = ItemDefinition & { bagCount: number; wornCount: number };
 
 /**
  * Вторая строка вещи: цена, прибавки, заметка — только то, что у вещи действительно есть.
  * Прибавка называется только у экипировки: у остальных она не действует, и показанное число лгало бы.
  */
-export function itemMeta(item: InventoryItem): string {
+export function itemMeta(item: ItemDefinition): string {
   const bonuses =
     item.bonuses === undefined || item.kind !== "gear"
       ? []
@@ -44,23 +45,27 @@ export function itemMeta(item: InventoryItem): string {
 
 /**
  * Строка вещи: имя со счётом и подробностями — кнопка, открывающая вещь; справа — то, что с вещью
- * делают чаще всего. У экипировки это «надето», у счётных категорий — расход и пополнение.
+ * делают чаще всего. Запас в сумке правится всегда; у экипировки рядом стоит второй счёт — надето.
  */
 function ItemRow({
   item,
   onOpen,
-  onToggleWorn,
-  onAdjustCount,
+  onAdjustBagCount,
+  onAdjustWornCount,
 }: {
-  item: InventoryItem;
+  item: BagRow;
   onOpen: () => void;
-  onToggleWorn: () => void;
-  onAdjustCount: (delta: number) => void;
+  onAdjustBagCount: (delta: number) => void;
+  onAdjustWornCount: (delta: number) => void;
 }) {
   const meta = itemMeta(item);
-  const countable = COUNTABLE_KINDS.includes(item.kind);
   // Ноль — состояние: кончившийся расходник виден нулём, а не пропадает из списка.
-  const countLabel = countable ? ` ×${item.count}` : item.count > 1 ? ` ×${item.count}` : "";
+  const countLabel =
+    item.kind === "gear"
+      ? ` · сумка ${item.bagCount} · надето ${item.wornCount}`
+      : item.bagCount === 1
+        ? ""
+        : ` ×${item.bagCount}`;
 
   return (
     <li className="flex items-center gap-1">
@@ -70,7 +75,9 @@ function ItemRow({
         aria-label={`Открыть: ${item.nameRu}`}
         className="min-h-11 min-w-0 flex-1 rounded-lg px-1 text-left hover:bg-slate-100 dark:hover:bg-slate-900"
       >
-        <span className={`block text-sm ${item.count === 0 && countable ? "text-slate-400 dark:text-slate-600" : ""}`}>
+        <span
+          className={`block text-sm ${item.bagCount === 0 && item.wornCount === 0 ? "text-slate-400 dark:text-slate-600" : ""}`}
+        >
           {item.nameRu}
           {countLabel}
         </span>
@@ -79,41 +86,45 @@ function ItemRow({
         )}
       </button>
 
-      {item.kind === "gear" ? (
+      <span className="flex shrink-0 gap-1">
         <button
           type="button"
-          role="switch"
-          aria-checked={item.worn}
-          aria-label={`Надето: ${item.nameRu}`}
-          onClick={onToggleWorn}
-          className={`min-h-11 shrink-0 rounded-lg border px-2 text-xs ${
-            item.worn
-              ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-              : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
-          }`}
+          aria-label={`Потратить один из сумки: ${item.nameRu}`}
+          disabled={item.bagCount === 0}
+          onClick={() => onAdjustBagCount(-1)}
+          className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
         >
-          {item.worn ? "надето" : "в сумке"}
+          −
         </button>
-      ) : null}
+        <button
+          type="button"
+          aria-label={`Добавить один в сумку: ${item.nameRu}`}
+          onClick={() => onAdjustBagCount(1)}
+          className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base dark:border-slate-800"
+        >
+          +
+        </button>
+      </span>
 
-      {countable ? (
+      {item.kind === "gear" ? (
         <span className="flex shrink-0 gap-1">
           <button
             type="button"
-            aria-label={`Потратить один: ${item.nameRu}`}
-            disabled={item.count === 0}
-            onClick={() => onAdjustCount(-1)}
-            className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+            aria-label={`Снять один: ${item.nameRu}`}
+            disabled={item.wornCount === 0}
+            onClick={() => onAdjustWornCount(-1)}
+            className="min-h-11 rounded-lg border border-slate-200 px-2 text-xs disabled:opacity-40 dark:border-slate-800"
           >
-            −
+            снять
           </button>
           <button
             type="button"
-            aria-label={`Добавить один: ${item.nameRu}`}
-            onClick={() => onAdjustCount(1)}
-            className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base dark:border-slate-800"
+            aria-label={`Надеть один: ${item.nameRu}`}
+            disabled={item.bagCount === 0}
+            onClick={() => onAdjustWornCount(1)}
+            className="min-h-11 rounded-lg border border-action bg-action/10 px-2 text-xs font-medium text-action-strong disabled:opacity-40 dark:text-action"
           >
-            +
+            надеть
           </button>
         </span>
       ) : null}
@@ -133,19 +144,27 @@ export function Bag({
   onEditArmor,
   onOpenItem,
   onAddItem,
-  onToggleWorn,
-  onAdjustCount,
+  onAdjustBagCount,
+  onAdjustWornCount,
 }: {
   character: CharacterState;
   onEditMoney: () => void;
   onEditArmor: () => void;
   onOpenItem: (id: string) => void;
   onAddItem: (kind: ItemKind, nameRu: string) => void;
-  onToggleWorn: (id: string) => void;
-  onAdjustCount: (id: string, delta: number) => void;
+  onAdjustBagCount: (id: string, delta: number) => void;
+  onAdjustWornCount: (id: string, delta: number) => void;
 }) {
-  const { money, items } = character.equipment;
+  const { money } = character.equipment;
+  const items = Items.of(character);
   const equipment = Equipment.of(character);
+  const wornArmor = equipment.wornArmor(items);
+
+  const rows: readonly BagRow[] = items.all.map((item) => ({
+    ...item,
+    bagCount: equipment.bagCount(item.id),
+    wornCount: equipment.wornCount(item.id),
+  }));
 
   return (
     <div className="flex flex-col gap-2">
@@ -185,9 +204,9 @@ export function Bag({
           </button>
         </div>
         <p className="text-sm tabular-nums">
-          База КД {equipment.armorClassBase}
-          {equipment.wornArmor !== undefined ? (
-            <span className="text-slate-500 dark:text-slate-400"> · {equipment.wornArmor.nameRu}</span>
+          База КД {equipment.armorClassBase(items)}
+          {wornArmor !== undefined ? (
+            <span className="text-slate-500 dark:text-slate-400"> · {wornArmor.nameRu}</span>
           ) : (
             <span className="text-slate-500 dark:text-slate-400"> · без доспехов</span>
           )}
@@ -195,7 +214,7 @@ export function Bag({
       </section>
 
       {SECTIONS.map((section) => {
-        const sectionItems = items.filter((item) => item.kind === section.kind);
+        const sectionItems = rows.filter((item) => item.kind === section.kind);
         return (
           <section
             key={section.kind}
@@ -209,8 +228,8 @@ export function Bag({
                     key={item.id}
                     item={item}
                     onOpen={() => onOpenItem(item.id)}
-                    onToggleWorn={() => onToggleWorn(item.id)}
-                    onAdjustCount={(delta) => onAdjustCount(item.id, delta)}
+                    onAdjustBagCount={(delta) => onAdjustBagCount(item.id, delta)}
+                    onAdjustWornCount={(delta) => onAdjustWornCount(item.id, delta)}
                   />
                 ))}
               </ul>
@@ -219,7 +238,6 @@ export function Bag({
           </section>
         );
       })}
-
     </div>
   );
 }

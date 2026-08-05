@@ -12,11 +12,8 @@ import { z } from "zod";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
-import {
-  filledGearOnlyFields,
-  MAXIMUM_ITEM_COUNT,
-  withoutGearOnlyFields,
-} from "@/core/domain/equipment/schema";
+import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
+import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/items/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 
@@ -182,7 +179,9 @@ function migrateArmorBasePatch(patch: unknown): unknown {
   return { ...fieldsOf(patch), equipment: split.equipment };
 }
 
-/** Снимает хранимую базу со снаряжения; `null` — приводить нечего. */
+/**
+ * Снимает хранимую базу со снаряжения; `null` — приводить нечего.
+ */
 function splitArmorBase(
   state: unknown,
 ): { equipment: Record<string, unknown>; base: unknown } | null {
@@ -190,6 +189,45 @@ function splitArmorBase(
   if (!("armorClassBase" in equipment)) return null;
   const { armorClassBase, ...bare } = equipment;
   return { equipment: bare, base: armorClassBase };
+}
+
+/**
+ * Вещь прежней формы знала про сумку и надетое одним счётом и одним флагом: число лежащих вместе, и
+ * флаг «вся стопка надета». Теперь вещь — сама по себе, без места, а сумка и надетое — два
+ * независимых счёта. Старая запись целиком лежала в одном месте, поэтому всё её число целиком
+ * переходит либо в сумку, либо в надетое — расщепления между обоими старая форма не знала.
+ */
+function migrateItemsSplit(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const equipment = fieldsOf(fields.equipment);
+  const stored = equipment.items;
+  if (!Array.isArray(stored)) return state;
+
+  const itemDefinitions: unknown[] = [];
+  const bag: unknown[] = [];
+  const worn: unknown[] = [];
+  for (const raw of stored) {
+    // Порченая запись объявления не подделывает: её отвергнет объявление вещи, а не приведение.
+    if (raw === null || typeof raw !== "object") {
+      itemDefinitions.push(raw);
+      continue;
+    }
+    const item = fieldsOf(raw);
+    const { worn: isWorn, count, ...definition } = item;
+    itemDefinitions.push(definition);
+    const entry = { itemId: definition.id, count: typeof count === "number" ? count : 1 };
+    // Надетость — факт места, не вещи: у прежней формы её хранила категория «экипировка», и
+    // не-экипировка надетой не бывает даже если старая запись так утверждала.
+    (isWorn === true && definition.kind === "gear" ? worn : bag).push(entry);
+  }
+
+  const { items: _dropped, ...restEquipment } = equipment;
+  const previousDefinitions = Array.isArray(fields.itemDefinitions) ? fields.itemDefinitions : [];
+  return {
+    ...fields,
+    itemDefinitions: [...previousDefinitions, ...itemDefinitions],
+    equipment: { ...restEquipment, bag, worn },
+  };
 }
 
 /**
@@ -262,15 +300,19 @@ function withoutForgottenFields(patch: unknown): unknown {
  */
 export function migrateUndoPatch(patch: unknown): unknown {
   return withoutForgottenFields(
-    migrateAdjustmentMarker(migrateArmorBasePatch(migrateMiscBonuses(migrateItemCategories(patch)))),
+    migrateAdjustmentMarker(
+      migrateItemsSplit(migrateArmorBasePatch(migrateMiscBonuses(migrateItemCategories(patch)))),
+    ),
   );
 }
 
 export function migrateCharacterState(raw: unknown): unknown {
   return migrateAdjustmentMarker(
-    migrateArmorBase(
-      migrateMiscBonuses(
-        migrateItemCategories(migrateArcaneRecovery(migrateShape(raw))),
+    migrateItemsSplit(
+      migrateArmorBase(
+        migrateMiscBonuses(
+          migrateItemCategories(migrateArcaneRecovery(migrateShape(raw))),
+        ),
       ),
     ),
   );
@@ -278,9 +320,13 @@ export function migrateCharacterState(raw: unknown): unknown {
 
 function migrateShape(raw: unknown): unknown {
   // Версии 3 и 4 узнаются по снаряжению, знающему про инвентарь либо хранимую базу защиты;
-  // версия 2 — по характеристикам.
+  // нынешняя форма — по разведённым сумке и надетому; версия 2 — по характеристикам.
   const equipment = fieldsOf(fieldsOf(raw).equipment);
-  if (equipment.armorClassBase !== undefined || equipment.items !== undefined) {
+  if (
+    equipment.armorClassBase !== undefined ||
+    equipment.items !== undefined ||
+    equipment.bag !== undefined
+  ) {
     return raw;
   }
 

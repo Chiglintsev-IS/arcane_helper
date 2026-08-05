@@ -14,6 +14,8 @@ import type { Ability, SkillId } from "@/core/domain/character/skills";
 import type { CharacterFields } from "@/core/domain/character/schema";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import type { EquipmentData } from "@/core/domain/equipment/schema";
+import { Items } from "@/core/domain/items/items";
+import type { ItemDefinition } from "@/core/domain/items/schema";
 import {
   DERIVED_IDS,
   deriveNumbers,
@@ -24,7 +26,7 @@ import {
 } from "./derived";
 
 /**
- * Что нужно листу, чтобы посчитать: поля персонажа и снаряжение.
+ * Что нужно листу, чтобы посчитать: поля персонажа, снаряжение и вещи, на которые оно ссылается.
  *
  * Тип структурный, а не «состояние персонажа целиком»: лист складывает базу с вещами и не обязан
  * знать ни про ячейки, ни про книгу. Полное состояние подходит сюда по форме.
@@ -32,7 +34,7 @@ import {
 export type SheetSource = Pick<
   CharacterFields,
   "level" | "abilities" | "saveProficiencies" | "skills" | "overrides" | "miscBonuses"
-> & { equipment: EquipmentData };
+> & { equipment: EquipmentData; itemDefinitions: readonly ItemDefinition[] };
 
 export class Sheet {
   private readonly numbers: DerivedNumbers;
@@ -40,11 +42,13 @@ export class Sheet {
   private constructor(
     private readonly input: SheetInput,
     private readonly dexterityModifier: number,
+    private readonly wornArmorNameRu: string | undefined,
   ) {
     this.numbers = deriveNumbers(input);
   }
 
   static of(state: SheetSource): Sheet {
+    const items = Items.of(state);
     const equipment = Equipment.of(state);
     const sheet = CharacterBase.of(state);
     return new Sheet(
@@ -55,10 +59,11 @@ export class Sheet {
         skills: state.skills,
         overrides: state.overrides,
         miscBonuses: state.miscBonuses,
-        bonuses: equipment.bonuses,
-        armorClassBase: equipment.armorClassBase,
+        bonuses: equipment.bonuses(items),
+        armorClassBase: equipment.armorClassBase(items),
       },
       sheet.modifier("dexterity"),
+      equipment.wornArmor(items)?.nameRu,
     );
   }
 
@@ -99,6 +104,7 @@ export class Sheet {
     dexterityModifier: number;
     itemBonus: number;
     miscBonus: number;
+    wornArmorNameRu: string | undefined;
   } {
     const base = derivedValue(this.input.overrides.armorClassBase, this.input.armorClassBase);
     return {
@@ -108,6 +114,7 @@ export class Sheet {
       dexterityModifier: this.dexterityModifier,
       itemBonus: this.input.bonuses.armorClass,
       miscBonus: this.input.miscBonuses.armorClass,
+      wornArmorNameRu: this.wornArmorNameRu,
     };
   }
 

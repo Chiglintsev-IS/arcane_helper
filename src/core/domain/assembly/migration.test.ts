@@ -124,7 +124,9 @@ describe("приведение состояния версии 1", () => {
     expect(Sheet.of(state).armorClassParts.base).toBe(13);
     expect(state.miscBonuses).toEqual({ spellcasting: 1, armorClass: 2, savingThrows: 1 });
     expect(state.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
-    expect(state.equipment.items).toEqual([]);
+    expect(state.equipment.bag).toEqual([]);
+    expect(state.equipment.worn).toEqual([]);
+    expect(state.itemDefinitions).toEqual([]);
   });
 
   it("версия 2 без снаряжения и без прибавок получает умолчания и остаётся без компонентов", () => {
@@ -221,58 +223,63 @@ describe("приведение состояния версии 1", () => {
     });
   });
 
-  describe("род вещи становится категорией", () => {
-    const withItems = (items: unknown[]) => {
+  describe("род вещи становится категорией, а место надетой вещи — независимым счётом", () => {
+    /** Сохранение с плоским прежним инвентарём вместо нынешних определений и запасов. */
+    const withLegacyItems = (items: unknown[]) => {
       const state = createThorne();
-      return { ...state, equipment: { ...state.equipment, items } };
+      return { ...state, itemDefinitions: [], equipment: { ...state.equipment, items } };
     };
-    const itemsOf = (migrated: unknown): unknown[] =>
-      listOf(fieldsOf(fieldsOf(migrated).equipment).items);
+    const definitionsOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(migrated).itemDefinitions);
+    const bagOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(fieldsOf(migrated).equipment).bag);
+    const wornOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(fieldsOf(migrated).equipment).worn);
 
     it("зелье — расходник, хлам — «другое», ингредиент остаётся собой", () => {
       const migrated = migrateCharacterState(
-        withItems([
+        withLegacyItems([
           { id: "potion", nameRu: "Зелье", kind: "potion" },
           { id: "junk", nameRu: "Черепок", kind: "junk" },
           { id: "dust", nameRu: "Пыль", kind: "ingredient" },
         ]),
       );
-      expect(itemsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
+      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
         "consumable",
         "other",
         "ingredient",
       ]);
     });
 
-    it("вещь без рода опознаётся по свойствам экипировки, и база доспеха среди них", () => {
+    it("вещь без рода опознаётся по прибавке или базе доспеха, голая вещь остаётся «другим»", () => {
       const migrated = migrateCharacterState(
-        withItems([
-          { id: "robe", nameRu: "Мантия", worn: true },
-          { id: "ring", nameRu: "Кольцо", worn: false, bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 } },
-          { id: "breastplate", nameRu: "Кираса", worn: false, armorBase: 14 },
-          { id: "rope", nameRu: "Верёвка", worn: false },
+        withLegacyItems([
+          { id: "ring", nameRu: "Кольцо", bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 } },
+          { id: "breastplate", nameRu: "Кираса", armorBase: 14 },
+          { id: "rope", nameRu: "Верёвка" },
         ]),
       );
-      expect(itemsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
-        "gear",
+      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
         "gear",
         "gear",
         "other",
       ]);
       // База доспеха у экипировки остаётся: снимать её значило бы терять доспех игрока.
-      expect(fieldsOf(itemsOf(migrated)[2]).armorBase).toBe(14);
+      expect(fieldsOf(definitionsOf(migrated)[1]).armorBase).toBe(14);
     });
 
-    it("надетость вне экипировки снимается: надетое зелье не двигает числа", () => {
+    it("надетость вне экипировки снимается: запас надетого зелья идёт в сумку, не в надетое", () => {
       const migrated = migrateCharacterState(
-        withItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
+        withLegacyItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
       );
-      expect(itemsOf(migrated)[0]).toMatchObject({ kind: "consumable", worn: false });
+      expect(fieldsOf(definitionsOf(migrated)[0]).kind).toBe("consumable");
+      expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["potion"]);
+      expect(wornOf(migrated)).toEqual([]);
     });
 
     it("прибавка и база доспеха вне экипировки снимаются, а сохранение читается (FR-238)", () => {
       const migrated = migrateCharacterState(
-        withItems([
+        withLegacyItems([
           {
             id: "potion",
             nameRu: "Зелье",
@@ -282,28 +289,25 @@ describe("приведение состояния версии 1", () => {
           },
         ]),
       );
-      expect(itemsOf(migrated)[0]).toEqual({
-        id: "potion",
-        nameRu: "Зелье",
-        kind: "consumable",
-        worn: false,
-      });
+      expect(definitionsOf(migrated)[0]).toEqual({ id: "potion", nameRu: "Зелье", kind: "consumable" });
       // Приведённое проходит объявление целиком: снимается ровно то, чего объявление не примет.
       expect(characterStateSchema.safeParse(migrated).success).toBe(true);
     });
 
-    it("надетый ингредиент прежней сборки снимается и с уже верной категорией", () => {
+    it("надетый ингредиент прежней сборки остаётся собой, его запас идёт в сумку", () => {
       const migrated = migrateCharacterState(
-        withItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
+        withLegacyItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
       );
-      expect(itemsOf(migrated)[0]).toMatchObject({ kind: "ingredient", worn: false });
+      expect(definitionsOf(migrated)[0]).toEqual({ id: "dust", nameRu: "Пыль", kind: "ingredient" });
+      expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["dust"]);
+      expect(wornOf(migrated)).toEqual([]);
     });
 
     it("счёт выше предела обрезается пределом: старое сохранение обязано читаться", () => {
       const migrated = migrateCharacterState(
-        withItems([{ id: "arrows", nameRu: "Стрелы", kind: "other", count: 15000 }]),
+        withLegacyItems([{ id: "arrows", nameRu: "Стрелы", kind: "other", count: 15000 }]),
       );
-      expect(fieldsOf(itemsOf(migrated)[0]).count).toBe(9999);
+      expect(fieldsOf(bagOf(migrated)[0]).count).toBe(9999);
     });
 
     it("снимок отмены приводится так же, как состояние", () => {
@@ -314,10 +318,10 @@ describe("приведение состояния версии 1", () => {
           items: [{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }],
         },
       };
-      expect(itemsOf(migrateUndoPatch(patch))[0]).toMatchObject({
-        kind: "consumable",
-        worn: false,
-      });
+      const migrated = migrateUndoPatch(patch);
+      expect(definitionsOf(migrated)[0]).toEqual({ id: "potion", nameRu: "Зелье", kind: "consumable" });
+      expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["potion"]);
+      expect(wornOf(migrated)).toEqual([]);
       // Снимок без снаряжения проходит насквозь: приводить в нём нечего.
       const bare = { hitPoints: { current: 1 } };
       expect(migrateUndoPatch(bare)).toBe(bare);
@@ -329,8 +333,10 @@ describe("приведение состояния версии 1", () => {
     });
 
     it("порченые записи проходят как есть: их отвергнет схема, а не приведение", () => {
-      const state = withItems(["не вещь", null]);
-      expect(itemsOf(migrateCharacterState(state))).toEqual(["не вещь", null]);
+      const migrated = migrateCharacterState(withLegacyItems(["не вещь", null]));
+      expect(definitionsOf(migrated)).toEqual(["не вещь", null]);
+      expect(bagOf(migrated)).toEqual([]);
+      expect(wornOf(migrated)).toEqual([]);
     });
 
     it("состояние без списка вещей приведению не подлежит", () => {
@@ -557,9 +563,9 @@ describe("сохранение каждой версии открывается 
 
   it("рода вещей версии 3 становятся категориями, надетость вне экипировки снимается", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_THREE));
-    expect(state.equipment.items.map((item) => [item.kind, item.worn])).toEqual([
-      ["consumable", false],
-      ["other", false],
-    ]);
+    expect(state.itemDefinitions.map((item) => item.kind)).toEqual(["consumable", "other"]);
+    // Верёвка была отмечена надетой в старой форме, но не экипировка — её запас переходит в сумку.
+    expect(state.equipment.bag.map((entry) => entry.itemId)).toEqual(["healing-potion", "rope"]);
+    expect(state.equipment.worn).toEqual([]);
   });
 });

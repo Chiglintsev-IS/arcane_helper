@@ -3,7 +3,8 @@
 import type { DerivedId } from "@/core/domain/sheet/derived";
 import type { Ability, SkillId } from "@/core/domain/character/skills";
 import type { CreatureSize } from "@/core/domain/character/schema";
-import type { Currency, ItemKind } from "@/core/domain/equipment/schema";
+import type { Currency } from "@/core/domain/equipment/schema";
+import type { ItemKind } from "@/core/domain/items/schema";
 import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
 
 export const ABILITY_LABELS: Record<Ability, string> = {

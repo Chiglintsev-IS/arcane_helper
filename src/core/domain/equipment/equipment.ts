@@ -7,20 +7,20 @@
  * Отдельно от персонажа — по той же причине. «+1 к магии» и надетый доспех принадлежат вещи, а не
  * Торну: положенные на лист персонажа, они делали бы КС и КД свойствами тела, и снять предмет
  * значило бы править характеристики.
+ *
+ * Отдельно от вещей — по третьей причине. Вещь отвечает «что это такое», снаряжение — «сколько
+ * этого у меня и что из этого на мне»: свою природу — категорию, прибавки, базу доспеха — снаряжение
+ * не хранит, а находит по названию у вещей и спрашивает.
  */
 
+import type { Items } from "@/core/domain/items/items";
+import { gearOnlyRefusal } from "@/core/domain/items/schema";
+import type { ItemDefinition } from "@/core/domain/items/schema";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import {
-  alignedInventoryItem,
-  assertInventoryItem,
-  assertMoney,
-  gearOnlyRefusal,
-  MAXIMUM_ITEM_COUNT,
-} from "./schema";
-import type { EquipmentData, InventoryItem, Money } from "./schema";
-
+import { assertMoney, MAXIMUM_ITEM_COUNT } from "./schema";
+import type { EquipmentData, Money, StockEntry } from "./schema";
 
 type EquipmentState = { equipment: EquipmentData };
 
@@ -29,14 +29,11 @@ export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
 const NO_BONUSES: ItemBonuses = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
-function contributes(bonuses: ItemBonuses | undefined): boolean {
-  return bonuses !== undefined && Object.values(bonuses).some((value) => value !== 0);
-}
-
-/** Прибавка из одних нулей не хранится вовсе: верёвка не участвует в счёте Класса Доспеха. */
-function withoutEmptyBonuses(item: InventoryItem): InventoryItem {
-  const { bonuses, ...rest } = item;
-  return contributes(bonuses) ? item : rest;
+/** Тот же запас с одной изменённой записью: заводит запись, если её ещё не было. */
+function withStock(entries: readonly StockEntry[], itemId: string, count: number): readonly StockEntry[] {
+  const found = entries.some((entry) => entry.itemId === itemId);
+  if (!found) return count === 0 ? entries : [...entries, { itemId, count }];
+  return entries.map((entry) => (entry.itemId === itemId ? { ...entry, count } : entry));
 }
 
 export class Equipment {
@@ -56,36 +53,49 @@ export class Equipment {
     return new Equipment({ equipment: { ...this.data, ...change } });
   }
 
+  get bag(): readonly StockEntry[] {
+    return this.data.bag;
+  }
+
+  get worn(): readonly StockEntry[] {
+    return this.data.worn;
+  }
+
+  get money(): Money {
+    return this.data.money;
+  }
+
+  /** Сколько вещи лежит в сумке — ноль, если записи вовсе нет. */
+  bagCount(itemId: string): number {
+    return this.data.bag.find((entry) => entry.itemId === itemId)?.count ?? 0;
+  }
+
+  /** Сколько вещи надето — ноль, если записи вовсе нет. */
+  wornCount(itemId: string): number {
+    return this.data.worn.find((entry) => entry.itemId === itemId)?.count ?? 0;
+  }
+
   /**
    * Надетый доспех, задающий базу КД: из надетой экипировки с базой берётся наибольшая.
    *
    * Замены базы не складываются — то же правило, что у «Доспехов мага» против кольчуги: вторая
    * кираса поверх первой защищает не лучше.
    */
-  get wornArmor(): InventoryItem | undefined {
-    return this.data.items.reduce<InventoryItem | undefined>(
-      (best, item) =>
+  wornArmor(items: Items): ItemDefinition | undefined {
+    return this.data.worn.reduce<ItemDefinition | undefined>((best, entry) => {
+      const item = entry.count > 0 ? items.find(entry.itemId) : undefined;
+      return item !== undefined &&
         item.kind === "gear" &&
-        item.worn &&
         item.armorBase !== undefined &&
         item.armorBase > (best?.armorBase ?? 0)
-          ? item
-          : best,
-      undefined,
-    );
+        ? item
+        : best;
+    }, undefined);
   }
 
   /** База Класса Доспеха — производная от надетого: доспех или его отсутствие. */
-  get armorClassBase(): number {
-    return this.wornArmor?.armorBase ?? UNARMORED_ARMOR_CLASS_BASE;
-  }
-
-  get items(): readonly InventoryItem[] {
-    return this.data.items;
-  }
-
-  get money(): Money {
-    return this.data.money;
+  armorClassBase(items: Items): number {
+    return this.wornArmor(items)?.armorBase ?? UNARMORED_ARMOR_CLASS_BASE;
   }
 
   /**
@@ -95,18 +105,17 @@ export class Equipment {
    * разошлось бы с тем, что действует за столом. Прибавка без вещи — свойство персонажа, а не
    * снаряжения, и живёт у него.
    */
-  get bonuses(): ItemBonuses {
-    return this.data.items.reduce<ItemBonuses>(
-      (total, item) =>
-        item.kind !== "gear" || !item.worn || item.bonuses === undefined
-          ? total
-          : {
-              spellcasting: total.spellcasting + item.bonuses.spellcasting,
-              armorClass: total.armorClass + item.bonuses.armorClass,
-              savingThrows: total.savingThrows + item.bonuses.savingThrows,
-            },
-      { ...NO_BONUSES },
-    );
+  bonuses(items: Items): ItemBonuses {
+    return this.data.worn.reduce<ItemBonuses>((total, entry) => {
+      if (entry.count <= 0) return total;
+      const item = items.find(entry.itemId);
+      if (item === undefined || item.kind !== "gear" || item.bonuses === undefined) return total;
+      return {
+        spellcasting: total.spellcasting + item.bonuses.spellcasting,
+        armorClass: total.armorClass + item.bonuses.armorClass,
+        savingThrows: total.savingThrows + item.bonuses.savingThrows,
+      };
+    }, { ...NO_BONUSES });
   }
 
   /**
@@ -150,86 +159,60 @@ export class Equipment {
   }
 
   /**
-   * id по умолчанию для новой вещи: строчными, пробелы дефисом. Одинаковое имя всегда даёт
-   * одинаковый id, поэтому находка того же названия сама находит свой стек.
-   */
-  static idFromName(nameRu: string): string {
-    return nameRu.trim().toLowerCase().replaceAll(" ", "-");
-  }
-
-  /**
-   * Новая вещь идёт в конец: порядок ввода — единственный, который игрок помнит.
-   *
-   * Одноимённая той же категории складывается в запас, а не отвергается: второе зелье лечения —
-   * самая частая находка за столом. Одноимённая другой категории отвергается с причиной: молча
-   * пополнить чужой раздел значит спрятать находку от игрока, который печатал её в свой.
-   *
-   * id можно не передавать: находка по имени получает его сама, а не от экрана.
-   */
-  addItem(item: Omit<InventoryItem, "id"> & { id?: string }): Equipment {
-    const id = item.id ?? Equipment.idFromName(item.nameRu);
-    const withId: InventoryItem = { ...item, id };
-    assertInventoryItem(withId);
-    const found = this.data.items.find((existing) => existing.id === id);
-    if (found === undefined) {
-      return this.with({ items: [...this.data.items, withId] });
-    }
-    if (found.kind !== item.kind) {
-      throw new DomainError(`«${found.nameRu}» уже лежит в сумке другой категорией`);
-    }
-    // Пополнение идёт тем же приращением, что и кнопка «+»: предел запаса один на оба входа.
-    return item.count === 0 ? this : this.adjustCount(id, item.count);
-  }
-
-  /** Правка вещи целиком. Поля, которых её категории не положено, снимаются, а не отвергаются. */
-  replaceItem(item: InventoryItem): Equipment {
-    const stored = alignedInventoryItem(withoutEmptyBonuses(item));
-    if (!this.data.items.some((existing) => existing.id === item.id)) {
-      throw new DomainError(`Вещи «${item.id}» нет в инвентаре`);
-    }
-    return this.with({
-      items: this.data.items.map((existing) => (existing.id === item.id ? stored : existing)),
-    });
-  }
-
-  removeItem(id: string): Equipment {
-    const items = this.data.items.filter((item) => item.id !== id);
-    if (items.length === this.data.items.length) {
-      throw new DomainError(`Вещи «${id}» нет в инвентаре`);
-    }
-    return this.with({ items });
-  }
-
-  /** Надевается только экипировка: «надетое зелье» не участвует ни в одном правиле. */
-  toggleWorn(id: string): Equipment {
-    const found = this.data.items.find((item) => item.id === id);
-    if (found === undefined) throw new DomainError(`Вещи «${id}» нет в инвентаре`);
-    if (found.kind !== "gear") {
-      throw new DomainError(gearOnlyRefusal(found.nameRu));
-    }
-    return this.replaceItem({ ...found, worn: !found.worn });
-  }
-
-  /**
-   * Меняет запас вещи на приращение — расход или пополнение.
+   * Меняет запас вещи в сумке на приращение — расход или пополнение, включая первое подбирание.
    *
    * Ноль — состояние, а не отсутствие: кончившееся зелье остаётся строкой с нулём, чтобы было
-   * видно, что оно кончилось, а не забыто. Убирается вещь только явным удалением.
+   * видно, что оно кончилось, а не забыто. Убирается запись только явной правкой на ноль сверху.
    */
-  adjustCount(id: string, delta: number): Equipment {
+  adjustBagCount(itemId: string, delta: number): Equipment {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new DomainError(`Приращение запаса должно быть целым и ненулевым, получено: ${delta}`);
     }
-    const found = this.data.items.find((item) => item.id === id);
-    if (found === undefined) throw new DomainError(`Вещи «${id}» нет в инвентаре`);
-    const count = found.count + delta;
+    const count = this.bagCount(itemId) + delta;
     if (count < 0) {
-      throw new DomainError(`«${found.nameRu}»: осталось ${found.count}, столько не потратить`);
+      throw new DomainError(`В сумке ${this.bagCount(itemId)}, столько не потратить`);
     }
     if (count > MAXIMUM_ITEM_COUNT) {
-      throw new DomainError(`«${found.nameRu}»: больше ${MAXIMUM_ITEM_COUNT} не хранится`);
+      throw new DomainError(`Больше ${MAXIMUM_ITEM_COUNT} не хранится`);
     }
-    return this.replaceItem({ ...found, count });
+    return this.with({ bag: withStock(this.data.bag, itemId, count) });
+  }
+
+  /**
+   * Надевает вещь: переносит счёт из сумки в надетое. Надевается только экипировка, и не больше,
+   * чем в сумке есть — вторая рубаха из воздуха не берётся.
+   */
+  equip(itemId: string, count: number, items: Items): Equipment {
+    if (!Number.isInteger(count) || count <= 0) {
+      throw new DomainError(`Число вещи для надевания должно быть целым и положительным, получено: ${count}`);
+    }
+    const item = items.find(itemId);
+    if (item === undefined) throw new DomainError(`Вещи «${itemId}» нет среди заведённых`);
+    if (item.kind !== "gear") throw new DomainError(gearOnlyRefusal(item.nameRu));
+
+    const inBag = this.bagCount(itemId);
+    if (count > inBag) {
+      throw new DomainError(`«${item.nameRu}»: в сумке ${inBag}, надеть больше нельзя`);
+    }
+    return this.with({
+      bag: withStock(this.data.bag, itemId, inBag - count),
+      worn: withStock(this.data.worn, itemId, this.wornCount(itemId) + count),
+    });
+  }
+
+  /** Снимает вещь: переносит счёт из надетого в сумку. Снять можно не больше, чем надето. */
+  unequip(itemId: string, count: number): Equipment {
+    if (!Number.isInteger(count) || count <= 0) {
+      throw new DomainError(`Число вещи для снятия должно быть целым и положительным, получено: ${count}`);
+    }
+    const wornNow = this.wornCount(itemId);
+    if (count > wornNow) {
+      throw new DomainError(`Надето ${wornNow}, снять больше нельзя`);
+    }
+    return this.with({
+      worn: withStock(this.data.worn, itemId, wornNow - count),
+      bag: withStock(this.data.bag, itemId, this.bagCount(itemId) + count),
+    });
   }
 
   withMoney(money: Money): Equipment {

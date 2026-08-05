@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 
-import type { Currency, InventoryItem, ItemKind } from "@/core/domain/equipment/schema";
-import { CURRENCIES, ITEM_KINDS } from "@/core/domain/equipment/schema";
+import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
+import { ITEM_KINDS } from "@/core/domain/items/schema";
+import type { Currency } from "@/core/domain/equipment/schema";
+import { CURRENCIES } from "@/core/domain/equipment/schema";
 import { BONUS_LABELS, CURRENCY_ABBR, ITEM_KIND_LABELS } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
@@ -11,24 +13,31 @@ import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 /**
  * Одна вещь целиком: категория, заметка, цена — и прибавки, если это экипировка.
  *
- * Открывается нажатием на саму вещь в списке сумки. Счёт и надетость полей не имеют: их меняют
- * кнопки на строке — расход, пополнение, «надето», — а поле рядом с ними показывало бы число,
- * набранное до нажатия, и сохранение возвращало бы потраченное обратно.
+ * Открывается нажатием на саму вещь в списке сумки. Запас в сумке и надетое полей здесь не имеют:
+ * их меняют кнопки на строке сумки — расход, пополнение, надевание, — а поле рядом с ними
+ * показывало бы число, набранное до нажатия, и сохранение возвращало бы потраченное обратно.
  */
 export function ItemSheet({
   item,
+  bagCount,
+  wornCount,
   onSave,
-  onAdjustCount,
+  onAdjustBagCount,
+  onAdjustWornCount,
   onRemove,
   onCancel,
   error = null,
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  item: InventoryItem;
-  onSave: (item: InventoryItem) => void;
+  item: ItemDefinition;
+  /** Сколько сейчас лежит в сумке и сколько надето — только для показа рядом со счётчиками. */
+  bagCount: number;
+  wornCount: number;
+  onSave: (item: ItemDefinition) => void;
   /** Немедленный расход и пополнение — не черновик: применяется нажатием, как кнопки на строке. */
-  onAdjustCount: (delta: number) => void;
+  onAdjustBagCount: (delta: number) => void;
+  onAdjustWornCount: (delta: number) => void;
   onRemove: () => void;
   onCancel: () => void;
 }) {
@@ -57,8 +66,7 @@ export function ItemSheet({
 
   return (
     <EditSheetFrame
-      // Счёт стоит в заголовке, а не полем: его меняют расход и пополнение на строке сумки.
-      titleRu={item.count === 1 ? item.nameRu : `${item.nameRu} ×${item.count}`}
+      titleRu={item.nameRu}
       error={error}
       onCancel={onCancel}
       onSave={() =>
@@ -66,8 +74,6 @@ export function ItemSheet({
           id: item.id,
           nameRu: item.nameRu,
           kind,
-          worn: item.worn,
-          count: item.count,
           ...(amount === undefined ? {} : { price: { amount, currency } }),
           ...(note.trim() === "" ? {} : { note: note.trim() }),
           bonuses: numbers,
@@ -77,31 +83,58 @@ export function ItemSheet({
     >
       {/*
        * Запас меняется кнопками, а не полем: поле хранило бы число, набранное до расхода, и
-       * сохранение возвращало бы потраченное. У экипировки это единственное место уменьшить стопку.
+       * сохранение возвращало бы потраченное.
        */}
       <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="text-slate-600 dark:text-slate-400">Запас</span>
+        <span className="text-slate-600 dark:text-slate-400">В сумке</span>
         <span className="flex items-center gap-1">
           <button
             type="button"
-            aria-label={`Потратить один: ${item.nameRu}`}
-            disabled={item.count === 0}
-            onClick={() => onAdjustCount(-1)}
+            aria-label={`Потратить один из сумки: ${item.nameRu}`}
+            disabled={bagCount === 0}
+            onClick={() => onAdjustBagCount(-1)}
             className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
           >
             −
           </button>
-          <span className="min-w-8 text-center tabular-nums">{item.count}</span>
+          <span className="min-w-8 text-center tabular-nums">{bagCount}</span>
           <button
             type="button"
-            aria-label={`Добавить один: ${item.nameRu}`}
-            onClick={() => onAdjustCount(1)}
+            aria-label={`Добавить один в сумку: ${item.nameRu}`}
+            onClick={() => onAdjustBagCount(1)}
             className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base dark:border-slate-800"
           >
             +
           </button>
         </span>
       </div>
+
+      {kind === "gear" ? (
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span className="text-slate-600 dark:text-slate-400">Надето</span>
+          <span className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label={`Снять один: ${item.nameRu}`}
+              disabled={wornCount === 0}
+              onClick={() => onAdjustWornCount(-1)}
+              className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+            >
+              −
+            </button>
+            <span className="min-w-8 text-center tabular-nums">{wornCount}</span>
+            <button
+              type="button"
+              aria-label={`Надеть один: ${item.nameRu}`}
+              disabled={bagCount === 0}
+              onClick={() => onAdjustWornCount(1)}
+              className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+            >
+              +
+            </button>
+          </span>
+        </div>
+      ) : null}
 
       <div role="radiogroup" aria-label="Категория" className="flex flex-wrap gap-1">
         {ITEM_KINDS.map((choice) => (
@@ -162,11 +195,19 @@ export function ItemSheet({
       <button
         type="button"
         aria-label={`Убрать: ${item.nameRu}`}
+        disabled={bagCount > 0 || wornCount > 0}
         onClick={onRemove}
-        className="min-h-11 rounded-lg border border-reaction bg-reaction/10 px-2 text-xs font-medium text-reaction-strong dark:text-reaction"
+        className="min-h-11 rounded-lg border border-reaction bg-reaction/10 px-2 text-xs font-medium text-reaction-strong disabled:opacity-40 dark:text-reaction"
       >
-        Убрать из сумки
+        Убрать вещь
       </button>
+      {bagCount > 0 || wornCount > 0 ? (
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Убрать можно, когда от вещи не остаётся ни следа: сперва потратьте запас в сумке и снимите
+          надетое.
+        </p>
+      ) : null}
     </EditSheetFrame>
   );
 }
+

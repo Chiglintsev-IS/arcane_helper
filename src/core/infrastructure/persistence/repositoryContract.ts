@@ -182,11 +182,14 @@ export function describeParsingContract(): void {
     };
 
     const parsed = parsePersisted(stored);
-    // Отмена старой записи обязана возвращать вещь новой формы: род переведён, надетость снята,
-    // счёт обрезан пределом.
-    expect(parsed.journal[0]?.undoPatch?.equipment?.items[0]).toMatchObject({
+    // Отмена старой записи обязана возвращать вещь новой формы: род переведён, вещь и запас
+    // разведены по разным местам, счёт обрезан пределом. Расходник надетым не бывает, и его
+    // запас переходит в сумку, а не в надетое, даже если старая запись утверждала обратное.
+    expect(parsed.journal[0]?.undoPatch?.itemDefinitions?.[0]).toMatchObject({
       kind: "consumable",
-      worn: false,
+    });
+    expect(parsed.journal[0]?.undoPatch?.equipment?.bag?.[0]).toMatchObject({
+      itemId: "potion",
       count: 9999,
     });
 

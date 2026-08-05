@@ -4,13 +4,15 @@ import { useState } from "react";
 
 import {
   addItem,
-  adjustItemCount,
+  adjustBagCount,
+  adjustWornCount,
   editItem,
   editMoney,
   removeItem,
-  toggleWorn,
 } from "@/core/application/useCases/equipment";
 import { setArmorClassBaseOverride } from "@/core/application/useCases/sheet";
+import { Items } from "@/core/domain/items/items";
+import { Equipment } from "@/core/domain/equipment/equipment";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { Bag } from "@/ui/widgets/bag/ui/Bag";
 import { ArmorClassBaseSheet } from "@/ui/features/edit-character-sheet/ui/ArmorClassBaseSheet";
@@ -52,10 +54,8 @@ export function BagScreen() {
     setOpen(null);
   };
 
-  const openedItem =
-    open?.of !== "item"
-      ? null
-      : (character.equipment.items.find((item) => item.id === open.id) ?? null);
+  const openedItem = open?.of !== "item" ? null : (Items.of(character).find(open.id) ?? null);
+  const equipment = Equipment.of(character);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
@@ -63,14 +63,10 @@ export function BagScreen() {
         character={character}
         onEditMoney={() => openSheet({ of: "money" })}
         onOpenItem={(id) => openSheet({ of: "item", id })}
-        onAddItem={(kind, nameRu) =>
-          apply((current) => addItem(current, { nameRu, kind, worn: false, count: 1 }, clock))
-        }
+        onAddItem={(kind, nameRu) => apply((current) => addItem(current, { nameRu, kind }, clock))}
         onEditArmor={() => openSheet({ of: "armorClassBase" })}
-        onToggleWorn={(id) => apply((current) => toggleWorn(current, id, clock))}
-        onAdjustCount={(id, delta) =>
-          apply((current) => adjustItemCount(current, id, delta, clock))
-        }
+        onAdjustBagCount={(id, delta) => apply((current) => adjustBagCount(current, id, delta, clock))}
+        onAdjustWornCount={(id, delta) => apply((current) => adjustWornCount(current, id, delta, clock))}
       />
 
       {open?.of === "money" ? (
@@ -95,11 +91,16 @@ export function BagScreen() {
         <ItemSheet
           key={openedItem.id}
           item={openedItem}
+          bagCount={equipment.bagCount(openedItem.id)}
+          wornCount={equipment.wornCount(openedItem.id)}
           error={refusal}
           onCancel={closeSheet}
           onSave={(item) => save((current) => editItem(current, item, clock))}
-          onAdjustCount={(delta) =>
-            apply((current) => adjustItemCount(current, openedItem.id, delta, clock))
+          onAdjustBagCount={(delta) =>
+            apply((current) => adjustBagCount(current, openedItem.id, delta, clock))
+          }
+          onAdjustWornCount={(delta) =>
+            apply((current) => adjustWornCount(current, openedItem.id, delta, clock))
           }
           onRemove={() => {
             if (apply((current) => removeItem(current, openedItem.id, clock)) === null) {
@@ -111,3 +112,4 @@ export function BagScreen() {
     </div>
   );
 }
+

@@ -121,37 +121,39 @@ const RAW: unknown = {
   arcaneRecovery: { maximum: ARCANE_RECOVERY_BUDGET, remaining: ARCANE_RECOVERY_BUDGET },
 
   hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
+  itemDefinitions: [
+    {
+      id: "spellcasting-focus",
+      nameRu: "Магическая фокусировка +1",
+      kind: "gear",
+      bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 },
+    },
+    {
+      id: "robe",
+      nameRu: "Мантия +1",
+      kind: "gear",
+      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+    },
+    {
+      id: "cloak-of-protection",
+      nameRu: "Плащ защиты",
+      kind: "gear",
+      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+    },
+    {
+      // Прибавка кубиком и по обстановке: приложение её не считает, поэтому она заметка.
+      id: "swamp-camouflage-kit",
+      nameRu: "Комплект болотной маскировки",
+      kind: "other",
+      note: "1d4 к Скрытности в болотах",
+    },
+  ],
   equipment: {
-    items: [
-      {
-        id: "spellcasting-focus",
-        nameRu: "Магическая фокусировка +1",
-        kind: "gear",
-        worn: true,
-        bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 },
-      },
-      {
-        id: "robe",
-        nameRu: "Мантия +1",
-        kind: "gear",
-        worn: true,
-        bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
-      },
-      {
-        id: "cloak-of-protection",
-        nameRu: "Плащ защиты",
-        kind: "gear",
-        worn: true,
-        bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
-      },
-      {
-        // Прибавка кубиком и по обстановке: приложение её не считает, поэтому она заметка.
-        id: "swamp-camouflage-kit",
-        nameRu: "Комплект болотной маскировки",
-        kind: "other",
-        worn: false,
-        note: "1d4 к Скрытности в болотах",
-      },
+    bag: [{ itemId: "swamp-camouflage-kit", count: 1 }],
+    worn: [
+      { itemId: "spellcasting-focus", count: 1 },
+      { itemId: "robe", count: 1 },
+      { itemId: "cloak-of-protection", count: 1 },
     ],
     components: { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: [] },
   },

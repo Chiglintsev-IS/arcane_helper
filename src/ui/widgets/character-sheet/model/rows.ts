@@ -66,7 +66,6 @@ const OVERRIDDEN_HINT = "введено руками";
  */
 function armorClassBlock(character: CharacterState): SheetBlockData {
   const parts = Sheet.of(character).armorClassParts;
-  const wornArmor = Character.of(character).equipment.wornArmor;
   return {
     id: "armorClass",
     titleRu: "Класс Доспеха",
@@ -75,7 +74,7 @@ function armorClassBlock(character: CharacterState): SheetBlockData {
       {
         labelRu: "База",
         value: String(parts.base),
-        hint: parts.baseOverridden ? OVERRIDDEN_HINT : (wornArmor?.nameRu ?? "без доспехов"),
+        hint: parts.baseOverridden ? OVERRIDDEN_HINT : (parts.wornArmorNameRu ?? "без доспехов"),
       },
       { labelRu: "Ловкость", value: signed(parts.dexterityModifier) },
       { labelRu: "Вещи", value: signed(parts.itemBonus) },

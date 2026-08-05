@@ -16,6 +16,7 @@ import { ARCANA_FIELDS } from "@/core/domain/arcana/schema";
 import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
 import { EFFECTS_FIELDS, refineEffects } from "@/core/domain/effects/schema";
 import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
+import { ITEMS_FIELDS } from "@/core/domain/items/schema";
 import { refineSpellbook, SPELLBOOK_FIELDS } from "@/core/domain/spellbook/schema";
 import { VITALITY_FIELDS } from "@/core/domain/vitality/schema";
 import { isoDateTime } from "@/core/domain/shared/schema";
@@ -30,6 +31,7 @@ const STATE_FIELDS = {
   ...ARCANA_FIELDS,
   ...EFFECTS_FIELDS,
   ...EQUIPMENT_FIELDS,
+  ...ITEMS_FIELDS,
   ...SPELLBOOK_FIELDS,
   ...VITALITY_FIELDS,
 };

@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { Equipment } from "@/core/domain/equipment/equipment";
 import { renderWithStores } from "@/ui/app/testing/stores";
 import { BagScreen } from "@/ui/screens/bag/ui/BagScreen";
 
@@ -23,8 +24,9 @@ describe("«Сумка» (FR-234, FR-242)", () => {
     await user.type(screen.getByLabelText("Новая экипировка"), "Кольцо защиты{Enter}");
 
     // Вещь легла в сумку: КД пока прежний — лежащее не действует.
-    const carried = stores.session.getState().session?.character.equipment.items ?? [];
-    expect(carried.find((item) => item.id === "кольцо-защиты")?.worn).toBe(false);
+    const carried = Equipment.of(stores.session.getState().session!.character);
+    expect(carried.bagCount("кольцо-защиты")).toBe(1);
+    expect(carried.wornCount("кольцо-защиты")).toBe(0);
 
     await user.click(screen.getByRole("button", { name: "Открыть: Кольцо защиты" }));
     const armorField = screen.getByLabelText("К защите");
@@ -32,10 +34,12 @@ describe("«Сумка» (FR-234, FR-242)", () => {
     await user.type(armorField, "1");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    await user.click(screen.getByRole("switch", { name: "Надето: Кольцо защиты" }));
+    await user.click(screen.getByRole("button", { name: "Надеть один: Кольцо защиты" }));
 
     const worn = stores.session.getState().session?.character;
-    expect(worn?.equipment.items.find((item) => item.id === "кольцо-защиты")?.worn).toBe(true);
+    const equipment = Equipment.of(worn!);
+    expect(equipment.wornCount("кольцо-защиты")).toBe(1);
+    expect(equipment.bagCount("кольцо-защиты")).toBe(0);
     // Персонаж при этом не тронут: вещь не меняет того, кто он.
     expect(worn?.abilities).toEqual(createThorne().abilities);
   });
@@ -45,17 +49,15 @@ describe("«Сумка» (FR-234, FR-242)", () => {
     const { stores } = await renderWithStores(<BagScreen />);
 
     await user.type(screen.getByLabelText("Новый расходник"), "Зелье лечения{Enter}");
-    await user.click(screen.getByRole("button", { name: "Добавить один: Зелье лечения" }));
-    await user.click(screen.getByRole("button", { name: "Потратить один: Зелье лечения" }));
-    await user.click(screen.getByRole("button", { name: "Потратить один: Зелье лечения" }));
+    await user.click(screen.getByRole("button", { name: "Добавить один в сумку: Зелье лечения" }));
+    await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
+    await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
 
     // Ноль — состояние: строка осталась, минус выключен.
-    const potion = stores.session
-      .getState()
-      .session?.character.equipment.items.find((item) => item.id === "зелье-лечения");
-    expect(potion?.count).toBe(0);
+    const bagCount = Equipment.of(stores.session.getState().session!.character).bagCount("зелье-лечения");
+    expect(bagCount).toBe(0);
     expect(
-      screen.getByRole("button", { name: "Потратить один: Зелье лечения" }),
+      screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }),
     ).toHaveProperty("disabled", true);
 
     await user.click(screen.getByRole("button", { name: "Править: Деньги" }));
