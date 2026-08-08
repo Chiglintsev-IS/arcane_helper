@@ -16,7 +16,7 @@ import type { ArmorCategory, StatMethod } from "@/core/domain/shared/stats";
 import { defineStat, ownCandidate, type Stat } from "../resolve";
 
 /** База Класса Доспеха без доспехов — правило игры, а не настройка. */
-const UNARMORED_BASE = 10;
+export const UNARMORED_ARMOR_CLASS_BASE = 10;
 
 /** Сколько Ловкости прибавляет доспех: в тяжёлом — нисколько, в среднем — не больше двух. */
 const DEXTERITY_LIMIT: Readonly<Record<ArmorCategory, number>> = {
@@ -32,6 +32,11 @@ function isArmor(method: StatMethod): method is ArmorMethod {
   return method.family === "armor";
 }
 
+/** Доспех без названной категории Ловкость не режет: предела у него нет, а не нулевой. */
+function dexterityLimit(category: ArmorCategory | undefined): number {
+  return category === undefined ? Number.POSITIVE_INFINITY : DEXTERITY_LIMIT[category];
+}
+
 function isSpell(method: StatMethod): method is SpellMethod {
   return method.family === "spell";
 }
@@ -44,7 +49,7 @@ export function armorClassStat(dexterity: Stat): Stat {
       const dexterityModifier = abilityModifier(read(dexterity));
       const armor = brought.filter(isArmor);
       const fromArmor = armor.map((method) => ({
-        value: method.base + Math.min(dexterityModifier, DEXTERITY_LIMIT[method.category]),
+        value: method.base + Math.min(dexterityModifier, dexterityLimit(method.category)),
         grownFrom: method,
       }));
       const fromSpells =
@@ -55,7 +60,11 @@ export function armorClassStat(dexterity: Stat): Stat {
               grownFrom: method,
             }));
 
-      return [ownCandidate(UNARMORED_BASE + dexterityModifier), ...fromArmor, ...fromSpells];
+      return [
+        ownCandidate(UNARMORED_ARMOR_CLASS_BASE + dexterityModifier),
+        ...fromArmor,
+        ...fromSpells,
+      ];
     },
   });
 }

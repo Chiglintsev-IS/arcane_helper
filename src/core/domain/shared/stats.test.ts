@@ -55,21 +55,16 @@ describe("форма вклада", () => {
     ).toBe(false);
   });
 
-  it("способ счёта от доспеха несёт базу и категорию, от заклинания — только базу", () => {
-    expect(
-      statContributionSchema.safeParse({
-        stat: "armorClass",
-        kind: "method",
-        method: { family: "armor", base: 16, category: "heavy" },
-      }).success,
-    ).toBe(true);
-    expect(
-      statContributionSchema.safeParse({
-        stat: "armorClass",
-        kind: "method",
-        method: { family: "armor", base: 16 },
-      }).success,
-    ).toBe(false);
+  it("способ счёта от доспеха несёт базу и необязательную категорию", () => {
+    const method = (value: unknown) =>
+      statContributionSchema.safeParse({ stat: "armorClass", kind: "method", method: value })
+        .success;
+
+    expect(method({ family: "armor", base: 16, category: "heavy" })).toBe(true);
+    expect(method({ family: "armor", base: 16 })).toBe(true);
+    expect(method({ family: "armor", base: 16, category: "plate" })).toBe(false);
+    expect(method({ family: "spell", base: 13 })).toBe(true);
+    expect(method({ family: "blessing", base: 13 })).toBe(false);
   });
 
   it("четвёртого вида вклада не бывает", () => {

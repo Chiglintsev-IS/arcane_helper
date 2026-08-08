@@ -7,7 +7,8 @@
 
 import { z } from "zod";
 
-import { CURRENCIES, itemBonusesSchema, nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
+import { CURRENCIES, nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
+import { ARMOR_CATEGORIES, statBonusesSchema } from "@/core/domain/shared/stats";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 /**
@@ -19,7 +20,16 @@ export const ITEM_KINDS = ["gear", "consumable", "ingredient", "other"] as const
 /** Верхний предел одной монеты цены. */
 const MAXIMUM_COIN_AMOUNT = 999_999;
 
-const armorBase = z.number().int().positive();
+/**
+ * Доспех: чем вещь защищает и какого она рода.
+ *
+ * Категория необязательна: находка, которую никто не опознал, остаётся доспехом без рода. Во что
+ * категория обходится Ловкости — правило защиты, и здесь про него не знают ничего.
+ */
+const armorSchema = z.object({
+  base: z.number().int().positive(),
+  category: z.enum(ARMOR_CATEGORIES).optional(),
+});
 
 /** Цена вещи. Необязательна: у находки из подземелья её может не назвать и мастер. */
 const priceSchema = z.object({
@@ -50,12 +60,15 @@ const itemDefinitionFields = z.object({
   kind: z.enum(ITEM_KINDS).default("other"),
   price: priceSchema.optional(),
   note: nonEmpty.optional(),
-  bonuses: itemBonusesSchema.optional(),
   /**
-   * База КД доспеха: у кольчуги 16, у кольца поля нет. База персонажа выводится из надетого —
-   * наибольшая из баз, без доспеха действует база без доспехов.
+   * Прибавки вещи — величинами словаря: кольцо защиты прибавляет к Классу Доспеха и к спасброскам,
+   * и каждая прибавка называет свою величину сама. Умбрелла «магия, защита, спасброски» умерла
+   * вместе с тремя разными математиками: она заставляла лист знать, что за каждым из трёх слов
+   * стоит, и разъезжалась с настоящим списком величин при первом же пополнении.
    */
-  armorBase: armorBase.optional(),
+  bonuses: statBonusesSchema.optional(),
+  /** Доспех: база и категория. У кольца поля нет вовсе. */
+  armor: armorSchema.optional(),
 });
 
 type ItemFields = z.infer<typeof itemDefinitionFields>;
@@ -69,7 +82,7 @@ type ItemFields = z.infer<typeof itemDefinitionFields>;
  */
 const GEAR_ONLY_FIELDS = [
   ["bonuses", undefined],
-  ["armorBase", undefined],
+  ["armor", undefined],
 ] as const satisfies readonly (readonly [keyof ItemFields, unknown])[];
 
 /** Свойства экипировки, заполненные у вещи: значение в снятом виде заполненным не считается. */
@@ -119,11 +132,15 @@ export function alignedItemDefinition(item: ItemDefinition): ItemDefinition {
 
 /**
  * Прибавка из одних нулей не хранится вовсе: верёвка не участвует в счёте Класса Доспеха.
+ *
+ * Нулевые величины снимаются поимённо, а не только целиком: сохранённая «защита 0» означала бы, что
+ * верёвка в разборе Класса Доспеха строкой стоит.
  */
 export function withoutEmptyBonuses(item: ItemDefinition): ItemDefinition {
   const { bonuses, ...rest } = item;
-  const contributes = bonuses !== undefined && Object.values(bonuses).some((value) => value !== 0);
-  return contributes ? item : rest;
+  if (bonuses === undefined) return item;
+  const contributing = Object.entries(bonuses).filter(([, value]) => value !== 0);
+  return contributing.length === 0 ? rest : { ...rest, bonuses: Object.fromEntries(contributing) };
 }
 
 /** Поля контекста для сборки полной схемы состояния. */

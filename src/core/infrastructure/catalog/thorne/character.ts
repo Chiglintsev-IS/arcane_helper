@@ -126,19 +126,27 @@ const RAW: unknown = {
       id: "spellcasting-focus",
       nameRu: "Магическая фокусировка +1",
       kind: "gear",
-      bonuses: { spellcasting: 1, armorClass: 0, savingThrows: 0 },
+      bonuses: { spellSaveDc: 1, spellAttackModifier: 1 },
     },
     {
       id: "robe",
       nameRu: "Мантия +1",
       kind: "gear",
-      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+      bonuses: { armorClass: 1 },
     },
     {
       id: "cloak-of-protection",
       nameRu: "Плащ защиты",
       kind: "gear",
-      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+      bonuses: {
+        armorClass: 1,
+        "save:strength": 1,
+        "save:dexterity": 1,
+        "save:constitution": 1,
+        "save:intelligence": 1,
+        "save:wisdom": 1,
+        "save:charisma": 1,
+      },
     },
     {
       // Прибавка кубиком и по обстановке: приложение её не считает, поэтому она заметка.

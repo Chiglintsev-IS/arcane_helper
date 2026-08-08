@@ -15,19 +15,14 @@
 
 import type { Items } from "@/core/domain/items/items";
 import { gearOnlyRefusal } from "@/core/domain/items/schema";
-import type { ItemDefinition } from "@/core/domain/items/schema";
-import type { ItemBonuses } from "@/core/domain/shared/schema";
+import { STAT_IDS } from "@/core/domain/shared/stats";
+import type { ContributionSource, SourcedContribution } from "@/core/domain/shared/stats";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import { assertMoney, MAXIMUM_ITEM_COUNT } from "./schema";
 import type { EquipmentData, Money, StockEntry } from "./schema";
 
 type EquipmentState = { equipment: EquipmentData };
-
-/** База Класса Доспеха без доспехов — правило игры, а не настройка. */
-export const UNARMORED_ARMOR_CLASS_BASE = 10;
-
-const NO_BONUSES: ItemBonuses = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
 /** Тот же запас с одной изменённой записью: заводит запись, если её ещё не было. */
 function withStock(entries: readonly StockEntry[], itemId: string, count: number): readonly StockEntry[] {
@@ -76,46 +71,45 @@ export class Equipment {
   }
 
   /**
-   * Надетый доспех, задающий базу КД: из надетой экипировки с базой берётся наибольшая.
+   * Что надетое приносит листу: способ счёта от доспеха и прибавки вещей.
    *
-   * Замены базы не складываются — то же правило, что у «Доспехов мага» против кольчуги: вторая
-   * кираса поверх первой защищает не лучше.
-   */
-  wornArmor(items: Items): ItemDefinition | undefined {
-    return this.data.worn.reduce<ItemDefinition | undefined>((best, entry) => {
-      const item = entry.count > 0 ? items.find(entry.itemId) : undefined;
-      return item !== undefined &&
-        item.kind === "gear" &&
-        item.armorBase !== undefined &&
-        item.armorBase > (best?.armorBase ?? 0)
-        ? item
-        : best;
-    }, undefined);
-  }
-
-  /** База Класса Доспеха — производная от надетого: доспех или его отсутствие. */
-  armorClassBase(items: Items): number {
-    return this.wornArmor(items)?.armorBase ?? UNARMORED_ARMOR_CLASS_BASE;
-  }
-
-  /**
-   * Что снаряжение прибавляет к числам: надетые вещи, и только они.
+   * Лежащее в сумке не приносит ничего: кольцо в мешке защиты не даёт, и число, выросшее от покупки,
+   * разошлось бы с тем, что действует за столом. Вклад без вещи снаряжению не принадлежит вовсе —
+   * это постоянный вклад персонажа, и живёт он у него.
    *
-   * Лежащее в сумке не считается: кольцо в мешке защиты не даёт, и число, выросшее от покупки,
-   * разошлось бы с тем, что действует за столом. Прибавка без вещи — свойство персонажа, а не
-   * снаряжения, и живёт у него.
+   * Итог здесь не считается: снаряжение не знает ни Ловкости, ни того, что доспех с заклинанием
+   * спорят. Оно отдаёт факты надетого, а спорят они уже в свёртке — потому вторая кираса и не
+   * удваивает защиту, хотя способов принесено два.
    */
-  bonuses(items: Items): ItemBonuses {
-    return this.data.worn.reduce<ItemBonuses>((total, entry) => {
-      if (entry.count <= 0) return total;
+  contributions(items: Items): readonly SourcedContribution[] {
+    return this.data.worn.flatMap((entry) => {
+      if (entry.count <= 0) return [];
       const item = items.find(entry.itemId);
-      if (item === undefined || item.kind !== "gear" || item.bonuses === undefined) return total;
-      return {
-        spellcasting: total.spellcasting + item.bonuses.spellcasting,
-        armorClass: total.armorClass + item.bonuses.armorClass,
-        savingThrows: total.savingThrows + item.bonuses.savingThrows,
-      };
-    }, { ...NO_BONUSES });
+      if (item === undefined || item.kind !== "gear") return [];
+
+      const source: ContributionSource = { origin: "item", nameRu: item.nameRu };
+      const armor: SourcedContribution[] =
+        item.armor === undefined
+          ? []
+          : [
+              {
+                source,
+                contribution: {
+                  stat: "armorClass",
+                  kind: "method",
+                  method: { family: "armor", base: item.armor.base, category: item.armor.category },
+                },
+              },
+            ];
+      const bonuses: SourcedContribution[] = STAT_IDS.flatMap((stat) => {
+        const value = item.bonuses?.[stat];
+        return value === undefined
+          ? []
+          : [{ source, contribution: { stat, kind: "bonus", value } }];
+      });
+
+      return [...armor, ...bonuses];
+    });
   }
 
   /**

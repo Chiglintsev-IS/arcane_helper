@@ -110,7 +110,12 @@ export type ArmorCategory = (typeof ARMOR_CATEGORIES)[number];
  * видно по составу принесённого, а не запросом чужого состояния.
  */
 export type StatMethod =
-  | { readonly family: "armor"; readonly base: number; readonly category: ArmorCategory }
+  | {
+      readonly family: "armor";
+      readonly base: number;
+      /** Не названа — предела нет: находка без опознанной категории Ловкость не режет. */
+      readonly category?: ArmorCategory | undefined;
+    }
   | { readonly family: "spell"; readonly base: number };
 
 /**
@@ -122,13 +127,36 @@ export type StatContribution =
   | { readonly stat: StatId; readonly kind: "bonus"; readonly value: number }
   | { readonly stat: StatId; readonly kind: "assignment"; readonly value: number };
 
+/**
+ * Откуда вклад пришёл — то, что показывают в разборе.
+ *
+ * Стоит рядом со вкладом, а не внутри него: счёт источника не читает вовсе, а вопрос «почему число
+ * такое» без него не отвечается. Название — то, чем игрок вещь или заклинание назвал; подпись из
+ * него строит отображение.
+ */
+export type ContributionSource = {
+  readonly origin: "item" | "spell" | "permanent";
+  readonly nameRu: string;
+};
+
+/** Пара, которой контексты отвечают листу: чей вклад и какой. */
+export type SourcedContribution = {
+  readonly source: ContributionSource;
+  readonly contribution: StatContribution;
+};
+
+/** Прибавки вещи и персонажа: величина и число. Ноль не хранится — он ни на что не влияет. */
+export const statBonusesSchema = z.partialRecord(z.enum(STAT_IDS), z.number().int());
+
+export type StatBonuses = z.infer<typeof statBonusesSchema>;
+
 const statId = z.enum(STAT_IDS, { error: "Такой величины не бывает" });
 
 const statMethodSchema = z.discriminatedUnion("family", [
   z.object({
     family: z.literal("armor"),
     base: z.number().int().positive(),
-    category: z.enum(ARMOR_CATEGORIES),
+    category: z.enum(ARMOR_CATEGORIES).optional(),
   }),
   z.object({ family: z.literal("spell"), base: z.number().int().positive() }),
 ]);

@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { isStateField } from "@/core/domain/assembly/state";
-import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/equipment/equipment";
+import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/items/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";

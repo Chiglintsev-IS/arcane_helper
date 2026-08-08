@@ -12,13 +12,13 @@ import {
 } from "@/core/domain/items/schema";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 
-const potion = { id: "potion", nameRu: "Зелье", kind: "consumable" as const };
+const potion: ItemDefinition = { id: "potion", nameRu: "Зелье", kind: "consumable" };
 const armored: ItemDefinition = {
   id: "chainmail",
   nameRu: "Кольчуга",
   kind: "gear",
-  armorBase: 16,
-  bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+  armor: { base: 16, category: "heavy" },
+  bonuses: { armorClass: 0 },
 };
 
 function withDefinition(item: unknown) {
@@ -47,11 +47,27 @@ describe("подсхема вещи", () => {
   });
 
   it("прибавки и база доспеха бывают только у экипировки (FR-238)", () => {
-    const bonuses = { spellcasting: 0, armorClass: 1, savingThrows: 0 };
+    const bonuses = { armorClass: 1 };
+    const armor = { base: 16, category: "heavy" };
     expect(withDefinition({ ...potion, bonuses }).success).toBe(false);
-    expect(withDefinition({ ...potion, armorBase: 16 }).success).toBe(false);
+    expect(withDefinition({ ...potion, armor }).success).toBe(false);
     // Та же запись экипировкой проходит: запрещено не поле, а его несовместимость с категорией.
-    expect(withDefinition({ ...potion, kind: "gear", bonuses, armorBase: 16 }).success).toBe(true);
+    expect(withDefinition({ ...potion, kind: "gear", bonuses, armor }).success).toBe(true);
+  });
+
+  it("прибавка называет величину словаря, и выдуманной величины не бывает (FR-247)", () => {
+    const gear = { id: "ring", nameRu: "Кольцо", kind: "gear" };
+    expect(withDefinition({ ...gear, bonuses: { "save:wisdom": 1 } }).success).toBe(true);
+    expect(withDefinition({ ...gear, bonuses: { savingThrows: 1 } }).success).toBe(false);
+    expect(withDefinition({ ...gear, bonuses: { armorClass: 1.5 } }).success).toBe(false);
+  });
+
+  it("категория доспеха необязательна и ограничена тремя (FR-247)", () => {
+    const gear = { id: "mail", nameRu: "Кольчуга", kind: "gear" };
+    expect(withDefinition({ ...gear, armor: { base: 16 } }).success).toBe(true);
+    expect(withDefinition({ ...gear, armor: { base: 16, category: "light" } }).success).toBe(true);
+    expect(withDefinition({ ...gear, armor: { base: 16, category: "plate" } }).success).toBe(false);
+    expect(withDefinition({ ...gear, armor: { base: 0 } }).success).toBe(false);
   });
 
   it("отказ называет вещь по имени", () => {
@@ -62,14 +78,14 @@ describe("подсхема вещи", () => {
 
 describe("свойства экипировки: перечисление, снятие", () => {
   it("заполненные свойства экипировки перечисляются", () => {
-    expect(filledGearOnlyFields(armored)).toEqual(["bonuses", "armorBase"]);
+    expect(filledGearOnlyFields(armored)).toEqual(["bonuses", "armor"]);
     expect(filledGearOnlyFields(potion)).toEqual([]);
   });
 
   it("снятые свойства экипировки отсутствуют полем, а не занулены", () => {
     const stripped = withoutGearOnlyFields(armored);
     expect("bonuses" in stripped).toBe(false);
-    expect("armorBase" in stripped).toBe(false);
+    expect("armor" in stripped).toBe(false);
   });
 });
 
@@ -79,27 +95,23 @@ describe("assertItemDefinition и alignedItemDefinition", () => {
   });
 
   it("«надетое зелье с прибавкой» отвергается, и отказ называет вещь (FR-238)", () => {
-    expect(() =>
-      assertItemDefinition({ ...potion, bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 } }),
-    ).toThrow(DomainError);
+    expect(() => assertItemDefinition({ ...potion, bonuses: { armorClass: 1 } })).toThrow(
+      DomainError,
+    );
   });
 
   it("правка со сменой категории на не-экипировку снимает свойства экипировки, а не отвергает", () => {
-    const moved = alignedItemDefinition({ ...(potion as ItemDefinition), kind: "other" });
+    const moved = alignedItemDefinition({ ...potion, kind: "other" });
     expect(moved).toEqual({ id: "potion", nameRu: "Зелье", kind: "other" });
   });
 
   it("прибавка из одних нулей не хранится: верёвка не участвует в счёте Класса Доспеха", () => {
-    const zeroed = withoutEmptyBonuses({
-      ...armored,
-      bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
-    });
-    expect("bonuses" in zeroed).toBe(false);
+    expect("bonuses" in withoutEmptyBonuses({ ...armored, bonuses: { armorClass: 0 } })).toBe(false);
 
     const contributing = withoutEmptyBonuses({
       ...armored,
-      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+      bonuses: { armorClass: 1, "save:wisdom": 0 },
     });
-    expect(contributing.bonuses).toEqual({ spellcasting: 0, armorClass: 1, savingThrows: 0 });
+    expect(contributing.bonuses).toEqual({ armorClass: 1 });
   });
 });

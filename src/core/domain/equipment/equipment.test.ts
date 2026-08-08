@@ -4,13 +4,32 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition } from "@/core/domain/items/schema";
+import type { SourcedContribution, StatId } from "@/core/domain/shared/stats";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+
+/** Сколько принесённые вклады прибавляют к величине: снаряжение итога не считает, а прибавки видны. */
+function bonusFor(brought: readonly SourcedContribution[], stat: StatId): number {
+  return brought.reduce(
+    (sum, { contribution }) =>
+      contribution.stat === stat && contribution.kind === "bonus" ? sum + contribution.value : sum,
+    0,
+  );
+}
+
+/** Способы счёта, принесённые к Классу Доспеха: их спор разрешает свёртка, а не снаряжение. */
+function armorMethods(brought: readonly SourcedContribution[]) {
+  return brought.flatMap(({ source, contribution }) =>
+    contribution.kind === "method" && contribution.method.family === "armor"
+      ? [{ nameRu: source.nameRu, base: contribution.method.base }]
+      : [],
+  );
+}
 
 const ring: ItemDefinition = {
   id: "ring",
   nameRu: "Кольцо защиты",
   kind: "gear",
-  bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+  bonuses: { armorClass: 1, "save:wisdom": 1 },
 };
 
 const potion: ItemDefinition = { id: "healing-potion", nameRu: "Зелье лечения", kind: "consumable" };
@@ -23,42 +42,56 @@ const chainmail: ItemDefinition = {
   id: "chainmail",
   nameRu: "Кольчуга",
   kind: "gear",
-  armorBase: 16,
+  armor: { base: 16, category: "heavy" },
 };
 
 const leather: ItemDefinition = {
   id: "leather",
   nameRu: "Кожаный доспех",
   kind: "gear",
-  armorBase: 11,
+  armor: { base: 11, category: "light" },
 };
 
 const gear = () => Equipment.of(createThorne());
 const items = (...definitions: ItemDefinition[]) => Items.of({ itemDefinitions: definitions });
 
 describe("снаряжение", () => {
-  it("прибавка считается только из надетых вещей", () => {
-    // Вещи Торна: фокусировка +1 к магии, мантия +1 и плащ +1 к защите, плащ +1 к спасброскам.
+  it("вклад приходит только от надетых вещей", () => {
+    // Вещи Торна: фокусировка +1 к КС и атаке, мантия +1 и плащ +1 к защите, плащ +1 к спасброскам.
     const thorne = createThorne();
-    expect(Equipment.of(thorne).bonuses(Items.of(thorne))).toEqual({
-      spellcasting: 1,
-      armorClass: 2,
-      savingThrows: 1,
-    });
+    const brought = Equipment.of(thorne).contributions(Items.of(thorne));
 
+    expect(bonusFor(brought, "armorClass")).toBe(2);
+    expect(bonusFor(brought, "spellSaveDc")).toBe(1);
+    expect(bonusFor(brought, "spellAttackModifier")).toBe(1);
+    expect(bonusFor(brought, "save:wisdom")).toBe(1);
+  });
+
+  it("каждый вклад приходит с вещью, которая его принесла", () => {
     const worn = gear().adjustBagCount("ring", 1).equip("ring", 1, items(ring));
-    expect(worn.bonuses(items(ring)).armorClass).toBe(1);
-    expect(worn.bonuses(items(ring)).savingThrows).toBe(1);
+
+    expect(worn.contributions(items(ring))).toContainEqual({
+      source: { origin: "item", nameRu: "Кольцо защиты" },
+      contribution: { stat: "armorClass", kind: "bonus", value: 1 },
+    });
   });
 
-  it("лежащее в сумке к числам не прибавляется", () => {
+  it("снятое кольцо вклада не даёт", () => {
+    const worn = gear().adjustBagCount("ring", 1).equip("ring", 1, items(ring));
+    const taken = worn.unequip("ring", 1);
+
+    expect(bonusFor(worn.contributions(items(ring)), "armorClass")).toBe(1);
+    expect(bonusFor(taken.contributions(items(ring)), "armorClass")).toBe(0);
+  });
+
+  it("лежащее в сумке вклада не приносит", () => {
     const stocked = gear().adjustBagCount("ring", 1);
-    expect(stocked.bonuses(items(ring))).toEqual(gear().bonuses(items(ring)));
+    expect(stocked.contributions(items(ring))).toEqual(gear().contributions(items(ring)));
   });
 
-  it("вещь без прибавки на числа не влияет", () => {
+  it("вещь без прибавки вклада не приносит", () => {
     const stocked = gear().adjustBagCount("helmet", 1).equip("helmet", 1, items(helmet));
-    expect(stocked.bonuses(items(helmet))).toEqual(gear().bonuses(items(helmet)));
+    expect(stocked.contributions(items(helmet))).toEqual(gear().contributions(items(helmet)));
   });
 
   it("надевание переносит счёт из сумки в надетое", () => {
@@ -66,7 +99,9 @@ describe("снаряжение", () => {
     const worn = stocked.equip("ring", 1, items(ring));
     expect(worn.bagCount("ring")).toBe(0);
     expect(worn.wornCount("ring")).toBe(1);
-    expect(worn.bonuses(items(ring)).armorClass).toBe(gear().bonuses(items(ring)).armorClass + 1);
+    expect(bonusFor(worn.contributions(items(ring)), "armorClass")).toBe(
+      bonusFor(gear().contributions(items(ring)), "armorClass") + 1,
+    );
   });
 
   it("снятие переносит счёт обратно в сумку", () => {
@@ -121,28 +156,40 @@ describe("снаряжение", () => {
     expect(gear().money.gold).toBe(0);
   });
 
-  it("база КД выводится из надетого: без доспеха 10, надетый доспех задаёт свою", () => {
-    expect(gear().armorClassBase(items())).toBe(10);
-    expect(gear().wornArmor(items())).toBeUndefined();
-
-    const armored = gear().adjustBagCount("chainmail", 1).equip("chainmail", 1, items(chainmail));
-    expect(armored.armorClassBase(items(chainmail))).toBe(16);
-    expect(armored.wornArmor(items(chainmail))?.nameRu).toBe("Кольчуга");
+  it("без доспеха способа «от доспеха» нет вовсе", () => {
+    expect(armorMethods(gear().contributions(items()))).toEqual([]);
   });
 
-  it("из двух надетых доспехов действует наибольшая база — замены не складываются", () => {
+  it("надетый доспех приносит способ счёта со своей базой и категорией", () => {
+    const armored = gear().adjustBagCount("chainmail", 1).equip("chainmail", 1, items(chainmail));
+
+    expect(armored.contributions(items(chainmail))).toContainEqual({
+      source: { origin: "item", nameRu: "Кольчуга" },
+      contribution: {
+        stat: "armorClass",
+        kind: "method",
+        method: { family: "armor", base: 16, category: "heavy" },
+      },
+    });
+  });
+
+  it("два надетых доспеха приносят по способу счёта: спорят они в свёртке, а не здесь", () => {
     const both = items(chainmail, leather);
     const wornBoth = gear()
       .adjustBagCount("chainmail", 1)
       .adjustBagCount("leather", 1)
       .equip("chainmail", 1, both)
       .equip("leather", 1, both);
-    expect(wornBoth.armorClassBase(both)).toBe(16);
+
+    expect(armorMethods(wornBoth.contributions(both))).toEqual([
+      { nameRu: "Кольчуга", base: 16 },
+      { nameRu: "Кожаный доспех", base: 11 },
+    ]);
   });
 
-  it("доспех в сумке базы не задаёт: кольчуга защищает надетой", () => {
+  it("доспех в сумке способа не приносит: кольчуга защищает надетой", () => {
     const carried = gear().adjustBagCount("chainmail", 1);
-    expect(carried.armorClassBase(items(chainmail))).toBe(10);
+    expect(armorMethods(carried.contributions(items(chainmail)))).toEqual([]);
   });
 
   it("отсутствие вещи в сумке или на теле отвергается с причиной", () => {
