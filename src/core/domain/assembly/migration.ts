@@ -2,9 +2,9 @@
  * Приведение состояния прежней версии.
  *
  * Обновление приложения не имеет права терять данные, поэтому сохранение версии 1 читается, а не
- * отвергается. Прежние производные числа становятся перебивками: пока игрок не заполнит
- * характеристики, за столом действуют ровно те числа, что были, и на листе видно, что они введены
- * руками.
+ * отвергается. Прежние производные числа становятся постоянными назначениями: пока игрок не
+ * заполнит характеристики, за столом действуют ровно те числа, что были, и в разборе видно, что
+ * они введены руками.
  */
 
 import { z } from "zod";
@@ -16,6 +16,13 @@ import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/items/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
+import {
+  ABILITIES,
+  SKILL_IDS,
+  saveStatId,
+  skillStatId,
+  type StatId,
+} from "@/core/domain/shared/stats";
 
 const UNKNOWN_ABILITY_SCORE = 10;
 
@@ -298,20 +305,218 @@ function withoutForgottenFields(patch: unknown): unknown {
  * Забытые поля снимаются последними: приведение прежних форм само дописывает в снимок поля, и
  * принадлежность проверяется у того набора ключей, который получился.
  */
+
+/**
+ * Подписи, под которыми прежние поля персонажа становятся постоянными вкладами.
+ *
+ * Заморожены на дате приведения: нынешние подписи вправе меняться, прошлые сохранения — нет. Имя
+ * обязательно, потому что разбор без него не отвечает на «откуда взялось это число», а прежние
+ * поля своего имени не несли — приведение честно говорит, что имени не знает.
+ */
+const LEGACY_OVERRIDE_NAME_RU = "Введено руками";
+const LEGACY_MISC_BONUS_NAME_RU = "Прочая прибавка";
+
+/** Прежние прибавки предмета словом: за каждым словом стоял свой набор величин. */
+const LEGACY_BONUS_TARGETS: Record<string, readonly StatId[]> = {
+  spellcasting: ["spellSaveDc", "spellAttackModifier"],
+  armorClass: ["armorClass"],
+  savingThrows: ABILITIES.map(saveStatId),
+};
+
+/** Прежние перебивки, чьё имя совпадает с именем величины. */
+const LEGACY_OVERRIDE_STATS: readonly StatId[] = [
+  "proficiencyBonus",
+  "spellSaveDc",
+  "spellAttackModifier",
+  "preparedLimit",
+  "initiative",
+  "passivePerception",
+];
+
+function permanent(nameRu: string, contribution: unknown): unknown {
+  return { nameRu, contribution };
+}
+
+/** Прибавки прежней формы — величинами словаря: ноль не переносится, он ни на что не влиял. */
+function bonusesToStats(legacy: unknown): Record<string, number> {
+  const fields = fieldsOf(legacy);
+  const bonuses: Record<string, number> = {};
+  for (const [word, stats] of Object.entries(LEGACY_BONUS_TARGETS)) {
+    const value = fields[word];
+    if (typeof value !== "number" || value === 0) continue;
+    for (const stat of stats) bonuses[stat] = value;
+  }
+  return bonuses;
+}
+
+/**
+ * Перебивки и прочие прибавки персонажа становятся постоянными вкладами.
+ *
+ * Перебивка — назначение: она перекрывала итог, и назначение делает то же, только протекает дальше.
+ * Перебитая база защиты — способ счёта от доспеха: игрок называл число, от которого считается
+ * защита, а не саму защиту. Ни одно действующее число при этом не меняется.
+ */
+function migratePermanentContributions(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  if (fields.overrides === undefined && fields.miscBonuses === undefined) return state;
+
+  const { overrides, miscBonuses, ...rest } = fields;
+  const known = fieldsOf(overrides);
+  const contributions: unknown[] = [];
+
+  for (const stat of LEGACY_OVERRIDE_STATS) {
+    const value = known[stat];
+    if (typeof value !== "number") continue;
+    contributions.push(permanent(LEGACY_OVERRIDE_NAME_RU, { stat, kind: "assignment", value }));
+  }
+
+  const saves = fieldsOf(known.saves);
+  for (const ability of ABILITIES) {
+    const value = saves[ability];
+    if (typeof value !== "number") continue;
+    contributions.push(
+      permanent(LEGACY_OVERRIDE_NAME_RU, {
+        stat: saveStatId(ability),
+        kind: "assignment",
+        value,
+      }),
+    );
+  }
+
+  const skills = fieldsOf(known.skills);
+  for (const skill of SKILL_IDS) {
+    const value = skills[skill];
+    if (typeof value !== "number") continue;
+    contributions.push(
+      permanent(LEGACY_OVERRIDE_NAME_RU, { stat: skillStatId(skill), kind: "assignment", value }),
+    );
+  }
+
+  if (typeof known.armorClassBase === "number") {
+    contributions.push(
+      permanent(LEGACY_OVERRIDE_NAME_RU, {
+        stat: "armorClass",
+        kind: "method",
+        method: { family: "armor", base: known.armorClassBase },
+      }),
+    );
+  }
+
+  for (const [stat, value] of Object.entries(bonusesToStats(miscBonuses))) {
+    contributions.push(permanent(LEGACY_MISC_BONUS_NAME_RU, { stat, kind: "bonus", value }));
+  }
+
+  const previous = Array.isArray(fields.permanentContributions) ? fields.permanentContributions : [];
+  return { ...rest, permanentContributions: [...previous, ...contributions] };
+}
+
+/**
+ * Вещь прежней формы: прибавки словом становятся прибавками величинами, база доспеха — доспехом.
+ *
+ * Категорию доспеха приведение не выдумывает: прежняя вещь её не знала, а доспех без категории
+ * Ловкость не режет — то же, что и было.
+ */
+function migrateItemShape(item: unknown): unknown {
+  if (item === null || typeof item !== "object") return item;
+  const fields = fieldsOf(item);
+  const { bonuses, armorBase, ...rest } = fields;
+  if (bonuses === undefined && armorBase === undefined) return item;
+
+  const stats = bonuses === undefined ? {} : bonusesToStats(bonuses);
+  const legacyWords = Object.keys(fieldsOf(bonuses)).some((word) => word in LEGACY_BONUS_TARGETS);
+  return {
+    ...rest,
+    ...(bonuses === undefined ? {} : legacyWords ? {} : { bonuses }),
+    ...(legacyWords && Object.keys(stats).length > 0 ? { bonuses: stats } : {}),
+    ...(typeof armorBase === "number" ? { armor: { base: armorBase } } : {}),
+  };
+}
+
+/** Вещи прежней формы — где бы они ни лежали: до разведения по местам и после него. */
+function migratedList(stored: unknown): unknown[] | null {
+  if (!Array.isArray(stored)) return null;
+  const items = stored.map(migrateItemShape);
+  // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
+  return items.every((item, index) => item === stored[index]) ? null : items;
+}
+
+function migrateItemShapes(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const equipment = fieldsOf(fields.equipment);
+  const inEquipment = migratedList(equipment.items);
+  const defined = migratedList(fields.itemDefinitions);
+  if (inEquipment === null && defined === null) return state;
+
+  return {
+    ...fields,
+    ...(inEquipment === null ? {} : { equipment: { ...equipment, items: inEquipment } }),
+    ...(defined === null ? {} : { itemDefinitions: defined }),
+  };
+}
+
+/** Вклад эффекта прежней формы: замена базы — способ счёта от заклинания, прибавка — прибавка. */
+function migrateEffectContributions(effect: unknown): unknown {
+  if (effect === null || typeof effect !== "object") return effect;
+  const fields = fieldsOf(effect);
+  if (fields.armorClass === undefined) return effect;
+
+  const { armorClass, ...rest } = fields;
+  const legacy = fieldsOf(armorClass);
+  const value = legacy.value;
+  if (typeof value !== "number") return { ...rest, contributions: [] };
+
+  return {
+    ...rest,
+    contributions: [
+      legacy.kind === "base_override"
+        ? { stat: "armorClass", kind: "method", method: { family: "spell", base: value } }
+        : { stat: "armorClass", kind: "bonus", value },
+    ],
+  };
+}
+
+function migrateEffectShapes(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const { activeEffects } = fields;
+  if (!Array.isArray(activeEffects)) return state;
+
+  const effects = activeEffects.map(migrateEffectContributions);
+  if (effects.every((effect, index) => effect === activeEffects[index])) return state;
+  return { ...fields, activeEffects: effects };
+}
+
 export function migrateUndoPatch(patch: unknown): unknown {
   return withoutForgottenFields(
-    migrateAdjustmentMarker(
-      migrateItemsSplit(migrateArmorBasePatch(migrateMiscBonuses(migrateItemCategories(patch)))),
+    migrateEffectShapes(
+      migrateAdjustmentMarker(
+        migratePermanentContributions(
+          migrateItemShapes(
+            migrateItemsSplit(
+              migrateArmorBasePatch(
+                migrateMiscBonuses(migrateItemCategories(migrateItemShapes(patch))),
+              ),
+            ),
+          ),
+        ),
+      ),
     ),
   );
 }
 
 export function migrateCharacterState(raw: unknown): unknown {
-  return migrateAdjustmentMarker(
-    migrateItemsSplit(
-      migrateArmorBase(
-        migrateMiscBonuses(
-          migrateItemCategories(migrateArcaneRecovery(migrateShape(raw))),
+  return migrateEffectShapes(
+    migrateAdjustmentMarker(
+      migratePermanentContributions(
+        migrateItemShapes(
+          migrateItemsSplit(
+            migrateArmorBase(
+              migrateMiscBonuses(
+                migrateItemCategories(
+                  migrateItemShapes(migrateArcaneRecovery(migrateShape(raw))),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     ),

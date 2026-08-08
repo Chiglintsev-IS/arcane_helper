@@ -9,7 +9,7 @@ import { expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { Sheet } from "@/core/domain/sheet/sheet";
+import { Character } from "@/core/domain/assembly/character";
 import {
   parsePersisted,
   StorageCorruptedError,
@@ -206,7 +206,7 @@ export function describeParsingContract(): void {
   it("версию старее приводит, а не отвергает: обновление не теряет данных", () => {
     const legacy = snapshot();
     // Полей нынешней формы у версии 1 не было — из образца они убираются вместе с их владельцами.
-    const { abilities, equipment, overrides, hitPoints, miscBonuses, ...character } =
+    const { abilities, equipment, hitPoints, permanentContributions, ...character } =
       legacy.character;
     const before = parsePersisted({
       ...legacy,
@@ -221,17 +221,11 @@ export function describeParsingContract(): void {
         hitPoints: { current: hitPoints.current, maximum: hitPoints.maximumBase, maximumReduction: 0 },
       },
     });
-    const totals = Sheet.of(before.character);
-    expect(totals.spellSaveDc).toBe(16);
-    // Прибавка версии 1 не называла вещи — она читается прочей прибавкой персонажа.
-    expect(totals.armorClassParts).toEqual({
-      base: 10,
-      baseOverridden: false,
-      baseFormula: 10,
-      dexterityModifier: 2,
-      itemBonus: 0,
-      miscBonus: 2,
-    });
+    const totals = Character.of(before.character).sheet;
+    // Числа версии 1 действуют прежними: перебивка стала постоянным назначением.
+    expect(totals.value("spellSaveDc")).toBe(16);
+    // Прибавка версии 1 не называла вещи — она читается постоянным вкладом персонажа: 10 + 2 + 2.
+    expect(totals.value("armorClass")).toBe(14);
   });
 
   it("испорченное сохранение остаётся повреждением, сколько бы ни стояло в версии", () => {

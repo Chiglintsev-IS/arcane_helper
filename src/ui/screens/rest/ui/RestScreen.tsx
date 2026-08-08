@@ -1,5 +1,7 @@
 "use client";
 
+import { Character } from "@/core/domain/assembly/character";
+import { saveStatId } from "@/core/domain/shared/stats";
 import { useState, useMemo } from "react";
 
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
@@ -21,7 +23,6 @@ import {
   startManualEffect,
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
-import { armorClassAdjustment } from "@/core/domain/sheet/armorClass";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
@@ -78,7 +79,7 @@ export function RestScreen() {
     setPanelOpen(false);
     if (character.concentration !== undefined) {
       setPendingCheck(
-        describeConcentrationCheck(damage, Sheet.of(character).savingThrow("constitution")),
+        describeConcentrationCheck(damage, Sheet.of(character).value(saveStatId("constitution"))),
       );
     }
   };
@@ -157,7 +158,7 @@ export function RestScreen() {
 
       {armorClassOpen ? (
         <ArmorClassSheet
-          value={armorClassAdjustment(character)}
+          value={Character.of(character).effects.manualAdjustment("armorAdjustment")}
           onCancel={() => setArmorClassOpen(false)}
           onSave={(value) => {
             const failure = apply((current) => setArmorClassAdjustment(current, value, clock));

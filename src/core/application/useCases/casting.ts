@@ -6,6 +6,7 @@
  */
 
 import { Character } from "@/core/domain/assembly/character";
+import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -209,7 +210,7 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
   let hitDiceNote = "";
   if (request.hitDice !== undefined && spell.hitDiceCost !== undefined) {
     const { count, rolled } = request.hitDice;
-    const healed = hitDiceHealing(spell.hitDiceCost, rolled, root.base.spellcastingModifier);
+    const healed = hitDiceHealing(spell.hitDiceCost, rolled, root.sheet.abilityModifier(SPELLCASTING_ABILITY));
     const spentDice = root.vitality.spendHitDice(count);
     const { vitality, restored } = spentDice.healUpTo(healed);
     root = root.withVitality(vitality);

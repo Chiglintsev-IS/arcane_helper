@@ -19,7 +19,8 @@ import { castOptions, type CastOption } from "@/core/application/casting/castOpt
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import { hitPointCost, spellPointCost } from "@/core/domain/arcana/slots";
-import { CharacterBase } from "@/core/domain/character/base";
+import { Character } from "@/core/domain/assembly/character";
+import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import {
   hitDiceRollRange,
   isPossibleHitDiceRoll,
@@ -307,7 +308,7 @@ function HitDiceStep({
 
   const count = draft.hitDiceCount;
   const size = pool?.size ?? 0;
-  const modifier = cost.addsSpellcastingModifier ? CharacterBase.of(character).spellcastingModifier : 0;
+  const modifier = cost.addsSpellcastingModifier ? Character.of(character).sheet.abilityModifier(SPELLCASTING_ABILITY) : 0;
   const rolled = draft.hitDiceRolled;
   const range = count === null ? null : hitDiceRollRange(count, size);
   const outOfRange =

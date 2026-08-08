@@ -23,7 +23,7 @@ import { isoDateTime } from "@/core/domain/shared/schema";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 /** Версия формата экспорта. Файл неизвестной версии отклоняется, прежний — приводится. */
-export const EXPORT_SCHEMA_VERSION = 6;
+export const EXPORT_SCHEMA_VERSION = 7;
 
 /** Поля состояния целиком: каждая строка — спред владельца, своих полей у сборки нет. */
 const STATE_FIELDS = {

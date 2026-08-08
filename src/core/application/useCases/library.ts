@@ -19,7 +19,7 @@ export function togglePreparation(session: Session, spell: Spell, clock: Clock):
     spell.id,
     spell.nameRu,
     spell.level,
-    Sheet.of(session.character).preparationLimit,
+    Sheet.of(session.character).value("preparedLimit"),
   );
   return commit(
     session,

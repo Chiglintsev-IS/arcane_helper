@@ -1,5 +1,6 @@
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { saveStatId } from "@/core/domain/shared/stats";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
@@ -89,7 +90,7 @@ export function describeConcentration(input: {
 }): ConcentrationSummary {
   const { spell, effect, character, journal } = input;
   const start = startRound(journal, effect.startedAt);
-  const modifier = signed(Sheet.of(character).savingThrow("constitution"));
+  const modifier = signed(Sheet.of(character).value(saveStatId("constitution")));
 
   return {
     spellId: effect.spellId ?? null,

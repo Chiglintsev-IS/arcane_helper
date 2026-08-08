@@ -42,7 +42,7 @@ export function unavailabilityReason(
 }
 
 /** Числа персонажа, из которых собирается подпись разрешения. Считает их лист. */
-export type ResolutionNumbers = Pick<Sheet, "spellSaveDc" | "spellAttackModifier">;
+export type ResolutionNumbers = Pick<Sheet, "value">;
 
 /**
  * Способ разрешения одной схемой: что бросают и против чего.
@@ -59,7 +59,7 @@ export function resolutionBadge(
   switch (resolution.type) {
     case "spell_attack":
       return {
-        label: `Атака ${CHECK_DIE_RU}${signed(numbers.spellAttackModifier)}`,
+        label: `Атака ${CHECK_DIE_RU}${signed(numbers.value("spellAttackModifier"))}`,
         icon: "✶",
       };
     case "saving_throw": {
@@ -67,7 +67,7 @@ export function resolutionBadge(
       // порог честнее, чем выдумать характеристику.
       const ability = resolution.savingThrow;
       const name = ability === undefined ? "Спасбросок" : `Спасбросок ${SAVING_THROW_NAMES[ability]}`;
-      return { label: `${name} КС ${numbers.spellSaveDc}`, icon: "◇" };
+      return { label: `${name} КС ${numbers.value("spellSaveDc")}`, icon: "◇" };
     }
     default:
       return { label: NO_ROLL_RU, icon: "○" };

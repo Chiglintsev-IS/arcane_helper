@@ -9,8 +9,6 @@
 import { abilityModifier, proficiencyBonus } from "@/core/domain/character/abilities";
 import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
-import { Sheet } from "@/core/domain/sheet/sheet";
-import type { DerivedId } from "@/core/domain/sheet/derived";
 import { skillsOfAbility, type SkillTraining } from "@/core/domain/character/skills";
 import {
   ABILITIES,
@@ -19,9 +17,12 @@ import {
   type SkillId,
 } from "@/core/domain/shared/stats";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import type { ItemBonuses } from "@/core/domain/shared/schema";
+import { DomainError } from "@/core/domain/shared/errors";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
-import { isPossibleCharacterLevel } from "@/core/domain/character/schema";
+import {
+  isPossibleCharacterLevel,
+  type PermanentContribution,
+} from "@/core/domain/character/schema";
 
 /** Справочные поля: имени и возраста журнал не касается. */
 export type Identity = Partial<
@@ -82,65 +83,46 @@ export function editAbility(
 
 
 
-/** `null` снимает перебивку: число возвращается к формуле. */
-export function setOverride(
-  session: Session,
-  id: DerivedId,
-  value: number | null,
-  clock: Clock,
-): Session {
-  const { overrides } = session.character;
-  const { [id]: _dropped, ...rest } = overrides;
-  const next: CharacterState["overrides"] =
-    value === null ? { ...rest } : { ...overrides, [id]: value };
-  return commit(
-    session,
-    Character.of(session.character).withSheet({ overrides: next }),
-    {
-      kind: "sheet_edited",
-      summaryRu: value === null ? "Число возвращено к формуле" : `Число введено руками: ${value}`,
-    },
-    clock,
-  );
-}
-
 /**
- * Перебивка базы КД: действует вместо выведенной из надетого доспеха, `null` возвращает счёт.
+ * Заводит или заменяет постоянный вклад: раса, дар, слово мастера — без вещи и без срока.
  *
- * Живёт рядом с остальными перебивками, а не в общем их сценарии: база КД — не производное число
- * листа, у неё своя формула и своя шторка.
+ * Правка базы, а не эффект, и потому обратима журналом, как всякая правка листа. Одноимённый вклад
+ * заменяется, а не удваивается: игрок правит уже записанное, а не заводит второе такое же.
  */
-export function setArmorClassBaseOverride(
+export function setPermanentContribution(
   session: Session,
-  value: number | null,
+  permanent: PermanentContribution,
   clock: Clock,
 ): Session {
-  const { overrides } = session.character;
-  const { armorClassBase: _dropped, ...rest } = overrides;
-  const next: CharacterState["overrides"] =
-    value === null ? { ...rest } : { ...overrides, armorClassBase: value };
+  const kept = session.character.permanentContributions.filter(
+    (existing) => existing.nameRu !== permanent.nameRu,
+  );
   return commit(
     session,
-    Character.of(session.character).withSheet({ overrides: next }),
-    {
-      kind: "sheet_edited",
-      summaryRu:
-        value === null ? "База Класса Доспеха: по надетому" : `База Класса Доспеха: ${value}`,
-    },
+    Character.of(session.character).withSheet({
+      permanentContributions: [...kept, permanent],
+    }),
+    { kind: "sheet_edited", summaryRu: `Постоянный вклад: ${permanent.nameRu}` },
     clock,
   );
 }
 
-/** Прочие прибавки: свойство самого персонажа — благословение, дар, обучение. */
-export function editMiscBonuses(
+/** Снимает постоянный вклад по имени: снятое возвращается журналом, как всякая правка. */
+export function removePermanentContribution(
   session: Session,
-  miscBonuses: ItemBonuses,
+  nameRu: string,
   clock: Clock,
 ): Session {
+  const kept = session.character.permanentContributions.filter(
+    (existing) => existing.nameRu !== nameRu,
+  );
+  if (kept.length === session.character.permanentContributions.length) {
+    throw new DomainError(`Постоянного вклада «${nameRu}» у персонажа нет`);
+  }
   return commit(
     session,
-    Character.of(session.character).withSheet({ miscBonuses }),
-    { kind: "sheet_edited", summaryRu: "Правка прочих прибавок" },
+    Character.of(session.character).withSheet({ permanentContributions: kept }),
+    { kind: "sheet_edited", summaryRu: `Постоянный вклад снят: ${nameRu}` },
     clock,
   );
 }
@@ -248,8 +230,8 @@ function levelShifts(before: CharacterState, after: CharacterState): LevelChange
     // Действующее число листа, а не формула класса: перебитое руками за уровнем не идёт.
     ...shifted(
       "preparedLimit",
-      Sheet.of(before).preparationLimit,
-      Sheet.of(after).preparationLimit,
+      Character.of(before).sheet.value("preparedLimit"),
+      Character.of(after).sheet.value("preparedLimit"),
     ),
   ];
 }

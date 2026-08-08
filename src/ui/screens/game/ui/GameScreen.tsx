@@ -1,5 +1,7 @@
 "use client";
 
+import { Character } from "@/core/domain/assembly/character";
+import { saveStatId } from "@/core/domain/shared/stats";
 import { useState, useMemo } from "react";
 
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
@@ -18,7 +20,6 @@ import { castSpell } from "@/core/application/useCases/casting";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { exchangeBlood, grantTemporaryHitPoints, heal, setSunlight, takeDamage } from "@/core/application/useCases/health";
-import { armorClassAdjustment } from "@/core/domain/sheet/armorClass";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { Sheet } from "@/core/domain/sheet/sheet";
 
@@ -122,7 +123,7 @@ export function GameScreen() {
     setPanelOpen(false);
     if (character.concentration !== undefined) {
       setPendingCheck(
-        describeConcentrationCheck(damage, Sheet.of(character).savingThrow("constitution")),
+        describeConcentrationCheck(damage, Sheet.of(character).value(saveStatId("constitution"))),
       );
     }
   };
@@ -277,7 +278,7 @@ export function GameScreen() {
 
       {armorClassOpen ? (
         <ArmorClassSheet
-          value={armorClassAdjustment(character)}
+          value={Character.of(character).effects.manualAdjustment("armorAdjustment")}
           error={refusal}
           onCancel={() => {
             setRefusal(null);

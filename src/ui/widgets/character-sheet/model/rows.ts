@@ -9,17 +9,25 @@
 
 import { Character } from "@/core/domain/assembly/character";
 import { skillsOfAbility } from "@/core/domain/character/skills";
-import { ABILITIES, type Ability } from "@/core/domain/shared/stats";
+import {
+  ABILITIES,
+  abilityStatId,
+  saveStatId,
+  skillStatId,
+  type Ability,
+  type StatContribution,
+} from "@/core/domain/shared/stats";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { Sheet } from "@/core/domain/sheet/sheet";
+import type { Sheet } from "@/core/domain/sheet/sheet";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import {
-  BONUS_LABELS,
   ABILITY_LABELS,
   DERIVED_LABELS,
+  DERIVED_STAT_IDS,
   orDash,
   SIZE_LABELS,
   SKILL_LABELS,
+  statLabel,
   TRAINING_LABELS,
 } from "@/ui/entities/character/lib/labels";
 import { signed } from "@/core/shared/language";
@@ -34,16 +42,7 @@ export type SheetRow = { labelRu: string; value: string; hint?: string };
  * заводить второй разбор рядом с первым и однажды их рассогласовать.
  */
 export type SheetEdit =
-  | {
-      block:
-        | "identity"
-        | "level"
-        | "health"
-        | "armorClassBase"
-        | "marks"
-        | "miscBonuses"
-        | "combatNumbers";
-    }
+  | { block: "identity" | "level" | "health" | "marks" | "permanent" }
   | { block: "ability"; ability: Ability };
 
 export type SheetBlockData = {
@@ -56,29 +55,44 @@ export type SheetBlockData = {
   secondary?: { labelRu: string; edit: SheetEdit };
 };
 
-const OVERRIDDEN_HINT = "введено руками";
+/** Чем вклад двигает число — словами строки разбора, а не именем вида вклада. */
+function contributionValue(contribution: StatContribution): string {
+  if (contribution.kind === "bonus") return signed(contribution.value);
+  if (contribution.kind === "assignment") return `= ${contribution.value}`;
+  return `база ${contribution.method.base}`;
+}
 
 /**
- * Раскладка КД: база из надетого доспеха, Ловкость, вещи, прочие прибавки.
+ * Разбор величины строками: что действует и откуда взялось.
  *
- * Итога здесь нет: его двигают действующие эффекты, и действующее число стоит в шапке «Игры» —
- * второе место для того же итога расходилось бы с первым молча.
+ * Непринятые вклады не показываются: «кольчуга победила „Доспехи мага“» — ответ на вопрос, которого
+ * за столом не задают, а строка на узком экране стоит места.
+ */
+function breakdownRows(sheet: Sheet, stat: Parameters<Sheet["value"]>[0]): SheetRow[] {
+  return sheet
+    .breakdown(stat)
+    .parts.filter((part) => part.applied)
+    .map((part) => ({
+      labelRu: part.source.nameRu,
+      value: contributionValue(part.contribution),
+    }));
+}
+
+/**
+ * Класс Доспеха: действующее число и всё, из чего оно сложилось.
+ *
+ * Итог здесь тот же, что в шапке «Игры», и это не два числа, а одно: считает его один код, и
+ * разойтись им нечем — прежде здесь стояла собственная раскладка, и она с шапкой расходилась.
  */
 function armorClassBlock(character: CharacterState): SheetBlockData {
-  const parts = Sheet.of(character).armorClassParts;
+  const sheet = Character.of(character).sheet;
   return {
     id: "armorClass",
     titleRu: "Класс Доспеха",
-    edit: { block: "armorClassBase" },
+    edit: { block: "permanent" },
     rows: [
-      {
-        labelRu: "База",
-        value: String(parts.base),
-        hint: parts.baseOverridden ? OVERRIDDEN_HINT : (parts.wornArmorNameRu ?? "без доспехов"),
-      },
-      { labelRu: "Ловкость", value: signed(parts.dexterityModifier) },
-      { labelRu: "Вещи", value: signed(parts.itemBonus) },
-      { labelRu: "Прочие прибавки", value: signed(parts.miscBonus) },
+      { labelRu: "Итог", value: String(sheet.value("armorClass")) },
+      ...breakdownRows(sheet, "armorClass"),
     ],
   };
 }
@@ -109,8 +123,7 @@ const SIGNED_DERIVED = new Set(["spellAttackModifier", "initiative", "proficienc
  * Телосложением, а не в отдельном списке из шести строк, где рядом стоят чужие числа.
  */
 function abilityBlock(character: CharacterState, ability: Ability): SheetBlockData {
-  const sheet = Character.of(character).base;
-  const totals = Sheet.of(character);
+  const totals = Character.of(character).sheet;
   return {
     id: `ability:${ability}`,
     titleRu: ABILITY_LABELS[ability],
@@ -118,18 +131,18 @@ function abilityBlock(character: CharacterState, ability: Ability): SheetBlockDa
     rows: [
       {
         labelRu: "Значение",
-        value: `${character.abilities[ability]} (${signed(sheet.modifier(ability))})`,
+        value: `${totals.value(abilityStatId(ability))} (${signed(totals.abilityModifier(ability))})`,
       },
       {
         labelRu: "Спасбросок",
-        value: signed(totals.savingThrow(ability)),
+        value: signed(totals.value(saveStatId(ability))),
         ...(character.saveProficiencies.includes(ability) ? { hint: "владение" } : {}),
       },
       ...skillsOfAbility(ability).map((id) => {
         const training = character.skills[id];
         return {
           labelRu: SKILL_LABELS[id],
-          value: signed(totals.skill(id)),
+          value: signed(totals.value(skillStatId(id))),
           ...(training === undefined ? {} : { hint: TRAINING_LABELS[training] }),
         };
       }),
@@ -140,18 +153,7 @@ function abilityBlock(character: CharacterState, ability: Ability): SheetBlockDa
 export function sheetBlocks(character: CharacterState): SheetBlockData[] {
   const { hitPoints } = character;
   const maximumHint = maximumOrigin(character);
-  /**
-   * Перебитые мастером числа — под его отметками: постоянная поправка мастера того же рода, что
-   * истощение и вдохновение. Не перебитое здесь не перечисляется — формула не отметка.
-   */
-  const overriddenNumbers: SheetRow[] = Sheet.of(character)
-    .derived()
-    .filter((number) => number.overridden)
-    .map((number) => ({
-      labelRu: DERIVED_LABELS[number.id],
-      value: SIGNED_DERIVED.has(number.id) ? signed(number.value) : String(number.value),
-      hint: OVERRIDDEN_HINT,
-    }));
+  const totals = Character.of(character).sheet;
 
   return [
     {
@@ -200,29 +202,36 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
       id: "marks",
       titleRu: "Отметки мастера",
       edit: { block: "marks" },
-      secondary: { labelRu: "Перебивки", edit: { block: "combatNumbers" } },
       rows: [
         {
           labelRu: "Истощение",
           value: character.exhaustion === 0 ? "нет" : `ступень ${character.exhaustion}`,
         },
         { labelRu: "Вдохновение", value: character.inspiration ? "есть" : "нет" },
-        ...overriddenNumbers,
       ],
     },
+    {
+      id: "combatNumbers",
+      titleRu: "Числа боя",
+      edit: { block: "permanent" },
+      rows: DERIVED_STAT_IDS.map((stat) => ({
+        labelRu: DERIVED_LABELS[stat],
+        value: SIGNED_DERIVED.has(stat) ? signed(totals.value(stat)) : String(totals.value(stat)),
+      })),
+    },
     /**
-     * Прочие прибавки — свойство самого Торна: благословение, дар, обучение. Прибавка с вещью
-     * правится у вещи в «Сумке», а этой карточке принадлежит вклад, у которого вещи нет.
+     * Постоянные вклады — свойство самого Торна: раса, дар, благословение, слово мастера. Вклад с
+     * вещью правится у вещи в «Сумке», а этой карточке принадлежит тот, у которого вещи нет.
      */
     {
-      id: "miscBonuses",
-      titleRu: "Прочие прибавки",
-      edit: { block: "miscBonuses" },
-      rows: [
-        { labelRu: BONUS_LABELS.spellcasting, value: signed(character.miscBonuses.spellcasting) },
-        { labelRu: BONUS_LABELS.armorClass, value: signed(character.miscBonuses.armorClass) },
-        { labelRu: BONUS_LABELS.savingThrows, value: signed(character.miscBonuses.savingThrows) },
-      ],
+      id: "permanentContributions",
+      titleRu: "Постоянные вклады",
+      edit: { block: "permanent" },
+      rows: character.permanentContributions.map(({ nameRu, contribution }) => ({
+        labelRu: nameRu,
+        value: contributionValue(contribution),
+        hint: statLabel(contribution.stat),
+      })),
     },
     ...ABILITIES.map((ability) => abilityBlock(character, ability)),
     {

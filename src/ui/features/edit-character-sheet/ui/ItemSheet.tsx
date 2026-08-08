@@ -1,12 +1,18 @@
 "use client";
 
+import { ARMOR_CATEGORIES, STAT_IDS, type ArmorCategory, type StatId } from "@/core/domain/shared/stats";
 import { useState } from "react";
 
 import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
 import type { Currency } from "@/core/domain/equipment/schema";
 import { CURRENCIES } from "@/core/domain/shared/schema";
-import { BONUS_LABELS, CURRENCY_ABBR, ITEM_KIND_LABELS } from "@/ui/entities/character/lib/labels";
+import {
+  ARMOR_CATEGORY_LABELS,
+  CURRENCY_ABBR,
+  ITEM_KIND_LABELS,
+  statLabel,
+} from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
@@ -47,18 +53,24 @@ export function ItemSheet({
     item.price === undefined ? "" : String(item.price.amount),
   );
   const [currency, setCurrency] = useState<Currency>(item.price?.currency ?? "gold");
-  const [spellcasting, setSpellcasting] = useState(String(item.bonuses?.spellcasting ?? 0));
-  const [armorClass, setArmorClass] = useState(String(item.bonuses?.armorClass ?? 0));
-  const [savingThrows, setSavingThrows] = useState(String(item.bonuses?.savingThrows ?? 0));
-  const [armorBase, setArmorBase] = useState(
-    item.armorBase === undefined ? "" : String(item.armorBase),
+  /**
+   * Прибавки набираются по одной на величину: список величин общий, и своего словаря у шторки нет.
+   * Набранное уходит владельцу как есть — ноль он не сохранит сам.
+   */
+  const [bonuses, setBonuses] = useState<readonly (readonly [StatId, string])[]>(
+    STAT_IDS.flatMap((stat) => {
+      const value = item.bonuses?.[stat];
+      return value === undefined ? [] : [[stat, String(value)] as const];
+    }),
   );
+  const [added, setAdded] = useState<StatId>("armorClass");
+  const [armorBase, setArmorBase] = useState(
+    item.armor === undefined ? "" : String(item.armor.base),
+  );
+  const [category, setCategory] = useState<ArmorCategory | "">(item.armor?.category ?? "");
 
-  const numbers = {
-    spellcasting: requiredFieldNumber(spellcasting),
-    armorClass: requiredFieldNumber(armorClass),
-    savingThrows: requiredFieldNumber(savingThrows),
-  };
+  const numbers: Record<string, number> = {};
+  for (const [stat, text] of bonuses) numbers[stat] = requiredFieldNumber(text);
   // Пустая цена — вещь без цены, а не цена ноль: у находки её может не назвать и мастер.
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
   // Пустая база — вещь не доспех: кольцо защищает прибавкой, а не заменой базы.
@@ -77,7 +89,9 @@ export function ItemSheet({
           ...(amount === undefined ? {} : { price: { amount, currency } }),
           ...(note.trim() === "" ? {} : { note: note.trim() }),
           bonuses: numbers,
-          ...(base === undefined ? {} : { armorBase: base }),
+          ...(base === undefined
+            ? {}
+            : { armor: { base, ...(category === "" ? {} : { category }) } }),
         })
       }
     >
@@ -181,13 +195,65 @@ export function ItemSheet({
       {/* Прибавки и база доспеха — свойства экипировки: зелье действует, когда его пьют. */}
       {kind === "gear" ? (
         <>
-          <NumberField labelRu={BONUS_LABELS.spellcasting} value={spellcasting} onChange={setSpellcasting} />
-          <NumberField labelRu={BONUS_LABELS.armorClass} value={armorClass} onChange={setArmorClass} />
-          <NumberField labelRu={BONUS_LABELS.savingThrows} value={savingThrows} onChange={setSavingThrows} />
+          {bonuses.map(([stat, text]) => (
+            <NumberField
+              key={stat}
+              labelRu={statLabel(stat)}
+              value={text}
+              onChange={(next) =>
+                setBonuses(bonuses.map((row) => (row[0] === stat ? [stat, next] : row)))
+              }
+            />
+          ))}
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-slate-500 dark:text-slate-400">Добавить прибавку</span>
+            <span className="flex gap-2">
+              <select
+                value={added}
+                onChange={(event) => setAdded(statOf(event.target.value))}
+                className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-800"
+              >
+                {STAT_IDS.map((stat) => (
+                  <option key={stat} value={stat}>
+                    {statLabel(stat)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() =>
+                  setBonuses(
+                    bonuses.some((row) => row[0] === added) ? bonuses : [...bonuses, [added, "0"]],
+                  )
+                }
+                className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+              >
+                Добавить
+              </button>
+            </span>
+          </label>
+
           <NumberField labelRu="База КД доспеха" value={armorBase} onChange={setArmorBase} min={1} />
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-slate-500 dark:text-slate-400">Категория доспеха</span>
+            <select
+              value={category}
+              onChange={(event) => setCategory(categoryOf(event.target.value))}
+              className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-800"
+            >
+              <option value="">не названа</option>
+              {ARMOR_CATEGORIES.map((option) => (
+                <option key={option} value={option}>
+                  {ARMOR_CATEGORY_LABELS[option]}
+                </option>
+              ))}
+            </select>
+          </label>
           <p className="text-xs text-slate-600 dark:text-slate-400">
             База — только у доспеха: у кольчуги 16, у кольца поля нет. Надетый доспех задаёт базу
-            КД сам; Ловкость и прибавки считаются сверху.
+            КД сам; Ловкость и прибавки считаются сверху, а во что категория обходится Ловкости —
+            правило листа.
           </p>
         </>
       ) : null}
@@ -211,3 +277,13 @@ export function ItemSheet({
   );
 }
 
+
+/** Выбранное в списке — величина словаря: список из него и построен. */
+function statOf(chosen: string): StatId {
+  return STAT_IDS.find((stat) => stat === chosen) ?? "armorClass";
+}
+
+/** Выбранная категория; пустая строка означает «не названа», а не отсутствие выбора. */
+function categoryOf(chosen: string): ArmorCategory | "" {
+  return ARMOR_CATEGORIES.find((category) => category === chosen) ?? "";
+}

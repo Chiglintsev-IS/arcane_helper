@@ -9,11 +9,11 @@
  * попадает в `gaps` с причиной. Показать неверное число хуже, чем не показать никакого.
  */
 
-import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { Character } from "@/core/domain/assembly/character";
+import { saveStatId } from "@/core/domain/shared/stats";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
-import { armorClassWithSpell } from "@/core/domain/sheet/armorClass";
 import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
 import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/core/shared/language";
 import {
@@ -76,10 +76,10 @@ function resolve(
       return { value: `${castLevel(spell, context.payment)}` };
 
     case "spellSaveDc":
-      return { value: `${Sheet.of(character).spellSaveDc}` };
+      return { value: `${Character.of(character).sheet.value("spellSaveDc")}` };
 
     case "spellAttackModifier":
-      return { value: signed(Sheet.of(character).spellAttackModifier) };
+      return { value: signed(Character.of(character).sheet.value("spellAttackModifier")) };
 
     case "damage":
       if (spell.damage === undefined) {
@@ -115,7 +115,7 @@ function resolve(
     case "armorClass":
       // Считается вклад выбранного заклинания вместе с уже активными эффектами.
       // Состояние при этом не меняется: до подтверждения его менять нельзя.
-      return { value: `${armorClassWithSpell(character, spell)}` };
+      return { value: `${Character.of(character).sheetWith(spell).value("armorClass")}` };
   }
 }
 
@@ -195,7 +195,7 @@ const DAMAGE_ABOVE_MINIMUM_CONCENTRATION_DC = (MINIMUM_CONCENTRATION_DC + 1) * 2
  */
 export function castInstructions(spell: Spell, context: AnnouncementContext): string[] {
   const { character } = context;
-  const totals = Sheet.of(character);
+  const totals = Character.of(character).sheet;
   const level = castLevel(spell, context.payment);
   const steps: string[] = [...componentRequirements(spell.components)];
 
@@ -226,7 +226,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
       // «КД цели» — единственное сокращение, которое инструкция не может заменить порогом: числа
       // противника приложение не знает. Поэтому рядом сказано, что с ним делать.
       steps.push(
-        `Бросьте d20${signed(totals.spellAttackModifier)} — попадание, если результат не ниже КД цели`,
+        `Бросьте d20${signed(totals.value("spellAttackModifier"))} — попадание, если результат не ниже КД цели`,
       );
       break;
     case "saving_throw": {
@@ -238,7 +238,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
       // Порог вместо «против вашей КС 16»: КС спасброска от заклинаний — это ровно то число, которое
       // цель должна выбросить, и назвать его напрямую короче, чем расшифровывать сокращение.
       steps.push(
-        `Цель бросает ${throwName}: ${totals.spellSaveDc} и выше — спаслась, ниже — нет`,
+        `Цель бросает ${throwName}: ${totals.value("spellSaveDc")} и выше — спаслась, ниже — нет`,
       );
       break;
     }
@@ -274,7 +274,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
     // Формула «10 или половина урона, что больше» требует счёта в уме на каждое попадание. Порог
     // постоянен, пока половина урона его не превысит, — эта граница и названа числом.
     steps.push(
-      `Держите концентрацию: получите урон — бросьте d20${signed(totals.savingThrow("constitution"))}.` +
+      `Держите концентрацию: получите урон — бросьте d20${signed(totals.value(saveStatId("constitution")))}.` +
         ` Нужно ${MINIMUM_CONCENTRATION_DC} и больше` +
         ` (при уроне от ${DAMAGE_ABOVE_MINIMUM_CONCENTRATION_DC} — половину урона и больше),` +
         " иначе заклинание спадает",

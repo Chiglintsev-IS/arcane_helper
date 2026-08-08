@@ -41,6 +41,10 @@ export function IdentitySheet({
   const [ageText, setAgeText] = useState(String(character.age));
   const [size, setSize] = useState<CreatureSize>(character.size);
   const [speedText, setSpeedText] = useState(String(character.speed));
+  const [weapons, setWeapons] = useState(character.proficiencies.weapons.join(", "));
+  const [armor, setArmor] = useState(character.proficiencies.armor.join(", "));
+  const [tools, setTools] = useState(character.proficiencies.tools.join(", "));
+  const [languages, setLanguages] = useState(character.proficiencies.languages.join(", "));
 
   const age = requiredFieldNumber(ageText);
   const speed = requiredFieldNumber(speedText);
@@ -59,6 +63,12 @@ export function IdentitySheet({
           age,
           size,
           speed,
+          proficiencies: {
+            weapons: asList(weapons),
+            armor: asList(armor),
+            tools: asList(tools),
+            languages: asList(languages),
+          },
         })
       }
     >

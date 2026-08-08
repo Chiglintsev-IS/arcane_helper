@@ -11,12 +11,12 @@
 
 "use client";
 
+import { Character } from "@/core/domain/assembly/character";
 import { useState, type FormEvent } from "react";
 
 import { ConcentrationCard } from "@/ui/entities/concentration/ui/ConcentrationCard";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
-import { effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 
 /**
@@ -26,7 +26,7 @@ import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summa
  * делает это видимым: неверный эффект снимается вручную.
  */
 function armorClassNote(effect: ActiveEffect, armorClass: number): string {
-  return effect.armorClass === undefined ? "" : ` · КД ${armorClass}`;
+  return effect.contributions.length === 0 ? "" : ` · КД ${armorClass}`;
 }
 
 /**
@@ -73,7 +73,7 @@ export function ActiveEffects({
   /** Заводит статус без вклада в КД: поле стоит прямо в блоке, рядом со списком. */
   onAddStatus: (nameRu: string) => void;
 }) {
-  const armorClass = effectiveArmorClass(character);
+  const armorClass = Character.of(character).sheet.value("armorClass");
   const concentrationEffect = character.activeEffects.find((effect) => effect.isConcentration);
   const otherEffects = character.activeEffects.filter((effect) => !effect.isConcentration);
 

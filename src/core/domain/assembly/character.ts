@@ -10,8 +10,10 @@ import { Arcana } from "@/core/domain/arcana/arcana";
 import { EffectBoard } from "@/core/domain/effects/effectBoard";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
+import { Sheet } from "@/core/domain/sheet/sheet";
 import { Spellbook } from "@/core/domain/spellbook/spellbook";
 import { Vitality } from "@/core/domain/vitality/vitality";
+import type { SourcedContribution } from "@/core/domain/shared/stats";
 import type { CharacterState } from "./state";
 import { CharacterBase } from "@/core/domain/character/base";
 import { parsedCharacterFields } from "@/core/domain/character/schema";
@@ -32,8 +34,7 @@ type SheetField =
   | "abilities"
   | "saveProficiencies"
   | "skills"
-  | "overrides"
-  | "miscBonuses"
+  | "permanentContributions"
   | "exhaustion"
   | "inspiration"
   | "level";
@@ -72,6 +73,46 @@ export class Character {
 
   get items(): Items {
     return Items.of(this.state);
+  }
+
+  /**
+   * Лист персонажа: основание — его собственные поля, вклады — от надетого и от действующего.
+   *
+   * Собирает их корень, потому что больше некому: снаряжение, эффекты и лист друг о друге не знают,
+   * а знать, из чего состоит персонаж, — как раз его дело.
+   */
+  get sheet(): Sheet {
+    return Sheet.of(this.state, this.contributions());
+  }
+
+  /**
+   * Лист, каким он станет, если сотворить заклинание, — состояние при этом не меняется.
+   *
+   * Предпросмотр и итог считаются одним и тем же кодом: расхождение между обещанным и случившимся
+   * возможно только там, где их считают дважды.
+   */
+  sheetWith(spell: Parameters<EffectBoard["contributionsWith"]>[0]): Sheet {
+    return Sheet.of(this.state, [
+      ...this.permanentContributions(),
+      ...this.equipment.contributions(this.items),
+      ...this.effects.contributionsWith(spell),
+    ]);
+  }
+
+  private contributions(): readonly SourcedContribution[] {
+    return [
+      ...this.permanentContributions(),
+      ...this.equipment.contributions(this.items),
+      ...this.effects.contributions(),
+    ];
+  }
+
+  /** Постоянные вклады персонажа — раса, дар, слово мастера: без вещи и без срока. */
+  private permanentContributions(): readonly SourcedContribution[] {
+    return this.state.permanentContributions.map(({ nameRu, contribution }) => ({
+      source: { origin: "permanent", nameRu },
+      contribution,
+    }));
   }
 
   withArcana(arcana: Arcana): Character {

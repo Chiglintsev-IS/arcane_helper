@@ -16,7 +16,7 @@ import { useState } from "react";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { armorClassWithSpell, effectiveArmorClass } from "@/core/domain/sheet/armorClass";
+import { Character } from "@/core/domain/assembly/character";
 import {
   availableTriggers,
   reactionsFor,
@@ -26,8 +26,9 @@ import {
 
 /** Что изменится в числах, если применить реакцию. Пусто — числа она не трогает. */
 function outcome(spell: Spell, character: CharacterState): string | null {
-  if (spell.armorClassEffect === undefined) return null;
-  return `КД ${armorClassWithSpell(character, spell)} вместо ${effectiveArmorClass(character)}`;
+  if (spell.contributions.length === 0) return null;
+  const root = Character.of(character);
+  return `КД ${root.sheetWith(spell).value("armorClass")} вместо ${root.sheet.value("armorClass")}`;
 }
 
 export function ReactionsSheet({

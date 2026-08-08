@@ -9,6 +9,7 @@
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
 
+import { Character } from "@/core/domain/assembly/character";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
@@ -16,7 +17,6 @@ import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { armorClassAdjustment, effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import { signed } from "@/core/shared/language";
 import { slotsInOrder } from "@/core/domain/arcana/slots";
@@ -171,14 +171,14 @@ export function ResourceHeader({
 
   // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок.
   const vitality = Vitality.of(character);
-  const armorClass = effectiveArmorClass(character);
+  const armorClass = Character.of(character).sheet.value("armorClass");
 
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
       <dl className="grid grid-cols-2 gap-1">
         <ArmorClassStat
           value={`${armorClass}`}
-          adjustment={armorClassAdjustment(character)}
+          adjustment={Character.of(character).effects.manualAdjustment("armorAdjustment")}
           onOpen={onOpenArmorClass}
         />
         <HitPointsStat
@@ -239,9 +239,9 @@ export function ResourceBadges({
          * Подпись короткая, доступное имя полное: на 320 пикселях «Пассивное восприятие» забирает
          * целый ряд значков, а ряд здесь стоит четверти карточки списка.
          */}
-        <li aria-label={`Пассивное восприятие ${totals.passivePerception}`}>
+        <li aria-label={`Пассивное восприятие ${totals.value("passivePerception")}`}>
           <Badge tone="muted" icon="◉">
-            Восприятие {totals.passivePerception}
+            Восприятие {totals.value("passivePerception")}
           </Badge>
         </li>
         {/*
@@ -266,7 +266,7 @@ export function ResourceBadges({
           <>
             <li>
               <Badge tone="muted" icon="◔">
-                Инициатива {signed(totals.initiative)}
+                Инициатива {signed(totals.value("initiative"))}
               </Badge>
             </li>
             <li>

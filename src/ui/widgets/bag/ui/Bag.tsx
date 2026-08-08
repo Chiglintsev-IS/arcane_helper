@@ -1,5 +1,8 @@
 "use client";
 
+import { Character } from "@/core/domain/assembly/character";
+import { STAT_IDS } from "@/core/domain/shared/stats";
+import { statLabel } from "@/ui/entities/character/lib/labels";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 import { Items } from "@/core/domain/items/items";
@@ -31,11 +34,10 @@ export function itemMeta(item: ItemDefinition): string {
   const bonuses =
     item.bonuses === undefined || item.kind !== "gear"
       ? []
-      : [
-          item.bonuses.spellcasting === 0 ? null : `магия ${signed(item.bonuses.spellcasting)}`,
-          item.bonuses.armorClass === 0 ? null : `защита ${signed(item.bonuses.armorClass)}`,
-          item.bonuses.savingThrows === 0 ? null : `спасброски ${signed(item.bonuses.savingThrows)}`,
-        ].filter((part) => part !== null);
+      : STAT_IDS.flatMap((stat) => {
+          const value = item.bonuses?.[stat];
+          return value === undefined || value === 0 ? [] : [`${statLabel(stat)} ${signed(value)}`];
+        });
   return [
     ...(item.price === undefined ? [] : [`${item.price.amount} ${CURRENCY_ABBR[item.price.currency]}`]),
     ...bonuses,
@@ -141,7 +143,6 @@ function ItemRow({
 export function Bag({
   character,
   onEditMoney,
-  onEditArmor,
   onOpenItem,
   onAddItem,
   onAdjustBagCount,
@@ -149,7 +150,6 @@ export function Bag({
 }: {
   character: CharacterState;
   onEditMoney: () => void;
-  onEditArmor: () => void;
   onOpenItem: (id: string) => void;
   onAddItem: (kind: ItemKind, nameRu: string) => void;
   onAdjustBagCount: (id: string, delta: number) => void;
@@ -158,7 +158,11 @@ export function Bag({
   const { money } = character.equipment;
   const items = Items.of(character);
   const equipment = Equipment.of(character);
-  const wornArmor = equipment.wornArmor(items);
+  const armorClass = Character.of(character).sheet.breakdown("armorClass");
+  // Доспех, по которому считается защита, называет сама свёртка: второго счёта здесь нет.
+  const wornArmorNameRu = armorClass.parts.find(
+    (part) => part.applied && part.contribution.kind === "method",
+  )?.source.nameRu;
 
   const rows: readonly BagRow[] = items.all.map((item) => ({
     ...item,
@@ -192,24 +196,13 @@ export function Bag({
       </section>
 
       <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Доспех</h2>
-          <button
-            type="button"
-            onClick={onEditArmor}
-            aria-label="Править: Доспех"
-            className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
-          >
-            Править
-          </button>
-        </div>
+        <h2 className="text-sm font-semibold">Доспех</h2>
         <p className="text-sm tabular-nums">
-          База КД {equipment.armorClassBase(items)}
-          {wornArmor !== undefined ? (
-            <span className="text-slate-500 dark:text-slate-400"> · {wornArmor.nameRu}</span>
-          ) : (
-            <span className="text-slate-500 dark:text-slate-400"> · без доспехов</span>
-          )}
+          КД {armorClass.value}
+          <span className="text-slate-500 dark:text-slate-400">
+            {" · "}
+            {wornArmorNameRu ?? "без доспехов"}
+          </span>
         </p>
       </section>
 

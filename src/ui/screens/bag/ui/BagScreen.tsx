@@ -10,12 +10,10 @@ import {
   editMoney,
   removeItem,
 } from "@/core/application/useCases/equipment";
-import { setArmorClassBaseOverride } from "@/core/application/useCases/sheet";
 import { Items } from "@/core/domain/items/items";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { Bag } from "@/ui/widgets/bag/ui/Bag";
-import { ArmorClassBaseSheet } from "@/ui/features/edit-character-sheet/ui/ArmorClassBaseSheet";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
 import type { Session } from "@/core/application/session";
@@ -25,7 +23,7 @@ import { applyEdit } from "@/ui/shared/model/editing";
  * Что открыто поверх сумки. Вещь названа своим полем, а не приставкой в строке: строка требует
  * разбора обратно, и разбор однажды разойдётся с тем, кто её собрал.
  */
-type BagEdit = { of: "money" } | { of: "armorClassBase" } | { of: "item"; id: string };
+type BagEdit = { of: "money" } | { of: "item"; id: string };
 
 export function BagScreen() {
   const { clock, session: sessionStore } = useStores();
@@ -64,7 +62,6 @@ export function BagScreen() {
         onEditMoney={() => openSheet({ of: "money" })}
         onOpenItem={(id) => openSheet({ of: "item", id })}
         onAddItem={(kind, nameRu) => apply((current) => addItem(current, { nameRu, kind }, clock))}
-        onEditArmor={() => openSheet({ of: "armorClassBase" })}
         onAdjustBagCount={(id, delta) => apply((current) => adjustBagCount(current, id, delta, clock))}
         onAdjustWornCount={(id, delta) => apply((current) => adjustWornCount(current, id, delta, clock))}
       />
@@ -75,15 +72,6 @@ export function BagScreen() {
           error={refusal}
           onCancel={closeSheet}
           onSave={(money) => save((current) => editMoney(current, money, clock))}
-        />
-      ) : null}
-
-      {open?.of === "armorClassBase" ? (
-        <ArmorClassBaseSheet
-          character={character}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(value) => save((current) => setArmorClassBaseOverride(current, value, clock))}
         />
       ) : null}
 

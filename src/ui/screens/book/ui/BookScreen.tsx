@@ -37,7 +37,7 @@ export function BookScreen() {
   const economy = deriveTurnEconomy(session);
   const context = { character, turn: economy };
   const { inFight } = economy;
-  const limit = Sheet.of(character).preparationLimit;
+  const limit = Sheet.of(character).value("preparedLimit");
 
   const inMode = spellsForScreen(spells, character, "book", inFight);
   const shown = filterSpells(inMode, filters, context);
