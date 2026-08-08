@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { Currency, Money } from "@/core/domain/equipment/schema";
-import { CURRENCIES } from "@/core/domain/equipment/schema";
+import { CURRENCIES } from "@/core/domain/shared/schema";
 import { CURRENCY_LABELS } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";

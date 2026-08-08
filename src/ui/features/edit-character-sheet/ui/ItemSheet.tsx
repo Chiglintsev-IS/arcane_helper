@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
 import type { Currency } from "@/core/domain/equipment/schema";
-import { CURRENCIES } from "@/core/domain/equipment/schema";
+import { CURRENCIES } from "@/core/domain/shared/schema";
 import { BONUS_LABELS, CURRENCY_ABBR, ITEM_KIND_LABELS } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";

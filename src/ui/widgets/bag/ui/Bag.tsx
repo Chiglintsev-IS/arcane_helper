@@ -3,7 +3,7 @@
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 import { Items } from "@/core/domain/items/items";
-import { CURRENCIES } from "@/core/domain/equipment/schema";
+import { CURRENCIES } from "@/core/domain/shared/schema";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { CURRENCY_ABBR } from "@/ui/entities/character/lib/labels";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";

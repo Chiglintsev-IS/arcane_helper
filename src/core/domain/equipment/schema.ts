@@ -93,4 +93,3 @@ export type StockEntry = DeepReadonly<z.infer<typeof stockEntrySchema>>;
 export type Currency = (typeof CURRENCIES)[number];
 export type Money = DeepReadonly<z.infer<typeof moneySchema>>;
 
-export { CURRENCIES };

@@ -13,7 +13,8 @@ import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
-import { CURRENCIES, type Money } from "@/core/domain/equipment/schema";
+import type { Money } from "@/core/domain/equipment/schema";
+import { CURRENCIES } from "@/core/domain/shared/schema";
 import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
 
