@@ -74,8 +74,9 @@ export function skillModifier(input: {
 
 const PASSIVE_BASE = 10;
 
-export function passivePerception(input: Parameters<typeof skillModifier>[0]): number {
-  return PASSIVE_BASE + skillModifier(input);
+/** Пассивное значение навыка: десятка вместо броска. */
+export function passivePerception(perceptionModifier: number): number {
+  return PASSIVE_BASE + perceptionModifier;
 }
 
 /**
@@ -90,8 +91,11 @@ export function initiativeModifier(input: { dexterity: number; wisdom: number })
 /**
  * Лимит подготовленных заклинаний волшебника: модификатор Интеллекта + уровень волшебника.
  * Торн: 4 + 7 = 11. Заговоры в лимит не входят.
+ *
+ * Нижнего предела формула не знает: он свойство величины и применяется после всех вкладов — иначе
+ * прибавка, пришедшая позже, увела бы лимит ниже единицы мимо уже применённого предела.
  */
 export function preparedLimit(intelligence: number, wizardLevel: number): number {
   assertCharacterLevel(wizardLevel);
-  return Math.max(1, abilityModifier(intelligence) + wizardLevel);
+  return abilityModifier(intelligence) + wizardLevel;
 }

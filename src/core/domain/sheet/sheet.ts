@@ -10,7 +10,7 @@
  */
 
 import { CharacterBase } from "@/core/domain/character/base";
-import type { Ability, SkillId } from "@/core/domain/character/skills";
+import type { Ability, SkillId } from "@/core/domain/shared/stats";
 import type { CharacterFields } from "@/core/domain/character/schema";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import type { EquipmentData } from "@/core/domain/equipment/schema";

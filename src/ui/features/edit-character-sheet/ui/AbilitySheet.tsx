@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 
-import {
-  skillsOfAbility,
-  type Ability,
-  type SkillId,
-  type SkillTraining,
-} from "@/core/domain/character/skills";
+import { skillsOfAbility, type SkillTraining } from "@/core/domain/character/skills";
+import type { Ability, SkillId } from "@/core/domain/shared/stats";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import {
   MAXIMUM_ABILITY_SCORE,

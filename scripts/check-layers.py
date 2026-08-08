@@ -24,6 +24,13 @@
  15. Отображение не меняет состояние: ни `commit`, ни `with…` на агрегате.
  16. Полная схема состояния состоит только из спредов владельцев: поле без владельца недопустимо.
  17. Агрегат объявляет, чем владеет: класс с состоянием и `toState` вызывает `ownedFields`.
+ 18. Циклов между модулями одного контекста нет.
+
+Восемнадцатое — то же восьмое, только в мелком. Величина, посчитанная из величины, которая считается
+из неё, не имеет значения вовсе, и заметить это тем труднее, чем ближе модули друг к другу: внутри
+одного контекста ребро заводится одной строкой импорта и глазами не видно. Разбиение по
+ответственности ациклично само — цикл здесь означает, что граница проведена не там, и чинится он
+переносом ответственности, а не разрывом ребра.
 
 Правила 14–17 держат единственную дверь мутации. Состояние персонажа меняется только через корень
 агрегата: дописанное поле мимо владельца затирается соседом при следующей правке, а посчитанное
@@ -56,6 +63,7 @@
 
 import json
 import pathlib
+import posixpath
 import re
 import sys
 
@@ -65,6 +73,7 @@ EXTRA = [pathlib.Path("e2e")]
 IMPORT = re.compile(r'(?:from|import)\s+["\']@/([^"\']+)["\']')
 TYPE_IMPORT = re.compile(r'import\s+type\s+[^;]*?["\']@/([^"\']+)["\']', re.S)
 ANY_IMPORT = re.compile(r'(?:from|import)\s+["\'](@/[^"\']+|\.[^"\']*)["\']')
+ANY_TYPE_IMPORT = re.compile(r'import\s+type\s+[^;]*?["\'](@/[^"\']+|\.[^"\']*)["\']', re.S)
 NAMED_IMPORT = re.compile(r'import\s+(type\s+)?\{([^}]*)\}\s*from\s*["\']([^"\']+)["\']', re.S)
 SPREAD = re.compile(r"\.\.\.(?=[\w(])")
 STATE_SPREADS = ("session.character", "current.character")
@@ -119,6 +128,9 @@ errors: list[str] = []
 
 # Ребро «контекст → контекст» и файлы, которые его создают.
 context_edges: dict[tuple[str, str], set[str]] = {}
+
+# Импорты модуля внутри его же контекста: граф, на котором ищется цикл в мелком.
+module_imports: dict[str, set[str]] = {}
 
 
 def layer_of(path: str) -> tuple[str, str]:
@@ -366,6 +378,47 @@ def check_imports(path: pathlib.Path) -> None:
                 errors.append(f"{path}: слайсы одного слоя не знают друг о друге — @/{target}")
 
 
+def module_name(relative: str) -> str:
+    """Имя модуля: путь от `src/` без расширения — как его пишут в импорте."""
+    for suffix in (".tsx", ".ts"):
+        if relative.endswith(suffix):
+            return relative[: -len(suffix)]
+    return relative
+
+
+def collect_module_imports(path: pathlib.Path) -> None:
+    """Импорты модуля внутри его же контекста: соседи, а не чужие контексты.
+
+    Импорт одного типа в счёт не идёт по той же причине, что и между слайсами интерфейса: до сборки
+    он исчезает, и посчитать значение из значения через него нельзя. Цикл, который ловит правило, —
+    цикл времени выполнения.
+    """
+    relative = str(path.relative_to(SRC)).replace("\\", "/")
+    context = domain_context(relative)
+    if context is None:
+        return
+
+    text = path.read_text(encoding="utf-8")
+    type_only = set(ANY_TYPE_IMPORT.findall(text))
+    for target in ANY_IMPORT.findall(text):
+        if target in type_only:
+            continue
+        resolved = (
+            target.removeprefix("@/")
+            if target.startswith("@/")
+            else posixpath.normpath(posixpath.join(posixpath.dirname(relative), target))
+        )
+        if domain_context(resolved) != context:
+            continue
+        module_imports.setdefault(module_name(relative), set()).add(module_name(resolved))
+
+
+def check_module_cycles() -> None:
+    """Цикл внутри контекста: величина, посчитанная из той, что считается из неё."""
+    for cycle in elementary_cycles(module_imports):
+        errors.append(f"цикл модулей внутри контекста — {cycle_name(cycle)}")
+
+
 def check_comments(path: pathlib.Path) -> None:
     text = path.read_text(encoding="utf-8")
     # Тестовый код узнаётся по vitest, а не по имени файла: общий набор проверок хранилища лежит
@@ -507,7 +560,9 @@ def main() -> int:
             check_state_spread(path)
             check_display_mutation(path)
             check_owned_fields(path)
+            collect_module_imports(path)
         check_comments(path)
+    check_module_cycles()
     check_test_only_slices()
     check_full_schema()
     for root in EXTRA:

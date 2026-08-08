@@ -8,13 +8,13 @@ import {
   spellAttackModifier,
   spellSaveDc,
 } from "@/core/domain/character/abilities";
+import { SKILL_ABILITY } from "@/core/domain/character/skills";
 import {
   ABILITIES,
-  SKILL_ABILITY,
   SKILL_IDS,
   type Ability,
   type SkillId,
-} from "@/core/domain/character/skills";
+} from "@/core/domain/shared/stats";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { recordOf } from "@/core/domain/shared/records";
 import type { CharacterFields } from "@/core/domain/character/schema";

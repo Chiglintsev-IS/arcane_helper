@@ -12,14 +12,10 @@ import {
   MAXIMUM_ABILITY_SCORE,
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
-import {
-  itemBonusesSchema,
-  nonEmpty,
-  NO_ITEM_BONUSES,
-  russianSchemaErrors,
-} from "@/core/domain/shared/schema";
+import { nonEmpty, russianSchemaErrors } from "@/core/domain/shared/schema";
+import { ABILITIES, SKILL_IDS } from "@/core/domain/shared/stats";
 
-import { ABILITIES, SKILL_IDS, SKILL_TRAINING } from "./skills";
+import { SKILL_TRAINING } from "./skills";
 
 const roleplayProfileSchema = z.object({
   tone: z.array(z.enum(["serious", "mysterious", "sarcastic", "wild"])).min(1),

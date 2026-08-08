@@ -1,40 +1,12 @@
 /**
- * Характеристики и навыки.
+ * Навыки персонажа: какой характеристикой их бросают и чем персонаж владеет.
+ *
+ * Имена характеристик и навыков живут не здесь, а в словаре величин: ими называют цель вклада и
+ * каталог, и снаряжение, и эффекты, а через персонажа это имя к ним не пришло бы — им пришлось бы
+ * знать про персонажа ради одного слова.
  */
 
-export const ABILITIES = [
-  "strength",
-  "dexterity",
-  "constitution",
-  "intelligence",
-  "wisdom",
-  "charisma",
-] as const;
-
-export type Ability = (typeof ABILITIES)[number];
-
-export const SKILL_IDS = [
-  "acrobatics",
-  "animalHandling",
-  "arcana",
-  "athletics",
-  "deception",
-  "history",
-  "insight",
-  "intimidation",
-  "investigation",
-  "medicine",
-  "nature",
-  "perception",
-  "performance",
-  "persuasion",
-  "religion",
-  "sleightOfHand",
-  "stealth",
-  "survival",
-] as const;
-
-export type SkillId = (typeof SKILL_IDS)[number];
+import { SKILL_IDS, type Ability, type SkillId } from "@/core/domain/shared/stats";
 
 export const SKILL_ABILITY: Record<SkillId, Ability> = {
   acrobatics: "dexterity",

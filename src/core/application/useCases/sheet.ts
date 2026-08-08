@@ -11,14 +11,13 @@ import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import type { DerivedId } from "@/core/domain/sheet/derived";
+import { skillsOfAbility, type SkillTraining } from "@/core/domain/character/skills";
 import {
   ABILITIES,
   SKILL_IDS,
-  skillsOfAbility,
   type Ability,
   type SkillId,
-  type SkillTraining,
-} from "@/core/domain/character/skills";
+} from "@/core/domain/shared/stats";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemBonuses } from "@/core/domain/shared/schema";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";

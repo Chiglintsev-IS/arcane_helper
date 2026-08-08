@@ -1,7 +1,7 @@
 /** Русские подписи листа. Домен отдаёт числа и идентификаторы — называет их экран. */
 
 import type { DerivedId } from "@/core/domain/sheet/derived";
-import type { Ability, SkillId } from "@/core/domain/character/skills";
+import type { Ability, SkillId } from "@/core/domain/shared/stats";
 import type { CreatureSize } from "@/core/domain/character/schema";
 import type { Currency } from "@/core/domain/equipment/schema";
 import type { ItemKind } from "@/core/domain/items/schema";

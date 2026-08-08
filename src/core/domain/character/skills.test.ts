@@ -1,22 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { ABILITIES, SKILL_ABILITY, SKILL_IDS, skillsOfAbility } from "./skills";
+import { ABILITIES, SKILL_IDS } from "@/core/domain/shared/stats";
+
+import { SKILL_ABILITY, skillsOfAbility } from "./skills";
 
 describe("таблица характеристик и навыков", () => {
-  it("шесть характеристик в порядке листа персонажа", () => {
-    expect(ABILITIES).toEqual([
-      "strength",
-      "dexterity",
-      "constitution",
-      "intelligence",
-      "wisdom",
-      "charisma",
-    ]);
-  });
-
-  it("восемнадцать навыков, у каждого своя характеристика", () => {
-    expect(SKILL_IDS).toHaveLength(18);
-    expect(Object.keys(SKILL_ABILITY)).toHaveLength(18);
+  it("у каждого навыка своя характеристика", () => {
+    expect(Object.keys(SKILL_ABILITY)).toHaveLength(SKILL_IDS.length);
     for (const id of SKILL_IDS) {
       expect(ABILITIES).toContain(SKILL_ABILITY[id]);
     }
