@@ -485,21 +485,42 @@ describe("расход костей хитов (FR-135)", () => {
   });
 });
 
-describe("вклад в Класс Доспеха (FR-093)", () => {
-  const withEffect = (value: number): unknown => ({
+describe("вклады заклинания (FR-093)", () => {
+  const withContribution = (contribution: unknown): unknown => ({
     ...fieldsOf(web()),
-    armorClassEffect: { kind: "bonus", value },
+    contributions: [contribution],
+  });
+  const bonus = (value: number) => withContribution({ stat: "armorClass", kind: "bonus", value });
+
+  it("вклада нет вовсе — заклинание на числа не влияет", () => {
+    expect(spellSchema.safeParse(fieldsOf(web())).success).toBe(true);
   });
 
-  it("нулевого вклада не бывает: отсутствие поля и есть «не влияет»", () => {
-    expect(firstError(withEffect(0))).toContain("не может быть нулевым");
+  it("нулевой и отрицательный вклад карточкой не приходят: это поправка мастера", () => {
+    expect(firstError(bonus(0))).toContain("не бывает нулевым или отрицательным");
+    expect(firstError(bonus(-1))).toContain("не бывает нулевым или отрицательным");
   });
 
-  it("отрицательный вклад карточкой не приходит: это поправка мастера", () => {
-    expect(firstError(withEffect(-1))).toContain("не бывает отрицательным");
+  it("отказ называет заклинание по имени", () => {
+    expect(firstError(bonus(-1))).toContain("Паутина");
   });
 
-  it("положительный принимается", () => {
-    expect(spellSchema.safeParse(withEffect(2)).success).toBe(true);
+  it("вклад называет величину словаря, и выдуманной величины не бывает", () => {
+    expect(spellSchema.safeParse(bonus(2)).success).toBe(true);
+    expect(
+      spellSchema.safeParse(withContribution({ stat: "лихость", kind: "bonus", value: 2 })).success,
+    ).toBe(false);
+  });
+
+  it("способ счёта от заклинания несёт базу: «Доспехи мага» спорят с доспехом, а не прибавляются", () => {
+    expect(
+      spellSchema.safeParse(
+        withContribution({
+          stat: "armorClass",
+          kind: "method",
+          method: { family: "spell", base: 13 },
+        }),
+      ).success,
+    ).toBe(true);
   });
 });

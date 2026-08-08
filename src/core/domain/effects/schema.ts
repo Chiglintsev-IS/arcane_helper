@@ -1,16 +1,17 @@
 /**
  * Подсхема эффектов: что действует и что держится вниманием.
  *
- * Вклад заклинания в Класс Доспеха и уровень ячейки приходят из каталога: это его словарь. Итог КД
- * эффекты по-прежнему не считают — они несут вклад данными, складывает лист.
+ * Уровень ячейки приходит из каталога: это его словарь. Итогов эффекты не считают — они несут
+ * вклады данными, а складывает лист.
  */
 
 import { z } from "zod";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
-import { armorClassEffectSchema, MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
+import { MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { isoDateTime, nonEmpty } from "@/core/domain/shared/schema";
+import { statContributionSchema } from "@/core/domain/shared/stats";
 
 const activeEffectSchema = z.object({
   id: nonEmpty,
@@ -32,8 +33,13 @@ const activeEffectSchema = z.object({
     .object({ label: nonEmpty, description: nonEmpty })
     .optional(),
 
-  // Копия вклада заклинания в КД: итог считается из одного состояния, без каталога.
-  armorClass: armorClassEffectSchema.optional(),
+  /**
+   * Копия вкладов действующего: итог считается из одного состояния, без каталога.
+   *
+   * Постоянного вклада среди эффектов не бывает: у эффекта есть окончание, и то, что не кончается,
+   * эффектом не является — оно свойство персонажа.
+   */
+  contributions: z.array(statContributionSchema).default([]),
 
   /**
    * Роль ручного эффекта, когда она есть: поправка к КД опознаётся этим признаком, а не строкой

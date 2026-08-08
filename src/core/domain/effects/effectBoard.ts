@@ -8,11 +8,22 @@
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
+import type { Spell } from "@/core/domain/catalog/spell";
+import type { ContributionSource, SourcedContribution } from "@/core/domain/shared/stats";
 import type { ActiveEffect, EffectsState } from "./schema";
 
 type EffectBoardState = EffectsState;
 
 export type ConcentrationEnd = "manual" | "failed_check" | "replaced" | "long_rest";
+
+/** Вклады одного действующего с их источником: имя — то, чем игрок это назвал. */
+function contributionsOf(
+  nameRu: string,
+  contributions: Spell["contributions"],
+): SourcedContribution[] {
+  const source: ContributionSource = { origin: "effect", nameRu };
+  return contributions.map((contribution) => ({ source, contribution }));
+}
 
 /** Концентрация ссылается на заклинание; эффект, заведённый вручную, её не держит. */
 function concentrationSpellId(effect: ActiveEffect): string {
@@ -114,6 +125,52 @@ export class EffectBoard {
       this.state.activeEffects.filter((effect) => effect.duration.type === "special"),
       undefined,
     );
+  }
+
+  /**
+   * Что действующее приносит листу: копии вкладов с именем того, кто их держит.
+   *
+   * Заклинание и заведённая мастером поправка приходят одинаково: для счёта они и есть одно, а
+   * различает их разве что подпись в разборе.
+   */
+  contributions(): readonly SourcedContribution[] {
+    return this.state.activeEffects.flatMap((effect) =>
+      contributionsOf(effect.nameRu, effect.contributions),
+    );
+  }
+
+  /**
+   * Какими станут вклады, если сотворить заклинание, — предпросмотр до подтверждения.
+   *
+   * Повторное применение того же заклинания вклад не удваивает: второй «Щит» поверх первого не
+   * даёт десяти. Узнаётся это по заклинанию, а не по совпадению чисел, и потому здесь, а не в
+   * свёртке: движок вкладов одинаковых от разных не отличает и отличать не должен.
+   */
+  contributionsWith(
+    spell: Pick<Spell, "id" | "nameRu" | "contributions">,
+  ): readonly SourcedContribution[] {
+    const alreadyActive = this.state.activeEffects.some(
+      (effect) => effect.spellId === spell.id && effect.contributions.length > 0,
+    );
+    return alreadyActive
+      ? this.contributions()
+      : [...this.contributions(), ...contributionsOf(spell.nameRu, spell.contributions)];
+  }
+
+  /** Эффект, заведённый шапкой ресурсов: опознаётся признаком рода, а не подписью. */
+  manualEffect(kind: NonNullable<ActiveEffect["manualKind"]>): ActiveEffect | undefined {
+    return this.state.activeEffects.find((effect) => effect.manualKind === kind);
+  }
+
+  /**
+   * Число заведённой вручную поправки: ноль означает, что её нет вовсе.
+   *
+   * Доска отдаёт записанное, а не считает по правилам: какой величины касается поправка, сказано в
+   * самом вкладе, и доска в это не заглядывает дальше вида «прибавка».
+   */
+  manualAdjustment(kind: NonNullable<ActiveEffect["manualKind"]>): number {
+    const [contribution] = this.manualEffect(kind)?.contributions ?? [];
+    return contribution?.kind === "bonus" ? contribution.value : 0;
   }
 
   toState(): EffectBoardState {

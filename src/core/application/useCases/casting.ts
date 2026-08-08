@@ -147,8 +147,8 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
     duration,
     isConcentration: spell.concentration,
     slotLevelUsed: slotLevelUsed(request),
-    // Вклад в Класс Доспеха копируется, чтобы итог считался из одного состояния, без каталога.
-    ...(spell.armorClassEffect === undefined ? {} : { armorClass: spell.armorClassEffect }),
+    // Вклады копируются, чтобы итог считался из одного состояния, без каталога.
+    contributions: spell.contributions,
     ...(spell.repeatableAction === undefined ? {} : { repeatableAction: spell.repeatableAction }),
     endConditionRu: endConditionRu(duration, spell.concentration),
   };

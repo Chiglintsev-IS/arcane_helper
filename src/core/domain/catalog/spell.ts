@@ -15,6 +15,7 @@ import { COMBAT_ROLES } from "@/core/domain/catalog/combatRole";
 import { REACTION_TRIGGERS } from "@/core/domain/catalog/reactions";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { nonEmpty } from "@/core/domain/shared/schema";
+import { statContributionSchema } from "@/core/domain/shared/stats";
 
 export const CANTRIP_LEVEL = 0;
 export const MAXIMUM_SPELL_LEVEL = 9;
@@ -143,16 +144,17 @@ const damageSchema = z.object({
 });
 
 /**
- * Вклад заклинания в Класс Доспеха.
+ * Вклады заклинания в величины листа.
  *
- * Отсутствие поля означает «к КД отношения не имеет», а не нулевой вклад: различие видно в данных
- * и не требует от движка знать список заклинаний, влияющих на защиту. Заклинания несут только
- * положительный вклад; ручная поправка тем же полем может быть и отрицательной.
+ * Пустой список означает «на числа не влияет»: различие видно в данных и не требует от листа знать
+ * список заклинаний, которые на что-то влияют. Форма вклада — общая, та же, что у вещи и у
+ * постоянного вклада персонажа: лист не различает, кто прислал.
+ *
+ * Цели вклада заклинание не читает: во вкладе есть имя величины и число, но нет способа спросить,
+ * чему эта величина сейчас равна. Поэтому «Доспехи мага, считающиеся от Класса Доспеха» — не
+ * запрещённые данные, а невыразимые.
  */
-export const armorClassEffectSchema = z.object({
-  kind: z.enum(["base_override", "bonus"]),
-  value: z.number().int().refine((value) => value !== 0, "не может быть нулевым"),
-});
+const spellContributionsSchema = z.array(statContributionSchema).default([]);
 
 /**
  * Расход Костей хитов заклинанием.
@@ -344,7 +346,7 @@ const spellShape = z.object({
   targeting: targetingSchema,
   resolution: resolutionSchema,
   damage: damageSchema.optional(),
-  armorClassEffect: armorClassEffectSchema.optional(),
+  contributions: spellContributionsSchema,
   hitDiceCost: hitDiceCostSchema.optional(),
 
   /**
@@ -385,13 +387,14 @@ function countCompleteVariants(roleplay: z.infer<typeof roleplaySchema>): number
 }
 
 export const spellSchema = spellShape.superRefine((spell, context) => {
-  // Карточка несёт только положительный вклад в защиту: отрицательный — это поправка мастера, и
-  // она заводится вручную, а не приходит контентом.
-  if (spell.armorClassEffect !== undefined && spell.armorClassEffect.value < 0) {
+  // Карточка несёт только положительный вклад: отрицательный — это поправка мастера, и она
+  // заводится вручную, а не приходит контентом.
+  for (const [index, contribution] of spell.contributions.entries()) {
+    if (contribution.kind === "method" || contribution.value > 0) continue;
     context.addIssue({
       code: "custom",
-      path: ["armorClassEffect", "value"],
-      message: "Вклад заклинания в Класс Доспеха не бывает отрицательным",
+      path: ["contributions", index],
+      message: `«${spell.nameRu}»: вклад заклинания в величину не бывает нулевым или отрицательным`,
     });
   }
 
@@ -494,7 +497,7 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
 
 /** Карточка неизменяема: контент приходит сборкой или выгрузкой игрока, а не правкой на месте. */
 export type Spell = DeepReadonly<z.infer<typeof spellSchema>>;
-export type ArmorClassEffect = z.infer<typeof armorClassEffectSchema>;
+
 
 /**
  * Компонент, который фокусировка не заменяет: со стоимостью или расходуемый.

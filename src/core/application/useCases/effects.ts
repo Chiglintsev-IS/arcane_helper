@@ -4,9 +4,8 @@
 
 import { Character } from "@/core/domain/assembly/character";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
-import type { ArmorClassEffect } from "@/core/domain/catalog/spell";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
-import { armorClassAdjustmentEffect } from "@/core/domain/sheet/armorClass";
+import type { StatContribution } from "@/core/domain/shared/stats";
 import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/core/shared/language";
 import { commit, type Clock, type Session } from "@/core/application/session";
@@ -22,8 +21,8 @@ const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
 type ManualEffectInput = {
   nameRu: string;
-  /** Прикрытие союзника и подобные вклады; статус без числа поле не заполняет. */
-  armorClass?: ArmorClassEffect;
+  /** Прикрытие союзника и подобные вклады; статус без числа поправку к защите не несёт. */
+  armorClassBonus?: number;
 };
 
 const CONCENTRATION_REASONS: Record<ConcentrationEnd, string> = {
@@ -91,7 +90,7 @@ export function spendRuneOnWardingSigil(session: Session, clock: Clock): Session
 /** Активный эффект без заклинания и уровня ячейки: общая форма для статуса и для поправки к КД. */
 function buildManualEffect(
   nameRu: string,
-  armorClass: ArmorClassEffect | undefined,
+  contributions: readonly StatContribution[],
   clock: Clock,
   manualKind?: ActiveEffect["manualKind"],
 ): ActiveEffect {
@@ -102,10 +101,15 @@ function buildManualEffect(
     duration: { type: "special" },
     isConcentration: false,
     slotLevelUsed: 0,
-    ...(armorClass === undefined ? {} : { armorClass }),
+    contributions,
     ...(manualKind === undefined ? {} : { manualKind }),
     endConditionRu: MANUAL_EFFECT_END_CONDITION_RU,
   };
+}
+
+/** Поправка к защите как вклад: прибавка к Классу Доспеха и ничего больше. */
+function armorClassBonus(value: number): StatContribution {
+  return { stat: "armorClass", kind: "bonus", value };
 }
 
 /**
@@ -117,15 +121,19 @@ export function startManualEffect(session: Session, input: ManualEffectInput, cl
   if (nameRu === "") {
     throw new DomainError("Название эффекта не может быть пустым");
   }
-  if (input.armorClass !== undefined && !Number.isInteger(input.armorClass.value)) {
+  if (input.armorClassBonus !== undefined && !Number.isInteger(input.armorClassBonus)) {
     throw new DomainError("Вклад в Класс Доспеха должен быть целым числом");
   }
-  if (input.armorClass !== undefined && input.armorClass.value <= 0) {
+  if (input.armorClassBonus !== undefined && input.armorClassBonus <= 0) {
     throw new DomainError("Вклад в Класс Доспеха должен быть положительным");
   }
 
   const root = Character.of(session.character);
-  const effect = buildManualEffect(nameRu, input.armorClass, clock);
+  const effect = buildManualEffect(
+    nameRu,
+    input.armorClassBonus === undefined ? [] : [armorClassBonus(input.armorClassBonus)],
+    clock,
+  );
   return commit(
     session,
     root.withEffects(root.effects.start(effect, clock.now())),
@@ -143,7 +151,7 @@ export function setArmorClassAdjustment(session: Session, value: number, clock: 
     throw new DomainError("Поправка к КД должна быть целым числом");
   }
 
-  const existing = armorClassAdjustmentEffect(session.character);
+  const existing = Character.of(session.character).effects.manualEffect("armorAdjustment");
   if (value === 0) {
     if (existing === undefined) return session;
     return endEffect(session, existing.id, clock);
@@ -153,7 +161,7 @@ export function setArmorClassAdjustment(session: Session, value: number, clock: 
   const cleared = existing === undefined ? root.effects : root.effects.end(existing.id).board;
   const effect = buildManualEffect(
     ARMOR_CLASS_ADJUSTMENT_NAME_RU,
-    { kind: "bonus", value },
+    [armorClassBonus(value)],
     clock,
     "armorAdjustment",
   );
