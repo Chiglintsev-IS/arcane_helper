@@ -69,7 +69,7 @@ QUESTIONS = "open-questions.md"
 ANSWERED_QUESTION = "Закрыт"
 # Отвеченный вопрос нужен двум документам: самому реестру и записи решения, которое его закрыло.
 # Остальным ответ достаётся фактом в тексте — ссылка на запись звала бы за нерешённым.
-QUESTION_CITERS = ("docs/open-questions.md", "docs/decisions.md")
+QUESTION_CITERS = ("docs/open-questions.md", "docs/decisions.md", "docs/agreements.md")
 
 FENCE = re.compile(r"^```.*?^```", re.M | re.S)
 REQUIREMENT = re.compile(r"\b((?:N?FR)-\d{3})\b")

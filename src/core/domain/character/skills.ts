@@ -1,8 +1,5 @@
 /**
- * Характеристики и навыки — данные правил D&D 5e (2014).
- *
- * Порядок характеристик — тот же, что на бумажном листе: по нему читают глазами, и другой порядок
- * заставил бы искать строку.
+ * Характеристики и навыки.
  */
 
 export const ABILITIES = [
@@ -39,7 +36,6 @@ export const SKILL_IDS = [
 
 export type SkillId = (typeof SKILL_IDS)[number];
 
-/** Какой характеристикой бросается навык. */
 export const SKILL_ABILITY: Record<SkillId, Ability> = {
   acrobatics: "dexterity",
   animalHandling: "wisdom",

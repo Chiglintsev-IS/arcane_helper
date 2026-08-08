@@ -1,11 +1,3 @@
-/**
- * Производные числа листа: одно место, где они считаются.
- *
- * Хранение готовых чисел означало бы, что правка уровня или характеристики оставит их прежними, и
- * расхождение не покажет себя ничем — приложение просто назовёт мастеру не тот КС. Перебивка
- * остаётся для случая, когда за столом действует не то, что даёт формула.
- */
-
 import {
   initiativeModifier,
   passivePerception,
@@ -16,7 +8,13 @@ import {
   spellAttackModifier,
   spellSaveDc,
 } from "@/core/domain/character/abilities";
-import { ABILITIES, SKILL_ABILITY, SKILL_IDS, type Ability, type SkillId } from "@/core/domain/character/skills";
+import {
+  ABILITIES,
+  SKILL_ABILITY,
+  SKILL_IDS,
+  type Ability,
+  type SkillId,
+} from "@/core/domain/character/skills";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { recordOf } from "@/core/domain/shared/records";
 import type { CharacterFields } from "@/core/domain/character/schema";
@@ -45,13 +43,15 @@ export const DERIVED_IDS: readonly DerivedId[] = [
  * Формула отдаётся рядом с действующим значением, потому что спрашивают их вместе: перебивку
  * набирают, глядя на то, от чего отступают, а снимают возвратом к формуле.
  */
-type DerivedValue = { value: number; overridden: boolean; formula: number };
+type DerivedValue = { value: number };
 
 export type DerivedNumber = DerivedValue & { id: DerivedId };
 
 /** Перебивка поверх формулы: её отсутствие и означает счёт. */
-export function derivedValue(override: number | undefined, formula: number): DerivedValue {
-  return { value: override ?? formula, overridden: override !== undefined, formula };
+export function derivedValue(formula: number): DerivedValue {
+  return {
+    value: formula,
+  };
 }
 
 /**
@@ -62,86 +62,38 @@ export function derivedValue(override: number | undefined, formula: number): Der
  */
 export type SheetInput = Pick<
   CharacterFields,
-  "level" | "abilities" | "saveProficiencies" | "skills" | "overrides" | "miscBonuses"
-> & {
-  bonuses: ItemBonuses;
-  armorClassBase: number;
-};
+  "level" | "abilities" | "saveProficiencies" | "skills"
+>;
 
-export type DerivedNumbers = Record<DerivedId, DerivedValue> & {
+export type DerivedNumbers = {
   saves: Record<Ability, number>;
   skills: Record<SkillId, number>;
 };
 
 export function deriveNumbers(sheet: SheetInput): DerivedNumbers {
-  const { overrides } = sheet;
-  const proficiency = derivedValue(overrides.proficiencyBonus, proficiencyBonus(sheet.level));
-  const bonus = proficiency.value;
+  const proficiency = proficiencyBonus(sheet.level);
+  const bonus = proficiency;
   const spellcastingScore = sheet.abilities[SPELLCASTING_ABILITY];
-  // Вклад надетых вещей и прочие прибавки персонажа складываются: источники разные, правило одно.
-  const spellcastingBonus = sheet.bonuses.spellcasting + sheet.miscBonuses.spellcasting;
-  const savingThrowBonus = sheet.bonuses.savingThrows + sheet.miscBonuses.savingThrows;
 
   const saves = recordOf(
     ABILITIES,
     (ability) =>
-      overrides.saves[ability] ??
       savingThrowModifier({
         score: sheet.abilities[ability],
         proficient: sheet.saveProficiencies.includes(ability),
         proficiencyBonus: bonus,
-        itemBonus: savingThrowBonus,
       }),
   );
 
-  const skills = recordOf(
-    SKILL_IDS,
-    (id) =>
-      overrides.skills[id] ??
-      skillModifier({
-        score: sheet.abilities[SKILL_ABILITY[id]],
-        training: sheet.skills[id],
-        proficiencyBonus: bonus,
-      }),
+  const skills = recordOf(SKILL_IDS, (id) =>
+    skillModifier({
+      score: sheet.abilities[SKILL_ABILITY[id]],
+      training: sheet.skills[id],
+      proficiencyBonus: bonus,
+    }),
   );
 
   return {
-    proficiencyBonus: proficiency,
-    spellSaveDc: derivedValue(
-      overrides.spellSaveDc,
-      spellSaveDc({
-        proficiencyBonus: bonus,
-        score: spellcastingScore,
-        itemBonus: spellcastingBonus,
-      }),
-    ),
-    spellAttackModifier: derivedValue(
-      overrides.spellAttackModifier,
-      spellAttackModifier({
-        proficiencyBonus: bonus,
-        score: spellcastingScore,
-        itemBonus: spellcastingBonus,
-      }),
-    ),
-    preparedLimit: derivedValue(
-      overrides.preparedLimit,
-      preparedLimit(spellcastingScore, sheet.level),
-    ),
-    initiative: derivedValue(
-      overrides.initiative,
-      initiativeModifier({
-        dexterity: sheet.abilities.dexterity,
-        wisdom: sheet.abilities.wisdom,
-      }),
-    ),
-    passivePerception: derivedValue(
-      overrides.passivePerception,
-      passivePerception({
-        score: sheet.abilities.wisdom,
-        training: sheet.skills.perception,
-        proficiencyBonus: bonus,
-      }),
-    ),
     saves,
     skills,
   };

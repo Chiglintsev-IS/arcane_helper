@@ -57,11 +57,11 @@ describe("производные характеристики Торна", () =>
   const intelligence = 18;
 
   it("КС спасброска без прибавки предмета равна 15", () => {
-    expect(spellSaveDc({ proficiencyBonus: proficiency, score: intelligence, itemBonus: 0 })).toBe(15);
+    expect(spellSaveDc({ proficiencyBonus: proficiency, score: intelligence })).toBe(15);
   });
 
   it("модификатор атаки заклинанием без прибавки предмета равен +7", () => {
-    expect(spellAttackModifier({ proficiencyBonus: proficiency, score: intelligence, itemBonus: 0 })).toBe(
+    expect(spellAttackModifier({ proficiencyBonus: proficiency, score: intelligence})).toBe(
       7,
     );
   });
@@ -75,11 +75,11 @@ describe("производные числа листа", () => {
   it("спасбросок: модификатор, владение, прибавка предмета", () => {
     // Торн: Телосложение 16 без владения, предмет +1.
     expect(
-      savingThrowModifier({ score: 16, proficient: false, proficiencyBonus: 3, itemBonus: 1 }),
+      savingThrowModifier({ score: 16, proficient: false, proficiencyBonus: 3 }),
     ).toBe(4);
     // Интеллект 18 с владением.
     expect(
-      savingThrowModifier({ score: 18, proficient: true, proficiencyBonus: 3, itemBonus: 1 }),
+      savingThrowModifier({ score: 18, proficient: true, proficiencyBonus: 3 }),
     ).toBe(8);
   });
 
@@ -102,8 +102,8 @@ describe("производные числа листа", () => {
   });
 
   it("КС и атака включают прибавку предмета к магии", () => {
-    expect(spellSaveDc({ proficiencyBonus: 3, score: 18, itemBonus: 1 })).toBe(16);
-    expect(spellAttackModifier({ proficiencyBonus: 3, score: 18, itemBonus: 1 })).toBe(8);
+    expect(spellSaveDc({ proficiencyBonus: 3, score: 18 })).toBe(16);
+    expect(spellAttackModifier({ proficiencyBonus: 3, score: 18 })).toBe(8);
   });
 });
 

@@ -3,17 +3,6 @@ import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/
 
 import type { SkillTraining } from "./skills";
 
-/**
- * Формулы листа персонажа: правила D&D 5e (2014) в виде функций.
- *
- * Прибавка предмета приходит слагаемым, а не спрятана в итоге: иначе правка характеристики не
- * сдвинула бы число, и расхождение с листом ничем себя не показало бы.
- */
-
-/**
- * Границы значения характеристики. Тридцать — предел правил для существа любого рода, единица —
- * низшее возможное: ноль означал бы отсутствие характеристики, а такого в правилах нет.
- */
 export const MINIMUM_ABILITY_SCORE = 1;
 export const MAXIMUM_ABILITY_SCORE = 30;
 
@@ -46,32 +35,29 @@ export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2);
 }
 
-/** КС спасброска от заклинаний. Торн: 8 + 3 + 4 + 1 = 16. */
+/** Сложность спасброска от заклинаний. */
 export function spellSaveDc(input: {
   proficiencyBonus: number;
   score: number;
-  itemBonus: number;
 }): number {
-  return SAVE_DC_BASE + input.proficiencyBonus + abilityModifier(input.score) + input.itemBonus;
+  return SAVE_DC_BASE + input.proficiencyBonus + abilityModifier(input.score);
 }
 
-/** Модификатор атаки заклинанием. Торн: 3 + 4 + 1 = +8. */
+/** Модификатор попадания заклинанием. d20 + n */
 export function spellAttackModifier(input: {
   proficiencyBonus: number;
   score: number;
-  itemBonus: number;
 }): number {
-  return input.proficiencyBonus + abilityModifier(input.score) + input.itemBonus;
+  return input.proficiencyBonus + abilityModifier(input.score);
 }
 
 export function savingThrowModifier(input: {
   score: number;
   proficient: boolean;
   proficiencyBonus: number;
-  itemBonus: number;
 }): number {
   return (
-    abilityModifier(input.score) + (input.proficient ? input.proficiencyBonus : 0) + input.itemBonus
+    abilityModifier(input.score) + (input.proficient ? input.proficiencyBonus : 0)
   );
 }
 
@@ -95,7 +81,7 @@ export function passivePerception(input: Parameters<typeof skillModifier>[0]): n
 /**
  * Инициатива: половина суммы модификаторов Ловкости и Мудрости, округляя вниз.
  *
- * Это домашнее правило стола: по правилам 5e инициатива равна модификатору Ловкости.
+ * Это домашнее правило стола.
  */
 export function initiativeModifier(input: { dexterity: number; wisdom: number }): number {
   return Math.floor((abilityModifier(input.dexterity) + abilityModifier(input.wisdom)) / 2);
