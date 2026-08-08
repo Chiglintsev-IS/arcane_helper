@@ -21,7 +21,6 @@ import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { exchangeBlood, grantTemporaryHitPoints, heal, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
-import { Sheet } from "@/core/domain/sheet/sheet";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
@@ -123,7 +122,7 @@ export function GameScreen() {
     setPanelOpen(false);
     if (character.concentration !== undefined) {
       setPendingCheck(
-        describeConcentrationCheck(damage, Sheet.of(character).value(saveStatId("constitution"))),
+        describeConcentrationCheck(damage, Character.of(character).sheet.value(saveStatId("constitution"))),
       );
     }
   };

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { StatContribution } from "@/core/domain/shared/stats";
 
-import { defineStat, ownCandidate, resolveStats, type Sourced } from "./resolve";
+import { breakdownOf, defineStat, ownCandidate, resolveStats } from "./resolve";
 
 /** Величина с собственным способом счёта: десятка, как у Класса Доспеха без доспехов. */
 const plain = defineStat({ id: "armorClass", methods: () => [ownCandidate(10)] });
@@ -16,7 +16,7 @@ const brought = defineStat({
     methods.map((method) => ({ value: method.base, grownFrom: method })),
 });
 
-function from(...contributions: StatContribution[]): Sourced<string>[] {
+function from(...contributions: StatContribution[]) {
   return contributions.map((contribution, index) => ({
     source: `источник ${index}`,
     contribution,
@@ -82,6 +82,30 @@ describe("свёртка вкладов", () => {
   it("без единого вклада действует собственный способ величины", () => {
     expect(resolveStats([plain], []).get("armorClass")?.value).toBe(10);
   });
+
+  it("величина без единого способа счёта считается от нуля", () => {
+    const nothing = defineStat({ id: "speed", methods: () => [] });
+
+    expect(resolveStats([nothing], []).get("speed")?.value).toBe(0);
+    expect(resolveStats([nothing], from({ stat: "speed", kind: "bonus", value: 4 })).get("speed")?.value).toBe(4);
+  });
+
+  it("диапазон бывает односторонним: нижний предел без верхнего и наоборот", () => {
+    const floored = defineStat({ id: "speed", range: { minimum: 0 }, methods: () => [ownCandidate(5)] });
+    const capped = defineStat({ id: "speed", range: { maximum: 3 }, methods: () => [ownCandidate(5)] });
+    const drain = { stat: "speed", kind: "bonus", value: -50 } as const;
+
+    expect(resolveStats([floored], from(drain)).get("speed")?.value).toBe(0);
+    expect(resolveStats([capped], from(drain)).get("speed")?.value).toBe(-45);
+    expect(resolveStats([capped], []).get("speed")?.value).toBe(3);
+  });
+
+  it("величины, которую сборщик пропустил, разбор не выдаёт нулём", () => {
+    const resolved = resolveStats([plain], []);
+
+    expect(breakdownOf(resolved, "armorClass").value).toBe(10);
+    expect(() => breakdownOf(resolved, "speed")).toThrow("сборщик её пропустил");
+  });
 });
 
 describe("разбор", () => {
@@ -122,6 +146,13 @@ describe("разбор", () => {
     const parts = resolved.get("armorClass")?.parts ?? [];
 
     expect(parts.map((part) => part.applied)).toEqual([false, true]);
+  });
+
+  it("второе назначение в итог не входит: единственность держит владелец вкладов", () => {
+    const resolved = resolveStats([plain], from(assignment(18), assignment(20)));
+
+    expect(resolved.get("armorClass")?.value).toBe(18);
+    expect(resolved.get("armorClass")?.parts.map((part) => part.applied)).toEqual([true, false]);
   });
 });
 

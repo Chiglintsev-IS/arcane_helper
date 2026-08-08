@@ -27,6 +27,7 @@ function effect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
     duration: { type: "minutes", value: 10 },
     isConcentration: true,
     slotLevelUsed: 1,
+    contributions: [],
     endConditionRu: "До конца концентрации.",
     ...overrides,
   };
@@ -91,6 +92,7 @@ describe("схема активного эффекта", () => {
       label: "Спасбросок Ловкости для входящих в область",
       description: "Существо, входящее в область, совершает спасбросок Ловкости.",
     },
+    contributions: [],
     endConditionRu: "До конца концентрации или 1 час.",
   };
 

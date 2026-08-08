@@ -1,4 +1,4 @@
-import { Sheet } from "@/core/domain/sheet/sheet";
+import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { saveStatId } from "@/core/domain/shared/stats";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
@@ -54,7 +54,7 @@ function mechanicsRu(spell: Spell, effect: ActiveEffect, character: CharacterSta
           characterLevel: character.level,
         })} (${spell.damage.type})`;
 
-  return [reach, resolutionBadge(spell.resolution, Sheet.of(character)).label, damage]
+  return [reach, resolutionBadge(spell.resolution, Character.of(character).sheet).label, damage]
     .filter((part) => part !== null)
     .join(" · ");
 }
@@ -90,7 +90,7 @@ export function describeConcentration(input: {
 }): ConcentrationSummary {
   const { spell, effect, character, journal } = input;
   const start = startRound(journal, effect.startedAt);
-  const modifier = signed(Sheet.of(character).value(saveStatId("constitution")));
+  const modifier = signed(Character.of(character).sheet.value(saveStatId("constitution")));
 
   return {
     spellId: effect.spellId ?? null,

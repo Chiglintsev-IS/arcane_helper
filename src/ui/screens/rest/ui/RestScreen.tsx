@@ -24,7 +24,6 @@ import {
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 
@@ -79,7 +78,7 @@ export function RestScreen() {
     setPanelOpen(false);
     if (character.concentration !== undefined) {
       setPendingCheck(
-        describeConcentrationCheck(damage, Sheet.of(character).value(saveStatId("constitution"))),
+        describeConcentrationCheck(damage, Character.of(character).sheet.value(saveStatId("constitution"))),
       );
     }
   };

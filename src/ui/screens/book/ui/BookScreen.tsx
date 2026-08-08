@@ -1,5 +1,6 @@
 "use client";
 
+import { Character } from "@/core/domain/assembly/character";
 import { useState } from "react";
 
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
@@ -8,7 +9,6 @@ import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "
 import { toCastRequest, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 import { castSpell } from "@/core/application/useCases/casting";
 import { setSpellNote, togglePreparation } from "@/core/application/useCases/library";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import { exchangeBlood } from "@/core/application/useCases/health";
 
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
@@ -37,7 +37,7 @@ export function BookScreen() {
   const economy = deriveTurnEconomy(session);
   const context = { character, turn: economy };
   const { inFight } = economy;
-  const limit = Sheet.of(character).value("preparedLimit");
+  const limit = Character.of(character).sheet.value("preparedLimit");
 
   const inMode = spellsForScreen(spells, character, "book", inFight);
   const shown = filterSpells(inMode, filters, context);

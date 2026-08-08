@@ -11,6 +11,7 @@
 
 "use client";
 
+import { Character } from "@/core/domain/assembly/character";
 import { useState } from "react";
 
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
@@ -26,7 +27,6 @@ import {
 import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
@@ -161,7 +161,7 @@ export function SpellCardDetails({
           <Row label="Цель">{targetingLabel(spell.targeting)}</Row>
           {spell.area === undefined ? null : <Row label="Область">{areaLabel(spell.area)}</Row>}
           <Row label="Разрешение">
-            {resolutionBadge(spell.resolution, Sheet.of(character)).label}
+            {resolutionBadge(spell.resolution, Character.of(character).sheet).label}
           </Row>
           {damage === null ? null : (
             <Row label="Урон">

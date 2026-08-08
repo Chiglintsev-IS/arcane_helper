@@ -47,7 +47,6 @@ const RAW: unknown = {
     perception: "proficient",
   },
   proficiencies: { weapons: [], armor: [], tools: [], languages: [] },
-  overrides: { saves: {}, skills: {} },
   exhaustion: 0,
   inspiration: false,
 

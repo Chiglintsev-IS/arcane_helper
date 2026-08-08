@@ -10,6 +10,7 @@
  * список, обещавший «вот всё, что подходит», врал.
  */
 
+import { Character } from "@/core/domain/assembly/character";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { Fragment } from "react";
@@ -17,7 +18,6 @@ import { Fragment } from "react";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { COMBAT_ROLE } from "@/ui/entities/spell/lib/format";
 import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { ascensionTierRate } from "@/core/domain/arcana/slots";
 import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
@@ -48,7 +48,7 @@ export function BloodMagicRow({
 
   // Обмен хитов на очки не бросает ничего, и говорит об этом тем же значком, что заклинание:
   // собственная подпись здесь однажды разошлась со словом заклинания.
-  const resolution = resolutionBadge({ type: "automatic" }, Sheet.of(character));
+  const resolution = resolutionBadge({ type: "automatic" }, Character.of(character).sheet);
 
   return (
     <li>

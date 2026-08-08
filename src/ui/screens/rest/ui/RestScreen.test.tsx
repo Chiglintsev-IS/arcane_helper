@@ -38,6 +38,7 @@ function concentrating(): CharacterState {
         duration: { type: "minutes", value: 10 },
         isConcentration: true,
         slotLevelUsed: 1,
+        contributions: [],
         endConditionRu: "До конца концентрации или истечения длительности.",
       },
     ],

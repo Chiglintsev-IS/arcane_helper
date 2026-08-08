@@ -22,8 +22,6 @@ import type { Sheet } from "@/core/domain/sheet/sheet";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import {
   ABILITY_LABELS,
-  DERIVED_LABELS,
-  DERIVED_STAT_IDS,
   orDash,
   SIZE_LABELS,
   SKILL_LABELS,
@@ -113,9 +111,6 @@ function maximumOrigin(character: CharacterState): string | null {
   return parts.length === 0 ? null : `${maximumBase} ${parts.join(", ")}`;
 }
 
-/** Число со знаком показывают модификаторы; КС, КД и пороги — без него. */
-const SIGNED_DERIVED = new Set(["spellAttackModifier", "initiative", "proficiencyBonus"]);
-
 /**
  * Блок одной характеристики: значение с модификатором, спасбросок, её навыки.
  *
@@ -153,7 +148,6 @@ function abilityBlock(character: CharacterState, ability: Ability): SheetBlockDa
 export function sheetBlocks(character: CharacterState): SheetBlockData[] {
   const { hitPoints } = character;
   const maximumHint = maximumOrigin(character);
-  const totals = Character.of(character).sheet;
 
   return [
     {
@@ -209,15 +203,6 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
         },
         { labelRu: "Вдохновение", value: character.inspiration ? "есть" : "нет" },
       ],
-    },
-    {
-      id: "combatNumbers",
-      titleRu: "Числа боя",
-      edit: { block: "permanent" },
-      rows: DERIVED_STAT_IDS.map((stat) => ({
-        labelRu: DERIVED_LABELS[stat],
-        value: SIGNED_DERIVED.has(stat) ? signed(totals.value(stat)) : String(totals.value(stat)),
-      })),
     },
     /**
      * Постоянные вклады — свойство самого Торна: раса, дар, благословение, слово мастера. Вклад с

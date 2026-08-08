@@ -1,3 +1,5 @@
+import type { PermanentContribution } from "@/core/domain/character/schema";
+import { saveStatId } from "@/core/domain/shared/stats";
 import { describe, expect, it } from "vitest";
 
 import { z } from "zod";
@@ -6,8 +8,6 @@ import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
-import { NO_ITEM_BONUSES } from "@/core/domain/shared/schema";
-import { Sheet } from "@/core/domain/sheet/sheet";
 
 /**
  * Поля самого Торна: кто он без вещей, ресурсов и заклинаний. Схема контекста лишнее отбрасывает,
@@ -104,43 +104,60 @@ describe("правка листа проходит объявления поле
     expect(refusal({ speed: -5 })).toContain("speed");
   });
 
-  it("дробная перебивка не сохраняется, а отрицательная сохраняется: минус бывает", () => {
-    expect(refusal({ overrides: { saves: {}, skills: {}, initiative: 1.5 } })).toContain("overrides");
+  it("дробный постоянный вклад не сохраняется, а отрицательный сохраняется: минус бывает", () => {
+    const permanent = (value: number): PermanentContribution[] => [
+      { nameRu: "Проклятие", contribution: { stat: "initiative", kind: "bonus", value } },
+    ];
+    expect(refusal({ permanentContributions: permanent(1.5) })).toContain("permanentContributions");
     expect(
       Character.of(createThorne())
-        .withSheet({ overrides: { saves: {}, skills: {}, initiative: -1 } })
-        .toState().overrides.initiative,
-    ).toBe(-1);
+        .withSheet({ permanentContributions: permanent(-1) })
+        .toState().permanentContributions,
+    ).toEqual(permanent(-1));
   });
 
-  it("перебивка базы КД: целое положительное принимается, иное отклоняется владельцем с причиной", () => {
+  it("постоянный вклад без имени не сохраняется: разбор без имени ни на что не отвечает", () => {
+    expect(
+      refusal({
+        permanentContributions: [
+          { nameRu: "  ", contribution: { stat: "armorClass", kind: "bonus", value: 1 } },
+        ],
+      }),
+    ).toContain("permanentContributions");
+  });
+
+  it("второе назначение на ту же величину отвергается с причиной", () => {
+    const assigned = (nameRu: string): PermanentContribution => ({
+      nameRu,
+      contribution: { stat: "armorClass", kind: "assignment", value: 18 },
+    });
+
     expect(
       Character.of(createThorne())
-        .withSheet({ overrides: { saves: {}, skills: {}, armorClassBase: 14 } })
-        .toState().overrides.armorClassBase,
-    ).toBe(14);
+        .withSheet({ permanentContributions: [assigned("Слово мастера")] })
+        .toState().permanentContributions,
+    ).toHaveLength(1);
 
-    const nonInteger = refusal({ overrides: { saves: {}, skills: {}, armorClassBase: 10.5 } });
-    expect(nonInteger).toContain("overrides");
-    expect(nonInteger).toContain("целым положительным числом");
-    expect(refusal({ overrides: { saves: {}, skills: {}, armorClassBase: -1 } })).toContain(
-      "целым положительным числом",
-    );
+    const twice = refusal({
+      permanentContributions: [assigned("Слово мастера"), assigned("Дар")],
+    });
+    expect(twice).toContain("уже назначено число");
+    expect(twice).toContain("armorClass");
   });
 
   it("правка, прошедшая объявления, доходит до состояния", () => {
     expect(Character.of(createThorne()).withSheet({ age: 142 }).toState().age).toBe(142);
   });
 
-  it("частичная прибавка доходит до состояния разобранной, а не куском", () => {
-    // Тип объявляет три поля, но патч, минующий типизированный вызов (импорт, ручная миграция),
-    // способен принести и меньше — тот самый случай, который здесь проверяется.
-    const partial: Record<string, unknown> = { miscBonuses: { spellcasting: 3 } };
+  it("правка доходит до состояния разобранной, а не куском", () => {
+    // Патч, минующий типизированный вызов (импорт, ручная миграция), способен принести неполное
+    // поле — тот самый случай, который здесь проверяется.
+    const partial: Record<string, unknown> = { skills: { arcana: "expert" } };
     const state = Character.of(createThorne()).withSheet(partial).toState();
-    expect(state.miscBonuses).toEqual({ ...NO_ITEM_BONUSES, spellcasting: 3 });
+    expect(state.skills).toEqual({ arcana: "expert" });
 
-    const sheet = Sheet.of(state);
-    expect(Number.isNaN(sheet.spellSaveDc)).toBe(false);
-    expect(Number.isNaN(sheet.savingThrow("strength"))).toBe(false);
+    const sheet = Character.of(state).sheet;
+    expect(Number.isNaN(sheet.value("spellSaveDc"))).toBe(false);
+    expect(Number.isNaN(sheet.value(saveStatId("strength")))).toBe(false);
   });
 });

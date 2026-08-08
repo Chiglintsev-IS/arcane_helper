@@ -56,21 +56,22 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(screen.getByText("20 (+5)")).toBeDefined();
   });
 
-  it("«Лист»: перебивка выбирается из чисел боя и снимается возвратом к формуле (FR-225)", async () => {
+  it("«Лист»: постоянный вклад заводится одной шторкой и двигает число (FR-246)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    await user.click(screen.getByRole("button", { name: "Править: Перебивки" }));
-    await user.click(screen.getByRole("button", { name: /^КС спасброска/ }));
+    await user.click(screen.getByRole("button", { name: "Править: Постоянные вклады" }));
 
-    // Формулу шторке отдаёт лист: экран не собирает её вход заново, чтобы узнать счёт.
-    expect(screen.getByText("По формуле — 16.")).toBeDefined();
-    const field = screen.getByLabelText("Значение");
+    await user.type(screen.getByLabelText("Откуда"), "Дар богов");
+    await user.selectOptions(screen.getByLabelText("Величина"), "spellSaveDc");
+    const field = screen.getByLabelText("Число");
     await user.clear(field);
-    await user.type(field, "18");
+    await user.type(field, "2");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(stores.session.getState().session?.character.overrides.spellSaveDc).toBe(18);
-    expect(screen.getByText("(введено руками)")).toBeDefined();
+    expect(stores.session.getState().session?.character.permanentContributions).toEqual([
+      { nameRu: "Дар богов", contribution: { stat: "spellSaveDc", kind: "bonus", value: 2 } },
+    ]);
+    expect(screen.getByText("Дар богов")).toBeDefined();
   });
 
   it("«Лист»: уровень пересчитывает ресурсы одной записью (FR-227)", async () => {

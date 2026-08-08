@@ -1,3 +1,5 @@
+import { Character } from "@/core/domain/assembly/character";
+import { saveStatId } from "@/core/domain/shared/stats";
 import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
 import {
   arcaneRecoveryUnavailability,
@@ -13,13 +15,11 @@ import {
   startManualEffect,
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
-import { effectiveArmorClass } from "@/core/domain/sheet/armorClass";
 import { exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
 import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, useRoleplayVariant } from "@/core/application/useCases/roleplay";
 import { castSpell } from "@/core/application/useCases/casting";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import { DomainError } from "@/core/domain/shared/errors";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -84,10 +84,10 @@ describe("начальное состояние Торна", () => {
   it("проходит схему и содержит подтверждённые числа", () => {
     const thorne = createThorne();
     expect(characterStateSchema.safeParse(thorne).success).toBe(true);
-    const totals = Sheet.of(thorne);
-    expect(totals.spellSaveDc).toBe(16);
-    expect(totals.spellAttackModifier).toBe(8);
-    expect(totals.savingThrow("constitution")).toBe(4);
+    const totals = Character.of(thorne).sheet;
+    expect(totals.value("spellSaveDc")).toBe(16);
+    expect(totals.value("spellAttackModifier")).toBe(8);
+    expect(totals.value(saveStatId("constitution"))).toBe(4);
     expect(thorne.hitPoints).toEqual({ current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 });
     expect(thorne.runes).toEqual({ maximum: 3, remaining: 3 });
     expect(thorne.spellSlots[1]?.maximum).toBe(4);
@@ -955,7 +955,7 @@ describe("ручной эффект (FR-236)", () => {
     expect(effect?.nameRu).toBe("Опутанный");
     expect(effect?.spellId).toBeUndefined();
     expect(effect?.isConcentration).toBe(false);
-    expect(effect?.armorClass).toBeUndefined();
+    expect(effect?.contributions).toEqual([]);
     expect(after.journal.at(-1)?.summaryRu).toBe("Эффект начат: Опутанный");
   });
 
@@ -968,12 +968,12 @@ describe("ручной эффект (FR-236)", () => {
     );
     const after = startManualEffect(
       shielded,
-      { nameRu: "Прикрытие союзника", armorClass: { kind: "bonus", value: 2 } },
+      { nameRu: "Прикрытие союзника", armorClassBonus: 2 },
       clock,
     );
 
     // Без вкладов: 14; «Щит» прибавляет 5; прикрытие союзника прибавляет ещё 2.
-    expect(effectiveArmorClass(after.character)).toBe(21);
+    expect(Character.of(after.character).sheet.value("armorClass")).toBe(21);
   });
 
   it("снимается тем же путём, что и любой активный эффект", () => {
@@ -992,13 +992,13 @@ describe("ручной эффект (FR-236)", () => {
 
   it("отклоняет неположительный вклад в Класс Доспеха", () => {
     expect(() =>
-      startManualEffect(session, { nameRu: "Статус", armorClass: { kind: "bonus", value: 0 } }, clock),
+      startManualEffect(session, { nameRu: "Статус", armorClassBonus: 0 }, clock),
     ).toThrow(DomainError);
   });
 
   it("отклоняет дробный вклад в Класс Доспеха", () => {
     expect(() =>
-      startManualEffect(session, { nameRu: "Статус", armorClass: { kind: "bonus", value: 1.5 } }, clock),
+      startManualEffect(session, { nameRu: "Статус", armorClassBonus: 1.5 }, clock),
     ).toThrow(DomainError);
   });
 });
@@ -1008,14 +1008,14 @@ describe("поправка к КД (FR-236)", () => {
     const after = setArmorClassAdjustment(session, 2, clock);
 
     expect(after.character.activeEffects).toHaveLength(1);
-    expect(effectiveArmorClass(after.character)).toBe(16);
+    expect(Character.of(after.character).sheet.value("armorClass")).toBe(16);
     expect(after.journal.at(-1)?.summaryRu).toBe("Поправка к КД: +2");
   });
 
   it("допускает отрицательное значение", () => {
     const after = setArmorClassAdjustment(session, -3, clock);
 
-    expect(effectiveArmorClass(after.character)).toBe(11);
+    expect(Character.of(after.character).sheet.value("armorClass")).toBe(11);
     expect(after.journal.at(-1)?.summaryRu).toBe("Поправка к КД: −3");
   });
 
@@ -1026,7 +1026,7 @@ describe("поправка к КД (FR-236)", () => {
     const second = setArmorClassAdjustment(first, 5, clock);
 
     expect(second.character.activeEffects).toHaveLength(1);
-    expect(effectiveArmorClass(second.character)).toBe(19);
+    expect(Character.of(second.character).sheet.value("armorClass")).toBe(19);
     expect(second.journal.length).toBe(journalLengthAfterFirst + 1);
   });
 
@@ -1036,7 +1036,7 @@ describe("поправка к КД (FR-236)", () => {
     const cleared = setArmorClassAdjustment(started, 0, clock);
 
     expect(cleared.character.activeEffects).toHaveLength(0);
-    expect(effectiveArmorClass(cleared.character)).toBe(14);
+    expect(Character.of(cleared.character).sheet.value("armorClass")).toBe(14);
   });
 
   it("ноль без заведённой поправки ничего не делает", () => {
@@ -1066,7 +1066,7 @@ describe("поправка к КД (FR-236)", () => {
     const after = setArmorClassAdjustment(shielded, 2, clock);
 
     // Без вкладов: 14; «Щит» прибавляет 5; поправка прибавляет ещё 2.
-    expect(effectiveArmorClass(after.character)).toBe(21);
+    expect(Character.of(after.character).sheet.value("armorClass")).toBe(21);
   });
 });
 
@@ -1787,13 +1787,18 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     );
   });
 
-  /** Персонаж на пределе в три заклинания: предел перебит мастером, набор занят целиком. */
+  /** Персонаж на пределе в три заклинания: предел назначен мастером, набор занят целиком. */
   function atLimitOfThree(): Session {
     return {
       ...session,
       character: {
         ...session.character,
-        overrides: { ...session.character.overrides, preparedLimit: 3 },
+        permanentContributions: [
+          {
+            nameRu: "Слово мастера",
+            contribution: { stat: "preparedLimit", kind: "assignment", value: 3 },
+          },
+        ],
         preparedSpellIds: session.character.spellbookSpellIds.slice(0, 3),
       },
     };

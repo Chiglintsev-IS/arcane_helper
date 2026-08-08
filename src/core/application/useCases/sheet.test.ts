@@ -1,7 +1,7 @@
+import { Character } from "@/core/domain/assembly/character";
 import { describe, expect, it } from "vitest";
 import { withSlotDebt, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
-import { Sheet } from "@/core/domain/sheet/sheet";
 import { characterStateSchema } from "@/core/domain/assembly/state";
 import { undoLast, type Clock, type Session } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -12,9 +12,8 @@ import {
   editHealth,
   editIdentity,
   editMarks,
-  editMiscBonuses,
-  setArmorClassBaseOverride,
-  setOverride,
+  removePermanentContribution,
+  setPermanentContribution,
 } from "./sheet";
 
 const session = () => ({ character: createThorne(), journal: [] });
@@ -65,7 +64,11 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("перебитый лимит подготовки за уровнем не идёт, и сдвига ему не обещают", () => {
-    const overridden = setOverride(session(), "preparedLimit", 20, clock).character;
+    const overridden = setPermanentContribution(
+      session(),
+      { nameRu: "Слово мастера", contribution: { stat: "preparedLimit", kind: "assignment", value: 20 } },
+      clock,
+    ).character;
 
     const preview = previewLevelChange(overridden, 9);
 
@@ -112,7 +115,7 @@ describe("смена уровня", () => {
     expect(after.character.spellSlots[4]).toEqual({ maximum: 2, remaining: 1 });
     expect(after.character.hitDice?.total).toBe(8);
     expect(after.character.hitPoints.maximumBase).toBe(66);
-    expect(Sheet.of(after.character).preparationLimit).toBe(12);
+    expect(Character.of(after.character).sheet.value("preparedLimit")).toBe(12);
   });
 
   it("долг ячейки переживает взятый уровень", () => {
@@ -170,7 +173,7 @@ describe("смена уровня", () => {
     const after = changeLevel(before, { level: 5, hitPointMaximumBase: 45 }, clock);
 
     expect(after.character.preparedSpellIds).toHaveLength(preparedCount);
-    expect(Sheet.of(after.character).preparationLimit).toBe(9);
+    expect(Character.of(after.character).sheet.value("preparedLimit")).toBe(9);
   });
 });
 
@@ -182,7 +185,7 @@ describe("правка листа", () => {
       clock,
     );
     expect(after.journal).toHaveLength(1);
-    expect(Sheet.of(after.character).spellSaveDc).toBe(17);
+    expect(Character.of(after.character).sheet.value("spellSaveDc")).toBe(17);
   });
 
   it("правка одной характеристики не трогает соседние и чужие навыки", () => {
@@ -235,25 +238,49 @@ describe("правка листа", () => {
     expect(after.journal[0]?.summaryRu).toBe("Отметки мастера изменены");
   });
 
-  it("прочие прибавки правятся с листа и двигают КС заклинаний", () => {
-    const blessed = editMiscBonuses(
+  it("постоянный вклад правится с листа и двигает КС заклинаний", () => {
+    const blessed = setPermanentContribution(
       session(),
-      { spellcasting: 3, armorClass: 2, savingThrows: 1 },
+      { nameRu: "Благословение", contribution: { stat: "spellSaveDc", kind: "bonus", value: 3 } },
       clock,
     );
-    // 8 + 3 (мастерство) + 4 (Интеллект) + 3 (прочие) + 1 (фокусировка).
-    expect(Sheet.of(blessed.character).spellSaveDc).toBe(19);
-    expect(blessed.journal[0]?.summaryRu).toBe("Правка прочих прибавок");
+    // 8 + 3 (мастерство) + 4 (Интеллект) + 1 (фокусировка) + 3 (благословение).
+    expect(Character.of(blessed.character).sheet.value("spellSaveDc")).toBe(19);
+    expect(blessed.journal[0]?.summaryRu).toBe("Постоянный вклад: Благословение");
 
     const undone = undoLast(blessed);
-    expect(undone.character.miscBonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
+    expect(undone.character.permanentContributions).toEqual([]);
   });
 
-  it("перебивка ставится и снимается", () => {
-    const set = setOverride(session(), "spellSaveDc", 18, clock);
-    expect(Sheet.of(set.character).spellSaveDc).toBe(18);
-    const cleared = setOverride(set, "spellSaveDc", null, clock);
-    expect(Sheet.of(cleared.character).spellSaveDc).toBe(16);
+  it("одноимённый вклад заменяется, а не удваивается", () => {
+    const once = setPermanentContribution(
+      session(),
+      { nameRu: "Дар", contribution: { stat: "armorClass", kind: "bonus", value: 1 } },
+      clock,
+    );
+    const twice = setPermanentContribution(
+      once,
+      { nameRu: "Дар", contribution: { stat: "armorClass", kind: "bonus", value: 2 } },
+      clock,
+    );
+
+    expect(twice.character.permanentContributions).toHaveLength(1);
+    expect(Character.of(twice.character).sheet.value("armorClass")).toBe(16);
+  });
+
+  it("назначение ставится и снимается по имени, а несуществующее снять нельзя", () => {
+    const set = setPermanentContribution(
+      session(),
+      { nameRu: "Слово мастера", contribution: { stat: "spellSaveDc", kind: "assignment", value: 18 } },
+      clock,
+    );
+    expect(Character.of(set.character).sheet.value("spellSaveDc")).toBe(18);
+
+    const cleared = removePermanentContribution(set, "Слово мастера", clock);
+    expect(Character.of(cleared.character).sheet.value("spellSaveDc")).toBe(16);
+    expect(cleared.journal.at(-1)?.summaryRu).toBe("Постоянный вклад снят: Слово мастера");
+
+    expect(() => removePermanentContribution(session(), "Нету", clock)).toThrow("Нету");
   });
 
   it("здоровье правится базой и снижением мастера", () => {
@@ -278,19 +305,23 @@ describe("правка листа", () => {
     expect(before.character.abilities.strength).toBe(8);
   });
 
-  it("перебивка базы КД ставится, снимается и проверяет значение", () => {
-    const set = setArmorClassBaseOverride(session(), 14, clock);
-    expect(Sheet.of(set.character).armorClassParts.base).toBe(14);
-    expect(Sheet.of(set.character).armorClassParts.baseOverridden).toBe(true);
-    expect(set.journal[0]?.summaryRu).toBe("База Класса Доспеха: 14");
+  it("назначенная база защиты приходит способом счёта и спорит с доспехом", () => {
+    const set = setPermanentContribution(
+      session(),
+      {
+        nameRu: "Чешуя тролля",
+        contribution: {
+          stat: "armorClass",
+          kind: "method",
+          method: { family: "armor", base: 14 },
+        },
+      },
+      clock,
+    );
+    // 14 + Ловкость 2 + мантия 1 + плащ 1.
+    expect(Character.of(set.character).sheet.value("armorClass")).toBe(18);
 
-    const cleared = setArmorClassBaseOverride(set, null, clock);
-    expect(Sheet.of(cleared.character).armorClassParts.baseOverridden).toBe(false);
-    expect(cleared.journal.at(-1)?.summaryRu).toBe("База Класса Доспеха: по надетому");
-  });
-
-  it("база КД: нецелое или отрицательное отклоняется", () => {
-    expect(() => setArmorClassBaseOverride(session(), 10.5, clock)).toThrow();
-    expect(() => setArmorClassBaseOverride(session(), -1, clock)).toThrow();
+    const cleared = removePermanentContribution(set, "Чешуя тролля", clock);
+    expect(Character.of(cleared.character).sheet.value("armorClass")).toBe(14);
   });
 });

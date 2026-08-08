@@ -126,6 +126,16 @@ describe("снаряжение", () => {
     expect(() => worn.unequip("ring", 2)).toThrow(DomainError);
   });
 
+  it("число вещи для надевания и снятия — целое и положительное", () => {
+    const stocked = gear().adjustBagCount("ring", 1);
+    expect(() => stocked.equip("ring", 0, items(ring))).toThrow(DomainError);
+    expect(() => stocked.equip("ring", 1.5, items(ring))).toThrow(DomainError);
+
+    const worn = stocked.equip("ring", 1, items(ring));
+    expect(() => worn.unequip("ring", 0)).toThrow(DomainError);
+    expect(() => worn.unequip("ring", 1.5)).toThrow(DomainError);
+  });
+
   it("надеть незаведённую вещь нельзя", () => {
     expect(() => gear().equip("ring", 1, items())).toThrow(DomainError);
   });

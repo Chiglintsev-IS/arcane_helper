@@ -1,3 +1,4 @@
+import type { StatId } from "@/core/domain/shared/stats";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -6,10 +7,16 @@ import {
   rangeLabel,
   rangePhrase,
   resolutionBadge,
+  type ResolutionNumbers,
 } from "@/ui/shared/lib/spellLabels";
 
 /** Числа Торна: оба включают +1 от предмета, и книга их не знает. */
-const THORNE = { spellSaveDc: 16, spellAttackModifier: 8 };
+const THORNE = numbers({ spellSaveDc: 16, spellAttackModifier: 8 });
+
+/** Лист в том объёме, в каком его читает подпись: величина по имени и ничего больше. */
+function numbers(known: Partial<Record<StatId, number>>): ResolutionNumbers {
+  return { value: (stat: StatId) => known[stat] ?? 0 };
+}
 
 describe("resolutionBadge (FR-211)", () => {
   it("все три способа устроены одной схемой: название проверки и число", () => {
@@ -23,7 +30,7 @@ describe("resolutionBadge (FR-211)", () => {
   });
 
   it("числа берутся у персонажа, а не из книги", () => {
-    const novice = { spellSaveDc: 13, spellAttackModifier: 5 };
+    const novice = numbers({ spellSaveDc: 13, spellAttackModifier: 5 });
     expect(resolutionBadge({ type: "spell_attack" }, novice).label).toBe("Атака d20+5");
     expect(resolutionBadge({ type: "saving_throw", savingThrow: "CON" }, novice).label).toBe(
       "Спасбросок Телосложения КС 13",
@@ -31,7 +38,7 @@ describe("resolutionBadge (FR-211)", () => {
   });
 
   it("отрицательный модификатор печатается тем же минусом, что на листе", () => {
-    expect(resolutionBadge({ type: "spell_attack" }, { spellSaveDc: 9, spellAttackModifier: -1 }).label).toBe(
+    expect(resolutionBadge({ type: "spell_attack" }, numbers({ spellSaveDc: 9, spellAttackModifier: -1 })).label).toBe(
       "Атака d20−1",
     );
   });

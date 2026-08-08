@@ -3,7 +3,6 @@
  */
 
 import { Character } from "@/core/domain/assembly/character";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
 
@@ -19,7 +18,7 @@ export function togglePreparation(session: Session, spell: Spell, clock: Clock):
     spell.id,
     spell.nameRu,
     spell.level,
-    Sheet.of(session.character).value("preparedLimit"),
+    Character.of(session.character).sheet.value("preparedLimit"),
   );
   return commit(
     session,

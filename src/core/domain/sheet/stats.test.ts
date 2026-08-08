@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { StatContribution } from "@/core/domain/shared/stats";
 
-import { resolveStats, type Sourced } from "./resolve";
+import { resolveStats } from "./resolve";
 import { statsOf, type StatFoundation } from "./stats";
 
 /** Основание Торна: то, что персонаж хранит сам, без единого вклада. */
@@ -27,8 +27,8 @@ const THORNE: StatFoundation = {
 };
 
 function resolved(...contributions: StatContribution[]) {
-  const brought: Sourced<string>[] = contributions.map((contribution) => ({
-    source: "проба",
+  const brought = contributions.map((contribution) => ({
+    source: { origin: "permanent", nameRu: "проба" },
     contribution,
   }));
   const stats = resolveStats(statsOf(THORNE), brought);

@@ -1,3 +1,4 @@
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
@@ -46,6 +47,7 @@ describe("describeConcentration (FR-084)", () => {
       duration: { type: "minutes", value: 10 },
       isConcentration: true,
       slotLevelUsed: 1,
+      contributions: [],
       endConditionRu: "До конца концентрации или истечения длительности.",
       ...overrides,
     };
@@ -157,9 +159,18 @@ describe("describeConcentration (FR-084)", () => {
   it("показывает отрицательные модификаторы со знаком минус", () => {
     // Волшебник со штрафом: у Торна оба модификатора положительные, а знак обязан быть верным.
     const base = createThorne();
-    const character = {
+    const character: CharacterState = {
       ...base,
-      overrides: { ...base.overrides, spellAttackModifier: -1, saves: { constitution: -2 } },
+      permanentContributions: [
+        {
+          nameRu: "Проклятие",
+          contribution: { stat: "spellAttackModifier", kind: "assignment", value: -1 },
+        },
+        {
+          nameRu: "Проклятие",
+          contribution: { stat: "save:constitution", kind: "assignment", value: -2 },
+        },
+      ],
     };
     const summary = describeConcentration({
       spell: spell("ray-of-frost"),

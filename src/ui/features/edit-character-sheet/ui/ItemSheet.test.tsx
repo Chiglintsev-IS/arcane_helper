@@ -36,7 +36,7 @@ describe("шторка вещи", () => {
       price: { amount: 150, currency: "gold" },
       note: "3 уровень, КС 15",
       // Набранное уходит как есть, включая нули: что из этого хранить, решает владелец.
-      bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+      bonuses: {},
     });
   });
 
@@ -48,7 +48,7 @@ describe("шторка вещи", () => {
           id: "кольцо",
           nameRu: "Кольцо защиты",
           kind: "gear",
-          bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+          bonuses: { armorClass: 1, "save:constitution": 1 },
         }}
         bagCount={0}
         wornCount={1}
@@ -60,11 +60,13 @@ describe("шторка вещи", () => {
       />,
     );
 
-    expect(screen.getByLabelText("К защите")).toBeDefined();
+    // Прибавки набраны по одной на величину, и каждая названа своим словом.
+    expect(screen.getByLabelText("Класс Доспеха")).toBeDefined();
+    expect(screen.getByLabelText("Спасбросок: Телосложение")).toBeDefined();
 
     await userEvent.click(screen.getByRole("radio", { name: "Другое" }));
     // Поля прибавок ушли вместе с категорией: зелье действует, когда его пьют, а не когда несут.
-    expect(screen.queryByLabelText("К защите")).toBeNull();
+    expect(screen.queryByLabelText("Класс Доспеха")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     // Прибавки уходят набранными: снимает их владелец, а не шторка.
@@ -72,7 +74,7 @@ describe("шторка вещи", () => {
       id: "кольцо",
       nameRu: "Кольцо защиты",
       kind: "other",
-      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+      bonuses: { armorClass: 1, "save:constitution": 1 },
     });
   });
 
@@ -123,7 +125,7 @@ describe("шторка вещи", () => {
       id: "зелье",
       nameRu: "Зелье лечения",
       kind: "consumable",
-      bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+      bonuses: {},
     });
   });
 
@@ -164,7 +166,9 @@ describe("шторка вещи", () => {
       />,
     );
 
-    await userEvent.clear(screen.getByLabelText("К защите"));
+    await userEvent.selectOptions(screen.getByLabelText("Добавить прибавку"), "armorClass");
+    await userEvent.click(screen.getByRole("button", { name: "Добавить" }));
+    await userEvent.clear(screen.getByLabelText("Класс Доспеха"));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(onSave.mock.calls[0]?.[0].bonuses.armorClass).toBeNaN();

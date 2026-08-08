@@ -14,6 +14,7 @@
  * Причина недоступности пишется словами: серый цвет без объяснения оставляет игрока в тупике
  */
 
+import { Character } from "@/core/domain/assembly/character";
 import { Fragment } from "react";
 
 import {
@@ -27,7 +28,6 @@ import {
 } from "@/ui/entities/spell/lib/format";
 import { rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { CANTRIP_LEVEL, type Spell } from "@/core/domain/catalog/spell";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
@@ -90,7 +90,7 @@ export function SpellCardCompact({
   const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
   const castingTime = CASTING_TIME[spell.castingTime.type];
   const ritualOnly = ritualOnlyBadge(spell, character);
-  const resolution = resolutionBadge(spell.resolution, Sheet.of(character));
+  const resolution = resolutionBadge(spell.resolution, Character.of(character).sheet);
   const damage = damageLabel(spell, spell.level, character.level);
   const slotCost = slotCostLabel(spell);
 

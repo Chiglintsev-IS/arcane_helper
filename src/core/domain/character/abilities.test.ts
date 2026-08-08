@@ -72,15 +72,15 @@ describe("производные характеристики Торна", () =>
 });
 
 describe("производные числа листа", () => {
-  it("спасбросок: модификатор, владение, прибавка предмета", () => {
-    // Торн: Телосложение 16 без владения, предмет +1.
+  it("спасбросок: модификатор и владение", () => {
+    // Торн: Телосложение 16 без владения. Прибавка плаща — вклад, а не часть формулы.
     expect(
       savingThrowModifier({ score: 16, proficient: false, proficiencyBonus: 3 }),
-    ).toBe(4);
+    ).toBe(3);
     // Интеллект 18 с владением.
     expect(
       savingThrowModifier({ score: 18, proficient: true, proficiencyBonus: 3 }),
-    ).toBe(8);
+    ).toBe(7);
   });
 
   it("навык: без владения, с владением, с компетентностью", () => {
@@ -90,7 +90,7 @@ describe("производные числа листа", () => {
   });
 
   it("пассивное восприятие — десять плюс навык Восприятия", () => {
-    expect(passivePerception({ score: 12, training: undefined, proficiencyBonus: 3 })).toBe(11);
+    expect(passivePerception(skillModifier({ score: 12, training: undefined, proficiencyBonus: 3 }))).toBe(11);
   });
 
   it("инициатива — половина суммы модификаторов Ловкости и Мудрости", () => {
@@ -101,9 +101,9 @@ describe("производные числа листа", () => {
     expect(initiativeModifier({ dexterity: 8, wisdom: 6 })).toBe(-2);
   });
 
-  it("КС и атака включают прибавку предмета к магии", () => {
-    expect(spellSaveDc({ proficiencyBonus: 3, score: 18 })).toBe(16);
-    expect(spellAttackModifier({ proficiencyBonus: 3, score: 18 })).toBe(8);
+  it("КС и атака считаются от бонуса мастерства и характеристики: вещей формула не знает", () => {
+    expect(spellSaveDc({ proficiencyBonus: 3, score: 18 })).toBe(15);
+    expect(spellAttackModifier({ proficiencyBonus: 3, score: 18 })).toBe(7);
   });
 });
 
@@ -113,8 +113,8 @@ describe("preparedLimit", () => {
     expect(preparedLimit(20, 20)).toBe(25);
   });
 
-  it("не опускается ниже одного заклинания при отрицательном модификаторе", () => {
-    expect(preparedLimit(6, 1)).toBe(1);
+  it("нижнего предела формула не знает: он свойство величины и применяется после вкладов", () => {
+    expect(preparedLimit(6, 1)).toBe(-1);
   });
 
   it("отклоняет уровень вне диапазона", () => {

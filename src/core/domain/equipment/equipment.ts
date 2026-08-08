@@ -19,15 +19,21 @@ import { STAT_IDS } from "@/core/domain/shared/stats";
 import type { ContributionSource, SourcedContribution } from "@/core/domain/shared/stats";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import { assertMoney, MAXIMUM_ITEM_COUNT } from "./schema";
+import { assertMoney, assertStockEntry, MAXIMUM_ITEM_COUNT } from "./schema";
 import type { EquipmentData, Money, StockEntry } from "./schema";
 
 type EquipmentState = { equipment: EquipmentData };
 
-/** Тот же запас с одной изменённой записью: заводит запись, если её ещё не было. */
+/**
+ * Тот же запас с одной изменённой записью: заводит запись, если её ещё не было.
+ *
+ * Получившаяся запись проходит своё объявление здесь, а не у каждого вызывающего: пределы счёта
+ * объявлены один раз, и вторая их проверка разошлась бы с настоящей при первой же правке предела.
+ */
 function withStock(entries: readonly StockEntry[], itemId: string, count: number): readonly StockEntry[] {
+  assertStockEntry({ itemId, count });
   const found = entries.some((entry) => entry.itemId === itemId);
-  if (!found) return count === 0 ? entries : [...entries, { itemId, count }];
+  if (!found) return [...entries, { itemId, count }];
   return entries.map((entry) => (entry.itemId === itemId ? { ...entry, count } : entry));
 }
 
@@ -46,14 +52,6 @@ export class Equipment {
 
   private with(change: Partial<EquipmentData>): Equipment {
     return new Equipment({ equipment: { ...this.data, ...change } });
-  }
-
-  get bag(): readonly StockEntry[] {
-    return this.data.bag;
-  }
-
-  get worn(): readonly StockEntry[] {
-    return this.data.worn;
   }
 
   get money(): Money {

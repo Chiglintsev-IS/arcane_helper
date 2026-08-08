@@ -45,7 +45,7 @@ describe("режим «Лист»", () => {
     expect(screen.queryByText("Снижение кровью")).toBeNull();
   });
 
-  it("у каждого блока есть кнопка правки с внятным именем, перебивки — у отметок", async () => {
+  it("у каждого блока есть кнопка правки с внятным именем", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
     render(<CharacterSheet character={createThorne()} onEdit={onEdit} />);
@@ -53,18 +53,26 @@ describe("режим «Лист»", () => {
     expect(screen.getByRole("button", { name: "Править: Интеллект" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Править: Уровень" })).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: "Править: Перебивки" }));
-    expect(onEdit).toHaveBeenCalledWith({ block: "combatNumbers" });
+    await user.click(screen.getByRole("button", { name: "Править: Постоянные вклады" }));
+    expect(onEdit).toHaveBeenCalledWith({ block: "permanent" });
   });
 
   it("подсказка стоит рядом со значением, а не вместо него", () => {
     const state = createThorne();
     render(
       <CharacterSheet
-        character={{ ...state, overrides: { ...state.overrides, initiative: 5 } }}
+        character={{
+          ...state,
+          permanentContributions: [
+            {
+              nameRu: "Дар богов",
+              contribution: { stat: "initiative", kind: "bonus", value: 5 },
+            },
+          ],
+        }}
         onEdit={() => {}}
       />,
     );
-    expect(screen.getByText("(введено руками)")).toBeDefined();
+    expect(screen.getByText("(Инициатива)")).toBeDefined();
   });
 });

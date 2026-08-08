@@ -59,9 +59,9 @@ const SINGULAR_STAT_IDS = [
   "speed",
 ] as const;
 
-export type AbilityStatId = `ability:${Ability}`;
-export type SaveStatId = `save:${Ability}`;
-export type SkillStatId = `skill:${SkillId}`;
+type AbilityStatId = `ability:${Ability}`;
+type SaveStatId = `save:${Ability}`;
+type SkillStatId = `skill:${SkillId}`;
 
 export type StatId =
   | (typeof SINGULAR_STAT_IDS)[number]
@@ -148,8 +148,6 @@ export type SourcedContribution = {
 
 /** Прибавки вещи и персонажа: величина и число. Ноль не хранится — он ни на что не влияет. */
 export const statBonusesSchema = z.partialRecord(z.enum(STAT_IDS), z.number().int());
-
-export type StatBonuses = z.infer<typeof statBonusesSchema>;
 
 const statId = z.enum(STAT_IDS, { error: "Такой величины не бывает" });
 

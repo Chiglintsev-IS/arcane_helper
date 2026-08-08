@@ -19,6 +19,7 @@ import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/
 import {
   ABILITIES,
   SKILL_IDS,
+  isStatId,
   saveStatId,
   skillStatId,
   type StatId,
@@ -337,16 +338,29 @@ function permanent(nameRu: string, contribution: unknown): unknown {
   return { nameRu, contribution };
 }
 
-/** Прибавки прежней формы — величинами словаря: ноль не переносится, он ни на что не влиял. */
+/**
+ * Прибавки прежней формы — величинами словаря: слово раскрывается в свои величины, ноль не
+ * переносится, а имя, которое и так величина, остаётся собой.
+ */
 function bonusesToStats(legacy: unknown): Record<string, number> {
-  const fields = fieldsOf(legacy);
   const bonuses: Record<string, number> = {};
-  for (const [word, stats] of Object.entries(LEGACY_BONUS_TARGETS)) {
-    const value = fields[word];
+  for (const [word, value] of Object.entries(fieldsOf(legacy))) {
     if (typeof value !== "number" || value === 0) continue;
-    for (const stat of stats) bonuses[stat] = value;
+    for (const stat of LEGACY_BONUS_TARGETS[word] ?? (isStatId(word) ? [word] : [])) {
+      bonuses[stat] = value;
+    }
   }
   return bonuses;
+}
+
+/**
+ * Прибавки названы словами прежней формы: «магия» и «спасброски» величинами не являются.
+ *
+ * «Защита» тем же словом называлась и тогда, и сейчас, и по ней одной прежнюю форму не отличить —
+ * отличает её слово, которого в словаре величин нет.
+ */
+function namedByLegacyWords(bonuses: unknown): boolean {
+  return Object.keys(fieldsOf(bonuses)).some((word) => !isStatId(word));
 }
 
 /**
@@ -420,14 +434,13 @@ function migrateItemShape(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
   const fields = fieldsOf(item);
   const { bonuses, armorBase, ...rest } = fields;
-  if (bonuses === undefined && armorBase === undefined) return item;
+  // Вещь нынешней формы проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
+  if (!namedByLegacyWords(bonuses) && armorBase === undefined) return item;
 
-  const stats = bonuses === undefined ? {} : bonusesToStats(bonuses);
-  const legacyWords = Object.keys(fieldsOf(bonuses)).some((word) => word in LEGACY_BONUS_TARGETS);
+  const stats = bonusesToStats(bonuses);
   return {
     ...rest,
-    ...(bonuses === undefined ? {} : legacyWords ? {} : { bonuses }),
-    ...(legacyWords && Object.keys(stats).length > 0 ? { bonuses: stats } : {}),
+    ...(Object.keys(stats).length === 0 ? {} : { bonuses: stats }),
     ...(typeof armorBase === "number" ? { armor: { base: armorBase } } : {}),
   };
 }

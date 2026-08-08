@@ -155,17 +155,17 @@ describe("экран «Сумка»", () => {
         nameRu: "Кольцо",
         kind: "gear",
         note: "фамильное",
-        bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+        bonuses: { armorClass: 1, "save:constitution": 1 },
       }),
-    ).toBe("защита +1 · спасброски +1 · фамильное");
+    ).toBe("Класс Доспеха +1 · Спасбросок: Телосложение +1 · фамильное");
     expect(
       itemMeta({
         id: "staff",
         nameRu: "Посох",
         kind: "gear",
-        bonuses: { spellcasting: 2, armorClass: 0, savingThrows: 0 },
+        bonuses: { spellSaveDc: 2, spellAttackModifier: 2 },
       }),
-    ).toBe("магия +2");
+    ).toBe("КС спасброска +2 · Атака заклинанием +2");
     expect(itemMeta({ id: "rope", nameRu: "Верёвка", kind: "other" })).toBe("");
     // Прибавка вне экипировки не действует — и потому не называется: показанное число лгало бы.
     expect(
@@ -173,28 +173,17 @@ describe("экран «Сумка»", () => {
         id: "old-potion",
         nameRu: "Странное зелье",
         kind: "consumable",
-        bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+        bonuses: { armorClass: 1 },
       }),
     ).toBe("");
   });
 
-  it("доспех и деньги открывают свои шторки", async () => {
-    const user = userEvent.setup();
-    const onEditArmor = vi.fn();
+  it("деньги открывают свою шторку, а доспех правится у самой вещи", () => {
     const onEditMoney = vi.fn();
-    render(
-      <Bag
-        character={createThorne()}
-        {...NOOP}
-        onEditArmor={onEditArmor}
-        onEditMoney={onEditMoney}
-      />,
-    );
+    render(<Bag character={createThorne()} {...NOOP} onEditMoney={onEditMoney} />);
 
-    await user.click(screen.getByRole("button", { name: "Править: Доспех" }));
-    await user.click(screen.getByRole("button", { name: "Править: Деньги" }));
-    expect(onEditArmor).toHaveBeenCalled();
-    expect(onEditMoney).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Править: Доспех" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Править: Деньги" })).toBeDefined();
   });
 
   it("у экипировки счёт сумки и надетого называется числом всегда, у другой категории — только не единица", () => {

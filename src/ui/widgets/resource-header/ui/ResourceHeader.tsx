@@ -15,7 +15,6 @@ import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
-import { Sheet } from "@/core/domain/sheet/sheet";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import { signed } from "@/core/shared/language";
@@ -217,7 +216,7 @@ export function ResourceBadges({
   /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
   bookCastingTimes: ReadonlySet<CastingTimeType>;
 }) {
-  const totals = Sheet.of(character);
+  const totals = Character.of(character).sheet;
   const vitality = Vitality.of(character);
   // Игроку важен разрыв с базой листа, а не то, чем он вызван: цифра одна.
   const maximumReduction = vitality.maximumReduction;

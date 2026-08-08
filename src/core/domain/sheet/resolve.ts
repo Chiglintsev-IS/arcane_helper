@@ -13,10 +13,10 @@ import { DomainError } from "@/core/domain/shared/errors";
 import type { StatContribution, StatId, StatMethod } from "@/core/domain/shared/stats";
 
 /** Допустимый диапазон величины: свойство самой величины, применяется в конце счёта. */
-export type StatRange = { readonly minimum?: number; readonly maximum?: number };
+type StatRange = { readonly minimum?: number; readonly maximum?: number };
 
 /** Значение уже посчитанной зависимости. */
-export type StatReader = (stat: Stat) => number;
+type StatReader = (stat: Stat) => number;
 
 /**
  * Посчитанный способ счёта и принесённый вклад, из которого он вырос.
@@ -24,7 +24,7 @@ export type StatReader = (stat: Stat) => number;
  * Собственный способ величины ни из чего не вырос и приносящего не имеет: «без доспехов» действует
  * и тогда, когда не принесли ничего.
  */
-export type StatCandidate = {
+type StatCandidate = {
   readonly value: number;
   readonly grownFrom: StatMethod | undefined;
 };
@@ -66,7 +66,7 @@ export function ownCandidate(value: number): StatCandidate {
   return { value, grownFrom: undefined };
 }
 
-export type Sourced<TSource> = {
+type Sourced<TSource> = {
   readonly source: TSource;
   readonly contribution: StatContribution;
 };
@@ -77,7 +77,7 @@ export type Sourced<TSource> = {
  * Непринятый способ счёта из разбора не пропадает: «кольчуга спорит с „Доспехами мага“ и
  * побеждает» — это ответ на «почему число такое», а исчезнувший проигравший ответом не был бы.
  */
-export type BreakdownPart<TSource> = Sourced<TSource> & { readonly applied: boolean };
+type BreakdownPart<TSource> = Sourced<TSource> & { readonly applied: boolean };
 
 export type Breakdown<TSource> = {
   readonly value: number;
@@ -139,10 +139,11 @@ function isApplied<TSource>(
   assignment: Sourced<TSource> | undefined,
   best: StatCandidate | undefined,
 ): boolean {
+  // Назначение здесь одно на всех: найдено — оно и решает, кто вошёл в итог, а не найдено — среди
+  // вкладов его нет вовсе, и остаются прибавка да способ счёта.
   if (assignment !== undefined) return sourced === assignment;
-  if (sourced.contribution.kind === "bonus") return true;
-  if (sourced.contribution.kind === "assignment") return false;
-  return best?.grownFrom === sourced.contribution.method;
+  if (sourced.contribution.kind === "method") return best?.grownFrom === sourced.contribution.method;
+  return true;
 }
 
 /**
@@ -178,6 +179,23 @@ export function resolveStats<TSource>(
     );
   }
   return resolved;
+}
+
+/**
+ * Разбор одной величины среди посчитанных.
+ *
+ * Пропущенная сборщиком величина — отказ, а не тихий ноль: ноль объявили бы мастеру за настоящее
+ * число, и пропуск в сборке остался бы незамеченным до самого стола.
+ */
+export function breakdownOf<TSource>(
+  resolved: ReadonlyMap<StatId, Breakdown<TSource>>,
+  stat: StatId,
+): Breakdown<TSource> {
+  const known = resolved.get(stat);
+  if (known === undefined) {
+    throw new DomainError(`Величины «${stat}» лист не считает: сборщик её пропустил`);
+  }
+  return known;
 }
 
 /** Величины в порядке зависимости: сначала то, из чего считают, потом то, что считают. */

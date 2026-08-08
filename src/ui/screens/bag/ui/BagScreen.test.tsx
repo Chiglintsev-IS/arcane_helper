@@ -29,7 +29,9 @@ describe("«Сумка» (FR-234, FR-242)", () => {
     expect(carried.wornCount("кольцо-защиты")).toBe(0);
 
     await user.click(screen.getByRole("button", { name: "Открыть: Кольцо защиты" }));
-    const armorField = screen.getByLabelText("К защите");
+    await user.selectOptions(screen.getByLabelText("Добавить прибавку"), "armorClass");
+    await user.click(screen.getByRole("button", { name: "Добавить" }));
+    const armorField = screen.getByLabelText("Класс Доспеха");
     await user.clear(armorField);
     await user.type(armorField, "1");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));

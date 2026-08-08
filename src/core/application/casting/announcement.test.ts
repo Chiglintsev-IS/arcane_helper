@@ -1,3 +1,4 @@
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -62,7 +63,15 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
   });
 
   it("сохраняет знак отрицательного модификатора атаки", () => {
-    const cursed = { ...thorne, overrides: { ...thorne.overrides, spellAttackModifier: -1 } };
+    const cursed: CharacterState = {
+      ...thorne,
+      permanentContributions: [
+        {
+          nameRu: "Проклятие",
+          contribution: { stat: "spellAttackModifier", kind: "assignment", value: -1 },
+        },
+      ],
+    };
     const announcement = renderAnnouncement(
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip", targetLabel: "гоблин" }),
@@ -167,7 +176,9 @@ describe("renderAnnouncement: готовый КД (FR-093)", () => {
               duration: { type: "hours", value: 8 },
               isConcentration: false,
               slotLevelUsed: 1,
-              armorClass: { kind: "base_override", value: 13 },
+              contributions: [
+                { stat: "armorClass", kind: "method", method: { family: "spell", base: 13 } },
+              ],
               endConditionRu: "До истечения длительности.",
             },
           ],
@@ -369,7 +380,15 @@ describe("castInstructions: что сделать этому персонажу 
   });
 
   it("отрицательный модификатор атаки сохраняет знак", () => {
-    const cursed = { ...thorne, overrides: { ...thorne.overrides, spellAttackModifier: -2 } };
+    const cursed: CharacterState = {
+      ...thorne,
+      permanentContributions: [
+        {
+          nameRu: "Проклятие",
+          contribution: { stat: "spellAttackModifier", kind: "assignment", value: -2 },
+        },
+      ],
+    };
     const steps = castInstructions(
       spell("ray-of-frost"),
       context({ character: cursed, mode: "cantrip" }),

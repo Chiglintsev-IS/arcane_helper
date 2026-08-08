@@ -12,7 +12,7 @@ describe("блоки листа", () => {
       "health",
       "armorClass",
       "marks",
-      "miscBonuses",
+      "permanentContributions",
       "ability:strength",
       "ability:dexterity",
       "ability:constitution",
@@ -23,15 +23,25 @@ describe("блоки листа", () => {
     ]);
   });
 
-  it("прочие прибавки — карточка листа: вклад без вещи принадлежит персонажу (FR-243)", () => {
-    const state = createThorne();
-    const blessed = { ...state, miscBonuses: { spellcasting: 1, armorClass: -1, savingThrows: 0 } };
-    const block = sheetBlocks(blessed).find((candidate) => candidate.id === "miscBonuses");
-    expect(block?.edit).toEqual({ block: "miscBonuses" });
+  it("постоянные вклады — карточка листа: вклад без вещи принадлежит персонажу (FR-243)", () => {
+    const blessed = {
+      ...createThorne(),
+      permanentContributions: [
+        { nameRu: "Дар", contribution: { stat: "spellSaveDc", kind: "bonus", value: 1 } as const },
+        { nameRu: "Проклятие", contribution: { stat: "armorClass", kind: "bonus", value: -1 } as const },
+        {
+          nameRu: "Слово мастера",
+          contribution: { stat: "initiative", kind: "assignment", value: 5 } as const,
+        },
+      ],
+    };
+    const block = sheetBlocks(blessed).find((candidate) => candidate.id === "permanentContributions");
+
+    expect(block?.edit).toEqual({ block: "permanent" });
     expect(block?.rows).toEqual([
-      { labelRu: "К магии", value: "+1" },
-      { labelRu: "К защите", value: "−1" },
-      { labelRu: "Ко всем спасброскам", value: "+0" },
+      { labelRu: "Дар", value: "+1", hint: "КС спасброска" },
+      { labelRu: "Проклятие", value: "−1", hint: "Класс Доспеха" },
+      { labelRu: "Слово мастера", value: "= 5", hint: "Инициатива" },
     ]);
   });
 
@@ -89,44 +99,32 @@ describe("блоки листа", () => {
     expect(blockById("marks")?.rows).toContainEqual({ labelRu: "Истощение", value: "нет" });
   });
 
-  it("перебитое число — отметка мастера: стоит в его блоке с подсказкой (FR-230)", () => {
-    const state = createThorne();
-    const overridden = { ...state, overrides: { ...state.overrides, spellSaveDc: 18, initiative: 5 } };
-    const rows = sheetBlocks(overridden).find((block) => block.id === "marks")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "КС спасброска", value: "18", hint: "введено руками" });
-    expect(rows).toContainEqual({ labelRu: "Инициатива", value: "+5", hint: "введено руками" });
-    // Не перебитое в отметках не перечисляется: формула — не отметка.
-    expect(rows?.some((row) => row.labelRu === "Атака заклинанием")).toBe(false);
+  it("постоянные вклады стоят своим блоком: имя, число и величина (FR-246)", () => {
+    const withGift = {
+      ...createThorne(),
+      permanentContributions: [
+        { nameRu: "Дар богов", contribution: { stat: "initiative", kind: "bonus", value: 5 } as const },
+      ],
+    };
+    const rows =
+      sheetBlocks(withGift).find((block) => block.id === "permanentContributions")?.rows ?? [];
+    expect(rows).toContainEqual({ labelRu: "Дар богов", value: "+5", hint: "Инициатива" });
   });
 
-  it("перебивки открываются второй кнопкой блока отметок", () => {
-    expect(blockById("marks")?.secondary).toEqual({
-      labelRu: "Перебивки",
-      edit: { block: "combatNumbers" },
-    });
-  });
-
-  it("блок КД показывает слагаемые и подсказку по надетому доспеху", () => {
+  it("блок КД показывает итог и разбор с источниками", () => {
     const rows = blockById("armorClass")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "База", value: "10", hint: "без доспехов" });
-    expect(rows).toContainEqual({ labelRu: "Ловкость", value: "+2" });
-    expect(rows).toContainEqual({ labelRu: "Вещи", value: "+2" });
+    expect(rows).toContainEqual({ labelRu: "Итог", value: "14" });
+    expect(rows).toContainEqual({ labelRu: "Мантия +1", value: "+1" });
+    expect(rows).toContainEqual({ labelRu: "Плащ защиты", value: "+1" });
   });
 
-  it("перебивка базы КД меняет подсказку на \"введено руками\"", () => {
-    const state = createThorne();
-    const overridden = { ...state, overrides: { ...state.overrides, armorClassBase: 12 } };
-    const rows = sheetBlocks(overridden).find((block) => block.id === "armorClass")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "База", value: "12", hint: "введено руками" });
-  });
-
-  it("надетый доспех называется в подсказке базы КД", () => {
+  it("надетый доспех виден в разборе своей базой", () => {
     const state = createThorne();
     const withArmor = {
       ...state,
       itemDefinitions: [
         ...state.itemDefinitions,
-        { id: "scale-mail", nameRu: "Чешуйчатый доспех", kind: "gear" as const, armorBase: 14 },
+        { id: "scale-mail", nameRu: "Чешуйчатый доспех", kind: "gear" as const, armor: { base: 14 } },
       ],
       equipment: {
         ...state.equipment,
@@ -134,7 +132,8 @@ describe("блоки листа", () => {
       },
     };
     const rows = sheetBlocks(withArmor).find((block) => block.id === "armorClass")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "База", value: "14", hint: "Чешуйчатый доспех" });
+    expect(rows).toContainEqual({ labelRu: "Чешуйчатый доспех", value: "база 14" });
+    expect(rows).toContainEqual({ labelRu: "Итог", value: "18" });
   });
 
   it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {

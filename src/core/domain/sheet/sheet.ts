@@ -18,9 +18,8 @@ import type {
   SourcedContribution,
   StatId,
 } from "@/core/domain/shared/stats";
-import { DomainError } from "@/core/domain/shared/errors";
 
-import { resolveStats, type Breakdown } from "./resolve";
+import { breakdownOf, resolveStats, type Breakdown } from "./resolve";
 import { statsOf, type StatFoundation } from "./stats";
 
 export class Sheet {
@@ -28,7 +27,14 @@ export class Sheet {
     private readonly resolved: ReadonlyMap<StatId, Breakdown<ContributionSource>>,
   ) {}
 
-  static of(foundation: StatFoundation, brought: readonly SourcedContribution[] = []): Sheet {
+  /**
+   * Вклады — обязательный довод, а не удобное умолчание.
+   *
+   * Пустой список по умолчанию однажды уже дал листу считать без надетого и без действующего: экран
+   * звал лист напрямую и получал числа, которых за столом нет. Забыть вклады теперь нельзя —
+   * собирает их корень персонажа.
+   */
+  static of(foundation: StatFoundation, brought: readonly SourcedContribution[]): Sheet {
     return new Sheet(resolveStats(statsOf(foundation), brought));
   }
 
@@ -54,10 +60,6 @@ export class Sheet {
 
   /** Разбор: итог вместе с вкладами и их источниками — ответ на «почему число такое». */
   breakdown(stat: StatId): Breakdown<ContributionSource> {
-    const known = this.resolved.get(stat);
-    if (known === undefined) {
-      throw new DomainError(`Величины «${stat}» лист не считает`);
-    }
-    return known;
+    return breakdownOf(this.resolved, stat);
   }
 }

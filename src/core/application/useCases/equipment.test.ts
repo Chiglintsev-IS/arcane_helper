@@ -1,6 +1,7 @@
+import { Character } from "@/core/domain/assembly/character";
+import { saveStatId } from "@/core/domain/shared/stats";
 import { describe, expect, it } from "vitest";
 
-import { Sheet } from "@/core/domain/sheet/sheet";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
 import { undoLast, type Clock } from "@/core/application/session";
@@ -49,22 +50,15 @@ describe("правка снаряжения", () => {
       id: RING_ID,
       nameRu: ring.nameRu,
       kind: "gear" as const,
-      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 1 },
+      bonuses: { armorClass: 1, "save:constitution": 1 },
     };
     const carried = editItem(addItem(session(), ring, clock), bonusedRing, clock);
     const after = adjustWornCount(carried, RING_ID, 1, clock);
-    const sheet = Sheet.of(after.character);
+    const sheet = Character.of(after.character).sheet;
 
     // Торн уже носит мантию и плащ защиты (по +1 к КД каждый): к их прибавке добавляется кольцо.
-    expect(sheet.armorClassParts).toEqual({
-      base: 10,
-      baseOverridden: false,
-      baseFormula: 10,
-      dexterityModifier: 2,
-      itemBonus: 3,
-      miscBonus: 0,
-    });
-    expect(sheet.savingThrow("constitution")).toBe(5);
+    expect(sheet.value("armorClass")).toBe(15);
+    expect(sheet.value(saveStatId("constitution"))).toBe(5);
     expect(after.character.abilities.constitution).toBe(16);
   });
 
@@ -73,15 +67,15 @@ describe("правка снаряжения", () => {
       id: RING_ID,
       nameRu: ring.nameRu,
       kind: "gear" as const,
-      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+      bonuses: { armorClass: 1 },
     };
     const worn = adjustWornCount(editItem(addItem(session(), ring, clock), bonusedRing, clock), RING_ID, 1, clock);
     const removedFromBody = adjustWornCount(worn, RING_ID, -1, clock);
 
     // Снятое кольцо перестаёт считаться: остаётся только прибавка уже надетой мантии и плаща.
-    expect(Sheet.of(removedFromBody.character).armorClassParts.itemBonus).toBe(2);
+    expect(Character.of(removedFromBody.character).sheet.value("armorClass")).toBe(14);
     expect(removedFromBody.journal.at(-1)?.summaryRu).toBe("Снято: Кольцо защиты");
-    expect(Sheet.of(undoLast(removedFromBody).character).armorClassParts.itemBonus).toBe(3);
+    expect(Character.of(undoLast(removedFromBody).character).sheet.value("armorClass")).toBe(15);
   });
 
   it("надевание лежащего в сумке названо своим словом", () => {
@@ -101,6 +95,12 @@ describe("правка снаряжения", () => {
   it("вещь с непустым запасом не убирается, отказ называет причину", () => {
     const added = addItem(session(), ring, clock);
     expect(() => removeItem(added, RING_ID, clock)).toThrow(/сперва потратьте или снимите весь запас/);
+  });
+
+  it("запас вещи, которой нет среди заведённых, отказ называет её идентификатором", () => {
+    // Запас без вещи — след прежнего сохранения: имени у него нет, и выдумывать его нечем.
+    const stocked = adjustBagCount(session(), "призрак", 1, clock);
+    expect(() => removeItem(stocked, "призрак", clock)).toThrow(/«призрак»/);
   });
 
   it("неизвестная вещь отвергается доменом", () => {
@@ -156,13 +156,14 @@ describe("правка снаряжения", () => {
     const chainmailId = Items.idFromName(chainmail.nameRu);
     const armored = editItem(
       addItem(session(), chainmail, clock),
-      { id: chainmailId, nameRu: chainmail.nameRu, kind: "gear", armorBase: 16 },
+      { id: chainmailId, nameRu: chainmail.nameRu, kind: "gear", armor: { base: 16 } },
       clock,
     );
     const worn = adjustWornCount(armored, chainmailId, 1, clock);
-    expect(Sheet.of(worn.character).armorClassParts.base).toBe(16);
+    // Кольчуга без категории Ловкость не режет: 16 + 2 + мантия 1 + плащ 1.
+    expect(Character.of(worn.character).sheet.value("armorClass")).toBe(20);
 
     const takenOff = adjustWornCount(worn, chainmailId, -1, clock);
-    expect(Sheet.of(takenOff.character).armorClassParts.base).toBe(10);
+    expect(Character.of(takenOff.character).sheet.value("armorClass")).toBe(14);
   });
 });

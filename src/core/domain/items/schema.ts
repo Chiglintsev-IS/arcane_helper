@@ -74,22 +74,18 @@ const itemDefinitionFields = z.object({
 type ItemFields = z.infer<typeof itemDefinitionFields>;
 
 /**
- * Свойства экипировки — каждое со своим снятым видом: отсутствием поля.
+ * Свойства экипировки. Снятый вид у них один — отсутствие поля: «прибавка ноль» и «прибавки нет» за
+ * столом означают разное, и хранить снятое нулём значило бы поставить верёвку строкой в разбор.
  *
  * Список один на всё ядро: по нему объявление отказывает чужой категории, по нему же правка вещи
  * эти свойства снимает. Второе перечисление разошлось бы с первым молча — и вещь, где новое
  * свойство лежит у расходника, перестала бы проходить объявление целиком.
  */
-const GEAR_ONLY_FIELDS = [
-  ["bonuses", undefined],
-  ["armor", undefined],
-] as const satisfies readonly (readonly [keyof ItemFields, unknown])[];
+const GEAR_ONLY_FIELDS = ["bonuses", "armor"] as const satisfies readonly (keyof ItemFields)[];
 
-/** Свойства экипировки, заполненные у вещи: значение в снятом виде заполненным не считается. */
+/** Свойства экипировки, заполненные у вещи. */
 export function filledGearOnlyFields(item: Readonly<Record<string, unknown>>): readonly string[] {
-  return GEAR_ONLY_FIELDS.filter(
-    ([field, cleared]) => item[field] !== cleared && item[field] !== undefined,
-  ).map(([field]) => field);
+  return GEAR_ONLY_FIELDS.filter((field) => item[field] !== undefined);
 }
 
 /** Та же вещь со снятыми свойствами экипировки: у прочих категорий их не бывает. */
@@ -97,10 +93,7 @@ export function withoutGearOnlyFields(
   item: Readonly<Record<string, unknown>>,
 ): Record<string, unknown> {
   const rest: Record<string, unknown> = { ...item };
-  for (const [field, cleared] of GEAR_ONLY_FIELDS) {
-    if (cleared === undefined) delete rest[field];
-    else rest[field] = cleared;
-  }
+  for (const field of GEAR_ONLY_FIELDS) delete rest[field];
   return rest;
 }
 
@@ -113,7 +106,6 @@ const itemDefinitionSchema = itemDefinitionFields.superRefine((item, context) =>
 
 export type ItemDefinition = DeepReadonly<z.infer<typeof itemDefinitionSchema>>;
 export type ItemKind = (typeof ITEM_KINDS)[number];
-export type Price = DeepReadonly<z.infer<typeof priceSchema>>;
 
 export function assertItemDefinition(item: unknown): void {
   parsedOrRefused(itemDefinitionSchema, item, "вещь");

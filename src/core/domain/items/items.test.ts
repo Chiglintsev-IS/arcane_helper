@@ -39,7 +39,7 @@ describe("вещи", () => {
       id: "ring",
       nameRu: "Кольцо защиты",
       kind: "gear",
-      bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+      bonuses: { armorClass: 1 },
     };
     const items = Items.of({ itemDefinitions: [armored] });
     const moved = items.replaceDefinition({ ...armored, kind: "other" });

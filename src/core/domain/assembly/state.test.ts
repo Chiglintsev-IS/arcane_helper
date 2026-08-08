@@ -10,6 +10,7 @@ import { ARCANA_FIELDS } from "@/core/domain/arcana/schema";
 import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
 import { EFFECTS_FIELDS } from "@/core/domain/effects/schema";
 import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
+import { ITEMS_FIELDS } from "@/core/domain/items/schema";
 import { SPELLBOOK_FIELDS } from "@/core/domain/spellbook/schema";
 import { VITALITY_FIELDS } from "@/core/domain/vitality/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
@@ -33,6 +34,7 @@ const WEB_EFFECT = {
     label: "Спасбросок Ловкости для входящих в область",
     description: "Существо, входящее в область, совершает спасбросок Ловкости.",
   },
+  contributions: [],
   endConditionRu: "До конца концентрации или 1 час.",
 };
 
@@ -112,6 +114,7 @@ const strictStateSchema = z.strictObject({
   ...ARCANA_FIELDS,
   ...EFFECTS_FIELDS,
   ...EQUIPMENT_FIELDS,
+  ...ITEMS_FIELDS,
   ...SPELLBOOK_FIELDS,
   ...VITALITY_FIELDS,
 });
@@ -135,10 +138,10 @@ describe("форма состояния", () => {
       "hitPoints",
       "id",
       "inspiration",
+      "itemDefinitions",
       "level",
-      "miscBonuses",
       "name",
-      "overrides",
+      "permanentContributions",
       "preparedSpellIds",
       "proficiencies",
       "roleplayPreferences",
@@ -301,8 +304,7 @@ describe("состояние целиком", () => {
     expect(thorneState.speed).toBe(30);
     expect(thorneState.exhaustion).toBe(0);
     expect(thorneState.inspiration).toBe(false);
-    expect(thorneState.overrides).toEqual({ saves: {}, skills: {} });
-    expect(thorneState.miscBonuses).toEqual({ spellcasting: 0, armorClass: 0, savingThrows: 0 });
+    expect(thorneState.permanentContributions).toEqual([]);
   });
 
   it("отсутствующие поля получают значение по умолчанию: обновление не теряет данных", () => {
