@@ -10,6 +10,7 @@ import {
 } from "@/core/domain/shared/levels";
 import {
   MAXIMUM_ABILITY_SCORE,
+  MAXIMUM_EXHAUSTION,
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
 import { nonEmpty, russianSchemaErrors } from "@/core/domain/shared/schema";
@@ -118,6 +119,18 @@ export const CHARACTER_FIELDS = {
   skills: z
     .partialRecord(z.enum(SKILL_IDS), z.enum(SKILL_TRAINING))
     .default({}),
+  proficiencies: z
+    .object({
+      weapons: z.array(nonEmpty).default([]),
+      armor: z.array(nonEmpty).default([]),
+      tools: z.array(nonEmpty).default([]),
+      languages: z.array(nonEmpty).default([]),
+    })
+    .default({ weapons: [], armor: [], tools: [], languages: [] }),
+
+  /** Отметки на листе: их ставят и снимают там же, где смотрят, — на «Листе». */
+  exhaustion: z.number().int().min(0).max(MAXIMUM_EXHAUSTION).default(0),
+  inspiration: z.boolean().default(false),
 
   roleplayProfile: roleplayProfileSchema,
 };
