@@ -8,11 +8,16 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 import type { ItemView } from "@/contract/views";
 import { toBagView } from "@/core/presentation/views/bagView";
+import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { Bag, itemMeta } from "./Bag";
 
 afterEach(cleanup);
 
+/** Перечни строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
+const { stats } = toChoicesView();
+
 const NOOP = {
+  stats,
   onEditMoney: () => {},
   onOpenItem: () => {},
   onAddItem: () => {},
@@ -160,7 +165,7 @@ describe("экран «Сумка»", () => {
   it("вторая строка вещи называет цену, прибавки и заметку — только то, что есть", () => {
     // Прибавки приезжают теми, что действуют: чьей категории они не положены, у того их и нет —
     // это стережёт владелец вещи, и второй такой проверки здесь не заводится.
-    expect(itemMeta(viewOf(potion))).toBe("50 зм");
+    expect(itemMeta(viewOf(potion), stats)).toBe("50 зм");
     expect(
       itemMeta(
         viewOf({
@@ -170,6 +175,7 @@ describe("экран «Сумка»", () => {
           note: "фамильное",
           bonuses: { armorClass: 1, "save:constitution": 1 },
         }),
+        stats,
       ),
     ).toBe("Класс Доспеха +1 · Спасбросок: Телосложение +1 · фамильное");
     expect(
@@ -180,9 +186,10 @@ describe("экран «Сумка»", () => {
           kind: "gear",
           bonuses: { spellSaveDc: 2, spellAttackModifier: 2 },
         }),
+        stats,
       ),
     ).toBe("КС спасброска +2 · Атака заклинанием +2");
-    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }))).toBe("");
+    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }), stats)).toBe("");
   });
 
   it("деньги открывают свою шторку, а доспех правится у самой вещи", () => {

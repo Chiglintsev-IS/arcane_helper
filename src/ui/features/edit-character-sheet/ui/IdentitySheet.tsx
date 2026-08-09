@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 
-import type { SheetView } from "@/contract/views";
-import { CREATURE_SIZES, type CreatureSize } from "@/core/domain/character/schema";
+import type { ChoicesView, SheetView } from "@/contract/views";
 import { sizeLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
@@ -35,6 +34,7 @@ type IdentityPatch = {
 
 export function IdentitySheet({
   sheet,
+  choices,
   onSave,
   onCancel,
   error = null,
@@ -43,6 +43,8 @@ export function IdentitySheet({
   error?: string | null;
   /** Лист: начальные значения полей. */
   sheet: SheetView;
+  /** Из чего выбирают: размеры существа перечнем правил. */
+  choices: ChoicesView;
   onSave: (patch: IdentityPatch) => void;
   onCancel: () => void;
 }) {
@@ -51,7 +53,7 @@ export function IdentitySheet({
   const [className, setClassName] = useState(sheet.className);
   const [subclass, setSubclass] = useState(sheet.subclass);
   const [ageText, setAgeText] = useState(String(sheet.age));
-  const [size, setSize] = useState<CreatureSize | string>(sheet.size);
+  const [size, setSize] = useState(sheet.size);
   const [speedText, setSpeedText] = useState(String(sheet.speed));
   const [weapons, setWeapons] = useState(sheet.proficiencies.weapons.join(", "));
   const [armor, setArmor] = useState(sheet.proficiencies.armor.join(", "));
@@ -91,7 +93,7 @@ export function IdentitySheet({
       <NumberField labelRu="Возраст" value={ageText} onChange={setAgeText} min={0} />
 
       <div role="radiogroup" aria-label="Размер" className="flex flex-wrap gap-1">
-        {CREATURE_SIZES.map((option) => (
+        {choices.creatureSizes.map((option) => (
           <button
             key={option}
             type="button"

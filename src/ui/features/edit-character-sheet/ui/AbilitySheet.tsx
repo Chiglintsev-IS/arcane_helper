@@ -2,25 +2,26 @@
 
 import { useState } from "react";
 
-import type { AbilityView } from "@/contract/views";
-import { type SkillTraining } from "@/core/domain/character/skills";
-import {
-  MAXIMUM_ABILITY_SCORE,
-  MINIMUM_ABILITY_SCORE,
-} from "@/core/domain/character/abilities";
-import { abilityLabel, skillLabel, TRAINING_LABELS } from "@/ui/entities/character/lib/labels";
+import type { AbilityView, ChoicesView } from "@/contract/views";
+import { abilityLabel, skillLabel, trainingLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /** Набранные владения: навык и степень словами правил — их же ждёт команда. */
 type Skills = Record<string, string>;
 
-/** Три состояния навыка. Отсутствие владения — снятый ключ, а не третье значение в данных. */
-const CHOICES: { training: SkillTraining | undefined; labelRu: string }[] = [
-  { training: undefined, labelRu: "нет" },
-  { training: "proficient", labelRu: TRAINING_LABELS.proficient },
-  { training: "expert", labelRu: TRAINING_LABELS.expert },
-];
+/**
+ * Три состояния навыка при двух степенях владения: отсутствие владения — снятый ключ, а не третья
+ * степень, и потому в перечень правил оно не входит, а в выбор игрока входит.
+ */
+function trainingChoices(
+  trainings: ChoicesView["skillTrainings"],
+): { training: string | undefined; labelRu: string }[] {
+  return [
+    { training: undefined, labelRu: "нет" },
+    ...trainings.map((training) => ({ training, labelRu: trainingLabel(training) })),
+  ];
+}
 
 /**
  * Правка одной характеристики: то же, что показывает её блок на листе.
@@ -30,6 +31,7 @@ const CHOICES: { training: SkillTraining | undefined; labelRu: string }[] = [
  */
 export function AbilitySheet({
   ability,
+  choices,
   onSave,
   onCancel,
   error = null,
@@ -37,6 +39,8 @@ export function AbilitySheet({
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   ability: AbilityView;
+  /** Из чего выбирают и в каких границах набирают: степени владения и пределы значения. */
+  choices: ChoicesView;
   onSave: (change: {
     ability: string;
     score: number;
@@ -56,7 +60,7 @@ export function AbilitySheet({
 
   const score = requiredFieldNumber(scoreText);
 
-  const setTraining = (id: string, training: SkillTraining | undefined): void => {
+  const setTraining = (id: string, training: string | undefined): void => {
     const { [id]: _dropped, ...rest } = skills;
     setSkills(training === undefined ? rest : { ...rest, [id]: training });
   };
@@ -72,8 +76,8 @@ export function AbilitySheet({
         labelRu="Значение"
         value={scoreText}
         onChange={setScoreText}
-        min={MINIMUM_ABILITY_SCORE}
-        max={MAXIMUM_ABILITY_SCORE}
+        min={choices.abilityScore.minimum}
+        max={choices.abilityScore.maximum}
       />
 
       <button
@@ -95,7 +99,7 @@ export function AbilitySheet({
         <div key={id} className="flex items-center justify-between gap-2 text-sm">
           <span>{skillLabel(id)}</span>
           <div role="radiogroup" aria-label={skillLabel(id)} className="flex gap-1">
-            {CHOICES.map((choice) => (
+            {trainingChoices(choices.skillTrainings).map((choice) => (
               <button
                 key={choice.labelRu}
                 type="button"

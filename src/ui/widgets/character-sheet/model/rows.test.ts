@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { sheetBlocks } from "./rows";
 
 /** Проекцию строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
-const blocksOf = (character: CharacterState) => sheetBlocks(toSheetView(character));
+const blocksOf = (character: CharacterState) =>
+  sheetBlocks(toSheetView(character), toChoicesView().stats);
 
 const blockById = (id: string) => blocksOf(createThorne()).find((block) => block.id === id);
 

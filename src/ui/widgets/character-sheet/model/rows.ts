@@ -9,7 +9,13 @@
  * Ничего не считается: числа приезжают проекцией, здесь выбираются слова и порядок.
  */
 
-import type { AbilityView, ContributionView, SheetView, StatView } from "@/contract/views";
+import type {
+  AbilityView,
+  ChoicesView,
+  ContributionView,
+  SheetView,
+  StatView,
+} from "@/contract/views";
 
 import {
   abilityLabel,
@@ -119,7 +125,7 @@ function abilityBlock(ability: AbilityView): SheetBlockData {
   };
 }
 
-export function sheetBlocks(sheet: SheetView): SheetBlockData[] {
+export function sheetBlocks(sheet: SheetView, stats: ChoicesView["stats"]): SheetBlockData[] {
   const { hitPoints } = sheet;
   const maximumHint = maximumOrigin(hitPoints);
 
@@ -189,7 +195,7 @@ export function sheetBlocks(sheet: SheetView): SheetBlockData[] {
       rows: sheet.permanentContributions.map((permanent) => ({
         labelRu: permanent.nameRu,
         value: contributionValue(permanent),
-        hint: statLabel(permanent.stat),
+        hint: statLabel(stats, permanent.stat),
       })),
     },
     ...sheet.abilities.map(abilityBlock),

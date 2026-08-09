@@ -82,12 +82,28 @@ export function skillStatId(skill: SkillId): SkillStatId {
   return `skill:${skill}`;
 }
 
-export const STAT_IDS: readonly StatId[] = [
-  ...SINGULAR_STAT_IDS,
-  ...ABILITIES.map(abilityStatId),
-  ...ABILITIES.map(saveStatId),
-  ...SKILL_IDS.map(skillStatId),
+/** Чем величина является: сама по себе, характеристика, её спасбросок или навык. */
+type StatKind = "singular" | "ability" | "save" | "skill";
+
+/**
+ * Величины вместе с разбором имени: чем каждая является и к чему относится.
+ *
+ * Разбор объявлен здесь, а не выводится из имени тем, кто имя получил: составляет имя этот модуль, и
+ * второй разбор той же строки разошёлся бы с составителем при первой же правке формы имени.
+ */
+export const STATS: readonly {
+  readonly id: StatId;
+  readonly kind: StatKind;
+  /** Характеристика или навык, к которым величина относится; нет вовсе — величина сама по себе. */
+  readonly of?: Ability | SkillId;
+}[] = [
+  ...SINGULAR_STAT_IDS.map((id) => ({ id, kind: "singular" as const })),
+  ...ABILITIES.map((of) => ({ id: abilityStatId(of), kind: "ability" as const, of })),
+  ...ABILITIES.map((of) => ({ id: saveStatId(of), kind: "save" as const, of })),
+  ...SKILL_IDS.map((of) => ({ id: skillStatId(of), kind: "skill" as const, of })),
 ];
+
+export const STAT_IDS: readonly StatId[] = STATS.map((stat) => stat.id);
 
 export function isStatId(value: string): value is StatId {
   return STAT_IDS.some((id) => id === value);

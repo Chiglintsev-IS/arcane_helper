@@ -17,7 +17,7 @@ import { applyEdit } from "@/ui/shared/model/editing";
 
 export function SheetScreen() {
   const { session: sessionStore } = useStores();
-  const sheet = useSession((state) => state.snapshot)!.sheet;
+  const { sheet, choices } = useSession((state) => state.snapshot)!;
 
   const [open, setOpen] = useState<SheetEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -43,11 +43,12 @@ export function SheetScreen() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-      <CharacterSheet sheet={sheet} onEdit={openSheet} />
+      <CharacterSheet sheet={sheet} stats={choices.stats} onEdit={openSheet} />
 
       {open?.block === "identity" ? (
         <IdentitySheet
           sheet={sheet}
+          choices={choices}
           error={refusal}
           onCancel={closeSheet}
           onSave={(patch) => void save({ kind: "edit_identity", patch }, closeSheet)}
@@ -58,6 +59,7 @@ export function SheetScreen() {
         <LevelSheet
           level={sheet.level}
           hitPoints={sheet.hitPoints}
+          choices={choices}
           error={refusal}
           onCancel={closeSheet}
           onSave={(next) => void save({ kind: "change_level", ...next }, closeSheet)}
@@ -68,6 +70,7 @@ export function SheetScreen() {
         <AbilitySheet
           key={editedAbility.id}
           ability={editedAbility}
+          choices={choices}
           error={refusal}
           onCancel={closeSheet}
           onSave={(change) => void save({ kind: "edit_ability", ...change }, closeSheet)}
@@ -86,6 +89,7 @@ export function SheetScreen() {
       {open?.block === "marks" ? (
         <MarksSheet
           marks={sheet}
+          choices={choices}
           error={refusal}
           onCancel={closeSheet}
           onSave={(marks) => void save({ kind: "edit_marks", ...marks }, closeSheet)}
@@ -95,6 +99,7 @@ export function SheetScreen() {
       {open?.block === "permanent" ? (
         <PermanentContributionSheet
           contributions={sheet.permanentContributions}
+          choices={choices}
           error={refusal}
           onCancel={closeSheet}
           onSave={(permanent) =>

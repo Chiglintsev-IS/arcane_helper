@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 
-import type { SheetView } from "@/contract/views";
-import { STAT_IDS, type StatId } from "@/core/domain/shared/stats";
+import type { ChoicesView, SheetView } from "@/contract/views";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { statLabel } from "@/ui/entities/character/lib/labels";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
@@ -22,11 +21,12 @@ import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 /** Вклад так, как его набирают: откуда он, какую величину двигает и на сколько. */
 type PermanentContributionPatch = {
   nameRu: string;
-  contribution: { stat: StatId; kind: "assignment" | "bonus"; value: number };
+  contribution: { stat: string; kind: "assignment" | "bonus"; value: number };
 };
 
 export function PermanentContributionSheet({
   contributions,
+  choices,
   editing = null,
   onSave,
   onRemove,
@@ -35,6 +35,8 @@ export function PermanentContributionSheet({
 }: {
   /** Постоянные вклады как они стоят на листе: начальные значения полей. */
   contributions: SheetView["permanentContributions"];
+  /** Из чего выбирают: перечень величин правилами и назван, и упорядочен. */
+  choices: ChoicesView;
   /** Имя правимого вклада; `null` — заводится новый. */
   editing?: string | null;
   /** Причина отказа от владельца: почему набранное не сохранилось. */
@@ -46,7 +48,9 @@ export function PermanentContributionSheet({
   const known = contributions.find((entry) => entry.nameRu === editing);
 
   const [nameRu, setNameRu] = useState(known?.nameRu ?? "");
-  const [stat, setStat] = useState<StatId>(statOf(known?.stat ?? "armorClass"));
+  // Новый вклад начинает с первой предложенной величины: перечень назван правилами, и своего
+  // умолчания у шторки нет.
+  const [stat, setStat] = useState(known?.stat ?? choices.stats[0]?.id ?? "");
   const [assigns, setAssigns] = useState(known?.kind === "assignment");
   const [value, setValue] = useState(String(known?.value ?? 0));
 
@@ -72,12 +76,12 @@ export function PermanentContributionSheet({
         <span className="text-slate-500 dark:text-slate-400">Величина</span>
         <select
           value={stat}
-          onChange={(event) => setStat(statOf(event.target.value))}
+          onChange={(event) => setStat(event.target.value)}
           className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-800"
         >
-          {STAT_IDS.map((id) => (
-            <option key={id} value={id}>
-              {statLabel(id)}
+          {choices.stats.map((option) => (
+            <option key={option.id} value={option.id}>
+              {statLabel(choices.stats, option.id)}
             </option>
           ))}
         </select>
@@ -105,9 +109,4 @@ export function PermanentContributionSheet({
       )}
     </EditSheetFrame>
   );
-}
-
-/** Выбранное в списке — величина словаря: список из него и построен. */
-function statOf(chosen: string): StatId {
-  return STAT_IDS.find((id) => id === chosen) ?? "armorClass";
 }

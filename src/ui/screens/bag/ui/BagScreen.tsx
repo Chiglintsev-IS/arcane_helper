@@ -17,7 +17,7 @@ type BagEdit = { of: "money" } | { of: "item"; id: string };
 
 export function BagScreen() {
   const { session: sessionStore } = useStores();
-  const bag = useSession((state) => state.snapshot)!.bag;
+  const { bag, choices } = useSession((state) => state.snapshot)!;
 
   const [open, setOpen] = useState<BagEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -48,6 +48,7 @@ export function BagScreen() {
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
       <Bag
         bag={bag}
+        stats={choices.stats}
         onEditMoney={() => openSheet({ of: "money" })}
         onOpenItem={(id) => openSheet({ of: "item", id })}
         onAddItem={(kind, nameRu) => void execute({ kind: "add_item", nameRu, itemKind: kind })}
@@ -68,6 +69,7 @@ export function BagScreen() {
         <ItemSheet
           key={openedItem.id}
           item={openedItem}
+          choices={choices}
           error={refusal}
           onCancel={closeSheet}
           onSave={(item) => void save({ kind: "edit_item", item })}

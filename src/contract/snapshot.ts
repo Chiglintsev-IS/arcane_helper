@@ -17,6 +17,7 @@ import {
   bagViewSchema,
   bloodMagicViewSchema,
   castingViewSchema,
+  choicesViewSchema,
   concentrationViewSchema,
   recoveryViewSchema,
   resourcesViewSchema,
@@ -54,6 +55,8 @@ export const snapshotSchema = z.object({
   casting: castingViewSchema,
   bloodMagic: bloodMagicViewSchema,
   spells: z.array(spellRowViewSchema),
+  /** Из чего выбирают и в каких границах набирают: закрытые списки правил и их пределы. */
+  choices: choicesViewSchema,
   /** Чем играют: карточками сборки или загруженными игроком. Слово правил, подпись — за экраном. */
   catalogSource: z.string().min(1),
   journal: z.array(journalEntryViewSchema),

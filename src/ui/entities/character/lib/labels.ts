@@ -1,22 +1,9 @@
 /** Русские подписи листа. Домен отдаёт числа и идентификаторы — называет их экран. */
 
-import {
-  ABILITIES,
-  SKILL_IDS,
-  abilityStatId,
-  saveStatId,
-  skillStatId,
-  type Ability,
-  type ArmorCategory,
-  type SkillId,
-  type StatId,
-} from "@/core/domain/shared/stats";
-import type { CreatureSize } from "@/core/domain/character/schema";
-import type { Currency } from "@/core/domain/equipment/schema";
-import type { ItemKind } from "@/core/domain/items/schema";
+import type { StatChoiceView } from "@/contract/views";
 import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
 
-export const ABILITY_LABELS: Record<Ability, string> = {
+export const ABILITY_LABELS: Readonly<Record<string, string>> = {
   strength: "Сила",
   dexterity: "Ловкость",
   constitution: "Телосложение",
@@ -25,7 +12,7 @@ export const ABILITY_LABELS: Record<Ability, string> = {
   charisma: "Харизма",
 };
 
-export const SKILL_LABELS: Record<SkillId, string> = {
+export const SKILL_LABELS: Readonly<Record<string, string>> = {
   acrobatics: "Акробатика",
   animalHandling: "Уход за животными",
   arcana: "Магия",
@@ -54,7 +41,7 @@ export const DERIVED_STAT_IDS = [
   "preparedLimit",
   "initiative",
   "passivePerception",
-] as const satisfies readonly StatId[];
+] as const;
 
 export const DERIVED_LABELS: Record<(typeof DERIVED_STAT_IDS)[number], string> = {
   proficiencyBonus: "Бонус мастерства",
@@ -66,11 +53,7 @@ export const DERIVED_LABELS: Record<(typeof DERIVED_STAT_IDS)[number], string> =
 };
 
 /** Величины, у которых имя ничем не уточняется: подпись у каждой своя. */
-const SINGULAR_STAT_IDS = [
-  ...DERIVED_STAT_IDS,
-  "armorClass",
-  "speed",
-] as const satisfies readonly StatId[];
+const SINGULAR_STAT_IDS = [...DERIVED_STAT_IDS, "armorClass", "speed"] as const;
 
 const SINGULAR_STAT_LABELS: Record<(typeof SINGULAR_STAT_IDS)[number], string> = {
   ...DERIVED_LABELS,
@@ -113,25 +96,33 @@ export function currencyAbbr(currency: string): string {
   return labelOf(CURRENCY_ABBREVIATIONS, currency);
 }
 
-/** Подпись величины: ею называют строку разбора — «откуда взялось это число». */
-export function statLabel(stat: string): string {
-  for (const id of SINGULAR_STAT_IDS) {
-    if (stat === id) return SINGULAR_STAT_LABELS[id];
-  }
-  for (const ability of ABILITIES) {
-    if (stat === abilityStatId(ability)) return ABILITY_LABELS[ability];
-    if (stat === saveStatId(ability)) return `Спасбросок: ${ABILITY_LABELS[ability]}`;
-  }
-  for (const skill of SKILL_IDS) {
-    if (stat === skillStatId(skill)) return SKILL_LABELS[skill];
-  }
-  return stat;
+export function itemKindLabel(kind: string): string {
+  return labelOf(ITEM_KIND_LABELS, kind);
+}
+
+export function armorCategoryLabel(category: string): string {
+  return labelOf(ARMOR_CATEGORY_LABELS, category);
+}
+
+/**
+ * Подпись величины: ею называют строку разбора — «откуда взялось это число».
+ *
+ * Имя величины составное, и разбирает его не подпись: разбор приезжает перечнем от того, кто имя и
+ * составил. Своё знание о форме имени разошлось бы с составителем при первой же её правке — молча, и
+ * сразу у восемнадцати навыков.
+ */
+export function statLabel(stats: readonly StatChoiceView[], stat: string): string {
+  const named = stats.find((candidate) => candidate.id === stat);
+  if (named?.of === undefined) return labelOf(SINGULAR_STAT_LABELS, stat);
+  if (named.kind === "save") return `Спасбросок: ${abilityLabel(named.of)}`;
+  if (named.kind === "skill") return skillLabel(named.of);
+  return abilityLabel(named.of);
 }
 
 /** Имя особенности волшебника: его называет и своя шторка, и привал, и предпросмотр смены уровня. */
 export const ARCANE_RECOVERY_LABEL = "Магическое восстановление";
 
-export const SIZE_LABELS: Record<CreatureSize, string> = {
+export const SIZE_LABELS: Readonly<Record<string, string>> = {
   tiny: "Крошечный",
   small: "Маленький",
   medium: "Средний",
@@ -140,16 +131,19 @@ export const SIZE_LABELS: Record<CreatureSize, string> = {
   gargantuan: "Громадный",
 };
 
-export const TRAINING_LABELS = { proficient: "владение", expert: "компетентность" } as const;
+const TRAINING_LABELS: Readonly<Record<string, string>> = {
+  proficient: "владение",
+  expert: "компетентность",
+};
 
 /** Ярлыки прибавок: их называют и лист, и шторка вещи, и шторка прочих прибавок. */
-export const ARMOR_CATEGORY_LABELS: Record<ArmorCategory, string> = {
+const ARMOR_CATEGORY_LABELS: Readonly<Record<string, string>> = {
   light: "Лёгкий",
   medium: "Средний",
   heavy: "Тяжёлый",
 };
 
-export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
+const ITEM_KIND_LABELS: Readonly<Record<string, string>> = {
   gear: "Экипировка",
   consumable: "Расходник",
   ingredient: "Ингредиент",
@@ -157,14 +151,11 @@ export const ITEM_KIND_LABELS: Record<ItemKind, string> = {
 };
 
 /** Полные имена монет — для полей правки кошелька. */
-export const CURRENCY_LABELS: Record<Currency, string> = {
+export const CURRENCY_LABELS: Readonly<Record<string, string>> = {
   gold: "Золото",
   silver: "Серебро",
   copper: "Медь",
 };
-
-/** Сокращения монет — для значков и цены: «50 зм» произносится, полное имя — нет. */
-export const CURRENCY_ABBR: Record<Currency, string> = CURRENCY_ABBREVIATIONS;
 
 /** Пустое справочное поле — прочерк: ноль здесь читался бы как настоящий ноль. */
 export function orDash(value: string | number): string {

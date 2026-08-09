@@ -12,6 +12,7 @@ import type { LiveSession } from "@/core/application/session";
 
 import { toBagView } from "./views/bagView";
 import { toBloodMagicView } from "./views/bloodMagicView";
+import { toChoicesView } from "./views/choicesView";
 import { toConcentrationView } from "./views/concentrationView";
 import { toEffectViews } from "./views/effectsView";
 import { toRecoveryView } from "./views/recoveryView";
@@ -34,6 +35,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     casting: toCastingView(live.session.character),
     bloodMagic: toBloodMagicView(live.session),
     spells: toSpellRowViews(live),
+    choices: toChoicesView(),
     catalogSource: live.spellCatalogSource,
     journal: live.session.journal.map((entry) => ({
       id: entry.id,

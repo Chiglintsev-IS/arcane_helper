@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 
-import { CURRENCIES, nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
+import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
@@ -90,7 +90,6 @@ export const EQUIPMENT_FIELDS = {
 /** Данные снаряжения. Имя `Equipment` занято объектом-значением: класс и его состояние — не одно и то же. */
 export type EquipmentData = DeepReadonly<z.infer<typeof equipmentSchema>>;
 export type StockEntry = DeepReadonly<z.infer<typeof stockEntrySchema>>;
-export type Currency = (typeof CURRENCIES)[number];
 export type Money = DeepReadonly<z.infer<typeof moneySchema>>;
 
 /**

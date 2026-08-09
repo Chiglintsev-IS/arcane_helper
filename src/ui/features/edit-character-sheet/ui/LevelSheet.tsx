@@ -3,8 +3,7 @@
 import { useState } from "react";
 
 import type { PreviewOf } from "@/contract/questions";
-import type { SheetView } from "@/contract/views";
-import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
+import type { ChoicesView, SheetView } from "@/contract/views";
 import { ARCANE_RECOVERY_LABEL, DERIVED_LABELS } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { usePreview } from "@/ui/shared/model/usePreview";
@@ -34,6 +33,7 @@ function changeLine(change: LevelChangeView): string {
 export function LevelSheet({
   level: currentLevel,
   hitPoints,
+  choices,
   onSave,
   onCancel,
   error = null,
@@ -42,6 +42,8 @@ export function LevelSheet({
   error?: string | null;
   level: number;
   hitPoints: SheetView["hitPoints"];
+  /** В каких границах набирают: пределы уровня приезжают от их владельца. */
+  choices: ChoicesView;
   onSave: (next: { level: number; hitPointMaximumBase: number }) => void;
   onCancel: () => void;
 }) {
@@ -66,8 +68,8 @@ export function LevelSheet({
         labelRu="Уровень"
         value={levelText}
         onChange={setLevelText}
-        min={MINIMUM_CHARACTER_LEVEL}
-        max={MAXIMUM_CHARACTER_LEVEL}
+        min={choices.characterLevel.minimum}
+        max={choices.characterLevel.maximum}
       />
       <NumberField
         labelRu="Базовый максимум хитов"

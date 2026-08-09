@@ -1,6 +1,6 @@
 "use client";
 
-import type { BagView, ItemView } from "@/contract/views";
+import type { BagView, ChoicesView, ItemView } from "@/contract/views";
 import { currencyAbbr, statLabel } from "@/ui/entities/character/lib/labels";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { signed } from "@/shared/language";
@@ -17,10 +17,10 @@ const SECTIONS: { kind: string; titleRu: string; addLabelRu: string }[] = [
 ];
 
 /** Вторая строка вещи: цена, прибавки, заметка — только то, что у вещи действительно есть. */
-export function itemMeta(item: ItemView): string {
+export function itemMeta(item: ItemView, stats: ChoicesView["stats"]): string {
   return [
     ...(item.price === undefined ? [] : [`${item.price.amount} ${currencyAbbr(item.price.currency)}`]),
-    ...item.bonuses.map((bonus) => `${statLabel(bonus.stat)} ${signed(bonus.value)}`),
+    ...item.bonuses.map((bonus) => `${statLabel(stats, bonus.stat)} ${signed(bonus.value)}`),
     ...(item.note === undefined ? [] : [item.note]),
   ].join(" · ");
 }
@@ -31,16 +31,18 @@ export function itemMeta(item: ItemView): string {
  */
 function ItemRow({
   item,
+  stats,
   onOpen,
   onAdjustBagCount,
   onAdjustWornCount,
 }: {
   item: ItemView;
+  stats: ChoicesView["stats"];
   onOpen: () => void;
   onAdjustBagCount: (delta: number) => void;
   onAdjustWornCount: (delta: number) => void;
 }) {
-  const meta = itemMeta(item);
+  const meta = itemMeta(item, stats);
   // Ноль — состояние: кончившийся расходник виден нулём, а не пропадает из списка.
   const countLabel =
     item.kind === "gear"
@@ -122,6 +124,7 @@ function ItemRow({
  */
 export function Bag({
   bag,
+  stats,
   onEditMoney,
   onOpenItem,
   onAddItem,
@@ -129,6 +132,8 @@ export function Bag({
   onAdjustWornCount,
 }: {
   bag: BagView;
+  /** Величины с разбором: ими подписаны прибавки вещи. */
+  stats: ChoicesView["stats"];
   onEditMoney: () => void;
   onOpenItem: (id: string) => void;
   onAddItem: (kind: string, nameRu: string) => void;
@@ -187,6 +192,7 @@ export function Bag({
                   <ItemRow
                     key={item.id}
                     item={item}
+                    stats={stats}
                     onOpen={() => onOpenItem(item.id)}
                     onAdjustBagCount={(delta) => onAdjustBagCount(item.id, delta)}
                     onAdjustWornCount={(delta) => onAdjustWornCount(item.id, delta)}

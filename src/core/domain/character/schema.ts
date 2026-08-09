@@ -189,4 +189,3 @@ const characterSchema = z.object(CHARACTER_FIELDS);
 
 export type CharacterFields = DeepReadonly<z.infer<typeof characterSchema>>;
 export type PermanentContribution = DeepReadonly<z.infer<typeof permanentContributionSchema>>;
-export type CreatureSize = (typeof CREATURE_SIZES)[number];

@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { ItemSheet } from "./ItemSheet";
 
 afterEach(cleanup);
@@ -11,7 +12,7 @@ describe("шторка вещи", () => {
   it("вещь: категория, заметка и цена дописываются к уже заведённой вещи (FR-235)", async () => {
     const onSave = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "свиток",
           nameRu: "Свиток огненного шара",
@@ -48,7 +49,7 @@ describe("шторка вещи", () => {
   it("вещь: прибавки видны только у экипировки, набранное уходит владельцу как есть (FR-238)", async () => {
     const onSave = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "кольцо",
           nameRu: "Кольцо защиты",
@@ -88,7 +89,7 @@ describe("шторка вещи", () => {
 
   it("вещь: запас полем не правится — он живёт расходом и пополнением на строке (FR-241)", () => {
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "зелье",
           nameRu: "Зелье лечения",
@@ -114,7 +115,7 @@ describe("шторка вещи", () => {
   it("вещь: пустая цена — вещь без цены, а не цена ноль", async () => {
     const onSave = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "зелье",
           nameRu: "Зелье лечения",
@@ -146,7 +147,7 @@ describe("шторка вещи", () => {
   it("вещь: дробная цена уходит владельцу — отказывает он", async () => {
     const onSave = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "зелье",
           nameRu: "Зелье лечения",
@@ -173,7 +174,7 @@ describe("шторка вещи", () => {
   it("вещь: пустое поле прибавки уходит владельцу — отказывает он", async () => {
     const onSave = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "шлем",
           nameRu: "Шлем",
@@ -201,7 +202,7 @@ describe("шторка вещи", () => {
   it("вещь: удаление стоит в её же шторке, включено только при пустом запасе (FR-241)", async () => {
     const onRemove = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "зелье",
           nameRu: "Зелье лечения",
@@ -224,7 +225,7 @@ describe("шторка вещи", () => {
 
   it("вещь: удаление выключено, пока в сумке или на теле остаётся запас", () => {
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "зелье",
           nameRu: "Зелье лечения",
@@ -250,7 +251,7 @@ describe("шторка вещи", () => {
   it("вещь: запас в сумке меняется кнопками в шторке — единственный способ уменьшить стопку", async () => {
     const onAdjustBagCount = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "кинжал",
           nameRu: "Кинжал",
@@ -275,7 +276,7 @@ describe("шторка вещи", () => {
 
   it("вещь: расход в шторке выключен на нуле — ноль состояние, а не отсутствие", () => {
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "зелье",
           nameRu: "Зелье",
@@ -300,7 +301,7 @@ describe("шторка вещи", () => {
   it("вещь: строка «Надето» видна только у экипировки, кнопки надевают и снимают", async () => {
     const onAdjustWornCount = vi.fn();
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "кинжал",
           nameRu: "Кинжал",
@@ -325,7 +326,7 @@ describe("шторка вещи", () => {
 
   it("вещь: у не-экипировки строки «Надето» нет", () => {
     render(
-      <ItemSheet
+      <ItemSheet choices={toChoicesView()}
         item={{
           id: "зелье",
           nameRu: "Зелье",

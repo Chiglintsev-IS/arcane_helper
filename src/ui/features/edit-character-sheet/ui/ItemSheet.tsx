@@ -1,17 +1,12 @@
 "use client";
 
-import { ARMOR_CATEGORIES, STAT_IDS, type ArmorCategory, type StatId } from "@/core/domain/shared/stats";
 import { useState } from "react";
 
-import type { ItemView } from "@/contract/views";
-import type { ItemKind } from "@/core/domain/items/schema";
-import { ITEM_KINDS } from "@/core/domain/items/schema";
-import type { Currency } from "@/core/domain/equipment/schema";
-import { CURRENCIES } from "@/core/domain/shared/schema";
+import type { ChoicesView, ItemView } from "@/contract/views";
 import {
-  ARMOR_CATEGORY_LABELS,
-  CURRENCY_ABBR,
-  ITEM_KIND_LABELS,
+  armorCategoryLabel,
+  currencyAbbr,
+  itemKindLabel,
   statLabel,
 } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
@@ -28,15 +23,16 @@ import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 type ItemPatch = {
   id: string;
   nameRu: string;
-  kind: ItemKind;
-  price?: { amount: number; currency: Currency };
+  kind: string;
+  price?: { amount: number; currency: string };
   note?: string;
   bonuses: Record<string, number>;
-  armor?: { base: number; category?: ArmorCategory };
+  armor?: { base: number; category?: string };
 };
 
 export function ItemSheet({
   item,
+  choices,
   onSave,
   onAdjustBagCount,
   onAdjustWornCount,
@@ -48,6 +44,8 @@ export function ItemSheet({
   error?: string | null;
   /** Вещь со своим запасом: что это такое и сколько её у персонажа — обе половины уже сведены. */
   item: ItemView;
+  /** Из чего выбирают: категории, монеты и величины — перечнями правил. */
+  choices: ChoicesView;
   onSave: (item: ItemPatch) => void;
   /** Немедленный расход и пополнение — не черновик: применяется нажатием, как кнопки на строке. */
   onAdjustBagCount: (delta: number) => void;
@@ -55,24 +53,28 @@ export function ItemSheet({
   onRemove: () => void;
   onCancel: () => void;
 }) {
-  const [kind, setKind] = useState<ItemKind>(kindOf(item.kind));
+  const [kind, setKind] = useState(item.kind);
   const [note, setNote] = useState(item.note ?? "");
   const [priceAmount, setPriceAmount] = useState(
     item.price === undefined ? "" : String(item.price.amount),
   );
-  const [currency, setCurrency] = useState<Currency>(currencyOf(item.price?.currency ?? ""));
+  // Монета вещи без цены — первая из предложенных: перечень идёт по достоинству, и старшая в нём
+  // первая. Пустой перечень оставил бы поле без выбора, и назвать монету было бы нечем.
+  const [currency, setCurrency] = useState(
+    item.price?.currency ?? choices.currencies[0] ?? "",
+  );
   /**
    * Прибавки набираются по одной на величину: список величин общий, и своего словаря у шторки нет.
    * Набранное уходит владельцу как есть — ноль он не сохранит сам.
    */
-  const [bonuses, setBonuses] = useState<readonly (readonly [StatId, string])[]>(
-    item.bonuses.map((bonus) => [statOf(bonus.stat), String(bonus.value)] as const),
+  const [bonuses, setBonuses] = useState<readonly (readonly [string, string])[]>(
+    item.bonuses.map((bonus) => [bonus.stat, String(bonus.value)] as const),
   );
-  const [added, setAdded] = useState<StatId>("armorClass");
+  const [added, setAdded] = useState(choices.stats[0]?.id ?? "");
   const [armorBase, setArmorBase] = useState(
     item.armor === undefined ? "" : String(item.armor.base),
   );
-  const [category, setCategory] = useState<ArmorCategory | "">(categoryOf(item.armor?.category ?? ""));
+  const [category, setCategory] = useState(item.armor?.category ?? "");
 
   const { bagCount, wornCount } = item;
 
@@ -158,7 +160,7 @@ export function ItemSheet({
       ) : null}
 
       <div role="radiogroup" aria-label="Категория" className="flex flex-wrap gap-1">
-        {ITEM_KINDS.map((choice) => (
+        {choices.itemKinds.map((choice) => (
           <button
             key={choice}
             type="button"
@@ -171,7 +173,7 @@ export function ItemSheet({
                 : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
             }`}
           >
-            {ITEM_KIND_LABELS[choice]}
+            {itemKindLabel(choice)}
           </button>
         ))}
       </div>
@@ -180,13 +182,13 @@ export function ItemSheet({
 
       <NumberField labelRu="Цена" value={priceAmount} onChange={setPriceAmount} min={0} />
       <div role="radiogroup" aria-label="Монета цены" className="flex gap-1">
-        {CURRENCIES.map((choice) => (
+        {choices.currencies.map((choice) => (
           <button
             key={choice}
             type="button"
             role="radio"
             aria-checked={currency === choice}
-            aria-label={`Монета: ${CURRENCY_ABBR[choice]}`}
+            aria-label={`Монета: ${currencyAbbr(choice)}`}
             onClick={() => setCurrency(choice)}
             className={`min-h-11 min-w-11 rounded-lg border px-2 text-xs ${
               currency === choice
@@ -194,7 +196,7 @@ export function ItemSheet({
                 : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
             }`}
           >
-            {CURRENCY_ABBR[choice]}
+            {currencyAbbr(choice)}
           </button>
         ))}
       </div>
@@ -205,7 +207,7 @@ export function ItemSheet({
           {bonuses.map(([stat, text]) => (
             <NumberField
               key={stat}
-              labelRu={statLabel(stat)}
+              labelRu={statLabel(choices.stats, stat)}
               value={text}
               onChange={(next) =>
                 setBonuses(bonuses.map((row) => (row[0] === stat ? [stat, next] : row)))
@@ -218,12 +220,12 @@ export function ItemSheet({
             <span className="flex gap-2">
               <select
                 value={added}
-                onChange={(event) => setAdded(statOf(event.target.value))}
+                onChange={(event) => setAdded(event.target.value)}
                 className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-800"
               >
-                {STAT_IDS.map((stat) => (
-                  <option key={stat} value={stat}>
-                    {statLabel(stat)}
+                {choices.stats.map((stat) => (
+                  <option key={stat.id} value={stat.id}>
+                    {statLabel(choices.stats, stat.id)}
                   </option>
                 ))}
               </select>
@@ -246,13 +248,13 @@ export function ItemSheet({
             <span className="text-slate-500 dark:text-slate-400">Категория доспеха</span>
             <select
               value={category}
-              onChange={(event) => setCategory(categoryOf(event.target.value))}
+              onChange={(event) => setCategory(event.target.value)}
               className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-800"
             >
               <option value="">не названа</option>
-              {ARMOR_CATEGORIES.map((option) => (
+              {choices.armorCategories.map((option) => (
                 <option key={option} value={option}>
-                  {ARMOR_CATEGORY_LABELS[option]}
+                  {armorCategoryLabel(option)}
                 </option>
               ))}
             </select>
@@ -282,24 +284,4 @@ export function ItemSheet({
       ) : null}
     </EditSheetFrame>
   );
-}
-
-
-/** Слово правил приезжает строкой: сужает его владелец списка, а не приведение типа на месте. */
-function kindOf(chosen: string): ItemKind {
-  return ITEM_KINDS.find((kind) => kind === chosen) ?? "other";
-}
-
-function currencyOf(chosen: string): Currency {
-  return CURRENCIES.find((currency) => currency === chosen) ?? "gold";
-}
-
-/** Выбранное в списке — величина словаря: список из него и построен. */
-function statOf(chosen: string): StatId {
-  return STAT_IDS.find((stat) => stat === chosen) ?? "armorClass";
-}
-
-/** Выбранная категория; пустая строка означает «не названа», а не отсутствие выбора. */
-function categoryOf(chosen: string): ArmorCategory | "" {
-  return ARMOR_CATEGORIES.find((category) => category === chosen) ?? "";
 }

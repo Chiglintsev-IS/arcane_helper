@@ -7,6 +7,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { AbilityView } from "@/contract/views";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { toSheetView } from "@/core/presentation/views/sheetView";
+import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { AbilitySheet } from "./AbilitySheet";
 
 afterEach(cleanup);
@@ -22,7 +23,7 @@ describe("шторка характеристики", () => {
   it("характеристика: шторка держит значение, спасбросок и её навыки", async () => {
     const onSave = vi.fn();
     render(
-      <AbilitySheet
+      <AbilitySheet choices={toChoicesView()}
         ability={abilityOf("intelligence")}
         onSave={onSave}
         onCancel={() => {}}
@@ -50,7 +51,7 @@ describe("шторка характеристики", () => {
   it("характеристика: набранное уходит владельцу, а причина отказа приходит от него", async () => {
     const onSave = vi.fn();
     render(
-      <AbilitySheet
+      <AbilitySheet choices={toChoicesView()}
         ability={abilityOf("strength")}
         error="Поле «abilities» не годится"
         onSave={onSave}
@@ -71,7 +72,7 @@ describe("шторка характеристики", () => {
   it("характеристика: владение спасброском снимается переключателем", async () => {
     const onSave = vi.fn();
     render(
-      <AbilitySheet
+      <AbilitySheet choices={toChoicesView()}
         ability={abilityOf("intelligence")}
         onSave={onSave}
         onCancel={() => {}}
@@ -87,7 +88,7 @@ describe("шторка характеристики", () => {
   it("характеристика: навык переключается в три состояния", async () => {
     const onSave = vi.fn();
     render(
-      <AbilitySheet
+      <AbilitySheet choices={toChoicesView()}
         ability={abilityOf("intelligence")}
         onSave={onSave}
         onCancel={() => {}}
@@ -109,7 +110,7 @@ describe("шторка характеристики", () => {
     const onSave = vi.fn();
     const state = createThorne();
     render(
-      <AbilitySheet
+      <AbilitySheet choices={toChoicesView()}
         ability={abilityOf("intelligence", { ...state, skills: { arcana: "proficient" } })}
         onSave={onSave}
         onCancel={() => {}}

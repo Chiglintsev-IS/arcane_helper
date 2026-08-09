@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 
-import { EXHAUSTION_STEPS } from "@/core/domain/character/abilities";
+import type { ChoicesView } from "@/contract/views";
 import { EditSheetFrame } from "./EditSheetFrame";
 
 
 export function MarksSheet({
   marks,
+  choices,
   onSave,
   onCancel,
   error = null,
@@ -16,6 +17,8 @@ export function MarksSheet({
   error?: string | null;
   /** Отметки мастера как они стоят сейчас: начальные значения полей. */
   marks: { exhaustion: number; inspiration: boolean };
+  /** Из чего выбирают: ступени истощения перечнем правил. */
+  choices: ChoicesView;
   onSave: (marks: { exhaustion: number; inspiration: boolean }) => void;
   onCancel: () => void;
 }) {
@@ -30,7 +33,7 @@ export function MarksSheet({
       onSave={() => onSave({ exhaustion, inspiration })}
     >
       <div role="radiogroup" aria-label="Ступень истощения" className="flex flex-wrap gap-1">
-        {EXHAUSTION_STEPS.map((step) => (
+        {choices.exhaustionSteps.map((step) => (
           <button
             key={step}
             type="button"

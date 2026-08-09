@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { testSnapshot } from "@/ui/app/testing/stores";
+import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { IdentitySheet } from "./IdentitySheet";
 
 afterEach(cleanup);
@@ -11,7 +12,7 @@ afterEach(cleanup);
 describe("шторка «кто он»", () => {
   it("кто он: список владений режется по запятой, пустая строка даёт пустой список", async () => {
     const onSave = vi.fn();
-    render(<IdentitySheet sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
+    render(<IdentitySheet choices={toChoicesView()} sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.type(screen.getByLabelText("Языки"), "общий, троллий ,");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -22,7 +23,7 @@ describe("шторка «кто он»", () => {
 
   it("кто он: размер выбирается кнопкой, возраст числом", async () => {
     const onSave = vi.fn();
-    render(<IdentitySheet sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
+    render(<IdentitySheet choices={toChoicesView()} sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.click(screen.getByRole("radio", { name: "Огромный" }));
     await userEvent.clear(screen.getByLabelText("Возраст"));
@@ -35,7 +36,7 @@ describe("шторка «кто он»", () => {
 
   it("кто он: пустое имя уходит владельцу — отказывает он", async () => {
     const onSave = vi.fn();
-    render(<IdentitySheet sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
+    render(<IdentitySheet choices={toChoicesView()} sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.clear(screen.getByLabelText("Имя"));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));

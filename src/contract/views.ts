@@ -7,8 +7,9 @@
  * видимо, а не тайно.
  *
  * Слов правил здесь нет перечислениями: имена характеристик, навыков, размеров, величин и родов
- * вклада приходят строками. Перечень был бы вторым списком тех же слов и разъехался бы с первым на
- * первой же правке правил, а подпись к слову — дело показывающего.
+ * вклада приходят строками. Перечисление было бы вторым списком тех же слов и разъехалось бы с
+ * первым на первой же правке правил, а подпись к слову — дело показывающего. Сам список при этом
+ * ездит — данными, от владельца, там, где поле выбора предлагает из него выбрать.
  */
 
 import { z } from "zod";
@@ -22,6 +23,45 @@ const word = z.string().min(1);
 const text = z.string();
 
 const whole = z.number().int();
+
+/**
+ * Величина, названная вместе с разбором имени: чем она является и к чему относится.
+ *
+ * Разбор приезжает от того, кто имя составил. Разбирать `save:dexterity` на стороне показывающего
+ * значило бы завести второе знание о форме имени, и оно разошлось бы с составителем молча.
+ */
+const statChoiceSchema = z.object({
+  id: word,
+  /** Сама по себе, характеристика, её спасбросок или навык. */
+  kind: word,
+  /** Характеристика или навык, к которым величина относится; нет вовсе — величина сама по себе. */
+  of: word.optional(),
+});
+
+/**
+ * Перечни выбора: закрытые списки правил, из которых игрок выбирает, и границы, в которых набирает.
+ *
+ * Состояния в них нет ни в одном: список того, что бывает, у персонажа не спрашивают. Едут они теми
+ * же перечнями, которыми пользуются сами правила, — поэтому пополнение перечня доходит до поля
+ * выбора без правок на другой стороне. Подписей здесь нет: выбор слова — дело показывающего.
+ *
+ * Границы стоят рядом с перечнями, потому что отвечают на тот же вопрос: что поле вправе предложить.
+ * Показать предел — чтение, а не проверка; проверяет набранное владелец инварианта.
+ */
+export const choicesViewSchema = z.object({
+  stats: z.array(statChoiceSchema),
+  creatureSizes: z.array(word),
+  itemKinds: z.array(word),
+  armorCategories: z.array(word),
+  currencies: z.array(word),
+  /** Степени владения навыком; отсутствия владения в перечне нет — это снятая степень, а не третья. */
+  skillTrainings: z.array(word),
+  /** Кому руна: перечень тех, между кем выбирают, когда руна цель выбирает. */
+  runeTargets: z.array(word),
+  exhaustionSteps: z.array(whole),
+  characterLevel: z.object({ minimum: whole, maximum: whole }),
+  abilityScore: z.object({ minimum: whole, maximum: whole }),
+});
 
 /**
  * Вклад так, как его показывают: чей он, чем двигает число и на сколько.
@@ -583,5 +623,7 @@ export type BloodMagicView = z.infer<typeof bloodMagicViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
 export type StatView = z.infer<typeof statViewSchema>;
+export type StatChoiceView = z.infer<typeof statChoiceSchema>;
+export type ChoicesView = z.infer<typeof choicesViewSchema>;
 export type AbilityView = z.infer<typeof abilityViewSchema>;
 export type SheetView = z.infer<typeof sheetViewSchema>;

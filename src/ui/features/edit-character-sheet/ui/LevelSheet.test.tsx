@@ -7,6 +7,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { withSlotDebt } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
+import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { LevelSheet } from "./LevelSheet";
 
 /**
@@ -19,7 +20,7 @@ async function openLevel(
 ): Promise<void> {
   const { sheet } = testSnapshot(character);
   await renderWithStores(
-    <LevelSheet
+    <LevelSheet choices={toChoicesView()}
       level={sheet.level}
       hitPoints={sheet.hitPoints}
       onSave={onSave}
