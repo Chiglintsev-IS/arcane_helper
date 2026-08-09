@@ -18,6 +18,7 @@ import { applyEdit } from "@/ui/shared/model/editing";
 export function SheetScreen() {
   const { session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
+  const sheet = useSession((state) => state.snapshot)!.sheet;
 
   const [open, setOpen] = useState<SheetEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -45,7 +46,7 @@ export function SheetScreen() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-      <CharacterSheet character={character} onEdit={openSheet} />
+      <CharacterSheet sheet={sheet} onEdit={openSheet} />
 
       {open?.block === "identity" ? (
         <IdentitySheet
@@ -67,9 +68,8 @@ export function SheetScreen() {
 
       {editedAbility === null ? null : (
         <AbilitySheet
-          key={editedAbility}
+          key={editedAbility.id}
           ability={editedAbility}
-          character={character}
           error={refusal}
           onCancel={closeSheet}
           onSave={(change) => void save({ kind: "edit_ability", ...change }, closeSheet)}

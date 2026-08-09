@@ -2,20 +2,18 @@
 
 import { useState } from "react";
 
-import { skillsOfAbility, type SkillTraining } from "@/core/domain/character/skills";
-import type { Ability, SkillId } from "@/core/domain/shared/stats";
-import type { CharacterState } from "@/core/domain/assembly/state";
+import type { AbilityView } from "@/contract/views";
+import { type SkillTraining } from "@/core/domain/character/skills";
 import {
   MAXIMUM_ABILITY_SCORE,
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
-import { ABILITY_LABELS, SKILL_LABELS, TRAINING_LABELS } from "@/ui/entities/character/lib/labels";
+import { abilityLabel, skillLabel, TRAINING_LABELS } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
-
-
-type Skills = Partial<Record<SkillId, SkillTraining>>;
+/** Набранные владения: навык и степень словами правил — их же ждёт команда. */
+type Skills = Record<string, string>;
 
 /** Три состояния навыка. Отсутствие владения — снятый ключ, а не третье значение в данных. */
 const CHOICES: { training: SkillTraining | undefined; labelRu: string }[] = [
@@ -32,47 +30,43 @@ const CHOICES: { training: SkillTraining | undefined; labelRu: string }[] = [
  */
 export function AbilitySheet({
   ability,
-  character,
   onSave,
   onCancel,
   error = null,
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  ability: Ability;
-  character: CharacterState;
+  ability: AbilityView;
   onSave: (change: {
-    ability: Ability;
+    ability: string;
     score: number;
     saveProficient: boolean;
     skills: Skills;
   }) => void;
   onCancel: () => void;
 }) {
-  const owned = skillsOfAbility(ability);
-  const [scoreText, setScoreText] = useState(String(character.abilities[ability]));
-  const [saveProficient, setSaveProficient] = useState(
-    character.saveProficiencies.includes(ability),
-  );
+  const owned = ability.skills;
+  const [scoreText, setScoreText] = useState(String(ability.score));
+  const [saveProficient, setSaveProficient] = useState(ability.saveProficient);
   const [skills, setSkills] = useState<Skills>(() =>
     Object.fromEntries(
-      owned.filter((id) => character.skills[id] !== undefined).map((id) => [id, character.skills[id]]),
+      owned.flatMap((skill) => (skill.training === undefined ? [] : [[skill.id, skill.training]])),
     ),
   );
 
   const score = requiredFieldNumber(scoreText);
 
-  const setTraining = (id: SkillId, training: SkillTraining | undefined): void => {
+  const setTraining = (id: string, training: SkillTraining | undefined): void => {
     const { [id]: _dropped, ...rest } = skills;
     setSkills(training === undefined ? rest : { ...rest, [id]: training });
   };
 
   return (
     <EditSheetFrame
-      titleRu={ABILITY_LABELS[ability]}
+      titleRu={abilityLabel(ability.id)}
       error={error}
       onCancel={onCancel}
-      onSave={() => onSave({ ability, score, saveProficient, skills })}
+      onSave={() => onSave({ ability: ability.id, score, saveProficient, skills })}
     >
       <NumberField
         labelRu="Значение"
@@ -97,10 +91,10 @@ export function AbilitySheet({
         Владение спасброском
       </button>
 
-      {owned.map((id) => (
+      {owned.map(({ id }) => (
         <div key={id} className="flex items-center justify-between gap-2 text-sm">
-          <span>{SKILL_LABELS[id]}</span>
-          <div role="radiogroup" aria-label={SKILL_LABELS[id]} className="flex gap-1">
+          <span>{skillLabel(id)}</span>
+          <div role="radiogroup" aria-label={skillLabel(id)} className="flex gap-1">
             {CHOICES.map((choice) => (
               <button
                 key={choice.labelRu}

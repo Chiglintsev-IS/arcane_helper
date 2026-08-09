@@ -16,10 +16,12 @@ import type { Snapshot } from "@/contract/snapshot";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createSession, type LiveSession } from "@/core/application/session";
+import { toSheetView } from "@/core/presentation/views/sheetView";
 
 import { createSessionStore } from "./sessionStore";
 
-const EMPTY: Snapshot = { version: 0, journal: [] };
+/** Снимок только что начатой сессии: проекцию строит настоящий презентер, а не подделка рядом. */
+const FRESH: Snapshot = { version: 0, sheet: toSheetView(createThorne()), journal: [] };
 
 function live(): LiveSession {
   return {
@@ -38,12 +40,12 @@ function fakeApi(answers: Partial<ArcaneApi> = {}): {
   return {
     sent,
     api: {
-      open: answers.open ?? (async () => EMPTY),
+      open: answers.open ?? (async () => FRESH),
       execute:
         answers.execute ??
         (async (envelope) => {
           sent.push(envelope);
-          return { ok: true, snapshot: { version: sent.length, journal: [] } } satisfies Result;
+          return { ok: true, snapshot: { ...FRESH, version: sent.length } } satisfies Result;
         }),
     },
   };
@@ -79,7 +81,7 @@ describe("открытие сессии", () => {
     await store.getState().hydrate();
 
     expect(store.getState().status).toBe("ready");
-    expect(store.getState().snapshot).toEqual(EMPTY);
+    expect(store.getState().snapshot).toEqual(FRESH);
     expect(store.getState().session?.character.name).toBe("Торн");
     expect(store.getState().spellCatalogSource).toBe("built_in");
   });
@@ -105,7 +107,7 @@ describe("открытие сессии", () => {
 
     await store.getState().hydrate();
 
-    expect(store.getState().snapshot).toEqual(EMPTY);
+    expect(store.getState().snapshot).toEqual(FRESH);
     expect(store.getState().session).toBeNull();
   });
 });

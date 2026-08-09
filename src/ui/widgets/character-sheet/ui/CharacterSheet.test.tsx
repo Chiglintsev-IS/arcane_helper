@@ -4,13 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { toSheetView } from "@/core/presentation/views/sheetView";
 import { CharacterSheet } from "./CharacterSheet";
 
 afterEach(cleanup);
 
 describe("режим «Лист»", () => {
   it("одна колонка базы: без вкладок, без чисел боя, без вещей (FR-230)", () => {
-    render(<CharacterSheet character={createThorne()} onEdit={() => {}} />);
+    render(<CharacterSheet sheet={toSheetView(createThorne())} onEdit={() => {}} />);
 
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Здоровье" })).toBeDefined();
@@ -29,11 +30,11 @@ describe("режим «Лист»", () => {
     const state = createThorne();
     render(
       <CharacterSheet
-        character={{
+        sheet={toSheetView({
           ...state,
           temporaryHitPoints: 5,
           hitPoints: { ...state.hitPoints, current: 24, maximumBase: 38, bloodReduction: 4 },
-        }}
+        })}
         onEdit={() => {}}
       />,
     );
@@ -48,7 +49,7 @@ describe("режим «Лист»", () => {
   it("у каждого блока есть кнопка правки с внятным именем", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
-    render(<CharacterSheet character={createThorne()} onEdit={onEdit} />);
+    render(<CharacterSheet sheet={toSheetView(createThorne())} onEdit={onEdit} />);
 
     expect(screen.getByRole("button", { name: "Править: Интеллект" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Править: Уровень" })).toBeDefined();
@@ -61,7 +62,7 @@ describe("режим «Лист»", () => {
     const state = createThorne();
     render(
       <CharacterSheet
-        character={{
+        sheet={toSheetView({
           ...state,
           permanentContributions: [
             {
@@ -69,7 +70,7 @@ describe("режим «Лист»", () => {
               contribution: { stat: "initiative", kind: "bonus", value: 5 },
             },
           ],
-        }}
+        })}
         onEdit={() => {}}
       />,
     );

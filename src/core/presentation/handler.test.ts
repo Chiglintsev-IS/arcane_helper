@@ -29,10 +29,14 @@ function handlerThat(execute: () => Promise<{ live: LiveSession; version: number
 }
 
 describe("чтение", () => {
-  it("отдаёт снимок с версией и журналом", async () => {
+  it("отдаёт снимок с версией, проекциями и журналом", async () => {
     const handler = handlerThat(async () => OPENED);
 
-    expect(await handler.read()).toEqual({ version: 0, journal: [] });
+    const snapshot = await handler.read();
+
+    expect(snapshot).toMatchObject({ version: 0, journal: [] });
+    // Состав проекции проверяет её собственный прогон; здесь важно, что она доехала.
+    expect(snapshot).toHaveProperty("sheet.name", "Торн");
   });
 });
 

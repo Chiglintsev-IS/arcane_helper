@@ -5,28 +5,19 @@
  * Лист — только база персонажа: кто он, характеристики, здоровье, отметки мастера, владения.
  * Действующие числа боя живут в шапке «Игры», вещи и деньги — в «Сумке»: три экрана отвечают на
  * три разных вопроса, и дублирование чисел между ними заставляло бы сверять их взглядом.
+ *
+ * Ничего не считается: числа приезжают проекцией, здесь выбираются слова и порядок.
  */
 
-import { Character } from "@/core/domain/assembly/character";
-import { skillsOfAbility } from "@/core/domain/character/skills";
+import type { AbilityView, ContributionView, SheetView, StatView } from "@/contract/views";
+
 import {
-  ABILITIES,
-  abilityStatId,
-  saveStatId,
-  skillStatId,
-  type Ability,
-  type StatContribution,
-} from "@/core/domain/shared/stats";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import type { Sheet } from "@/core/domain/sheet/sheet";
-import { Vitality } from "@/core/domain/vitality/vitality";
-import {
-  ABILITY_LABELS,
+  abilityLabel,
   orDash,
-  SIZE_LABELS,
-  SKILL_LABELS,
+  sizeLabel,
+  skillLabel,
   statLabel,
-  TRAINING_LABELS,
+  trainingLabel,
 } from "@/ui/entities/character/lib/labels";
 import { signed } from "@/core/shared/language";
 
@@ -36,12 +27,12 @@ export type SheetRow = { labelRu: string; value: string; hint?: string };
  * Что откроет «Править». Не строка: опечатка в одном из имён молча выключала бы шторку — блок
  * рисуется, кнопка нажимается, и ничего не происходит, а компилятор про это не знает.
  *
- * Характеристика названа своим полем, а не приставкой в имени: разбирать строку обратно значит
- * заводить второй разбор рядом с первым и однажды их рассогласовать.
+ * Характеристика едет целиком, а не именем: шторка правит ровно то, что показал блок, и второго
+ * поиска той же записи по имени между блоком и шторкой не заводится.
  */
 export type SheetEdit =
   | { block: "identity" | "level" | "health" | "marks" | "permanent" }
-  | { block: "ability"; ability: Ability };
+  | { block: "ability"; ability: AbilityView };
 
 export type SheetBlockData = {
   id: string;
@@ -53,27 +44,16 @@ export type SheetBlockData = {
   secondary?: { labelRu: string; edit: SheetEdit };
 };
 
-/** Чем вклад двигает число — словами строки разбора, а не именем вида вклада. */
-function contributionValue(contribution: StatContribution): string {
-  if (contribution.kind === "bonus") return signed(contribution.value);
-  if (contribution.kind === "assignment") return `= ${contribution.value}`;
-  return `база ${contribution.method.base}`;
+/** Чем вклад двигает число — словами строки разбора, а не именем рода вклада. */
+function contributionValue({ kind, value }: ContributionView): string {
+  if (kind === "bonus") return signed(value);
+  if (kind === "assignment") return `= ${value}`;
+  return `база ${value}`;
 }
 
-/**
- * Разбор величины строками: что действует и откуда взялось.
- *
- * Непринятые вклады не показываются: «кольчуга победила „Доспехи мага“» — ответ на вопрос, которого
- * за столом не задают, а строка на узком экране стоит места.
- */
-function breakdownRows(sheet: Sheet, stat: Parameters<Sheet["value"]>[0]): SheetRow[] {
-  return sheet
-    .breakdown(stat)
-    .parts.filter((part) => part.applied)
-    .map((part) => ({
-      labelRu: part.source.nameRu,
-      value: contributionValue(part.contribution),
-    }));
+/** Разбор величины строками: что действует и откуда взялось. */
+function breakdownRows(stat: StatView): SheetRow[] {
+  return stat.parts.map((part) => ({ labelRu: part.nameRu, value: contributionValue(part) }));
 }
 
 /**
@@ -82,15 +62,14 @@ function breakdownRows(sheet: Sheet, stat: Parameters<Sheet["value"]>[0]): Sheet
  * Итог здесь тот же, что в шапке «Игры», и это не два числа, а одно: считает его один код, и
  * разойтись им нечем — прежде здесь стояла собственная раскладка, и она с шапкой расходилась.
  */
-function armorClassBlock(character: CharacterState): SheetBlockData {
-  const sheet = Character.of(character).sheet;
+function armorClassBlock(armorClass: StatView): SheetBlockData {
   return {
     id: "armorClass",
     titleRu: "Класс Доспеха",
     edit: { block: "permanent" },
     rows: [
-      { labelRu: "Итог", value: String(sheet.value("armorClass")) },
-      ...breakdownRows(sheet, "armorClass"),
+      { labelRu: "Итог", value: String(armorClass.value) },
+      ...breakdownRows(armorClass),
     ],
   };
 }
@@ -102,8 +81,7 @@ function armorClassBlock(character: CharacterState): SheetBlockData {
  *
  * Минус типографский: дефис в этой позиции на узком экране читается как перенос строки.
  */
-function maximumOrigin(character: CharacterState): string | null {
-  const { maximumBase, bloodReduction, masterReduction } = character.hitPoints;
+function maximumOrigin({ maximumBase, bloodReduction, masterReduction }: SheetView["hitPoints"]): string | null {
   const parts = [
     bloodReduction === 0 ? null : `−${bloodReduction} кровью`,
     masterReduction === 0 ? null : `−${masterReduction} мастером`,
@@ -117,37 +95,33 @@ function maximumOrigin(character: CharacterState): string | null {
  * Так устроен бумажный лист, и по нему ищут глазами: «спасбросок Телосложения» находят под
  * Телосложением, а не в отдельном списке из шести строк, где рядом стоят чужие числа.
  */
-function abilityBlock(character: CharacterState, ability: Ability): SheetBlockData {
-  const totals = Character.of(character).sheet;
+function abilityBlock(ability: AbilityView): SheetBlockData {
   return {
-    id: `ability:${ability}`,
-    titleRu: ABILITY_LABELS[ability],
+    id: `ability:${ability.id}`,
+    titleRu: abilityLabel(ability.id),
     edit: { block: "ability", ability },
     rows: [
       {
         labelRu: "Значение",
-        value: `${totals.value(abilityStatId(ability))} (${signed(totals.abilityModifier(ability))})`,
+        value: `${ability.score} (${signed(ability.modifier)})`,
       },
       {
         labelRu: "Спасбросок",
-        value: signed(totals.value(saveStatId(ability))),
-        ...(character.saveProficiencies.includes(ability) ? { hint: "владение" } : {}),
+        value: signed(ability.save),
+        ...(ability.saveProficient ? { hint: "владение" } : {}),
       },
-      ...skillsOfAbility(ability).map((id) => {
-        const training = character.skills[id];
-        return {
-          labelRu: SKILL_LABELS[id],
-          value: signed(totals.value(skillStatId(id))),
-          ...(training === undefined ? {} : { hint: TRAINING_LABELS[training] }),
-        };
-      }),
+      ...ability.skills.map((skill) => ({
+        labelRu: skillLabel(skill.id),
+        value: signed(skill.value),
+        ...(skill.training === undefined ? {} : { hint: trainingLabel(skill.training) }),
+      })),
     ],
   };
 }
 
-export function sheetBlocks(character: CharacterState): SheetBlockData[] {
-  const { hitPoints } = character;
-  const maximumHint = maximumOrigin(character);
+export function sheetBlocks(sheet: SheetView): SheetBlockData[] {
+  const { hitPoints } = sheet;
+  const maximumHint = maximumOrigin(hitPoints);
 
   return [
     {
@@ -156,13 +130,13 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
       edit: { block: "identity" },
       secondary: { labelRu: "Уровень", edit: { block: "level" } },
       rows: [
-        { labelRu: "Имя", value: orDash(character.name) },
-        { labelRu: "Вид", value: orDash(character.species) },
-        { labelRu: "Возраст", value: orDash(character.age) },
-        { labelRu: "Размер", value: SIZE_LABELS[character.size] },
-        { labelRu: "Скорость", value: `${character.speed} футов` },
-        { labelRu: "Класс", value: `${character.className}, ${character.level}` },
-        { labelRu: "Подкласс", value: orDash(character.subclass) },
+        { labelRu: "Имя", value: orDash(sheet.name) },
+        { labelRu: "Вид", value: orDash(sheet.species) },
+        { labelRu: "Возраст", value: orDash(sheet.age) },
+        { labelRu: "Размер", value: sizeLabel(sheet.size) },
+        { labelRu: "Скорость", value: `${sheet.speed} футов` },
+        { labelRu: "Класс", value: `${sheet.className}, ${sheet.level}` },
+        { labelRu: "Подкласс", value: orDash(sheet.subclass) },
       ],
     },
     {
@@ -172,26 +146,26 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
       rows: [
         {
           labelRu: "Хиты",
-          value: `${hitPoints.current} из ${Vitality.of(character).maximum}`,
-          ...(character.temporaryHitPoints === 0
+          value: `${hitPoints.current} из ${hitPoints.maximum}`,
+          ...(hitPoints.temporary === 0
             ? {}
-            : { hint: `${signed(character.temporaryHitPoints)} временных` }),
+            : { hint: `${signed(hitPoints.temporary)} временных` }),
         },
         {
           labelRu: "Максимум",
-          value: String(Vitality.of(character).maximum),
+          value: String(hitPoints.maximum),
           ...(maximumHint === null ? {} : { hint: maximumHint }),
         },
         {
           labelRu: "Кости хитов",
           value:
-            character.hitDice === undefined
+            hitPoints.hitDice === undefined
               ? "—"
-              : `${character.hitDice.remaining} из ${character.hitDice.total} по d${character.hitDice.size}`,
+              : `${hitPoints.hitDice.remaining} из ${hitPoints.hitDice.total} по d${hitPoints.hitDice.size}`,
         },
       ],
     },
-    armorClassBlock(character),
+    armorClassBlock(sheet.armorClass),
     {
       id: "marks",
       titleRu: "Отметки мастера",
@@ -199,9 +173,9 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
       rows: [
         {
           labelRu: "Истощение",
-          value: character.exhaustion === 0 ? "нет" : `ступень ${character.exhaustion}`,
+          value: sheet.exhaustion === 0 ? "нет" : `ступень ${sheet.exhaustion}`,
         },
-        { labelRu: "Вдохновение", value: character.inspiration ? "есть" : "нет" },
+        { labelRu: "Вдохновение", value: sheet.inspiration ? "есть" : "нет" },
       ],
     },
     /**
@@ -212,22 +186,22 @@ export function sheetBlocks(character: CharacterState): SheetBlockData[] {
       id: "permanentContributions",
       titleRu: "Постоянные вклады",
       edit: { block: "permanent" },
-      rows: character.permanentContributions.map(({ nameRu, contribution }) => ({
-        labelRu: nameRu,
-        value: contributionValue(contribution),
-        hint: statLabel(contribution.stat),
+      rows: sheet.permanentContributions.map((permanent) => ({
+        labelRu: permanent.nameRu,
+        value: contributionValue(permanent),
+        hint: statLabel(permanent.stat),
       })),
     },
-    ...ABILITIES.map((ability) => abilityBlock(character, ability)),
+    ...sheet.abilities.map(abilityBlock),
     {
       id: "proficiencies",
       titleRu: "Снаряжение и языки",
       edit: { block: "identity" },
       rows: [
-        { labelRu: "Оружие", value: orDash(character.proficiencies.weapons.join(", ")) },
-        { labelRu: "Доспехи", value: orDash(character.proficiencies.armor.join(", ")) },
-        { labelRu: "Инструменты", value: orDash(character.proficiencies.tools.join(", ")) },
-        { labelRu: "Языки", value: orDash(character.proficiencies.languages.join(", ")) },
+        { labelRu: "Оружие", value: orDash(sheet.proficiencies.weapons.join(", ")) },
+        { labelRu: "Доспехи", value: orDash(sheet.proficiencies.armor.join(", ")) },
+        { labelRu: "Инструменты", value: orDash(sheet.proficiencies.tools.join(", ")) },
+        { labelRu: "Языки", value: orDash(sheet.proficiencies.languages.join(", ")) },
       ],
     },
   ];

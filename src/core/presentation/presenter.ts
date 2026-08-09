@@ -10,9 +10,12 @@ import type { Snapshot } from "@/contract/snapshot";
 
 import type { LiveSession } from "@/core/application/session";
 
+import { toSheetView } from "./views/sheetView";
+
 export function toSnapshot(live: LiveSession, version: number): Snapshot {
   return {
     version,
+    sheet: toSheetView(live.session.character),
     journal: live.session.journal.map((entry) => ({
       id: entry.id,
       at: entry.at,

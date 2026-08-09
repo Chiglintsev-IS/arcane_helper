@@ -4,17 +4,26 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import type { AbilityView } from "@/contract/views";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import { toSheetView } from "@/core/presentation/views/sheetView";
 import { AbilitySheet } from "./AbilitySheet";
 
 afterEach(cleanup);
+
+/** Характеристика из настоящей проекции: подделка рядом проверяла бы себя, а не приложение. */
+function abilityOf(id: string, character: CharacterState = createThorne()): AbilityView {
+  const found = toSheetView(character).abilities.find((ability) => ability.id === id);
+  if (found === undefined) throw new Error(`нет характеристики ${id}`);
+  return found;
+}
 
 describe("шторка характеристики", () => {
   it("характеристика: шторка держит значение, спасбросок и её навыки", async () => {
     const onSave = vi.fn();
     render(
       <AbilitySheet
-        ability="intelligence"
-        character={createThorne()}
+        ability={abilityOf("intelligence")}
         onSave={onSave}
         onCancel={() => {}}
       />,
@@ -42,8 +51,7 @@ describe("шторка характеристики", () => {
     const onSave = vi.fn();
     render(
       <AbilitySheet
-        ability="strength"
-        character={createThorne()}
+        ability={abilityOf("strength")}
         error="Поле «abilities» не годится"
         onSave={onSave}
         onCancel={() => {}}
@@ -64,8 +72,7 @@ describe("шторка характеристики", () => {
     const onSave = vi.fn();
     render(
       <AbilitySheet
-        ability="intelligence"
-        character={createThorne()}
+        ability={abilityOf("intelligence")}
         onSave={onSave}
         onCancel={() => {}}
       />,
@@ -81,8 +88,7 @@ describe("шторка характеристики", () => {
     const onSave = vi.fn();
     render(
       <AbilitySheet
-        ability="intelligence"
-        character={createThorne()}
+        ability={abilityOf("intelligence")}
         onSave={onSave}
         onCancel={() => {}}
       />,
@@ -104,8 +110,7 @@ describe("шторка характеристики", () => {
     const state = createThorne();
     render(
       <AbilitySheet
-        ability="intelligence"
-        character={{ ...state, skills: { arcana: "proficient" } }}
+        ability={abilityOf("intelligence", { ...state, skills: { arcana: "proficient" } })}
         onSave={onSave}
         onCancel={() => {}}
       />,

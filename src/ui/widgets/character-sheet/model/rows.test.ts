@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import { toSheetView } from "@/core/presentation/views/sheetView";
 import { sheetBlocks } from "./rows";
 
-const blockById = (id: string) => sheetBlocks(createThorne()).find((block) => block.id === id);
+/** Проекцию строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
+const blocksOf = (character: CharacterState) => sheetBlocks(toSheetView(character));
+
+const blockById = (id: string) => blocksOf(createThorne()).find((block) => block.id === id);
 
 describe("блоки листа", () => {
   it("лист — только база персонажа, порядком бумажного листа (FR-230)", () => {
-    expect(sheetBlocks(createThorne()).map((block) => block.id)).toEqual([
+    expect(blocksOf(createThorne()).map((block) => block.id)).toEqual([
       "identity",
       "health",
       "armorClass",
@@ -35,7 +40,7 @@ describe("блоки листа", () => {
         },
       ],
     };
-    const block = sheetBlocks(blessed).find((candidate) => candidate.id === "permanentContributions");
+    const block = blocksOf(blessed).find((candidate) => candidate.id === "permanentContributions");
 
     expect(block?.edit).toEqual({ block: "permanent" });
     expect(block?.rows).toEqual([
@@ -62,7 +67,7 @@ describe("блоки листа", () => {
       ...state,
       hitPoints: { current: 30, maximumBase: 60, bloodReduction: 6, masterReduction: 4 },
     };
-    const rows = sheetBlocks(hurt).find((block) => block.id === "health")?.rows ?? [];
+    const rows = blocksOf(hurt).find((block) => block.id === "health")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Хиты", value: "30 из 50" });
     expect(rows).toContainEqual({
       labelRu: "Максимум",
@@ -79,21 +84,21 @@ describe("блоки листа", () => {
   it("временные хиты видны на листе сразу, как только они есть (FR-240)", () => {
     const state = createThorne();
     const rows =
-      sheetBlocks({ ...state, temporaryHitPoints: 5 }).find((block) => block.id === "health")
-        ?.rows ?? [];
+      blocksOf({ ...state, temporaryHitPoints: 5 }).find((block) => block.id === "health")?.rows ??
+      [];
     expect(rows).toContainEqual({ labelRu: "Хиты", value: "60 из 60", hint: "+5 временных" });
   });
 
   it("состояние без Костей хитов называет их прочерком", () => {
     const { hitDice: _none, ...withoutDice } = createThorne();
-    const rows = sheetBlocks(withoutDice).find((block) => block.id === "health")?.rows ?? [];
+    const rows = blocksOf(withoutDice).find((block) => block.id === "health")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Кости хитов", value: "—" });
   });
 
   it("отметки мастера читаются словами", () => {
     const state = createThorne();
     const marked = { ...state, exhaustion: 3, inspiration: true };
-    const rows = sheetBlocks(marked).find((block) => block.id === "marks")?.rows ?? [];
+    const rows = blocksOf(marked).find((block) => block.id === "marks")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Истощение", value: "ступень 3" });
     expect(rows).toContainEqual({ labelRu: "Вдохновение", value: "есть" });
     expect(blockById("marks")?.rows).toContainEqual({ labelRu: "Истощение", value: "нет" });
@@ -107,7 +112,7 @@ describe("блоки листа", () => {
       ],
     };
     const rows =
-      sheetBlocks(withGift).find((block) => block.id === "permanentContributions")?.rows ?? [];
+      blocksOf(withGift).find((block) => block.id === "permanentContributions")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Дар богов", value: "+5", hint: "Инициатива" });
   });
 
@@ -131,13 +136,13 @@ describe("блоки листа", () => {
         worn: [...state.equipment.worn, { itemId: "scale-mail", count: 1 }],
       },
     };
-    const rows = sheetBlocks(withArmor).find((block) => block.id === "armorClass")?.rows ?? [];
+    const rows = blocksOf(withArmor).find((block) => block.id === "armorClass")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Чешуйчатый доспех", value: "база 14" });
     expect(rows).toContainEqual({ labelRu: "Итог", value: "18" });
   });
 
   it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {
-    const ids = sheetBlocks(createThorne()).map((block) => block.id);
+    const ids = blocksOf(createThorne()).map((block) => block.id);
     expect(ids).not.toContain("combatNumbers");
     expect(ids).not.toContain("inventory");
     expect(ids).not.toContain("armorClassBase");
@@ -164,7 +169,7 @@ describe("блоки листа", () => {
   });
 
   it("все восемнадцать навыков разложены по шести блокам и ни один не потерян", () => {
-    const skillRows = sheetBlocks(createThorne())
+    const skillRows = blocksOf(createThorne())
       .filter((block) => block.id.startsWith("ability:"))
       // Значение и спасбросок есть у каждой характеристики; остальное — её навыки.
       .flatMap((block) => block.rows.slice(2));
@@ -175,7 +180,7 @@ describe("блоки листа", () => {
   it("владение и компетентность названы подсказкой", () => {
     const state = createThorne();
     const trained = { ...state, skills: { arcana: "expert" as const } };
-    const rows = sheetBlocks(trained).find((block) => block.id === "ability:intelligence")?.rows ?? [];
+    const rows = blocksOf(trained).find((block) => block.id === "ability:intelligence")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Магия", value: "+10", hint: "компетентность" });
   });
 
@@ -195,7 +200,10 @@ describe("блоки листа", () => {
   });
 
   it("каждый блок называет свою шторку, а уровень правится второй кнопкой", () => {
-    expect(blockById("ability:wisdom")?.edit).toEqual({ block: "ability", ability: "wisdom" });
+    const wisdom = blockById("ability:wisdom")?.edit;
+    // Шторка получает саму характеристику: второго поиска той же записи по имени не заводится.
+    expect(wisdom?.block).toBe("ability");
+    expect(wisdom?.block === "ability" ? wisdom.ability.id : null).toBe("wisdom");
     expect(blockById("identity")?.secondary).toEqual({
       labelRu: "Уровень",
       edit: { block: "level" },
@@ -214,7 +222,7 @@ describe("блоки листа", () => {
       ...state,
       proficiencies: { ...state.proficiencies, languages: ["Общий", "Великаний"] },
     };
-    const rows = sheetBlocks(armed).find((block) => block.id === "proficiencies")?.rows ?? [];
+    const rows = blocksOf(armed).find((block) => block.id === "proficiencies")?.rows ?? [];
     expect(rows).toContainEqual({ labelRu: "Языки", value: "Общий, Великаний" });
   });
 });

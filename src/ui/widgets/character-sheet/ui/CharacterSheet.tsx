@@ -1,6 +1,6 @@
 "use client";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
+import type { SheetView } from "@/contract/views";
 import { sheetBlocks, type SheetEdit } from "../model/rows";
 import { SheetBlock } from "./SheetBlock";
 
@@ -10,15 +10,15 @@ import { SheetBlock } from "./SheetBlock";
  * временные хиты — вводится там, где действует: в «Игре».
  */
 export function CharacterSheet({
-  character,
+  sheet,
   onEdit,
 }: {
-  character: CharacterState;
+  sheet: SheetView;
   onEdit: (edit: SheetEdit) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      {sheetBlocks(character).map((block) => (
+      {sheetBlocks(sheet).map((block) => (
         <SheetBlock
           key={block.id}
           block={block}

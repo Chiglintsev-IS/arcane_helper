@@ -78,8 +78,35 @@ const SINGULAR_STAT_LABELS: Record<(typeof SINGULAR_STAT_IDS)[number], string> =
   speed: "Скорость",
 };
 
+/**
+ * Подпись по слову правил.
+ *
+ * Слово приезжает проекцией строкой, поэтому подпись ищется, а не берётся ключом: словарь подписей
+ * — выбор слов, а список слов принадлежит правилам, и второй его копии здесь нет. Незнакомое слово
+ * показывается как есть: пропасть с экрана молча оно не вправе.
+ */
+function labelOf(labels: Readonly<Record<string, string>>, word: string): string {
+  return labels[word] ?? word;
+}
+
+export function abilityLabel(ability: string): string {
+  return labelOf(ABILITY_LABELS, ability);
+}
+
+export function skillLabel(skill: string): string {
+  return labelOf(SKILL_LABELS, skill);
+}
+
+export function sizeLabel(size: string): string {
+  return labelOf(SIZE_LABELS, size);
+}
+
+export function trainingLabel(training: string): string {
+  return labelOf(TRAINING_LABELS, training);
+}
+
 /** Подпись величины: ею называют строку разбора — «откуда взялось это число». */
-export function statLabel(stat: StatId): string {
+export function statLabel(stat: string): string {
   for (const id of SINGULAR_STAT_IDS) {
     if (stat === id) return SINGULAR_STAT_LABELS[id];
   }
