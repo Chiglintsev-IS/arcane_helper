@@ -28,7 +28,6 @@ import {
   type CastDraft,
   type WizardStep,
 } from "@/ui/features/cast-spell/model/castDraftStore";
-import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import {
   RUNES,
   RUNE_LABEL,
@@ -458,7 +457,7 @@ function SummaryStep({
   draft: CastDraft;
   row: SpellRowView;
   preview: CastPreview | null;
-  onRoleplay: (category: RoleplayCategory) => void;
+  onRoleplay: (category: string) => void;
 }) {
   const [diagramOpen, setDiagramOpen] = useState(false);
   // Отсутствие цели — решение, а не пробел: мастер её не спрашивает.
@@ -514,7 +513,7 @@ function SummaryStep({
       ) : null}
 
       <RoleplaySection
-        spell={draft.spell}
+        spellId={row.id}
         category={draft.roleplayCategory}
         onCategory={onRoleplay}
       />

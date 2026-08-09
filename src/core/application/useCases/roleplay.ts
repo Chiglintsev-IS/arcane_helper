@@ -14,7 +14,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { withoutRecord, type Occasion, type Session } from "@/core/application/session";
 
 
-export type RoleplayVariant = {
+type RoleplayVariant = {
   id: string;
   text: string;
   category: RoleplayCategory;

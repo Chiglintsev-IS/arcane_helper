@@ -28,7 +28,6 @@ import {
 import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
-import type { Spell } from "@/core/domain/catalog/spell";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -40,18 +39,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function SpellCardDetails({
-  spell,
   row,
   casting,
   onCast,
   onNoteChange,
   onClose,
 }: {
-  /**
-   * Карточка из каталога сессии: она осталась ради схемы ритуала и вариантов отыгрыша, у которых
-   * своей проекции ещё нет. Всё остальное приезжает строкой и уже посчитано.
-   */
-  spell: Spell;
   /** Заклинание целиком: написанное о нём и то, чем оно является для персонажа сейчас. */
   row: SpellRowView;
   /** Числа заклинателя: ими называется бросок. */
@@ -182,7 +175,7 @@ export function SpellCardDetails({
           <p className="mt-2 text-sm">{card.fullRulesRu}</p>
         </details>
 
-        <RoleplaySection spell={spell} collapsible />
+        <RoleplaySection spellId={row.id} collapsible />
 
         <label className="flex flex-col gap-1 text-xs">
           <span className="font-medium">Заметка</span>

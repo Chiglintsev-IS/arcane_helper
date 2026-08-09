@@ -6,28 +6,27 @@
  * обязательно по правилам: вербальный компонент
  * значит, что заклинание нужно произнести вслух, и забывают об этом чаще всего.
  *
- * Предпочтения (``) компонент читает сам, а не принимает пропсами: он рендерится и из
- * карточки, и из мастера применения, и прокидывание через обоих завело бы два источника одной
- * правды. Пропсы остались прежними — от них зависит мастер.
+ * Строку заклинания компонент берёт сам, а не принимает пропсами: он рендерится и из карточки, и из
+ * мастера применения, и прокидывание через обоих завело бы два источника одной правды. Пометки на
+ * вариантах и порядок показа приезжают в ней посчитанными.
  */
 
 "use client";
 
-import { defaultRoleplayVariant, roleplayCategories, roleplayVariants, type RoleplayVariant } from "@/core/application/useCases/roleplay";
 import { useState } from "react";
 
-import type { Spell } from "@/core/domain/catalog/spell";
-import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
+import type { RoleplayVariantView, SpellCardView, SpellRowView } from "@/contract/views";
+
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 
-const CATEGORY_LABELS: Record<RoleplayCategory, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   short: "Коротко",
   atmospheric: "Атмосферно",
   sarcastic: "Саркастично",
 };
 
 /** Что из отыгрыша требуют правила, а что остаётся украшением. */
-function requirementNote(components: Spell["components"]): string {
+function requirementNote(components: SpellCardView["components"]): string {
   if (components.verbal && components.somatic) {
     return "Обязательно: произнести вслух и сделать жест свободной рукой";
   }
@@ -44,51 +43,47 @@ const ACTION_CLASS =
   "min-h-11 grow rounded-lg border border-slate-200 px-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300";
 
 function Variants({
-  spell,
+  row,
   category,
   onCategory,
 }: {
-  spell: Spell;
-  category: RoleplayCategory;
-  onCategory: (category: RoleplayCategory) => void;
+  row: SpellRowView;
+  category: string;
+  onCategory: (category: string) => void;
 }) {
   const { session: sessionStore } = useStores();
-  const character = useSession((state) => state.session?.character);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [ownText, setOwnText] = useState<string | null>(null);
 
-  if (character === undefined) return null;
-
   const execute = sessionStore.getState().execute;
-  const categories = roleplayCategories(character, spell);
+  const categories = row.roleplayCategories;
   // Отключённая категория пропадает из ряда, и показывать её нечем: берём первую оставшуюся.
   // Скрыть все три нельзя, поэтому запасной вариант здесь всегда есть.
-  const shown = categories.includes(category) ? category : (categories[0] ?? category);
+  const shown = categories.find((candidate) => candidate.id === category) ?? categories[0];
 
-  const variants = roleplayVariants(character, spell, shown);
+  const variants = shown?.variants ?? [];
   const visible = variants.filter((variant) => !variant.disabled);
   const hidden = variants.filter((variant) => variant.disabled);
-  const rotated = defaultRoleplayVariant(character, spell, shown);
-  const selected =
-    visible.find((variant) => variant.id === selectedId) ?? rotated ?? visible[0];
+  const rotated = visible.find((variant) => variant.suggested);
+  const selected = visible.find((variant) => variant.id === selectedId) ?? rotated ?? visible[0];
 
   /** Выбор варианта — это и есть его использование: счётчик ведёт ротацию. */
-  const choose = (variant: RoleplayVariant): void => {
+  const choose = (variant: RoleplayVariantView): void => {
     setSelectedId(variant.id);
-    void execute({ kind: "use_roleplay_variant", spellId: spell.id, variantId: variant.id });
+    void execute({ kind: "use_roleplay_variant", spellId: row.id, variantId: variant.id });
   };
 
-  const copy = (variant: RoleplayVariant): void => {
+  const copy = (variant: RoleplayVariantView): void => {
     // Safari на iOS отдаёт буфер только внутри пользовательского жеста: любое ожидание до вызова —
     // и разрешение потеряно. Сохранение состояния асинхронно, поэтому идёт после.
     void navigator.clipboard?.writeText(variant.text);
-    void execute({ kind: "use_roleplay_variant", spellId: spell.id, variantId: variant.id });
+    void execute({ kind: "use_roleplay_variant", spellId: row.id, variantId: variant.id });
   };
 
   const addOwn = (text: string): void => {
     // Пустой текст сюда не доходит: операция его отклонит, но поле не должно и предлагать отправку.
-    if (text.trim() === "") return;
-    void execute({ kind: "add_roleplay_variant", spellId: spell.id, category: shown, text });
+    if (text.trim() === "" || shown === undefined) return;
+    void execute({ kind: "add_roleplay_variant", spellId: row.id, category: shown.id, text });
     setOwnText(null);
   };
 
@@ -96,23 +91,23 @@ function Variants({
     <div className="flex flex-col gap-2">
       {/* Механическая строка внутри художественного блока — единственная и помечена как требование. */}
       <p className="rounded-md border border-concentration/40 bg-concentration/10 px-2 py-1 text-xs font-medium not-italic text-concentration-strong dark:text-concentration">
-        {requirementNote(spell.components)}
+        {requirementNote(row.card.components)}
       </p>
 
       <div className="flex flex-wrap gap-1">
         {categories.map((value) => (
           <button
-            key={value}
+            key={value.id}
             type="button"
-            aria-pressed={shown === value}
-            onClick={() => onCategory(value)}
+            aria-pressed={shown?.id === value.id}
+            onClick={() => onCategory(value.id)}
             className={`min-h-11 rounded-lg border px-2 text-xs ${
-              shown === value
+              shown?.id === value.id
                 ? "border-concentration text-concentration-strong dark:text-concentration"
                 : "border-slate-200 text-slate-500 dark:border-slate-800"
             }`}
           >
-            {CATEGORY_LABELS[value]}
+            {CATEGORY_LABELS[value.id] ?? value.id}
           </button>
         ))}
       </div>
@@ -146,7 +141,7 @@ function Variants({
             onClick={() =>
               void execute({
                 kind: "toggle_roleplay_favorite",
-                spellId: spell.id,
+                spellId: row.id,
                 variantId: selected.id,
               })
             }
@@ -159,7 +154,7 @@ function Variants({
             onClick={() =>
               void execute({
                 kind: "toggle_roleplay_disabled",
-                spellId: spell.id,
+                spellId: row.id,
                 variantId: selected.id,
               })
             }
@@ -212,7 +207,7 @@ function Variants({
                   onClick={() =>
                     void execute({
                       kind: "toggle_roleplay_disabled",
-                      spellId: spell.id,
+                      spellId: row.id,
                       variantId: variant.id,
                     })
                   }
@@ -230,11 +225,11 @@ function Variants({
         <div>
           <dt className="not-italic">Реплика</dt>
           {/* Кавычки-ёлочки отличают прямую речь от описания жеста рядом. */}
-          <dd>«{spell.roleplay.incantation}»</dd>
+          <dd>«{row.card.roleplay.incantation}»</dd>
         </div>
         <div>
           <dt className="not-italic">Жест</dt>
-          <dd>{spell.roleplay.gesture}</dd>
+          <dd>{row.card.roleplay.gesture}</dd>
         </div>
       </dl>
     </div>
@@ -246,29 +241,37 @@ function Variants({
  * категории часть применения, а не справка.
  */
 export function RoleplaySection({
-  spell,
+  spellId,
   collapsible = false,
   category: controlled,
   onCategory,
 }: {
-  spell: Spell;
+  spellId: string;
   collapsible?: boolean;
-  category?: RoleplayCategory;
-  onCategory?: (category: RoleplayCategory) => void;
+  /** Выбранная снаружи категория; `null` — выбора не было, и показывается первая доступная. */
+  category?: string | null;
+  onCategory?: (category: string) => void;
 }) {
-  const [local, setLocal] = useState<RoleplayCategory>("short");
+  const row = useSession((state) =>
+    state.snapshot?.spells.find((candidate) => candidate.id === spellId),
+  );
+  const [local, setLocal] = useState<string | null>(null);
   const category = controlled ?? local;
-  const change = (value: RoleplayCategory): void => {
+  const change = (value: string): void => {
     setLocal(value);
     onCategory?.(value);
   };
+
+  if (row === undefined) return null;
+  // Пока игрок не выбирал, показывается первая доступная категория: пустого ряда не бывает.
+  const shown = category ?? row.roleplayCategories[0]?.id ?? "";
 
   if (collapsible) {
     return (
       <details className="rounded-lg border border-dashed border-concentration/50 bg-concentration/5 p-2">
         <summary className="cursor-pointer text-sm font-medium text-concentration-strong dark:text-concentration">Отыгрыш</summary>
         <div className="mt-2">
-          <Variants spell={spell} category={category} onCategory={change} />
+          <Variants row={row} category={shown} onCategory={change} />
         </div>
       </details>
     );
@@ -280,7 +283,7 @@ export function RoleplaySection({
       className="flex flex-col gap-2 rounded-lg border border-dashed border-concentration/50 bg-concentration/5 p-2"
     >
       <h3 className="text-xs font-medium uppercase tracking-wide text-concentration-strong dark:text-concentration">Отыгрыш</h3>
-      <Variants spell={spell} category={category} onCategory={change} />
+      <Variants row={row} category={shown} onCategory={change} />
     </section>
   );
 }

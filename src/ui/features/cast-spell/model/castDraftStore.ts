@@ -17,10 +17,8 @@ import type { CommandOf } from "@/contract/commands";
 import type { CastOptionView, SpellRowView } from "@/contract/views";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-import type { Spell } from "@/core/domain/catalog/spell";
 import type { Rune, RuneTarget } from "@/core/domain/arcana/runes";
 import { runeChoosesTarget } from "@/core/domain/arcana/runes";
-import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 
 /**
  * Экраны мастера в порядке. Шаг, где нечего выбирать, не показывается.
@@ -64,13 +62,14 @@ export const NO_COMPONENT = "no_component";
 const OWN_STEP_WARNINGS: readonly string[] = [CONCENTRATION_BUSY, NO_COMPONENT];
 
 export type CastDraft = {
-  /** Карточка нужна схеме ритуала и отыгрышу: у них своей проекции ещё нет. */
-  spell: Spell;
+  /** Что творят: заклинание названо идентификатором, а строка его берётся из снимка. */
+  spellId: string;
   /** Выбранный способ сотворения — целиком, вместе с его ценой и вердиктом. */
   option: CastOptionView;
   /** Цель свободным текстом; `null` — не указана, и объявление корректно без неё. */
   targetLabel: string | null;
-  roleplayCategory: RoleplayCategory;
+  /** Выбранная категория отыгрыша словом правил; `null` — игрок не выбирал, и её назовёт строка. */
+  roleplayCategory: string | null;
   /** Мастер разрешил исключение. Замену концентрации это согласие не покрывает. */
   allowAnyway: boolean;
   /** Игрок согласился прервать идущую концентрацию: выбор между двумя эффектами — только его. */
@@ -90,12 +89,10 @@ export type CastDraft = {
   step: WizardStep;
 };
 
-const DEFAULT_ROLEPLAY_CATEGORY: RoleplayCategory = "short";
-
 /** Ключ запоминания — идентификатор заклинания: выбор помнится по заклинанию, а не глобально. */
 type Remembered = {
   payment: Record<string, CastOptionView["payment"]>;
-  roleplay: Record<string, RoleplayCategory>;
+  roleplay: Record<string, string>;
 };
 
 /** Один ли это способ оплаты: ячейки различаются уровнем, прочие роды — только собой. */
@@ -166,7 +163,7 @@ export function visibleSteps(
 export function toCastCommand(draft: CastDraft): CommandOf<"cast_spell"> {
   return {
     kind: "cast_spell",
-    spellId: draft.spell.id,
+    spellId: draft.spellId,
     mode: draft.option.mode,
     payment: draft.option.payment,
     ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
@@ -184,7 +181,7 @@ export type CastDraftState = {
   /** Недавно введённые цели: выбор из списка вместо ввода экономит секунды в бою. */
   recentTargets: string[];
 
-  start: (spell: Spell, row: SpellRowView) => void;
+  start: (row: SpellRowView) => void;
   chooseCastOption: (option: CastOptionView) => void;
   /** Приложить руну или снять её. Не более одной на заклинание. */
   chooseRune: (rune: Rune) => void;
@@ -194,7 +191,7 @@ export type CastDraftState = {
   /** Что выпало на брошенных костях. */
   setHitDiceRolled: (rolled: number | null) => void;
   setTarget: (label: string) => void;
-  setRoleplayCategory: (category: RoleplayCategory) => void;
+  setRoleplayCategory: (category: string) => void;
   /** «Применить всё равно»: предупреждения, которые снимает исключение мастера, перестают мешать. */
   allowAnyway: () => void;
   /** «Прервать и сотворить»: согласие на замену идущей концентрации. */
@@ -229,12 +226,13 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
       draft: null,
       recentTargets: [],
 
-      start(spell, row) {
+      start(row) {
         const draft: CastDraft = {
-          spell,
+          spellId: row.id,
           option: defaultOption(row, remembered),
           targetLabel: null,
-          roleplayCategory: remembered.roleplay[spell.id] ?? DEFAULT_ROLEPLAY_CATEGORY,
+          // Невыбранную категорию называет строка: перечень категорий — правило, а не выбор мастера.
+          roleplayCategory: remembered.roleplay[row.id] ?? null,
           allowAnyway: false,
           replaceConcentration: false,
           rune: null,
@@ -271,7 +269,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
 
       chooseCastOption(option) {
         edit((draft) => {
-          remembered.payment[draft.spell.id] = option.payment;
+          remembered.payment[draft.spellId] = option.payment;
           // Ритуал и заговор руну не принимают: выбранная до смены оплаты, она молча пропала бы
           // при подтверждении.
           const reset = { hitDiceCount: null, hitDiceRolled: null };
@@ -295,7 +293,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
 
       setRoleplayCategory(category) {
         edit((draft) => {
-          remembered.roleplay[draft.spell.id] = category;
+          remembered.roleplay[draft.spellId] = category;
           return { ...draft, roleplayCategory: category };
         });
       },

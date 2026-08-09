@@ -124,7 +124,7 @@ function draftOf(): CastDraft {
 
 describe("руна при сотворении (FR-151)", () => {
   it("прикладывается к заклинанию и попадает в запрос применения", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().chooseRune("war");
 
     expect(draftOf().rune).toBe("war");
@@ -132,7 +132,7 @@ describe("руна при сотворении (FR-151)", () => {
   });
 
   it("повторное нажатие снимает руну: выбор без возможности передумать — ловушка", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().chooseRune("life");
     store.getState().chooseRune("life");
 
@@ -141,7 +141,7 @@ describe("руна при сотворении (FR-151)", () => {
   });
 
   it("выбор другой руны заменяет прежнюю: больше одной на заклинание не бывает", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().chooseRune("life");
     store.getState().chooseRune("wind");
 
@@ -150,7 +150,7 @@ describe("руна при сотворении (FR-151)", () => {
 
   it("смена оплаты на ритуал снимает руну: ритуал её не принимает", () => {
     const row = rowOf(detectMagic, createThorne(), OUTSIDE_FIGHT);
-    store.getState().start(detectMagic, row);
+    store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 1));
     store.getState().chooseRune("war");
     expect(draftOf().rune).toBe("war");
@@ -167,7 +167,7 @@ describe("руна при сотворении (FR-151)", () => {
 
 describe("цель руны жизни (FR-156)", () => {
   it("по умолчанию себе, но переключается на другого и уходит в запрос", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().chooseRune("life");
     expect(draftOf().runeTarget).toBe("self");
 
@@ -177,7 +177,7 @@ describe("цель руны жизни (FR-156)", () => {
   });
 
   it("руна, цели не выбирающая, возвращает её себе: ветер действует только на заклинателя", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().chooseRune("life");
     store.getState().chooseRuneTarget("other");
 
@@ -187,7 +187,7 @@ describe("цель руны жизни (FR-156)", () => {
 
   it("смена оплаты на ритуал возвращает цель к себе вместе с руной", () => {
     const row = rowOf(detectMagic, createThorne(), OUTSIDE_FIGHT);
-    store.getState().start(detectMagic, row);
+    store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 1));
     store.getState().chooseRune("life");
     store.getState().chooseRuneTarget("other");
@@ -204,7 +204,7 @@ describe("цель руны жизни (FR-156)", () => {
 
 describe("начало применения", () => {
   it("подготовленное заклинание начинается с ячейки своего уровня и первого видимого шага", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
 
     expect(draftOf()).toMatchObject({
       option: { mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
@@ -215,23 +215,23 @@ describe("начало применения", () => {
   });
 
   it("заклинание на себя начинается с выбора ячейки", () => {
-    store.getState().start(shield, rowOf(shield));
+    store.getState().start(rowOf(shield));
     expect(draftOf().step).toBe("slot");
   });
 
   it("заговор не выбирает ячейку", () => {
-    store.getState().start(rayOfFrost, rowOf(rayOfFrost));
+    store.getState().start(rowOf(rayOfFrost));
     expect(draftOf().option).toMatchObject({ mode: "cantrip", payment: { kind: "none" } });
   });
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
     // Вне боя: в бою ритуального способа нет вовсе, +10 минут в раунд не помещаются.
-    store.getState().start(identify, rowOf(identify, createThorne(), OUTSIDE_FIGHT));
+    store.getState().start(rowOf(identify, createThorne(), OUTSIDE_FIGHT));
     expect(draftOf().option).toMatchObject({ mode: "ritual", payment: { kind: "none" } });
   });
 
   it("в бою тот же ритуал начинается ячейкой (FR-208)", () => {
-    store.getState().start(detectMagic, rowOf(detectMagic));
+    store.getState().start(rowOf(detectMagic));
     expect(draftOf().option).toMatchObject({
       mode: "normal",
       payment: { kind: "slot", slotLevel: 1 },
@@ -239,7 +239,7 @@ describe("начало применения", () => {
   });
 
   it("отмена стирает черновик", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().cancel();
     expect(store.getState().draft).toBeNull();
   });
@@ -248,19 +248,19 @@ describe("начало применения", () => {
 describe("шаги мастера (FR-021, M-03)", () => {
   it("типовое боевое заклинание проходится за два шага", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toEqual(["slot", "summary"]);
   });
 
   it("заговор применяется одним экраном: выбирать нечего", () => {
     const row = rowOf(rayOfFrost);
-    store.getState().start(rayOfFrost, row);
+    store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toEqual(["summary"]);
   });
 
   it("цель мастер не спрашивает: ввод текста в бою слишком медленный (OQ-10)", () => {
     const row = rowOf(rayOfFrost);
-    store.getState().start(rayOfFrost, row);
+    store.getState().start(row);
     const steps: string[] = [...visibleSteps(draftOf(), row)];
     expect(steps).not.toContain("target");
   });
@@ -272,7 +272,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
       { kind: "cast_spell", spellId: rayOfFrost.id, mode: "cantrip", payment: { kind: "none" } },
     ];
     const row = rowOf(mageArmor, createThorne(), spent);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
 
     expect(visibleSteps(draftOf(), row)).toEqual(["availability", "slot", "summary"]);
     expect(draftOf().step).toBe("availability");
@@ -280,32 +280,32 @@ describe("шаги мастера (FR-021, M-03)", () => {
 
   it("концентрационное заклинание само по себе шага не добавляет: заменять нечего", () => {
     const row = rowOf(detectMagic);
-    store.getState().start(detectMagic, row);
+    store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).not.toContain("concentration");
   });
 
   it("занятая концентрация добавляет шаг замены (FR-081)", () => {
     const row = rowOf(detectMagic, concentrating());
-    store.getState().start(detectMagic, row);
+    store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("concentration");
   });
 
   it("компонент со стоимостью добавляет шаг проверки компонентов", () => {
     const row = rowOf(identify);
-    store.getState().start(identify, row);
+    store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("components");
   });
 
   it("компоненты без стоимости отдельного шага не требуют: выбирать нечего", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).not.toContain("components");
   });
 
   it("расход Костей хитов добавляет свой шаг", () => {
     const arcaneVigor = spell("arcane-vigor");
     const row = rowOf(arcaneVigor);
-    store.getState().start(arcaneVigor, row);
+    store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("hitDice");
   });
 });
@@ -313,7 +313,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
 describe("навигация по шагам", () => {
   it("вперёд и назад ходят только по видимым шагам", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     const steps = visibleSteps(draftOf(), row);
 
     store.getState().next(steps);
@@ -324,7 +324,7 @@ describe("навигация по шагам", () => {
 
   it("на последнем шаге вперёд не уходит, на первом — назад", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     const steps = visibleSteps(draftOf(), row);
 
     store.getState().back(steps);
@@ -352,27 +352,27 @@ describe("навигация по шагам", () => {
 describe("запоминание выбора", () => {
   it("повторное применение предлагает прежний уровень ячейки", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 3));
     store.getState().cancel();
 
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 3 });
   });
 
   it("запомненный уровень не переносится на другое заклинание", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 4));
     store.getState().cancel();
 
-    store.getState().start(shield, rowOf(shield));
+    store.getState().start(rowOf(shield));
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 1 });
   });
 
   it("запомненный способ оплаты, которого больше нет, заменяется предложенным", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 4));
     store.getState().cancel();
 
@@ -381,7 +381,7 @@ describe("запоминание выбора", () => {
     const { 4: _lost, ...withoutFourth } = thorne.spellSlots;
     const weaker = { ...thorne, spellSlots: withoutFourth };
 
-    store.getState().start(mageArmor, rowOf(mageArmor, weaker));
+    store.getState().start(rowOf(mageArmor, weaker));
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 1 });
   });
 
@@ -389,7 +389,7 @@ describe("запоминание выбора", () => {
     const spent = withoutSlots(createThorne());
     const row = rowOf(mageArmor, spent);
 
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 1 });
     expect(visibleSteps(draftOf(), row)).toContain("availability");
   });
@@ -398,29 +398,29 @@ describe("запоминание выбора", () => {
     const ninthLevel: Spell = { ...mageArmor, level: 9 };
     const row = rowOf(ninthLevel, createThorne(), IN_FIGHT, [ninthLevel]);
 
-    store.getState().start(ninthLevel, row);
+    store.getState().start(row);
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 9 });
   });
 
   it("запоминает категорию отыгрыша", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     store.getState().setRoleplayCategory("sarcastic");
     store.getState().cancel();
 
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     expect(draftOf().roleplayCategory).toBe("sarcastic");
   });
 
   it("оплату кровью тоже запоминает", () => {
     const row = rowOf(mageArmor);
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     store
       .getState()
       .chooseCastOption(optionBy(row, (option) => option.payment.kind === "spell_points"));
     store.getState().cancel();
 
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     expect(draftOf().option.payment).toEqual({ kind: "spell_points" });
   });
 });
@@ -430,7 +430,7 @@ describe("кости хитов в черновике", () => {
 
   it("смена числа костей обнуляет выпавшее: оно относилось к прежнему броску", () => {
     const row = rowOf(arcaneVigor);
-    store.getState().start(arcaneVigor, row);
+    store.getState().start(row);
     store.getState().setHitDiceCount(2);
     store.getState().setHitDiceRolled(9);
     store.getState().setHitDiceCount(1);
@@ -440,7 +440,7 @@ describe("кости хитов в черновике", () => {
 
   it("смена ячейки обнуляет оба поля: максимум зависит от её уровня", () => {
     const row = rowOf(arcaneVigor);
-    store.getState().start(arcaneVigor, row);
+    store.getState().start(row);
     store.getState().setHitDiceCount(2);
     store.getState().setHitDiceRolled(9);
     store.getState().chooseCastOption(slotOption(row, 3));
@@ -450,7 +450,7 @@ describe("кости хитов в черновике", () => {
 
   it("брошенное уходит в заявку целиком, а недобранное не уходит вовсе", () => {
     const row = rowOf(arcaneVigor);
-    store.getState().start(arcaneVigor, row);
+    store.getState().start(row);
     store.getState().setHitDiceCount(2);
     expect(toCastCommand(draftOf())).not.toHaveProperty("hitDice");
 
@@ -461,7 +461,7 @@ describe("кости хитов в черновике", () => {
 
 describe("цель свободным текстом (OQ-10)", () => {
   it("сохраняет недавние цели без повторов и новые сверху", () => {
-    store.getState().start(rayOfFrost, rowOf(rayOfFrost));
+    store.getState().start(rowOf(rayOfFrost));
     store.getState().setTarget("гоблин у двери");
     store.getState().setTarget("огр");
     store.getState().setTarget("гоблин у двери");
@@ -471,7 +471,7 @@ describe("цель свободным текстом (OQ-10)", () => {
   });
 
   it("список недавних целей не растёт бесконечно", () => {
-    store.getState().start(rayOfFrost, rowOf(rayOfFrost));
+    store.getState().start(rowOf(rayOfFrost));
     for (let index = 0; index <= RECENT_TARGETS_LIMIT; index += 1) {
       store.getState().setTarget(`цель ${index}`);
     }
@@ -479,7 +479,7 @@ describe("цель свободным текстом (OQ-10)", () => {
   });
 
   it("пустая строка цель снимает и в недавние не попадает", () => {
-    store.getState().start(rayOfFrost, rowOf(rayOfFrost));
+    store.getState().start(rowOf(rayOfFrost));
     store.getState().setTarget("огр");
     store.getState().setTarget("   ");
 
@@ -490,7 +490,7 @@ describe("цель свободным текстом (OQ-10)", () => {
 
 describe("заявка на применение", () => {
   it("собирает заявку из черновика", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().setTarget("на себя");
     store.getState().allowAnyway();
 
@@ -506,14 +506,14 @@ describe("заявка на применение", () => {
   });
 
   it("исключение мастера не выдаёт согласия на замену концентрации", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().allowAnyway();
 
     expect(toCastCommand(draftOf()).replaceConcentration).toBe(false);
   });
 
   it("согласие на замену концентрации не выдаёт исключения мастера", () => {
-    store.getState().start(mageArmor, rowOf(mageArmor));
+    store.getState().start(rowOf(mageArmor));
     store.getState().replaceConcentration();
 
     const request = toCastCommand(draftOf());
@@ -522,7 +522,7 @@ describe("заявка на применение", () => {
   });
 
   it("без цели поля цели в заявке нет", () => {
-    store.getState().start(shield, rowOf(shield));
+    store.getState().start(rowOf(shield));
     expect(toCastCommand(draftOf())).not.toHaveProperty("targetLabel");
   });
 });
@@ -533,7 +533,7 @@ describe("инвариант FR-022: до подтверждения состо�
     const before = structuredClone(session);
     const row = rowOf(mageArmor, session.character);
 
-    store.getState().start(mageArmor, row);
+    store.getState().start(row);
     const steps = visibleSteps(draftOf(), row);
     store.getState().chooseCastOption(slotOption(row, 2));
     store.getState().setTarget("на себя");

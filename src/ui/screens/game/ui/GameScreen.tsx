@@ -33,7 +33,6 @@ export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
   const error = useSession((state) => state.error);
-  const spells = useSession((state) => state.spellCatalog);
   const snapshot = useSession((state) => state.snapshot)!;
   const draft = useDraft((state) => state.draft);
 
@@ -61,7 +60,7 @@ export function GameScreen() {
   const turn = snapshot.turn;
   const { inFight } = turn;
   // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
-  const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spell.id) ?? null;
+  const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spellId) ?? null;
 
   const { concentration } = snapshot;
   const concentrationSummary = useMemo(() => {
@@ -78,7 +77,6 @@ export function GameScreen() {
   const shown = filterSpells(inMode, filters);
   const dividing = dividingCategories(inMode);
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
-  const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
   const rows = shown.map((spell) => (
@@ -215,13 +213,12 @@ export function GameScreen() {
         ) : null}
       </div>
 
-      {openSpell === null || openRow === null || draft !== null ? null : (
+      {openRow === null || draft !== null ? null : (
         <SpellCardDetails
-          spell={openSpell}
           row={openRow}
           casting={casting}
-          onCast={() => draftStore.getState().start(openSpell, openRow)}
-          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
+          onCast={() => draftStore.getState().start(openRow)}
+          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openRow.id, note })}
           onClose={() => setOpenSpellId(null)}
         />
       )}
@@ -310,10 +307,8 @@ export function GameScreen() {
           reactionAvailable={turn.reactionAvailable}
           runeAvailable={snapshot.resources.wardingSigilAvailable}
           onCast={(row) => {
-            const spell = spells.find((candidate) => candidate.id === row.id);
-            if (spell === undefined) return;
             setReactionsOpen(false);
-            draftStore.getState().start(spell, row);
+            draftStore.getState().start(row);
           }}
           onSpendRune={async () => {
             if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {

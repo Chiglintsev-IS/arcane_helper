@@ -19,7 +19,6 @@ import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 export function BookScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
   const error = useSession((state) => state.error);
-  const spells = useSession((state) => state.spellCatalog);
   const snapshot = useSession((state) => state.snapshot)!;
   const draft = useDraft((state) => state.draft);
 
@@ -32,13 +31,12 @@ export function BookScreen() {
   const { inFight } = turn;
   const { casting } = snapshot;
   // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
-  const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spell.id) ?? null;
+  const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spellId) ?? null;
 
   const inMode = spellsForScreen(snapshot.spells, "book");
   const shown = filterSpells(inMode, filters);
   const dividing = dividingCategories(inMode);
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
-  const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
   const rows = shown.map((spell) => (
@@ -110,13 +108,12 @@ export function BookScreen() {
         ) : null}
       </div>
 
-      {openSpell === null || openRow === null || draft !== null ? null : (
+      {openRow === null || draft !== null ? null : (
         <SpellCardDetails
-          spell={openSpell}
           row={openRow}
           casting={casting}
-          onCast={() => draftStore.getState().start(openSpell, openRow)}
-          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
+          onCast={() => draftStore.getState().start(openRow)}
+          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openRow.id, note })}
           onClose={() => setOpenSpellId(null)}
         />
       )}

@@ -213,7 +213,7 @@ describe("карточка", () => {
 
   it("свой компонент назван словами, и строка знает, лежит ли он в сумке", () => {
     // Компонент «Опознания» — жемчужина за 100 зм: фокусировка её не заменяет.
-    expect(row("identify").card.material?.textRu).toContain("жемчуж");
+    expect(row("identify").card.components.material?.textRu).toContain("жемчуж");
     expect(row("identify").ownComponentCarried).toBe(false);
 
     const bought = row("identify", createThorne(), [
@@ -221,7 +221,7 @@ describe("карточка", () => {
     ]);
     expect(bought.ownComponentCarried).toBe(true);
     // Заклинание без материального компонента о нём молчит.
-    expect(row("shield").card.material).toBeUndefined();
+    expect(row("shield").card.components.material).toBeUndefined();
   });
 
   it("заметка игрока едет строкой; ненаписанной нет вовсе", () => {

@@ -53,10 +53,13 @@ export function testClock(): Clock {
 }
 
 /**
- * Идёт ли бой. Отметка ставится той же командой, что и кнопкой на экране: хранимого признака
- * «бой идёт» нет, и подделать его подстановкой в состояние нельзя.
+ * Обстановка прогона: идёт ли бой и какими карточками играют.
+ *
+ * Отметка боя ставится той же командой, что и кнопкой на экране: хранимого признака «бой идёт» нет,
+ * и подделать его подстановкой в состояние нельзя. Каталог подменяется целиком — так проверяется
+ * то, чего в книге Торна нет: у всех его карточек по одному варианту отыгрыша на категорию.
  */
-export type PlaySituation = { inFight?: boolean };
+export type PlaySituation = { inFight?: boolean; catalog?: readonly Spell[] };
 
 /**
  * Снимок настоящего ядра без сторов и без ожидания.
@@ -122,7 +125,7 @@ export async function createTestStores(
       repository: createMemoryRepository(),
       clock,
       createInitialCharacter: () => character,
-      loadBuiltInCatalog: loadThorneSpells,
+      loadBuiltInCatalog: () => [...(situation.catalog ?? loadThorneSpells())],
     }),
     clock,
   );

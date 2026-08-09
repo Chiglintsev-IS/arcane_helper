@@ -39,8 +39,8 @@ export function MaterialsList({
               <span aria-hidden="true">{row.ownComponentCarried ? "✓" : "✖"}</span>
               <span className="flex-1 leading-tight">
                 <span className="font-medium">{row.nameRu}</span> —{" "}
-                {row.card.material?.textRu}
-                {row.card.material?.consumed === true ? " · расходуется" : ""}
+                {row.card.components.material?.textRu}
+                {row.card.components.material?.consumed === true ? " · расходуется" : ""}
               </span>
             </button>
           </li>

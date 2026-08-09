@@ -16,7 +16,7 @@ function Slots() {
 }
 
 function DraftName() {
-  const name = useDraft((state) => state.draft?.spell.nameRu ?? "черновика нет");
+  const name = useDraft((state) => state.draft?.spellId ?? "черновика нет");
   return <output>{name}</output>;
 }
 

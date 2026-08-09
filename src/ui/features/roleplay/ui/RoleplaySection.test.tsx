@@ -4,9 +4,9 @@
  * Блок отыгрыша: одна реплика цельной фразой, три категории и управление
  * вариантами.
  *
- * Предпочтения проверяются на настоящем сторе: компонент читает их сам, потому что рендерится и из
- * карточки, и из мастера применения, — прокидывать их через обоих значило бы завести два источника
- * одной правды.
+ * Варианты проверяются на настоящем сторе: компонент берёт строку заклинания сам, потому что
+ * рендерится и из карточки, и из мастера применения, — прокидывать её через обоих значило бы завести
+ * два источника одной правды.
  *
  * Первый тест сторожит склейку: до этой работы карточка показывала весь список реплик разом, через
  * « · », будто персонаж произносит их подряд. Ожидаемый текст берётся из контента, а не переписан
@@ -17,18 +17,20 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import type { RoleplayVariantView } from "@/contract/views";
 import type { Spell } from "@/core/domain/catalog/spell";
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { AppStores } from "@/ui/shared/model/storeContext";
-import { renderWithStores, spell } from "@/ui/app/testing/stores";
+import { renderWithStores, spell, testSpells } from "@/ui/app/testing/stores";
 import { RoleplaySection } from "./RoleplaySection";
 
 /**
- * Карточка с тремя вариантами в категории «Коротко». В контенте их по одному на категорию
- * ( требует три на заклинание), а порядок и ротацию видно только на нескольких.
+ * Книга, в которой у «Щита» три варианта в категории «Коротко». В контенте их по одному на
+ * категорию ( требует три на заклинание), а порядок и ротацию видно только на нескольких.
  */
-function threeShort(): Spell {
+function withThreeShort(): readonly Spell[] {
   const base = spell("shield");
-  return {
+  const changed: Spell = {
     ...base,
     roleplay: {
       ...base.roleplay,
@@ -39,10 +41,15 @@ function threeShort(): Spell {
       },
     },
   };
+  return testSpells.map((card) => (card.id === base.id ? changed : card));
 }
 
-function preferences(stores: AppStores) {
-  return stores.session.getState().session?.character.roleplayPreferences.shield;
+/** Варианты категории так, как их прислало ядро: пометки и ротация посчитаны им. */
+function variantsOf(stores: AppStores, category = "short"): RoleplayVariantView[] {
+  const row = stores.session
+    .getState()
+    .snapshot?.spells.find((candidate) => candidate.id === "shield");
+  return row?.roleplayCategories.find((shown) => shown.id === category)?.variants ?? [];
 }
 
 /** Тексты вариантов в порядке показа: только они, без кнопок действий. */
@@ -52,26 +59,28 @@ function shownVariants(): string[] {
     .map((button) => button.textContent ?? "");
 }
 
+const THREE_SHORT = { catalog: withThreeShort() };
+
 describe("реплика и жест", () => {
   it("показывает одну реплику в кавычках", async () => {
-    await renderWithStores(<RoleplaySection spell={spell("ray-of-frost")} />);
+    await renderWithStores(<RoleplaySection spellId="ray-of-frost" />);
     expect(screen.getByText(`«${spell("ray-of-frost").roleplay.incantation}»`)).toBeDefined();
   });
 
   it("не склеивает художественные строки через разделитель", async () => {
-    const { container } = await renderWithStores(<RoleplaySection spell={spell("ray-of-frost")} />);
+    const { container } = await renderWithStores(<RoleplaySection spellId="ray-of-frost" />);
     expect(container.textContent).not.toContain(" · ");
   });
 
   it("показывает жест как отдельную строку", async () => {
-    await renderWithStores(<RoleplaySection spell={spell("shield")} />);
+    await renderWithStores(<RoleplaySection spellId="shield" />);
     expect(screen.getByText(spell("shield").roleplay.gesture)).toBeDefined();
   });
 });
 
 describe("три категории вариантов (FR-051)", () => {
   it("предлагает короткий, атмосферный и саркастический", async () => {
-    await renderWithStores(<RoleplaySection spell={spell("shield")} />);
+    await renderWithStores(<RoleplaySection spellId="shield" />);
     for (const label of ["Коротко", "Атмосферно", "Саркастично"]) {
       expect(screen.getByRole("button", { name: label })).toBeDefined();
     }
@@ -80,7 +89,7 @@ describe("три категории вариантов (FR-051)", () => {
   it("показывает варианты выбранной категории, а не всех сразу", async () => {
     const user = userEvent.setup();
     const card = spell("shield");
-    await renderWithStores(<RoleplaySection spell={card} />);
+    await renderWithStores(<RoleplaySection spellId="shield" />);
 
     expect(shownVariants()).toEqual(card.roleplay.completeVariants.short);
 
@@ -92,18 +101,22 @@ describe("три категории вариантов (FR-051)", () => {
 describe("управление вариантами (FR-053)", () => {
   it("при открытии выбран вариант, использованный реже других", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<RoleplaySection spell={threeShort()} />);
+    const { stores } = await renderWithStores(
+      <RoleplaySection spellId="shield" />,
+      createThorne(),
+      THREE_SHORT,
+    );
 
     expect(screen.getByRole("button", { name: "Первый.", pressed: true })).toBeDefined();
 
-    // Выбор — это и есть использование: в следующий раз показан будет другой вариант.
-    await user.click(screen.getByRole("button", { name: "Второй." }));
-    expect(preferences(stores)?.usageCount).toEqual({ "short-1": 1 });
+    // Выбор — это и есть использование: показанный уступает место следующему по ротации.
+    await user.click(screen.getByRole("button", { name: "Первый." }));
+    expect(variantsOf(stores).find((variant) => variant.suggested)?.text).toBe("Второй.");
   });
 
   it("копирует текст выбранного варианта нажатием", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<RoleplaySection spell={threeShort()} />);
+    await renderWithStores(<RoleplaySection spellId="shield" />, createThorne(), THREE_SHORT);
 
     await user.click(screen.getByRole("button", { name: "Третий." }));
     await user.click(screen.getByRole("button", { name: "Скопировать" }));
@@ -113,42 +126,54 @@ describe("управление вариантами (FR-053)", () => {
 
   it("отмечает любимым, и любимый поднимается выше остальных", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<RoleplaySection spell={threeShort()} />);
+    const { stores } = await renderWithStores(
+      <RoleplaySection spellId="shield" />,
+      createThorne(),
+      THREE_SHORT,
+    );
 
     await user.click(screen.getByRole("button", { name: "Третий." }));
     await user.click(screen.getByRole("button", { name: "В любимые" }));
 
-    expect(preferences(stores)?.favoriteVariantIds).toEqual(["short-2"]);
+    expect(variantsOf(stores).filter((variant) => variant.favorite)).toHaveLength(1);
     expect(shownVariants()).toEqual(["Третий.", "Первый.", "Второй."]);
     expect(screen.getByRole("button", { name: "Из любимых" })).toBeDefined();
   });
 
   it("принимает свой вариант и показывает его первым", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<RoleplaySection spell={threeShort()} />);
+    const { stores } = await renderWithStores(
+      <RoleplaySection spellId="shield" />,
+      createThorne(),
+      THREE_SHORT,
+    );
 
     await user.click(screen.getByRole("button", { name: "Написать свой" }));
     await user.type(screen.getByLabelText("Свой вариант отыгрыша"), "Мой текст.");
     await user.click(screen.getByRole("button", { name: "Добавить" }));
 
     expect(shownVariants()[0]).toBe("Мой текст.");
-    expect(preferences(stores)?.customVariants[0]?.category).toBe("short");
+    expect(variantsOf(stores)[0]).toMatchObject({ text: "Мой текст.", own: true });
   });
 
   it("пустой свой вариант не добавляется", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<RoleplaySection spell={threeShort()} />);
+    const { stores } = await renderWithStores(
+      <RoleplaySection spellId="shield" />,
+      createThorne(),
+      THREE_SHORT,
+    );
 
     await user.click(screen.getByRole("button", { name: "Написать свой" }));
     await user.click(screen.getByRole("button", { name: "Добавить" }));
 
-    expect(preferences(stores)?.customVariants ?? []).toHaveLength(0);
+    expect(variantsOf(stores).filter((variant) => variant.own)).toHaveLength(0);
     expect(shownVariants()).toEqual(["Первый.", "Второй.", "Третий."]);
   });
 
   it("отключает нежелательный вариант и возвращает его обратно", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<RoleplaySection spell={threeShort()} />);
+    await renderWithStores(<RoleplaySection spellId="shield" />, createThorne(), THREE_SHORT);
 
     await user.click(screen.getByRole("button", { name: "Второй." }));
     await user.click(screen.getByRole("button", { name: "Отключить" }));
@@ -160,7 +185,7 @@ describe("управление вариантами (FR-053)", () => {
 
   it("категория без включённых вариантов пропадает из списка категорий", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<RoleplaySection spell={threeShort()} />);
+    await renderWithStores(<RoleplaySection spellId="shield" />, createThorne(), THREE_SHORT);
 
     await user.click(screen.getByRole("button", { name: "Саркастично" }));
     await user.click(screen.getByRole("button", { name: "Саркастичный." }));
@@ -173,7 +198,7 @@ describe("управление вариантами (FR-053)", () => {
   it("последнюю категорию отключить нельзя, и причина названа", async () => {
     const user = userEvent.setup();
     const card = spell("shield");
-    const { stores } = await renderWithStores(<RoleplaySection spell={card} />);
+    const { stores } = await renderWithStores(<RoleplaySection spellId="shield" />);
 
     for (const category of ["Атмосферно", "Саркастично"]) {
       await user.click(screen.getByRole("button", { name: category }));
