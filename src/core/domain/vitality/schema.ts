@@ -99,4 +99,3 @@ export const VITALITY_FIELDS = {
 const vitalityStateSchema = z.object(VITALITY_FIELDS);
 
 export type VitalityState = DeepReadonly<z.infer<typeof vitalityStateSchema>>;
-export type HitDice = DeepReadonly<NonNullable<z.infer<typeof hitDiceSchema>>>;

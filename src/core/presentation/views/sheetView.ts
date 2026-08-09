@@ -80,6 +80,7 @@ export function toSheetView(character: CharacterState): SheetView {
       maximumBase: vitality.maximumBase,
       bloodReduction: vitality.bloodReduction,
       masterReduction: vitality.masterReduction,
+      maximumReduction: vitality.maximumReduction,
       temporary: vitality.temporary,
       ...(hitDice === undefined
         ? {}

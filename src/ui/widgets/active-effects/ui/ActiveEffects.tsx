@@ -11,7 +11,6 @@
 
 "use client";
 
-import { Character } from "@/core/domain/assembly/character";
 import { useState, type FormEvent } from "react";
 
 import { ConcentrationCard } from "@/ui/entities/concentration/ui/ConcentrationCard";
@@ -61,19 +60,21 @@ function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
 
 export function ActiveEffects({
   character,
+  armorClass,
   concentration,
   onOpenConcentration,
   onEndEffect,
   onAddStatus,
 }: {
   character: CharacterState;
+  /** Действующая защита: то же число, что в шапке и на «Листе», — его считает лист. */
+  armorClass: number;
   concentration: ConcentrationSummary | null;
   onOpenConcentration: () => void;
   onEndEffect: (effectId: string) => void;
   /** Заводит статус без вклада в КД: поле стоит прямо в блоке, рядом со списком. */
   onAddStatus: (nameRu: string) => void;
 }) {
-  const armorClass = Character.of(character).sheet.value("armorClass");
   const concentrationEffect = character.activeEffects.find((effect) => effect.isConcentration);
   const otherEffects = character.activeEffects.filter((effect) => !effect.isConcentration);
 

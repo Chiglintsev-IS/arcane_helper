@@ -72,20 +72,23 @@ export function RestScreen() {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-col gap-2">
         <ResourceHeader
-          character={character}
+          sheet={snapshot.sheet}
+          resources={snapshot.resources}
           onOpenArmorClass={() => setArmorClassOpen(true)}
           onOpenHitPoints={() => setDamageOpen(true)}
           onEditResources={() => setResourcesOpen(true)}
         />
 
         <ResourceBadges
-          character={character}
-          economy={economy}
+          sheet={snapshot.sheet}
+          resources={snapshot.resources}
+          turn={snapshot.turn}
           bookCastingTimes={dividing.castingTimes}
         />
 
         <ActiveEffects
           character={character}
+          armorClass={snapshot.sheet.armorClass.value}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
@@ -142,7 +145,7 @@ export function RestScreen() {
 
       {armorClassOpen ? (
         <ArmorClassSheet
-          value={Character.of(character).effects.manualAdjustment("armorAdjustment")}
+          value={snapshot.resources.armorClassAdjustment}
           onCancel={() => setArmorClassOpen(false)}
           onSave={async (value) => {
             const failure = await execute({ kind: "set_armor_class_adjustment", value });

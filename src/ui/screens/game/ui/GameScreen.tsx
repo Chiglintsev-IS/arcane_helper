@@ -152,7 +152,8 @@ export function GameScreen() {
          */}
         <div className="sticky top-0 z-10 bg-[Canvas] pb-1 pt-2">
           <ResourceHeader
-            character={character}
+            sheet={snapshot.sheet}
+            resources={snapshot.resources}
             onOpenArmorClass={() => setArmorClassOpen(true)}
             onOpenHitPoints={() => setDamageOpen(true)}
             onEditResources={() => setResourcesOpen(true)}
@@ -160,13 +161,15 @@ export function GameScreen() {
         </div>
 
         <ResourceBadges
-          character={character}
-          economy={economy}
+          sheet={snapshot.sheet}
+          resources={snapshot.resources}
+          turn={snapshot.turn}
           bookCastingTimes={dividing.castingTimes}
         />
 
         <ActiveEffects
           character={character}
+          armorClass={snapshot.sheet.armorClass.value}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
@@ -275,7 +278,7 @@ export function GameScreen() {
 
       {armorClassOpen ? (
         <ArmorClassSheet
-          value={Character.of(character).effects.manualAdjustment("armorAdjustment")}
+          value={snapshot.resources.armorClassAdjustment}
           error={refusal}
           onCancel={() => {
             setRefusal(null);

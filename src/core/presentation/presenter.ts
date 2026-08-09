@@ -11,6 +11,7 @@ import type { Snapshot } from "@/contract/snapshot";
 import type { LiveSession } from "@/core/application/session";
 
 import { toBagView } from "./views/bagView";
+import { toResourcesView } from "./views/resourcesView";
 import { toSheetView } from "./views/sheetView";
 import { toCastingView, toSpellRowViews, toTurnView } from "./views/spellRowsView";
 
@@ -19,6 +20,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     version,
     sheet: toSheetView(live.session.character),
     bag: toBagView(live.session.character),
+    resources: toResourcesView(live.session.character),
     turn: toTurnView(live),
     casting: toCastingView(live.session.character),
     spells: toSpellRowViews(live),

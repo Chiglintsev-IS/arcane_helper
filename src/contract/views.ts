@@ -68,6 +68,8 @@ const hitPointsViewSchema = z.object({
   maximumBase: whole,
   bloodReduction: whole,
   masterReduction: whole,
+  /** Насколько максимум ниже базового: за столом важен разрыв, а не то, чем он вызван. */
+  maximumReduction: whole,
   temporary: whole,
   /** Костей хитов может не быть вовсе: состояние приехало из чужой сборки. */
   hitDice: z.object({ remaining: whole, total: whole, size: whole }).optional(),
@@ -143,6 +145,26 @@ export const bagViewSchema = z.object({
 });
 
 /**
+ * Действующие числа боя: чем платить и что мешает прямо сейчас.
+ *
+ * Отдельно от листа, потому что двигаются они каждый ход, а лист за сессию почти не меняется.
+ * Хиты и Класс Доспеха сюда не повторяются: их считает лист, и второе такое же число разошлось бы
+ * с первым молча.
+ */
+export const resourcesViewSchema = z.object({
+  /** Ячейки по возрастанию уровня: порядок принадлежит правилам, а не порядку ключей состояния. */
+  slots: z.array(z.object({ level: whole, remaining: whole, maximum: whole })),
+  runes: z.object({ remaining: whole, maximum: whole }),
+  spellPoints: whole,
+  /** Ручная поправка Класса Доспеха: правится там же, где видна. */
+  armorClassAdjustment: whole,
+  passivePerception: whole,
+  initiative: whole,
+  /** Чем подавлены особенности вида: приложение это показывает, а решает мастер. */
+  suppression: z.object({ firedUpon: z.boolean(), underDirectSunlight: z.boolean() }),
+});
+
+/**
  * Экономия хода: что осталось потратить и на каком раунде это происходит.
  *
  * Вне боя ходов нет, и правила отвечают «всё доступно» независимо от журнала — признак схватки
@@ -212,6 +234,7 @@ export const castingViewSchema = z.object({
 });
 
 export type ContributionView = z.infer<typeof contributionViewSchema>;
+export type ResourcesView = z.infer<typeof resourcesViewSchema>;
 export type TurnView = z.infer<typeof turnViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;

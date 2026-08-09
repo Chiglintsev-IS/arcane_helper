@@ -9,15 +9,12 @@
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
 
-import { Character } from "@/core/domain/assembly/character";
-import type { TurnEconomy } from "@/core/domain/encounter/encounter";
+import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
+
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { Vitality } from "@/core/domain/vitality/vitality";
 import { signed } from "@/core/shared/language";
-import { slotsInOrder } from "@/core/domain/arcana/slots";
 
 /**
  * Ярлык ресурса хода. Подпись одна и та же в обоих состояниях: израсходованность несут знак и
@@ -154,40 +151,39 @@ function SlotCounter({
  * перестраиваться от начала боя.
  */
 export function ResourceHeader({
-  character,
+  sheet,
+  resources,
   onOpenArmorClass,
   onOpenHitPoints,
   onEditResources,
 }: {
-  character: CharacterState;
+  /** Хиты и защита приезжают листом: то же число, что на «Листе», а не второй его счёт. */
+  sheet: SheetView;
+  resources: ResourcesView;
   onOpenArmorClass: () => void;
   onOpenHitPoints: () => void;
   /** Ручная правка ячеек и рун. */
   onEditResources: () => void;
 }) {
-  const slots = slotsInOrder(character.spellSlots);
-
-  // Слагаемые состояния не складываются здесь: итог с учётом эффектов считает движок.
-  const vitality = Vitality.of(character);
-  const armorClass = Character.of(character).sheet.value("armorClass");
+  const { hitPoints } = sheet;
 
   return (
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
       <dl className="grid grid-cols-2 gap-1">
         <ArmorClassStat
-          value={`${armorClass}`}
-          adjustment={Character.of(character).effects.manualAdjustment("armorAdjustment")}
+          value={`${sheet.armorClass.value}`}
+          adjustment={resources.armorClassAdjustment}
           onOpen={onOpenArmorClass}
         />
         <HitPointsStat
-          value={`${vitality.current}/${vitality.maximum}`}
-          temporary={character.temporaryHitPoints}
+          value={`${hitPoints.current}/${hitPoints.maximum}`}
+          temporary={hitPoints.temporary}
           onOpen={onOpenHitPoints}
         />
       </dl>
 
       <ul aria-label="Ячейки заклинаний" className="flex gap-1">
-        {slots.map((slot) => (
+        {resources.slots.map((slot) => (
           <SlotCounter
             key={slot.level}
             level={slot.level}
@@ -206,20 +202,19 @@ export function ResourceHeader({
  * ситуации, и закрепить их значило бы отдать прокрутке первую карточку.
  */
 export function ResourceBadges({
-  character,
-  economy,
+  sheet,
+  resources,
+  turn,
   bookCastingTimes,
 }: {
-  character: CharacterState;
-  economy: TurnEconomy;
+  sheet: SheetView;
+  resources: ResourcesView;
+  turn: TurnView;
   /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
   bookCastingTimes: ReadonlySet<string>;
 }) {
-  const totals = Character.of(character).sheet;
-  const vitality = Vitality.of(character);
-  // Игроку важен разрыв с базой листа, а не то, чем он вызван: цифра одна.
-  const maximumReduction = vitality.maximumReduction;
-  const { inFight } = economy;
+  const { hitPoints } = sheet;
+  const { inFight } = turn;
 
   return (
     <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
@@ -228,18 +223,18 @@ export function ResourceBadges({
          * восприятие, руны, очки. Значок, исчезающий с началом боя, сдвинул бы соседей, и глаз
          * искал бы число заново там, где секунду назад стояло другое.
          */}
-        <li aria-label={`Кости хитов ${hitDiceLabel(character.hitDice)}`}>
+        <li aria-label={`Кости хитов ${hitDiceLabel(hitPoints.hitDice)}`}>
           <Badge tone="muted" icon="✚">
-            Кости {hitDiceLabel(character.hitDice)}
+            Кости {hitDiceLabel(hitPoints.hitDice)}
           </Badge>
         </li>
         {/*
          * Подпись короткая, доступное имя полное: на 320 пикселях «Пассивное восприятие» забирает
          * целый ряд значков, а ряд здесь стоит четверти карточки списка.
          */}
-        <li aria-label={`Пассивное восприятие ${totals.value("passivePerception")}`}>
+        <li aria-label={`Пассивное восприятие ${resources.passivePerception}`}>
           <Badge tone="muted" icon="◉">
-            Восприятие {totals.value("passivePerception")}
+            Восприятие {resources.passivePerception}
           </Badge>
         </li>
         {/*
@@ -248,12 +243,12 @@ export function ResourceBadges({
          */}
         <li>
           <Badge tone="ritual" icon="❖">
-            Руны {character.runes.remaining}/{character.runes.maximum}
+            Руны {resources.runes.remaining}/{resources.runes.maximum}
           </Badge>
         </li>
         <li>
           <Badge tone="muted" icon="✚">
-            Очки {character.spellPoints.remaining}
+            Очки {resources.spellPoints}
           </Badge>
         </li>
         {/*
@@ -264,20 +259,20 @@ export function ResourceBadges({
           <>
             <li>
               <Badge tone="muted" icon="◔">
-                Инициатива {signed(totals.value("initiative"))}
+                Инициатива {signed(resources.initiative)}
               </Badge>
             </li>
             <li>
               <Badge tone="action" icon="◷">
-                Раунд {economy.round}
+                Раунд {turn.round}
               </Badge>
             </li>
           </>
         ) : null}
-        {maximumReduction > 0 ? (
+        {hitPoints.maximumReduction > 0 ? (
           <li>
             <Badge tone="reaction" icon="✖">
-              Максимум снижен на {maximumReduction}
+              Максимум снижен на {hitPoints.maximumReduction}
             </Badge>
           </li>
         ) : null}
@@ -285,28 +280,28 @@ export function ResourceBadges({
          * Ступень названа числом и словом, а не одним цветом. Отсутствующего в ряду нет вовсе:
          * «Истощение 0» занимало бы место сообщением о том, чего не происходит.
          */}
-        {character.exhaustion > 0 ? (
-          <li aria-label={`Истощение: ступень ${character.exhaustion}`}>
+        {sheet.exhaustion > 0 ? (
+          <li aria-label={`Истощение: ступень ${sheet.exhaustion}`}>
             <Badge tone="reaction" icon="✖">
-              Истощение {character.exhaustion}
+              Истощение {sheet.exhaustion}
             </Badge>
           </li>
         ) : null}
-        {character.inspiration ? (
+        {sheet.inspiration ? (
           <li aria-label="Вдохновение">
             <Badge tone="action" icon="✦">
               Вдохновение
             </Badge>
           </li>
         ) : null}
-        {character.suppression.firedUpon ? (
+        {resources.suppression.firedUpon ? (
           <li>
             <Badge tone="reaction" icon="✖">
               Особенности подавлены: урон огнём
             </Badge>
           </li>
         ) : null}
-        {character.suppression.underDirectSunlight ? (
+        {resources.suppression.underDirectSunlight ? (
           <li>
             <Badge tone="reaction" icon="✖">
               Особенности подавлены: солнечный свет
@@ -322,8 +317,8 @@ export function ResourceBadges({
          */}
         {inFight ? (
           <>
-            <li aria-label={economy.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
-              <TurnResource available={economy.actionAvailable} tone="action">
+            <li aria-label={turn.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
+              <TurnResource available={turn.actionAvailable} tone="action">
                 Действие
               </TurnResource>
             </li>
@@ -331,18 +326,18 @@ export function ResourceBadges({
             {bookCastingTimes.has("bonus_action") ? (
               <li
                 aria-label={
-                  economy.bonusActionAvailable
+                  turn.bonusActionAvailable
                     ? "Бонусное действие доступно"
                     : "Бонусное действие израсходовано"
                 }
               >
-                <TurnResource available={economy.bonusActionAvailable} tone="bonus">
+                <TurnResource available={turn.bonusActionAvailable} tone="bonus">
                   Бонусное
                 </TurnResource>
               </li>
             ) : null}
-            <li aria-label={economy.reactionAvailable ? "Реакция доступна" : "Реакция израсходована"}>
-              <TurnResource available={economy.reactionAvailable} tone="reaction">
+            <li aria-label={turn.reactionAvailable ? "Реакция доступна" : "Реакция израсходована"}>
+              <TurnResource available={turn.reactionAvailable} tone="reaction">
                 Реакция
               </TurnResource>
             </li>
