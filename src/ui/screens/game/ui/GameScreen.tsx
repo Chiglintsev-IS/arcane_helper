@@ -7,7 +7,6 @@ import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import type { Command } from "@/contract/commands";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
-import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
@@ -59,9 +58,9 @@ export function GameScreen() {
     setRefusal(reason);
     if (reason === null) close();
   };
-  const economy = deriveTurnEconomy(session);
-  const { inFight } = economy;
-  const context = { character, turn: economy };
+  const turn = snapshot.turn;
+  const { inFight } = turn;
+  const context = { character, turn };
 
   const { concentration } = snapshot;
   const concentrationSummary = useMemo(() => {
@@ -97,7 +96,7 @@ export function GameScreen() {
         key="blood-magic"
         character={character}
         casting={casting}
-        economy={economy}
+        turn={turn}
         onOpen={() => setBloodOpen(true)}
       />
     ));
@@ -232,7 +231,7 @@ export function GameScreen() {
       {bloodOpen ? (
         <BloodMagicWizard
           character={character}
-          economy={economy}
+          turn={turn}
           error={error}
           onCancel={() => setBloodOpen(false)}
           onConfirm={async (points, allowAnyway) => {
@@ -311,7 +310,7 @@ export function GameScreen() {
           rows={snapshot.spells}
           armorClass={snapshot.sheet.armorClass.value}
           runesRemaining={snapshot.resources.runes.remaining}
-          reactionAvailable={economy.reactionAvailable}
+          reactionAvailable={turn.reactionAvailable}
           runeAvailable={snapshot.resources.wardingSigilAvailable}
           onCast={(spell) => {
             setReactionsOpen(false);
@@ -372,7 +371,7 @@ export function GameScreen() {
       <CastWizard
         character={character}
         casting={casting}
-        economy={economy}
+        turn={turn}
         onConfirm={confirm}
         error={error}
       />

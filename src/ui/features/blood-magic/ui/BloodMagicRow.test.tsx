@@ -5,13 +5,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { testSnapshot } from "@/ui/app/testing/stores";
-import type { TurnEconomy } from "@/core/domain/encounter/encounter";
+import type { TurnView } from "@/contract/views";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
 
-const IN_TURN: TurnEconomy = {
+const IN_TURN: TurnView = {
   round: 1,
   inFight: true,
   actionAvailable: true,
@@ -19,13 +19,13 @@ const IN_TURN: TurnEconomy = {
   reactionAvailable: true,
 };
 
-function renderRow(economy: TurnEconomy): void {
+function renderRow(turn: TurnView): void {
   render(
     <ul>
       <BloodMagicRow
         character={createThorne()}
         casting={testSnapshot().casting}
-        economy={economy}
+        turn={turn}
         onOpen={() => {}}
       />
     </ul>,

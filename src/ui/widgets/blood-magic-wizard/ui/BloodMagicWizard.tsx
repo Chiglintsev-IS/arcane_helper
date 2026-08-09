@@ -2,7 +2,6 @@
 
 "use client";
 
-import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { useState } from "react";
 
 import {
@@ -10,6 +9,7 @@ import {
   WIZARD_STEP_TITLES,
   WizardShell,
 } from "@/ui/shared/ui/WizardShell";
+import type { TurnView } from "@/contract/views";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import {
   bloodExchangeAnnouncement,
@@ -132,13 +132,13 @@ function SummaryStep({ character, points }: { character: CharacterState; points:
 
 export function BloodMagicWizard({
   character,
-  economy,
+  turn,
   onConfirm,
   onCancel,
   error,
 }: {
   character: CharacterState;
-  economy: TurnEconomy;
+  turn: TurnView;
   /** Единственное действие мастера, меняющее состояние персонажа. */
   onConfirm: (points: number, allowAnyway: boolean) => void;
   onCancel: () => void;
@@ -151,10 +151,10 @@ export function BloodMagicWizard({
   // Первый шаг — первый видимый, как в `castDraftStore.start`: иначе предупреждение о подавлении
   // остаётся за спиной, а игрок узнаёт о нём отказом при подтверждении.
   const [step, setStep] = useState<Step>(() =>
-    exchangeWarnings(character, economy).length > 0 ? "availability" : "amount",
+    exchangeWarnings(character, turn).length > 0 ? "availability" : "amount",
   );
 
-  const warnings = exchangeWarnings(character, economy);
+  const warnings = exchangeWarnings(character, turn);
   const steps: Step[] = warnings.length > 0 ? [...STEPS] : ["amount", "summary"];
   const current = steps.includes(step) ? step : "amount";
   const index = steps.indexOf(current);

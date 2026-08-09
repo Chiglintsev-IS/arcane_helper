@@ -2,9 +2,8 @@
 
 "use client";
 
-import type { CastingView } from "@/contract/views";
+import type { CastingView, TurnView } from "@/contract/views";
 
-import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { useState } from "react";
 
 import {
@@ -559,13 +558,13 @@ function SummaryStep({
 export function CastWizard({
   character,
   casting,
-  economy,
+  turn,
   onConfirm,
   error,
 }: {
   character: CharacterState;
   casting: CastingView;
-  economy: TurnEconomy;
+  turn: TurnView;
   /** Подтверждение: единственное действие мастера, меняющее состояние персонажа. */
   onConfirm: (draft: CastDraft) => void;
   error: string | null;
@@ -575,12 +574,12 @@ export function CastWizard({
 
   if (draft === null) return null;
 
-  const context = { character, turn: economy };
+  const context = { character, turn };
   const steps = visibleSteps(draft, context);
   const availability = checkAvailability({
     spell: draft.spell,
     character,
-    turn: economy,
+    turn,
     mode: draft.mode,
     payment: draft.payment,
   });
@@ -654,7 +653,7 @@ export function CastWizard({
           <SlotStep
             draft={draft}
             character={character}
-            inCombat={economy.inFight}
+            inCombat={turn.inFight}
             onChoose={(option) => actions.chooseCastOption(option)}
           />
           {/*

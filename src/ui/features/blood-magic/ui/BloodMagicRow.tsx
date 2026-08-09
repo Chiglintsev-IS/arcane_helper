@@ -10,9 +10,8 @@
  * список, обещавший «вот всё, что подходит», врал.
  */
 
-import type { CastingView } from "@/contract/views";
+import type { CastingView, TurnView } from "@/contract/views";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
-import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { Fragment } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
@@ -27,20 +26,20 @@ import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 export function BloodMagicRow({
   character,
   casting,
-  economy,
+  turn,
   onOpen,
 }: {
   character: CharacterState;
   /** Числа заклинателя: обмен называет их тем же значком, что и заклинание. */
   casting: CastingView;
-  economy: TurnEconomy;
+  turn: TurnView;
   onOpen: () => void;
 }) {
   const rate = ascensionTierRate(character.level);
   // Причина — целая фраза, как у заклинания: одно слово «действие» не говорит, что с ним не так.
   const reason = !bloodMagicAvailable(character.suppression)
     ? "Особенности подавлены"
-    : !economy.actionAvailable
+    : !turn.actionAvailable
       ? ACTION_SPENT_MESSAGES.action
       : null;
 

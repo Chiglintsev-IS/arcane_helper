@@ -14,7 +14,6 @@ import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
-import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 
 export function BookScreen() {
@@ -31,9 +30,9 @@ export function BookScreen() {
 
   const { character } = session;
   const execute = sessionStore.getState().execute;
-  const economy = deriveTurnEconomy(session);
-  const context = { character, turn: economy };
-  const { inFight } = economy;
+  const turn = snapshot.turn;
+  const context = { character, turn };
+  const { inFight } = turn;
   const { casting } = snapshot;
 
   const inMode = spellsForScreen(snapshot.spells, "book");
@@ -62,7 +61,7 @@ export function BookScreen() {
         key="blood-magic"
         character={character}
         casting={casting}
-        economy={economy}
+        turn={turn}
         onOpen={() => setBloodOpen(true)}
       />
     ));
@@ -127,7 +126,7 @@ export function BookScreen() {
       {bloodOpen ? (
         <BloodMagicWizard
           character={character}
-          economy={economy}
+          turn={turn}
           error={error}
           onCancel={() => setBloodOpen(false)}
           onConfirm={async (points, allowAnyway) => {
@@ -144,7 +143,7 @@ export function BookScreen() {
       <CastWizard
         character={character}
         casting={casting}
-        economy={economy}
+        turn={turn}
         onConfirm={confirm}
         error={error}
       />
