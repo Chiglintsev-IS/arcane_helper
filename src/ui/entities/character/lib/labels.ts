@@ -14,7 +14,7 @@ import {
 import type { CreatureSize } from "@/core/domain/character/schema";
 import type { Currency } from "@/core/domain/equipment/schema";
 import type { ItemKind } from "@/core/domain/items/schema";
-import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
+import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
 
 export const ABILITY_LABELS: Record<Ability, string> = {
   strength: "Сила",

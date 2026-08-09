@@ -1,6 +1,6 @@
 import type { CastingView, ConcentrationView, SpellRowView } from "@/contract/views";
 
-import { signed } from "@/core/shared/language";
+import { signed } from "@/shared/language";
 import { areaPhrase, rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 
 /** Способ прерывания концентрации. Право мастера помечено: приложение его не применяет само. */

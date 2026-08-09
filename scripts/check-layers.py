@@ -354,7 +354,7 @@ def check_imports(path: pathlib.Path) -> None:
             errors.append(f"{path}: логика тянет отображение — @/{target}")
             continue
 
-        if source_layer == "core/domain" and target_layer not in ("core/domain", "core/shared"):
+        if source_layer == "core/domain" and target_layer not in ("core/domain", "shared"):
             errors.append(f"{path}: домен зависит от внешнего слоя — @/{target}")
             continue
 

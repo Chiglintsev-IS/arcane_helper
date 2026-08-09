@@ -17,7 +17,7 @@ import {
 import type { PreviewOf } from "@/contract/questions";
 import type { BloodMagicView, SheetView } from "@/contract/views";
 import { usePreview } from "@/ui/shared/model/usePreview";
-import { withPlural } from "@/core/shared/language";
+import { withPlural } from "@/shared/language";
 
 type ExchangePreview = PreviewOf<"blood_exchange_preview">;
 

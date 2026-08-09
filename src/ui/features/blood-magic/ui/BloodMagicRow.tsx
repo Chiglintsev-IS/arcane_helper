@@ -20,7 +20,7 @@ import { Fragment } from "react";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { combatRole } from "@/ui/entities/spell/lib/format";
 import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
-import { withPlural } from "@/core/shared/language";
+import { withPlural } from "@/shared/language";
 
 export function BloodMagicRow({
   bloodMagic,

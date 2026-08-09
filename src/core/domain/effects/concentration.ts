@@ -1,7 +1,7 @@
 import { DomainError } from "@/core/domain/shared/errors";
 import type { ActiveEffect } from "./schema";
 
-import { withPlural } from "@/core/shared/language";
+import { withPlural } from "@/shared/language";
 
 export const MINIMUM_CONCENTRATION_DC = 10;
 

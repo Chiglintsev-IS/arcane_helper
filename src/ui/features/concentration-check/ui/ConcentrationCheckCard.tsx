@@ -13,7 +13,7 @@ import { useState } from "react";
 
 import type { ConcentrationCheckView } from "@/contract/views";
 import { checkGuidanceRu } from "@/ui/features/concentration-check/lib/checkGuidance";
-import { signed } from "@/core/shared/language";
+import { signed } from "@/shared/language";
 
 export function ConcentrationCheckCard({
   check,

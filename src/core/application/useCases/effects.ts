@@ -7,7 +7,7 @@ import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
 import type { StatContribution } from "@/core/domain/shared/stats";
 import { DomainError } from "@/core/domain/shared/errors";
-import { signed } from "@/core/shared/language";
+import { signed } from "@/shared/language";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";

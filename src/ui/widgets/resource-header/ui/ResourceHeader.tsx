@@ -14,7 +14,7 @@ import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
-import { signed } from "@/core/shared/language";
+import { signed } from "@/shared/language";
 
 /**
  * Ярлык ресурса хода. Подпись одна и та же в обоих состояниях: израсходованность несут знак и

@@ -3,7 +3,7 @@
 import type { BagView, ItemView } from "@/contract/views";
 import { currencyAbbr, statLabel } from "@/ui/entities/character/lib/labels";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
-import { signed } from "@/core/shared/language";
+import { signed } from "@/shared/language";
 
 /**
  * Разделы сумки — по категории вещи. Порядок постоянен, пустой раздел остаётся на месте со своей

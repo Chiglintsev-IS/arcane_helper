@@ -15,7 +15,7 @@ import { saveStatId } from "@/core/domain/shared/stats";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
 import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
-import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/core/shared/language";
+import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/shared/language";
 import {
   hitPointCost,
   hitPointsForPoints,

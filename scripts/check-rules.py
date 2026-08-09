@@ -57,7 +57,7 @@ MINIMUM_SHARED_LENGTH = 16
 ALLOWED_REPEATS: set[str] = set()
 
 # Владелец сокращений монет и мер: единственная таблица, с которой их сверяют.
-LANGUAGE_OWNER = "src/core/shared/language.ts"
+LANGUAGE_OWNER = "src/shared/language.ts"
 
 # Поля состояния, чьи числа следуют правилам своих контекстов: их меняет операция, а не литерал.
 RULED_STATE_FIELDS = (

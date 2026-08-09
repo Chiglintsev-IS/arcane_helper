@@ -13,7 +13,7 @@ import {
   timeSpanAccusativeRu,
   type LongCastingUnit,
   type TimeUnit,
-} from "@/core/shared/language";
+} from "@/shared/language";
 import { type Tone } from "@/ui/shared/ui/tone";
 
 /** Заговор ячейки не стоит. Число — цена строки, а не вид заклинания. */

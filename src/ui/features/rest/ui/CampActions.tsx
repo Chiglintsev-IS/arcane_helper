@@ -13,7 +13,7 @@
 "use client";
 
 import type { RecoveryView } from "@/contract/views";
-import { withPlural } from "@/core/shared/language";
+import { withPlural } from "@/shared/language";
 import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
 import { RestActionButton } from "./RestActionButton";
 

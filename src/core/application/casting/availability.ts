@@ -9,7 +9,7 @@ import {
   longCastingTimeRu,
   withPlural,
   type LongCastingUnit,
-} from "@/core/shared/language";
+} from "@/shared/language";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL, needsOwnComponent } from "@/core/domain/catalog/spell";
 

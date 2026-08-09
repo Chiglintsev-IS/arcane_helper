@@ -15,7 +15,7 @@ import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 import type { Money } from "@/core/domain/equipment/schema";
 import { CURRENCIES } from "@/core/domain/shared/schema";
-import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
+import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 
 function applied(

@@ -19,7 +19,7 @@ import {
   statLabel,
   trainingLabel,
 } from "@/ui/entities/character/lib/labels";
-import { signed } from "@/core/shared/language";
+import { signed } from "@/shared/language";
 
 export type SheetRow = { labelRu: string; value: string; hint?: string };
 

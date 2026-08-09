@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { longCastingTimeRu, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, withPlural } from "@/core/shared/language";
+import { longCastingTimeRu, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, withPlural } from "@/shared/language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 

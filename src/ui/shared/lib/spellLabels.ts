@@ -16,7 +16,7 @@ import {
   plural,
   SAVING_THROW_NAMES,
   signed,
-} from "@/core/shared/language";
+} from "@/shared/language";
 
 /** Заголовок списка: строка обмена стоит среди заклинаний, но заклинанием не является. */
 export function spellListLabel(withActions: boolean): string {
