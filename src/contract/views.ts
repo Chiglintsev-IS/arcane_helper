@@ -126,6 +126,8 @@ const itemViewSchema = z.object({
   wornCount: whole,
   price: z.object({ amount: whole, currency: word }).optional(),
   bonuses: z.array(z.object({ stat: word, value: whole })),
+  /** База защиты и род доспеха; нет вовсе — вещь доспехом не является. */
+  armor: z.object({ base: whole, category: word.optional() }).optional(),
   note: text.optional(),
 });
 

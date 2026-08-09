@@ -31,6 +31,14 @@ function itemView(item: ItemDefinition, equipment: Equipment): ItemView {
       const value = item.bonuses?.[stat];
       return value === undefined ? [] : [{ stat, value }];
     }),
+    ...(item.armor === undefined
+      ? {}
+      : {
+          armor: {
+            base: item.armor.base,
+            ...(item.armor.category === undefined ? {} : { category: item.armor.category }),
+          },
+        }),
     ...(item.note === undefined ? {} : { note: item.note }),
   };
 }

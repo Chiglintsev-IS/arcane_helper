@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { testSnapshot } from "@/ui/app/testing/stores";
 import { MarksSheet } from "./MarksSheet";
 
 afterEach(cleanup);
@@ -11,7 +11,7 @@ afterEach(cleanup);
 describe("шторка отметок мастера", () => {
   it("отметки мастера: ступень истощения от нуля до шести", async () => {
     const onSave = vi.fn();
-    render(<MarksSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
+    render(<MarksSheet marks={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.click(screen.getByRole("radio", { name: "Ступень 3" }));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -21,7 +21,7 @@ describe("шторка отметок мастера", () => {
 
   it("отметки мастера: вдохновение переключается", async () => {
     const onSave = vi.fn();
-    render(<MarksSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
+    render(<MarksSheet marks={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
 
     await userEvent.click(screen.getByLabelText("Вдохновение"));
     await userEvent.click(screen.getByRole("radio", { name: "Без истощения" }));
@@ -33,7 +33,7 @@ describe("шторка отметок мастера", () => {
   it("отмена закрывает шторку, ничего не сохраняя", async () => {
     const onCancel = vi.fn();
     const onSave = vi.fn();
-    render(<MarksSheet character={createThorne()} onSave={onSave} onCancel={onCancel} />);
+    render(<MarksSheet marks={testSnapshot().sheet} onSave={onSave} onCancel={onCancel} />);
 
     await userEvent.click(screen.getByRole("button", { name: "Отмена" }));
 

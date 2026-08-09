@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 
-import type { PermanentContribution } from "@/core/domain/character/schema";
-import type { CharacterState } from "@/core/domain/assembly/state";
+import type { SheetView } from "@/contract/views";
 import { STAT_IDS, type StatId } from "@/core/domain/shared/stats";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { statLabel } from "@/ui/entities/character/lib/labels";
@@ -20,33 +19,36 @@ import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
  * Границ нет: проклятие — тоже вклад, и его число отрицательно. Вклады надетых вещей сюда не
  * входят — они приходят из инвентаря и правятся у самой вещи в «Сумке».
  */
+/** Вклад так, как его набирают: откуда он, какую величину двигает и на сколько. */
+type PermanentContributionPatch = {
+  nameRu: string;
+  contribution: { stat: StatId; kind: "assignment" | "bonus"; value: number };
+};
+
 export function PermanentContributionSheet({
-  character,
+  contributions,
   editing = null,
   onSave,
   onRemove,
   onCancel,
   error = null,
 }: {
-  character: CharacterState;
+  /** Постоянные вклады как они стоят на листе: начальные значения полей. */
+  contributions: SheetView["permanentContributions"];
   /** Имя правимого вклада; `null` — заводится новый. */
   editing?: string | null;
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  onSave: (permanent: PermanentContribution) => void;
+  onSave: (permanent: PermanentContributionPatch) => void;
   onRemove: (nameRu: string) => void;
   onCancel: () => void;
 }) {
-  const known = character.permanentContributions.find((entry) => entry.nameRu === editing);
+  const known = contributions.find((entry) => entry.nameRu === editing);
 
   const [nameRu, setNameRu] = useState(known?.nameRu ?? "");
-  const [stat, setStat] = useState<StatId>(known?.contribution.stat ?? "armorClass");
-  const [assigns, setAssigns] = useState(known?.contribution.kind === "assignment");
-  const [value, setValue] = useState(
-    known === undefined || known.contribution.kind === "method"
-      ? "0"
-      : String(known.contribution.value),
-  );
+  const [stat, setStat] = useState<StatId>(statOf(known?.stat ?? "armorClass"));
+  const [assigns, setAssigns] = useState(known?.kind === "assignment");
+  const [value, setValue] = useState(String(known?.value ?? 0));
 
   const number = requiredFieldNumber(value);
 

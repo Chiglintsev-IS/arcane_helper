@@ -73,6 +73,26 @@ describe("вещи", () => {
     });
     expect(itemOf(withStock(rope), "rope")).toMatchObject({ bonuses: [] });
   });
+
+  it("доспех едет базой и родом, а неопознанная находка — одной базой", () => {
+    const mail: ItemDefinition = {
+      id: "mail",
+      nameRu: "Кольчуга",
+      kind: "gear",
+      armor: { base: 16, category: "medium" },
+    };
+    const found: ItemDefinition = {
+      id: "found",
+      nameRu: "Находка",
+      kind: "gear",
+      armor: { base: 12 },
+    };
+
+    expect(itemOf(withStock(mail), "mail").armor).toEqual({ base: 16, category: "medium" });
+    expect(itemOf(withStock(found), "found").armor).toEqual({ base: 12 });
+    // Вещь, доспехом не являющаяся, о защите молчит вовсе.
+    expect(itemOf(withStock(rope), "rope").armor).toBeUndefined();
+  });
 });
 
 describe("защита", () => {

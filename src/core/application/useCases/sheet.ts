@@ -42,7 +42,7 @@ const IDENTITY_FIELDS = [
   "proficiencies",
 ] as const;
 
-export type Identity = Partial<Pick<CharacterState, (typeof IDENTITY_FIELDS)[number]>>;
+type Identity = Partial<Pick<CharacterState, (typeof IDENTITY_FIELDS)[number]>>;
 
 /**
  * Справочная часть присланной правки. Прочие поля состояния отбрасываются: правка листа не дверь к

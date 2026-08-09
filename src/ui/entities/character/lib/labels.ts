@@ -105,6 +105,10 @@ export function trainingLabel(training: string): string {
   return labelOf(TRAINING_LABELS, training);
 }
 
+export function currencyLabel(currency: string): string {
+  return labelOf(CURRENCY_LABELS, currency);
+}
+
 export function currencyAbbr(currency: string): string {
   return labelOf(CURRENCY_ABBREVIATIONS, currency);
 }

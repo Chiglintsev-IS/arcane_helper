@@ -3,8 +3,6 @@
 import { useState } from "react";
 
 import type { Command } from "@/contract/commands";
-import { Items } from "@/core/domain/items/items";
-import { Equipment } from "@/core/domain/equipment/equipment";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { Bag } from "@/ui/widgets/bag/ui/Bag";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
@@ -19,13 +17,11 @@ type BagEdit = { of: "money" } | { of: "item"; id: string };
 
 export function BagScreen() {
   const { session: sessionStore } = useStores();
-  const session = useSession((state) => state.session)!;
   const bag = useSession((state) => state.snapshot)!.bag;
 
   const [open, setOpen] = useState<BagEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const { character } = session;
   const execute = sessionStore.getState().execute;
 
   /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
@@ -45,8 +41,8 @@ export function BagScreen() {
     setOpen(null);
   };
 
-  const openedItem = open?.of !== "item" ? null : (Items.of(character).find(open.id) ?? null);
-  const equipment = Equipment.of(character);
+  const openedItem =
+    open?.of !== "item" ? null : (bag.items.find((item) => item.id === open.id) ?? null);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
@@ -61,7 +57,7 @@ export function BagScreen() {
 
       {open?.of === "money" ? (
         <MoneySheet
-          money={character.equipment.money}
+          money={bag.money}
           error={refusal}
           onCancel={closeSheet}
           onSave={(money) => void save({ kind: "edit_money", money })}
@@ -72,8 +68,6 @@ export function BagScreen() {
         <ItemSheet
           key={openedItem.id}
           item={openedItem}
-          bagCount={equipment.bagCount(openedItem.id)}
-          wornCount={equipment.wornCount(openedItem.id)}
           error={refusal}
           onCancel={closeSheet}
           onSave={(item) => void save({ kind: "edit_item", item })}

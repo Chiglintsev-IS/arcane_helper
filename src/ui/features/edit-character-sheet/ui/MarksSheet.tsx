@@ -2,25 +2,25 @@
 
 import { useState } from "react";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
 import { EXHAUSTION_STEPS } from "@/core/domain/character/abilities";
 import { EditSheetFrame } from "./EditSheetFrame";
 
 
 export function MarksSheet({
-  character,
+  marks,
   onSave,
   onCancel,
   error = null,
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  character: CharacterState;
+  /** Отметки мастера как они стоят сейчас: начальные значения полей. */
+  marks: { exhaustion: number; inspiration: boolean };
   onSave: (marks: { exhaustion: number; inspiration: boolean }) => void;
   onCancel: () => void;
 }) {
-  const [exhaustion, setExhaustion] = useState(character.exhaustion);
-  const [inspiration, setInspiration] = useState(character.inspiration);
+  const [exhaustion, setExhaustion] = useState(marks.exhaustion);
+  const [inspiration, setInspiration] = useState(marks.inspiration);
 
   return (
     <EditSheetFrame

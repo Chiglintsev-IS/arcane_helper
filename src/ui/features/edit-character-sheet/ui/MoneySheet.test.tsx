@@ -12,7 +12,11 @@ describe("шторка денег", () => {
     const onSave = vi.fn();
     render(
       <MoneySheet
-        money={{ gold: 15, silver: 30, copper: 12 }}
+        money={[
+          { currency: "gold", amount: 15 },
+          { currency: "silver", amount: 30 },
+          { currency: "copper", amount: 12 },
+        ]}
         onSave={onSave}
         onCancel={() => {}}
       />,
@@ -29,7 +33,15 @@ describe("шторка денег", () => {
   it("деньги: отрицательное и пустое уходят владельцу — отказывает он", async () => {
     const onSave = vi.fn();
     render(
-      <MoneySheet money={{ gold: 15, silver: 0, copper: 0 }} onSave={onSave} onCancel={() => {}} />,
+      <MoneySheet
+        money={[
+          { currency: "gold", amount: 15 },
+          { currency: "silver", amount: 0 },
+          { currency: "copper", amount: 0 },
+        ]}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
     );
 
     const gold = screen.getByLabelText("Золото");

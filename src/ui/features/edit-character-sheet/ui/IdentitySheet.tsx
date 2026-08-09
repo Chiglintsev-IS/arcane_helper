@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
+import type { SheetView } from "@/contract/views";
 import { CREATURE_SIZES, type CreatureSize } from "@/core/domain/character/schema";
-import type { Identity } from "@/core/application/useCases/sheet";
-import { SIZE_LABELS } from "@/ui/entities/character/lib/labels";
+import { sizeLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
@@ -22,29 +21,42 @@ function asList(text: string): string[] {
     .filter((part) => part !== "");
 }
 
+/** Справочная часть листа: что шторка набирает и отдаёт владельцу. Что из этого он примет — его дело. */
+type IdentityPatch = {
+  name: string;
+  species: string;
+  className: string;
+  subclass: string;
+  age: number;
+  size: string;
+  speed: number;
+  proficiencies: { weapons: string[]; armor: string[]; tools: string[]; languages: string[] };
+};
+
 export function IdentitySheet({
-  character,
+  sheet,
   onSave,
   onCancel,
   error = null,
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  character: CharacterState;
-  onSave: (patch: Identity) => void;
+  /** Лист: начальные значения полей. */
+  sheet: SheetView;
+  onSave: (patch: IdentityPatch) => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState(character.name);
-  const [species, setSpecies] = useState(character.species);
-  const [className, setClassName] = useState(character.className);
-  const [subclass, setSubclass] = useState(character.subclass);
-  const [ageText, setAgeText] = useState(String(character.age));
-  const [size, setSize] = useState<CreatureSize>(character.size);
-  const [speedText, setSpeedText] = useState(String(character.speed));
-  const [weapons, setWeapons] = useState(character.proficiencies.weapons.join(", "));
-  const [armor, setArmor] = useState(character.proficiencies.armor.join(", "));
-  const [tools, setTools] = useState(character.proficiencies.tools.join(", "));
-  const [languages, setLanguages] = useState(character.proficiencies.languages.join(", "));
+  const [name, setName] = useState(sheet.name);
+  const [species, setSpecies] = useState(sheet.species);
+  const [className, setClassName] = useState(sheet.className);
+  const [subclass, setSubclass] = useState(sheet.subclass);
+  const [ageText, setAgeText] = useState(String(sheet.age));
+  const [size, setSize] = useState<CreatureSize | string>(sheet.size);
+  const [speedText, setSpeedText] = useState(String(sheet.speed));
+  const [weapons, setWeapons] = useState(sheet.proficiencies.weapons.join(", "));
+  const [armor, setArmor] = useState(sheet.proficiencies.armor.join(", "));
+  const [tools, setTools] = useState(sheet.proficiencies.tools.join(", "));
+  const [languages, setLanguages] = useState(sheet.proficiencies.languages.join(", "));
 
   const age = requiredFieldNumber(ageText);
   const speed = requiredFieldNumber(speedText);
@@ -85,7 +97,7 @@ export function IdentitySheet({
             type="button"
             role="radio"
             aria-checked={size === option}
-            aria-label={SIZE_LABELS[option]}
+            aria-label={sizeLabel(option)}
             onClick={() => setSize(option)}
             className={`min-h-11 rounded-lg border px-2 text-sm ${
               size === option
@@ -93,7 +105,7 @@ export function IdentitySheet({
                 : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
             }`}
           >
-            {SIZE_LABELS[option]}
+            {sizeLabel(option)}
           </button>
         ))}
       </div>

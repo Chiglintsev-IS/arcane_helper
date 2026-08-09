@@ -12,9 +12,14 @@ describe("шторка вещи", () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "свиток", nameRu: "Свиток огненного шара", kind: "other" }}
-        bagCount={1}
-        wornCount={0}
+        item={{
+          id: "свиток",
+          nameRu: "Свиток огненного шара",
+          kind: "other",
+          bagCount: 1,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={onSave}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -48,10 +53,13 @@ describe("шторка вещи", () => {
           id: "кольцо",
           nameRu: "Кольцо защиты",
           kind: "gear",
-          bonuses: { armorClass: 1, "save:constitution": 1 },
+          bonuses: [
+            { stat: "armorClass", value: 1 },
+            { stat: "save:constitution", value: 1 },
+          ],
+          bagCount: 0,
+          wornCount: 1,
         }}
-        bagCount={0}
-        wornCount={1}
         onSave={onSave}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -81,9 +89,14 @@ describe("шторка вещи", () => {
   it("вещь: запас полем не правится — он живёт расходом и пополнением на строке (FR-241)", () => {
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
-        bagCount={2}
-        wornCount={0}
+        item={{
+          id: "зелье",
+          nameRu: "Зелье лечения",
+          kind: "consumable",
+          bagCount: 2,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={() => {}}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -107,9 +120,10 @@ describe("шторка вещи", () => {
           nameRu: "Зелье лечения",
           kind: "consumable",
           price: { amount: 50, currency: "gold" },
+          bagCount: 1,
+          wornCount: 0,
+          bonuses: [],
         }}
-        bagCount={1}
-        wornCount={0}
         onSave={onSave}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -133,9 +147,14 @@ describe("шторка вещи", () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
-        bagCount={1}
-        wornCount={0}
+        item={{
+          id: "зелье",
+          nameRu: "Зелье лечения",
+          kind: "consumable",
+          bagCount: 1,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={onSave}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -155,9 +174,14 @@ describe("шторка вещи", () => {
     const onSave = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "шлем", nameRu: "Шлем", kind: "gear" }}
-        bagCount={1}
-        wornCount={0}
+        item={{
+          id: "шлем",
+          nameRu: "Шлем",
+          kind: "gear",
+          bagCount: 1,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={onSave}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -178,9 +202,14 @@ describe("шторка вещи", () => {
     const onRemove = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
-        bagCount={0}
-        wornCount={0}
+        item={{
+          id: "зелье",
+          nameRu: "Зелье лечения",
+          kind: "consumable",
+          bagCount: 0,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={() => {}}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -196,9 +225,14 @@ describe("шторка вещи", () => {
   it("вещь: удаление выключено, пока в сумке или на теле остаётся запас", () => {
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье лечения", kind: "consumable" }}
-        bagCount={2}
-        wornCount={0}
+        item={{
+          id: "зелье",
+          nameRu: "Зелье лечения",
+          kind: "consumable",
+          bagCount: 2,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={() => {}}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -217,9 +251,14 @@ describe("шторка вещи", () => {
     const onAdjustBagCount = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "кинжал", nameRu: "Кинжал", kind: "gear" }}
-        bagCount={2}
-        wornCount={0}
+        item={{
+          id: "кинжал",
+          nameRu: "Кинжал",
+          kind: "gear",
+          bagCount: 2,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={() => {}}
         onAdjustBagCount={onAdjustBagCount}
         onAdjustWornCount={() => {}}
@@ -237,9 +276,14 @@ describe("шторка вещи", () => {
   it("вещь: расход в шторке выключен на нуле — ноль состояние, а не отсутствие", () => {
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье", kind: "consumable" }}
-        bagCount={0}
-        wornCount={0}
+        item={{
+          id: "зелье",
+          nameRu: "Зелье",
+          kind: "consumable",
+          bagCount: 0,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={() => {}}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
@@ -257,9 +301,14 @@ describe("шторка вещи", () => {
     const onAdjustWornCount = vi.fn();
     render(
       <ItemSheet
-        item={{ id: "кинжал", nameRu: "Кинжал", kind: "gear" }}
-        bagCount={1}
-        wornCount={1}
+        item={{
+          id: "кинжал",
+          nameRu: "Кинжал",
+          kind: "gear",
+          bagCount: 1,
+          wornCount: 1,
+          bonuses: [],
+        }}
         onSave={() => {}}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={onAdjustWornCount}
@@ -277,9 +326,14 @@ describe("шторка вещи", () => {
   it("вещь: у не-экипировки строки «Надето» нет", () => {
     render(
       <ItemSheet
-        item={{ id: "зелье", nameRu: "Зелье", kind: "consumable" }}
-        bagCount={1}
-        wornCount={0}
+        item={{
+          id: "зелье",
+          nameRu: "Зелье",
+          kind: "consumable",
+          bagCount: 1,
+          wornCount: 0,
+          bonuses: [],
+        }}
         onSave={() => {}}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}

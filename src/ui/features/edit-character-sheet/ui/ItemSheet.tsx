@@ -3,7 +3,8 @@
 import { ARMOR_CATEGORIES, STAT_IDS, type ArmorCategory, type StatId } from "@/core/domain/shared/stats";
 import { useState } from "react";
 
-import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
+import type { ItemView } from "@/contract/views";
+import type { ItemKind } from "@/core/domain/items/schema";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
 import type { Currency } from "@/core/domain/equipment/schema";
 import { CURRENCIES } from "@/core/domain/shared/schema";
@@ -23,10 +24,19 @@ import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
  * их меняют кнопки на строке сумки — расход, пополнение, надевание, — а поле рядом с ними
  * показывало бы число, набранное до нажатия, и сохранение возвращало бы потраченное обратно.
  */
+/** Вещь так, как её набирают: то же, чем она приехала, — без запаса и надетого. */
+type ItemPatch = {
+  id: string;
+  nameRu: string;
+  kind: ItemKind;
+  price?: { amount: number; currency: Currency };
+  note?: string;
+  bonuses: Record<string, number>;
+  armor?: { base: number; category?: ArmorCategory };
+};
+
 export function ItemSheet({
   item,
-  bagCount,
-  wornCount,
   onSave,
   onAdjustBagCount,
   onAdjustWornCount,
@@ -36,38 +46,35 @@ export function ItemSheet({
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  item: ItemDefinition;
-  /** Сколько сейчас лежит в сумке и сколько надето — только для показа рядом со счётчиками. */
-  bagCount: number;
-  wornCount: number;
-  onSave: (item: ItemDefinition) => void;
+  /** Вещь со своим запасом: что это такое и сколько её у персонажа — обе половины уже сведены. */
+  item: ItemView;
+  onSave: (item: ItemPatch) => void;
   /** Немедленный расход и пополнение — не черновик: применяется нажатием, как кнопки на строке. */
   onAdjustBagCount: (delta: number) => void;
   onAdjustWornCount: (delta: number) => void;
   onRemove: () => void;
   onCancel: () => void;
 }) {
-  const [kind, setKind] = useState<ItemKind>(item.kind);
+  const [kind, setKind] = useState<ItemKind>(kindOf(item.kind));
   const [note, setNote] = useState(item.note ?? "");
   const [priceAmount, setPriceAmount] = useState(
     item.price === undefined ? "" : String(item.price.amount),
   );
-  const [currency, setCurrency] = useState<Currency>(item.price?.currency ?? "gold");
+  const [currency, setCurrency] = useState<Currency>(currencyOf(item.price?.currency ?? ""));
   /**
    * Прибавки набираются по одной на величину: список величин общий, и своего словаря у шторки нет.
    * Набранное уходит владельцу как есть — ноль он не сохранит сам.
    */
   const [bonuses, setBonuses] = useState<readonly (readonly [StatId, string])[]>(
-    STAT_IDS.flatMap((stat) => {
-      const value = item.bonuses?.[stat];
-      return value === undefined ? [] : [[stat, String(value)] as const];
-    }),
+    item.bonuses.map((bonus) => [statOf(bonus.stat), String(bonus.value)] as const),
   );
   const [added, setAdded] = useState<StatId>("armorClass");
   const [armorBase, setArmorBase] = useState(
     item.armor === undefined ? "" : String(item.armor.base),
   );
-  const [category, setCategory] = useState<ArmorCategory | "">(item.armor?.category ?? "");
+  const [category, setCategory] = useState<ArmorCategory | "">(categoryOf(item.armor?.category ?? ""));
+
+  const { bagCount, wornCount } = item;
 
   const numbers: Record<string, number> = {};
   for (const [stat, text] of bonuses) numbers[stat] = requiredFieldNumber(text);
@@ -277,6 +284,15 @@ export function ItemSheet({
   );
 }
 
+
+/** Слово правил приезжает строкой: сужает его владелец списка, а не приведение типа на месте. */
+function kindOf(chosen: string): ItemKind {
+  return ITEM_KINDS.find((kind) => kind === chosen) ?? "other";
+}
+
+function currencyOf(chosen: string): Currency {
+  return CURRENCIES.find((currency) => currency === chosen) ?? "gold";
+}
 
 /** Выбранное в списке — величина словаря: список из него и построен. */
 function statOf(chosen: string): StatId {

@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 
-import type { Currency, Money } from "@/core/domain/equipment/schema";
-import { CURRENCIES } from "@/core/domain/shared/schema";
-import { CURRENCY_LABELS } from "@/ui/entities/character/lib/labels";
+import type { BagView } from "@/contract/views";
+import { currencyLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
@@ -22,23 +21,18 @@ export function MoneySheet({
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  money: Money;
-  onSave: (money: Money) => void;
+  /** Кошелёк в порядке достоинства: перечень монет стола называет владелец, а не шторка. */
+  money: BagView["money"];
+  onSave: (money: Record<string, number>) => void;
   onCancel: () => void;
 }) {
-  const [values, setValues] = useState<Record<Currency, string>>({
-    gold: String(money.gold),
-    silver: String(money.silver),
-    copper: String(money.copper),
-  });
+  const [values, setValues] = useState<Record<string, string>>(
+    Object.fromEntries(money.map((coin) => [coin.currency, String(coin.amount)])),
+  );
 
-  // Монеты стола известны и перечислены владельцем: значение собирается по имени, а не сборкой из
-  // списка, — тип сходится без каста, и умолчание объявления не может молча дописать пропущенную.
-  const nextMoney: Money = {
-    gold: requiredFieldNumber(values.gold),
-    silver: requiredFieldNumber(values.silver),
-    copper: requiredFieldNumber(values.copper),
-  };
+  const nextMoney: Record<string, number> = Object.fromEntries(
+    money.map((coin) => [coin.currency, requiredFieldNumber(values[coin.currency] ?? "")]),
+  );
 
   return (
     <EditSheetFrame
@@ -47,12 +41,12 @@ export function MoneySheet({
       onCancel={onCancel}
       onSave={() => onSave(nextMoney)}
     >
-      {CURRENCIES.map((currency) => (
+      {money.map((coin) => (
         <NumberField
-          key={currency}
-          labelRu={CURRENCY_LABELS[currency]}
-          value={values[currency]}
-          onChange={(value) => setValues((current) => ({ ...current, [currency]: value }))}
+          key={coin.currency}
+          labelRu={currencyLabel(coin.currency)}
+          value={values[coin.currency] ?? ""}
+          onChange={(value) => setValues((current) => ({ ...current, [coin.currency]: value }))}
           min={0}
         />
       ))}

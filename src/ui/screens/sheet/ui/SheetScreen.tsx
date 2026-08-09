@@ -17,13 +17,10 @@ import { applyEdit } from "@/ui/shared/model/editing";
 
 export function SheetScreen() {
   const { session: sessionStore } = useStores();
-  const session = useSession((state) => state.session)!;
   const sheet = useSession((state) => state.snapshot)!.sheet;
 
   const [open, setOpen] = useState<SheetEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
-
-  const { character } = session;
 
   /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
   const save = async (command: Command, close: () => void): Promise<void> => {
@@ -50,7 +47,7 @@ export function SheetScreen() {
 
       {open?.block === "identity" ? (
         <IdentitySheet
-          character={character}
+          sheet={sheet}
           error={refusal}
           onCancel={closeSheet}
           onSave={(patch) => void save({ kind: "edit_identity", patch }, closeSheet)}
@@ -88,7 +85,7 @@ export function SheetScreen() {
 
       {open?.block === "marks" ? (
         <MarksSheet
-          character={character}
+          marks={sheet}
           error={refusal}
           onCancel={closeSheet}
           onSave={(marks) => void save({ kind: "edit_marks", ...marks }, closeSheet)}
@@ -97,7 +94,7 @@ export function SheetScreen() {
 
       {open?.block === "permanent" ? (
         <PermanentContributionSheet
-          character={character}
+          contributions={sheet.permanentContributions}
           error={refusal}
           onCancel={closeSheet}
           onSave={(permanent) =>
