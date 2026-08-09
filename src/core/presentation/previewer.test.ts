@@ -15,6 +15,9 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 
 import { answerQuestion } from "./previewer";
 
+/** Время выгрузки: часы приходят снаружи, и прогон называет своё. */
+const NOW = "2026-07-31T18:00:00.000Z";
+
 function alive(character: CharacterState = createThorne()): LiveSession {
   return {
     session: createSession(character),
@@ -29,7 +32,7 @@ describe("здоровье", () => {
       kind: "health_preview",
       maximumBase: 70,
       masterReduction: 10,
-    });
+    }, NOW);
 
     expect(preview).toEqual({ kind: "health_preview", effectiveMaximum: 60 });
   });
@@ -39,7 +42,7 @@ describe("здоровье", () => {
       kind: "health_preview",
       maximumBase: 0,
       masterReduction: 0,
-    });
+    }, NOW);
 
     expect(preview).toEqual({ kind: "health_preview", effectiveMaximum: null });
   });
@@ -48,7 +51,7 @@ describe("здоровье", () => {
     const live = alive();
     const before = live.session.character;
 
-    answerQuestion(live, { kind: "health_preview", maximumBase: 70, masterReduction: 0 });
+    answerQuestion(live, { kind: "health_preview", maximumBase: 70, masterReduction: 0 }, NOW);
 
     expect(live.session.character).toBe(before);
     expect(live.session.journal).toHaveLength(0);
@@ -57,7 +60,7 @@ describe("здоровье", () => {
 
 describe("уровень", () => {
   it("сдвиг ячейки едет вместе с её уровнем", () => {
-    const preview = answerQuestion(alive(), { kind: "level_preview", level: 8 });
+    const preview = answerQuestion(alive(), { kind: "level_preview", level: 8 }, NOW);
 
     expect(preview.kind === "level_preview" && preview.changes).toContainEqual({
       of: "slots",
@@ -68,7 +71,7 @@ describe("уровень", () => {
   });
 
   it("сдвиг величины без уровня ячейки едет без него", () => {
-    const preview = answerQuestion(alive(), { kind: "level_preview", level: 9 });
+    const preview = answerQuestion(alive(), { kind: "level_preview", level: 9 }, NOW);
 
     expect(preview.kind === "level_preview" && preview.changes).toContainEqual({
       of: "runes",
@@ -78,13 +81,13 @@ describe("уровень", () => {
   });
 
   it("невозможному уровню отвечать нечем: ни сдвигов, ни средней прибавки", () => {
-    const preview = answerQuestion(alive(), { kind: "level_preview", level: 21 });
+    const preview = answerQuestion(alive(), { kind: "level_preview", level: 21 }, NOW);
 
     expect(preview).toEqual({ kind: "level_preview", changes: [], hitPoints: null });
   });
 
   it("среднее за взятый уровень едет слагаемыми: кость бросает игрок", () => {
-    const preview = answerQuestion(alive(), { kind: "level_preview", level: 8 });
+    const preview = answerQuestion(alive(), { kind: "level_preview", level: 8 }, NOW);
 
     expect(preview.kind === "level_preview" && preview.hitPoints).toMatchObject({ total: 7 });
   });
@@ -97,7 +100,7 @@ describe("сотворение", () => {
 
   /** Обычное сотворение — умолчание вопроса: режим спрашивают только там, где он и проверяется. */
   function castPreview(question: Omit<CastAsk, "kind" | "mode"> & { mode?: string }) {
-    const preview = answerQuestion(alive(), { kind: "cast_preview", mode: "normal", ...question });
+    const preview = answerQuestion(alive(), { kind: "cast_preview", mode: "normal", ...question }, NOW);
     return preview.kind === "cast_preview" ? preview : null;
   }
 
@@ -190,7 +193,7 @@ describe("сотворение", () => {
       spellId: "arcane-vigor",
       mode: "normal",
       payment: { kind: "slot", slotLevel: 2 },
-    });
+    }, NOW);
 
     expect(spent.kind === "cast_preview" && spent.hitDice).toMatchObject({ maximum: 0 });
   });
@@ -204,7 +207,7 @@ describe("сотворение", () => {
       mode: "normal",
       payment: { kind: "slot", slotLevel: 2 },
       hitDiceCount: 2,
-    });
+    }, NOW);
 
     expect(preview.kind === "cast_preview" && preview.hitDice).toEqual({ maximum: 0, modifier: 4 });
   });
@@ -231,7 +234,7 @@ describe("сотворение", () => {
       spellId: "mage-armor",
       mode: "normal",
       payment: slotOne,
-    });
+    }, NOW);
 
     expect(live.session.character).toBe(before);
     expect(live.session.journal).toHaveLength(0);
@@ -240,7 +243,7 @@ describe("сотворение", () => {
 
 describe("обмен крови на очки", () => {
   function exchange(points: number) {
-    const preview = answerQuestion(alive(), { kind: "blood_exchange_preview", points });
+    const preview = answerQuestion(alive(), { kind: "blood_exchange_preview", points }, NOW);
     return preview.kind === "blood_exchange_preview" ? preview : null;
   }
 
@@ -272,7 +275,7 @@ describe("магическое восстановление", () => {
     const preview = answerQuestion(alive(character), {
       kind: "arcane_recovery_preview",
       plan: spent,
-    });
+    }, NOW);
     return preview.kind === "arcane_recovery_preview" ? preview : null;
   }
 

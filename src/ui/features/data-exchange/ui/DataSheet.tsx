@@ -13,13 +13,11 @@
 
 import { useState } from "react";
 
-import type { SpellCatalogSource } from "@/core/application/session";
-
 export function DataSheet({
   exportText,
   fileName,
   error,
-  catalogSource = "built_in",
+  catalogSource,
   onImport,
   onRestoreBuiltInCatalog,
   onClose,
@@ -28,8 +26,8 @@ export function DataSheet({
   fileName: string;
   /** Причина отказа от прошлой попытки загрузки или возврата к встроенным карточкам, или `null`. */
   error: string | null;
-  /** Чем играют прямо сейчас. */
-  catalogSource?: SpellCatalogSource;
+  /** Чем играют прямо сейчас: слово правил, а подпись к нему — дело экрана. */
+  catalogSource: string;
   onImport: (raw: string) => void;
   /** Вернуть карточки из сборки. Без обработчика кнопки нет: возвращать нечем. */
   onRestoreBuiltInCatalog?: () => void;

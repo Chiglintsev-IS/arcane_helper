@@ -127,7 +127,8 @@ export const commandSchema = z.discriminatedUnion("kind", [
 
   // Сессия
   command("undo_last", {}),
-  command("import_snapshot", { file: z.looseObject({}) }),
+  /** Присланное — текстом как есть: разбирает его ядро, оно же и откажет с причиной. */
+  command("import_snapshot", { raw: z.string() }),
   command("restore_built_in_catalog", {}),
   command("reset", {}),
 ]);

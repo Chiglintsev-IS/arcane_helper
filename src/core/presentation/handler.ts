@@ -23,6 +23,8 @@ import { answerQuestion } from "./previewer";
 type Application = {
   open(): Promise<{ live: LiveSession; version: number }>;
   execute(envelope: Envelope): Promise<{ live: LiveSession; version: number }>;
+  /** Часы ядра: в выгрузке стоит время, а состояние его не хранит. */
+  now(): string;
 };
 
 /** Дверь ядра до провода: то же, что порт договора, но в сыром виде. */
@@ -64,7 +66,7 @@ export function createHandler(application: Application): Backend {
      */
     async answer(raw: unknown): Promise<unknown> {
       const { live } = await application.open();
-      return answerQuestion(live, questionSchema.parse(raw));
+      return answerQuestion(live, questionSchema.parse(raw), application.now());
     },
   };
 }

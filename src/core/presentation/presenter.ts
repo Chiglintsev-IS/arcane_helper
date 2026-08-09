@@ -34,6 +34,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     casting: toCastingView(live.session.character),
     bloodMagic: toBloodMagicView(live.session),
     spells: toSpellRowViews(live),
+    catalogSource: live.spellCatalogSource,
     journal: live.session.journal.map((entry) => ({
       id: entry.id,
       at: entry.at,

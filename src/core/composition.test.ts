@@ -15,7 +15,7 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { createMemoryRepository } from "@/core/infrastructure/persistence/memoryRepository";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { exportSnapshot, type ExportFile } from "@/core/application/dataExchange";
+import { exportSnapshot } from "@/core/application/dataExchange";
 import type { Clock } from "@/core/application/ports/clock";
 import { toPersisted, type SessionRepository } from "@/core/application/ports/sessionRepository";
 import { createSession } from "@/core/application/session";
@@ -71,22 +71,22 @@ function castMageArmor(slotLevel: number) {
 }
 
 /** Файл с тем же составом карточек, но переписанным названием: возврат к встроенным заметен. */
-function renamedCatalogFile(): ExportFile {
+function renamedCatalogFile(): string {
   const catalog = loadThorneSpells().map((spell) =>
     spell.id === "shield" ? { ...spell, nameRu: "Щит по-домашнему" } : spell,
   );
-  return exportSnapshot(createThorne(), catalog, NOW);
+  return JSON.stringify(exportSnapshot(createThorne(), catalog, NOW));
 }
 
 /** Своя карточка, которой в сборке нет: после неё возврат к встроенным ломал бы книгу. */
 const HOMEBREW: Spell = { ...mageArmor, id: "thorne-signature", nameRu: "Подпись Торна" };
 
-function homebrewCatalogFile(): ExportFile {
+function homebrewCatalogFile(): string {
   const character = {
     ...createThorne(),
     spellbookSpellIds: [...createThorne().spellbookSpellIds, HOMEBREW.id],
   };
-  return exportSnapshot(character, [...loadThorneSpells(), HOMEBREW], NOW);
+  return JSON.stringify(exportSnapshot(character, [...loadThorneSpells(), HOMEBREW], NOW));
 }
 
 describe("открытие сессии", () => {
@@ -330,7 +330,7 @@ describe("каталог заклинаний (FR-123)", () => {
     await api.open();
 
     const result = await api.execute(
-      envelope({ kind: "import_snapshot", file: renamedCatalogFile() }),
+      envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }),
     );
 
     expect(result.ok).toBe(true);
@@ -344,7 +344,7 @@ describe("каталог заклинаний (FR-123)", () => {
     const repository = createMemoryRepository();
     const first = connect(repository);
     await first.api.open();
-    await first.api.execute(envelope({ kind: "import_snapshot", file: homebrewCatalogFile() }));
+    await first.api.execute(envelope({ kind: "import_snapshot", raw: homebrewCatalogFile() }));
 
     const second = connect(repository);
     await second.api.open();
@@ -359,7 +359,7 @@ describe("каталог заклинаний (FR-123)", () => {
     await api.open();
     await api.execute(castMageArmor(1));
 
-    await api.execute(envelope({ kind: "import_snapshot", file: renamedCatalogFile() }));
+    await api.execute(envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }));
 
     expect(core.live()?.session.journal).toHaveLength(0);
     expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(4);
@@ -369,9 +369,9 @@ describe("каталог заклинаний (FR-123)", () => {
     const { api } = connect();
     await api.open();
 
-    const result = await api.execute(envelope({ kind: "import_snapshot", file: { spells: [] } }));
+    const result = await api.execute(envelope({ kind: "import_snapshot", raw: JSON.stringify({ spells: [] }) }));
 
-    expect(!result.ok && result.reasonRu).toMatch(/персонаж из файла обмена/);
+    expect(!result.ok && result.reasonRu).toMatch(/character/);
   });
 
   it("ссылка в пустоту не проходит и не оставляет половины импорта", async () => {
@@ -380,9 +380,9 @@ describe("каталог заклинаний (FR-123)", () => {
     await api.open();
 
     // Файл, до которого разбор бы не допустил: карточки своего заклинания в нём нет.
-    const broken = homebrewCatalogFile();
+    const broken = { ...JSON.parse(homebrewCatalogFile()), spells: loadThorneSpells() };
     const result = await api.execute(
-      envelope({ kind: "import_snapshot", file: { ...broken, spells: loadThorneSpells() } }),
+      envelope({ kind: "import_snapshot", raw: JSON.stringify(broken) }),
     );
 
     expect(!result.ok && result.reasonRu).toMatch(/thorne-signature/);
@@ -395,7 +395,7 @@ describe("каталог заклинаний (FR-123)", () => {
     const repository = createMemoryRepository();
     const { core, api } = connect(repository);
     await api.open();
-    await api.execute(envelope({ kind: "import_snapshot", file: renamedCatalogFile() }));
+    await api.execute(envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }));
 
     const result = await api.execute(envelope({ kind: "restore_built_in_catalog" }));
 
@@ -408,7 +408,7 @@ describe("каталог заклинаний (FR-123)", () => {
   it("возврат, который оставил бы подготовленное без карточки, отклоняется", async () => {
     const { core, api } = connect();
     await api.open();
-    await api.execute(envelope({ kind: "import_snapshot", file: homebrewCatalogFile() }));
+    await api.execute(envelope({ kind: "import_snapshot", raw: homebrewCatalogFile() }));
 
     const result = await api.execute(envelope({ kind: "restore_built_in_catalog" }));
 
@@ -435,7 +435,7 @@ describe("каталог заклинаний (FR-123)", () => {
     const repository = createMemoryRepository();
     const { core, api } = connect(repository);
     await api.open();
-    await api.execute(envelope({ kind: "import_snapshot", file: renamedCatalogFile() }));
+    await api.execute(envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }));
 
     await api.execute(envelope({ kind: "long_rest" }));
 
@@ -462,7 +462,7 @@ describe("сброс", () => {
     const repository = createMemoryRepository();
     const { core, api } = connect(repository);
     await api.open();
-    await api.execute(envelope({ kind: "import_snapshot", file: homebrewCatalogFile() }));
+    await api.execute(envelope({ kind: "import_snapshot", raw: homebrewCatalogFile() }));
 
     await api.execute(envelope({ kind: "reset" }));
 

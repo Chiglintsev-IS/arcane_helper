@@ -54,6 +54,8 @@ export const snapshotSchema = z.object({
   casting: castingViewSchema,
   bloodMagic: bloodMagicViewSchema,
   spells: z.array(spellRowViewSchema),
+  /** Чем играют: карточками сборки или загруженными игроком. Слово правил, подпись — за экраном. */
+  catalogSource: z.string().min(1),
   journal: z.array(journalEntryViewSchema),
 });
 

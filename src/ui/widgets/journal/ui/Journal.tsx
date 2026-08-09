@@ -8,7 +8,7 @@
  * Компонент презентационный: записи приходят параметром, отмена и выгрузка — обратными вызовами.
  */
 
-import type { JournalEntry } from "@/core/domain/journal/entry";
+import type { Snapshot } from "@/contract/snapshot";
 
 /**
  * Время записи как «ЧЧ:ММ». Дата не показывается: журнал глубиной 100 живёт одну игру за столом, а
@@ -27,7 +27,7 @@ export function Journal({
   onData,
 }: {
   /** Записи в порядке хранения: старое первым, как их держит журнал. */
-  entries: readonly JournalEntry[];
+  entries: Snapshot["journal"];
   onUndo: () => void;
   /** Выгрузка и загрузка: копию делают, разбирая случившееся, а не выбирая, чем сходить. */
   onData: () => void;

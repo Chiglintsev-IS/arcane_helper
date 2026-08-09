@@ -51,6 +51,13 @@ export const questionSchema = z.discriminatedUnion("kind", [
   }),
   /** Во что обойдётся обмен набранного числа очков заклинаний. */
   z.object({ kind: z.literal("blood_exchange_preview"), points: numeric }),
+  /**
+   * Чем выгрузить состояние прямо сейчас.
+   *
+   * Вопросом, а не проекцией: в выгрузке стоит время, которого в состоянии нет, — и снимок,
+   * несущий «сейчас», перестал бы быть функцией одного состояния.
+   */
+  z.object({ kind: z.literal("export_preview") }),
   /** Годится ли набранный план магического восстановления и во сколько уровней он обойдётся. */
   z.object({
     kind: z.literal("arcane_recovery_preview"),
@@ -123,6 +130,13 @@ export const previewSchema = z.discriminatedUnion("kind", [
     affordableSpellLevel: whole.nullable(),
     instructions: z.array(word),
     announcement: word,
+  }),
+  z.object({
+    kind: z.literal("export_preview"),
+    /** Имя файла с датой: папка из десяти «export (3).json» — не резервная копия. */
+    fileName: word,
+    /** Сам файл текстом: скачивают и кладут в буфер именно его. */
+    text: word,
   }),
   z.object({
     kind: z.literal("arcane_recovery_preview"),

@@ -33,6 +33,7 @@ import {
   castInstructions,
   renderAnnouncement,
 } from "@/core/application/casting/announcement";
+import { exportFileName, exportSnapshot } from "@/core/application/dataExchange";
 import type { LiveSession } from "@/core/application/session";
 import { previewLevelChange } from "@/core/application/useCases/sheet";
 
@@ -135,8 +136,16 @@ function castPreview(live: LiveSession, question: CastQuestion): Preview {
   };
 }
 
-export function answerQuestion(live: LiveSession, question: Question): Preview {
+export function answerQuestion(live: LiveSession, question: Question, now: string): Preview {
   const { character } = live.session;
+
+  if (question.kind === "export_preview") {
+    return {
+      kind: "export_preview",
+      fileName: exportFileName(now),
+      text: JSON.stringify(exportSnapshot(character, live.spellCatalog, now), null, 2),
+    };
+  }
 
   if (question.kind === "health_preview") {
     return {

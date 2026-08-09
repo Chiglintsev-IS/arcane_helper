@@ -24,8 +24,11 @@ function live(): LiveSession {
 
 const OPENED = { live: live(), version: 0 };
 
+/** Часы двери: снимку они не нужны, а выгрузке — да. */
+const NOW = "2026-07-31T18:00:00.000Z";
+
 function handlerThat(execute: () => Promise<{ live: LiveSession; version: number }>) {
-  return createHandler({ open: async () => OPENED, execute });
+  return createHandler({ now: () => NOW, open: async () => OPENED, execute });
 }
 
 describe("чтение", () => {

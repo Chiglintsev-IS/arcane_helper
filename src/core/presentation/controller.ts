@@ -11,25 +11,22 @@
  * здесь нет: она разошлась бы с настоящей при первой же правке правил, и молча.
  */
 
-import { z } from "zod";
-
 import type { Command } from "@/contract/commands";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { characterStatePatchSchema, characterStateSchema } from "@/core/domain/assembly/state";
-import { parsedOrRefused } from "@/core/domain/shared/schema";
+import { characterStatePatchSchema } from "@/core/domain/assembly/state";
 import { RUNE_TARGETS } from "@/core/domain/arcana/runes";
 import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
 import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
 import { permanentContributionOf } from "@/core/domain/character/schema";
 import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
-import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
+import type { Spell } from "@/core/domain/catalog/spell";
 import { ABILITIES, SKILL_IDS, type SkillId } from "@/core/domain/shared/stats";
 import { SKILL_TRAINING, type SkillTraining } from "@/core/domain/character/skills";
 import { DomainError } from "@/core/domain/shared/errors";
 
-import { applyImport, type ExportFile } from "@/core/application/dataExchange";
+import { applyImport, parseImport, type ExportFile } from "@/core/application/dataExchange";
 import {
   alreadyApplied,
   createSession,
@@ -116,19 +113,15 @@ function skillsOf(skills: Readonly<Record<string, string>>): Partial<Record<Skil
 }
 
 /**
- * Файл обмена из сообщения.
+ * Файл обмена из присланного текста.
  *
- * Персонаж разбирается объявлением состояния, карточки — объявлением каталога при применении.
- * Ссылочную целостность сводит сама запись, поэтому здесь её не проверяют: вторая такая проверка
- * разошлась бы с настоящей.
+ * Разбирает его та же проверка, что читает собственный контент, и она же называет причину отказа:
+ * второй разбор на стороне просящего принял бы то, чего эта не принимает, — и молча.
  */
-function exportFileOf(file: Readonly<Record<string, unknown>>): ExportFile {
-  return {
-    schemaVersion: Number(file.schemaVersion),
-    exportedAt: String(file.exportedAt),
-    character: parsedOrRefused(characterStateSchema, file.character, "персонаж из файла обмена"),
-    spells: parsedOrRefused(z.array(spellSchema), file.spells, "карточки из файла обмена"),
-  };
+function exportFileOf(raw: string): ExportFile {
+  const parsed = parseImport(raw);
+  if (!parsed.ok) throw new DomainError(parsed.reasonRu);
+  return parsed.file;
 }
 
 /**
@@ -347,7 +340,7 @@ export function applyCommand(
     case "import_snapshot": {
       const { character, spells } = applyImport(
         session.character,
-        exportFileOf(command.file),
+        exportFileOf(command.raw),
         "replace",
       );
       return {

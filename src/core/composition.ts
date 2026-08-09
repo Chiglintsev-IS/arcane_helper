@@ -99,6 +99,8 @@ export function createCore(parts: CoreParts): Core {
   };
 
   const handler = createHandler({
+    now: clock.now,
+
     async open() {
       return { live: await opened(), version };
     },
