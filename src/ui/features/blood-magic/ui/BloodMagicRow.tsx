@@ -8,44 +8,38 @@
  * Строка устроена как строка заклинания и подчиняется тем же фильтрам — отбор делает `PlayScreen`
  * по `BLOOD_MAGIC_TRAITS`. Пока она стояла особняком, она оставалась на экране при любом фильтре, и
  * список, обещавший «вот всё, что подходит», врал.
+ *
+ * Причина недоступности приходит от той же проверки, которой откажет подтверждение: собранная здесь
+ * заново, она однажды разошлась бы с отказом мастера обмена.
  */
 
-import type { CastingView, TurnView } from "@/contract/views";
+import type { BloodMagicView, CastingView, ResourcesView } from "@/contract/views";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { Fragment } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
 import { combatRole } from "@/ui/entities/spell/lib/format";
 import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { ascensionTierRate } from "@/core/domain/arcana/slots";
-import { bloodMagicAvailable } from "@/core/domain/vitality/blood";
 import { withPlural } from "@/core/shared/language";
-import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 
 export function BloodMagicRow({
-  character,
+  bloodMagic,
   casting,
-  turn,
+  resources,
   onOpen,
 }: {
-  character: CharacterState;
+  bloodMagic: BloodMagicView;
   /** Числа заклинателя: обмен называет их тем же значком, что и заклинание. */
   casting: CastingView;
-  turn: TurnView;
+  resources: ResourcesView;
   onOpen: () => void;
 }) {
-  const rate = ascensionTierRate(character.level);
   // Причина — целая фраза, как у заклинания: одно слово «действие» не говорит, что с ним не так.
-  const reason = !bloodMagicAvailable(character.suppression)
-    ? "Особенности подавлены"
-    : !turn.actionAvailable
-      ? ACTION_SPENT_MESSAGES.action
-      : null;
+  const reason = bloodMagic.warningsRu[0] ?? null;
 
   const facts = [
-    `${withPlural(rate, ["хит", "хита", "хитов"])} за очко`,
-    `Очков ${character.spellPoints.remaining}`,
+    `${withPlural(bloodMagic.hitPointsPerPoint, ["хит", "хита", "хитов"])} за очко`,
+    `Очков ${resources.spellPoints}`,
   ];
 
   // Обмен хитов на очки не бросает ничего, и говорит об этом тем же значком, что заклинание:

@@ -18,8 +18,7 @@ import type { Command } from "@/contract/commands";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { characterStatePatchSchema, characterStateSchema } from "@/core/domain/assembly/state";
 import { parsedOrRefused } from "@/core/domain/shared/schema";
-import { CAST_MODES } from "@/core/domain/arcana/slots";
-import { RUNES, RUNE_TARGETS } from "@/core/domain/arcana/runes";
+import { RUNE_TARGETS } from "@/core/domain/arcana/runes";
 import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
 import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
@@ -85,32 +84,13 @@ import {
 } from "@/core/application/useCases/sheet";
 import { beginTurn, endCombat, startCombat } from "@/core/application/useCases/turn";
 
+import { castModeOf, oneOf, runeOf, spellOf } from "./words";
+
 /** Чем контроллер располагает помимо самой сессии: содержимое сборки. */
 type ControllerParts = {
   builtInCatalog: readonly Spell[];
   createInitialCharacter: () => CharacterState;
 };
-
-/**
- * Слово из закрытого списка. Список приносит его владелец — тот самый, которым пользуется он сам,
- * поэтому пополнение перечня доходит сюда без правок.
- */
-function oneOf<TWord extends string>(words: readonly TWord[], value: string, subject: string): TWord {
-  const found = words.find((word) => word === value);
-  if (found === undefined) {
-    throw new DomainError(`Не годится ${subject} — «${value}» не из тех, что бывают`);
-  }
-  return found;
-}
-
-/** Карточка по идентификатору: команда называет заклинание, карточку ядро берёт свою. */
-function spellOf(catalog: readonly Spell[], spellId: string): Spell {
-  const spell = catalog.find((candidate) => candidate.id === spellId);
-  if (spell === undefined) {
-    throw new DomainError(`Не годится заклинание — карточки «${spellId}» в каталоге нет`);
-  }
-  return spell;
-}
 
 /** Уровни ячеек приезжают ключами объекта, а ключ объекта — всегда строка. */
 function slotPlanOf(plan: Readonly<Record<string, number>>): Record<number, number> {
@@ -175,10 +155,10 @@ export function applyCommand(
           session,
           {
             spell: spellOf(spellCatalog, command.spellId),
-            mode: oneOf(CAST_MODES, command.mode, "способ сотворения"),
+            mode: castModeOf(command.mode),
             payment: command.payment,
             ...(command.targetLabel === undefined ? {} : { targetLabel: command.targetLabel }),
-            ...(command.rune === undefined ? {} : { rune: oneOf(RUNES, command.rune, "руна") }),
+            ...(command.rune === undefined ? {} : { rune: runeOf(command.rune) }),
             ...(command.runeTarget === undefined
               ? {}
               : { runeTarget: oneOf(RUNE_TARGETS, command.runeTarget, "цель руны") }),

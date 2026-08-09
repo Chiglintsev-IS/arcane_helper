@@ -5,19 +5,21 @@
  * и ни одно действие этого стора его не касается. Выход из мастера на любом шаге, включая закрытие
  * приложения, оставляет ресурсы нетронутыми, потому что менять их отсюда попросту нечем
  *
+ * По правилам черновик не считает ничего: способы сотворения вместе с их ценой, уроном и вердиктом
+ * приезжают строкой заклинания, а объявление и шаги — ответом на вопрос. Здесь остаётся выбор
+ * игрока и то, что он уже набрал.
+ *
  * Подтверждение выполняет вызывающий: он берёт `toCastCommand` и отправляет намерение через
  * единственную дверь ядра — `sessionStore.execute`.
  */
 
 import type { CommandOf } from "@/contract/commands";
+import type { CastOptionView, SpellRowView } from "@/contract/views";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { checkAvailability, type TurnResources } from "@/core/application/casting/availability";
-import { bestCastPlan, castOptions, type CastOption } from "@/core/application/casting/castOptions";
-import { runeChoosesTarget, type Rune, type RuneTarget } from "@/core/domain/arcana/runes";
-import { CANTRIP_LEVEL, needsOwnComponent } from "@/core/domain/catalog/spell";
+import type { Rune, RuneTarget } from "@/core/domain/arcana/runes";
+import { runeChoosesTarget } from "@/core/domain/arcana/runes";
 import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 
 /**
@@ -49,10 +51,23 @@ const OPTIONAL_STEPS = WIZARD_STEPS.filter(
 /** Сколько недавних целей помнить: ввод текста в бою — самая медленная операция. */
 export const RECENT_TARGETS_LIMIT = 5;
 
+/** Занятая концентрация: шаг замены — выбор между двумя эффектами, а не сообщение. */
+export const CONCENTRATION_BUSY = "concentration_busy";
+
+/** Нехватка компонента: о ней говорит свой шаг, где рядом стоит и перечень требуемого. */
+export const NO_COMPONENT = "no_component";
+
+/**
+ * Помехи, у которых в мастере свой шаг, и потому не повторяемые на шаге доступности: иначе игрок
+ * читает одно и то же дважды и жмёт «Далее» не глядя.
+ */
+const OWN_STEP_WARNINGS: readonly string[] = [CONCENTRATION_BUSY, NO_COMPONENT];
+
 export type CastDraft = {
+  /** Карточка нужна схеме ритуала и отыгрышу: у них своей проекции ещё нет. */
   spell: Spell;
-  mode: CastOption["mode"];
-  payment: CastOption["payment"];
+  /** Выбранный способ сотворения — целиком, вместе с его ценой и вердиктом. */
+  option: CastOptionView;
   /** Цель свободным текстом; `null` — не указана, и объявление корректно без неё. */
   targetLabel: string | null;
   roleplayCategory: RoleplayCategory;
@@ -75,52 +90,36 @@ export type CastDraft = {
   step: WizardStep;
 };
 
-export type DraftContext = {
-  character: CharacterState;
-  turn: TurnResources;
-};
-
 const DEFAULT_ROLEPLAY_CATEGORY: RoleplayCategory = "short";
 
 /** Ключ запоминания — идентификатор заклинания: выбор помнится по заклинанию, а не глобально. */
 type Remembered = {
-  payment: Record<string, CastOption["payment"]>;
+  payment: Record<string, CastOptionView["payment"]>;
   roleplay: Record<string, RoleplayCategory>;
 };
 
-/**
- * Способ оплаты для нового черновика: запомненный выбор игрока важнее предложения по умолчанию.
- *
- * Предложение по умолчанию берётся у `bestCastPlan` — того же способа, чью причину недоступности
- * показывает строка списка. Одна функция на оба места: иначе список объясняет одно, а мастер
- * предлагает другое («Причина недоступности берётся у лучшего способа»).
- */
-function defaultOption(
-  spell: Spell,
-  context: DraftContext,
-  remembered: Remembered,
-): CastOption {
-  const rememberedPayment = remembered.payment[spell.id];
-  if (rememberedPayment !== undefined) {
-    const match = castOptions(spell, context.character, { inCombat: context.turn.inFight }).find(
-      (option) =>
-        option.payment.kind === rememberedPayment.kind &&
-        (option.payment.kind !== "slot" ||
-          rememberedPayment.kind !== "slot" ||
-          option.payment.slotLevel === rememberedPayment.slotLevel),
-    );
-    if (match !== undefined) return match;
-  }
-
-  // Способов может не быть вовсе — заклинание уровня, до которого персонаж не дорос. Тогда оплата
-  // не выбрана, и шаг доступности объяснит причину, а не молчаливо пустой мастер.
-  const plan = bestCastPlan(spell, context.character, context.turn);
-  return plan?.option ?? { mode: "normal", payment: { kind: "none" } };
+/** Один ли это способ оплаты: ячейки различаются уровнем, прочие роды — только собой. */
+function samePayment(one: CastOptionView["payment"], other: CastOptionView["payment"]): boolean {
+  if (one.kind !== other.kind) return false;
+  return one.kind !== "slot" || other.kind !== "slot" || one.slotLevel === other.slotLevel;
 }
 
-/** Требуется ли отдельный шаг компонентов: фокусировка заменяет всё, кроме стоимости и расхода. */
-function needsComponentStep(spell: Spell): boolean {
-  return needsOwnComponent(spell.components);
+/**
+ * Способ для нового черновика: запомненный выбор игрока важнее предложенного.
+ *
+ * Предложенный помечен в самой строке — тем же перебором, который назвал её причину недоступности.
+ * Одно решение на оба места: иначе список объясняет одно, а мастер предлагает другое.
+ */
+function defaultOption(row: SpellRowView, remembered: Remembered): CastOptionView {
+  const [head, ...tail] = row.castOptions;
+  const rememberedPayment = remembered.payment[row.id];
+  const match =
+    rememberedPayment === undefined
+      ? undefined
+      : row.castOptions.find((option) => samePayment(option.payment, rememberedPayment));
+
+  // Ищется по остальным, а первый способ и есть ответ по умолчанию: пометка стоит ровно одна.
+  return match ?? tail.find((option) => option.suggested) ?? head;
 }
 
 /**
@@ -133,39 +132,22 @@ function needsComponentStep(spell: Spell): boolean {
  */
 export function visibleSteps(
   draft: CastDraft,
-  context: DraftContext,
+  row: SpellRowView,
 ): [...WizardStep[], WizardStep] {
-  const { spell } = draft;
-  const availability = checkAvailability({
-    spell,
-    character: context.character,
-    turn: context.turn,
-    mode: draft.mode,
-    payment: draft.payment,
-  });
-  // Замена концентрации живёт на своём шаге и в проверке доступности не дублируется.
-  // Замена концентрации и нехватка компонента живут на своих шагах и в проверке доступности не
-  // дублируются: иначе игрок читает одно и то же дважды и жмёт «Далее» не глядя.
-  const blocking = availability.warnings.filter(
-    (warning) => warning.code !== "concentration_busy" && warning.code !== "no_component",
-  );
-  // Шаг концентрации — это выбор между двумя эффектами, а не сообщение. Предупреждение приходит
-  // ровно тогда, когда концентрация занята и её придётся бросить.
-  const replacesConcentration = availability.warnings.some(
-    (warning) => warning.code === "concentration_busy",
-  );
+  const { warnings } = draft.option;
+  const blocking = warnings.filter((warning) => !OWN_STEP_WARNINGS.includes(warning.code));
+  const replacesConcentration = warnings.some((warning) => warning.code === CONCENTRATION_BUSY);
 
   const optional = OPTIONAL_STEPS.filter((step) => {
     switch (step) {
       case "availability":
         return blocking.length > 0;
       case "slot":
-        return spell.level !== CANTRIP_LEVEL;
+        return !row.cantrip;
       case "hitDice":
-        // Заклинание объявляет расход само: списка тратящих кости движку не нужно.
-        return spell.hitDiceCost !== undefined;
+        return row.spendsHitDice;
       case "components":
-        return needsComponentStep(spell);
+        return row.ownComponentRequired;
       case "concentration":
         return replacesConcentration;
     }
@@ -185,8 +167,8 @@ export function toCastCommand(draft: CastDraft): CommandOf<"cast_spell"> {
   return {
     kind: "cast_spell",
     spellId: draft.spell.id,
-    mode: draft.mode,
-    payment: draft.payment,
+    mode: draft.option.mode,
+    payment: draft.option.payment,
     ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
     ...(draft.rune === null ? {} : { rune: draft.rune, runeTarget: draft.runeTarget }),
     ...(draft.hitDiceCount === null || draft.hitDiceRolled === null
@@ -202,8 +184,8 @@ export type CastDraftState = {
   /** Недавно введённые цели: выбор из списка вместо ввода экономит секунды в бою. */
   recentTargets: string[];
 
-  start: (spell: Spell, context: DraftContext) => void;
-  chooseCastOption: (option: CastOption) => void;
+  start: (spell: Spell, row: SpellRowView) => void;
+  chooseCastOption: (option: CastOptionView) => void;
   /** Приложить руну или снять её. Не более одной на заклинание. */
   chooseRune: (rune: Rune) => void;
   chooseRuneTarget: (target: RuneTarget) => void;
@@ -247,12 +229,10 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
       draft: null,
       recentTargets: [],
 
-      start(spell, context) {
-        const option = defaultOption(spell, context, remembered);
+      start(spell, row) {
         const draft: CastDraft = {
           spell,
-          mode: option.mode,
-          payment: option.payment,
+          option: defaultOption(row, remembered),
           targetLabel: null,
           roleplayCategory: remembered.roleplay[spell.id] ?? DEFAULT_ROLEPLAY_CATEGORY,
           allowAnyway: false,
@@ -264,7 +244,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           step: "summary",
         };
         // Первый видимый шаг: у списка всегда есть хотя бы итоговый экран.
-        const [first] = visibleSteps(draft, context);
+        const [first] = visibleSteps(draft, row);
         set({ draft: { ...draft, step: first } });
       },
 
@@ -296,8 +276,8 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           // при подтверждении.
           const reset = { hitDiceCount: null, hitDiceRolled: null };
           if (option.payment.kind !== "slot")
-            return { ...draft, ...option, rune: null, runeTarget: "self" as const, ...reset };
-          return { ...draft, mode: option.mode, payment: option.payment, ...reset };
+            return { ...draft, option, rune: null, runeTarget: "self" as const, ...reset };
+          return { ...draft, option, ...reset };
         });
       },
 

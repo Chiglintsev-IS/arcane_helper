@@ -20,6 +20,7 @@ import {
   hitPointCost,
   hitPointsForPoints,
   spellPointCost,
+  RITUAL_EXTRA_MINUTES,
 } from "@/core/domain/arcana/slots";
 import {
   maximumRecoveryPerHour,
@@ -210,7 +211,9 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
         " максимум хитов упадёт на столько же",
     );
   } else if (context.mode === "ritual") {
-    steps.push("Ячейка не расходуется, но накладывание займёт на 10 минут дольше");
+    steps.push(
+      `Ячейка не расходуется, но накладывание займёт на ${RITUAL_EXTRA_MINUTES} минут дольше`,
+    );
   }
 
   // Руна списывается той же транзакцией, что и ячейка, поэтому названа рядом с ценой.

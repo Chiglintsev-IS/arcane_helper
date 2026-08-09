@@ -10,7 +10,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withSpellPoints, withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import {
+  withSpellPoints,
+  withSpentSlots,
+  withoutSlots,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
@@ -100,17 +104,24 @@ describe("почему нельзя", () => {
     expect(row("mage-armor", paid).unavailableReason).toBeUndefined();
   });
 
-  it("заклинание, до уровня которого он не дорос, объясняется отсутствием способа", () => {
+  it("заклинание, до уровня которого он не дорос, называет недостающую ячейку", () => {
     // Карточка выше и ячеек, и таблицы кровавого колдовства: способов у него нет вовсе. Такой в
-    // книге Торна нет, поэтому она берётся из настоящей и поднимается уровнем.
+    // книге Торна нет, поэтому она берётся из настоящей и поднимается уровнем. Мастер применения
+    // всё равно откроется — и обязан сказать, чем это заклинание сотворяли бы.
     const catalog = loadThorneSpells();
     const highest = catalog.find((spell) => spell.id === "polymorph");
     if (highest === undefined) throw new Error("нет карточки для подъёма уровня");
     const beyond = [{ ...highest, level: 6, ritual: false }];
+    const shown = row(highest.id, createThorne(), [], beyond);
 
-    expect(row(highest.id, createThorne(), [], beyond).unavailableReason).toBe(
-      "нет доступного способа сотворения",
-    );
+    expect(shown.unavailableReason).toBe("Ячеек 6 уровня у персонажа нет");
+    expect(shown.castOptions).toEqual([
+      expect.objectContaining({
+        payment: { kind: "slot", slotLevel: 6 },
+        suggested: true,
+        available: false,
+      }),
+    ]);
   });
 });
 
@@ -147,6 +158,61 @@ describe("числа под этого персонажа", () => {
       preparedLimit: 11,
       preparedCount: createThorne().preparedSpellIds.length,
     });
+  });
+});
+
+describe("способы сотворения", () => {
+  it("у заговора способ один и без оплаты, и сам он назван заговором", () => {
+    const shown = row("ray-of-frost");
+
+    expect(shown.cantrip).toBe(true);
+    expect(shown.castOptions).toEqual([
+      expect.objectContaining({ mode: "cantrip", payment: { kind: "none" }, suggested: true }),
+    ]);
+  });
+
+  it("урон едет по каждой ячейке, а не по уровню заклинания", () => {
+    // «Молния» третьего уровня: своей ячейкой 8d6, четвёртой — на кость больше.
+    const damage = row("lightning-bolt").castOptions.map((option) => option.damage?.formula);
+
+    expect(damage).toContain("8d6");
+    expect(damage).toContain("9d6");
+  });
+
+  it("оплата кровью называет цену в очках и в хитах", () => {
+    const blood = row("mage-armor").castOptions.find(
+      (option) => option.payment.kind === "spell_points",
+    );
+
+    // Первый уровень — два очка, курс Торна — три хита за очко.
+    expect(blood).toMatchObject({ spellPointCost: 2, hitPointCost: 6 });
+  });
+
+  it("ритуальный способ называет, на сколько он длиннее обычного", () => {
+    const ritual = row("detect-magic").castOptions.find((option) => option.mode === "ritual");
+
+    expect(ritual?.extraMinutes).toBe(10);
+  });
+
+  it("вердикт стоит у каждого способа: потраченная ячейка не запрещает соседнюю", () => {
+    const spent = withSpentSlots(createThorne(), 1, 4);
+    const options = row("mage-armor", spent).castOptions;
+    const bySlot = (level: number) =>
+      options.find(
+        (option) => option.payment.kind === "slot" && option.payment.slotLevel === level,
+      );
+
+    expect(bySlot(1)?.available).toBe(false);
+    expect(bySlot(1)?.warnings[0]?.code).toBe("no_slot");
+    expect(bySlot(2)?.available).toBe(true);
+  });
+
+  it("шаги мастера решаются признаками строки, а не разбором карточки на экране", () => {
+    expect(row("arcane-vigor").spendsHitDice).toBe(true);
+    expect(row("mage-armor").spendsHitDice).toBe(false);
+    // Компонент «Опознания» — жемчужина за 100 зм: фокусировка её не заменяет.
+    expect(row("identify").ownComponentRequired).toBe(true);
+    expect(row("identify").componentReminders.join(" ")).toContain("жемчуж");
   });
 });
 

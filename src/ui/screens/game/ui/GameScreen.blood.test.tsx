@@ -195,9 +195,10 @@ describe("предупреждения (FR-031, FR-175, FR-176)", () => {
     };
     const { user, stores } = await openWizard(sunlit);
 
+    // Фраза одна на строку списка и на мастер: обе берут её у той проверки, которая и откажет.
     expect(
-      screen.getByText(/не действует под прямым солнечным светом/),
-    ).toBeDefined();
+      screen.getAllByText(/не действует под прямым солнечным светом/),
+    ).toHaveLength(2);
     expect(
       screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled"),
     ).toBe(true);

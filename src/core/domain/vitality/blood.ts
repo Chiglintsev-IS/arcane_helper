@@ -81,11 +81,6 @@ export function traitsSuppressed(state: SuppressionState): boolean {
   return state.firedUpon || state.underDirectSunlight;
 }
 
-/** Доступно ли кровавое колдовство: те же условия подавления. */
-export function bloodMagicAvailable(suppression: SuppressionState): boolean {
-  return !traitsSuppressed(suppression);
-}
-
 /**
  * Почему кровавое колдовство сейчас не действует; `null` — действует.
  *

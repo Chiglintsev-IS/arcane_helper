@@ -13,6 +13,8 @@
 
 import { z } from "zod";
 
+import { paymentSchema } from "./commands";
+
 /** Слово правил: договор ручается за непустую строку, за смысл — владелец списка. */
 const word = z.string().min(1);
 
@@ -210,6 +212,35 @@ export const turnViewSchema = z.object({
 });
 
 /**
+ * Способ сотворить заклинание: чем платить, во что это обойдётся и что мешает именно ему.
+ *
+ * Вердикт стоит у каждого способа, а не один на строку: ячейкой третьего уровня заклинание
+ * сотворится, а вторым — нет, и «недоступно» без указания способа не отвечает ни на один вопрос
+ * игрока. Способов у строки всегда хотя бы один: даже несотворимое называет, чем его сотворяли бы.
+ *
+ * Объявления и шагов здесь нет: они зависят ещё и от набранного — цели, руны, брошенных костей, — и
+ * приходят ответом на вопрос. Прислать их с каждым способом значило бы прислать сорок текстов ради
+ * одного показанного.
+ */
+export const castOptionViewSchema = z.object({
+  /** Режим словом правил: обычное сотворение, ритуал, заговор. */
+  mode: word,
+  payment: paymentSchema,
+  /** Способ, которому мешает меньше всего: с него мастер и начинает. Ровно один в списке. */
+  suggested: z.boolean(),
+  available: z.boolean(),
+  /** Что мешает: код — чтобы отобрать по шагам мастера, фраза — чтобы показать. */
+  warnings: z.array(z.object({ code: word, reasonRu: word })),
+  /** Сколько очков заклинаний спишется и во сколько хитов они обойдутся. */
+  spellPointCost: whole.optional(),
+  hitPointCost: whole.optional(),
+  /** На сколько минут дольше обычного идёт накладывание. */
+  extraMinutes: whole.optional(),
+  /** Урон именно этой ячейкой: он растёт с её уровнем, а не с уровнем заклинания. */
+  damage: z.object({ formula: word, type: word }).optional(),
+});
+
+/**
  * Строка списка заклинаний: карточка вместе с тем, чем она является для этого персонажа сейчас.
  *
  * Числа подставлены под него, а не взяты из книги: 2d8 у заговора — это его уровень. Подписи здесь
@@ -229,6 +260,12 @@ export const spellRowViewSchema = z.object({
   resolution: z.object({ type: word, savingThrow: word.optional() }),
   concentration: z.boolean(),
   ritual: z.boolean(),
+  /** Заговор: платы не требует, руну не принимает и уровнем ячейки не усиливается. */
+  cantrip: z.boolean(),
+  /** Расходует ли сотворение Кости хитов: сколько их позволено бросить, зависит от ячейки. */
+  spendsHitDice: z.boolean(),
+  /** Нужен собственный материальный компонент: фокусировка его не заменяет. */
+  ownComponentRequired: z.boolean(),
   /** Роль в бою: чем бить, чем закрыться, всё прочее. */
   role: word,
 
@@ -250,6 +287,16 @@ export const spellRowViewSchema = z.object({
   damage: z.object({ formula: word, type: word }).optional(),
   /** Каким станет Класс Доспеха, если сотворить; нет вовсе — защиты заклинание не трогает. */
   armorClassIfCast: whole.optional(),
+
+  /**
+   * Чем сотворить и во что это обойдётся, по способу на запись.
+   *
+   * Пустым не бывает, и это записано формой, а не обещанием в тексте: заклинание, которое сотворить
+   * нечем, называет тот способ, которым его сотворяли бы.
+   */
+  castOptions: z.tuple([castOptionViewSchema], castOptionViewSchema),
+  /** Что требуется произнести, показать и приложить: перечень словами, а не «В, С, М». */
+  componentReminders: z.array(word),
 
   /**
    * Что сделать и что сказать мастеру — способом, который предложит мастер применения.
@@ -326,14 +373,32 @@ export const castingViewSchema = z.object({
   preparedCount: whole,
 });
 
+/**
+ * Кровавое колдовство: во что обходится очко и сколько их берут за раз.
+ *
+ * Стоит рядом со строками заклинаний, потому что за то же действие и конкурирует. Причина, по
+ * которой обмен сейчас не идёт, приходит от той же проверки, которой откажет подтверждение: строка
+ * списка и мастер обмена обязаны называть один запрет одними словами.
+ */
+export const bloodMagicViewSchema = z.object({
+  /** Курс нынешней ступени возвышения: сколько хитов отдаётся за одно очко. */
+  hitPointsPerPoint: whole,
+  /** Сколько очков создаётся за раз: от, до и с чего начинать. */
+  points: z.object({ minimum: whole, maximum: whole, initial: whole }),
+  /** Что мешает обмену прямо сейчас, по фразе на помеху; пусто — ничего. */
+  warningsRu: z.array(word),
+});
+
 export type ContributionView = z.infer<typeof contributionViewSchema>;
 export type ConcentrationCheckView = z.infer<typeof concentrationCheckViewSchema>;
 export type ConcentrationView = z.infer<typeof concentrationViewSchema>;
 export type ResourcesView = z.infer<typeof resourcesViewSchema>;
 export type RecoveryView = z.infer<typeof recoveryViewSchema>;
 export type TurnView = z.infer<typeof turnViewSchema>;
+export type CastOptionView = z.infer<typeof castOptionViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;
+export type BloodMagicView = z.infer<typeof bloodMagicViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
 export type StatView = z.infer<typeof statViewSchema>;

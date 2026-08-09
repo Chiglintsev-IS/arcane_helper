@@ -31,9 +31,10 @@ export function BookScreen() {
   const { character } = session;
   const execute = sessionStore.getState().execute;
   const turn = snapshot.turn;
-  const context = { character, turn };
   const { inFight } = turn;
   const { casting } = snapshot;
+  // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
+  const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spell.id) ?? null;
 
   const inMode = spellsForScreen(snapshot.spells, "book");
   const shown = filterSpells(inMode, filters);
@@ -59,9 +60,9 @@ export function BookScreen() {
     rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "book"), 0, (
       <BloodMagicRow
         key="blood-magic"
-        character={character}
+        bloodMagic={snapshot.bloodMagic}
         casting={casting}
-        turn={turn}
+        resources={snapshot.resources}
         onOpen={() => setBloodOpen(true)}
       />
     ));
@@ -117,7 +118,7 @@ export function BookScreen() {
           row={openRow}
           casting={casting}
           note={character.spellNotes[openSpell.id]}
-          onCast={() => draftStore.getState().start(openSpell, context)}
+          onCast={() => draftStore.getState().start(openSpell, openRow)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
           onClose={() => setOpenSpellId(null)}
         />
@@ -125,8 +126,8 @@ export function BookScreen() {
 
       {bloodOpen ? (
         <BloodMagicWizard
-          character={character}
-          turn={turn}
+          bloodMagic={snapshot.bloodMagic}
+          hitPoints={snapshot.sheet.hitPoints}
           error={error}
           onCancel={() => setBloodOpen(false)}
           onConfirm={async (points, allowAnyway) => {
@@ -141,9 +142,9 @@ export function BookScreen() {
       ) : null}
 
       <CastWizard
-        character={character}
-        casting={casting}
-        turn={turn}
+        row={castRow}
+        resources={snapshot.resources}
+        hitDice={snapshot.sheet.hitPoints.hitDice}
         onConfirm={confirm}
         error={error}
       />

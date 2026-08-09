@@ -15,6 +15,8 @@
 
 import { z } from "zod";
 
+import { paymentSchema } from "./commands";
+
 /** Число как форма. Возможность величины — правило, и отвечает за неё владелец. */
 const numeric = z.number();
 
@@ -31,6 +33,24 @@ export const questionSchema = z.discriminatedUnion("kind", [
   }),
   /** Что изменится при переходе на набранный уровень. */
   z.object({ kind: z.literal("level_preview"), level: numeric }),
+  /**
+   * Чем обернётся сотворение так, как его набрали в мастере.
+   *
+   * Способ едет целиком, а не ссылкой на строку способов: спрашивающий уже держит выбранный, и
+   * искать его заново по номеру значило бы завести второй способ сказать одно и то же.
+   */
+  z.object({
+    kind: z.literal("cast_preview"),
+    spellId: word,
+    mode: word,
+    payment: paymentSchema,
+    targetLabel: word.optional(),
+    rune: word.optional(),
+    hitDiceCount: numeric.optional(),
+    hitDiceRolled: numeric.optional(),
+  }),
+  /** Во что обойдётся обмен набранного числа очков заклинаний. */
+  z.object({ kind: z.literal("blood_exchange_preview"), points: numeric }),
 ]);
 
 /**
@@ -56,6 +76,48 @@ export const previewSchema = z.discriminatedUnion("kind", [
     hitPoints: z
       .object({ perDie: whole, dieSize: whole, constitution: whole, total: whole })
       .nullable(),
+  }),
+  z.object({
+    kind: z.literal("cast_preview"),
+    /** Что сказать мастеру и чего в этой фразе не хватает. */
+    announcement: z.object({
+      text: word,
+      gaps: z.array(z.object({ placeholder: word.optional(), reasonRu: word })),
+    }),
+    /** Что сделать за столом — числами этого персонажа и этой ячейки. */
+    instructions: z.array(word),
+    /** Руна на выбранной ячейке: что даст каждая и почему сейчас ни одной не приложить. */
+    runes: z.object({
+      effects: z.array(z.object({ rune: word, effectRu: word })),
+      unavailabilityRu: word.optional(),
+    }),
+    /** Кости хитов; нет вовсе — это сотворение их не тратит. */
+    hitDice: z
+      .object({
+        /** Сколько костей позволено бросить выбранной ячейкой. Ноль — бросать нечего. */
+        maximum: whole,
+        /** Что вообще может выпасть на набранном числе костей; нет вовсе — число не набрано. */
+        roll: z.object({ minimum: whole, maximum: whole }).optional(),
+        /** Прибавка заклинателя к броску: ноль — это сотворение её не прибавляет. */
+        modifier: whole,
+        /** Возможно ли названное выпавшее; нет вовсе — выпавшее не названо. */
+        rollPossible: z.boolean().optional(),
+        /** Сколько хитов вернётся с прибавкой заклинателя; нет вовсе — выпавшее не названо. */
+        restored: whole.optional(),
+      })
+      .optional(),
+  }),
+  z.object({
+    kind: z.literal("blood_exchange_preview"),
+    hitPointsSpent: whole,
+    hitPointsAfter: whole,
+    /** Максимум хитов после обмена: вторая, невосстановимая половина цены. */
+    maximumAfter: whole,
+    pointsAfter: whole,
+    /** Наибольший уровень, который оплатят накопленные очки; `null` — не хватает ни на что. */
+    affordableSpellLevel: whole.nullable(),
+    instructions: z.array(word),
+    announcement: word,
   }),
 ]);
 

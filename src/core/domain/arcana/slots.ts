@@ -97,6 +97,9 @@ export const CAST_MODES = ["normal", "ritual", "cantrip"] as const;
 
 export type CastMode = (typeof CAST_MODES)[number];
 
+/** Насколько ритуальное накладывание длиннее обычного. */
+export const RITUAL_EXTRA_MINUTES = 10;
+
 /**
  * Расходует ли применение ячейку.
  * Заговоры не расходуют, ритуальное применение не расходует.
@@ -360,6 +363,9 @@ export function hitPointCost(spellLevel: number, level: number): number {
   return hitPointsForPoints(spellPointCost(spellLevel), level);
 }
 
+/** Меньше одного очка обмен не создаёт: половины очка в правилах нет. */
+export const MINIMUM_EXCHANGE_POINTS = 1;
+
 /**
  * Потолок одного обмена: сколько очков покупается на текущие хиты.
  *
@@ -367,7 +373,10 @@ export function hitPointCost(spellLevel: number, level: number): number {
  * решение за игрока. Нехватку называет отдельная проверка доступности.
  */
 export function maximumExchangePoints(currentHitPoints: number, level: number): number {
-  return Math.max(1, Math.floor(currentHitPoints / ascensionTierRate(level)));
+  return Math.max(
+    MINIMUM_EXCHANGE_POINTS,
+    Math.floor(currentHitPoints / ascensionTierRate(level)),
+  );
 }
 
 /** Уровни заклинаний, которые оплачиваются указанным числом очков. */

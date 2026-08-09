@@ -60,7 +60,8 @@ export function GameScreen() {
   };
   const turn = snapshot.turn;
   const { inFight } = turn;
-  const context = { character, turn };
+  // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
+  const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spell.id) ?? null;
 
   const { concentration } = snapshot;
   const concentrationSummary = useMemo(() => {
@@ -94,9 +95,9 @@ export function GameScreen() {
     rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play"), 0, (
       <BloodMagicRow
         key="blood-magic"
-        character={character}
+        bloodMagic={snapshot.bloodMagic}
         casting={casting}
-        turn={turn}
+        resources={snapshot.resources}
         onOpen={() => setBloodOpen(true)}
       />
     ));
@@ -222,7 +223,7 @@ export function GameScreen() {
           row={openRow}
           casting={casting}
           note={character.spellNotes[openSpell.id]}
-          onCast={() => draftStore.getState().start(openSpell, context)}
+          onCast={() => draftStore.getState().start(openSpell, openRow)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
           onClose={() => setOpenSpellId(null)}
         />
@@ -230,8 +231,8 @@ export function GameScreen() {
 
       {bloodOpen ? (
         <BloodMagicWizard
-          character={character}
-          turn={turn}
+          bloodMagic={snapshot.bloodMagic}
+          hitPoints={snapshot.sheet.hitPoints}
           error={error}
           onCancel={() => setBloodOpen(false)}
           onConfirm={async (points, allowAnyway) => {
@@ -313,8 +314,10 @@ export function GameScreen() {
           reactionAvailable={turn.reactionAvailable}
           runeAvailable={snapshot.resources.wardingSigilAvailable}
           onCast={(spell) => {
+            const row = snapshot.spells.find((candidate) => candidate.id === spell.id);
+            if (row === undefined) return;
             setReactionsOpen(false);
-            draftStore.getState().start(spell, context);
+            draftStore.getState().start(spell, row);
           }}
           onSpendRune={async () => {
             if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {
@@ -369,9 +372,9 @@ export function GameScreen() {
       )}
 
       <CastWizard
-        character={character}
-        casting={casting}
-        turn={turn}
+        row={castRow}
+        resources={snapshot.resources}
+        hitDice={snapshot.sheet.hitPoints.hitDice}
         onConfirm={confirm}
         error={error}
       />

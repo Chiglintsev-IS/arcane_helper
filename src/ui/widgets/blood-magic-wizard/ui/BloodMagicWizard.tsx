@@ -1,4 +1,9 @@
-/** Состояние персонажа отсюда менять нечем: его меняет только `onConfirm` из кнопки подтверждения. */
+/**
+ * Состояние персонажа отсюда менять нечем: его меняет только `onConfirm` из кнопки подтверждения.
+ *
+ * Цена набранного, объявление и шаги приходят ответом ядра на вопрос: пока их считали здесь, курс
+ * ступени и снижение максимума жили в двух местах сразу.
+ */
 
 "use client";
 
@@ -9,19 +14,12 @@ import {
   WIZARD_STEP_TITLES,
   WizardShell,
 } from "@/ui/shared/ui/WizardShell";
-import type { TurnView } from "@/contract/views";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import {
-  bloodExchangeAnnouncement,
-  bloodExchangeInstructions,
-  bloodExchangePreview,
-} from "@/core/application/casting/announcement";
-import { exchangeWarnings } from "@/core/application/casting/availability";
-import {
-  affordableSpellLevels,
-  maximumExchangePoints,
-} from "@/core/domain/arcana/slots";
+import type { PreviewOf } from "@/contract/questions";
+import type { BloodMagicView, SheetView } from "@/contract/views";
+import { usePreview } from "@/ui/shared/model/usePreview";
 import { withPlural } from "@/core/shared/language";
+
+type ExchangePreview = PreviewOf<"blood_exchange_preview">;
 
 /** Шаги мастера обмена. Шага «чем оплатить» здесь нет: оплата у обмена одна — хиты. */
 const STEPS = ["availability", "amount", "summary"] as const;
@@ -34,44 +32,37 @@ const STEP_TITLES: Record<Step, string> = {
   summary: WIZARD_STEP_TITLES.summary,
 };
 
-/**
- * Объём по умолчанию: два очка — минимум, которого хватает хоть на что-то. Одно очко не покупает
- * ничего, а начинать с потолка значило бы предлагать отдать всё здоровье
- * (rules-engine.md).
- */
-const DEFAULT_POINTS = 2;
-
 /** Подсказка «на что хватит»: очки живут до долгого отдыха, поэтому остаток тоже считается. */
-function affordableHint(totalPoints: number): string {
-  const levels = affordableSpellLevels(totalPoints);
-  const last = levels.at(-1);
-  if (last === undefined) return `Станет ${totalPoints} — на заклинание пока не хватает`;
+function affordableHint(preview: ExchangePreview): string {
+  if (preview.affordableSpellLevel === null) {
+    return `Станет ${preview.pointsAfter} — на заклинание пока не хватает`;
+  }
   return (
-    `Станет ${withPlural(totalPoints, ["очко", "очка", "очков"])}` +
-    ` — хватит на ${last} уровень`
+    `Станет ${withPlural(preview.pointsAfter, ["очко", "очка", "очков"])}` +
+    ` — хватит на ${preview.affordableSpellLevel} уровень`
   );
 }
 
 function AmountStep({
-  character,
   points,
-  maximum,
+  bounds,
+  currentHitPoints,
+  preview,
   onChange,
 }: {
-  character: CharacterState;
   points: number;
-  maximum: number;
+  bounds: BloodMagicView["points"];
+  currentHitPoints: number;
+  preview: ExchangePreview | null;
   onChange: (points: number) => void;
 }) {
-  const preview = bloodExchangePreview(points, character);
-
   return (
     <section aria-label="Сколько очков создать" className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           aria-label="Меньше очков"
-          disabled={points <= 1}
+          disabled={points <= bounds.minimum}
           onClick={() => onChange(points - 1)}
           className="min-h-11 w-14 rounded-xl border border-slate-200 text-xl disabled:opacity-40 dark:border-slate-800"
         >
@@ -80,13 +71,15 @@ function AmountStep({
         <p className="flex flex-col items-center">
           <span className="text-2xl font-semibold tabular-nums leading-tight">{points}</span>
           <span className="text-xs text-slate-600 dark:text-slate-400">
-            {withPlural(preview.hitPointsSpent, ["хит", "хита", "хитов"])}
+            {preview === null
+              ? ""
+              : withPlural(preview.hitPointsSpent, ["хит", "хита", "хитов"])}
           </span>
         </p>
         <button
           type="button"
           aria-label="Больше очков"
-          disabled={points >= maximum}
+          disabled={points >= bounds.maximum}
           onClick={() => onChange(points + 1)}
           className="min-h-11 w-14 rounded-xl border border-slate-200 text-xl disabled:opacity-40 dark:border-slate-800"
         >
@@ -94,23 +87,26 @@ function AmountStep({
         </button>
       </div>
 
-      <p className="text-sm">{affordableHint(preview.pointsAfter)}</p>
-      {/* Максимум назван вместе с текущими: без него непонятно, почему лечение потом упрётся. */}
-      <p className="text-xs text-slate-600 dark:text-slate-400">
-        Хиты {character.hitPoints.current} → {preview.hitPointsAfter}, максимум тоже{" "}
-        {preview.maximumAfter}
-      </p>
+      {preview === null ? null : (
+        <>
+          <p className="text-sm">{affordableHint(preview)}</p>
+          {/* Максимум назван вместе с текущими: без него непонятно, почему лечение потом упрётся. */}
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Хиты {currentHitPoints} → {preview.hitPointsAfter}, максимум тоже {preview.maximumAfter}
+          </p>
+        </>
+      )}
     </section>
   );
 }
 
-function SummaryStep({ character, points }: { character: CharacterState; points: number }) {
+function SummaryStep({ preview }: { preview: ExchangePreview | null }) {
   return (
     <div className="flex flex-col gap-3">
       <section aria-label="Что сделать" className="flex flex-col gap-1">
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
         <ol className="flex flex-col gap-1 text-sm">
-          {bloodExchangeInstructions(points, character).map((step) => (
+          {(preview?.instructions ?? []).map((step) => (
             <li key={step} className="rounded-lg border border-slate-200 px-2 py-1 dark:border-slate-800">
               {step}
             </li>
@@ -123,7 +119,7 @@ function SummaryStep({ character, points }: { character: CharacterState; points:
           Сказать мастеру
         </h3>
         <p className="rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-800">
-          {bloodExchangeAnnouncement(points, character)}
+          {preview?.announcement ?? ""}
         </p>
       </section>
     </div>
@@ -131,30 +127,32 @@ function SummaryStep({ character, points }: { character: CharacterState; points:
 }
 
 export function BloodMagicWizard({
-  character,
-  turn,
+  bloodMagic,
+  hitPoints,
   onConfirm,
   onCancel,
   error,
 }: {
-  character: CharacterState;
-  turn: TurnView;
+  bloodMagic: BloodMagicView;
+  /** Хиты до обмена: их считает лист, и вторым числом здесь они не заводятся. */
+  hitPoints: SheetView["hitPoints"];
   /** Единственное действие мастера, меняющее состояние персонажа. */
   onConfirm: (points: number, allowAnyway: boolean) => void;
   onCancel: () => void;
   error: string | null;
 }) {
-  const maximum = maximumExchangePoints(character.hitPoints.current, character.level);
+  const warnings = bloodMagic.warningsRu;
 
-  const [points, setPoints] = useState(Math.min(DEFAULT_POINTS, maximum));
+  const [points, setPoints] = useState(bloodMagic.points.initial);
   const [allowAnyway, setAllowAnyway] = useState(false);
   // Первый шаг — первый видимый, как в `castDraftStore.start`: иначе предупреждение о подавлении
   // остаётся за спиной, а игрок узнаёт о нём отказом при подтверждении.
-  const [step, setStep] = useState<Step>(() =>
-    exchangeWarnings(character, turn).length > 0 ? "availability" : "amount",
-  );
+  const [step, setStep] = useState<Step>(() => (warnings.length > 0 ? "availability" : "amount"));
 
-  const warnings = exchangeWarnings(character, turn);
+  const asked = { kind: "blood_exchange_preview" as const, points };
+  const answer = usePreview(asked);
+  const preview = answer?.kind === "blood_exchange_preview" ? answer : null;
+
   const steps: Step[] = warnings.length > 0 ? [...STEPS] : ["amount", "summary"];
   const current = steps.includes(step) ? step : "amount";
   const index = steps.indexOf(current);
@@ -216,14 +214,15 @@ export function BloodMagicWizard({
 
       {current === "amount" ? (
         <AmountStep
-          character={character}
           points={points}
-          maximum={maximum}
+          bounds={bloodMagic.points}
+          currentHitPoints={hitPoints.current}
+          preview={preview}
           onChange={setPoints}
         />
       ) : null}
 
-      {current === "summary" ? <SummaryStep character={character} points={points} /> : null}
+      {current === "summary" ? <SummaryStep preview={preview} /> : null}
 
       {error === null ? null : (
         <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">

@@ -9,23 +9,30 @@
  * схватка, и второй ответ на тот же вопрос разошёлся бы с ним молча.
  */
 
-import type { CastingView, SpellRowView, TurnView } from "@/contract/views";
+import type { CastOptionView, CastingView, SpellRowView, TurnView } from "@/contract/views";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Character } from "@/core/domain/assembly/character";
+import { hitPointCost, spellPointCost, RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
-import type { Spell } from "@/core/domain/catalog/spell";
+import { CANTRIP_LEVEL, needsOwnComponent, type Spell } from "@/core/domain/catalog/spell";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import {
-  bestCastPlan,
+  checkAvailability,
+  componentRequirements,
+} from "@/core/application/casting/availability";
+import {
+  castPlans,
   castableInSituation,
   isSpellReady,
   ritualAvailable,
   slotPriceOf,
   type CastOption,
+  type CastPlan,
+  type CastPlans,
 } from "@/core/application/casting/castOptions";
 import type { LiveSession } from "@/core/application/session";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
@@ -40,14 +47,76 @@ function fallbackOption(spell: Spell): CastOption {
 }
 
 /**
+ * Способы сотворения этого заклинания и предложенный среди них.
+ *
+ * Пустым список не бывает: заклинание, которое сотворить нечем, называет тот способ, которым его
+ * сотворяли бы, — иначе мастер применения открывается пустым и не объясняет, чего не хватает.
+ */
+function plansFor(spell: Spell, character: CharacterState, turn: TurnEconomy): CastPlans {
+  const found = castPlans(spell, character, turn);
+  if (found !== null) return found;
+
+  const option = fallbackOption(spell);
+  const only: CastPlan = {
+    option,
+    availability: checkAvailability({ spell, character, turn, ...option }),
+  };
+  return { all: [only], suggested: only };
+}
+
+/**
  * Почему заклинание сейчас недоступно, одной фразой; ничего — доступно.
  *
- * Способ спрашивается один и тот же, что и у мастера применения: взять причину у произвольного
- * способа значило бы соврать — неподготовленный ритуал объяснялся бы подготовкой.
+ * Причина берётся у предложенного способа — того же, который откроет мастер применения: взять её у
+ * произвольного значило бы соврать, и неподготовленный ритуал объяснялся бы подготовкой.
  */
-function unavailableReason(plan: ReturnType<typeof bestCastPlan>): string | undefined {
-  if (plan === null) return "нет доступного способа сотворения";
-  return plan.availability.warnings[0]?.reasonRu;
+function unavailableReason(suggested: CastPlan): string | undefined {
+  return suggested.availability.warnings[0]?.reasonRu;
+}
+
+/** Уровень, на котором сотворяется заклинание этим способом: выбранная ячейка или свой уровень. */
+function castLevel(spell: Spell, option: CastOption): number {
+  return option.payment.kind === "slot" ? option.payment.slotLevel : spell.level;
+}
+
+function castOptionView(
+  plan: CastPlan,
+  plans: CastPlans,
+  spell: Spell,
+  character: CharacterState,
+): CastOptionView {
+  const { option } = plan;
+  const paidWithPoints = option.payment.kind === "spell_points";
+
+  return {
+    mode: option.mode,
+    payment: option.payment,
+    suggested: plan === plans.suggested,
+    available: plan.availability.available,
+    warnings: plan.availability.warnings.map((warning) => ({
+      code: warning.code,
+      reasonRu: warning.reasonRu,
+    })),
+    ...(paidWithPoints
+      ? {
+          spellPointCost: spellPointCost(spell.level),
+          hitPointCost: hitPointCost(spell.level, character.level),
+        }
+      : {}),
+    ...(option.mode === "ritual" ? { extraMinutes: RITUAL_EXTRA_MINUTES } : {}),
+    ...(spell.damage === undefined
+      ? {}
+      : {
+          damage: {
+            formula: effectiveDamage(spell.damage, {
+              spellLevel: spell.level,
+              slotLevel: castLevel(spell, option),
+              characterLevel: character.level,
+            }),
+            type: spell.damage.type,
+          },
+        }),
+  };
 }
 
 /** Каким станет Класс Доспеха, если сотворить: у заклинания без вклада в защиту — ничем. */
@@ -57,9 +126,10 @@ function armorClassIfCast(spell: Spell, character: CharacterState): number | und
 }
 
 function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy): SpellRowView {
-  const plan = bestCastPlan(spell, character, turn);
-  const reason = unavailableReason(plan);
-  const announcementContext = { character, ...(plan?.option ?? fallbackOption(spell)) };
+  const plans = plansFor(spell, character, turn);
+  const [first, ...rest] = plans.all;
+  const reason = unavailableReason(plans.suggested);
+  const announcementContext = { character, ...plans.suggested.option };
   const announcement = renderAnnouncement(spell, announcementContext);
   const armorClass = armorClassIfCast(spell, character);
 
@@ -91,6 +161,9 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     },
     concentration: spell.concentration,
     ritual: spell.ritual,
+    cantrip: spell.level === CANTRIP_LEVEL,
+    spendsHitDice: spell.hitDiceCost !== undefined,
+    ownComponentRequired: needsOwnComponent(spell.components),
     role: combatRoleOf(spell),
 
     slotPrice: slotPriceOf(spell, turn.inFight),
@@ -114,6 +187,11 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
           },
         }),
     ...(armorClass === undefined ? {} : { armorClassIfCast: armorClass }),
+    castOptions: [
+      castOptionView(first, plans, spell, character),
+      ...rest.map((plan) => castOptionView(plan, plans, spell, character)),
+    ],
+    componentReminders: componentRequirements(spell.components),
     instructions: castInstructions(spell, announcementContext),
     announcement: {
       text: announcement.text,

@@ -236,7 +236,10 @@ describe("замена концентрации (FR-081, AC-13)", () => {
     expect(screen.getByText(/Шаг 1 из 3: Чем сотворить/)).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
-    expect(screen.getByText(/Идёт концентрация: «Обнаружение магии»/)).toBeDefined();
+    // Фразу выбирает проверка доступности: собранная в мастере заново, она разошлась бы с той,
+    // которой та же помеха названа в списке, — и с отказом подтверждения.
+    const wizard = within(screen.getByRole("dialog", { name: /Применение/ }));
+    expect(wizard.getByText(/Уже идёт концентрация: «Обнаружение магии»/)).toBeDefined();
     expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Заменить концентрацию" }));

@@ -2,7 +2,6 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
 import {
-  bloodMagicAvailable,
   LONG_REST_HOURS,
   maximumRecoveryPerHour,
   maximumReductionAfterHours,
@@ -85,6 +84,5 @@ describe("подавление особенностей", () => {
     [{ firedUpon: true, underDirectSunlight: true }, true],
   ])("состояние %o подавляет: %s", (state, expected) => {
     expect(traitsSuppressed(state)).toBe(expected);
-    expect(bloodMagicAvailable(state)).toBe(!expected);
   });
 });

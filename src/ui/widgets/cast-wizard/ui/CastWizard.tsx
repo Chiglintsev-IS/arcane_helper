@@ -1,8 +1,15 @@
-/** Компонент меняет только черновик: состояние персонажа трогает лишь кнопка подтверждения. */
+/**
+ * Компонент меняет только черновик: состояние персонажа трогает лишь кнопка подтверждения.
+ *
+ * По правилам он не считает ничего. Способы сотворения с их ценой, уроном и вердиктом приезжают
+ * строкой заклинания; объявление, шаги, эффект руны и границы броска костей — ответом на вопрос про
+ * набранное. Здесь остаются слова, порядок и то, открыт ли шаг.
+ */
 
 "use client";
 
-import type { CastingView, TurnView } from "@/contract/views";
+import type { CastOptionView, ResourcesView, SpellRowView } from "@/contract/views";
+import type { PreviewOf, Question } from "@/contract/questions";
 
 import { useState } from "react";
 
@@ -14,20 +21,10 @@ import {
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import { castingTimeBadge, castingTimePhrase, levelLabel } from "@/ui/entities/spell/lib/format";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { checkAvailability, type Availability } from "@/core/application/casting/availability";
-import { castOptions, type CastOption } from "@/core/application/casting/castOptions";
-import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
-import { effectiveDamage } from "@/core/domain/catalog/scaling";
-import { hitPointCost, spellPointCost } from "@/core/domain/arcana/slots";
-import {
-  hitDiceRollRange,
-  isPossibleHitDiceRoll,
-  maximumHitDiceForCast,
-} from "@/core/domain/vitality/hitDice";
-import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import {
   visibleSteps,
+  CONCENTRATION_BUSY,
+  NO_COMPONENT,
   type CastDraft,
   type WizardStep,
 } from "@/ui/features/cast-spell/model/castDraftStore";
@@ -38,12 +35,13 @@ import {
   RUNE_TARGETS,
   RUNE_TARGET_LABEL,
   runeChoosesTarget,
-  runeEffect,
-  runeUnavailability,
   type Rune,
   type RuneTarget,
 } from "@/core/domain/arcana/runes";
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
+import { usePreview } from "@/ui/shared/model/usePreview";
+
+type CastPreview = PreviewOf<"cast_preview">;
 
 const STEP_TITLES: Record<WizardStep, string> = {
   availability: WIZARD_STEP_TITLES.availability,
@@ -55,43 +53,36 @@ const STEP_TITLES: Record<WizardStep, string> = {
 };
 
 /**
- * Причина, по которой руну сейчас не приложить, — словами. `null` — приложить можно.
- *
- * Недоступное показывается с причиной, а не исчезает (ux.md):
- * пропавший блок читается как «руны в этой игре нет», а не как «не к этому сотворению».
- */
-function runeUnavailable(draft: CastDraft, character: CharacterState): string | null {
-  return runeUnavailability(draft.payment.kind === "slot", character.runes.remaining);
-}
-
-/**
  * Шаг руны.
  *
  * Число показывается до подтверждения и по выбранному уровню ячейки: «половина уровня с округлением
- * вверх, минимум +1» — ровно то, что игрок иначе считает в уме в момент объявления мастеру.
+ * вверх, минимум +1» — ровно то, что игрок иначе считает в уме в момент объявления мастеру. Считает
+ * его ядро: посчитать здесь значило бы завести второе правило о том же.
+ *
+ * Недоступное показывается с причиной, а не исчезает: пропавший блок читается как «руны в этой игре
+ * нет», а не как «не к этому сотворению».
  *
  * Руна необязательна: шаг проходится дальше без выбора, и это отдельная кнопка «Без руны», а не
  * молчание — иначе непонятно, ждёт ли мастер выбора.
  */
 function RuneStep({
   draft,
-  character,
+  runes,
+  pool,
   onChoose,
   onChooseTarget,
 }: {
   draft: CastDraft;
-  character: CharacterState;
+  runes: CastPreview["runes"];
+  pool: ResourcesView["runes"];
   onChoose: (rune: Rune) => void;
   onChooseTarget: (target: RuneTarget) => void;
 }) {
-  const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
-  const unavailable = runeUnavailable(draft, character);
-
-  if (unavailable !== null) {
+  if (runes.unavailabilityRu !== undefined) {
     return (
       <section aria-label="Руна" className="flex flex-col gap-1">
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Руна</h3>
-        <p className="text-xs text-slate-600 dark:text-slate-400">{unavailable}</p>
+        <p className="text-xs text-slate-600 dark:text-slate-400">{runes.unavailabilityRu}</p>
       </section>
     );
   }
@@ -99,11 +90,13 @@ function RuneStep({
   return (
     <section aria-label="Руна" className="flex flex-col gap-2">
       <p className="text-xs text-slate-600 dark:text-slate-400">
-        Руна не требует действия и не более одной на заклинание. Осталось рун:{" "}
-        {character.runes.remaining} из {character.runes.maximum}.
+        Руна не требует действия и не более одной на заклинание. Осталось рун: {pool.remaining} из{" "}
+        {pool.maximum}.
       </p>
       <ul className="flex flex-col gap-1">
         {RUNES.map((rune) => {
+          const effect = runes.effects.find((candidate) => candidate.rune === rune);
+          if (effect === undefined) return null;
           const chosen = draft.rune === rune;
           return (
             <li key={rune}>
@@ -119,7 +112,7 @@ function RuneStep({
               >
                 <span className="text-sm font-medium leading-tight">{RUNE_LABEL[rune]}</span>
                 <span className="text-xs leading-tight text-slate-600 dark:text-slate-400">
-                  {runeEffect(rune, slotLevel)}
+                  {effect.effectRu}
                 </span>
               </button>
             </li>
@@ -154,46 +147,39 @@ function RuneStep({
   );
 }
 
-/** Подпись способа сотворения: что именно спишется. */
-function optionLabel(option: CastOption, draft: CastDraft, character: CharacterState): string {
-  if (option.mode === "ritual") return "Ритуалом · +10 минут, ячейка не расходуется";
+/** Подпись способа сотворения: что именно спишется. Числа приехали посчитанными. */
+function optionLabel(option: CastOptionView, resources: ResourcesView): string {
+  if (option.mode === "ritual") {
+    return `Ритуалом · +${option.extraMinutes} минут, ячейка не расходуется`;
+  }
   if (option.payment.kind === "spell_points") {
-    const points = spellPointCost(draft.spell.level);
-    return `Кровью · ${points} очков (${hitPointCost(draft.spell.level, character.level)} хитов), осталось ${character.spellPoints.remaining}`;
+    return (
+      `Кровью · ${option.spellPointCost} очков (${option.hitPointCost} хитов),` +
+      ` осталось ${resources.spellPoints}`
+    );
   }
   if (option.payment.kind === "slot") {
-    const slot = character.spellSlots[option.payment.slotLevel];
-    return `Ячейка ${option.payment.slotLevel} уровня · осталось ${slot?.remaining ?? 0} из ${slot?.maximum ?? 0}`;
+    const { slotLevel } = option.payment;
+    const slot = resources.slots.find((candidate) => candidate.level === slotLevel);
+    return `Ячейка ${slotLevel} уровня · осталось ${slot?.remaining ?? 0} из ${slot?.maximum ?? 0}`;
   }
   return "Без оплаты";
 }
 
-/** Результат повышения уровня показывается до подтверждения, а не после списания. */
-function optionEffect(option: CastOption, draft: CastDraft, character: CharacterState): string | null {
-  const { damage } = draft.spell;
-  if (damage === undefined) return null;
-  const slotLevel = option.payment.kind === "slot" ? option.payment.slotLevel : draft.spell.level;
-  return `урон ${effectiveDamage(damage, {
-    spellLevel: draft.spell.level,
-    slotLevel,
-    characterLevel: character.level,
-  })} ${damage.type}`;
-}
-
 function AvailabilityStep({
-  availability,
+  warnings,
   allowAnyway,
   onAllowAnyway,
 }: {
-  availability: Availability;
+  warnings: CastOptionView["warnings"];
   allowAnyway: boolean;
   onAllowAnyway: () => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
       <ul className="flex flex-col gap-2">
-        {availability.warnings
-          .filter((warning) => warning.code !== "concentration_busy")
+        {warnings
+          .filter((warning) => warning.code !== CONCENTRATION_BUSY)
           .map((warning) => (
             <li
               key={warning.code}
@@ -222,28 +208,25 @@ function AvailabilityStep({
 
 function SlotStep({
   draft,
-  character,
-  inCombat,
+  row,
+  resources,
   onChoose,
 }: {
   draft: CastDraft;
-  character: CharacterState;
-  /** В бою ритуального способа нет: он не укладывается в раунд. */
-  inCombat: boolean;
-  onChoose: (option: CastOption) => void;
+  row: SpellRowView;
+  resources: ResourcesView;
+  onChoose: (option: CastOptionView) => void;
 }) {
-  const options = castOptions(draft.spell, character, { inCombat });
-  const chosen = (option: CastOption): boolean =>
-    option.mode === draft.mode &&
-    option.payment.kind === draft.payment.kind &&
+  const chosen = (option: CastOptionView): boolean =>
+    option.mode === draft.option.mode &&
+    option.payment.kind === draft.option.payment.kind &&
     (option.payment.kind !== "slot" ||
-      draft.payment.kind !== "slot" ||
-      option.payment.slotLevel === draft.payment.slotLevel);
+      draft.option.payment.kind !== "slot" ||
+      option.payment.slotLevel === draft.option.payment.slotLevel);
 
   return (
     <ul className="flex flex-col gap-1">
-      {options.map((option) => {
-        const effect = optionEffect(option, draft, character);
+      {row.castOptions.map((option) => {
         const key = `${option.mode}-${option.payment.kind}-${
           option.payment.kind === "slot" ? option.payment.slotLevel : 0
         }`;
@@ -259,8 +242,12 @@ function SlotStep({
                   : "border-slate-200 dark:border-slate-800"
               }`}
             >
-              <span>{optionLabel(option, draft, character)}</span>
-              {effect === null ? null : <span className="text-xs opacity-80">{effect}</span>}
+              <span>{optionLabel(option, resources)}</span>
+              {option.damage === undefined ? null : (
+                <span className="text-xs opacity-80">
+                  урон {option.damage.formula} {option.damage.type}
+                </span>
+              )}
             </button>
           </li>
         );
@@ -272,32 +259,25 @@ function SlotStep({
 /**
  * Сколько костей бросить и что выпало.
  *
- * Кубик бросает игрок, приложение принимает результат и складывает. Выпавшее проверяется
- * диапазоном возможного: опечатку от броска приложение отличать обязано, а оспаривать возможный
- * результат не вправе.
+ * Кубик бросает игрок, приложение принимает результат и складывает. Возможность выпавшего решают
+ * правила: опечатку от броска приложение отличать обязано, а оспаривать возможный результат не
+ * вправе.
  */
 function HitDiceStep({
   draft,
-  character,
-  casting,
+  hitDice,
+  pool,
   onCount,
   onRolled,
 }: {
   draft: CastDraft;
-  character: CharacterState;
-  /** Числа заклинателя: прибавка к броску костей — его модификатор, а не число этой карточки. */
-  casting: CastingView;
+  hitDice: NonNullable<CastPreview["hitDice"]>;
+  /** Остаток костей: их считает лист, и вторым числом здесь он не заводится. */
+  pool: { remaining: number; total: number; size: number } | undefined;
   onCount: (count: number) => void;
   onRolled: (rolled: number | null) => void;
 }) {
-  const cost = draft.spell.hitDiceCost;
-  const pool = character.hitDice;
-  if (cost === undefined) return null;
-
-  const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
-  const maximum = maximumHitDiceForCast(cost, draft.spell.level, slotLevel, pool?.remaining ?? 0);
-
-  if (maximum === 0) {
+  if (hitDice.maximum === 0) {
     // Шаг не прячется, а объясняет: правило запрещает бросать несуществующие кости, но не
     // запрещает потратить ячейку зря, и решение остаётся за игроком.
     return (
@@ -310,18 +290,14 @@ function HitDiceStep({
 
   const count = draft.hitDiceCount;
   const size = pool?.size ?? 0;
-  const modifier = cost.addsSpellcastingModifier ? casting.spellcastingModifier : 0;
   const rolled = draft.hitDiceRolled;
-  const range = count === null ? null : hitDiceRollRange(count, size);
-  const outOfRange =
-    count !== null && rolled !== null && !isPossibleHitDiceRoll(rolled, count, size);
 
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <span className="text-sm">Сколько костей бросить</span>
         <ul className="flex flex-wrap gap-1">
-          {Array.from({ length: maximum }, (_, index) => index + 1).map((option) => (
+          {Array.from({ length: hitDice.maximum }, (_, index) => index + 1).map((option) => (
             <li key={option}>
               <button
                 type="button"
@@ -355,26 +331,27 @@ function HitDiceStep({
             aria-describedby="hit-dice-rolled-hint"
             type="number"
             inputMode="numeric"
-            min={range?.minimum}
-            max={range?.maximum}
+            min={hitDice.roll?.minimum}
+            max={hitDice.roll?.maximum}
             value={rolled ?? ""}
             onChange={(event) =>
               onRolled(event.target.value === "" ? null : Number(event.target.value))
             }
             className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
           />
-          {outOfRange ? (
+          {hitDice.rollPossible === false ? (
             <span id="hit-dice-rolled-hint" className="text-xs text-danger">
-              На {count}d{size} может выпасть от {range?.minimum} до {range?.maximum}
+              На {count}d{size} может выпасть от {hitDice.roll?.minimum} до {hitDice.roll?.maximum}
             </span>
-          ) : rolled === null ? (
+          ) : hitDice.restored === undefined ? (
             <span id="hit-dice-rolled-hint" className="text-xs opacity-80">
               Бросьте кости и введите сумму
             </span>
           ) : (
             <span id="hit-dice-rolled-hint" className="text-xs opacity-80">
               {rolled}
-              {modifier === 0 ? "" : ` + ${modifier}`} — вернётся {rolled + modifier} хитов
+              {hitDice.modifier === 0 ? "" : ` + ${hitDice.modifier}`} — вернётся{" "}
+              {hitDice.restored} хитов
             </span>
           )}
         </div>
@@ -383,14 +360,14 @@ function HitDiceStep({
   );
 }
 
-function ComponentsStep({ availability }: { availability: Availability }) {
+function ComponentsStep({ row, warnings }: { row: SpellRowView; warnings: CastOptionView["warnings"] }) {
   // Вердикт, а не напоминание: приложение знает про фокусировку и про то, что лежит в сумке
   //. Пока был открыт, здесь стояла честная отговорка «проверьте по листу».
-  const missing = availability.warnings.filter((warning) => warning.code === "no_component");
+  const missing = warnings.filter((warning) => warning.code === NO_COMPONENT);
 
   return (
     <ul className="flex flex-col gap-1 text-sm">
-      {availability.componentReminders.map((reminder) => (
+      {row.componentReminders.map((reminder) => (
         <li key={reminder} className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
           {reminder}
         </li>
@@ -422,30 +399,25 @@ function ComponentsStep({ availability }: { availability: Availability }) {
  * без замены выбирать не из чего, а о самой концентрации напоминает итоговый экран.
  */
 function ConcentrationStep({
-  character,
+  warnings,
   onReplace,
   onCancel,
   replaceConfirmed,
 }: {
-  character: CharacterState;
+  warnings: CastOptionView["warnings"];
   onReplace: () => void;
   onCancel: () => void;
   replaceConfirmed: boolean;
 }) {
-  const current = character.concentration;
-  if (current === undefined) return null;
-
-  // Имя берётся у эффекта, а при его отсутствии — у самой концентрации: так же поступает проверка
-  // доступности, и расхождение двух источников не оставит на экране пустые кавычки.
-  const effect = character.activeEffects.find(
-    (candidate) => candidate.isConcentration && candidate.spellId === current.spellId,
-  );
+  // Чем именно занята концентрация, называет та же проверка, которая её и обнаружила: собранная
+  // здесь заново фраза разошлась бы с отказом подтверждения.
+  const busy = warnings.find((warning) => warning.code === CONCENTRATION_BUSY);
+  if (busy === undefined) return null;
 
   return (
     <div className="flex flex-col gap-2 text-sm">
       <p className="rounded-lg border border-concentration/50 bg-concentration/10 p-2">
-        Идёт концентрация: «{effect?.nameRu ?? current.spellId}». Новое заклинание её завершит, и
-        эффект закроется.
+        {busy.reasonRu}
       </p>
       {replaceConfirmed ? (
         <p className="text-slate-600 dark:text-slate-400">Замена подтверждена.</p>
@@ -479,31 +451,25 @@ function ConcentrationStep({
  */
 function SummaryStep({
   draft,
-  character,
+  preview,
   onRoleplay,
 }: {
   draft: CastDraft;
-  character: CharacterState;
+  preview: CastPreview | null;
   onRoleplay: (category: RoleplayCategory) => void;
 }) {
-  const context = {
-    character,
-    mode: draft.mode,
-    payment: draft.payment,
-    ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
-    ...(draft.rune === null ? {} : { rune: draft.rune }),
-  };
-  const announcement = renderAnnouncement(draft.spell, context);
-  const instructions = castInstructions(draft.spell, context);
-  const shownGaps = announcement.gaps.filter((gap) => gap.placeholder !== "target");
   const [diagramOpen, setDiagramOpen] = useState(false);
+  // Отсутствие цели — решение, а не пробел: мастер её не спрашивает.
+  const shownGaps = (preview?.announcement.gaps ?? []).filter(
+    (gap) => gap.placeholder !== "target",
+  );
 
   return (
     <div className="flex flex-col gap-3">
       <section aria-label="Что сделать" className="flex flex-col gap-1">
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
         <ol className="flex flex-col gap-1 text-sm">
-          {instructions.map((step) => (
+          {(preview?.instructions ?? []).map((step) => (
             <li
               key={step}
               className="rounded-lg border border-slate-200 px-2 py-1 dark:border-slate-800"
@@ -519,9 +485,8 @@ function SummaryStep({
           Сказать мастеру
         </h3>
         <p className="rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-800">
-          {announcement.text}
+          {preview?.announcement.text ?? ""}
         </p>
-        {/* Отсутствие цели — решение, а не пробел: мастер её не спрашивает. */}
         {shownGaps.length === 0 ? null : (
           <ul className="flex flex-col gap-1 text-xs text-slate-500">
             {shownGaps.map((gap) => (
@@ -532,7 +497,7 @@ function SummaryStep({
       </section>
 
       {/* Схема только в ритуальном режиме: рисовать десять минут в бою нельзя. */}
-      {draft.mode === "ritual" && draft.spell.ritualDiagram !== undefined ? (
+      {draft.option.mode === "ritual" && draft.spell.ritualDiagram !== undefined ? (
         <button
           type="button"
           onClick={() => setDiagramOpen(true)}
@@ -555,78 +520,86 @@ function SummaryStep({
   );
 }
 
+/**
+ * Что спросить у ядра про набранное. `null` — мастер закрыт, и спрашивать не о чем.
+ *
+ * Вопрос везёт выбранный способ и всё, что игрок успел набрать: объявление, шаги, эффект руны и
+ * границы броска зависят и от того, и от другого, и ответ на них один.
+ */
+function castQuestion(draft: CastDraft | null, row: SpellRowView | null): Question | null {
+  if (draft === null || row === null) return null;
+  return {
+    kind: "cast_preview",
+    spellId: row.id,
+    mode: draft.option.mode,
+    payment: draft.option.payment,
+    ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
+    ...(draft.rune === null ? {} : { rune: draft.rune }),
+    ...(draft.hitDiceCount === null ? {} : { hitDiceCount: draft.hitDiceCount }),
+    ...(draft.hitDiceRolled === null ? {} : { hitDiceRolled: draft.hitDiceRolled }),
+  };
+}
+
 export function CastWizard({
-  character,
-  casting,
-  turn,
+  row,
+  resources,
+  hitDice,
   onConfirm,
   error,
 }: {
-  character: CharacterState;
-  casting: CastingView;
-  turn: TurnView;
+  /** Строка выбранного заклинания; `null` — мастер закрыт либо строки для него нет. */
+  row: SpellRowView | null;
+  /** Чем платить: остатки ячеек, рун и очков. Считать по ним мастер ничего не вправе. */
+  resources: ResourcesView;
+  /** Кости хитов персонажа; нет вовсе — состояние приехало из чужой сборки. */
+  hitDice: { remaining: number; total: number; size: number } | undefined;
   /** Подтверждение: единственное действие мастера, меняющее состояние персонажа. */
   onConfirm: (draft: CastDraft) => void;
   error: string | null;
 }) {
   const { draft: draftStore } = useStores();
   const draft = useDraft((state) => state.draft);
+  const answer = usePreview(castQuestion(draft, row));
+  const preview: CastPreview | null = answer?.kind === "cast_preview" ? answer : null;
 
-  if (draft === null) return null;
+  if (draft === null || row === null) return null;
 
-  const context = { character, turn };
-  const steps = visibleSteps(draft, context);
-  const availability = checkAvailability({
-    spell: draft.spell,
-    character,
-    turn,
-    mode: draft.mode,
-    payment: draft.payment,
-  });
+  const steps = visibleSteps(draft, row);
+  const { warnings } = draft.option;
 
   const index = steps.indexOf(draft.step);
   const isLast = draft.step === "summary";
-  const castingTime = castingTimeBadge(draft.spell.castingTime.type);
+  const castingTime = castingTimeBadge(row.castingTime.type);
   const actions = draftStore.getState();
 
   // Замена концентрации требует явного выбора: без него дальше не пускаем. Согласие своё, а не
   // общее с «Применить всё равно»: иначе брошенное заклинание молча разрешало бы и перерасход.
   const concentrationBlocked =
     draft.step === "concentration" &&
-    character.concentration !== undefined &&
+    warnings.some((warning) => warning.code === CONCENTRATION_BUSY) &&
     !draft.replaceConcentration;
   const availabilityBlocked = draft.step === "availability" && !draft.allowAnyway;
-  // Кости: пока число не выбрано или выпавшее вне возможного, дальше не пускаем. Костей может не
-  // остаться вовсе — тогда выбирать нечего, и шаг не задерживает.
-  const hitDiceBlocked = ((): boolean => {
-    if (draft.step !== "hitDice") return false;
-    const cost = draft.spell.hitDiceCost;
-    if (cost === undefined) return false;
-    const slotLevel = draft.payment.kind === "slot" ? draft.payment.slotLevel : draft.spell.level;
-    const maximum = maximumHitDiceForCast(
-      cost,
-      draft.spell.level,
-      slotLevel,
-      character.hitDice?.remaining ?? 0,
-    );
-    if (maximum === 0) return false;
-    const { hitDiceCount: count, hitDiceRolled: rolled } = draft;
-    if (count === null || rolled === null) return true;
-    const size = character.hitDice?.size ?? 0;
-    return !isPossibleHitDiceRoll(rolled, count, size);
-  })();
+  // Кости: пока число не выбрано или выпавшее вне возможного, дальше не пускаем. Возможность
+  // выпавшего решают правила, и ответ на этот шаг ещё может быть в пути. Костей может не остаться
+  // вовсе — тогда выбирать нечего, и шаг не задерживает.
+  const hitDiceBlocked =
+    draft.step === "hitDice" &&
+    (preview === null ||
+      (preview.hitDice !== undefined &&
+        preview.hitDice.maximum > 0 &&
+        preview.hitDice.rollPossible !== true));
 
   const back = index > 0 ? { onBack: () => actions.back(steps) } : {};
 
   return (
     <WizardShell
-      ariaLabel={`Применение «${draft.spell.nameRu}»`}
-      title={draft.spell.nameRu}
-      subtitle={levelLabel(draft.spell.level)}
+      ariaLabel={`Применение «${row.nameRu}»`}
+      title={row.nameRu}
+      subtitle={levelLabel(row.level)}
       badge={{
         tone: castingTime.tone,
         icon: castingTime.icon,
-        label: castingTimePhrase(draft.spell.castingTime),
+        label: castingTimePhrase(row.castingTime),
       }}
       stepLabel={`Шаг ${index + 1} из ${steps.length}: ${STEP_TITLES[draft.step]}`}
       onCancel={() => actions.cancel()}
@@ -643,7 +616,7 @@ export function CastWizard({
     >
       {draft.step === "availability" ? (
         <AvailabilityStep
-          availability={availability}
+          warnings={warnings}
           allowAnyway={draft.allowAnyway}
           onAllowAnyway={() => actions.allowAnyway()}
         />
@@ -652,8 +625,8 @@ export function CastWizard({
         <>
           <SlotStep
             draft={draft}
-            character={character}
-            inCombat={turn.inFight}
+            row={row}
+            resources={resources}
             onChoose={(option) => actions.chooseCastOption(option)}
           />
           {/*
@@ -661,29 +634,30 @@ export function CastWizard({
  ячейки, и отдельный экран сделал бы типовое применение трёхшаговым — против
  бюджета в четыре шага, из которых боевое заклинание сегодня тратит два.
  */}
-          {draft.spell.level === CANTRIP_LEVEL || draft.mode === "ritual" ? null : (
+          {row.cantrip || draft.option.mode === "ritual" || preview === null ? null : (
             <RuneStep
               draft={draft}
-              character={character}
+              runes={preview.runes}
+              pool={resources.runes}
               onChoose={(rune) => actions.chooseRune(rune)}
               onChooseTarget={(target) => actions.chooseRuneTarget(target)}
             />
           )}
         </>
       ) : null}
-      {draft.step === "hitDice" ? (
+      {draft.step === "hitDice" && preview?.hitDice !== undefined ? (
         <HitDiceStep
           draft={draft}
-          character={character}
-          casting={casting}
+          hitDice={preview.hitDice}
+          pool={hitDice}
           onCount={(count) => actions.setHitDiceCount(count)}
           onRolled={(rolled) => actions.setHitDiceRolled(rolled)}
         />
       ) : null}
-      {draft.step === "components" ? <ComponentsStep availability={availability} /> : null}
+      {draft.step === "components" ? <ComponentsStep row={row} warnings={warnings} /> : null}
       {draft.step === "concentration" ? (
         <ConcentrationStep
-          character={character}
+          warnings={warnings}
           replaceConfirmed={draft.replaceConcentration}
           onReplace={() => actions.replaceConcentration()}
           onCancel={() => actions.cancel()}
@@ -692,7 +666,7 @@ export function CastWizard({
       {draft.step === "summary" ? (
         <SummaryStep
           draft={draft}
-          character={character}
+          preview={preview}
           onRoleplay={(category) => actions.setRoleplayCategory(category)}
         />
       ) : null}

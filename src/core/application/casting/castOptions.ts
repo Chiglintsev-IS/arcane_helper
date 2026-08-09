@@ -82,7 +82,7 @@ export type CastOption = {
  * В бою ритуального способа среди них нет: ритуал занимает на десять минут больше обычного, а раунд
  * длится шесть секунд. Предлагать его в бою значит предлагать выбор, который нельзя сделать.
  */
-export function castOptions(
+function castOptions(
   spell: Spell,
   character: CharacterState,
   options: { inCombat: boolean },
@@ -107,27 +107,42 @@ export function castOptions(
 }
 
 /** Способ сотворения вместе с его проверкой доступности. */
-type CastPlan = { option: CastOption; availability: Availability };
+export type CastPlan = { option: CastOption; availability: Availability };
+
+/** Способы сотворения и предложенный среди них. Предложенный всегда один из перечисленных. */
+export type CastPlans = { all: [CastPlan, ...CastPlan[]]; suggested: CastPlan };
 
 /**
  * Способ, которому мешает меньше всего: доступный, если он есть, иначе с наименьшим числом
- * предупреждений. `null` — способов нет вовсе: заклинание уровня, до которого персонаж не дорос.
+ * предупреждений.
  *
  * Взять причину у произвольного способа значило бы соврать: неподготовленный ритуал объяснялся бы
  * подготовкой, хотя ритуалу она не нужна и мастер применения предложит именно ритуал.
  */
-export function bestCastPlan(
+function leastHindered(first: CastPlan, rest: readonly CastPlan[]): CastPlan {
+  let best = first;
+  for (const plan of [first, ...rest]) {
+    if (plan.availability.available) return plan;
+    if (plan.availability.warnings.length < best.availability.warnings.length) best = plan;
+  }
+  return best;
+}
+
+/**
+ * Все способы сотворить заклинание вместе с тем, что каждому мешает, и с предложенным среди них.
+ *
+ * Проверены все, а не только предложенный: ячейкой третьего заклинание сотворится, а вторым — нет,
+ * и один вердикт на всю строку не отвечает ни на один вопрос игрока. `null` — способов нет вовсе:
+ * заклинание уровня, до которого персонаж не дорос.
+ */
+export function castPlans(
   spell: Spell,
   character: CharacterState,
   turn: TurnResources,
-): CastPlan | null {
-  let best: CastPlan | null = null;
-  for (const option of castOptions(spell, character, { inCombat: turn.inFight })) {
-    const availability = checkAvailability({ spell, character, turn, ...option });
-    if (availability.available) return { option, availability };
-    if (best === null || availability.warnings.length < best.availability.warnings.length) {
-      best = { option, availability };
-    }
-  }
-  return best;
+): CastPlans | null {
+  const [first, ...rest] = castOptions(spell, character, { inCombat: turn.inFight }).map(
+    (option) => ({ option, availability: checkAvailability({ spell, character, turn, ...option }) }),
+  );
+  if (first === undefined) return null;
+  return { all: [first, ...rest], suggested: leastHindered(first, rest) };
 }

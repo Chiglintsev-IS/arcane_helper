@@ -31,8 +31,14 @@ function command<K extends string, S extends z.ZodRawShape>(kind: K, shape: S) {
   return z.object({ kind: z.literal(kind), ...shape });
 }
 
-/** Чем платят за заклинание. Род оплаты придуман договором, поэтому перечислением. */
-const paymentSchema = z.discriminatedUnion("kind", [
+/**
+ * Чем платят за заклинание. Род оплаты придуман договором, поэтому перечислением.
+ *
+ * Тот же самый и в проекции способов, и в вопросе про набранное: способ, показанный игроку, — это
+ * ровно то, чем он потом и заплатит, и второй формой сказать об этом значило бы переводить одно в
+ * другое на полпути.
+ */
+export const paymentSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("slot"), slotLevel: numeric }),
   z.object({ kind: z.literal("spell_points") }),
   z.object({ kind: z.literal("none") }),
