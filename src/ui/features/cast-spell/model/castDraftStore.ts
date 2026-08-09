@@ -17,9 +17,6 @@ import type { CommandOf } from "@/contract/commands";
 import type { CastOptionView, SpellRowView } from "@/contract/views";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-import type { Rune, RuneTarget } from "@/core/domain/arcana/runes";
-import { runeChoosesTarget } from "@/core/domain/arcana/runes";
-
 /**
  * Экраны мастера в порядке. Шаг, где нечего выбирать, не показывается.
  *
@@ -74,10 +71,10 @@ export type CastDraft = {
   allowAnyway: boolean;
   /** Игрок согласился прервать идущую концентрацию: выбор между двумя эффектами — только его. */
   replaceConcentration: boolean;
-  /** Приложенная руна или `null`. Не более одной на заклинание. */
-  rune: Rune | null;
+  /** Приложенная руна словом правил или `null`. Не более одной на заклинание. */
+  rune: string | null;
   /** Кому её эффект. Спрашивается только у той руны, которая выбирает цель. */
-  runeTarget: RuneTarget;
+  runeTarget: string;
   /**
    * Сколько Костей хитов бросить и что на них выпало. Оба `null`, пока игрок не выбрал.
    *
@@ -88,6 +85,12 @@ export type CastDraft = {
   hitDiceRolled: number | null;
   step: WizardStep;
 };
+
+/**
+ * Цель руны, пока игрок не выбирал: заклинатель. Правилам это не противоречит и их не повторяет —
+ * невыбранная цель для них и означает «себе», а мастеру нужна отмеченная кнопка, а не пустой ряд.
+ */
+const DEFAULT_RUNE_TARGET = "self";
 
 /** Ключ запоминания — идентификатор заклинания: выбор помнится по заклинанию, а не глобально. */
 type Remembered = {
@@ -183,9 +186,14 @@ export type CastDraftState = {
 
   start: (row: SpellRowView) => void;
   chooseCastOption: (option: CastOptionView) => void;
-  /** Приложить руну или снять её. Не более одной на заклинание. */
-  chooseRune: (rune: Rune) => void;
-  chooseRuneTarget: (target: RuneTarget) => void;
+  /**
+   * Приложить руну или снять её. Не более одной на заклинание.
+   *
+   * Выбирает ли руна цель — правило, и приходит оно предпросмотром рядом с её эффектом: набранная
+   * цель руны, которая цель не выбирает, уехала бы в подтверждение и молча ничего не значила.
+   */
+  chooseRune: (rune: string, choosesTarget: boolean) => void;
+  chooseRuneTarget: (target: string) => void;
   /** Сколько костей бросить. Смена числа обнуляет выпавшее: оно относилось к прежнему. */
   setHitDiceCount: (count: number) => void;
   /** Что выпало на брошенных костях. */
@@ -236,7 +244,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           allowAnyway: false,
           replaceConcentration: false,
           rune: null,
-          runeTarget: "self",
+          runeTarget: DEFAULT_RUNE_TARGET,
           hitDiceCount: null,
           hitDiceRolled: null,
           step: "summary",
@@ -246,12 +254,12 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
         set({ draft: { ...draft, step: first } });
       },
 
-      chooseRune(rune) {
+      chooseRune(rune, choosesTarget) {
         // Повторное нажатие снимает руну: выбор из трёх без возможности передумать — ловушка.
         edit((draft) => ({
           ...draft,
           rune: draft.rune === rune ? null : rune,
-          runeTarget: runeChoosesTarget(rune) ? draft.runeTarget : "self",
+          runeTarget: choosesTarget ? draft.runeTarget : DEFAULT_RUNE_TARGET,
         }));
       },
 
@@ -274,7 +282,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
           // при подтверждении.
           const reset = { hitDiceCount: null, hitDiceRolled: null };
           if (option.payment.kind !== "slot")
-            return { ...draft, option, rune: null, runeTarget: "self" as const, ...reset };
+            return { ...draft, option, rune: null, runeTarget: DEFAULT_RUNE_TARGET, ...reset };
           return { ...draft, option, ...reset };
         });
       },

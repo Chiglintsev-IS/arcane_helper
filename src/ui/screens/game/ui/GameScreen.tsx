@@ -363,6 +363,7 @@ export function GameScreen() {
       <CastWizard
         row={castRow}
         resources={snapshot.resources}
+        choices={snapshot.choices}
         hitDice={snapshot.sheet.hitPoints.hitDice}
         onConfirm={confirm}
         error={error}

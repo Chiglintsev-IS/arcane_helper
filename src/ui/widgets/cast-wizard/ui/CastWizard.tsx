@@ -8,7 +8,7 @@
 
 "use client";
 
-import type { CastOptionView, ResourcesView, SpellRowView } from "@/contract/views";
+import type { CastOptionView, ChoicesView, ResourcesView, SpellRowView } from "@/contract/views";
 import type { PreviewOf, Question } from "@/contract/questions";
 
 import { useState } from "react";
@@ -28,19 +28,16 @@ import {
   type CastDraft,
   type WizardStep,
 } from "@/ui/features/cast-spell/model/castDraftStore";
-import {
-  RUNES,
-  RUNE_LABEL,
-  RUNE_TARGETS,
-  RUNE_TARGET_LABEL,
-  runeChoosesTarget,
-  type Rune,
-  type RuneTarget,
-} from "@/core/domain/arcana/runes";
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
 import { usePreview } from "@/ui/shared/model/usePreview";
 
 type CastPreview = PreviewOf<"cast_preview">;
+
+/** Кому руна: перечень целей приезжает перечнем правил, а слово к слову выбирает экран. */
+const RUNE_TARGET_LABELS: Readonly<Record<string, string>> = {
+  self: "Себе",
+  other: "Другому",
+};
 
 const STEP_TITLES: Record<WizardStep, string> = {
   availability: WIZARD_STEP_TITLES.availability,
@@ -67,15 +64,18 @@ const STEP_TITLES: Record<WizardStep, string> = {
 function RuneStep({
   draft,
   runes,
+  targets,
   pool,
   onChoose,
   onChooseTarget,
 }: {
   draft: CastDraft;
   runes: CastPreview["runes"];
+  /** Кому руна: перечень тех, между кем выбирают. */
+  targets: ChoicesView["runeTargets"];
   pool: ResourcesView["runes"];
-  onChoose: (rune: Rune) => void;
-  onChooseTarget: (target: RuneTarget) => void;
+  onChoose: (rune: string, choosesTarget: boolean) => void;
+  onChooseTarget: (target: string) => void;
 }) {
   if (runes.unavailabilityRu !== undefined) {
     return (
@@ -93,23 +93,21 @@ function RuneStep({
         {pool.maximum}.
       </p>
       <ul className="flex flex-col gap-1">
-        {RUNES.map((rune) => {
-          const effect = runes.effects.find((candidate) => candidate.rune === rune);
-          if (effect === undefined) return null;
-          const chosen = draft.rune === rune;
+        {runes.effects.map((effect) => {
+          const chosen = draft.rune === effect.rune;
           return (
-            <li key={rune}>
+            <li key={effect.rune}>
               <button
                 type="button"
                 aria-pressed={chosen}
-                onClick={() => onChoose(rune)}
+                onClick={() => onChoose(effect.rune, effect.choosesTarget)}
                 className={`flex min-h-11 w-full flex-col items-start rounded-lg border px-3 py-1 text-left ${
                   chosen
                     ? "border-ritual bg-ritual/10 text-ritual-strong dark:text-ritual"
                     : "border-slate-200 dark:border-slate-800"
                 }`}
               >
-                <span className="text-sm font-medium leading-tight">{RUNE_LABEL[rune]}</span>
+                <span className="text-sm font-medium leading-tight">{effect.nameRu}</span>
                 <span className="text-xs leading-tight text-slate-600 dark:text-slate-400">
                   {effect.effectRu}
                 </span>
@@ -118,9 +116,9 @@ function RuneStep({
           );
         })}
       </ul>
-      {draft.rune !== null && runeChoosesTarget(draft.rune) ? (
+      {runes.effects.some((effect) => effect.rune === draft.rune && effect.choosesTarget) ? (
         <div role="group" aria-label="Кому руна" className="flex gap-1">
-          {RUNE_TARGETS.map((target) => (
+          {targets.map((target) => (
             <button
               key={target}
               type="button"
@@ -132,7 +130,7 @@ function RuneStep({
                   : "border-slate-200 dark:border-slate-800"
               }`}
             >
-              {RUNE_TARGET_LABEL[target]}
+              {RUNE_TARGET_LABELS[target] ?? target}
             </button>
           ))}
         </div>
@@ -544,12 +542,15 @@ function castQuestion(draft: CastDraft | null, row: SpellRowView | null): Questi
 export function CastWizard({
   row,
   resources,
+  choices,
   hitDice,
   onConfirm,
   error,
 }: {
   /** Строка выбранного заклинания; `null` — мастер закрыт либо строки для него нет. */
   row: SpellRowView | null;
+  /** Из чего выбирают: кому достаётся руна, выбирающая цель. */
+  choices: ChoicesView;
   /** Чем платить: остатки ячеек, рун и очков. Считать по ним мастер ничего не вправе. */
   resources: ResourcesView;
   /** Кости хитов персонажа; нет вовсе — состояние приехало из чужой сборки. */
@@ -639,8 +640,9 @@ export function CastWizard({
             <RuneStep
               draft={draft}
               runes={preview.runes}
+              targets={choices.runeTargets}
               pool={resources.runes}
-              onChoose={(rune) => actions.chooseRune(rune)}
+              onChoose={(rune, choosesTarget) => actions.chooseRune(rune, choosesTarget)}
               onChooseTarget={(target) => actions.chooseRuneTarget(target)}
             />
           )}

@@ -17,11 +17,6 @@ export const RUNE_LABEL: Record<Rune, string> = {
   wind: "Руна ветра",
 };
 
-export const RUNE_TARGET_LABEL: Record<RuneTarget, string> = {
-  self: "Себе",
-  other: "Другому",
-};
-
 /** Максимум пула рун равен бонусу мастерства. */
 export function runesMaximum(proficiencyBonus: number): number {
   return proficiencyBonus;

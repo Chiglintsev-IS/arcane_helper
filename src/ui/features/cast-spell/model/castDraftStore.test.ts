@@ -17,6 +17,7 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { applyCommand } from "@/core/presentation/controller";
+import { answerQuestion } from "@/core/presentation/previewer";
 import { toSpellRowViews } from "@/core/presentation/views/spellRowsView";
 import {
   createCastDraftStore,
@@ -64,6 +65,22 @@ function played(
     );
   });
   return live;
+}
+
+/**
+ * Выбирает ли руна цель — правило, и мастер узнаёт его предпросмотром. Здесь спрошено у того же
+ * ответчика: угаданный флаг проверял бы догадку прогона, а не приложение.
+ */
+function choosesTarget(rune: string): boolean {
+  const preview = answerQuestion(
+    played(createThorne(), IN_FIGHT),
+    { kind: "cast_preview", spellId: mageArmor.id, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+    testClock().now(),
+  );
+  if (preview.kind !== "cast_preview") throw new Error("ответчик ответил не про сотворение");
+  const effect = preview.runes.effects.find((candidate) => candidate.rune === rune);
+  if (effect === undefined) throw new Error(`нет эффекта руны ${rune}`);
+  return effect.choosesTarget;
 }
 
 /** Строка заклинания так, как её увидит мастер применения. */
@@ -125,7 +142,7 @@ function draftOf(): CastDraft {
 describe("руна при сотворении (FR-151)", () => {
   it("прикладывается к заклинанию и попадает в запрос применения", () => {
     store.getState().start(rowOf(mageArmor));
-    store.getState().chooseRune("war");
+    store.getState().chooseRune("war", choosesTarget("war"));
 
     expect(draftOf().rune).toBe("war");
     expect(toCastCommand(draftOf()).rune).toBe("war");
@@ -133,8 +150,8 @@ describe("руна при сотворении (FR-151)", () => {
 
   it("повторное нажатие снимает руну: выбор без возможности передумать — ловушка", () => {
     store.getState().start(rowOf(mageArmor));
-    store.getState().chooseRune("life");
-    store.getState().chooseRune("life");
+    store.getState().chooseRune("life", choosesTarget("life"));
+    store.getState().chooseRune("life", choosesTarget("life"));
 
     expect(draftOf().rune).toBeNull();
     expect(toCastCommand(draftOf()).rune).toBeUndefined();
@@ -142,8 +159,8 @@ describe("руна при сотворении (FR-151)", () => {
 
   it("выбор другой руны заменяет прежнюю: больше одной на заклинание не бывает", () => {
     store.getState().start(rowOf(mageArmor));
-    store.getState().chooseRune("life");
-    store.getState().chooseRune("wind");
+    store.getState().chooseRune("life", choosesTarget("life"));
+    store.getState().chooseRune("wind", choosesTarget("wind"));
 
     expect(draftOf().rune).toBe("wind");
   });
@@ -152,7 +169,7 @@ describe("руна при сотворении (FR-151)", () => {
     const row = rowOf(detectMagic, createThorne(), OUTSIDE_FIGHT);
     store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 1));
-    store.getState().chooseRune("war");
+    store.getState().chooseRune("war", choosesTarget("war"));
     expect(draftOf().rune).toBe("war");
 
     store.getState().chooseCastOption(optionBy(row, (option) => option.mode === "ritual"));
@@ -160,7 +177,7 @@ describe("руна при сотворении (FR-151)", () => {
   });
 
   it("без черновика выбор руны ничего не делает", () => {
-    store.getState().chooseRune("war");
+    store.getState().chooseRune("war", choosesTarget("war"));
     expect(store.getState().draft).toBeNull();
   });
 });
@@ -168,7 +185,7 @@ describe("руна при сотворении (FR-151)", () => {
 describe("цель руны жизни (FR-156)", () => {
   it("по умолчанию себе, но переключается на другого и уходит в запрос", () => {
     store.getState().start(rowOf(mageArmor));
-    store.getState().chooseRune("life");
+    store.getState().chooseRune("life", choosesTarget("life"));
     expect(draftOf().runeTarget).toBe("self");
 
     store.getState().chooseRuneTarget("other");
@@ -178,10 +195,10 @@ describe("цель руны жизни (FR-156)", () => {
 
   it("руна, цели не выбирающая, возвращает её себе: ветер действует только на заклинателя", () => {
     store.getState().start(rowOf(mageArmor));
-    store.getState().chooseRune("life");
+    store.getState().chooseRune("life", choosesTarget("life"));
     store.getState().chooseRuneTarget("other");
 
-    store.getState().chooseRune("wind");
+    store.getState().chooseRune("wind", choosesTarget("wind"));
     expect(draftOf().runeTarget).toBe("self");
   });
 
@@ -189,7 +206,7 @@ describe("цель руны жизни (FR-156)", () => {
     const row = rowOf(detectMagic, createThorne(), OUTSIDE_FIGHT);
     store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 1));
-    store.getState().chooseRune("life");
+    store.getState().chooseRune("life", choosesTarget("life"));
     store.getState().chooseRuneTarget("other");
 
     store.getState().chooseCastOption(optionBy(row, (option) => option.mode === "ritual"));

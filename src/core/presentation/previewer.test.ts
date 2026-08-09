@@ -131,6 +131,14 @@ describe("сотворение", () => {
     expect(first?.runes.effects[0]?.effectRu).not.toEqual(fourth?.runes.effects[0]?.effectRu);
   });
 
+  it("руна называет себя и говорит, выбирает ли цель: выбирает одна из трёх", () => {
+    const preview = castPreview({ spellId: "mage-armor", payment: slotOne });
+
+    const chooses = preview?.runes.effects.filter((effect) => effect.choosesTarget) ?? [];
+    expect(chooses.map((effect) => effect.rune)).toEqual(["life"]);
+    expect(chooses[0]?.nameRu).toBe("Руна жизни");
+  });
+
   it("при оплате кровью руна не предлагается вовсе, и причина названа", () => {
     const preview = castPreview({ spellId: "mage-armor", payment: { kind: "spell_points" } });
 

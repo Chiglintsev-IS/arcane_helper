@@ -16,7 +16,13 @@ import {
   arcaneRecoveryPlanCost,
   validateArcaneRecovery,
 } from "@/core/domain/arcana/slots";
-import { RUNES, runeEffect, runeUnavailability } from "@/core/domain/arcana/runes";
+import {
+  RUNES,
+  RUNE_LABEL,
+  runeChoosesTarget,
+  runeEffect,
+  runeUnavailability,
+} from "@/core/domain/arcana/runes";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
   hitDiceRollRange,
@@ -92,16 +98,24 @@ function hitDiceOf(
  * Что даст каждая руна на выбранной ячейке и почему сейчас ни одной не приложить.
  *
  * Эффекты приезжают все три, а не только выбранный: игрок выбирает руну, читая, что каждая даст,
- * и посчитать половину уровня ячейки на экране значило бы завести второе правило о том же.
+ * и посчитать половину уровня ячейки на экране значило бы завести второе правило о том же. Вместе с
+ * эффектом едет и то, выбирает ли руна цель: это правило, и спросить его дважды значит однажды
+ * предложить выбор там, где выбора нет.
  */
 function runesOf(live: LiveSession, payment: PaymentChoice): PreviewOf<"cast_preview">["runes"] {
   const { runes } = live.session.character;
   const unavailability = runeUnavailability(payment.kind === "slot", runes.remaining);
 
   return {
-    effects: payment.kind === "slot"
-      ? RUNES.map((rune) => ({ rune, effectRu: runeEffect(rune, payment.slotLevel) }))
-      : [],
+    effects:
+      payment.kind === "slot"
+        ? RUNES.map((rune) => ({
+            rune,
+            nameRu: RUNE_LABEL[rune],
+            effectRu: runeEffect(rune, payment.slotLevel),
+            choosesTarget: runeChoosesTarget(rune),
+          }))
+        : [],
     ...(unavailability === null ? {} : { unavailabilityRu: unavailability }),
   };
 }
