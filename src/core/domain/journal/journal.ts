@@ -77,6 +77,7 @@ export class Journal<TState extends object = Record<string, unknown>> {
       ...(recorded.spellId === undefined ? {} : { spellId: recorded.spellId }),
       ...(recorded.slotLevel === undefined ? {} : { slotLevel: recorded.slotLevel }),
       ...(recorded.actionUsed === undefined ? {} : { actionUsed: recorded.actionUsed }),
+      ...(recorded.damage === undefined ? {} : { damage: recorded.damage }),
     };
     const entries = [...this.entries, entry];
     return new Journal(

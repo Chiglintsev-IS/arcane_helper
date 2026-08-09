@@ -1,12 +1,9 @@
 "use client";
 
-import { Character } from "@/core/domain/assembly/character";
-import { saveStatId } from "@/core/domain/shared/stats";
 import { useState, useMemo } from "react";
 
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { wardingSigilAvailable } from "@/core/application/useCases/effects";
-import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 
@@ -36,24 +33,22 @@ export function RestScreen() {
   const [damageOpen, setDamageOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
+  const [checkOpen, setCheckOpen] = useState(false);
 
   const { character } = session;
   const execute = sessionStore.getState().execute;
   const economy = deriveTurnEconomy(session);
   const { inFight } = economy;
 
+  const { concentration } = snapshot;
   const concentrationSummary = useMemo(() => {
-    const effect = character.activeEffects.find((candidate) => candidate.isConcentration);
-    if (effect === undefined) return null;
+    if (concentration === undefined) return null;
     return describeConcentration({
-      spell: spells.find((candidate) => candidate.id === effect.spellId) ?? null,
-      effect,
-      character,
+      concentration,
+      row: snapshot.spells.find((candidate) => candidate.id === concentration.spellId) ?? null,
       casting: snapshot.casting,
-      journal: session.journal,
     });
-  }, [character, spells, snapshot.casting, session.journal]);
+  }, [concentration, snapshot.spells, snapshot.casting]);
   const inMode = spellsForScreen(snapshot.spells, "rest");
   const dividing = dividingCategories(inMode);
 
@@ -61,11 +56,7 @@ export function RestScreen() {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
     setDamageOpen(false);
     setPanelOpen(false);
-    if (character.concentration !== undefined) {
-      setPendingCheck(
-        describeConcentrationCheck(damage, Character.of(character).sheet.value(saveStatId("constitution"))),
-      );
-    }
+    setCheckOpen(true);
   };
 
   return (
@@ -197,20 +188,20 @@ export function RestScreen() {
         />
       ) : null}
 
-      {pendingCheck === null || concentrationSummary === null ? null : (
+      {!checkOpen || concentration?.checkAfterDamage === undefined ? null : (
         <ConcentrationCheckCard
-          check={pendingCheck}
-          spellNameRu={concentrationSummary.nameRu}
+          check={concentration.checkAfterDamage}
+          spellNameRu={concentration.nameRu}
           runeAvailable={wardingSigilAvailable(session)}
-          onSuccess={() => setPendingCheck(null)}
+          onSuccess={() => setCheckOpen(false)}
           onSpendRune={async () => {
             if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {
-              setPendingCheck(null);
+              setCheckOpen(false);
             }
           }}
           onFail={async () => {
             if ((await execute({ kind: "end_concentration", reason: "failed_check" })) === null) {
-              setPendingCheck(null);
+              setCheckOpen(false);
             }
           }}
         />

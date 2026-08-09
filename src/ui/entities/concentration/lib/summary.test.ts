@@ -1,75 +1,51 @@
-import type { CharacterState } from "@/core/domain/assembly/state";
+/**
+ * Подписи блока концентрации.
+ *
+ * Числа сюда приходят проекцией, и здесь проверяется только выбор слов: падеж, знак, порядок фактов
+ * через точку и деградация без карточки. Правила — раунд начала, урон по ячейке, сложность — стоят
+ * у своего владельца и проверяются его прогоном.
+ */
+
 import { describe, expect, it } from "vitest";
 
-import { testSnapshot } from "@/ui/app/testing/stores";
-
-import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
+import type { ConcentrationView, SpellRowView } from "@/contract/views";
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { ActiveEffect } from "@/core/domain/effects/schema";
-import type { Spell } from "@/core/domain/catalog/spell";
+import { testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
-
-/**
- * Карточка по идентификатору прямо из контента.
- *
- * Помощник `spell` из `@/testing/stores` здесь не годится: он тянет `@testing-library/react`, а
- * тесты правил идут в окружении node без jsdom.
- */
-const CONTENT = new Map(loadThorneSpells().map((item) => [item.id, item]));
-
-function spell(id: string): Spell {
-  const found = CONTENT.get(id);
-  if (found === undefined) throw new Error(`нет карточки ${id}`);
-  return found;
-}
-
-/**
- * Карточка без области.
- *
- * Ключ убирается, а не присваивается `undefined`: при `exactOptionalPropertyTypes` явный `undefined`
- * в необязательное поле не проходит проверку типов.
- */
-function withoutArea(id: string): Omit<Spell, "area"> {
-  const { area: _area, ...rest } = spell(id);
-  return rest;
-}
 
 /** Числа заклинателя Торна: их строит настоящий презентер. */
 const CASTING = testSnapshot().casting;
 
+/** Строка настоящей проекции: досягаемость и род броска блок берёт из неё. */
+const ROW = testSpellRow("detect-magic");
+
+function concentration(overrides: Partial<ConcentrationView> = {}): ConcentrationView {
+  return {
+    spellId: "detect-magic",
+    nameRu: "Обнаружение магии",
+    slotLevelUsed: 1,
+    startedOnRound: 1,
+    startApproximate: false,
+    durationRu: "до 10 минут",
+    shortRulesRu: "Заклинатель чувствует присутствие магии вокруг себя.",
+    save: 4,
+    minimumDc: 10,
+    ...overrides,
+  };
+}
+
+function summaryOf(
+  overrides: Partial<ConcentrationView> = {},
+  row: SpellRowView | null = ROW,
+  casting = CASTING,
+) {
+  return describeConcentration({ concentration: concentration(overrides), row, casting });
+}
+
 describe("describeConcentration (FR-084)", () => {
-  const journal = [
-    { at: "2026-07-31T18:00:00.000Z", kind: "turn_started" },
-    { at: "2026-07-31T18:00:01.000Z", kind: "spell_cast" },
-  ];
-
-  function effect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
-    return {
-      id: "effect-1",
-      spellId: "detect-magic",
-      nameRu: "Обнаружение магии",
-      startedAt: "2026-07-31T18:00:01.000Z",
-      duration: { type: "minutes", value: 10 },
-      isConcentration: true,
-      slotLevelUsed: 1,
-      contributions: [],
-      endConditionRu: "До конца концентрации или истечения длительности.",
-      ...overrides,
-    };
-  }
-
-  function summaryFor(spellId: string, overrides: Partial<ActiveEffect> = {}) {
-    return describeConcentration({
-      spell: spell(spellId),
-      effect: effect({ spellId, ...overrides }),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
-    });
-  }
-
   it("описывает заклинание с областью и без броска", () => {
-    const summary = summaryFor("detect-magic");
+    const summary = summaryOf();
 
     expect(summary.spellId).toBe("detect-magic");
     expect(summary.rulesAvailable).toBe(true);
@@ -83,46 +59,31 @@ describe("describeConcentration (FR-084)", () => {
   });
 
   it("подставляет КС спасброска цели", () => {
-    const summary = describeConcentration({
-      spell: { ...withoutArea("detect-magic"), resolution: { type: "saving_throw", savingThrow: "DEX" } },
-      effect: effect(),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
+    const { area: _area, ...withoutArea } = ROW;
+    const summary = summaryOf({}, {
+      ...withoutArea,
+      resolution: { type: "saving_throw", savingThrow: "DEX" },
     });
 
     expect(summary.mechanicsLabel).toBe("На себя · Спасбросок Ловкости КС 16");
   });
 
-  it("подставляет модификатор атаки и урон по фактической ячейке", () => {
-    const summary = describeConcentration({
-      spell: { ...spell("ray-of-frost"), concentration: true, duration: { type: "rounds", value: 3 } },
-      effect: effect({ spellId: "ray-of-frost", slotLevelUsed: 0, duration: { type: "rounds", value: 3 } }),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
-    });
+  it("подставляет модификатор атаки и урон, посчитанный проекцией", () => {
+    const summary = summaryOf(
+      { slotLevelUsed: 0, damage: { formula: "2d8", type: "холод" } },
+      testSpellRow("ray-of-frost"),
+    );
 
     expect(summary.slotLabel).toBe("без ячейки");
-    expect(summary.durationLabel).toBe("до 3 раундов");
-    // Заговор растёт от уровня персонажа: пороги 5 и 11, у 7 уровня — два кубика.
     expect(summary.mechanicsLabel).toBe("60 футов · Атака d20+8 · Урон 2d8 (холод)");
   });
 
   it("помечает раунд неточным, если начало вытеснено из журнала", () => {
-    const summary = describeConcentration({
-      spell: spell("detect-magic"),
-      effect: effect({ startedAt: "2026-07-31T10:00:00.000Z" }),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
-    });
-
-    expect(summary.startLabel).toBe("раунд ≥ 1");
+    expect(summaryOf({ startApproximate: true }).startLabel).toBe("раунд ≥ 1");
   });
 
   it("перечисляет способы прерывания, помечая право мастера", () => {
-    const { breakers } = summaryFor("detect-magic");
+    const { breakers } = summaryOf();
 
     expect(breakers[0]?.textRu).toContain("спасбросок Телосложения +4");
     expect(breakers.map((breaker) => breaker.atDiscretion)).toEqual([
@@ -137,13 +98,10 @@ describe("describeConcentration (FR-084)", () => {
   });
 
   it("деградирует до данных эффекта, если карточки нет в контенте", () => {
-    const summary = describeConcentration({
-      spell: null,
-      effect: effect(),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
+    const { spellId: _spellId, ...withoutCard } = concentration({
+      shortRulesRu: "До конца концентрации или истечения длительности.",
     });
+    const summary = describeConcentration({ concentration: withoutCard, row: null, casting: CASTING });
 
     // Показать «Концентрации нет» нельзя: незаметная потеря концентрации запрещена.
     expect(summary.nameRu).toBe("Обнаружение магии");
@@ -154,13 +112,8 @@ describe("describeConcentration (FR-084)", () => {
   });
 
   it("не выдумывает характеристику, когда спасбросок в карточке не указан", () => {
-    const summary = describeConcentration({
-      spell: { ...withoutArea("detect-magic"), resolution: { type: "saving_throw" } },
-      effect: effect(),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
-    });
+    const { area: _area, ...withoutArea } = ROW;
+    const summary = summaryOf({}, { ...withoutArea, resolution: { type: "saving_throw" } });
 
     // Схема требует характеристику при спасброске; без неё состояние испорчено, и назвать один
     // порог честнее, чем выдумать характеристику.
@@ -183,14 +136,12 @@ describe("describeConcentration (FR-084)", () => {
         },
       ],
     };
-    const summary = describeConcentration({
-      spell: spell("ray-of-frost"),
-      effect: effect({ spellId: "ray-of-frost", slotLevelUsed: 0 }),
-      character,
+    const summary = summaryOf(
+      { save: -2, slotLevelUsed: 0 },
+      testSpellRow("ray-of-frost", character),
       // Числа проклятого заклинателя: их считает та же проекция, что и в приложении.
-      casting: testSnapshot(character).casting,
-      journal,
-    });
+      testSnapshot(character).casting,
+    );
 
     expect(summary.mechanicsLabel).toContain("Атака d20−1");
     expect(summary.breakLabel).toBe("Урон → спасбросок Телосложения −2, КС от 10");
@@ -201,33 +152,21 @@ describe("describeConcentration (FR-084)", () => {
     [{ type: "special" } as const, "Особая дальность"],
     [{ type: "distance" } as const, "0 футов"],
   ])("описывает дальность %o как «%s»", (range, expected) => {
-    const summary = describeConcentration({
-      spell: { ...withoutArea("detect-magic"), range },
-      effect: effect(),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
-    });
+    const { area: _area, ...withoutArea } = ROW;
 
-    expect(summary.mechanicsLabel).toContain(expected);
+    expect(summaryOf({}, { ...withoutArea, range }).mechanicsLabel).toContain(expected);
   });
 
   it.each([
-    ["cone" as const, "Конус"],
-    ["cube" as const, "Куб"],
-    ["line" as const, "Линия"],
-    ["cylinder" as const, "Цилиндр"],
+    ["cone", "Конус"],
+    ["cube", "Куб"],
+    ["line", "Линия"],
+    ["cylinder", "Цилиндр"],
   ])("называет область формы %s как «%s»", (shape, expected) => {
-    const summary = describeConcentration({
-      spell: {
-        ...spell("detect-magic"),
-        area: { shape, sizeFeet: 20 },
-        range: { type: "distance", distanceFeet: 60 },
-      },
-      effect: effect(),
-      character: createThorne(),
-      casting: CASTING,
-      journal,
+    const summary = summaryOf({}, {
+      ...ROW,
+      area: { shape, sizeFeet: 20 },
+      range: { type: "distance", distanceFeet: 60 },
     });
 
     expect(summary.mechanicsLabel).toContain(`${expected} 20 футов`);

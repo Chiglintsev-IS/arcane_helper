@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 
-import type { ConcentrationCheck } from "@/core/domain/effects/concentration";
+import type { ConcentrationCheckView } from "@/contract/views";
 import { checkGuidanceRu } from "@/ui/features/concentration-check/lib/checkGuidance";
 import { signed } from "@/core/shared/language";
 
@@ -23,7 +23,7 @@ export function ConcentrationCheckCard({
   onSpendRune,
   onFail,
 }: {
-  check: ConcentrationCheck;
+  check: ConcentrationCheckView;
   spellNameRu: string;
   runeAvailable: boolean;
   onSuccess: () => void;

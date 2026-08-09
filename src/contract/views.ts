@@ -220,6 +220,51 @@ export const spellRowViewSchema = z.object({
 });
 
 /**
+ * Проверка концентрации, которой ответил последний урон.
+ *
+ * Вердикт едет перечислением, а не выводится из чисел показывающим: «не проходит даже 20» — вывод
+ * из граней кости и порога, а не из вёрстки, и повторить его на экране значило бы завести второе
+ * правило о том же.
+ */
+export const concentrationCheckViewSchema = z.object({
+  dc: whole,
+  modifier: whole,
+  hasAdvantage: z.boolean(),
+  /** Наименьший результат кости, который проходит. */
+  minimumRoll: whole,
+  /** Чем решается: любым броском, никаким или начиная с наименьшего. */
+  outcome: word,
+});
+
+/**
+ * Концентрация так, как её показывают: что держится, с какого раунда и чем срывается.
+ *
+ * Досягаемости и рода броска здесь нет: они у строки того же заклинания, и повторить их значило бы
+ * прислать одно и то же дважды. Урон — есть: он посчитан по потраченной ячейке, а строка называет
+ * цену собственного уровня.
+ */
+export const concentrationViewSchema = z.object({
+  /** Чем держится; нет вовсе — карточки в контенте нет, и вести за правилами некуда. */
+  spellId: word.optional(),
+  nameRu: word,
+  /** Ячейка, которой сотворено; 0 — ячейка не тратилась. */
+  slotLevelUsed: whole,
+  startedOnRound: whole,
+  /** Начало вытеснено из обрезанного журнала: раунд — нижняя граница, а не точное число. */
+  startApproximate: z.boolean(),
+  durationRu: word,
+  shortRulesRu: word,
+  /** Урон с учётом потраченной ячейки. */
+  damage: z.object({ formula: word, type: word }).optional(),
+  /** Спасбросок Телосложения — единственный вид проверки концентрации. */
+  save: whole,
+  /** Ниже этой сложности проверка концентрации не бывает. */
+  minimumDc: whole,
+  /** Что требует последний полученный урон; нет вовсе — отвечать не на что. */
+  checkAfterDamage: concentrationCheckViewSchema.optional(),
+});
+
+/**
  * Числа заклинателя: то, чем он колдует вообще, а не этим заклинанием.
  *
  * Стоят раз на персонажа, а не при каждой строке: от заклинания они не зависят, и повторить их в
@@ -234,6 +279,8 @@ export const castingViewSchema = z.object({
 });
 
 export type ContributionView = z.infer<typeof contributionViewSchema>;
+export type ConcentrationCheckView = z.infer<typeof concentrationCheckViewSchema>;
+export type ConcentrationView = z.infer<typeof concentrationViewSchema>;
 export type ResourcesView = z.infer<typeof resourcesViewSchema>;
 export type TurnView = z.infer<typeof turnViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;

@@ -2,6 +2,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
 import {
+  checkOutcome,
   describeConcentrationCheck,
   durationWithRoundsRu,
   startRound,
@@ -60,6 +61,19 @@ describe("describeConcentrationCheck", () => {
   it("считает наименьший проходящий бросок", () => {
     expect(describeConcentrationCheck(24, 4).minimumRoll).toBe(8);
     expect(describeConcentrationCheck(10, -1).minimumRoll).toBe(11);
+  });
+});
+
+describe("checkOutcome", () => {
+  // Границы принадлежат правилу: натуральная 20 спасбросок сама по себе не проходит, и «не
+  // проходит даже 20» — вывод из граней кости, а не из подписи.
+  it.each([
+    [10, 9, "any_roll"],
+    [10, 20, "any_roll"],
+    [24, 4, "threshold"],
+    [60, 4, "impossible"],
+  ])("урон %i с модификатором %i решается как «%s»", (damage, modifier, expected) => {
+    expect(checkOutcome(describeConcentrationCheck(damage, modifier))).toBe(expected);
   });
 });
 

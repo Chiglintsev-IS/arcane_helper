@@ -19,7 +19,7 @@ function roundsHint(rounds: number): string {
 }
 
 /** Записи журнала в том объёме, который нужен для счёта раундов. */
-export type TurnMark = { at: string; kind: string };
+type TurnMark = { at: string; kind: string };
 
 type StartRound = {
   round: number;
@@ -66,7 +66,7 @@ function concentrationCheckDc(damage: number): number {
   return Math.max(MINIMUM_CONCENTRATION_DC, Math.floor(damage / 2));
 }
 
-export type ConcentrationCheck = {
+type ConcentrationCheck = {
   /** Спасбросок Телосложения — единственный вид проверки концентрации. */
   ability: "CON";
   dc: number;

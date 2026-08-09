@@ -63,6 +63,12 @@ export type JournalEntry<TState = Record<string, unknown>> = {
   readonly spellId?: string | undefined;
   readonly slotLevel?: number | undefined;
   readonly actionUsed?: TurnResource | undefined;
+  /**
+   * Сколько урона принесло событие. Тем и отличается полученный урон от прочих изменений здоровья:
+   * от него зависит сложность проверки концентрации, и восстановить его по снимку отмены нельзя —
+   * упавшие в ноль хиты урон обрезают, а сложность нет.
+   */
+  readonly damage?: number | undefined;
 };
 
 /** Что записывает операция; время и идентификатор добавляет журнал. */
@@ -72,4 +78,5 @@ export type Recorded = {
   spellId?: string;
   slotLevel?: number;
   actionUsed?: TurnResource;
+  damage?: number;
 };

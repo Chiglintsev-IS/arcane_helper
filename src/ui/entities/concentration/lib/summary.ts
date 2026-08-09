@@ -1,16 +1,5 @@
-import type { CastingView } from "@/contract/views";
-import { Character } from "@/core/domain/assembly/character";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { saveStatId } from "@/core/domain/shared/stats";
-import type { ActiveEffect } from "@/core/domain/effects/schema";
-import type { Spell } from "@/core/domain/catalog/spell";
-import { effectiveDamage } from "@/core/domain/catalog/scaling";
-import {
-  MINIMUM_CONCENTRATION_DC,
-  durationWithRoundsRu,
-  startRound,
-  type TurnMark,
-} from "@/core/domain/effects/concentration";
+import type { CastingView, ConcentrationView, SpellRowView } from "@/contract/views";
+
 import { signed } from "@/core/shared/language";
 import { areaPhrase, rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 
@@ -21,7 +10,7 @@ export type ConcentrationBreaker = {
 };
 
 export type ConcentrationSummary = {
-  /** Концентрационный эффект всегда ссылается на заклинание; `null` — только ради общего с ручным эффектом поля. */
+  /** Карточка, к которой ведут полные правила; `null` — её нет в контенте. */
   spellId: string | null;
   nameRu: string;
   slotLabel: string;
@@ -42,33 +31,23 @@ export type ConcentrationSummary = {
  * формулировки, «Луч холода» показывал «атака заклинанием +8» там, где список говорил «Атака d20+8».
  */
 function mechanicsRu(
-  spell: Spell,
-  effect: ActiveEffect,
-  character: CharacterState,
+  row: SpellRowView,
+  damage: ConcentrationView["damage"],
   casting: CastingView,
 ): string {
   const reach =
-    spell.area === undefined
-      ? rangePhrase(spell.range)
-      : areaPhrase(spell.area, spell.range.type === "self");
-  const damage =
-    spell.damage === undefined
-      ? null
-      : `Урон ${effectiveDamage(spell.damage, {
-          spellLevel: spell.level,
-          slotLevel: effect.slotLevelUsed,
-          characterLevel: character.level,
-        })} (${spell.damage.type})`;
+    row.area === undefined ? rangePhrase(row.range) : areaPhrase(row.area, row.range.type === "self");
+  const damageRu = damage === undefined ? null : `Урон ${damage.formula} (${damage.type})`;
 
-  return [reach, resolutionBadge(spell.resolution, casting).label, damage]
+  return [reach, resolutionBadge(row.resolution, casting).label, damageRu]
     .filter((part) => part !== null)
     .join(" · ");
 }
 
-function breakers(constitutionModifier: string): ConcentrationBreaker[] {
+function breakers(constitutionModifier: string, minimumDc: number): ConcentrationBreaker[] {
   return [
     {
-      textRu: `Урон — спасбросок Телосложения ${constitutionModifier}, КС = максимум(${MINIMUM_CONCENTRATION_DC}, половина урона вниз). Провал завершает и концентрацию, и эффект`,
+      textRu: `Урон — спасбросок Телосложения ${constitutionModifier}, КС = максимум(${minimumDc}, половина урона вниз). Провал завершает и концентрацию, и эффект`,
       atDiscretion: false,
     },
     { textRu: "Ещё одно концентрационное заклинание — это заменит", atDiscretion: false },
@@ -76,43 +55,46 @@ function breakers(constitutionModifier: string): ConcentrationBreaker[] {
     { textRu: "Своё решение — в любой момент, бесплатно", atDiscretion: false },
     { textRu: "Истечение длительности — приложение не отсчитывает", atDiscretion: false },
     {
-      textRu: `Сильно отвлекающая обстановка — спасбросок Телосложения ${constitutionModifier} против КС ${MINIMUM_CONCENTRATION_DC}`,
+      textRu: `Сильно отвлекающая обстановка — спасбросок Телосложения ${constitutionModifier} против КС ${minimumDc}`,
       atDiscretion: true,
     },
   ];
 }
 
 /**
- * Описание собирается из карточки при отрисовке, а не хранится: сохранённый текст разошёлся бы с
- * обновлённым контентом. Карточки может не быть — состояние пришло импортом из другой сборки, — и
- * тогда описание деградирует до того, что лежит в самом эффекте: концентрация не может исчезнуть с
- * экрана незаметно.
+ * Подписи собираются при отрисовке, а числа приходят проекцией: сохранённый текст разошёлся бы с
+ * обновлённым контентом, а посчитанное на экране — с правилами. Строки заклинания может не быть —
+ * состояние пришло импортом из другой сборки, — и тогда механика деградирует до слов о том, что
+ * правил в контенте нет: концентрация не может исчезнуть с экрана незаметно.
  */
 export function describeConcentration(input: {
-  spell: Spell | null;
-  effect: ActiveEffect;
-  character: CharacterState;
+  concentration: ConcentrationView;
+  /** Строка того же заклинания: досягаемость и род броска стоят в ней. */
+  row: SpellRowView | null;
   /** Числа заклинателя: ими называется бросок в строке механики. */
   casting: CastingView;
-  journal: readonly TurnMark[];
 }): ConcentrationSummary {
-  const { spell, effect, character, casting, journal } = input;
-  const start = startRound(journal, effect.startedAt);
-  const modifier = signed(Character.of(character).sheet.value(saveStatId("constitution")));
+  const { concentration, row, casting } = input;
+  const modifier = signed(concentration.save);
 
   return {
-    spellId: effect.spellId ?? null,
-    nameRu: effect.nameRu,
-    slotLabel: effect.slotLevelUsed === 0 ? "без ячейки" : `ячейка ${effect.slotLevelUsed} ур.`,
-    startLabel: start.approximate ? `раунд ≥ ${start.round}` : `раунд ${start.round}`,
-    durationLabel: durationWithRoundsRu(effect.duration),
+    spellId: concentration.spellId ?? null,
+    nameRu: concentration.nameRu,
+    slotLabel:
+      concentration.slotLevelUsed === 0
+        ? "без ячейки"
+        : `ячейка ${concentration.slotLevelUsed} ур.`,
+    startLabel: concentration.startApproximate
+      ? `раунд ≥ ${concentration.startedOnRound}`
+      : `раунд ${concentration.startedOnRound}`,
+    durationLabel: concentration.durationRu,
     mechanicsLabel:
-      spell === null
+      row === null
         ? "Правил нет в контенте: состояние из другой сборки"
-        : mechanicsRu(spell, effect, character, casting),
-    breakLabel: `Урон → спасбросок Телосложения ${modifier}, КС от ${MINIMUM_CONCENTRATION_DC}`,
-    shortRulesRu: spell === null ? effect.endConditionRu : spell.shortRulesRu,
-    rulesAvailable: spell !== null,
-    breakers: breakers(modifier),
+        : mechanicsRu(row, concentration.damage, casting),
+    breakLabel: `Урон → спасбросок Телосложения ${modifier}, КС от ${concentration.minimumDc}`,
+    shortRulesRu: concentration.shortRulesRu,
+    rulesAvailable: concentration.spellId !== undefined,
+    breakers: breakers(modifier, concentration.minimumDc),
   };
 }

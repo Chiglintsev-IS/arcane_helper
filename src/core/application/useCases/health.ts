@@ -24,7 +24,11 @@ export function takeDamage(
   return commit(
     session,
     root.withVitality(vitality),
-    { kind: "hit_points_changed", summaryRu: `Получено урона: ${damage}${absorbedNote}${note}` },
+    {
+      kind: "hit_points_changed",
+      summaryRu: `Получено урона: ${damage}${absorbedNote}${note}`,
+      damage,
+    },
     occasion,
   );
 }

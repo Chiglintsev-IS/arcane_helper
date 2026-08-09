@@ -15,6 +15,7 @@ import { z } from "zod";
 import {
   bagViewSchema,
   castingViewSchema,
+  concentrationViewSchema,
   resourcesViewSchema,
   sheetViewSchema,
   spellRowViewSchema,
@@ -42,6 +43,8 @@ export const snapshotSchema = z.object({
   bag: bagViewSchema,
   resources: resourcesViewSchema,
   turn: turnViewSchema,
+  /** Что держится вниманием; нет вовсе — не держится ничего. */
+  concentration: concentrationViewSchema.optional(),
   casting: castingViewSchema,
   spells: z.array(spellRowViewSchema),
   journal: z.array(journalEntryViewSchema),

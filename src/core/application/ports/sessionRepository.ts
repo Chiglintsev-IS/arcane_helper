@@ -40,6 +40,11 @@ const journalEntrySchema = z.object({
   spellId: z.string().min(1).optional(),
   slotLevel: z.number().int().optional(),
   actionUsed: z.enum(["action", "bonus_action", "reaction"]).optional(),
+  /**
+   * Урон записи. Необязателен, поэтому версия формата не растёт: сохранение без него читается
+   * ровно как прежде — проверка концентрации по такой записи просто неизвестна, как и была.
+   */
+  damage: z.number().int().optional(),
 });
 
 const persistedSessionSchema = z.object({
