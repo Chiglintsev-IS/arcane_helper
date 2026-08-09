@@ -12,6 +12,7 @@ import type { LiveSession } from "@/core/application/session";
 
 import { toBagView } from "./views/bagView";
 import { toConcentrationView } from "./views/concentrationView";
+import { toRecoveryView } from "./views/recoveryView";
 import { toResourcesView } from "./views/resourcesView";
 import { toSheetView } from "./views/sheetView";
 import { toCastingView, toSpellRowViews, toTurnView } from "./views/spellRowsView";
@@ -23,7 +24,8 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     version,
     sheet: toSheetView(live.session.character),
     bag: toBagView(live.session.character),
-    resources: toResourcesView(live.session.character),
+    resources: toResourcesView(live.session),
+    recovery: toRecoveryView(live.session),
     turn: toTurnView(live),
     ...(concentration === undefined ? {} : { concentration }),
     casting: toCastingView(live.session.character),

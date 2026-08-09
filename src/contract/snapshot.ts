@@ -16,6 +16,7 @@ import {
   bagViewSchema,
   castingViewSchema,
   concentrationViewSchema,
+  recoveryViewSchema,
   resourcesViewSchema,
   sheetViewSchema,
   spellRowViewSchema,
@@ -42,6 +43,7 @@ export const snapshotSchema = z.object({
   sheet: sheetViewSchema,
   bag: bagViewSchema,
   resources: resourcesViewSchema,
+  recovery: recoveryViewSchema,
   turn: turnViewSchema,
   /** Что держится вниманием; нет вовсе — не держится ничего. */
   concentration: concentrationViewSchema.optional(),

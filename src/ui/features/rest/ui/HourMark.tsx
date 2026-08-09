@@ -12,9 +12,7 @@
 
 "use client";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { Vitality } from "@/core/domain/vitality/vitality";
-import { Arcana } from "@/core/domain/arcana/arcana";
+import type { RecoveryView } from "@/contract/views";
 import { withPlural } from "@/core/shared/language";
 import { RestActionButton } from "./RestActionButton";
 
@@ -35,26 +33,22 @@ function hourLabel(maximumReturn: number, healed: number, spellPoints: number): 
 }
 
 export function HourMark({
-  character,
-  inFight,
+  nextHour,
   onRecoverMaximum,
 }: {
-  character: CharacterState;
-  /** Идёт ли бой прямо сейчас: внутри раунда час не проходит. */
-  inFight: boolean;
+  nextHour: RecoveryView["nextHour"];
   onRecoverMaximum: () => void;
 }) {
-  const { returned, healed } = Vitality.of(character).afterAnHour(character.level);
-  const spellPoints = Arcana.of(character).spellPoints;
+  const { maximumReturned, healed, spellPointsLost, unavailabilityRu } = nextHour;
   // Кнопка, которая гарантированно ответит отказом, занимает ряд и обещает возможность, которой
   // нет: часу нечего менять — кнопки тоже нет.
-  if (returned <= 0 && healed <= 0 && spellPoints <= 0) return null;
+  if (maximumReturned <= 0 && healed <= 0 && spellPointsLost <= 0) return null;
 
   return (
     <RestActionButton
       onClick={onRecoverMaximum}
-      name={hourLabel(returned, healed, spellPoints)}
-      {...(inFight ? { disabledReason: "Час не проходит во время боя" } : {})}
+      name={hourLabel(maximumReturned, healed, spellPointsLost)}
+      {...(unavailabilityRu === undefined ? {} : { disabledReason: unavailabilityRu })}
     />
   );
 }

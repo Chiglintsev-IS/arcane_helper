@@ -514,16 +514,16 @@ describe("отдых и бой: отказ приходит с причиной 
     await user.click(screen.getByRole("radio", { name: /^Привал/ }));
 
     const shortRest = screen.getByRole("button", {
-      name: "Короткий отдых · час — Не проходит во время боя",
+      name: "Короткий отдых · час — Пока идёт бой, короткий отдых недоступен",
     });
     expect(shortRest.hasAttribute("disabled")).toBe(true);
 
-    const longRest = screen.getByRole("button", { name: "Долгий отдых — Не проходит во время боя" });
+    const longRest = screen.getByRole("button", { name: "Долгий отдых — Пока идёт бой, долгий отдых недоступен" });
     expect(longRest.hasAttribute("disabled")).toBe(true);
 
     // Подпись несёт ещё и остаток дневного бюджета, поэтому имя проверяется началом и причиной.
     const recovery = screen.getByRole("button", {
-      name: /^Магическое восстановление .* — Не проходит во время боя$/,
+      name: /^Магическое восстановление .* — Пока идёт бой, магическое восстановление недоступно$/,
     });
     expect(recovery.hasAttribute("disabled")).toBe(true);
   });
@@ -536,7 +536,7 @@ describe("отдых и бой: отказ приходит с причиной 
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("radio", { name: /^Привал/ }));
     await user.click(
-      screen.getByRole("button", { name: "Долгий отдых — Не проходит во время боя" }),
+      screen.getByRole("button", { name: "Долгий отдых — Пока идёт бой, долгий отдых недоступен" }),
     );
 
     expect(stores.session.getState().session?.journal.at(-1)?.kind).not.toBe("long_rest");

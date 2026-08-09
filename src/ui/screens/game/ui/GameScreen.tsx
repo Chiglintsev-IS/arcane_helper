@@ -7,8 +7,7 @@ import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import type { Command } from "@/contract/commands";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
-import { wardingSigilAvailable } from "@/core/application/useCases/effects";
-import { combatEndRecovery, deriveTurnEconomy } from "@/core/application/useCases/turn";
+import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
@@ -194,8 +193,7 @@ export function GameScreen() {
             Реакции
           </button>
           <HourMark
-            character={character}
-            inFight={inFight}
+            nextHour={snapshot.recovery.nextHour}
             onRecoverMaximum={() =>
               void execute({ kind: "recover_hit_point_maximum" })
             }
@@ -285,8 +283,8 @@ export function GameScreen() {
         <ConfirmSheet
           title="Бой закончен?"
           body={
-            combatEndRecovery(character) > 0
-              ? `Регенерация вне боя идёт непрерывно: здоровье поднимется до половины максимума, это ${combatEndRecovery(character)} хитов.`
+            snapshot.recovery.combatEndRecovery > 0
+              ? `Регенерация вне боя идёт непрерывно: здоровье поднимется до половины максимума, это ${snapshot.recovery.combatEndRecovery} хитов.`
               : "Счёт раундов начнётся заново, потраченное в этом бою перестанет связывать. Лечить нечего: здоровье не ниже половины максимума."
           }
           confirmLabel="Да, бой закончен"
@@ -314,7 +312,7 @@ export function GameScreen() {
           armorClass={snapshot.sheet.armorClass.value}
           runesRemaining={snapshot.resources.runes.remaining}
           reactionAvailable={economy.reactionAvailable}
-          runeAvailable={wardingSigilAvailable(session)}
+          runeAvailable={snapshot.resources.wardingSigilAvailable}
           onCast={(spell) => {
             setReactionsOpen(false);
             draftStore.getState().start(spell, context);
@@ -356,7 +354,7 @@ export function GameScreen() {
         <ConcentrationCheckCard
           check={concentration.checkAfterDamage}
           spellNameRu={concentration.nameRu}
-          runeAvailable={wardingSigilAvailable(session)}
+          runeAvailable={snapshot.resources.wardingSigilAvailable}
           onSuccess={() => setCheckOpen(false)}
           onSpendRune={async () => {
             if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {

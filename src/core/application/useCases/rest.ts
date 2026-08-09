@@ -10,7 +10,6 @@
  */
 
 import { Character } from "@/core/domain/assembly/character";
-import type { CharacterState } from "@/core/domain/assembly/state";
 import type { SlotRecoveryPlan } from "@/core/domain/arcana/slots";
 import { DomainError } from "@/core/domain/shared/errors";
 import { LONG_REST_HOURS, maximumReductionAfterHours } from "@/core/domain/vitality/blood";
@@ -27,8 +26,9 @@ import { inFight } from "./turn";
  * иначе персонаж вышел бы из отдыха с недобором, не видным ни на одном экране.
  */
 export function longRest(session: Session, occasion: Occasion): Session {
-  if (inFight(session)) {
-    throw new DomainError("Пока идёт бой, долгий отдых недоступен");
+  const unavailability = longRestUnavailability(session);
+  if (unavailability !== null) {
+    throw new DomainError(unavailability);
   }
   const root = Character.of(session.character);
   const reduction = maximumReductionAfterHours(
@@ -61,8 +61,9 @@ export function longRest(session: Session, occasion: Occasion): Session {
  * час» рядом с ним не должна значить больше, чем сам отдых.
  */
 export function shortRest(session: Session, occasion: Occasion): Session {
-  if (inFight(session)) {
-    throw new DomainError("Пока идёт бой, короткий отдых недоступен");
+  const unavailability = shortRestUnavailability(session);
+  if (unavailability !== null) {
+    throw new DomainError(unavailability);
   }
   const root = Character.of(session.character);
   const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
@@ -85,13 +86,26 @@ export function shortRest(session: Session, occasion: Occasion): Session {
 }
 
 /**
- * Почему «Магическое восстановление» сейчас не берётся, кроме боя; `null` — берётся.
+ * Почему операция привала сейчас не идёт; `null` — идёт.
  *
- * Экран спрашивает ту же причину, которой откажет само применение, а не пересказывает правило:
- * погашенная кнопка обязана называть ровно то, чем ответил бы отказ.
+ * Спрашивают их дважды: до нажатия — чтобы погасить кнопку и назвать причину, и при нажатии —
+ * чтобы отказать. Ответ обязан быть один: две формулировки одного запрета расходятся на первой же
+ * правке, и молча.
+ *
+ * Бой перекрывает собственные причины магического восстановления: пока он идёт, «берётся после
+ * короткого отдыха» бессмысленно — короткого отдыха сейчас тоже нет.
  */
-export function arcaneRecoveryUnavailability(character: CharacterState): string | null {
-  return Character.of(character).arcana.arcaneRecoveryUnavailability();
+export function shortRestUnavailability(session: Session): string | null {
+  return inFight(session) ? "Пока идёт бой, короткий отдых недоступен" : null;
+}
+
+export function longRestUnavailability(session: Session): string | null {
+  return inFight(session) ? "Пока идёт бой, долгий отдых недоступен" : null;
+}
+
+export function arcaneRecoveryUnavailability(session: Session): string | null {
+  if (inFight(session)) return "Пока идёт бой, магическое восстановление недоступно";
+  return Character.of(session.character).arcana.arcaneRecoveryUnavailability();
 }
 
 /** Магическое восстановление. Дневной бюджет уровней ячеек можно брать частями. */
@@ -100,10 +114,7 @@ export function useArcaneRecovery(
   plan: SlotRecoveryPlan,
   occasion: Occasion,
 ): Session {
-  if (inFight(session)) {
-    throw new DomainError("Пока идёт бой, магическое восстановление недоступно");
-  }
-  const unavailability = arcaneRecoveryUnavailability(session.character);
+  const unavailability = arcaneRecoveryUnavailability(session);
   if (unavailability !== null) {
     throw new DomainError(unavailability);
   }

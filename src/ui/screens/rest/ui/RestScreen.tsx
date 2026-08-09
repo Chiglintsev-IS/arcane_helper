@@ -2,8 +2,6 @@
 
 import { useState, useMemo } from "react";
 
-import { deriveTurnEconomy } from "@/core/application/useCases/turn";
-import { wardingSigilAvailable } from "@/core/application/useCases/effects";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 
@@ -37,8 +35,6 @@ export function RestScreen() {
 
   const { character } = session;
   const execute = sessionStore.getState().execute;
-  const economy = deriveTurnEconomy(session);
-  const { inFight } = economy;
 
   const { concentration } = snapshot;
   const concentrationSummary = useMemo(() => {
@@ -88,8 +84,7 @@ export function RestScreen() {
 
         <div className="flex flex-wrap items-center gap-2">
           <HourMark
-            character={character}
-            inFight={inFight}
+            nextHour={snapshot.recovery.nextHour}
             onRecoverMaximum={() =>
               void execute({ kind: "recover_hit_point_maximum" })
             }
@@ -100,7 +95,7 @@ export function RestScreen() {
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
         <Camp
           character={character}
-          inFight={inFight}
+          recovery={snapshot.recovery}
           spells={spells}
           onShortRest={() => void execute({ kind: "short_rest" })}
           onLongRest={() => setLongRestOpen(true)}
@@ -192,7 +187,7 @@ export function RestScreen() {
         <ConcentrationCheckCard
           check={concentration.checkAfterDamage}
           spellNameRu={concentration.nameRu}
-          runeAvailable={wardingSigilAvailable(session)}
+          runeAvailable={snapshot.resources.wardingSigilAvailable}
           onSuccess={() => setCheckOpen(false)}
           onSpendRune={async () => {
             if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {

@@ -855,7 +855,7 @@ describe("отдых и восстановление", () => {
     current = useArcaneRecovery(current, { 1: 2 }, occasion);
     current = useArcaneRecovery(current, { 1: 2 }, occasion);
 
-    const reason = arcaneRecoveryUnavailability(current.character);
+    const reason = arcaneRecoveryUnavailability(current);
     expect(reason).toMatch(/Дневной бюджет восстановления исчерпан/);
     expect(() => useArcaneRecovery(current, { 1: 1 }, occasion)).toThrow(reason ?? "");
   });

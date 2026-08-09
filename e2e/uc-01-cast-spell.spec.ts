@@ -549,9 +549,9 @@ test("combat keeps camp mode reachable, but rest refuses with a reason", async (
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await switchMode(page, /^Привал/);
 
-  const shortRest = page.getByRole("button", { name: /Короткий отдых.*Не проходит во время боя/ });
+  const shortRest = page.getByRole("button", { name: /Короткий отдых.*Пока идёт бой, короткий отдых недоступен/ });
   await expect(shortRest).toBeDisabled();
-  const longRest = page.getByRole("button", { name: "Долгий отдых — Не проходит во время боя" });
+  const longRest = page.getByRole("button", { name: "Долгий отдых — Пока идёт бой, долгий отдых недоступен" });
   await expect(longRest).toBeDisabled();
 
   // Ячейки не тронуты: клик по выключенной кнопке в браузере не срабатывает вовсе.

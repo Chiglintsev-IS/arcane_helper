@@ -160,8 +160,39 @@ export const resourcesViewSchema = z.object({
   armorClassAdjustment: whole,
   passivePerception: whole,
   initiative: whole,
+  /**
+   * Спасёт ли руна провал прямо сейчас: она есть и реакция не потрачена. Оба условия — правила, и
+   * сложить их на экране значило бы завести второй ответ на вопрос, которым откажет само сотворение.
+   */
+  wardingSigilAvailable: z.boolean(),
   /** Чем подавлены особенности вида: приложение это показывает, а решает мастер. */
   suppression: z.object({ firedUpon: z.boolean(), underDirectSunlight: z.boolean() }),
+});
+
+/**
+ * Восстановление: что вернут час и конец боя и почему операция сейчас не идёт.
+ *
+ * Причина едет словами и приходит от той операции, которая ими и откажет: погашенная кнопка обязана
+ * называть ровно то, чем ответил бы отказ, а второй экземпляр фразы разошёлся бы с первым молча.
+ * Нет причины — операция идёт.
+ */
+export const recoveryViewSchema = z.object({
+  /**
+   * Что сделает следующий отмеченный час: вернёт ступень снижённого максимума, даст регенерации
+   * дойти до половины и погасит очки заклинаний. Три нуля — часу нечего менять.
+   */
+  nextHour: z.object({
+    maximumReturned: whole,
+    healed: whole,
+    spellPointsLost: whole,
+    unavailabilityRu: word.optional(),
+  }),
+  /** Сколько хитов вернёт окончание боя; ноль — лечить нечего. */
+  combatEndRecovery: whole,
+  shortRestUnavailabilityRu: word.optional(),
+  longRestUnavailabilityRu: word.optional(),
+  /** Магическое восстановление: остаток дневного бюджета уровней ячеек. */
+  arcaneRecovery: z.object({ remaining: whole, unavailabilityRu: word.optional() }),
 });
 
 /**
@@ -299,6 +330,7 @@ export type ContributionView = z.infer<typeof contributionViewSchema>;
 export type ConcentrationCheckView = z.infer<typeof concentrationCheckViewSchema>;
 export type ConcentrationView = z.infer<typeof concentrationViewSchema>;
 export type ResourcesView = z.infer<typeof resourcesViewSchema>;
+export type RecoveryView = z.infer<typeof recoveryViewSchema>;
 export type TurnView = z.infer<typeof turnViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;

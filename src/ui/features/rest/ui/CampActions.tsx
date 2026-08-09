@@ -1,10 +1,9 @@
 /**
  * Операции привала: короткий отдых, магическое восстановление и долгий отдых.
  *
- * Ни одна не идёт во время боя: короткий отдых — это час, а долгий разом уничтожает состояние
- * схватки, и оба предложения посреди раунда невыполнимы. Магическое восстановление гаснет ещё и по
- * своим причинам: пока не было короткого отдыха и когда дневной бюджет исчерпан. Кнопка при этом не
- * исчезает, а гаснет и называет причину словами: пропавшая не отвечает на вопрос «почему нельзя».
+ * Ни одна не идёт во время боя, и у магического восстановления есть ещё свои причины. Какая из них
+ * сейчас главная, решают правила: кнопка получает готовую фразу и её же показывает. Кнопка при этом
+ * не исчезает, а гаснет и называет причину словами: пропавшая не отвечает на вопрос «почему нельзя».
  *
  * Порядок рядов — по цене времени: короткий отдых и магическое восстановление, которое он
  * открывает, стоят рядом; долгий отдых — отдельной строкой, потому что он уничтожает состояние боя,
@@ -13,25 +12,10 @@
 
 "use client";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { arcaneRecoveryUnavailability } from "@/core/application/useCases/rest";
+import type { RecoveryView } from "@/contract/views";
 import { withPlural } from "@/core/shared/language";
 import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
 import { RestActionButton } from "./RestActionButton";
-
-const COMBAT_REASON = "Не проходит во время боя";
-
-/**
- * Почему магическое восстановление сейчас недоступно. `null` — доступно.
- *
- * Бой перекрывает собственное предусловие: пока он идёт, называть «берётся после короткого
- * отдыха» бессмысленно — короткий отдых сейчас недоступен по той же причине. Остальные причины
- * называет ядро — те же, которыми оно откажет при нажатии.
- */
-function arcaneRecoveryReason(character: CharacterState, inFight: boolean): string | null {
-  if (inFight) return COMBAT_REASON;
-  return arcaneRecoveryUnavailability(character);
-}
 
 /**
  * Подпись кнопки восстановления: остаток бюджета виден до нажатия, а не после отказа — решение,
@@ -41,22 +25,23 @@ function arcaneRecoveryLabel(remaining: number): string {
   return `${ARCANE_RECOVERY_LABEL} · осталось ${withPlural(remaining, ["уровень", "уровня", "уровней"])}`;
 }
 
+/** Причина отказа приезжает готовой; её отсутствие и означает «можно». */
+function disabled(reasonRu: string | undefined): { disabledReason?: string } {
+  return reasonRu === undefined ? {} : { disabledReason: reasonRu };
+}
 
 export function CampActions({
-  character,
-  inFight,
+  recovery,
   onShortRest,
   onLongRest,
   onArcaneRecovery,
 }: {
-  character: CharacterState;
-  /** Идёт ли бой прямо сейчас: ни один из отдыхов внутри раунда не проходит. */
-  inFight: boolean;
+  recovery: RecoveryView;
   onShortRest: () => void;
   onLongRest: () => void;
   onArcaneRecovery: () => void;
 }) {
-  const recoveryReason = arcaneRecoveryReason(character, inFight);
+  const { arcaneRecovery } = recovery;
 
   return (
     <section aria-label="Привал" className="flex flex-col gap-1">
@@ -64,7 +49,7 @@ export function CampActions({
         <RestActionButton
           onClick={onShortRest}
           name="Короткий отдых · час"
-          {...(inFight ? { disabledReason: COMBAT_REASON } : {})}
+          {...disabled(recovery.shortRestUnavailabilityRu)}
         />
         {/*
          * Кнопка не исчезает недоступной: пропавшая кнопка не отвечает на вопрос «почему нельзя»,
@@ -73,15 +58,15 @@ export function CampActions({
          */}
         <RestActionButton
           onClick={onArcaneRecovery}
-          name={arcaneRecoveryLabel(character.arcaneRecovery.remaining)}
-          {...(recoveryReason === null ? {} : { disabledReason: recoveryReason })}
+          name={arcaneRecoveryLabel(arcaneRecovery.remaining)}
+          {...disabled(arcaneRecovery.unavailabilityRu)}
         />
       </div>
       <div className="flex flex-wrap gap-1">
         <RestActionButton
           onClick={onLongRest}
           name="Долгий отдых"
-          {...(inFight ? { disabledReason: COMBAT_REASON } : {})}
+          {...disabled(recovery.longRestUnavailabilityRu)}
         />
       </div>
     </section>

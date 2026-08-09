@@ -100,6 +100,18 @@ export function hourNotes(returned: number, healed: number, hadSpellPoints: bool
 }
 
 /**
+ * Почему час сейчас не проходит; `null` — проходит.
+ *
+ * Спрашивают её и до нажатия, и при нём: погашенная кнопка называет ровно ту причину, которой
+ * ответил бы отказ. Того, что часу нечего менять, здесь нет: это видно по числам самого часа.
+ */
+export function hourUnavailability(session: Session): string | null {
+  return inFight(session) ? IN_FIGHT_HOUR_REASON : null;
+}
+
+const IN_FIGHT_HOUR_REASON = "Пока идёт бой, час пройти не может";
+
+/**
  * Почасовое восстановление максимума хитов и погашение очков заклинаний. Час отмечает игрок:
  * таймеров в приложении нет, а внутри боевого раунда часа не бывает.
  *
@@ -107,8 +119,9 @@ export function hourNotes(returned: number, healed: number, hadSpellPoints: bool
  * восстановление максимума и регенерацию, а очки истекают сами по себе.
  */
 export function recoverHitPointMaximum(session: Session, occasion: Occasion): Session {
-  if (inFight(session)) {
-    throw new DomainError("Пока идёт бой, час пройти не может");
+  const unavailability = hourUnavailability(session);
+  if (unavailability !== null) {
+    throw new DomainError(unavailability);
   }
   const root = Character.of(session.character);
   const hadSpellPoints = root.arcana.spellPoints > 0;

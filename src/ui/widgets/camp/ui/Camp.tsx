@@ -12,6 +12,7 @@
 
 "use client";
 
+import type { RecoveryView } from "@/contract/views";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { CampActions } from "@/ui/features/rest/ui/CampActions";
@@ -19,7 +20,7 @@ import { MaterialsList } from "@/ui/features/materials/ui/MaterialsList";
 
 export function Camp({
   character,
-  inFight,
+  recovery,
   spells,
   onShortRest,
   onLongRest,
@@ -27,8 +28,7 @@ export function Camp({
   onToggleMaterial,
 }: {
   character: CharacterState;
-  /** Идёт ли бой прямо сейчас: ни один из отдыхов внутри раунда не проходит. */
-  inFight: boolean;
+  recovery: RecoveryView;
   spells: readonly Spell[];
   onShortRest: () => void;
   onLongRest: () => void;
@@ -38,8 +38,7 @@ export function Camp({
   return (
     <div className="flex flex-col gap-3">
       <CampActions
-        character={character}
-        inFight={inFight}
+        recovery={recovery}
         onShortRest={onShortRest}
         onLongRest={onLongRest}
         onArcaneRecovery={onArcaneRecovery}
