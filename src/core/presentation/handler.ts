@@ -11,11 +11,13 @@
  */
 
 import { envelopeSchema, type Envelope } from "@/contract/commands";
+import { questionSchema } from "@/contract/questions";
 
 import { DomainError } from "@/core/domain/shared/errors";
 import type { LiveSession } from "@/core/application/session";
 
 import { toSnapshot } from "./presenter";
+import { answerQuestion } from "./previewer";
 
 /** Чем хендлер располагает: собранное ядро, знающее своё состояние и его версию. */
 type Application = {
@@ -27,6 +29,7 @@ type Application = {
 export type Backend = {
   read(): Promise<unknown>;
   handle(raw: unknown): Promise<unknown>;
+  answer(raw: unknown): Promise<unknown>;
 };
 
 export function createHandler(application: Application): Backend {
@@ -53,6 +56,15 @@ export function createHandler(application: Application): Backend {
         if (error instanceof DomainError) return { ok: false, reasonRu: error.message };
         throw error;
       }
+    },
+
+    /**
+     * Вопрос разбирается строго: в отличие от команды, у предпросмотра нет ветки отказа, а
+     * неразобранный вопрос означает не игрока, а сломанную сторону — то есть дефект.
+     */
+    async answer(raw: unknown): Promise<unknown> {
+      const { live } = await application.open();
+      return answerQuestion(live, questionSchema.parse(raw));
     },
   };
 }

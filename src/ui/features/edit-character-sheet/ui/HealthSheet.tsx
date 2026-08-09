@@ -2,31 +2,34 @@
 
 import { useState } from "react";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { Vitality } from "@/core/domain/vitality/vitality";
+import type { SheetView } from "@/contract/views";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+import { usePreview } from "@/ui/shared/model/usePreview";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 export function HealthSheet({
-  character,
+  hitPoints,
   onSave,
   onCancel,
   error = null,
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  character: CharacterState;
+  hitPoints: SheetView["hitPoints"];
   onSave: (change: { maximumBase: number; masterReduction: number }) => void;
   onCancel: () => void;
 }) {
-  const { hitPoints } = character;
   const [baseText, setBaseText] = useState(String(hitPoints.maximumBase));
   const [masterText, setMasterText] = useState(String(hitPoints.masterReduction));
 
   const maximumBase = requiredFieldNumber(baseText);
   const masterReduction = requiredFieldNumber(masterText);
-  // Каким станет действующий максимум, знает жизнеспособность; `null` — такого максимума не бывает.
-  const effective = Vitality.of(character).maximumWith({ maximumBase, masterReduction });
+  // Незаполненное поле не спрашивают: спрашивать не о чем, пока число не набрано.
+  const filled = !Number.isNaN(maximumBase) && !Number.isNaN(masterReduction);
+  const preview = usePreview(
+    filled ? { kind: "health_preview", maximumBase, masterReduction } : null,
+  );
+  const effective = preview?.kind === "health_preview" ? preview.effectiveMaximum : null;
 
   return (
     <EditSheetFrame

@@ -189,7 +189,7 @@ export function editHealth(
 type LeveledValue = "runes" | "arcaneRecovery" | "hitDice" | "preparedLimit";
 
 /** Что сдвинется при смене уровня: величина, её прежнее и новое значение. */
-export type LevelChange =
+type LevelChange =
   | { of: "slots"; slotLevel: number; before: number; after: number }
   | { of: LeveledValue; before: number; after: number };
 

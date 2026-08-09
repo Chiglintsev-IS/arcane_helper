@@ -7,6 +7,7 @@
  */
 
 import type { Envelope } from "./commands";
+import type { Preview, Question } from "./questions";
 import type { Result } from "./result";
 import type { Snapshot } from "./snapshot";
 
@@ -14,4 +15,6 @@ export type ArcaneApi = {
   /** Открыть сессию: прочитать сохранённое либо начать заново. Повтор безвреден. */
   open(): Promise<Snapshot>;
   execute(envelope: Envelope): Promise<Result>;
+  /** Спросить про ненабранное. Состояния не меняет, поэтому повтор безвреден и здесь. */
+  ask(question: Question): Promise<Preview>;
 };

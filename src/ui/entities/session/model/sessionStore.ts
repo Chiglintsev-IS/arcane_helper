@@ -17,6 +17,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 
 import type { Command } from "@/contract/commands";
 import type { ArcaneApi } from "@/contract/port";
+import type { Preview, Question } from "@/contract/questions";
 import type { Snapshot } from "@/contract/snapshot";
 
 import type { Session, SpellCatalogSource } from "@/core/application/session";
@@ -50,6 +51,12 @@ export type SessionStoreState = {
    * когда она появится, повторять он будет ровно этот идентификатор.
    */
   execute: (command: Command) => Promise<string | null>;
+  /**
+   * Спросить про набранное, но ещё не отправленное. Ответ никуда не зеркалится: состояние им не
+   * менялось. Недоступный ответчик даёт `null` — предпросмотр молчит, а игрок всё равно вправе
+   * подтвердить и получить настоящий отказ.
+   */
+  ask: (question: Question) => Promise<Preview | null>;
   /** Снять сообщение об ошибке. */
   dismissError: () => void;
 };
@@ -121,6 +128,14 @@ export function createSessionStore(
           const reason = describe(error);
           set({ error: reason });
           return reason;
+        }
+      },
+
+      async ask(question) {
+        try {
+          return await api.ask(question);
+        } catch {
+          return null;
         }
       },
 

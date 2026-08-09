@@ -59,7 +59,8 @@ export function SheetScreen() {
 
       {open?.block === "level" ? (
         <LevelSheet
-          character={character}
+          level={sheet.level}
+          hitPoints={sheet.hitPoints}
           error={refusal}
           onCancel={closeSheet}
           onSave={(next) => void save({ kind: "change_level", ...next }, closeSheet)}
@@ -78,7 +79,7 @@ export function SheetScreen() {
 
       {open?.block === "health" ? (
         <HealthSheet
-          character={character}
+          hitPoints={sheet.hitPoints}
           error={refusal}
           onCancel={closeSheet}
           onSave={(change) => void save({ kind: "edit_health", ...change }, closeSheet)}

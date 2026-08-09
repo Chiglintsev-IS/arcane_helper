@@ -26,5 +26,9 @@ export function createLocalTransport(backend: Backend): Transport {
     async send(command: unknown): Promise<unknown> {
       return wire(await backend.handle(wire(command)));
     },
+
+    async ask(question: unknown): Promise<unknown> {
+      return wire(await backend.answer(wire(question)));
+    },
   };
 }

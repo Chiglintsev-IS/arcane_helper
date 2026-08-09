@@ -132,6 +132,7 @@ export function createCore(parts: CoreParts): Core {
   return {
     read: handler.read,
     handle: handler.handle,
+    answer: handler.answer,
     live: () => live,
   };
 }

@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Envelope } from "@/contract/commands";
 import type { ArcaneApi } from "@/contract/port";
+import type { Preview } from "@/contract/questions";
 import type { Result } from "@/contract/result";
 import type { Snapshot } from "@/contract/snapshot";
 
@@ -47,6 +48,9 @@ function fakeApi(answers: Partial<ArcaneApi> = {}): {
           sent.push(envelope);
           return { ok: true, snapshot: { ...FRESH, version: sent.length } } satisfies Result;
         }),
+      ask:
+        answers.ask ??
+        (async () => ({ kind: "health_preview", effectiveMaximum: 60 }) satisfies Preview),
     },
   };
 }
@@ -179,6 +183,30 @@ describe("отправка намерений", () => {
 
     store.getState().dismissError();
 
+    expect(store.getState().error).toBeNull();
+  });
+});
+
+describe("вопрос про ненабранное", () => {
+  it("ответ доезжает как есть: состояние им не двигают", async () => {
+    const { api } = fakeApi();
+    const store = makeStore(api);
+
+    expect(await store.getState().ask({ kind: "level_preview", level: 8 })).toMatchObject({
+      kind: "health_preview",
+    });
+    expect(store.getState().snapshot).toBeNull();
+  });
+
+  it("недоступный ответчик молчит, а не выдаёт причину отказа: игрок ещё печатает", async () => {
+    const { api } = fakeApi({
+      ask: async () => {
+        throw new Error("Бэкенд ответил 503");
+      },
+    });
+    const store = makeStore(api);
+
+    expect(await store.getState().ask({ kind: "level_preview", level: 8 })).toBeNull();
     expect(store.getState().error).toBeNull();
   });
 });

@@ -1,19 +1,34 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { HealthSheet } from "./HealthSheet";
 import { withBloodExchange, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
+import { HealthSheet } from "./HealthSheet";
 
-afterEach(cleanup);
+/**
+ * Шторка рендерится на настоящем ядре: действующий максимум от набранного считает жизнеспособность,
+ * а не шторка, и приходит он ответом на вопрос.
+ */
+async function openHealth(
+  character: CharacterState = createThorne(),
+  onSave: (change: { maximumBase: number; masterReduction: number }) => void = () => {},
+): Promise<void> {
+  const { sheet } = testSnapshot(character);
+  await renderWithStores(
+    <HealthSheet hitPoints={sheet.hitPoints} onSave={onSave} onCancel={() => {}} />,
+    character,
+  );
+}
 
 describe("шторка здоровья", () => {
-  it("здоровье: снижение кровью показано, но не правится", () => {
+  it("здоровье: снижение кровью показано, но не правится", async () => {
     // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
     const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
-    render(<HealthSheet character={hurt} onSave={() => {}} onCancel={() => {}} />);
+    await openHealth(hurt);
 
     expect(screen.getByText(/Снижение кровью — 6/)).toBeDefined();
     expect(screen.queryByLabelText("Снижение кровью")).toBeNull();
@@ -23,7 +38,7 @@ describe("шторка здоровья", () => {
     // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
     const onSave = vi.fn();
     const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
-    render(<HealthSheet character={hurt} onSave={onSave} onCancel={() => {}} />);
+    await openHealth(hurt, onSave);
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));
     await userEvent.type(screen.getByLabelText("Базовый максимум"), "6");
@@ -34,7 +49,7 @@ describe("шторка здоровья", () => {
   });
 
   it("здоровье: пустое поле показывает прочерк вместо действующего максимума", async () => {
-    render(<HealthSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+    await openHealth();
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));
 
@@ -43,7 +58,7 @@ describe("шторка здоровья", () => {
 
   it("здоровье: сохранение отдаёт базу и снижение мастера", async () => {
     const onSave = vi.fn();
-    render(<HealthSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
+    await openHealth(createThorne(), onSave);
 
     await userEvent.clear(screen.getByLabelText("Снижение мастера"));
     await userEvent.type(screen.getByLabelText("Снижение мастера"), "10");

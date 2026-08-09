@@ -33,5 +33,15 @@ export function createHttpTransport(baseUrl: string): Transport {
         }),
       );
     },
+
+    async ask(question: unknown): Promise<unknown> {
+      return await body(
+        await fetch(`${baseUrl}/question`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(question),
+        }),
+      );
+    },
   };
 }

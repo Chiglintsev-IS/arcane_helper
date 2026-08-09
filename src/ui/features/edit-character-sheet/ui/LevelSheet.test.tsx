@@ -1,17 +1,37 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { CharacterState } from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { withSlotDebt } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
 import { LevelSheet } from "./LevelSheet";
 
-afterEach(cleanup);
+/**
+ * Шторка рендерится на настоящем ядре: предпросмотр приходит ответом на вопрос, а не считается
+ * здесь же. Без ядра проверять было бы нечего — сама шторка не знает ни одного правила.
+ */
+async function openLevel(
+  character: CharacterState = createThorne(),
+  onSave: (next: { level: number; hitPointMaximumBase: number }) => void = () => {},
+): Promise<void> {
+  const { sheet } = testSnapshot(character);
+  await renderWithStores(
+    <LevelSheet
+      level={sheet.level}
+      hitPoints={sheet.hitPoints}
+      onSave={onSave}
+      onCancel={() => {}}
+    />,
+    character,
+  );
+}
 
 describe("шторка уровня", () => {
   it("уровень: показывает, что изменится, до подтверждения", async () => {
-    render(<LevelSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+    await openLevel();
 
     const field = screen.getByLabelText("Уровень");
     await userEvent.clear(field);
@@ -23,7 +43,7 @@ describe("шторка уровня", () => {
   });
 
   it("уровень: рост бонуса мастерства двигает руны", async () => {
-    render(<LevelSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+    await openLevel();
 
     const field = screen.getByLabelText("Уровень");
     await userEvent.clear(field);
@@ -33,7 +53,7 @@ describe("шторка уровня", () => {
   });
 
   it("уровень: дневной бюджет восстановления назван в перечне сдвигов", async () => {
-    render(<LevelSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+    await openLevel();
 
     const field = screen.getByLabelText("Уровень");
     await userEvent.clear(field);
@@ -43,13 +63,7 @@ describe("шторка уровня", () => {
   });
 
   it("уровень: долг ячейки перечню сдвигов не мешает", async () => {
-    render(
-      <LevelSheet
-        character={withSlotDebt(createThorne(), 1)}
-        onSave={() => {}}
-        onCancel={() => {}}
-      />,
-    );
+    await openLevel(withSlotDebt(createThorne(), 1));
 
     const field = screen.getByLabelText("Уровень");
     await userEvent.clear(field);
@@ -60,7 +74,7 @@ describe("шторка уровня", () => {
   });
 
   it("уровень: вне диапазона 1–20 перечня изменений нет — считать нечего", async () => {
-    render(<LevelSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+    await openLevel();
 
     const field = screen.getByLabelText("Уровень");
     await userEvent.clear(field);
@@ -70,15 +84,16 @@ describe("шторка уровня", () => {
     expect(screen.queryByText(/Ячейки/)).toBeNull();
   });
 
-  it("уровень: максимум хитов подсказывает среднее, но не подставляет", () => {
-    render(<LevelSheet character={createThorne()} onSave={() => {}} onCancel={() => {}} />);
+  it("уровень: максимум хитов подсказывает среднее, но не подставляет", async () => {
+    await openLevel();
     expect(screen.getByLabelText("Базовый максимум хитов")).toHaveProperty("value", "60");
-    expect(screen.getByText(/среднее за уровень: \+7/)).toBeDefined();
+    // Предпросмотр приезжает ответом, а не рендером: до ответа его на экране нет.
+    expect(await screen.findByText(/среднее за уровень: \+7/)).toBeDefined();
   });
 
   it("уровень: сохранение отдаёт уровень и введённый максимум", async () => {
     const onSave = vi.fn();
-    render(<LevelSheet character={createThorne()} onSave={onSave} onCancel={() => {}} />);
+    await openLevel(createThorne(), onSave);
 
     const level = screen.getByLabelText("Уровень");
     await userEvent.clear(level);

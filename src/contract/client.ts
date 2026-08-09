@@ -10,6 +10,7 @@
  */
 
 import { envelopeSchema, type Envelope } from "./commands";
+import { previewSchema, questionSchema, type Preview, type Question } from "./questions";
 import { resultSchema, type Result } from "./result";
 import { snapshotSchema, type Snapshot } from "./snapshot";
 import type { ArcaneApi } from "./port";
@@ -23,6 +24,10 @@ export function createClient(transport: Transport): ArcaneApi {
 
     async execute(envelope: Envelope): Promise<Result> {
       return resultSchema.parse(await transport.send(envelopeSchema.parse(envelope)));
+    },
+
+    async ask(question: Question): Promise<Preview> {
+      return previewSchema.parse(await transport.ask(questionSchema.parse(question)));
     },
   };
 }
