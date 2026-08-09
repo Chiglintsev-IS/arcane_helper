@@ -1,8 +1,9 @@
 /**
- * Помощники компонентных тестов: настоящие сторы на хранилище в памяти.
+ * Помощники компонентных тестов: настоящее ядро на хранилище в памяти.
  *
- * Моков здесь нет намеренно. Компонент проверяется на тех же операциях состояния, что работают в
- * приложении, иначе тест подтверждает поведение мока, а не приложения.
+ * Моков здесь нет намеренно. Компонент проверяется на том же ядре, что работает в приложении, и
+ * через тот же провод — включая сериализацию сообщений. Иначе прогон подтверждает поведение мока, а
+ * не приложения, и первым же несериализуемым полем расходится с сетью.
  */
 
 import { render, type RenderResult, cleanup } from "@testing-library/react";
@@ -13,13 +14,11 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { createCastDraftStore } from "@/ui/features/cast-spell/model/castDraftStore";
 import { createMemoryRepository } from "@/core/infrastructure/persistence/memoryRepository";
-import type { Clock } from "@/core/application/session";
-import { createSessionStore } from "@/ui/entities/session/model/sessionStore";
-import { StoreProvider } from "@/ui/app/providers/stores";
+import type { Clock } from "@/core/application/ports/clock";
+import { createCore } from "@/core/composition";
+import { connectStores, StoreProvider } from "@/ui/app/providers/stores";
 import type { AppStores } from "@/ui/shared/model/storeContext";
-import { startCombat } from "@/core/application/useCases/turn";
 
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
@@ -48,28 +47,31 @@ export function testClock(): Clock {
 }
 
 /**
- * Идёт ли бой. Отметка ставится той же операцией, что и кнопкой на экране: хранимого признака
+ * Идёт ли бой. Отметка ставится той же командой, что и кнопкой на экране: хранимого признака
  * «бой идёт» нет, и подделать его подстановкой в состояние нельзя.
  */
 export type PlaySituation = { inFight?: boolean };
 
-/** Готовые сторы с загруженным состоянием: компонент рендерится сразу с данными. */
+/** Готовые сторы с открытой сессией: компонент рендерится сразу с данными. */
 export async function createTestStores(
   character: CharacterState = createThorne(),
   situation: PlaySituation = {},
 ): Promise<AppStores> {
   const clock = testClock();
-  const session = createSessionStore({
-    repository: createMemoryRepository(),
+  const stores = connectStores(
+    createCore({
+      repository: createMemoryRepository(),
+      clock,
+      createInitialCharacter: () => character,
+      loadBuiltInCatalog: loadThorneSpells,
+    }),
     clock,
-    createInitialCharacter: () => character,
-    loadBuiltInCatalog: loadThorneSpells,
-  });
-  await session.getState().hydrate();
+  );
+  await stores.session.getState().hydrate();
   if (situation.inFight === true) {
-    session.getState().apply((current) => startCombat(current, clock));
+    await stores.session.getState().execute({ kind: "start_combat" });
   }
-  return { session, draft: createCastDraftStore(), clock };
+  return stores;
 }
 
 export type RenderWithStores = RenderResult & { stores: AppStores };

@@ -8,13 +8,31 @@
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { characterStateSchema, MUTABLE_STATE_KEYS } from "@/core/domain/assembly/state";
 import type { Character } from "@/core/domain/assembly/character";
+import type { Spell } from "@/core/domain/catalog/spell";
 import { DomainError } from "@/core/domain/shared/errors";
 import { Journal } from "@/core/domain/journal/journal";
 import type { JournalEntry, Recorded } from "@/core/domain/journal/entry";
+import type { Clock } from "@/core/application/ports/clock";
 
 export type Session = {
   character: CharacterState;
   journal: readonly JournalEntry<CharacterState>[];
+};
+
+/** Чем играют прямо сейчас: карточками из сборки или загруженными игроком. */
+export type SpellCatalogSource = "built_in" | "imported";
+
+/**
+ * Живая сессия: персонаж с журналом и карточки, по которым идёт игра.
+ *
+ * Держится одним значением, потому что меняется одним: подменённый каталог без персонажа — ссылка
+ * в пустоту, а персонаж без каталога — заклинание, которое нечем открыть. То же, что уходит в
+ * хранилище сохранённой сессией, только в памяти ядра.
+ */
+export type LiveSession = {
+  session: Session;
+  spellCatalog: readonly Spell[];
+  spellCatalogSource: SpellCatalogSource;
 };
 
 /**
@@ -27,11 +45,24 @@ function characterJournal(entries: readonly JournalEntry<CharacterState>[]) {
   return Journal.of(entries, MUTABLE_STATE_KEYS);
 }
 
-/** Время и идентификаторы приходят снаружи: чистые функции их не изобретают. */
-export type Clock = {
-  now: () => string;
-  nextId: () => string;
-};
+/**
+ * Обстоятельства одного применения: когда оно случилось, какими идентификаторами обзавелось и по
+ * какой попытке пришло.
+ *
+ * Идентификатор попытки выдаёт тот, кто её поставил, и повторяет при пересылке. Идентификаторы
+ * самих записей выдаёт ядро: порядок событий — факт его стороны, а не той, что попросила.
+ */
+export type Occasion = Clock & { commandId: string };
+
+/**
+ * Применялась ли уже эта попытка.
+ *
+ * Узнаётся по журналу, а не по отдельному реестру: журнал и так единственное место, где видно
+ * случившееся, и на нём держится обратимость. Второй список разошёлся бы с ним на первой же отмене.
+ */
+export function alreadyApplied(session: Session, commandId: string): boolean {
+  return session.journal.some((entry) => entry.commandId === commandId);
+}
 
 export function createSession(character: CharacterState): Session {
   return { character, journal: [] };
@@ -47,12 +78,13 @@ export function commit(
   session: Session,
   after: Character,
   recorded: Recorded,
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const character = after.toState();
   const journal = characterJournal(session.journal).append(session.character, character, recorded, {
-    id: clock.nextId(),
-    at: clock.now(),
+    id: occasion.nextId(),
+    at: occasion.now(),
+    commandId: occasion.commandId,
   });
   return { character, journal: [...journal.list] };
 }

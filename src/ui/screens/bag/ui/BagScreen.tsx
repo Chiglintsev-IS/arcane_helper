@@ -2,21 +2,13 @@
 
 import { useState } from "react";
 
-import {
-  addItem,
-  adjustBagCount,
-  adjustWornCount,
-  editItem,
-  editMoney,
-  removeItem,
-} from "@/core/application/useCases/equipment";
+import type { Command } from "@/contract/commands";
 import { Items } from "@/core/domain/items/items";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { Bag } from "@/ui/widgets/bag/ui/Bag";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
-import type { Session } from "@/core/application/session";
 import { applyEdit } from "@/ui/shared/model/editing";
 
 /**
@@ -26,18 +18,18 @@ import { applyEdit } from "@/ui/shared/model/editing";
 type BagEdit = { of: "money" } | { of: "item"; id: string };
 
 export function BagScreen() {
-  const { clock, session: sessionStore } = useStores();
+  const { session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
 
   const [open, setOpen] = useState<BagEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const { character } = session;
-  const apply = sessionStore.getState().apply;
+  const execute = sessionStore.getState().execute;
 
   /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
-  const save = (operation: (current: Session) => Session): void => {
-    const reason = applyEdit(sessionStore, operation);
+  const save = async (command: Command): Promise<void> => {
+    const reason = await applyEdit(sessionStore, command);
     setRefusal(reason);
     if (reason === null) setOpen(null);
   };
@@ -61,9 +53,9 @@ export function BagScreen() {
         character={character}
         onEditMoney={() => openSheet({ of: "money" })}
         onOpenItem={(id) => openSheet({ of: "item", id })}
-        onAddItem={(kind, nameRu) => apply((current) => addItem(current, { nameRu, kind }, clock))}
-        onAdjustBagCount={(id, delta) => apply((current) => adjustBagCount(current, id, delta, clock))}
-        onAdjustWornCount={(id, delta) => apply((current) => adjustWornCount(current, id, delta, clock))}
+        onAddItem={(kind, nameRu) => void execute({ kind: "add_item", nameRu, itemKind: kind })}
+        onAdjustBagCount={(id, delta) => void execute({ kind: "adjust_bag_count", itemId: id, delta })}
+        onAdjustWornCount={(id, delta) => void execute({ kind: "adjust_worn_count", itemId: id, delta })}
       />
 
       {open?.of === "money" ? (
@@ -71,7 +63,7 @@ export function BagScreen() {
           money={character.equipment.money}
           error={refusal}
           onCancel={closeSheet}
-          onSave={(money) => save((current) => editMoney(current, money, clock))}
+          onSave={(money) => void save({ kind: "edit_money", money })}
         />
       ) : null}
 
@@ -83,15 +75,15 @@ export function BagScreen() {
           wornCount={equipment.wornCount(openedItem.id)}
           error={refusal}
           onCancel={closeSheet}
-          onSave={(item) => save((current) => editItem(current, item, clock))}
+          onSave={(item) => void save({ kind: "edit_item", item })}
           onAdjustBagCount={(delta) =>
-            apply((current) => adjustBagCount(current, openedItem.id, delta, clock))
+            void execute({ kind: "adjust_bag_count", itemId: openedItem.id, delta })
           }
           onAdjustWornCount={(delta) =>
-            apply((current) => adjustWornCount(current, openedItem.id, delta, clock))
+            void execute({ kind: "adjust_worn_count", itemId: openedItem.id, delta })
           }
-          onRemove={() => {
-            if (apply((current) => removeItem(current, openedItem.id, clock)) === null) {
+          onRemove={async () => {
+            if ((await execute({ kind: "remove_item", itemId: openedItem.id })) === null) {
               setOpen(null);
             }
           }}

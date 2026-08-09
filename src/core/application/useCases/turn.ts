@@ -9,7 +9,7 @@
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Encounter, type TurnEconomy } from "@/core/domain/encounter/encounter";
-import { commit, type Clock, type Session } from "@/core/application/session";
+import { commit, type Occasion, type Session } from "@/core/application/session";
 
 
 function encounterOf(session: Session): Encounter {
@@ -31,17 +31,17 @@ export function deriveTurnEconomy(session: Session): TurnEconomy {
  * Это и есть первый ход, поэтому вся работа начала хода выполняется здесь же. Без отметки
  * приложение не знает, где кончился прежний бой, и следующий начинается с шестого раунда.
  */
-export function startCombat(session: Session, clock: Clock): Session {
-  return advanceTurn(session, clock, "combat_started", "Бой начался");
+export function startCombat(session: Session, occasion: Occasion): Session {
+  return advanceTurn(session, occasion, "combat_started", "Бой начался");
 }
 
-export function beginTurn(session: Session, clock: Clock): Session {
-  return advanceTurn(session, clock, "turn_started", "Начало хода");
+export function beginTurn(session: Session, occasion: Occasion): Session {
+  return advanceTurn(session, occasion, "turn_started", "Начало хода");
 }
 
 function advanceTurn(
   session: Session,
-  clock: Clock,
+  occasion: Occasion,
   kind: "combat_started" | "turn_started",
   title: string,
 ): Session {
@@ -62,7 +62,7 @@ function advanceTurn(
     session,
     after,
     { kind, summaryRu: notes.length === 0 ? title : `${title} · ${notes.join(", ")}` },
-    clock,
+    occasion,
   );
 }
 
@@ -76,7 +76,7 @@ export function combatEndRecovery(character: CharacterState): number {
  *
  * Запись появляется всегда, даже когда лечить нечего: от неё считаются раунды следующего боя.
  */
-export function endCombat(session: Session, clock: Clock): Session {
+export function endCombat(session: Session, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const restored = root.vitality.combatEndRecovery();
   const after = root.withVitality(root.vitality.healUpTo(restored).vitality);
@@ -90,6 +90,6 @@ export function endCombat(session: Session, clock: Clock): Session {
           ? "Бой закончен"
           : `Бой закончен: восстановлено ${restored} до половины максимума`,
     },
-    clock,
+    occasion,
   );
 }

@@ -7,14 +7,14 @@
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import { hitPointsForPoints } from "@/core/domain/arcana/slots";
-import { commit, type Clock, type Session } from "@/core/application/session";
+import { commit, type Occasion, type Session } from "@/core/application/session";
 import { inFight } from "./turn";
 
 /** Полученный урон. Огненный урон подавляет расовые особенности. */
 export function takeDamage(
   session: Session,
   damage: number,
-  clock: Clock,
+  occasion: Occasion,
   options: { fire?: boolean } = {},
 ): Session {
   const root = Character.of(session.character);
@@ -25,11 +25,11 @@ export function takeDamage(
     session,
     root.withVitality(vitality),
     { kind: "hit_points_changed", summaryRu: `Получено урона: ${damage}${absorbedNote}${note}` },
-    clock,
+    occasion,
   );
 }
 
-export function heal(session: Session, amount: number, clock: Clock): Session {
+export function heal(session: Session, amount: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const { vitality, restored } = root.vitality.heal(amount);
   const note = restored < amount ? ` (из ${amount}: упёрлись в максимум)` : "";
@@ -37,18 +37,18 @@ export function heal(session: Session, amount: number, clock: Clock): Session {
     session,
     root.withVitality(vitality),
     { kind: "hit_points_changed", summaryRu: `Вылечено: ${restored}${note}` },
-    clock,
+    occasion,
   );
 }
 
 /** Ручное начисление временных хитов. */
-export function grantTemporaryHitPoints(session: Session, amount: number, clock: Clock): Session {
+export function grantTemporaryHitPoints(session: Session, amount: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(
     session,
     root.withVitality(root.vitality.grantTemporaryExplicitly(amount)),
     { kind: "hit_points_changed", summaryRu: `Временные хиты: ${amount}` },
-    clock,
+    occasion,
   );
 }
 
@@ -60,7 +60,7 @@ export function grantTemporaryHitPoints(session: Session, amount: number, clock:
 export function exchangeBlood(
   session: Session,
   spellPoints: number,
-  clock: Clock,
+  occasion: Occasion,
   options: { allowAnyway?: boolean } = {},
 ): Session {
   const root = Character.of(session.character);
@@ -78,7 +78,7 @@ export function exchangeBlood(
       summaryRu: `Кровавое колдовство: ${exchange.hitPointsSpent} хитов → ${exchange.pointsCreated} очков`,
       actionUsed: "action",
     },
-    clock,
+    occasion,
   );
 }
 
@@ -102,7 +102,7 @@ export function hourNotes(returned: number, healed: number, hadSpellPoints: bool
  * Очки заклинаний гаснут любым отмеченным часом независимо от подавления: оно решает только за
  * восстановление максимума и регенерацию, а очки истекают сами по себе.
  */
-export function recoverHitPointMaximum(session: Session, clock: Clock): Session {
+export function recoverHitPointMaximum(session: Session, occasion: Occasion): Session {
   if (inFight(session)) {
     throw new DomainError("Пока идёт бой, час пройти не может");
   }
@@ -129,12 +129,12 @@ export function recoverHitPointMaximum(session: Session, clock: Clock): Session 
       kind: "hit_points_changed",
       summaryRu: `Прошёл час: ${hourNotes(returned, healed, hadSpellPoints).join(", ")}`,
     },
-    clock,
+    occasion,
   );
 }
 
 /** Признак прямого солнечного света переключается вручную. */
-export function setSunlight(session: Session, underSunlight: boolean, clock: Clock): Session {
+export function setSunlight(session: Session, underSunlight: boolean, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(
     session,
@@ -143,6 +143,6 @@ export function setSunlight(session: Session, underSunlight: boolean, clock: Clo
       kind: "suppression_changed",
       summaryRu: underSunlight ? "Под прямым солнечным светом" : "Вне солнечного света",
     },
-    clock,
+    occasion,
   );
 }

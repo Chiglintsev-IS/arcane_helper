@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { withSlotDebt, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { characterStateSchema } from "@/core/domain/assembly/state";
-import { undoLast, type Clock, type Session } from "@/core/application/session";
+import { undoLast, type Occasion, type Session } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   changeLevel,
@@ -19,15 +19,16 @@ import {
 const session = () => ({ character: createThorne(), journal: [] });
 
 /** Детерминированные часы: чистые функции время не изобретают. */
-function testClock(): Clock {
+function testOccasion(commandId = "command-1"): Occasion {
   let tick = 0;
   return {
     now: () => new Date(Date.UTC(2026, 7, 2, 12, 0, tick)).toISOString(),
     nextId: () => `id-${++tick}`,
+    commandId,
   };
 }
 
-const clock = testClock();
+const occasion = testOccasion();
 
 describe("предпросмотр смены уровня", () => {
   it("называет всё, что сдвинется: ячейки, руны, кости, лимит подготовки", () => {
@@ -67,7 +68,7 @@ describe("предпросмотр смены уровня", () => {
     const overridden = setPermanentContribution(
       session(),
       { nameRu: "Слово мастера", contribution: { stat: "preparedLimit", kind: "assignment", value: 20 } },
-      clock,
+      occasion,
     ).character;
 
     const preview = previewLevelChange(overridden, 9);
@@ -109,7 +110,7 @@ describe("смена уровня", () => {
     const base = session();
     const spent = { ...base, character: withSpentSlots(base.character, 4, 1) };
 
-    const after = changeLevel(spent, { level: 8, hitPointMaximumBase: 66 }, clock);
+    const after = changeLevel(spent, { level: 8, hitPointMaximumBase: 66 }, occasion);
 
     expect(after.character.level).toBe(8);
     expect(after.character.spellSlots[4]).toEqual({ maximum: 2, remaining: 1 });
@@ -122,7 +123,7 @@ describe("смена уровня", () => {
     const base = session();
     const indebted = { ...base, character: withSlotDebt(base.character, 1) };
 
-    const after = changeLevel(indebted, { level: 9, hitPointMaximumBase: 72 }, clock);
+    const after = changeLevel(indebted, { level: 9, hitPointMaximumBase: 72 }, occasion);
 
     // Максимум первого уровня не двигается — долг остаётся висеть; пятый приходит неистраченным.
     expect(after.character.spellSlots[1]).toEqual({ maximum: 4, remaining: -1 });
@@ -130,14 +131,14 @@ describe("смена уровня", () => {
   });
 
   it("понижение обрезает остаток и убирает исчезнувший уровень ячеек", () => {
-    const after = changeLevel(session(), { level: 6, hitPointMaximumBase: 54 }, clock);
+    const after = changeLevel(session(), { level: 6, hitPointMaximumBase: 54 }, occasion);
     expect(after.character.spellSlots[4]).toBeUndefined();
     expect(after.character.hitDice?.remaining).toBe(6);
   });
 
   it("одна запись журнала, и отмена возвращает и лист, и ресурсы", () => {
     const before = session();
-    const after = changeLevel(before, { level: 8, hitPointMaximumBase: 66 }, clock);
+    const after = changeLevel(before, { level: 8, hitPointMaximumBase: 66 }, occasion);
     expect(after.journal).toHaveLength(1);
 
     const undone = undoLast(after);
@@ -147,12 +148,12 @@ describe("смена уровня", () => {
   });
 
   it("руны следуют за бонусом мастерства", () => {
-    const after = changeLevel(session(), { level: 9, hitPointMaximumBase: 72 }, clock);
+    const after = changeLevel(session(), { level: 9, hitPointMaximumBase: 72 }, occasion);
     expect(after.character.runes).toEqual({ maximum: 4, remaining: 4 });
   });
 
   it("бюджет магического восстановления следует за уровнем", () => {
-    const after = changeLevel(session(), { level: 9, hitPointMaximumBase: 72 }, clock);
+    const after = changeLevel(session(), { level: 9, hitPointMaximumBase: 72 }, occasion);
     // ceil(9 / 2) = 5, а остаток был полным — двигается вместе с максимумом.
     expect(after.character.arcaneRecovery).toEqual({ maximum: 5, remaining: 5 });
   });
@@ -162,7 +163,7 @@ describe("смена уровня", () => {
       ...session(),
       character: { ...session().character, arcaneRecovery: { maximum: 4, remaining: 1 } },
     };
-    const after = changeLevel(spent, { level: 9, hitPointMaximumBase: 72 }, clock);
+    const after = changeLevel(spent, { level: 9, hitPointMaximumBase: 72 }, occasion);
     expect(after.character.arcaneRecovery).toEqual({ maximum: 5, remaining: 2 });
   });
 
@@ -170,7 +171,7 @@ describe("смена уровня", () => {
     const before = session();
     const preparedCount = before.character.preparedSpellIds.length;
 
-    const after = changeLevel(before, { level: 5, hitPointMaximumBase: 45 }, clock);
+    const after = changeLevel(before, { level: 5, hitPointMaximumBase: 45 }, occasion);
 
     expect(after.character.preparedSpellIds).toHaveLength(preparedCount);
     expect(Character.of(after.character).sheet.value("preparedLimit")).toBe(9);
@@ -182,7 +183,7 @@ describe("правка листа", () => {
     const after = editAbility(
       session(),
       { ability: "intelligence", score: 20, saveProficient: true, skills: {} },
-      clock,
+      occasion,
     );
     expect(after.journal).toHaveLength(1);
     expect(Character.of(after.character).sheet.value("spellSaveDc")).toBe(17);
@@ -198,7 +199,7 @@ describe("правка листа", () => {
     const after = editAbility(
       before,
       { ability: "intelligence", score: 20, saveProficient: true, skills: { arcana: "expert" } },
-      clock,
+      occasion,
     );
 
     expect(after.character.abilities.strength).toBe(8);
@@ -209,14 +210,14 @@ describe("правка листа", () => {
     const dropped = editAbility(
       session(),
       { ability: "wisdom", score: 12, saveProficient: false, skills: {} },
-      clock,
+      occasion,
     );
     expect(dropped.character.saveProficiencies).toEqual(["intelligence"]);
 
     const added = editAbility(
       dropped,
       { ability: "strength", score: 8, saveProficient: true, skills: {} },
-      clock,
+      occasion,
     );
     expect(added.character.saveProficiencies).toEqual(["strength", "intelligence"]);
   });
@@ -228,13 +229,13 @@ describe("правка листа", () => {
   });
 
   it("отметки мастера записываются", () => {
-    const after = editMarks(session(), { exhaustion: 2, inspiration: true }, clock);
+    const after = editMarks(session(), { exhaustion: 2, inspiration: true }, occasion);
     expect(after.character.exhaustion).toBe(2);
     expect(after.journal).toHaveLength(1);
   });
 
   it("снятое истощение записывается общей подписью", () => {
-    const after = editMarks(session(), { exhaustion: 0, inspiration: true }, clock);
+    const after = editMarks(session(), { exhaustion: 0, inspiration: true }, occasion);
     expect(after.journal[0]?.summaryRu).toBe("Отметки мастера изменены");
   });
 
@@ -242,7 +243,7 @@ describe("правка листа", () => {
     const blessed = setPermanentContribution(
       session(),
       { nameRu: "Благословение", contribution: { stat: "spellSaveDc", kind: "bonus", value: 3 } },
-      clock,
+      occasion,
     );
     // 8 + 3 (мастерство) + 4 (Интеллект) + 1 (фокусировка) + 3 (благословение).
     expect(Character.of(blessed.character).sheet.value("spellSaveDc")).toBe(19);
@@ -256,12 +257,12 @@ describe("правка листа", () => {
     const once = setPermanentContribution(
       session(),
       { nameRu: "Дар", contribution: { stat: "armorClass", kind: "bonus", value: 1 } },
-      clock,
+      occasion,
     );
     const twice = setPermanentContribution(
       once,
       { nameRu: "Дар", contribution: { stat: "armorClass", kind: "bonus", value: 2 } },
-      clock,
+      occasion,
     );
 
     expect(twice.character.permanentContributions).toHaveLength(1);
@@ -272,19 +273,19 @@ describe("правка листа", () => {
     const set = setPermanentContribution(
       session(),
       { nameRu: "Слово мастера", contribution: { stat: "spellSaveDc", kind: "assignment", value: 18 } },
-      clock,
+      occasion,
     );
     expect(Character.of(set.character).sheet.value("spellSaveDc")).toBe(18);
 
-    const cleared = removePermanentContribution(set, "Слово мастера", clock);
+    const cleared = removePermanentContribution(set, "Слово мастера", occasion);
     expect(Character.of(cleared.character).sheet.value("spellSaveDc")).toBe(16);
     expect(cleared.journal.at(-1)?.summaryRu).toBe("Постоянный вклад снят: Слово мастера");
 
-    expect(() => removePermanentContribution(session(), "Нету", clock)).toThrow("Нету");
+    expect(() => removePermanentContribution(session(), "Нету", occasion)).toThrow("Нету");
   });
 
   it("здоровье правится базой и снижением мастера", () => {
-    const after = editHealth(session(), { maximumBase: 70, masterReduction: 10 }, clock);
+    const after = editHealth(session(), { maximumBase: 70, masterReduction: 10 }, occasion);
     expect(after.character.hitPoints).toEqual({
       current: 60,
       maximumBase: 70,
@@ -298,7 +299,7 @@ describe("правка листа", () => {
     const before = session();
     expect(() =>
       characterStateSchema.parse(
-        editAbility(before, { ability: "strength", score: 0, saveProficient: false, skills: {} }, clock)
+        editAbility(before, { ability: "strength", score: 0, saveProficient: false, skills: {} }, occasion)
           .character,
       ),
     ).toThrow();
@@ -316,12 +317,12 @@ describe("правка листа", () => {
           method: { family: "armor", base: 14 },
         },
       },
-      clock,
+      occasion,
     );
     // 14 + Ловкость 2 + мантия 1 + плащ 1.
     expect(Character.of(set.character).sheet.value("armorClass")).toBe(18);
 
-    const cleared = removePermanentContribution(set, "Чешуя тролля", clock);
+    const cleared = removePermanentContribution(set, "Чешуя тролля", occasion);
     expect(Character.of(cleared.character).sheet.value("armorClass")).toBe(14);
   });
 });

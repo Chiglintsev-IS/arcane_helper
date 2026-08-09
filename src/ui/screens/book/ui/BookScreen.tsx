@@ -6,10 +6,7 @@ import { useState } from "react";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
-import { toCastRequest, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
-import { castSpell } from "@/core/application/useCases/casting";
-import { setSpellNote, togglePreparation } from "@/core/application/useCases/library";
-import { exchangeBlood } from "@/core/application/useCases/health";
+import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
@@ -22,7 +19,7 @@ import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { spellListLabel, unavailabilityReason } from "@/ui/shared/lib/spellLabels";
 
 export function BookScreen() {
-  const { clock, draft: draftStore, session: sessionStore } = useStores();
+  const { draft: draftStore, session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
   const error = useSession((state) => state.error);
   const spells = useSession((state) => state.spellCatalog);
@@ -33,7 +30,7 @@ export function BookScreen() {
   const [bloodOpen, setBloodOpen] = useState(false);
 
   const { character } = session;
-  const apply = sessionStore.getState().apply;
+  const execute = sessionStore.getState().execute;
   const economy = deriveTurnEconomy(session);
   const context = { character, turn: economy };
   const { inFight } = economy;
@@ -54,7 +51,7 @@ export function BookScreen() {
       onOpen={() => setOpenSpellId(spell.id)}
       onTogglePrepared={
         !inFight
-          ? () => apply((current) => togglePreparation(current, spell, clock))
+          ? () => void execute({ kind: "toggle_preparation", spellId: spell.id })
           : undefined
       }
     />
@@ -71,8 +68,8 @@ export function BookScreen() {
   }
   const listLabel = spellListLabel(bloodShown);
 
-  const confirm = (confirmed: CastDraft): void => {
-    const failure = apply((current) => castSpell(current, toCastRequest(confirmed), clock));
+  const confirm = async (confirmed: CastDraft): Promise<void> => {
+    const failure = await execute(toCastCommand(confirmed));
     if (failure === null) {
       draftStore.getState().cancel();
       setOpenSpellId(null);
@@ -121,7 +118,7 @@ export function BookScreen() {
           economy={economy}
           note={character.spellNotes[openSpell.id]}
           onCast={() => draftStore.getState().start(openSpell, context)}
-          onNoteChange={(note) => apply((current) => setSpellNote(current, openSpell.id, note))}
+          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
           onClose={() => setOpenSpellId(null)}
         />
       )}
@@ -132,10 +129,12 @@ export function BookScreen() {
           economy={economy}
           error={error}
           onCancel={() => setBloodOpen(false)}
-          onConfirm={(points, allowAnyway) => {
-            const failure = apply((current) =>
-              exchangeBlood(current, points, clock, { allowAnyway }),
-            );
+          onConfirm={async (points, allowAnyway) => {
+            const failure = await execute({
+              kind: "exchange_blood",
+              spellPoints: points,
+              allowAnyway,
+            });
             if (failure === null) setBloodOpen(false);
           }}
         />

@@ -14,7 +14,10 @@ import type { ActiveEffect, EffectsState } from "./schema";
 
 type EffectBoardState = EffectsState;
 
-export type ConcentrationEnd = "manual" | "failed_check" | "replaced" | "long_rest";
+/** Отчего концентрация кончилась — перечнем: тем же списком сужается слово, пришедшее снаружи. */
+export const CONCENTRATION_ENDS = ["manual", "failed_check", "replaced", "long_rest"] as const;
+
+export type ConcentrationEnd = (typeof CONCENTRATION_ENDS)[number];
 
 /** Вклады одного действующего с их источником: имя — то, чем игрок это назвал. */
 function contributionsOf(

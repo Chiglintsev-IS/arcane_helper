@@ -93,3 +93,13 @@ export type StockEntry = DeepReadonly<z.infer<typeof stockEntrySchema>>;
 export type Currency = (typeof CURRENCIES)[number];
 export type Money = DeepReadonly<z.infer<typeof moneySchema>>;
 
+/**
+ * Кошелёк из сообщения снаружи: объявление проверяет его само и отказывает с причиной.
+ *
+ * Наружу отдаётся сужение, а не схема: пусти схему за границу, и её начнут расширять на месте, а
+ * объявление кошелька перестанет быть одним.
+ */
+export function moneyOf(value: unknown): Money {
+  return parsedOrRefused(moneySchema, value, "кошелёк");
+}
+

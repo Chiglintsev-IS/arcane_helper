@@ -13,7 +13,7 @@ import {
   MAXIMUM_EXHAUSTION,
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
-import { nonEmpty, russianSchemaErrors } from "@/core/domain/shared/schema";
+import { nonEmpty, parsedOrRefused, russianSchemaErrors } from "@/core/domain/shared/schema";
 import { ABILITIES, SKILL_IDS, statContributionSchema } from "@/core/domain/shared/stats";
 
 import { SKILL_TRAINING } from "./skills";
@@ -115,6 +115,16 @@ const permanentContributionSchema = z.object({
   nameRu: nonEmpty,
   contribution: statContributionSchema,
 });
+
+/**
+ * Постоянный вклад из сообщения снаружи: объявление проверяет его само и отказывает с причиной.
+ *
+ * Наружу отдаётся сужение, а не схема: пусти схему за границу, и её начнут расширять на месте, а
+ * объявление вклада перестанет быть одним.
+ */
+export function permanentContributionOf(value: unknown): PermanentContribution {
+  return parsedOrRefused(permanentContributionSchema, value, "постоянный вклад");
+}
 
 /**
  * Двух назначений на одну величину не бывает.

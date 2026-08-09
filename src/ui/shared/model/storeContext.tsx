@@ -11,15 +11,19 @@ import { createContext, useContext } from "react";
 import { useStore } from "zustand";
 import type { StoreApi } from "zustand/vanilla";
 
-import type { Clock } from "@/core/application/session";
 import type { SessionStoreState } from "@/ui/entities/session/model/sessionStore";
 import type { CastDraftState } from "@/ui/features/cast-spell/model/castDraftStore";
 
 export type AppStores = {
   session: StoreApi<SessionStoreState>;
   draft: StoreApi<CastDraftState>;
-  /** Время и идентификаторы: операции состояния их не изобретают. */
-  clock: Clock;
+  /**
+   * Часы приложения: время, которым помечается выгруженный файл.
+   *
+   * Игрового состояния ими не меняют — время записей журнала ставит ядро. Здесь оно нужно ровно
+   * затем, зачем и всякому файлу: чтобы игрок узнал свою выгрузку среди прочих.
+   */
+  now: () => string;
 };
 
 export const StoresContext = createContext<AppStores | null>(null);

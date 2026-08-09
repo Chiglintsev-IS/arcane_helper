@@ -7,19 +7,10 @@ import { useState, useMemo } from "react";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
-import { toCastRequest, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
-import {
-  endConcentration,
-  endEffect,
-  setArmorClassAdjustment,
-  spendRuneOnWardingSigil,
-  startManualEffect,
-  wardingSigilAvailable,
-} from "@/core/application/useCases/effects";
-import { castSpell } from "@/core/application/useCases/casting";
-import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
-import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
-import { exchangeBlood, grantTemporaryHitPoints, heal, setSunlight, takeDamage } from "@/core/application/useCases/health";
+import type { Command } from "@/contract/commands";
+import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
+import { wardingSigilAvailable } from "@/core/application/useCases/effects";
+import { combatEndRecovery, deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
@@ -40,14 +31,11 @@ import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
-import { setSpellNote } from "@/core/application/useCases/library";
-import { recoverHitPointMaximum } from "@/core/application/useCases/health";
 import { spellListLabel, unavailabilityReason } from "@/ui/shared/lib/spellLabels";
-import type { Session } from "@/core/application/session";
 import { applyEdit } from "@/ui/shared/model/editing";
 
 export function GameScreen() {
-  const { clock, draft: draftStore, session: sessionStore } = useStores();
+  const { draft: draftStore, session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
   const error = useSession((state) => state.error);
   const spells = useSession((state) => state.spellCatalog);
@@ -65,12 +53,12 @@ export function GameScreen() {
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const { character } = session;
-  const apply = sessionStore.getState().apply;
+  const execute = sessionStore.getState().execute;
   const [refusal, setRefusal] = useState<string | null>(null);
 
   /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
-  const saveEdit = (operation: (current: Session) => Session, close: () => void): void => {
-    const reason = applyEdit(sessionStore, operation);
+  const saveEdit = async (command: Command, close: () => void): Promise<void> => {
+    const reason = await applyEdit(sessionStore, command);
     setRefusal(reason);
     if (reason === null) close();
   };
@@ -116,8 +104,8 @@ export function GameScreen() {
   }
   const listLabel = spellListLabel(bloodShown);
 
-  const recordDamage = (damage: number, fire: boolean): void => {
-    if (apply((current) => takeDamage(current, damage, clock, { fire })) !== null) return;
+  const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
+    if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
     setDamageOpen(false);
     setPanelOpen(false);
     if (character.concentration !== undefined) {
@@ -127,18 +115,18 @@ export function GameScreen() {
     }
   };
 
-  const startFight = (): void => {
-    if (apply((current) => startCombat(current, clock)) === null) setFilters(NO_FILTERS);
+  const startFight = async (): Promise<void> => {
+    if ((await execute({ kind: "start_combat" })) === null) setFilters(NO_FILTERS);
   };
 
-  const finishFight = (): void => {
-    if (apply((current) => endCombat(current, clock)) !== null) return;
+  const finishFight = async (): Promise<void> => {
+    if ((await execute({ kind: "end_combat" })) !== null) return;
     setFilters(NO_FILTERS);
     setFightOverOpen(false);
   };
 
-  const confirm = (confirmed: CastDraft): void => {
-    const failure = apply((current) => castSpell(current, toCastRequest(confirmed), clock));
+  const confirm = async (confirmed: CastDraft): Promise<void> => {
+    const failure = await execute(toCastCommand(confirmed));
     if (failure === null) {
       draftStore.getState().cancel();
       setOpenSpellId(null);
@@ -175,8 +163,8 @@ export function GameScreen() {
           character={character}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
-          onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
-          onAddStatus={(nameRu) => apply((current) => startManualEffect(current, { nameRu }, clock))}
+          onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
+          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
         />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -192,7 +180,7 @@ export function GameScreen() {
           {inFight ? (
             <button
               type="button"
-              onClick={() => apply((current) => beginTurn(current, clock))}
+              onClick={() => void execute({ kind: "begin_turn" })}
               className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold text-action-strong dark:text-action"
             >
               Новый ход
@@ -209,7 +197,7 @@ export function GameScreen() {
             character={character}
             inFight={inFight}
             onRecoverMaximum={() =>
-              apply((current) => recoverHitPointMaximum(current, clock))
+              void execute({ kind: "recover_hit_point_maximum" })
             }
           />
         </div>
@@ -238,7 +226,7 @@ export function GameScreen() {
           economy={economy}
           note={character.spellNotes[openSpell.id]}
           onCast={() => draftStore.getState().start(openSpell, context)}
-          onNoteChange={(note) => apply((current) => setSpellNote(current, openSpell.id, note))}
+          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
           onClose={() => setOpenSpellId(null)}
         />
       )}
@@ -249,10 +237,12 @@ export function GameScreen() {
           economy={economy}
           error={error}
           onCancel={() => setBloodOpen(false)}
-          onConfirm={(points, allowAnyway) => {
-            const failure = apply((current) =>
-              exchangeBlood(current, points, clock, { allowAnyway }),
-            );
+          onConfirm={async (points, allowAnyway) => {
+            const failure = await execute({
+              kind: "exchange_blood",
+              spellPoints: points,
+              allowAnyway,
+            });
             if (failure === null) setBloodOpen(false);
           }}
         />
@@ -266,8 +256,8 @@ export function GameScreen() {
             setOpenSpellId(concentrationSummary.spellId);
           }}
           onTakeDamage={() => setDamageOpen(true)}
-          onDrop={() => {
-            if (apply((current) => endConcentration(current, "manual", clock)) === null) {
+          onDrop={async () => {
+            if ((await execute({ kind: "end_concentration", reason: "manual" })) === null) {
               setPanelOpen(false);
             }
           }}
@@ -284,7 +274,7 @@ export function GameScreen() {
             setArmorClassOpen(false);
           }}
           onSave={(value) =>
-            saveEdit((current) => setArmorClassAdjustment(current, value, clock), () =>
+            void saveEdit({ kind: "set_armor_class_adjustment", value }, () =>
               setArmorClassOpen(false),
             )
           }
@@ -309,10 +299,10 @@ export function GameScreen() {
       {resourcesOpen ? (
         <ResourcesSheet
           character={character}
-          onSpendSlot={(level) => apply((current) => spendSpellSlot(current, level, clock))}
-          onRefundSlot={(level) => apply((current) => refundSpellSlot(current, level, clock))}
-          onAdjustRunes={(delta) => apply((current) => adjustRunes(current, delta, clock))}
-          onSunlight={(under) => apply((current) => setSunlight(current, under, clock))}
+          onSpendSlot={(level) => void execute({ kind: "spend_spell_slot", slotLevel: level })}
+          onRefundSlot={(level) => void execute({ kind: "refund_spell_slot", slotLevel: level })}
+          onAdjustRunes={(delta) => void execute({ kind: "adjust_runes", delta })}
+          onSunlight={(under) => void execute({ kind: "set_sunlight", underSunlight: under })}
           onClose={() => setResourcesOpen(false)}
         />
       ) : null}
@@ -327,8 +317,8 @@ export function GameScreen() {
             setReactionsOpen(false);
             draftStore.getState().start(spell, context);
           }}
-          onSpendRune={() => {
-            if (apply((current) => spendRuneOnWardingSigil(current, clock)) === null) {
+          onSpendRune={async () => {
+            if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {
               setReactionsOpen(false);
             }
           }}
@@ -345,10 +335,10 @@ export function GameScreen() {
           }}
           onDamage={recordDamage}
           onHeal={(amount) =>
-            saveEdit((current) => heal(current, amount, clock), () => setDamageOpen(false))
+            void saveEdit({ kind: "heal", amount }, () => setDamageOpen(false))
           }
           onTemporary={(amount) =>
-            saveEdit((current) => grantTemporaryHitPoints(current, amount, clock), () =>
+            void saveEdit({ kind: "grant_temporary_hit_points", amount }, () =>
               setDamageOpen(false),
             )
           }
@@ -361,13 +351,13 @@ export function GameScreen() {
           spellNameRu={concentrationSummary.nameRu}
           runeAvailable={wardingSigilAvailable(session)}
           onSuccess={() => setPendingCheck(null)}
-          onSpendRune={() => {
-            if (apply((current) => spendRuneOnWardingSigil(current, clock)) === null) {
+          onSpendRune={async () => {
+            if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {
               setPendingCheck(null);
             }
           }}
-          onFail={() => {
-            if (apply((current) => endConcentration(current, "failed_check", clock)) === null) {
+          onFail={async () => {
+            if ((await execute({ kind: "end_concentration", reason: "failed_check" })) === null) {
               setPendingCheck(null);
             }
           }}

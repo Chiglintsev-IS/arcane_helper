@@ -52,6 +52,14 @@ export type JournalEntry<TState = Record<string, unknown>> = {
    * остаётся: журнал ещё и история.
    */
   readonly undoPatch: Partial<TState> | null;
+  /**
+   * По какой попытке запись появилась. Ею узнаётся повтор: одно намерение, доставленное дважды —
+   * оборвалась связь, дрогнул палец, — не должно списать ресурс дважды.
+   *
+   * Необязателен: запись бывает и не по команде, а сделанные до того, как попытки обзавелись
+   * идентификаторами, остаются читаемыми — повтор для них просто неузнаваем, как и был.
+   */
+  readonly commandId?: string | undefined;
   readonly spellId?: string | undefined;
   readonly slotLevel?: number | undefined;
   readonly actionUsed?: TurnResource | undefined;

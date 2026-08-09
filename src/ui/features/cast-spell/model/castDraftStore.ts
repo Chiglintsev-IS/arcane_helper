@@ -5,11 +5,11 @@
  * и ни одно действие этого стора его не касается. Выход из мастера на любом шаге, включая закрытие
  * приложения, оставляет ресурсы нетронутыми, потому что менять их отсюда попросту нечем
  *
- * Подтверждение выполняет вызывающий: он берёт `toCastRequest` и передаёт её в `castSpell` через
- * единственную точку изменения состояния — `sessionStore.apply`.
+ * Подтверждение выполняет вызывающий: он берёт `toCastCommand` и отправляет намерение через
+ * единственную дверь ядра — `sessionStore.execute`.
  */
 
-import type { CastRequest } from "@/core/application/useCases/casting";
+import type { CommandOf } from "@/contract/commands";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
@@ -175,10 +175,16 @@ export function visibleSteps(
   return [...optional, LAST_STEP];
 }
 
-/** Заявка на применение. Собирается из черновика и уходит в `castSpell` при подтверждении. */
-export function toCastRequest(draft: CastDraft): CastRequest {
+/**
+ * Намерение сотворить. Собирается из черновика и уходит в ядро при подтверждении.
+ *
+ * Заклинание называется идентификатором: карточку ядро возьмёт свою. Присланная карточка была бы
+ * экраном, диктующим правила. Выпавшее на костях едет числом — его знает игрок, а не приложение.
+ */
+export function toCastCommand(draft: CastDraft): CommandOf<"cast_spell"> {
   return {
-    spell: draft.spell,
+    kind: "cast_spell",
+    spellId: draft.spell.id,
     mode: draft.mode,
     payment: draft.payment,
     ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),

@@ -10,7 +10,7 @@ import { ALL_TURN_RESOURCES } from "@/core/application/casting/availability";
 import {
   createCastDraftStore,
   RECENT_TARGETS_LIMIT,
-  toCastRequest,
+  toCastCommand,
   visibleSteps,
   type CastDraft,
   type DraftContext,
@@ -49,7 +49,7 @@ function concentrating(): CharacterState {
   const session = castSpell(
     createSession(createThorne()),
     { spell: spell("web"), mode: "normal", payment: { kind: "slot", slotLevel: 2 } },
-    testClock(),
+    { ...testClock(), commandId: "command-1" },
   );
   return session.character;
 }
@@ -72,7 +72,7 @@ describe("руна при сотворении (FR-151)", () => {
     store.getState().chooseRune("war");
 
     expect(draftOf().rune).toBe("war");
-    expect(toCastRequest(draftOf()).rune).toBe("war");
+    expect(toCastCommand(draftOf()).rune).toBe("war");
   });
 
   it("повторное нажатие снимает руну: выбор без возможности передумать — ловушка", () => {
@@ -81,7 +81,7 @@ describe("руна при сотворении (FR-151)", () => {
     store.getState().chooseRune("life");
 
     expect(draftOf().rune).toBeNull();
-    expect(toCastRequest(draftOf()).rune).toBeUndefined();
+    expect(toCastCommand(draftOf()).rune).toBeUndefined();
   });
 
   it("выбор другой руны заменяет прежнюю: больше одной на заклинание не бывает", () => {
@@ -116,7 +116,7 @@ describe("цель руны жизни (FR-156)", () => {
 
     store.getState().chooseRuneTarget("other");
     expect(draftOf().runeTarget).toBe("other");
-    expect(toCastRequest(draftOf()).runeTarget).toBe("other");
+    expect(toCastCommand(draftOf()).runeTarget).toBe("other");
   });
 
   it("руна, цели не выбирающая, возвращает её себе: ветер действует только на заклинателя", () => {
@@ -368,8 +368,9 @@ describe("заявка на применение", () => {
     store.getState().setTarget("на себя");
     store.getState().allowAnyway();
 
-    expect(toCastRequest(draftOf())).toEqual({
-      spell: mageArmor,
+    expect(toCastCommand(draftOf())).toEqual({
+      kind: "cast_spell",
+      spellId: mageArmor.id,
       mode: "normal",
       payment: { kind: "slot", slotLevel: 1 },
       targetLabel: "на себя",
@@ -382,21 +383,21 @@ describe("заявка на применение", () => {
     store.getState().start(mageArmor, context());
     store.getState().allowAnyway();
 
-    expect(toCastRequest(draftOf()).replaceConcentration).toBe(false);
+    expect(toCastCommand(draftOf()).replaceConcentration).toBe(false);
   });
 
   it("согласие на замену концентрации не выдаёт исключения мастера", () => {
     store.getState().start(mageArmor, context());
     store.getState().replaceConcentration();
 
-    const request = toCastRequest(draftOf());
+    const request = toCastCommand(draftOf());
     expect(request.replaceConcentration).toBe(true);
     expect(request.allowAnyway).toBe(false);
   });
 
   it("без цели поля цели в заявке нет", () => {
     store.getState().start(shield, context());
-    expect(toCastRequest(draftOf())).not.toHaveProperty("targetLabel");
+    expect(toCastCommand(draftOf())).not.toHaveProperty("targetLabel");
   });
 });
 
@@ -412,7 +413,7 @@ describe("инвариант FR-022: до подтверждения состо�
     store.getState().setRoleplayCategory("atmospheric");
     store.getState().allowAnyway();
     for (const _ of steps) store.getState().next(steps);
-    toCastRequest(draftOf());
+    toCastCommand(draftOf());
 
     expect(session).toEqual(before);
   });

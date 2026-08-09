@@ -13,7 +13,7 @@
 
 "use client";
 
-import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, type RoleplayVariant, useRoleplayVariant } from "@/core/application/useCases/roleplay";
+import { defaultRoleplayVariant, roleplayCategories, roleplayVariants, type RoleplayVariant } from "@/core/application/useCases/roleplay";
 import { useState } from "react";
 
 import type { Spell } from "@/core/domain/catalog/spell";
@@ -52,14 +52,14 @@ function Variants({
   category: RoleplayCategory;
   onCategory: (category: RoleplayCategory) => void;
 }) {
-  const { clock, session: sessionStore } = useStores();
+  const { session: sessionStore } = useStores();
   const character = useSession((state) => state.session?.character);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [ownText, setOwnText] = useState<string | null>(null);
 
   if (character === undefined) return null;
 
-  const apply = sessionStore.getState().apply;
+  const execute = sessionStore.getState().execute;
   const categories = roleplayCategories(character, spell);
   // Отключённая категория пропадает из ряда, и показывать её нечем: берём первую оставшуюся.
   // Скрыть все три нельзя, поэтому запасной вариант здесь всегда есть.
@@ -75,20 +75,20 @@ function Variants({
   /** Выбор варианта — это и есть его использование: счётчик ведёт ротацию. */
   const choose = (variant: RoleplayVariant): void => {
     setSelectedId(variant.id);
-    apply((current) => useRoleplayVariant(current, spell.id, variant.id));
+    void execute({ kind: "use_roleplay_variant", spellId: spell.id, variantId: variant.id });
   };
 
   const copy = (variant: RoleplayVariant): void => {
     // Safari на iOS отдаёт буфер только внутри пользовательского жеста: любое ожидание до вызова —
     // и разрешение потеряно. Сохранение состояния асинхронно, поэтому идёт после.
     void navigator.clipboard?.writeText(variant.text);
-    apply((current) => useRoleplayVariant(current, spell.id, variant.id));
+    void execute({ kind: "use_roleplay_variant", spellId: spell.id, variantId: variant.id });
   };
 
   const addOwn = (text: string): void => {
     // Пустой текст сюда не доходит: операция его отклонит, но поле не должно и предлагать отправку.
     if (text.trim() === "") return;
-    apply((current) => addRoleplayVariant(current, spell.id, shown, text, clock));
+    void execute({ kind: "add_roleplay_variant", spellId: spell.id, category: shown, text });
     setOwnText(null);
   };
 
@@ -144,7 +144,11 @@ function Variants({
           <button
             type="button"
             onClick={() =>
-              apply((current) => toggleRoleplayFavorite(current, spell.id, selected.id))
+              void execute({
+                kind: "toggle_roleplay_favorite",
+                spellId: spell.id,
+                variantId: selected.id,
+              })
             }
             className={ACTION_CLASS}
           >
@@ -152,7 +156,13 @@ function Variants({
           </button>
           <button
             type="button"
-            onClick={() => apply((current) => toggleRoleplayDisabled(current, spell, selected.id))}
+            onClick={() =>
+              void execute({
+                kind: "toggle_roleplay_disabled",
+                spellId: spell.id,
+                variantId: selected.id,
+              })
+            }
             className={ACTION_CLASS}
           >
             Отключить
@@ -200,7 +210,11 @@ function Variants({
                   type="button"
                   aria-label={`Включить: ${variant.text}`}
                   onClick={() =>
-                    apply((current) => toggleRoleplayDisabled(current, spell, variant.id))
+                    void execute({
+                      kind: "toggle_roleplay_disabled",
+                      spellId: spell.id,
+                      variantId: variant.id,
+                    })
                   }
                   className={ACTION_CLASS}
                 >

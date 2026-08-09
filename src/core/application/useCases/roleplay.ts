@@ -11,7 +11,7 @@ import type { RoleplayPreference } from "@/core/domain/spellbook/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ROLEPLAY_CATEGORIES, type RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import { DomainError } from "@/core/domain/shared/errors";
-import { withoutRecord, type Clock, type Session } from "@/core/application/session";
+import { withoutRecord, type Occasion, type Session } from "@/core/application/session";
 
 
 export type RoleplayVariant = {
@@ -160,7 +160,7 @@ export function addRoleplayVariant(
   spellId: string,
   category: RoleplayCategory,
   text: string,
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const trimmed = text.trim();
   if (trimmed === "") {
@@ -168,7 +168,7 @@ export function addRoleplayVariant(
   }
   return change(session, spellId, (current) => ({
     ...current,
-    customVariants: [...current.customVariants, { id: clock.nextId(), category, text: trimmed }],
+    customVariants: [...current.customVariants, { id: occasion.nextId(), category, text: trimmed }],
   }));
 }
 

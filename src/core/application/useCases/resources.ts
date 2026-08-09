@@ -7,9 +7,9 @@
  */
 
 import { Character } from "@/core/domain/assembly/character";
-import { commit, type Clock, type Session } from "@/core/application/session";
+import { commit, type Occasion, type Session } from "@/core/application/session";
 
-export function adjustRunes(session: Session, delta: number, clock: Clock): Session {
+export function adjustRunes(session: Session, delta: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const arcana = root.arcana.shiftRunes(delta);
   const remaining = arcana.runes.remaining;
@@ -20,28 +20,28 @@ export function adjustRunes(session: Session, delta: number, clock: Clock): Sess
       kind: "manual_adjustment",
       summaryRu: delta > 0 ? `Возвращена руна: ${remaining}` : `Потрачена руна: ${remaining}`,
     },
-    clock,
+    occasion,
   );
 }
 
 /** Ручное списание ячейки: эффект предмета или чужое заклинание вне модели приложения. */
-export function spendSpellSlot(session: Session, slotLevel: number, clock: Clock): Session {
+export function spendSpellSlot(session: Session, slotLevel: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(
     session,
     root.withArcana(root.arcana.spendSlot(slotLevel)),
     { kind: "slot_spent", summaryRu: `Списана ячейка ${slotLevel} уровня`, slotLevel },
-    clock,
+    occasion,
   );
 }
 
 /** Возврат ошибочно потраченной ячейки. */
-export function refundSpellSlot(session: Session, slotLevel: number, clock: Clock): Session {
+export function refundSpellSlot(session: Session, slotLevel: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(
     session,
     root.withArcana(root.arcana.refundSlot(slotLevel)),
     { kind: "slot_refunded", summaryRu: `Возвращена ячейка ${slotLevel} уровня`, slotLevel },
-    clock,
+    occasion,
   );
 }

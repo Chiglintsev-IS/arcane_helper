@@ -1,0 +1,390 @@
+/**
+ * Контроллер: перевод команды договора в вызов сценария.
+ *
+ * Единственное место, где внешний язык встречается с внутренним. Сценарии живут в словаре
+ * предметной области — принимают карточку заклинания и сессию; команда приносит идентификаторы и
+ * строки. Перевод стоит здесь, поэтому вторая версия договора однажды поглотится тоже здесь, не
+ * задев ни одного сценария.
+ *
+ * Слово, пришедшее строкой, сужает владелец списка — тем же перечнем, которым пользуется сам.
+ * Составное значение сужает объявление своего контекста и отказывает с причиной. Второй проверки
+ * здесь нет: она разошлась бы с настоящей при первой же правке правил, и молча.
+ */
+
+import { z } from "zod";
+
+import type { Command } from "@/contract/commands";
+
+import type { CharacterState } from "@/core/domain/assembly/state";
+import { characterStatePatchSchema, characterStateSchema } from "@/core/domain/assembly/state";
+import { parsedOrRefused } from "@/core/domain/shared/schema";
+import { CAST_MODES } from "@/core/domain/arcana/slots";
+import { RUNES, RUNE_TARGETS } from "@/core/domain/arcana/runes";
+import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
+import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
+import { moneyOf } from "@/core/domain/equipment/schema";
+import { permanentContributionOf } from "@/core/domain/character/schema";
+import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
+import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
+import { ABILITIES, SKILL_IDS, type SkillId } from "@/core/domain/shared/stats";
+import { SKILL_TRAINING, type SkillTraining } from "@/core/domain/character/skills";
+import { DomainError } from "@/core/domain/shared/errors";
+
+import { applyImport, type ExportFile } from "@/core/application/dataExchange";
+import {
+  alreadyApplied,
+  createSession,
+  replaceCharacter,
+  undoLast,
+  type LiveSession,
+  type Occasion,
+  type Session,
+} from "@/core/application/session";
+import { castSpell } from "@/core/application/useCases/casting";
+import {
+  endConcentration,
+  endEffect,
+  setArmorClassAdjustment,
+  spendRuneOnWardingSigil,
+  startManualEffect,
+} from "@/core/application/useCases/effects";
+import {
+  addItem,
+  adjustBagCount,
+  adjustWornCount,
+  editItem,
+  editMoney,
+  removeItem,
+} from "@/core/application/useCases/equipment";
+import {
+  exchangeBlood,
+  grantTemporaryHitPoints,
+  heal,
+  recoverHitPointMaximum,
+  setSunlight,
+  takeDamage,
+} from "@/core/application/useCases/health";
+import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
+import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
+import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
+import {
+  addRoleplayVariant,
+  toggleRoleplayDisabled,
+  toggleRoleplayFavorite,
+  useRoleplayVariant,
+} from "@/core/application/useCases/roleplay";
+import {
+  changeLevel,
+  editAbility,
+  editHealth,
+  editIdentity,
+  editMarks,
+  identityOf,
+  removePermanentContribution,
+  setPermanentContribution,
+} from "@/core/application/useCases/sheet";
+import { beginTurn, endCombat, startCombat } from "@/core/application/useCases/turn";
+
+/** Чем контроллер располагает помимо самой сессии: содержимое сборки. */
+type ControllerParts = {
+  builtInCatalog: readonly Spell[];
+  createInitialCharacter: () => CharacterState;
+};
+
+/**
+ * Слово из закрытого списка. Список приносит его владелец — тот самый, которым пользуется он сам,
+ * поэтому пополнение перечня доходит сюда без правок.
+ */
+function oneOf<TWord extends string>(words: readonly TWord[], value: string, subject: string): TWord {
+  const found = words.find((word) => word === value);
+  if (found === undefined) {
+    throw new DomainError(`Не годится ${subject} — «${value}» не из тех, что бывают`);
+  }
+  return found;
+}
+
+/** Карточка по идентификатору: команда называет заклинание, карточку ядро берёт свою. */
+function spellOf(catalog: readonly Spell[], spellId: string): Spell {
+  const spell = catalog.find((candidate) => candidate.id === spellId);
+  if (spell === undefined) {
+    throw new DomainError(`Не годится заклинание — карточки «${spellId}» в каталоге нет`);
+  }
+  return spell;
+}
+
+/** Уровни ячеек приезжают ключами объекта, а ключ объекта — всегда строка. */
+function slotPlanOf(plan: Readonly<Record<string, number>>): Record<number, number> {
+  const levels: Record<number, number> = {};
+  for (const [level, count] of Object.entries(plan)) {
+    const parsed = Number(level);
+    if (!Number.isInteger(parsed)) {
+      throw new DomainError(`Не годится уровень ячейки — «${level}» не целое число`);
+    }
+    levels[parsed] = count;
+  }
+  return levels;
+}
+
+/** Владения навыками правимой характеристики: и навык, и степень — слова закрытых списков. */
+function skillsOf(skills: Readonly<Record<string, string>>): Partial<Record<SkillId, SkillTraining>> {
+  const trained: Partial<Record<SkillId, SkillTraining>> = {};
+  for (const [skill, training] of Object.entries(skills)) {
+    const id = oneOf(SKILL_IDS, skill, "навык");
+    Object.assign(trained, { [id]: oneOf(SKILL_TRAINING, training, "владение навыком") });
+  }
+  return trained;
+}
+
+/**
+ * Файл обмена из сообщения.
+ *
+ * Персонаж разбирается объявлением состояния, карточки — объявлением каталога при применении.
+ * Ссылочную целостность сводит сама запись, поэтому здесь её не проверяют: вторая такая проверка
+ * разошлась бы с настоящей.
+ */
+function exportFileOf(file: Readonly<Record<string, unknown>>): ExportFile {
+  return {
+    schemaVersion: Number(file.schemaVersion),
+    exportedAt: String(file.exportedAt),
+    character: parsedOrRefused(characterStateSchema, file.character, "персонаж из файла обмена"),
+    spells: parsedOrRefused(z.array(spellSchema), file.spells, "карточки из файла обмена"),
+  };
+}
+
+/**
+ * Применение команды. Отказ по правилам вылетает исключением владельца и становится ответом выше;
+ * здесь его не ловят — решать, что делать с отказом, не дело перевода.
+ *
+ * Повтор узнаётся до применения: та же попытка, доставленная дважды, оставляет сессию как есть.
+ */
+export function applyCommand(
+  live: LiveSession,
+  command: Command,
+  occasion: Occasion,
+  parts: ControllerParts,
+): LiveSession {
+  const { session, spellCatalog } = live;
+  if (alreadyApplied(session, occasion.commandId)) return live;
+
+  const changed = (next: Session): LiveSession => ({ ...live, session: next });
+
+  switch (command.kind) {
+    case "cast_spell":
+      return changed(
+        castSpell(
+          session,
+          {
+            spell: spellOf(spellCatalog, command.spellId),
+            mode: oneOf(CAST_MODES, command.mode, "способ сотворения"),
+            payment: command.payment,
+            ...(command.targetLabel === undefined ? {} : { targetLabel: command.targetLabel }),
+            ...(command.rune === undefined ? {} : { rune: oneOf(RUNES, command.rune, "руна") }),
+            ...(command.runeTarget === undefined
+              ? {}
+              : { runeTarget: oneOf(RUNE_TARGETS, command.runeTarget, "цель руны") }),
+            ...(command.allowAnyway === undefined ? {} : { allowAnyway: command.allowAnyway }),
+            ...(command.replaceConcentration === undefined
+              ? {}
+              : { replaceConcentration: command.replaceConcentration }),
+            ...(command.hitDice === undefined ? {} : { hitDice: command.hitDice }),
+          },
+          occasion,
+        ),
+      );
+
+    case "start_combat":
+      return changed(startCombat(session, occasion));
+    case "begin_turn":
+      return changed(beginTurn(session, occasion));
+    case "end_combat":
+      return changed(endCombat(session, occasion));
+
+    case "end_concentration":
+      return changed(
+        endConcentration(
+          session,
+          oneOf(CONCENTRATION_ENDS, command.reason, "причина конца концентрации"),
+          occasion,
+        ),
+      );
+    case "spend_rune_on_warding_sigil":
+      return changed(spendRuneOnWardingSigil(session, occasion));
+    case "start_manual_effect":
+      return changed(
+        startManualEffect(
+          session,
+          {
+            nameRu: command.nameRu,
+            ...(command.armorClassBonus === undefined
+              ? {}
+              : { armorClassBonus: command.armorClassBonus }),
+          },
+          occasion,
+        ),
+      );
+    case "set_armor_class_adjustment":
+      return changed(setArmorClassAdjustment(session, command.value, occasion));
+    case "end_effect":
+      return changed(endEffect(session, command.effectId, occasion));
+
+    case "adjust_runes":
+      return changed(adjustRunes(session, command.delta, occasion));
+    case "spend_spell_slot":
+      return changed(spendSpellSlot(session, command.slotLevel, occasion));
+    case "refund_spell_slot":
+      return changed(refundSpellSlot(session, command.slotLevel, occasion));
+
+    case "take_damage":
+      return changed(
+        takeDamage(
+          session,
+          command.damage,
+          occasion,
+          command.fire === undefined ? {} : { fire: command.fire },
+        ),
+      );
+    case "heal":
+      return changed(heal(session, command.amount, occasion));
+    case "grant_temporary_hit_points":
+      return changed(grantTemporaryHitPoints(session, command.amount, occasion));
+    case "exchange_blood":
+      return changed(
+        exchangeBlood(
+          session,
+          command.spellPoints,
+          occasion,
+          command.allowAnyway === undefined ? {} : { allowAnyway: command.allowAnyway },
+        ),
+      );
+    case "recover_hit_point_maximum":
+      return changed(recoverHitPointMaximum(session, occasion));
+    case "set_sunlight":
+      return changed(setSunlight(session, command.underSunlight, occasion));
+
+    case "long_rest":
+      return changed(longRest(session, occasion));
+    case "short_rest":
+      return changed(shortRest(session, occasion));
+    case "use_arcane_recovery":
+      return changed(useArcaneRecovery(session, slotPlanOf(command.plan), occasion));
+
+    case "toggle_preparation":
+      return changed(togglePreparation(session, spellOf(spellCatalog, command.spellId), occasion));
+    case "toggle_material":
+      return changed(toggleMaterial(session, command.spellId, occasion));
+    case "set_spell_note":
+      return changed(setSpellNote(session, command.spellId, command.note));
+
+    case "toggle_roleplay_favorite":
+      return changed(toggleRoleplayFavorite(session, command.spellId, command.variantId));
+    case "toggle_roleplay_disabled":
+      return changed(
+        toggleRoleplayDisabled(session, spellOf(spellCatalog, command.spellId), command.variantId),
+      );
+    case "add_roleplay_variant":
+      return changed(
+        addRoleplayVariant(
+          session,
+          command.spellId,
+          oneOf(ROLEPLAY_CATEGORIES, command.category, "род отыгрыша"),
+          command.text,
+          occasion,
+        ),
+      );
+    case "use_roleplay_variant":
+      return changed(useRoleplayVariant(session, command.spellId, command.variantId));
+
+    case "add_item":
+      return changed(
+        addItem(
+          session,
+          { nameRu: command.nameRu, kind: oneOf(ITEM_KINDS, command.itemKind, "категория вещи") },
+          occasion,
+        ),
+      );
+    case "edit_item":
+      return changed(editItem(session, itemDefinitionOf(command.item), occasion));
+    case "remove_item":
+      return changed(removeItem(session, command.itemId, occasion));
+    case "adjust_bag_count":
+      return changed(adjustBagCount(session, command.itemId, command.delta, occasion));
+    case "adjust_worn_count":
+      return changed(adjustWornCount(session, command.itemId, command.delta, occasion));
+    case "edit_money":
+      return changed(editMoney(session, moneyOf(command.money), occasion));
+
+    case "edit_identity":
+      return changed(
+        editIdentity(session, identityOf(characterStatePatchSchema.parse(command.patch))),
+      );
+    case "edit_ability":
+      return changed(
+        editAbility(
+          session,
+          {
+            ability: oneOf(ABILITIES, command.ability, "характеристика"),
+            score: command.score,
+            saveProficient: command.saveProficient,
+            skills: skillsOf(command.skills),
+          },
+          occasion,
+        ),
+      );
+    case "set_permanent_contribution":
+      return changed(
+        setPermanentContribution(session, permanentContributionOf(command.permanent), occasion),
+      );
+    case "remove_permanent_contribution":
+      return changed(removePermanentContribution(session, command.nameRu, occasion));
+    case "edit_marks":
+      return changed(
+        editMarks(
+          session,
+          { exhaustion: command.exhaustion, inspiration: command.inspiration },
+          occasion,
+        ),
+      );
+    case "edit_health":
+      return changed(
+        editHealth(
+          session,
+          { maximumBase: command.maximumBase, masterReduction: command.masterReduction },
+          occasion,
+        ),
+      );
+    case "change_level":
+      return changed(
+        changeLevel(
+          session,
+          { level: command.level, hitPointMaximumBase: command.hitPointMaximumBase },
+          occasion,
+        ),
+      );
+
+    case "undo_last":
+      return changed(undoLast(session));
+
+    case "import_snapshot": {
+      const { character, spells } = applyImport(
+        session.character,
+        exportFileOf(command.file),
+        "replace",
+      );
+      return {
+        session: replaceCharacter(character),
+        spellCatalog: spells,
+        spellCatalogSource: "imported",
+      };
+    }
+
+    case "restore_built_in_catalog":
+      return { session, spellCatalog: parts.builtInCatalog, spellCatalogSource: "built_in" };
+
+    case "reset":
+      return {
+        session: createSession(parts.createInitialCharacter()),
+        spellCatalog: parts.builtInCatalog,
+        spellCatalogSource: "built_in",
+      };
+  }
+}

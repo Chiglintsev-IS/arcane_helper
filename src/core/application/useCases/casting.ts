@@ -29,13 +29,13 @@ import {
   type PaymentChoice,
   type TurnResource,
 } from "@/core/application/casting/availability";
-import { commit, type Clock, type Session } from "@/core/application/session";
+import { commit, type Occasion, type Session } from "@/core/application/session";
 import { deriveTurnEconomy, inFight } from "./turn";
 
 /** Способ оплаты определён правилами — здесь только его применение к состоянию. */
 type Payment = PaymentChoice;
 
-export type CastRequest = {
+type CastRequest = {
   spell: Spell;
   mode: CastMode;
   payment: Payment;
@@ -128,7 +128,7 @@ function endConditionRu(duration: ActiveEffect["duration"], concentration: boole
 }
 
 /** Создаёт активный эффект, если заклинание продолжается. Мгновенное — не создаёт. */
-function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
+function buildEffect(request: CastRequest, occasion: Occasion): ActiveEffect | null {
   const { spell } = request;
   if (spell.duration.type === "instant") return null;
 
@@ -141,10 +141,10 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
         };
 
   return {
-    id: clock.nextId(),
+    id: occasion.nextId(),
     spellId: spell.id,
     nameRu: spell.nameRu,
-    startedAt: clock.now(),
+    startedAt: occasion.now(),
     duration,
     isConcentration: spell.concentration,
     slotLevelUsed: slotLevelUsed(request),
@@ -156,7 +156,7 @@ function buildEffect(request: CastRequest, clock: Clock): ActiveEffect | null {
 }
 
 /** Подтверждённое применение: оплата, действие, руна, концентрация, эффект — одной записью. */
-export function castSpell(session: Session, request: CastRequest, clock: Clock): Session {
+export function castSpell(session: Session, request: CastRequest, occasion: Occasion): Session {
   const { spell } = request;
 
   const turn = deriveTurnEconomy(session);
@@ -186,7 +186,7 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
   root = applyPayment(root, request);
   root = applyRune(root, request);
 
-  const effect = buildEffect(request, clock);
+  const effect = buildEffect(request, occasion);
   /*
  * Раундовый эффект вне схватки не успевает начаться: раундов нет, значит эффект истёк бы в тот же
  * миг, в который родился. Ячейка при этом уже потрачена — сотворить игрок выбрал сам, и молча
@@ -199,7 +199,7 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
     : "";
 
   if (effect !== null && !expiresImmediately) {
-    root = root.withEffects(root.effects.start(effect, clock.now()));
+    root = root.withEffects(root.effects.start(effect, occasion.now()));
   }
 
   /*
@@ -242,6 +242,6 @@ export function castSpell(session: Session, request: CastRequest, clock: Clock):
       // предъявлялось бы игроку в бою, потому что до отметки о начале боя границы в журнале нет.
       ...(used === undefined || !inFight(session) ? {} : { actionUsed: used }),
     },
-    clock,
+    occasion,
   );
 }

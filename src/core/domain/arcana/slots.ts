@@ -92,7 +92,10 @@ export function spellSlotsForLevel(wizardLevel: number): SpellSlots {
   return slots;
 }
 
-export type CastMode = "normal" | "ritual" | "cantrip";
+/** Способы сотворения перечнем: тем же списком сужается слово, пришедшее снаружи. */
+export const CAST_MODES = ["normal", "ritual", "cantrip"] as const;
+
+export type CastMode = (typeof CAST_MODES)[number];
 
 /**
  * Расходует ли применение ячейку.

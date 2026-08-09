@@ -4,25 +4,8 @@ import { Character } from "@/core/domain/assembly/character";
 import { saveStatId } from "@/core/domain/shared/stats";
 import { useState, useMemo } from "react";
 
-import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
-import {
-  grantTemporaryHitPoints,
-  heal,
-  recoverHitPointMaximum,
-  setSunlight,
-  takeDamage,
-} from "@/core/application/useCases/health";
-import { toggleMaterial } from "@/core/application/useCases/library";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
-import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
-import {
-  endConcentration,
-  endEffect,
-  setArmorClassAdjustment,
-  spendRuneOnWardingSigil,
-  startManualEffect,
-  wardingSigilAvailable,
-} from "@/core/application/useCases/effects";
+import { wardingSigilAvailable } from "@/core/application/useCases/effects";
 import { describeConcentrationCheck, type ConcentrationCheck } from "@/core/domain/effects/concentration";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
@@ -42,7 +25,7 @@ import { dividingCategories } from "@/ui/features/filter-spells/model/filters";
 import { spellsForScreen } from "@/ui/shared/model/spellList";
 
 export function RestScreen() {
-  const { clock, session: sessionStore } = useStores();
+  const { session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
   const spells = useSession((state) => state.spellCatalog);
 
@@ -55,7 +38,7 @@ export function RestScreen() {
   const [pendingCheck, setPendingCheck] = useState<ConcentrationCheck | null>(null);
 
   const { character } = session;
-  const apply = sessionStore.getState().apply;
+  const execute = sessionStore.getState().execute;
   const economy = deriveTurnEconomy(session);
   const { inFight } = economy;
 
@@ -72,8 +55,8 @@ export function RestScreen() {
   const inMode = spellsForScreen(spells, character, "rest", inFight);
   const dividing = dividingCategories(inMode, inFight);
 
-  const recordDamage = (damage: number, fire: boolean): void => {
-    if (apply((current) => takeDamage(current, damage, clock, { fire })) !== null) return;
+  const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
+    if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
     setDamageOpen(false);
     setPanelOpen(false);
     if (character.concentration !== undefined) {
@@ -103,8 +86,8 @@ export function RestScreen() {
           character={character}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
-          onEndEffect={(effectId) => apply((current) => endEffect(current, effectId, clock))}
-          onAddStatus={(nameRu) => apply((current) => startManualEffect(current, { nameRu }, clock))}
+          onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
+          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
         />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -112,7 +95,7 @@ export function RestScreen() {
             character={character}
             inFight={inFight}
             onRecoverMaximum={() =>
-              apply((current) => recoverHitPointMaximum(current, clock))
+              void execute({ kind: "recover_hit_point_maximum" })
             }
           />
         </div>
@@ -123,10 +106,10 @@ export function RestScreen() {
           character={character}
           inFight={inFight}
           spells={spells}
-          onShortRest={() => apply((current) => shortRest(current, clock))}
+          onShortRest={() => void execute({ kind: "short_rest" })}
           onLongRest={() => setLongRestOpen(true)}
           onArcaneRecovery={() => setRecoveryOpen(true)}
-          onToggleMaterial={(spellId) => apply((current) => toggleMaterial(current, spellId, clock))}
+          onToggleMaterial={(spellId) => void execute({ kind: "toggle_material", spellId })}
         />
       </div>
 
@@ -136,8 +119,8 @@ export function RestScreen() {
           body="Вернутся все ячейки и руны, снимется концентрация, закроются эффекты короче отдыха, обнулятся очки заклинаний и временные хиты."
           confirmLabel="Отдохнуть"
           cancelLabel="Отмена"
-          onConfirm={() => {
-            if (apply((current) => longRest(current, clock)) === null) setLongRestOpen(false);
+          onConfirm={async () => {
+            if ((await execute({ kind: "long_rest" })) === null) setLongRestOpen(false);
           }}
           onCancel={() => setLongRestOpen(false)}
         />
@@ -146,8 +129,8 @@ export function RestScreen() {
       {recoveryOpen ? (
         <ArcaneRecoverySheet
           character={character}
-          onConfirm={(plan) => {
-            if (apply((current) => useArcaneRecovery(current, plan, clock)) === null) {
+          onConfirm={async (plan) => {
+            if ((await execute({ kind: "use_arcane_recovery", plan })) === null) {
               setRecoveryOpen(false);
             }
           }}
@@ -159,8 +142,8 @@ export function RestScreen() {
         <ArmorClassSheet
           value={Character.of(character).effects.manualAdjustment("armorAdjustment")}
           onCancel={() => setArmorClassOpen(false)}
-          onSave={(value) => {
-            const failure = apply((current) => setArmorClassAdjustment(current, value, clock));
+          onSave={async (value) => {
+            const failure = await execute({ kind: "set_armor_class_adjustment", value });
             if (failure === null) setArmorClassOpen(false);
           }}
         />
@@ -170,11 +153,11 @@ export function RestScreen() {
         <HitPointsSheet
           onCancel={() => setDamageOpen(false)}
           onDamage={recordDamage}
-          onHeal={(amount) => {
-            if (apply((current) => heal(current, amount, clock)) === null) setDamageOpen(false);
+          onHeal={async (amount) => {
+            if ((await execute({ kind: "heal", amount })) === null) setDamageOpen(false);
           }}
-          onTemporary={(amount) => {
-            if (apply((current) => grantTemporaryHitPoints(current, amount, clock)) === null) {
+          onTemporary={async (amount) => {
+            if ((await execute({ kind: "grant_temporary_hit_points", amount })) === null) {
               setDamageOpen(false);
             }
           }}
@@ -184,10 +167,10 @@ export function RestScreen() {
       {resourcesOpen ? (
         <ResourcesSheet
           character={character}
-          onSpendSlot={(level) => apply((current) => spendSpellSlot(current, level, clock))}
-          onRefundSlot={(level) => apply((current) => refundSpellSlot(current, level, clock))}
-          onAdjustRunes={(delta) => apply((current) => adjustRunes(current, delta, clock))}
-          onSunlight={(under) => apply((current) => setSunlight(current, under, clock))}
+          onSpendSlot={(level) => void execute({ kind: "spend_spell_slot", slotLevel: level })}
+          onRefundSlot={(level) => void execute({ kind: "refund_spell_slot", slotLevel: level })}
+          onAdjustRunes={(delta) => void execute({ kind: "adjust_runes", delta })}
+          onSunlight={(under) => void execute({ kind: "set_sunlight", underSunlight: under })}
           onClose={() => setResourcesOpen(false)}
         />
       ) : null}
@@ -200,8 +183,8 @@ export function RestScreen() {
         <ConcentrationPanel
           summary={concentrationSummary}
           onTakeDamage={() => setDamageOpen(true)}
-          onDrop={() => {
-            if (apply((current) => endConcentration(current, "manual", clock)) === null) {
+          onDrop={async () => {
+            if ((await execute({ kind: "end_concentration", reason: "manual" })) === null) {
               setPanelOpen(false);
             }
           }}
@@ -215,13 +198,13 @@ export function RestScreen() {
           spellNameRu={concentrationSummary.nameRu}
           runeAvailable={wardingSigilAvailable(session)}
           onSuccess={() => setPendingCheck(null)}
-          onSpendRune={() => {
-            if (apply((current) => spendRuneOnWardingSigil(current, clock)) === null) {
+          onSpendRune={async () => {
+            if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {
               setPendingCheck(null);
             }
           }}
-          onFail={() => {
-            if (apply((current) => endConcentration(current, "failed_check", clock)) === null) {
+          onFail={async () => {
+            if ((await execute({ kind: "end_concentration", reason: "failed_check" })) === null) {
               setPendingCheck(null);
             }
           }}

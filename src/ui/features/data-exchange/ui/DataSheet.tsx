@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 
-import type { SpellCatalogSource } from "@/ui/entities/session/model/sessionStore";
+import type { SpellCatalogSource } from "@/core/application/session";
 
 export function DataSheet({
   exportText,

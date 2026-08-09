@@ -4,7 +4,7 @@
 
 import { Character } from "@/core/domain/assembly/character";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
+import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
 
 /**
  * Переключение подготовки заклинания.
@@ -12,7 +12,7 @@ import { commit, withoutRecord, type Clock, type Session } from "@/core/applicat
  * Лимит сценарий берёт у листа сам: он производное характеристики и уровня, и экран, передававший
  * его аргументом, решал за книгу, сколько ей можно.
  */
-export function togglePreparation(session: Session, spell: Spell, clock: Clock): Session {
+export function togglePreparation(session: Session, spell: Spell, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const { spellbook, prepared } = root.spellbook.togglePreparation(
     spell.id,
@@ -28,7 +28,7 @@ export function togglePreparation(session: Session, spell: Spell, clock: Clock):
       summaryRu: prepared ? `Подготовлено: ${spell.nameRu}` : `Снята подготовка: ${spell.nameRu}`,
       spellId: spell.id,
     },
-    clock,
+    occasion,
   );
 }
 
@@ -38,7 +38,7 @@ export function togglePreparation(session: Session, spell: Spell, clock: Clock):
  * Списка предметов у приложения нет: есть ровно то, что нужно проверке доступности, — лежит ли в
  * сумке компонент конкретного заклинания.
  */
-export function toggleMaterial(session: Session, spellId: string, clock: Clock): Session {
+export function toggleMaterial(session: Session, spellId: string, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const { equipment, owned } = root.equipment.toggleMaterial(spellId);
   return commit(
@@ -49,7 +49,7 @@ export function toggleMaterial(session: Session, spellId: string, clock: Clock):
       summaryRu: owned ? `Компонент куплен: ${spellId}` : `Компонент израсходован: ${spellId}`,
       spellId,
     },
-    clock,
+    occasion,
   );
 }
 

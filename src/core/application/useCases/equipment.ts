@@ -16,18 +16,18 @@ import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 import type { Money } from "@/core/domain/equipment/schema";
 import { CURRENCIES } from "@/core/domain/shared/schema";
 import { CURRENCY_ABBREVIATIONS } from "@/core/shared/language";
-import { commit, type Clock, type Session } from "@/core/application/session";
+import { commit, type Occasion, type Session } from "@/core/application/session";
 
 function applied(
   session: Session,
   change: (character: Character) => Character,
   summaryRu: string,
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   return commit(session, change(Character.of(session.character)), {
     kind: "sheet_edited",
     summaryRu,
-  }, clock);
+  }, occasion);
 }
 
 /**
@@ -39,7 +39,7 @@ function applied(
 export function addItem(
   session: Session,
   item: { nameRu: string; kind: ItemKind },
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const id = Items.idFromName(item.nameRu);
   const before = Character.of(session.character).equipment.bagCount(id);
@@ -50,22 +50,22 @@ export function addItem(
       return root.withItems(items).withEquipment(root.equipment.adjustBagCount(id, 1));
     },
     `Добавлено: ${item.nameRu} (стало ${before + 1})`,
-    clock,
+    occasion,
   );
 }
 
 /** Правка вещи: категория, заметка, цена и прибавки. Отдельно от надевания — то другое событие. */
-export function editItem(session: Session, item: ItemDefinition, clock: Clock): Session {
+export function editItem(session: Session, item: ItemDefinition, occasion: Occasion): Session {
   return applied(
     session,
     (root) => root.withItems(root.items.replaceDefinition(item)),
     `Правка вещи: ${item.nameRu}`,
-    clock,
+    occasion,
   );
 }
 
 /** Убирает вещь целиком: только когда от неё не осталось ни следа — ни в сумке, ни на теле. */
-export function removeItem(session: Session, id: string, clock: Clock): Session {
+export function removeItem(session: Session, id: string, occasion: Occasion): Session {
   const { equipment, items } = Character.of(session.character);
   const item = items.find(id);
   if (equipment.bagCount(id) > 0 || equipment.wornCount(id) > 0) {
@@ -75,7 +75,7 @@ export function removeItem(session: Session, id: string, clock: Clock): Session 
     session,
     (root) => root.withItems(root.items.removeDefinition(id)),
     `Убрано: ${item?.nameRu ?? id}`,
-    clock,
+    occasion,
   );
 }
 
@@ -83,14 +83,14 @@ export function removeItem(session: Session, id: string, clock: Clock): Session 
  * Меняет запас вещи в сумке: минус — расход, плюс — пополнение. Журнал называет получившееся число,
  * потому что «Потрачено: зелье» дважды подряд не отвечает, сколько осталось.
  */
-export function adjustBagCount(session: Session, id: string, delta: number, clock: Clock): Session {
+export function adjustBagCount(session: Session, id: string, delta: number, occasion: Occasion): Session {
   const item = Character.of(session.character).items.find(id);
   const verb = delta < 0 ? "Потрачено" : "Пополнено";
   return applied(
     session,
     (root) => root.withEquipment(root.equipment.adjustBagCount(id, delta)),
     `${verb}: ${item?.nameRu ?? id} (в сумке ${(Character.of(session.character).equipment.bagCount(id)) + delta})`,
-    clock,
+    occasion,
   );
 }
 
@@ -98,7 +98,7 @@ export function adjustBagCount(session: Session, id: string, delta: number, cloc
  * Надеть или снять: число — сколько экземпляров переходит между сумкой и надетым. Отрицательное
  * число снимает, положительное надевает — строка сумки просит один и тот же жест кнопкой.
  */
-export function adjustWornCount(session: Session, id: string, delta: number, clock: Clock): Session {
+export function adjustWornCount(session: Session, id: string, delta: number, occasion: Occasion): Session {
   const character = Character.of(session.character);
   const item = character.items.find(id);
   const verb = delta < 0 ? "Снято" : "Надето";
@@ -109,12 +109,12 @@ export function adjustWornCount(session: Session, id: string, delta: number, clo
         delta < 0 ? root.equipment.unequip(id, -delta) : root.equipment.equip(id, delta, root.items),
       ),
     `${verb}: ${item?.nameRu ?? id}`,
-    clock,
+    occasion,
   );
 }
 
 /** Правка кошелька. Журнал называет только сдвинувшиеся монеты: «зм 15 → 215». */
-export function editMoney(session: Session, money: Money, clock: Clock): Session {
+export function editMoney(session: Session, money: Money, occasion: Occasion): Session {
   const before = session.character.equipment.money;
   const changes = CURRENCIES.filter((currency) => before[currency] !== money[currency]).map(
     (currency) =>
@@ -124,6 +124,6 @@ export function editMoney(session: Session, money: Money, clock: Clock): Session
     session,
     (root) => root.withEquipment(root.equipment.withMoney(money)),
     changes.length === 0 ? "Деньги: без изменений" : `Деньги: ${changes.join(", ")}`,
-    clock,
+    occasion,
   );
 }

@@ -32,6 +32,11 @@ const journalEntrySchema = z.object({
    * не быть: приведение снимает поля, которых состояние больше не знает, а запись остаётся.
    */
   undoPatch: characterStatePatchSchema.nullable(),
+  /**
+   * Идентификатор попытки, по которой запись появилась. Необязателен, поэтому версия формата не
+   * растёт: сохранение без него читается ровно как прежде.
+   */
+  commandId: z.string().min(1).optional(),
   spellId: z.string().min(1).optional(),
   slotLevel: z.number().int().optional(),
   actionUsed: z.enum(["action", "bonus_action", "reaction"]).optional(),

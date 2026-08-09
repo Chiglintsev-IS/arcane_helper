@@ -1,15 +1,13 @@
 // @vitest-environment jsdom
 
-import { longRest } from "@/core/application/useCases/rest";
-import { castSpell } from "@/core/application/useCases/casting";
 import "fake-indexeddb/auto";
 
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { createTestStores, spell } from "@/ui/app/testing/stores";
-import { createBrowserStores, StoreProvider, systemClock } from "@/ui/app/providers/stores";
+import { createTestStores } from "@/ui/app/testing/stores";
+import { createBrowserStores, StoreProvider } from "@/ui/app/providers/stores";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 
 function Slots() {
@@ -42,19 +40,18 @@ describe("StoreProvider", () => {
       </StoreProvider>,
     );
 
-    act(() => {
-      stores.session.getState().apply((session) =>
-        castSpell(
-          session,
-          { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-          stores.clock,
-        ),
-      );
+    await act(async () => {
+      await stores.session.getState().execute({
+        kind: "cast_spell",
+        spellId: "mage-armor",
+        mode: "normal",
+        payment: { kind: "slot", slotLevel: 1 },
+      });
     });
     expect(screen.getByText("ячейки 1 уровня: 3")).toBeDefined();
 
-    act(() => {
-      stores.session.getState().apply((session) => longRest(session, stores.clock));
+    await act(async () => {
+      await stores.session.getState().execute({ kind: "long_rest" });
     });
     expect(screen.getByText("ячейки 1 уровня: 4")).toBeDefined();
   });
@@ -114,9 +111,8 @@ describe("сторы для браузера", () => {
     expect(stores.session.getState().spellCatalogSource).toBe("built_in");
   });
 
-  it("часы приложения дают время в ISO и разные идентификаторы", () => {
-    const clock = systemClock();
-    expect(Number.isNaN(Date.parse(clock.now()))).toBe(false);
-    expect(clock.nextId()).not.toBe(clock.nextId());
+  it("часы приложения дают время в ISO для выгружаемого файла", () => {
+    const stores = createBrowserStores();
+    expect(Number.isNaN(Date.parse(stores.now()))).toBe(false);
   });
 });

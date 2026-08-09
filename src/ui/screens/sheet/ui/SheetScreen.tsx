@@ -2,15 +2,7 @@
 
 import { useState } from "react";
 
-import {
-  changeLevel,
-  editAbility,
-  editHealth,
-  editIdentity,
-  editMarks,
-  removePermanentContribution,
-  setPermanentContribution,
-} from "@/core/application/useCases/sheet";
+import type { Command } from "@/contract/commands";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 
 import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
@@ -21,11 +13,10 @@ import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentityShe
 import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
 import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { PermanentContributionSheet } from "@/ui/features/edit-character-sheet/ui/PermanentContributionSheet";
-import type { Session } from "@/core/application/session";
 import { applyEdit } from "@/ui/shared/model/editing";
 
 export function SheetScreen() {
-  const { clock, session: sessionStore } = useStores();
+  const { session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
 
   const [open, setOpen] = useState<SheetEdit | null>(null);
@@ -34,8 +25,8 @@ export function SheetScreen() {
   const { character } = session;
 
   /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
-  const save = (operation: (current: Session) => Session, close: () => void): void => {
-    const reason = applyEdit(sessionStore, operation);
+  const save = async (command: Command, close: () => void): Promise<void> => {
+    const reason = await applyEdit(sessionStore, command);
     setRefusal(reason);
     if (reason === null) close();
   };
@@ -61,7 +52,7 @@ export function SheetScreen() {
           character={character}
           error={refusal}
           onCancel={closeSheet}
-          onSave={(patch) => save((current) => editIdentity(current, patch), closeSheet)}
+          onSave={(patch) => void save({ kind: "edit_identity", patch }, closeSheet)}
         />
       ) : null}
 
@@ -70,7 +61,7 @@ export function SheetScreen() {
           character={character}
           error={refusal}
           onCancel={closeSheet}
-          onSave={(next) => save((current) => changeLevel(current, next, clock), closeSheet)}
+          onSave={(next) => void save({ kind: "change_level", ...next }, closeSheet)}
         />
       ) : null}
 
@@ -81,7 +72,7 @@ export function SheetScreen() {
           character={character}
           error={refusal}
           onCancel={closeSheet}
-          onSave={(change) => save((current) => editAbility(current, change, clock), closeSheet)}
+          onSave={(change) => void save({ kind: "edit_ability", ...change }, closeSheet)}
         />
       )}
 
@@ -90,7 +81,7 @@ export function SheetScreen() {
           character={character}
           error={refusal}
           onCancel={closeSheet}
-          onSave={(change) => save((current) => editHealth(current, change, clock), closeSheet)}
+          onSave={(change) => void save({ kind: "edit_health", ...change }, closeSheet)}
         />
       ) : null}
 
@@ -99,7 +90,7 @@ export function SheetScreen() {
           character={character}
           error={refusal}
           onCancel={closeSheet}
-          onSave={(marks) => save((current) => editMarks(current, marks, clock), closeSheet)}
+          onSave={(marks) => void save({ kind: "edit_marks", ...marks }, closeSheet)}
         />
       ) : null}
 
@@ -109,10 +100,10 @@ export function SheetScreen() {
           error={refusal}
           onCancel={closeSheet}
           onSave={(permanent) =>
-            save((current) => setPermanentContribution(current, permanent, clock), closeSheet)
+            void save({ kind: "set_permanent_contribution", permanent }, closeSheet)
           }
           onRemove={(nameRu) =>
-            save((current) => removePermanentContribution(current, nameRu, clock), closeSheet)
+            void save({ kind: "remove_permanent_contribution", nameRu }, closeSheet)
           }
         />
       ) : null}

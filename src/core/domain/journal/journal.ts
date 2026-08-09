@@ -65,7 +65,7 @@ export class Journal<TState extends object = Record<string, unknown>> {
     before: TState,
     after: TState,
     recorded: Recorded,
-    stamp: { id: string; at: string },
+    stamp: { id: string; at: string; commandId?: string },
   ): Journal<TState> {
     const entry: JournalEntry<TState> = {
       id: stamp.id,
@@ -73,6 +73,7 @@ export class Journal<TState extends object = Record<string, unknown>> {
       kind: recorded.kind,
       summaryRu: recorded.summaryRu,
       undoPatch: changedFields(before, after, this.mutableKeys),
+      ...(stamp.commandId === undefined ? {} : { commandId: stamp.commandId }),
       ...(recorded.spellId === undefined ? {} : { spellId: recorded.spellId }),
       ...(recorded.slotLevel === undefined ? {} : { slotLevel: recorded.slotLevel }),
       ...(recorded.actionUsed === undefined ? {} : { actionUsed: recorded.actionUsed }),

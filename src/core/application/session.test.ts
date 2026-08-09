@@ -48,19 +48,20 @@ function spell(id: string): Spell {
 }
 
 /** Детерминированные часы: чистые функции время не изобретают. */
-function testClock() {
+function testOccasion(commandId = "command-1") {
   let tick = 0;
   return {
     now: () => new Date(Date.UTC(2026, 6, 31, 18, 0, tick)).toISOString(),
     nextId: () => `id-${++tick}`,
+    commandId,
   };
 }
 
-let clock: ReturnType<typeof testClock>;
+let occasion: ReturnType<typeof testOccasion>;
 let session: Session;
 
 beforeEach(() => {
-  clock = testClock();
+  occasion = testOccasion();
   session = createSession(createThorne());
 });
 
@@ -69,7 +70,7 @@ beforeEach(() => {
  * игрок, и она же считается первым ходом.
  */
 function withTurnTracking(base: Session): Session {
-  return startCombat(base, clock);
+  return startCombat(base, occasion);
 }
 
 /**
@@ -114,7 +115,7 @@ describe("применение заклинания (FR-023)", () => {
     const after = castSpell(
       session,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(after.character.spellSlots[1]?.remaining).toBe(3);
     expect(after.character.activeEffects).toHaveLength(1);
@@ -127,7 +128,7 @@ describe("применение заклинания (FR-023)", () => {
     const after = castSpell(
       session,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(after.journal).toHaveLength(1);
     expect(after.journal[0]?.kind).toBe("reaction_cast");
@@ -137,7 +138,7 @@ describe("применение заклинания (FR-023)", () => {
     const after = castSpell(
       session,
       { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" }, targetLabel: "гоблин" },
-      clock,
+      occasion,
     );
     expect(after.character.spellSlots).toEqual(session.character.spellSlots);
     expect(after.journal[0]?.summaryRu).toBe("Луч холода — заговором");
@@ -147,7 +148,7 @@ describe("применение заклинания (FR-023)", () => {
     const after = castSpell(
       session,
       { spell: spell("detect-magic"), mode: "ritual", payment: { kind: "none" } },
-      clock,
+      occasion,
     );
     expect(after.character.spellSlots).toEqual(session.character.spellSlots);
     expect(after.journal[0]?.summaryRu).toBe("Обнаружение магии — ритуалом");
@@ -158,14 +159,14 @@ describe("применение заклинания (FR-023)", () => {
       castSpell(
         session,
         { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "slot", slotLevel: 1 } },
-        clock,
+        occasion,
       ),
     ).toThrow(/Заговор не расходует ячейку/);
     expect(() =>
       castSpell(
         session,
         { spell: spell("identify"), mode: "ritual", payment: { kind: "slot", slotLevel: 1 } },
-        clock,
+        occasion,
       ),
     ).toThrow(/Ритуальное применение не расходует ячейку/);
   });
@@ -173,13 +174,13 @@ describe("применение заклинания (FR-023)", () => {
   it("отклоняет ячейку ниже уровня заклинания", () => {
     const highLevel: Spell = { ...spell("shield"), level: 3 };
     expect(() =>
-      castSpell(session, { spell: highLevel, mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, clock),
+      castSpell(session, { spell: highLevel, mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, occasion),
     ).toThrow(/ниже уровня заклинания/);
   });
 
   it("требует способа оплаты для заклинания с ячейкой", () => {
     expect(() =>
-      castSpell(session, { spell: spell("shield"), mode: "normal", payment: { kind: "none" } }, clock),
+      castSpell(session, { spell: spell("shield"), mode: "normal", payment: { kind: "none" } }, occasion),
     ).toThrow(/требует способа оплаты/);
   });
 
@@ -188,7 +189,7 @@ describe("применение заклинания (FR-023)", () => {
     const after = castSpell(
       session,
       { spell: instant, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(after.character.activeEffects).toHaveLength(0);
   });
@@ -198,14 +199,14 @@ describe("применение заклинания (FR-023)", () => {
     current = castSpell(
       current,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 4 } },
-      clock,
+      occasion,
     );
     expect(current.character.spellSlots[4]?.remaining).toBe(0);
     expect(() =>
       castSpell(
         current,
         { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 4 } },
-        clock,
+        occasion,
       ),
     ).toThrow(/Нет свободной ячейки/);
     const forced = castSpell(
@@ -216,7 +217,7 @@ describe("применение заклинания (FR-023)", () => {
         payment: { kind: "slot", slotLevel: 4 },
         allowAnyway: true,
       },
-      clock,
+      occasion,
     );
     expect(forced.character.spellSlots[4]?.remaining).toBe(-1);
   });
@@ -228,14 +229,14 @@ describe("экономия действий (FR-141)", () => {
     current = castSpell(
       current,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(deriveTurnEconomy(current).actionAvailable).toBe(false);
 
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
 
@@ -243,7 +244,7 @@ describe("экономия действий (FR-141)", () => {
     current = castSpell(
       current,
       { spell: bonus, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(deriveTurnEconomy(current).bonusActionAvailable).toBe(false);
   });
@@ -256,13 +257,13 @@ describe("экономия действий (FR-141)", () => {
     current = castSpell(
       current,
       { spell: spell(id), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(() =>
       castSpell(
         current,
         { spell: spell(id), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-        clock,
+        occasion,
       ),
     ).toThrow(expected);
   });
@@ -270,9 +271,9 @@ describe("экономия действий (FR-141)", () => {
   it("не даёт потратить бонусное действие дважды", () => {
     const bonus: Spell = { ...spell("disguise-self"), castingTime: { type: "bonus_action" } };
     let current = withTurnTracking(session);
-    current = castSpell(current, { spell: bonus, mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, clock);
+    current = castSpell(current, { spell: bonus, mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, occasion);
     expect(() =>
-      castSpell(current, { spell: bonus, mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, clock),
+      castSpell(current, { spell: bonus, mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, occasion),
     ).toThrow(/Бонусное действие уже израсходовано/);
   });
 
@@ -282,7 +283,7 @@ describe("экономия действий (FR-141)", () => {
       current = castSpell(
         current,
         { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
-        clock,
+        occasion,
       );
     }
     expect(deriveTurnEconomy(current).actionAvailable).toBe(true);
@@ -292,7 +293,7 @@ describe("экономия действий (FR-141)", () => {
     const current = castSpell(
       withTurnTracking(session),
       { spell: spell("find-familiar"), mode: "ritual", payment: { kind: "none" } },
-      clock,
+      occasion,
     );
     expect(deriveTurnEconomy(current).actionAvailable).toBe(true);
   });
@@ -302,9 +303,9 @@ describe("экономия действий (FR-141)", () => {
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
     expect(deriveTurnEconomy(current).actionAvailable).toBe(true);
   });
@@ -315,20 +316,20 @@ describe("истечение эффекта в раундах (FR-094)", () => {
     castSpell(
       base,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
 
   it("начало хода снимает истёкшее: «Щит» держится один раунд", () => {
     const shielded = castShield(withTurnTracking(session));
     expect(shielded.character.activeEffects).toHaveLength(1);
 
-    const next = beginTurn(shielded, clock);
+    const next = beginTurn(shielded, occasion);
     expect(next.character.activeEffects).toEqual([]);
     expect(next.journal.at(-1)?.summaryRu).toContain("«Щит» истёк");
   });
 
   it("снятие обратимо: ошибка возвращается отменой (FR-111)", () => {
-    const next = beginTurn(castShield(withTurnTracking(session)), clock);
+    const next = beginTurn(castShield(withTurnTracking(session)), occasion);
     expect(undoLast(next).character.activeEffects).toHaveLength(1);
   });
 
@@ -337,9 +338,9 @@ describe("истечение эффекта в раундах (FR-094)", () => {
     const casting = castSpell(
       withTurnTracking(session),
       { spell: spell("detect-magic"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
-    expect(beginTurn(casting, clock).character.activeEffects).toHaveLength(1);
+    expect(beginTurn(casting, occasion).character.activeEffects).toHaveLength(1);
   });
 
   it("эффект на несколько раундов переживает свой первый ход", () => {
@@ -348,14 +349,14 @@ describe("истечение эффекта в раундах (FR-094)", () => {
     let current = castSpell(
       withTurnTracking(session),
       { spell: threeRounds, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
 
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(current.character.activeEffects).toHaveLength(1);
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(current.character.activeEffects).toHaveLength(1);
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(current.character.activeEffects).toEqual([]);
   });
 
@@ -366,11 +367,11 @@ describe("истечение эффекта в раундах (FR-094)", () => {
     const casting = castSpell(
       withTurnTracking(session),
       { spell: brief, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(casting.character.concentration).toBeDefined();
 
-    const next = beginTurn(casting, clock);
+    const next = beginTurn(casting, occasion);
     expect(next.character.activeEffects).toEqual([]);
     expect(next.character.concentration).toBeUndefined();
     expect(characterStateSchema.safeParse(next.character).success).toBe(true);
@@ -384,7 +385,7 @@ describe("концентрация (FR-080, FR-081)", () => {
     const after = castSpell(
       session,
       { spell: concentrating(), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(after.character.concentration?.spellId).toBe("detect-magic");
     expect(after.character.activeEffects.filter((effect) => effect.isConcentration)).toHaveLength(1);
@@ -394,13 +395,13 @@ describe("концентрация (FR-080, FR-081)", () => {
     const first = castSpell(
       session,
       { spell: concentrating(), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(() =>
       castSpell(
         first,
         { spell: concentrating(), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-        clock,
+        occasion,
       ),
     ).toThrow(/Уже идёт концентрация/);
   });
@@ -409,7 +410,7 @@ describe("концентрация (FR-080, FR-081)", () => {
     const first = castSpell(
       session,
       { spell: concentrating(), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(() =>
       castSpell(
@@ -420,7 +421,7 @@ describe("концентрация (FR-080, FR-081)", () => {
           payment: { kind: "slot", slotLevel: 1 },
           allowAnyway: true,
         },
-        clock,
+        occasion,
       ),
     ).toThrow(/Уже идёт концентрация/);
   });
@@ -429,7 +430,7 @@ describe("концентрация (FR-080, FR-081)", () => {
     const first = castSpell(
       session,
       { spell: concentrating(), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     const replaced = castSpell(
       first,
@@ -439,7 +440,7 @@ describe("концентрация (FR-080, FR-081)", () => {
         payment: { kind: "slot", slotLevel: 1 },
         replaceConcentration: true,
       },
-      clock,
+      occasion,
     );
     expect(replaced.character.concentration?.spellId).toBe("other-concentration");
     expect(replaced.character.activeEffects.filter((effect) => effect.isConcentration)).toHaveLength(1);
@@ -451,9 +452,9 @@ describe("концентрация (FR-080, FR-081)", () => {
       const started = castSpell(
         session,
         { spell: concentrating(), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-        clock,
+        occasion,
       );
-      const ended = endConcentration(started, reason, clock);
+      const ended = endConcentration(started, reason, occasion);
       expect(ended.character.concentration).toBeUndefined();
       expect(ended.character.activeEffects.filter((effect) => effect.isConcentration)).toHaveLength(0);
       expect(ended.journal.at(-1)?.kind).toBe("concentration_ended");
@@ -461,7 +462,7 @@ describe("концентрация (FR-080, FR-081)", () => {
   );
 
   it("завершать нечего, если концентрации нет", () => {
-    expect(() => endConcentration(session, "manual", clock)).toThrow(DomainError);
+    expect(() => endConcentration(session, "manual", occasion)).toThrow(DomainError);
   });
 });
 
@@ -471,7 +472,7 @@ describe("«Знаки ограждения» (FR-153, FR-154)", () => {
   });
 
   it("тратят руну и реакцию", () => {
-    const after = spendRuneOnWardingSigil(withTurnTracking(session), clock);
+    const after = spendRuneOnWardingSigil(withTurnTracking(session), occasion);
     expect(after.character.runes.remaining).toBe(2);
     expect(deriveTurnEconomy(after).reactionAvailable).toBe(false);
     expect(after.journal.at(-1)?.kind).toBe("rune_spent");
@@ -479,9 +480,9 @@ describe("«Знаки ограждения» (FR-153, FR-154)", () => {
 
   it("недоступны без реакции", () => {
     const base = withTurnTracking(session);
-    const spent = spendRuneOnWardingSigil(base, clock);
+    const spent = spendRuneOnWardingSigil(base, occasion);
     expect(wardingSigilAvailable(spent)).toBe(false);
-    expect(() => spendRuneOnWardingSigil(spent, clock)).toThrow(/Реакция уже израсходована/);
+    expect(() => spendRuneOnWardingSigil(spent, occasion)).toThrow(/Реакция уже израсходована/);
   });
 
   it("недоступны без рун", () => {
@@ -490,16 +491,16 @@ describe("«Знаки ограждения» (FR-153, FR-154)", () => {
       character: { ...session.character, runes: { maximum: 3, remaining: 0 } },
     };
     expect(wardingSigilAvailable(drained)).toBe(false);
-    expect(() => spendRuneOnWardingSigil(drained, clock)).toThrow(/Рун не осталось/);
+    expect(() => spendRuneOnWardingSigil(drained, occasion)).toThrow(/Рун не осталось/);
   });
 
   it("спасают концентрацию: провал проверки можно не доводить до конца", () => {
     const started = castSpell(
       session,
       { spell: spell("detect-magic"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
-    const saved = spendRuneOnWardingSigil(started, clock);
+    const saved = spendRuneOnWardingSigil(started, occasion);
     expect(saved.character.concentration?.spellId).toBe("detect-magic");
     expect(saved.character.runes.remaining).toBe(2);
   });
@@ -515,7 +516,7 @@ describe("руна при сотворении (FR-151)", () => {
         payment: { kind: "slot", slotLevel: 1 },
         rune: "war",
       },
-      clock,
+      occasion,
     );
     expect(after.character.runes.remaining).toBe(2);
   });
@@ -534,7 +535,7 @@ describe("руна при сотворении (FR-151)", () => {
           payment: { kind: "spell_points" },
           rune: "life",
         },
-        clock,
+        occasion,
       ),
     ).toThrow(/только к заклинанию, оплаченному ячейкой/);
   });
@@ -553,7 +554,7 @@ describe("руна при сотворении (FR-151)", () => {
           payment: { kind: "slot", slotLevel: 1 },
           rune: "wind",
         },
-        clock,
+        occasion,
       ),
     ).toThrow(/Рун не осталось/);
   });
@@ -564,7 +565,7 @@ describe("руна жизни начисляет временные хиты (FR
     return castSpell(
       from,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel }, rune },
-      clock,
+      occasion,
     );
   }
 
@@ -598,7 +599,7 @@ describe("руна жизни начисляет временные хиты (FR
         rune: "life",
         runeTarget: "other",
       },
-      clock,
+      occasion,
     );
 
     expect(cast.character.temporaryHitPoints).toBe(0);
@@ -620,7 +621,7 @@ describe("руна жизни начисляет временные хиты (FR
 
 describe("кровавое колдовство (FR-170…FR-174)", () => {
   it("обменивает хиты на очки и снижает максимум", () => {
-    const after = exchangeBlood(session, 3, clock);
+    const after = exchangeBlood(session, 3, occasion);
     expect(after.character.spellPoints.remaining).toBe(3);
     expect(after.character.hitPoints).toEqual({
       current: 51,
@@ -632,13 +633,13 @@ describe("кровавое колдовство (FR-170…FR-174)", () => {
   });
 
   it("каждое очко всегда кратно курсу: ровно 9 хитов за 3 очка", () => {
-    const after = exchangeBlood(session, 3, clock);
+    const after = exchangeBlood(session, 3, occasion);
     expect(after.character.spellPoints.remaining).toBe(3);
     expect(after.character.hitPoints.current).toBe(51);
   });
 
   it("отклоняет нулевой обмен", () => {
-    expect(() => exchangeBlood(session, 0, clock)).toThrow(/Нужно хотя бы одно очко/);
+    expect(() => exchangeBlood(session, 0, occasion)).toThrow(/Нужно хотя бы одно очко/);
   });
 
   it("отклоняет обмен дороже текущего здоровья", () => {
@@ -646,20 +647,20 @@ describe("кровавое колдовство (FR-170…FR-174)", () => {
       ...session,
       character: withDamage(session.character, 55),
     };
-    expect(() => exchangeBlood(weak, 3, clock)).toThrow(/в наличии 5/);
+    expect(() => exchangeBlood(weak, 3, occasion)).toThrow(/в наличии 5/);
   });
 
   it("расходует действие при включённом учёте хода", () => {
-    const after = exchangeBlood(withTurnTracking(session), 3, clock);
+    const after = exchangeBlood(withTurnTracking(session), 3, occasion);
     expect(deriveTurnEconomy(after).actionAvailable).toBe(false);
   });
 
   it("оплачивает заклинание очками", () => {
-    const withPoints = exchangeBlood(session, 2, clock);
+    const withPoints = exchangeBlood(session, 2, occasion);
     const cast = castSpell(
       withPoints,
       { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } },
-      clock,
+      occasion,
     );
     expect(cast.character.spellPoints.remaining).toBe(0);
     expect(cast.character.spellSlots[1]?.remaining).toBe(4);
@@ -668,62 +669,62 @@ describe("кровавое колдовство (FR-170…FR-174)", () => {
 
   it("отклоняет оплату, когда очков не хватает", () => {
     expect(() =>
-      castSpell(session, { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } }, clock),
+      castSpell(session, { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } }, occasion),
     ).toThrow(/Очков заклинаний 0, нужно 2/);
   });
 
   it("подавлено уроном огнём и солнцем (FR-176)", () => {
-    const burned = takeDamage(session, 7, clock, { fire: true });
-    expect(() => exchangeBlood(burned, 3, clock)).toThrow(/подавлено уроном огнём/);
+    const burned = takeDamage(session, 7, occasion, { fire: true });
+    expect(() => exchangeBlood(burned, 3, occasion)).toThrow(/подавлено уроном огнём/);
 
-    const sunlit = setSunlight(session, true, clock);
-    expect(() => exchangeBlood(sunlit, 3, clock)).toThrow(/под прямым солнечным светом/);
+    const sunlit = setSunlight(session, true, occasion);
+    expect(() => exchangeBlood(sunlit, 3, occasion)).toThrow(/под прямым солнечным светом/);
   });
 
   it("подавление обходится явным разрешением", () => {
-    const burned = takeDamage(session, 7, clock, { fire: true });
-    expect(exchangeBlood(burned, 3, clock, { allowAnyway: true }).character.spellPoints.remaining).toBe(3);
+    const burned = takeDamage(session, 7, occasion, { fire: true });
+    expect(exchangeBlood(burned, 3, occasion, { allowAnyway: true }).character.spellPoints.remaining).toBe(3);
   });
 });
 
 describe("урон, подавление и регенерация (FR-180…FR-182)", () => {
   it("урон уменьшает хиты и не уходит ниже нуля", () => {
-    expect(takeDamage(session, 70, clock).character.hitPoints.current).toBe(0);
+    expect(takeDamage(session, 70, occasion).character.hitPoints.current).toBe(0);
   });
 
   it("огненный урон подавляет особенности до начала хода", () => {
-    const burned = takeDamage(session, 5, clock, { fire: true });
+    const burned = takeDamage(session, 5, occasion, { fire: true });
     expect(burned.character.suppression.firedUpon).toBe(true);
     expect(burned.journal.at(-1)?.summaryRu).toContain("огонь");
-    expect(beginTurn(burned, clock).character.suppression.firedUpon).toBe(false);
+    expect(beginTurn(burned, occasion).character.suppression.firedUpon).toBe(false);
   });
 
   it.each([0, -3, 1.5])("отклоняет урон %s", (damage) => {
-    expect(() => takeDamage(session, damage, clock)).toThrow(DomainError);
+    expect(() => takeDamage(session, damage, occasion)).toThrow(DomainError);
   });
 
   it("признак солнца переключается и не переключается впустую", () => {
-    const sunlit = setSunlight(session, true, clock);
+    const sunlit = setSunlight(session, true, occasion);
     expect(sunlit.character.suppression.underDirectSunlight).toBe(true);
-    expect(() => setSunlight(sunlit, true, clock)).toThrow(/уже в этом состоянии/);
-    expect(setSunlight(sunlit, false, clock).character.suppression.underDirectSunlight).toBe(false);
+    expect(() => setSunlight(sunlit, true, occasion)).toThrow(/уже в этом состоянии/);
+    expect(setSunlight(sunlit, false, occasion).character.suppression.underDirectSunlight).toBe(false);
   });
 
   it("регенерация действует только ниже половины максимума и без подавления", () => {
     expect(Vitality.of(session.character).regenerationDue(session.character.level)).toBe(0);
-    const wounded = takeDamage(session, 40, clock);
+    const wounded = takeDamage(session, 40, occasion);
     expect(Vitality.of(wounded.character).regenerationDue(wounded.character.level)).toBe(3);
-    const burned = takeDamage(wounded, 1, clock, { fire: true });
+    const burned = takeDamage(wounded, 1, occasion, { fire: true });
     expect(Vitality.of(burned.character).regenerationDue(burned.character.level)).toBe(0);
-    const downed = takeDamage(wounded, 100, clock);
+    const downed = takeDamage(wounded, 100, occasion);
     expect(Vitality.of(downed.character).regenerationDue(downed.character.level)).toBe(0);
   });
 
   it("порог регенерации считается от снижённого максимума", () => {
-    const exchanged = exchangeBlood(session, 10, clock);
+    const exchanged = exchangeBlood(session, 10, occasion);
     // Максимум стал 30, текущее 30 — половина не пройдена.
     expect(Vitality.of(exchanged.character).regenerationDue(exchanged.character.level)).toBe(0);
-    const wounded = takeDamage(exchanged, 20, clock);
+    const wounded = takeDamage(exchanged, 20, occasion);
     expect(Vitality.of(wounded.character).regenerationDue(wounded.character.level)).toBe(3);
   });
 });
@@ -738,10 +739,10 @@ describe("отдых и восстановление", () => {
         payment: { kind: "slot", slotLevel: 2 },
         rune: "life",
       },
-      clock,
+      occasion,
     );
-    current = exchangeBlood(current, 3, clock);
-    current = longRest(current, clock);
+    current = exchangeBlood(current, 3, occasion);
+    current = longRest(current, occasion);
 
     expect(current.character.spellSlots[2]?.remaining).toBe(3);
     expect(current.character.runes.remaining).toBe(3);
@@ -751,8 +752,8 @@ describe("отдых и восстановление", () => {
   });
 
   it("долгий отдых возвращает здоровье (FR-130)", () => {
-    const wounded = takeDamage(session, 41, clock);
-    expect(longRest(wounded, clock).character.hitPoints).toEqual({
+    const wounded = takeDamage(session, 41, occasion);
+    expect(longRest(wounded, occasion).character.hitPoints).toEqual({
       current: 60,
       maximumBase: 60,
       bloodReduction: 0,
@@ -763,10 +764,10 @@ describe("отдых и восстановление", () => {
   it("долгий отдых возвращает восемь часов снижённого максимума (FR-130, FR-173)", () => {
     // 30 хитов на очки: максимум 30, вернуть предстоит 30. За восемь часов по 3 — 24 очка,
     // остаётся 6, и текущие поднимаются ровно до нового максимума.
-    const spent = exchangeBlood(session, 10, clock);
+    const spent = exchangeBlood(session, 10, occasion);
     expect(spent.character.hitPoints).toEqual({ current: 30, maximumBase: 60, bloodReduction: 30, masterReduction: 0 });
 
-    expect(longRest(spent, clock).character.hitPoints).toEqual({
+    expect(longRest(spent, occasion).character.hitPoints).toEqual({
       current: 54,
       maximumBase: 60,
       bloodReduction: 6,
@@ -775,13 +776,13 @@ describe("отдых и восстановление", () => {
   });
 
   it("отдых не обнуляет снижение махом: правило возвращает по часам", () => {
-    const spent = exchangeBlood(session, 10, clock);
-    expect(longRest(spent, clock).character.hitPoints.bloodReduction).toBeGreaterThan(0);
+    const spent = exchangeBlood(session, 10, occasion);
+    expect(longRest(spent, occasion).character.hitPoints.bloodReduction).toBeGreaterThan(0);
   });
 
   it("небольшое снижение отдых закрывает целиком", () => {
-    const spent = exchangeBlood(session, 3, clock);
-    expect(longRest(spent, clock).character.hitPoints).toEqual({
+    const spent = exchangeBlood(session, 3, occasion);
+    expect(longRest(spent, occasion).character.hitPoints).toEqual({
       current: 60,
       maximumBase: 60,
       bloodReduction: 0,
@@ -790,8 +791,8 @@ describe("отдых и восстановление", () => {
   });
 
   it("возврат здоровья отменяется вместе с отдыхом (FR-111)", () => {
-    const spent = exchangeBlood(takeDamage(session, 10, clock), 9, clock);
-    const undone = undoLast(longRest(spent, clock));
+    const spent = exchangeBlood(takeDamage(session, 10, occasion), 9, occasion);
+    const undone = undoLast(longRest(spent, occasion));
     expect(undone.character.hitPoints).toEqual(spent.character.hitPoints);
   });
 
@@ -800,9 +801,9 @@ describe("отдых и восстановление", () => {
     let current = castSpell(
       session,
       { spell: special, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
-    current = longRest(current, clock);
+    current = longRest(current, occasion);
     expect(current.character.activeEffects).toHaveLength(1);
   });
 
@@ -810,63 +811,63 @@ describe("отдых и восстановление", () => {
     let current = castSpell(
       session,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
-    current = shortRest(current, clock);
+    current = shortRest(current, occasion);
     expect(current.character.spellSlots[1]?.remaining).toBe(3);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
   });
 
   it("два последовательных частичных восстановления укладываются в общий бюджет (FR-131)", () => {
     let current = outOfCombat(session);
-    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, clock);
+    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, occasion);
     expect(current.character.spellSlots[1]?.remaining).toBe(0);
-    current = shortRest(current, clock);
+    current = shortRest(current, occasion);
 
-    current = useArcaneRecovery(current, { 1: 1 }, clock);
+    current = useArcaneRecovery(current, { 1: 1 }, occasion);
     expect(current.character.spellSlots[1]?.remaining).toBe(1);
     expect(current.character.arcaneRecovery).toEqual({ maximum: 4, remaining: 3 });
 
-    current = useArcaneRecovery(current, { 1: 1 }, clock);
+    current = useArcaneRecovery(current, { 1: 1 }, occasion);
     expect(current.character.spellSlots[1]?.remaining).toBe(2);
     expect(current.character.arcaneRecovery).toEqual({ maximum: 4, remaining: 2 });
   });
 
   it("третье восстановление отклоняется, когда бюджет исчерпан (FR-131)", () => {
     let current = outOfCombat(session);
-    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, clock);
-    current = shortRest(current, clock);
+    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, occasion);
+    current = shortRest(current, occasion);
 
-    current = useArcaneRecovery(current, { 1: 2 }, clock);
-    current = useArcaneRecovery(current, { 1: 2 }, clock);
+    current = useArcaneRecovery(current, { 1: 2 }, occasion);
+    current = useArcaneRecovery(current, { 1: 2 }, occasion);
     expect(current.character.arcaneRecovery.remaining).toBe(0);
 
-    current = spendSpellSlot(current, 1, clock);
-    expect(() => useArcaneRecovery(current, { 1: 1 }, clock)).toThrow(
+    current = spendSpellSlot(current, 1, occasion);
+    expect(() => useArcaneRecovery(current, { 1: 1 }, occasion)).toThrow(
       /Дневной бюджет восстановления исчерпан/,
     );
   });
 
   it("исчерпанный бюджет называется той же причиной, которой гаснет кнопка (FR-131)", () => {
     let current = outOfCombat(session);
-    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, clock);
-    current = shortRest(current, clock);
-    current = useArcaneRecovery(current, { 1: 2 }, clock);
-    current = useArcaneRecovery(current, { 1: 2 }, clock);
+    for (let i = 0; i < 4; i += 1) current = spendSpellSlot(current, 1, occasion);
+    current = shortRest(current, occasion);
+    current = useArcaneRecovery(current, { 1: 2 }, occasion);
+    current = useArcaneRecovery(current, { 1: 2 }, occasion);
 
     const reason = arcaneRecoveryUnavailability(current.character);
     expect(reason).toMatch(/Дневной бюджет восстановления исчерпан/);
-    expect(() => useArcaneRecovery(current, { 1: 1 }, clock)).toThrow(reason ?? "");
+    expect(() => useArcaneRecovery(current, { 1: 1 }, occasion)).toThrow(reason ?? "");
   });
 
   it("долгий отдых заполняет бюджет заново (FR-131)", () => {
     let current = outOfCombat(session);
-    current = spendSpellSlot(current, 1, clock);
-    current = shortRest(current, clock);
-    current = useArcaneRecovery(current, { 1: 1 }, clock);
+    current = spendSpellSlot(current, 1, occasion);
+    current = shortRest(current, occasion);
+    current = useArcaneRecovery(current, { 1: 1 }, occasion);
     expect(current.character.arcaneRecovery.remaining).toBe(3);
 
-    current = longRest(current, clock);
+    current = longRest(current, occasion);
     expect(current.character.arcaneRecovery).toEqual({ maximum: 4, remaining: 4 });
   });
 
@@ -876,11 +877,11 @@ describe("отдых и восстановление", () => {
       current = castSpell(
         current,
         { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: level } },
-        clock,
+        occasion,
       );
     }
-    current = shortRest(current, clock);
-    expect(() => useArcaneRecovery(current, { 3: 1, 2: 1 }, clock)).toThrow(
+    current = shortRest(current, occasion);
+    expect(() => useArcaneRecovery(current, { 3: 1, 2: 1 }, occasion)).toThrow(
       /превышает остаток бюджета 4/,
     );
   });
@@ -889,19 +890,19 @@ describe("отдых и восстановление", () => {
     const spent = castSpell(
       withTurnTracking(session),
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     // Худший случай: долгий отдых посреди раунда молча вернул бы все ячейки разом.
-    expect(() => longRest(spent, clock)).toThrow(/Пока идёт бой/);
+    expect(() => longRest(spent, occasion)).toThrow(/Пока идёт бой/);
     expect(spent.character.spellSlots[1]?.remaining).toBe(3);
   });
 
   it("короткий отдых отказывает во время боя (FR-215)", () => {
-    expect(() => shortRest(withTurnTracking(session), clock)).toThrow(/Пока идёт бой/);
+    expect(() => shortRest(withTurnTracking(session), occasion)).toThrow(/Пока идёт бой/);
   });
 
   it("магическое восстановление отказывает во время боя (FR-215)", () => {
-    expect(() => useArcaneRecovery(withTurnTracking(session), { 1: 1 }, clock)).toThrow(
+    expect(() => useArcaneRecovery(withTurnTracking(session), { 1: 1 }, occasion)).toThrow(
       /Пока идёт бой/,
     );
   });
@@ -910,9 +911,9 @@ describe("отдых и восстановление", () => {
     let current = castSpell(
       session,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 2 } },
-      clock,
+      occasion,
     );
-    current = refundSpellSlot(current, 2, clock);
+    current = refundSpellSlot(current, 2, occasion);
     expect(current.character.spellSlots[2]?.remaining).toBe(3);
     expect(current.journal.at(-1)?.kind).toBe("slot_refunded");
   });
@@ -923,10 +924,10 @@ describe("активные эффекты (FR-091)", () => {
     const cast = castSpell(
       session,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     const effectId = cast.character.activeEffects[0]?.id ?? "";
-    const ended = endEffect(cast, effectId, clock);
+    const ended = endEffect(cast, effectId, occasion);
     expect(ended.character.activeEffects).toHaveLength(0);
   });
 
@@ -934,21 +935,21 @@ describe("активные эффекты (FR-091)", () => {
     const cast = castSpell(
       session,
       { spell: spell("detect-magic"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     const effectId = cast.character.activeEffects[0]?.id ?? "";
-    const ended = endEffect(cast, effectId, clock);
+    const ended = endEffect(cast, effectId, occasion);
     expect(ended.character.concentration).toBeUndefined();
   });
 
   it("отклоняет неизвестный эффект", () => {
-    expect(() => endEffect(session, "нет-такого", clock)).toThrow(DomainError);
+    expect(() => endEffect(session, "нет-такого", occasion)).toThrow(DomainError);
   });
 });
 
 describe("ручной эффект (FR-236)", () => {
   it("создаёт эффект без заклинания и пишет это в журнал", () => {
-    const after = startManualEffect(session, { nameRu: "Опутанный" }, clock);
+    const after = startManualEffect(session, { nameRu: "Опутанный" }, occasion);
 
     expect(after.character.activeEffects).toHaveLength(1);
     const [effect] = after.character.activeEffects;
@@ -964,12 +965,12 @@ describe("ручной эффект (FR-236)", () => {
     const shielded = castSpell(
       withTurnTracking(session),
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     const after = startManualEffect(
       shielded,
       { nameRu: "Прикрытие союзника", armorClassBonus: 2 },
-      clock,
+      occasion,
     );
 
     // Без вкладов: 14; «Щит» прибавляет 5; прикрытие союзника прибавляет ещё 2.
@@ -977,35 +978,35 @@ describe("ручной эффект (FR-236)", () => {
   });
 
   it("снимается тем же путём, что и любой активный эффект", () => {
-    const started = startManualEffect(session, { nameRu: "Опутанный" }, clock);
+    const started = startManualEffect(session, { nameRu: "Опутанный" }, occasion);
     const effectId = started.character.activeEffects[0]?.id ?? "";
 
-    const ended = endEffect(started, effectId, clock);
+    const ended = endEffect(started, effectId, occasion);
 
     expect(ended.character.activeEffects).toHaveLength(0);
     expect(ended.journal.at(-1)?.summaryRu).toBe("Эффект завершён: Опутанный");
   });
 
   it("отклоняет пустое имя", () => {
-    expect(() => startManualEffect(session, { nameRu: "   " }, clock)).toThrow(DomainError);
+    expect(() => startManualEffect(session, { nameRu: "   " }, occasion)).toThrow(DomainError);
   });
 
   it("отклоняет неположительный вклад в Класс Доспеха", () => {
     expect(() =>
-      startManualEffect(session, { nameRu: "Статус", armorClassBonus: 0 }, clock),
+      startManualEffect(session, { nameRu: "Статус", armorClassBonus: 0 }, occasion),
     ).toThrow(DomainError);
   });
 
   it("отклоняет дробный вклад в Класс Доспеха", () => {
     expect(() =>
-      startManualEffect(session, { nameRu: "Статус", armorClassBonus: 1.5 }, clock),
+      startManualEffect(session, { nameRu: "Статус", armorClassBonus: 1.5 }, occasion),
     ).toThrow(DomainError);
   });
 });
 
 describe("поправка к КД (FR-236)", () => {
   it("заводит поправку одним эффектом и складывает её по общему правилу", () => {
-    const after = setArmorClassAdjustment(session, 2, clock);
+    const after = setArmorClassAdjustment(session, 2, occasion);
 
     expect(after.character.activeEffects).toHaveLength(1);
     expect(Character.of(after.character).sheet.value("armorClass")).toBe(16);
@@ -1013,17 +1014,17 @@ describe("поправка к КД (FR-236)", () => {
   });
 
   it("допускает отрицательное значение", () => {
-    const after = setArmorClassAdjustment(session, -3, clock);
+    const after = setArmorClassAdjustment(session, -3, occasion);
 
     expect(Character.of(after.character).sheet.value("armorClass")).toBe(11);
     expect(after.journal.at(-1)?.summaryRu).toBe("Поправка к КД: −3");
   });
 
   it("новое значение заменяет прежнее одним переходом, а не двумя", () => {
-    const first = setArmorClassAdjustment(session, 2, clock);
+    const first = setArmorClassAdjustment(session, 2, occasion);
     const journalLengthAfterFirst = first.journal.length;
 
-    const second = setArmorClassAdjustment(first, 5, clock);
+    const second = setArmorClassAdjustment(first, 5, occasion);
 
     expect(second.character.activeEffects).toHaveLength(1);
     expect(Character.of(second.character).sheet.value("armorClass")).toBe(19);
@@ -1031,28 +1032,28 @@ describe("поправка к КД (FR-236)", () => {
   });
 
   it("ноль снимает поправку вовсе", () => {
-    const started = setArmorClassAdjustment(session, 2, clock);
+    const started = setArmorClassAdjustment(session, 2, occasion);
 
-    const cleared = setArmorClassAdjustment(started, 0, clock);
+    const cleared = setArmorClassAdjustment(started, 0, occasion);
 
     expect(cleared.character.activeEffects).toHaveLength(0);
     expect(Character.of(cleared.character).sheet.value("armorClass")).toBe(14);
   });
 
   it("ноль без заведённой поправки ничего не делает", () => {
-    const after = setArmorClassAdjustment(session, 0, clock);
+    const after = setArmorClassAdjustment(session, 0, occasion);
 
     expect(after).toBe(session);
   });
 
   it("несёт типизированный признак: опознание не зависит от подписи", () => {
-    const after = setArmorClassAdjustment(session, 2, clock);
+    const after = setArmorClassAdjustment(session, 2, occasion);
 
     expect(after.character.activeEffects[0]?.manualKind).toBe("armorAdjustment");
   });
 
   it("отклоняет дробное значение", () => {
-    expect(() => setArmorClassAdjustment(session, 1.5, clock)).toThrow(DomainError);
+    expect(() => setArmorClassAdjustment(session, 1.5, occasion)).toThrow(DomainError);
   });
 
   it("не путается с другими активными эффектами: складывается с «Щитом»", () => {
@@ -1060,10 +1061,10 @@ describe("поправка к КД (FR-236)", () => {
     const shielded = castSpell(
       withTurnTracking(session),
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
 
-    const after = setArmorClassAdjustment(shielded, 2, clock);
+    const after = setArmorClassAdjustment(shielded, 2, occasion);
 
     // Без вкладов: 14; «Щит» прибавляет 5; поправка прибавляет ещё 2.
     expect(Character.of(after.character).sheet.value("armorClass")).toBe(21);
@@ -1081,7 +1082,7 @@ describe("отмена последнего действия (FR-111)", () => {
         payment: { kind: "slot", slotLevel: 2 },
         rune: "war",
       },
-      clock,
+      occasion,
     );
     const undone = undoLast(after);
     expect(undone.character).toEqual(before);
@@ -1089,16 +1090,16 @@ describe("отмена последнего действия (FR-111)", () => {
   });
 
   it.each([
-    ["применение заговора", (s: Session) => castSpell(s, { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } }, clock)],
-    ["кровавое колдовство", (s: Session) => exchangeBlood(s, 3, clock)],
-    ["урон", (s: Session) => takeDamage(s, 12, clock, { fire: true })],
-    ["солнце", (s: Session) => setSunlight(s, true, clock)],
-    ["руну на знаки ограждения", (s: Session) => spendRuneOnWardingSigil(s, clock)],
-    ["долгий отдых", (s: Session) => longRest(exchangeBlood(s, 3, clock), clock)],
+    ["применение заговора", (s: Session) => castSpell(s, { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } }, occasion)],
+    ["кровавое колдовство", (s: Session) => exchangeBlood(s, 3, occasion)],
+    ["урон", (s: Session) => takeDamage(s, 12, occasion, { fire: true })],
+    ["солнце", (s: Session) => setSunlight(s, true, occasion)],
+    ["руну на знаки ограждения", (s: Session) => spendRuneOnWardingSigil(s, occasion)],
+    ["долгий отдых", (s: Session) => longRest(exchangeBlood(s, 3, occasion), occasion)],
     // Отдых обязан что-то восстанавливать, иначе случай ничего не проверяет:
     // сначала тратим реакцию и руну, потом отдыхаем.
-    ["короткий отдых", (s: Session) => shortRest(spendRuneOnWardingSigil(s, clock), clock)],
-    ["начало хода", (s: Session) => beginTurn(takeDamage(s, 5, clock, { fire: true }), clock)],
+    ["короткий отдых", (s: Session) => shortRest(spendRuneOnWardingSigil(s, occasion), occasion)],
+    ["начало хода", (s: Session) => beginTurn(takeDamage(s, 5, occasion, { fire: true }), occasion)],
   ])("отменяет %s", (_name, operation) => {
     const start = session;
     const changed = operation(start);
@@ -1111,10 +1112,10 @@ describe("отмена последнего действия (FR-111)", () => {
     let current = castSpell(
       session,
       { spell: spell("detect-magic"), mode: "normal", payment: { kind: "slot", slotLevel: 3 } },
-      clock,
+      occasion,
     );
     const beforeRest = structuredClone(current.character);
-    current = longRest(current, clock);
+    current = longRest(current, occasion);
     current = undoLast(current);
     expect(current.character).toEqual(beforeRest);
   });
@@ -1124,8 +1125,8 @@ describe("отмена последнего действия (FR-111)", () => {
   });
 
   it("испорченный снимок отмены не становится состоянием", () => {
-    const spent = spendSpellSlot(session, 1, clock);
-    const stored = toPersisted(spent, clock.now(), null);
+    const spent = spendSpellSlot(session, 1, occasion);
+    const stored = toPersisted(spent, occasion.now(), null);
     // Хранилище проверяет у снимка принадлежность ключей, а не значения: такая запись доживает до
     // отмены.
     const corrupted = fromPersisted(
@@ -1142,7 +1143,7 @@ describe("отмена последнего действия (FR-111)", () => {
   });
 
   it("отмена записи без снимка называет причину, а не делает вид, что вернула состояние", () => {
-    const stored = toPersisted(spendSpellSlot(session, 1, clock), clock.now(), null);
+    const stored = toPersisted(spendSpellSlot(session, 1, occasion), occasion.now(), null);
     // Так выглядит запись прежней версии: снимок возвращал учёт хода, которого состояние уже не
     // знает, и приведение оставило запись без снимка.
     const legacy = fromPersisted(
@@ -1168,7 +1169,7 @@ describe("отмена последнего действия (FR-111)", () => {
       current = castSpell(
         current,
         { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: level } },
-        clock,
+        occasion,
       );
       snapshots.push(structuredClone(current.character));
     }
@@ -1186,7 +1187,7 @@ describe("журнал (FR-110, FR-112)", () => {
     const after = castSpell(
       before,
       { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
-      clock,
+      occasion,
     );
     expect(after.journal).toHaveLength(1);
     expect(after.journal[0]?.undoPatch).toEqual({});
@@ -1197,7 +1198,7 @@ describe("журнал (FR-110, FR-112)", () => {
     const after = castSpell(
       session,
       { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
-      clock,
+      occasion,
     );
     const undone = undoLast(after);
     expect(undone.journal).toHaveLength(0);
@@ -1210,7 +1211,7 @@ describe("журнал (FR-110, FR-112)", () => {
       current = castSpell(
         current,
         { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" }, targetLabel: `цель ${index}` },
-        clock,
+        occasion,
       );
       current = { ...current, character: { ...current.character, activeEffects: [] } };
     }
@@ -1221,7 +1222,7 @@ describe("журнал (FR-110, FR-112)", () => {
     const after = castSpell(
       session,
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 3 } },
-      clock,
+      occasion,
     );
     expect(after.journal[0]).toMatchObject({ spellId: "mage-armor", slotLevel: 3 });
   });
@@ -1234,11 +1235,11 @@ describe("экономия хода выводится из журнала (ADR-
   });
 
   it("вне боя всё доступно независимо от журнала", () => {
-    let current = beginTurn(outOfCombat(session), clock);
+    let current = beginTurn(outOfCombat(session), occasion);
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
   });
@@ -1248,81 +1249,81 @@ describe("экономия хода выводится из журнала (ADR-
     let current = withTurnTracking(session);
     expect(deriveTurnEconomy(current).round).toBe(1);
     for (const expected of [2, 3, 4]) {
-      current = beginTurn(current, clock);
+      current = beginTurn(current, occasion);
       expect(deriveTurnEconomy(current).round).toBe(expected);
     }
   });
 
   it("реакция, потраченная после начала хода, недоступна", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
 
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     const economy = deriveTurnEconomy(current);
     expect(economy.reactionAvailable).toBe(false);
   });
 
   it("реакция возвращается началом следующего хода, а не концом раунда", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     // Между ходами происходят другие события — реакция всё ещё потрачена.
-    current = takeDamage(current, 4, clock);
+    current = takeDamage(current, 4, occasion);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
 
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
   });
 
   it("«Знаки ограждения» тратят реакцию так же, как заклинание-реакция", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
-    current = spendRuneOnWardingSigil(current, clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
+    current = spendRuneOnWardingSigil(current, occasion);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
     expect(current.journal.at(-1)?.actionUsed).toBe("reaction");
   });
 
   it("отмена реакции возвращает доступность без отдельной логики", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     current = undoLast(current);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
   });
 
   it("кровавое колдовство расходует действие в терминах журнала", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
-    current = exchangeBlood(current, 3, clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
+    current = exchangeBlood(current, 3, occasion);
     expect(current.journal.at(-1)?.actionUsed).toBe("action");
     expect(deriveTurnEconomy(current).actionAvailable).toBe(false);
   });
 
   it("ритуал ничего не тратит внутри хода", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
     current = castSpell(
       current,
       { spell: spell("find-familiar"), mode: "ritual", payment: { kind: "none" } },
-      clock,
+      occasion,
     );
     expect(current.journal.at(-1)?.actionUsed).toBeUndefined();
     expect(deriveTurnEconomy(current).actionAvailable).toBe(true);
   });
 
   it("вывод и флаги состояния не расходятся", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
     const steps: Array<(s: Session) => Session> = [
-      (s) => castSpell(s, { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, clock),
-      (s) => castSpell(s, { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, clock),
-      (s) => beginTurn(s, clock),
+      (s) => castSpell(s, { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, occasion),
+      (s) => castSpell(s, { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, occasion),
+      (s) => beginTurn(s, occasion),
     ];
     for (const step of steps) {
       current = step(current);
@@ -1338,38 +1339,38 @@ describe("экономия хода выводится из журнала (ADR-
 
 describe("регенерация тролля начисляется в начале хода (FR-182)", () => {
   it("восстанавливает хиты и пишет величину в журнал", () => {
-    let current = takeDamage(session, 40, clock);
+    let current = takeDamage(session, 40, occasion);
     expect(current.character.hitPoints.current).toBe(20);
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(current.character.hitPoints.current).toBe(23);
     expect(current.journal.at(-1)?.summaryRu).toBe("Начало хода · регенерация +3");
   });
 
   it("не начисляет выше половины максимума", () => {
-    const current = beginTurn(session, clock);
+    const current = beginTurn(session, occasion);
     expect(current.character.hitPoints.current).toBe(60);
     expect(current.journal.at(-1)?.summaryRu).toBe("Начало хода");
   });
 
   it("не начисляет под подавлением огнём", () => {
-    let current = takeDamage(session, 40, clock);
-    current = takeDamage(current, 1, clock, { fire: true });
+    let current = takeDamage(session, 40, occasion);
+    current = takeDamage(current, 1, occasion, { fire: true });
     const before = current.character.hitPoints.current;
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(current.character.hitPoints.current).toBe(before);
   });
 
   it("не начисляет под солнцем", () => {
-    let current = takeDamage(session, 40, clock);
-    current = setSunlight(current, true, clock);
+    let current = takeDamage(session, 40, occasion);
+    current = setSunlight(current, true, occasion);
     const before = current.character.hitPoints.current;
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(current.character.hitPoints.current).toBe(before);
   });
 
   it("не поднимает с нуля хитов", () => {
-    let current = takeDamage(session, 60, clock);
-    current = beginTurn(current, clock);
+    let current = takeDamage(session, 60, occasion);
+    current = beginTurn(current, occasion);
     expect(current.character.hitPoints.current).toBe(0);
   });
 
@@ -1379,16 +1380,16 @@ describe("регенерация тролля начисляется в нача
 
     const nearlyFull: Session = { ...session, character: withDamage(weakened, 2) };
     // 2 из 4 — не ниже половины, регенерация не идёт.
-    expect(beginTurn(nearlyFull, clock).character.hitPoints.current).toBe(2);
+    expect(beginTurn(nearlyFull, occasion).character.hitPoints.current).toBe(2);
 
     const low: Session = { ...session, character: withDamage(weakened, 3) };
-    expect(beginTurn(low, clock).character.hitPoints.current).toBe(4);
+    expect(beginTurn(low, occasion).character.hitPoints.current).toBe(4);
   });
 
   it("начисление отменяется вместе с началом хода", () => {
-    const wounded = takeDamage(session, 40, clock);
+    const wounded = takeDamage(session, 40, occasion);
     const before = structuredClone(wounded.character);
-    const undone = undoLast(beginTurn(wounded, clock));
+    const undone = undoLast(beginTurn(wounded, occasion));
     expect(undone.character).toEqual(before);
   });
 });
@@ -1400,7 +1401,7 @@ describe("активный эффект без указанной длитель
     const after = castSpell(
       withTurnTracking(session),
       { spell: vague, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(after.character.activeEffects[0]?.duration).toEqual({ type: "rounds" });
   });
@@ -1410,7 +1411,7 @@ describe("активный эффект без указанной длитель
     const after = castSpell(
       session,
       { spell: special, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(after.character.activeEffects[0]?.duration).toEqual({ type: "special" });
   });
@@ -1419,7 +1420,7 @@ describe("активный эффект без указанной длитель
 
 describe("обмен крови вне боя действие не расходует (FR-143, FR-170)", () => {
   it("на привале хиты уходят, а кэш действия остаётся нетронутым", () => {
-    const after = exchangeBlood(outOfCombat(session), 2, clock);
+    const after = exchangeBlood(outOfCombat(session), 2, occasion);
     expect(after.character.spellPoints.remaining).toBe(2);
     expect(deriveTurnEconomy(after).actionAvailable).toBe(true);
   });
@@ -1431,13 +1432,13 @@ describe("правка хитов: лечение и временные (FR-205,
   }
 
   it("лечение поднимает текущие хиты и пишется в журнал", () => {
-    const after = heal(hurt(40), 12, clock);
+    const after = heal(hurt(40), 12, occasion);
     expect(after.character.hitPoints.current).toBe(52);
     expect(after.journal.at(-1)?.summaryRu).toBe("Вылечено: 12");
   });
 
   it("выше максимума не поднимает и говорит об этом", () => {
-    const after = heal(hurt(55), 20, clock);
+    const after = heal(hurt(55), 20, occasion);
     expect(after.character.hitPoints.current).toBe(60);
     expect(after.journal.at(-1)?.summaryRu).toBe("Вылечено: 5 (из 20: упёрлись в максимум)");
   });
@@ -1446,61 +1447,61 @@ describe("правка хитов: лечение и временные (FR-205,
     // Состояние берётся у настоящей операции: обмен уменьшает сам максимум, а `maximumReduction`
     // хранит только то, сколько предстоит вернуть по часу. Придуманная пара «максимум 60, снижение
     // 9» в жизни не встречается, и тест на ней подтверждал бы вычитание снижения дважды.
-    const reduced = exchangeBlood(hurt(40), 3, clock);
+    const reduced = exchangeBlood(hurt(40), 3, occasion);
     expect(reduced.character.hitPoints).toEqual({ current: 31, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
 
-    expect(heal(reduced, 30, clock).character.hitPoints.current).toBe(51);
+    expect(heal(reduced, 30, occasion).character.hitPoints.current).toBe(51);
   });
 
   it("на полном здоровье отказывает, а не пишет пустую запись", () => {
-    expect(() => heal(session, 5, clock)).toThrow(/уже на максимуме/);
+    expect(() => heal(session, 5, occasion)).toThrow(/уже на максимуме/);
   });
 
   it.each([0, -3, 1.5])("отклоняет недопустимое лечение %s", (amount) => {
-    expect(() => heal(hurt(40), amount, clock)).toThrow(DomainError);
+    expect(() => heal(hurt(40), amount, occasion)).toThrow(DomainError);
   });
 
   it("временные хиты записываются отдельным числом", () => {
-    const after = grantTemporaryHitPoints(session, 8, clock);
+    const after = grantTemporaryHitPoints(session, 8, occasion);
     expect(after.character.temporaryHitPoints).toBe(8);
     expect(after.character.hitPoints.current).toBe(60);
     expect(after.journal.at(-1)?.summaryRu).toBe("Временные хиты: 8");
   });
 
   it("не складываются: меньшее значение отклоняется", () => {
-    const granted = grantTemporaryHitPoints(session, 8, clock);
-    expect(() => grantTemporaryHitPoints(granted, 5, clock)).toThrow(/не складываются/);
-    expect(grantTemporaryHitPoints(granted, 10, clock).character.temporaryHitPoints).toBe(10);
+    const granted = grantTemporaryHitPoints(session, 8, occasion);
+    expect(() => grantTemporaryHitPoints(granted, 5, occasion)).toThrow(/не складываются/);
+    expect(grantTemporaryHitPoints(granted, 10, occasion).character.temporaryHitPoints).toBe(10);
   });
 
   it.each([0, -1, 2.5])("отклоняет недопустимое значение %s", (amount) => {
-    expect(() => grantTemporaryHitPoints(session, amount, clock)).toThrow(DomainError);
+    expect(() => grantTemporaryHitPoints(session, amount, occasion)).toThrow(DomainError);
   });
 
   it("урон идёт сначала по временным хитам", () => {
-    const granted = grantTemporaryHitPoints(session, 8, clock);
-    const after = takeDamage(granted, 5, clock);
+    const granted = grantTemporaryHitPoints(session, 8, occasion);
+    const after = takeDamage(granted, 5, occasion);
     expect(after.character.temporaryHitPoints).toBe(3);
     expect(after.character.hitPoints.current).toBe(60);
     expect(after.journal.at(-1)?.summaryRu).toBe("Получено урона: 5, из них 5 временными хитами");
   });
 
   it("остаток урона сверх временных хитов бьёт по текущим", () => {
-    const granted = grantTemporaryHitPoints(session, 8, clock);
-    const after = takeDamage(granted, 20, clock);
+    const granted = grantTemporaryHitPoints(session, 8, occasion);
+    const after = takeDamage(granted, 20, occasion);
     expect(after.character.temporaryHitPoints).toBe(0);
     expect(after.character.hitPoints.current).toBe(48);
   });
 
   it("лечение временные хиты не восстанавливает", () => {
-    const spent = takeDamage(grantTemporaryHitPoints(hurt(40), 8, clock), 20, clock);
+    const spent = takeDamage(grantTemporaryHitPoints(hurt(40), 8, occasion), 20, occasion);
     expect(spent.character.temporaryHitPoints).toBe(0);
-    expect(heal(spent, 10, clock).character.temporaryHitPoints).toBe(0);
+    expect(heal(spent, 10, occasion).character.temporaryHitPoints).toBe(0);
   });
 
   it("долгий отдых снимает временные хиты", () => {
-    const granted = grantTemporaryHitPoints(session, 8, clock);
-    expect(longRest(granted, clock).character.temporaryHitPoints).toBe(0);
+    const granted = grantTemporaryHitPoints(session, 8, occasion);
+    expect(longRest(granted, occasion).character.temporaryHitPoints).toBe(0);
   });
 });
 
@@ -1510,7 +1511,7 @@ describe("окончание эффекта называет срок число
     const after = castSpell(
       session,
       { spell: subject, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     return after.character.activeEffects[0]?.endConditionRu;
   }
@@ -1625,18 +1626,18 @@ describe("предпочтения отыгрыша (FR-053)", () => {
   });
 
   it("свой вариант показывается первым в своей категории", () => {
-    const own = addRoleplayVariant(session, card.id, "short", "Не сегодня.", clock);
+    const own = addRoleplayVariant(session, card.id, "short", "Не сегодня.", occasion);
     expect(texts(own)).toEqual(["Не сегодня.", "Первый.", "Второй.", "Третий."]);
     // Категории не смешиваются: свой вариант живёт только в той, куда написан.
     expect(texts(own, "atmospheric")).toEqual(["Атмосферный."]);
   });
 
   it("пустой свой вариант отклоняется, а не сохраняется пробелами", () => {
-    expect(() => addRoleplayVariant(session, card.id, "short", "   ", clock)).toThrow(DomainError);
+    expect(() => addRoleplayVariant(session, card.id, "short", "   ", occasion)).toThrow(DomainError);
   });
 
   it("любимый идёт раньше остальных, но позже своего", () => {
-    let current = addRoleplayVariant(session, card.id, "short", "Не сегодня.", clock);
+    let current = addRoleplayVariant(session, card.id, "short", "Не сегодня.", occasion);
     current = toggleRoleplayFavorite(current, card.id, short2);
     expect(texts(current)).toEqual(["Не сегодня.", "Третий.", "Первый.", "Второй."]);
   });
@@ -1710,7 +1711,7 @@ describe("предпочтения отыгрыша (FR-053)", () => {
   });
 
   it("предпочтения журнала не касаются и проходят схему состояния", () => {
-    let current = addRoleplayVariant(session, card.id, "sarcastic", "Опять?", clock);
+    let current = addRoleplayVariant(session, card.id, "sarcastic", "Опять?", occasion);
     current = toggleRoleplayFavorite(current, card.id, short0);
     current = useRoleplayVariant(current, card.id, short0);
 
@@ -1744,8 +1745,8 @@ describe("художественный текст не влияет на мех�
 
     // Двое одинаковых часов вместо одних общих: идентификаторы и время у обоих применений
     // совпадают, и сравнение идёт по существу, а не по счётчику.
-    const first = castSpell(session, { spell: original, ...request }, testClock());
-    const second = castSpell(session, { spell: rewritten, ...request }, testClock());
+    const first = castSpell(session, { spell: original, ...request }, testOccasion());
+    const second = castSpell(session, { spell: rewritten, ...request }, testOccasion());
 
     expect(second.character).toEqual(first.character);
     expect(second.journal).toEqual(first.journal);
@@ -1770,18 +1771,18 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   }
 
   it("готовит и снимает подготовку, записывая каждое действие в журнал", () => {
-    const prepared = togglePreparation(withRoom(), spell("detect-magic"), clock);
+    const prepared = togglePreparation(withRoom(), spell("detect-magic"), occasion);
     expect(prepared.character.preparedSpellIds).toContain("detect-magic");
     expect(prepared.journal.at(-1)?.summaryRu).toBe("Подготовлено: Обнаружение магии");
 
-    const dropped = togglePreparation(prepared, spell("detect-magic"), clock);
+    const dropped = togglePreparation(prepared, spell("detect-magic"), occasion);
     expect(dropped.character.preparedSpellIds).not.toContain("detect-magic");
     expect(dropped.journal.at(-1)?.summaryRu).toBe("Снята подготовка: Обнаружение магии");
   });
 
   it("подготовка обратима (FR-111)", () => {
     const before = withRoom();
-    const prepared = togglePreparation(before, spell("detect-magic"), clock);
+    const prepared = togglePreparation(before, spell("detect-magic"), occasion);
     expect(undoLast(prepared).character.preparedSpellIds).toEqual(
       before.character.preparedSpellIds,
     );
@@ -1807,7 +1808,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   it("лимит — жёсткое ограничение, а не предупреждение (FR-101)", () => {
     // Единственное место, где приложение отказывает без «всё равно»: это правило подготовки, и
     // мастер здесь исключений не делает.
-    expect(() => togglePreparation(atLimitOfThree(), spell("identify"), clock)).toThrow(
+    expect(() => togglePreparation(atLimitOfThree(), spell("identify"), occasion)).toThrow(
       /Подготовлено 3 из 3/,
     );
   });
@@ -1815,56 +1816,56 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   it("снять подготовку на пределе можно: иначе набор было бы не пересобрать", () => {
     const full = atLimitOfThree();
     const first = full.character.preparedSpellIds[0]!;
-    const after = togglePreparation(full, spell(first), clock);
+    const after = togglePreparation(full, spell(first), occasion);
     expect(after.character.preparedSpellIds).toHaveLength(2);
   });
 
   it("набор Торна начинается ровно на пределе: 11 из 11 (FR-101)", () => {
     expect(session.character.preparedSpellIds).toHaveLength(LIMIT);
-    expect(() => togglePreparation(session, spell("blink"), clock)).toThrow(
+    expect(() => togglePreparation(session, spell("blink"), occasion)).toThrow(
       /Подготовлено 11 из 11/,
     );
   });
 
   it("заговор не готовится: он вне лимита и доступен всегда (FR-102)", () => {
-    expect(() => togglePreparation(session, spell("ray-of-frost"), clock)).toThrow(
+    expect(() => togglePreparation(session, spell("ray-of-frost"), occasion)).toThrow(
       /Заговор не готовится/,
     );
   });
 
   it("заклинания вне книги подготовить нельзя (FR-100)", () => {
     const foreign: Spell = { ...spell("mage-armor"), id: "fireball", nameRu: "Огненный шар" };
-    expect(() => togglePreparation(session, foreign, clock)).toThrow(/нет в книге/);
+    expect(() => togglePreparation(session, foreign, occasion)).toThrow(/нет в книге/);
   });
 
   it("ритуал готовится как обычное заклинание (FR-103)", () => {
     // говорит, что ритуалом его можно творить и без подготовки, а не что готовить нельзя:
     // подготовленный ритуал в бою творится за ячейку обычным временем.
-    const after = togglePreparation(withRoom(), spell("identify"), clock);
+    const after = togglePreparation(withRoom(), spell("identify"), occasion);
     expect(after.character.preparedSpellIds).toContain("identify");
   });
 });
 
 describe("дорогие компоненты (FR-030)", () => {
   it("отмечается купленным и обратно израсходованным", () => {
-    const bought = toggleMaterial(session, "identify", clock);
+    const bought = toggleMaterial(session, "identify", occasion);
     expect(bought.character.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
     expect(bought.journal.at(-1)?.summaryRu).toBe("Компонент куплен: identify");
 
-    const spent = toggleMaterial(bought, "identify", clock);
+    const spent = toggleMaterial(bought, "identify", occasion);
     expect(spent.character.equipment.components?.materialsForSpellIds).toEqual([]);
     expect(spent.journal.at(-1)?.summaryRu).toBe("Компонент израсходован: identify");
   });
 
   it("обратимо, как любой расход (FR-111)", () => {
-    const bought = toggleMaterial(session, "identify", clock);
+    const bought = toggleMaterial(session, "identify", occasion);
     expect(undoLast(bought).character.equipment.components?.materialsForSpellIds).toEqual([]);
   });
 
   it("состоянию без снаряжения отвечает причиной", () => {
     const { components: _none, ...withoutComponents } = session.character.equipment;
     const unknown = { ...session.character, equipment: withoutComponents };
-    expect(() => toggleMaterial(createSession(unknown), "identify", clock)).toThrow(
+    expect(() => toggleMaterial(createSession(unknown), "identify", occasion)).toThrow(
       /не заведено снаряжение/,
     );
   });
@@ -1875,45 +1876,45 @@ describe("кости хитов (FR-134)", () => {
     // Кости тратит заклинание своим применением; здесь важен возврат, поэтому пул задан сразу.
     const spent = createSession(withSpentHitDice(session.character, 5));
     // Половина от семи — три: 2 + 3 = 5, а не все семь. Долгий бой обязан стоить.
-    expect(longRest(spent, clock).character.hitDice?.remaining).toBe(5);
+    expect(longRest(spent, occasion).character.hitDice?.remaining).toBe(5);
   });
 
   it("возврат не переливается через край", () => {
-    expect(longRest(session, clock).character.hitDice?.remaining).toBe(7);
+    expect(longRest(session, occasion).character.hitDice?.remaining).toBe(7);
   });
 
   it("персонажу без костей отдых их не выдумывает", () => {
     const { hitDice: _none, ...withoutDice } = session.character;
-    expect(longRest(createSession(withoutDice), clock).character.hitDice).toBeUndefined();
+    expect(longRest(createSession(withoutDice), occasion).character.hitDice).toBeUndefined();
   });
 });
 
 describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", () => {
   it("возвращает и тратит руну, записывая обе правки", () => {
-    const spent = adjustRunes(session, -1, clock);
+    const spent = adjustRunes(session, -1, occasion);
     expect(spent.character.runes.remaining).toBe(2);
     expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачена руна: 2");
 
-    const returned = adjustRunes(spent, 1, clock);
+    const returned = adjustRunes(spent, 1, occasion);
     expect(returned.character.runes.remaining).toBe(3);
     expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена руна: 3");
   });
 
   it("за границы пула не выпускает", () => {
-    expect(() => adjustRunes(session, 1, clock)).toThrow(/от 0 до 3/);
-    const empty = adjustRunes(adjustRunes(adjustRunes(session, -1, clock), -1, clock), -1, clock);
-    expect(() => adjustRunes(empty, -1, clock)).toThrow(/от 0 до 3/);
+    expect(() => adjustRunes(session, 1, occasion)).toThrow(/от 0 до 3/);
+    const empty = adjustRunes(adjustRunes(adjustRunes(session, -1, occasion), -1, occasion), -1, occasion);
+    expect(() => adjustRunes(empty, -1, occasion)).toThrow(/от 0 до 3/);
   });
 
   it("ручное списание ячейки пишется в журнал и обратимо (FR-111)", () => {
-    const spent = spendSpellSlot(session, 1, clock);
+    const spent = spendSpellSlot(session, 1, occasion);
     expect(spent.character.spellSlots[1]?.remaining).toBe(3);
     expect(spent.journal.at(-1)?.summaryRu).toBe("Списана ячейка 1 уровня");
     expect(undoLast(spent).character.spellSlots[1]?.remaining).toBe(4);
   });
 
   it("правка руны обратима", () => {
-    expect(undoLast(adjustRunes(session, -1, clock)).character.runes.remaining).toBe(3);
+    expect(undoLast(adjustRunes(session, -1, occasion)).character.runes.remaining).toBe(3);
   });
 });
 
@@ -1926,17 +1927,17 @@ describe("конец боя (FR-216)", () => {
   }
 
   it("поднимает здоровье до половины максимума", () => {
-    const after = endCombat(wounded(12), clock);
+    const after = endCombat(wounded(12), occasion);
     expect(after.character.hitPoints.current).toBe(30);
     expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен: восстановлено 18 до половины максимума");
   });
 
   it("выше половины не поднимает: до полного здоровья регенерация не доводит", () => {
-    expect(endCombat(wounded(29), clock).character.hitPoints.current).toBe(30);
+    expect(endCombat(wounded(29), occasion).character.hitPoints.current).toBe(30);
   });
 
   it("закончить бой можно и здоровым: конец боя — факт, а не лечение", () => {
-    const after = endCombat(wounded(30), clock);
+    const after = endCombat(wounded(30), occasion);
     expect(after.character.hitPoints.current).toBe(30);
     expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен");
     expect(after.journal.at(-1)?.kind).toBe("combat_ended");
@@ -1944,38 +1945,38 @@ describe("конец боя (FR-216)", () => {
 
   it("считает половину от снижённого максимума, а не от исходного (FR-172)", () => {
     // Обмен уменьшил максимум до 51 — половина от него 25, а не 30.
-    const spent = exchangeBlood(wounded(20), 3, clock);
+    const spent = exchangeBlood(wounded(20), 3, occasion);
     expect(combatEndRecovery(spent.character)).toBe(14);
-    expect(endCombat(spent, clock).character.hitPoints.current).toBe(25);
+    expect(endCombat(spent, occasion).character.hitPoints.current).toBe(25);
   });
 
   it("восстановление обратимо (FR-111)", () => {
-    expect(undoLast(endCombat(wounded(12), clock)).character.hitPoints.current).toBe(12);
+    expect(undoLast(endCombat(wounded(12), occasion)).character.hitPoints.current).toBe(12);
   });
 
   it("сбрасывает счёт раундов: следующий бой начинается с первого", () => {
     let current = withTurnTracking(session);
-    for (let round = 0; round < 4; round += 1) current = beginTurn(current, clock);
+    for (let round = 0; round < 4; round += 1) current = beginTurn(current, occasion);
     expect(deriveTurnEconomy(current).round).toBe(5);
 
-    current = endCombat(current, clock);
+    current = endCombat(current, occasion);
     expect(deriveTurnEconomy(current).round).toBe(1);
     expect(deriveTurnEconomy(current).inFight).toBe(false);
 
-    current = beginTurn(current, clock);
+    current = beginTurn(current, occasion);
     expect(deriveTurnEconomy(current).round).toBe(1);
   });
 
   it("потраченное в прошлом бою нового не связывает", () => {
-    let current = beginTurn(withTurnTracking(session), clock);
+    let current = beginTurn(withTurnTracking(session), occasion);
     current = castSpell(
       current,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
-      clock,
+      occasion,
     );
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
 
-    current = endCombat(current, clock);
+    current = endCombat(current, occasion);
     expect(deriveTurnEconomy(current)).toMatchObject({
       actionAvailable: true,
       bonusActionAvailable: true,
@@ -1985,22 +1986,22 @@ describe("конец боя (FR-216)", () => {
 
   it("отмена возвращает и счёт раундов прежнего боя (FR-111)", () => {
     let current = withTurnTracking(session);
-    for (let round = 0; round < 2; round += 1) current = beginTurn(current, clock);
-    const undone = undoLast(endCombat(current, clock));
+    for (let round = 0; round < 2; round += 1) current = beginTurn(current, occasion);
+    const undone = undoLast(endCombat(current, occasion));
     expect(deriveTurnEconomy(undone).round).toBe(3);
   });
 });
 
 describe("почасовое восстановление максимума хитов и очков заклинаний (FR-173, FR-175)", () => {
   function afterExchange(): Session {
-    return exchangeBlood(session, 3, clock);
+    return exchangeBlood(session, 3, occasion);
   }
 
   it("возвращает не больше, чем утрачено кровавым колдовством", () => {
     const spent = afterExchange();
     expect(spent.character.hitPoints).toEqual({ current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
 
-    const recovered = recoverHitPointMaximum(spent, clock);
+    const recovered = recoverHitPointMaximum(spent, occasion);
     // На 7 уровне возвращается 3 за час.
     expect(recovered.character.hitPoints).toEqual({
       current: 51,
@@ -2011,29 +2012,29 @@ describe("почасовое восстановление максимума х�
   });
 
   it("последний час возвращает только остаток", () => {
-    let state = exchangeBlood(session, 2, clock);
-    state = recoverHitPointMaximum(state, clock);
+    let state = exchangeBlood(session, 2, occasion);
+    state = recoverHitPointMaximum(state, occasion);
     expect(state.character.hitPoints).toEqual({ current: 54, maximumBase: 60, bloodReduction: 3, masterReduction: 0 });
 
-    state = recoverHitPointMaximum(state, clock);
+    state = recoverHitPointMaximum(state, occasion);
     expect(state.character.hitPoints).toEqual({ current: 54, maximumBase: 60, bloodReduction: 0, masterReduction: 0 });
   });
 
   it("без снижения максимума, регенерации и очков восстанавливать нечего", () => {
-    expect(() => recoverHitPointMaximum(session, clock)).toThrow(DomainError);
+    expect(() => recoverHitPointMaximum(session, occasion)).toThrow(DomainError);
   });
 
   it("очки заклинаний гаснут любым отмеченным часом, сколько бы их ни набежало", () => {
     const withPoints = afterExchange();
     expect(withPoints.character.spellPoints.remaining).toBe(3);
 
-    const recovered = recoverHitPointMaximum(withPoints, clock);
+    const recovered = recoverHitPointMaximum(withPoints, occasion);
     expect(recovered.character.spellPoints.remaining).toBe(0);
     expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: максимум +3, очки заклинаний погашены");
   });
 
   it("под подавлением максимум не восстанавливается, но очки гаснут независимо от него", () => {
-    const recovered = recoverHitPointMaximum(setSunlight(afterExchange(), true, clock), clock);
+    const recovered = recoverHitPointMaximum(setSunlight(afterExchange(), true, occasion), occasion);
     expect(recovered.character.hitPoints.bloodReduction).toBe(9);
     expect(recovered.character.spellPoints.remaining).toBe(0);
     expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: очки заклинаний погашены");
@@ -2042,25 +2043,25 @@ describe("почасовое восстановление максимума х�
   it("под подавлением без непогашенных очков восстанавливать нечего: ни солнце, ни огонь", () => {
     // Очки уже потрачены на сотворение — остаётся только снижение, а его подавление и держит.
     const drained = castSpell(
-      exchangeBlood(session, 2, clock),
+      exchangeBlood(session, 2, occasion),
       { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } },
-      clock,
+      occasion,
     );
     expect(drained.character.spellPoints.remaining).toBe(0);
     expect(drained.character.hitPoints.bloodReduction).toBe(6);
 
-    expect(() => recoverHitPointMaximum(setSunlight(drained, true, clock), clock)).toThrow(/солнеч/);
+    expect(() => recoverHitPointMaximum(setSunlight(drained, true, occasion), occasion)).toThrow(/солнеч/);
 
-    const burned = takeDamage(drained, 5, clock, { fire: true });
-    expect(() => recoverHitPointMaximum(burned, clock)).toThrow(/огн/);
+    const burned = takeDamage(drained, 5, occasion, { fire: true });
+    expect(() => recoverHitPointMaximum(burned, occasion)).toThrow(/огн/);
   });
 
   it("во время боя час пройти не может, как и любая другая отметка схватки", () => {
-    expect(() => recoverHitPointMaximum(withTurnTracking(afterExchange()), clock)).toThrow(/бой/);
+    expect(() => recoverHitPointMaximum(withTurnTracking(afterExchange()), occasion)).toThrow(/бой/);
   });
 
   it("обратимо через журнал", () => {
-    const recovered = recoverHitPointMaximum(afterExchange(), clock);
+    const recovered = recoverHitPointMaximum(afterExchange(), occasion);
     const undone = undoLast(recovered);
     expect(undone.character.hitPoints.bloodReduction).toBe(9);
     expect(undone.character.spellPoints.remaining).toBe(3);
@@ -2069,10 +2070,10 @@ describe("почасовое восстановление максимума х�
   it("час не только поднимает максимум, но и лечит: регенерация идёт непрерывно", () => {
     // Раненый обменом: 20 из 51 при снижении 9. За час максимум станет 54, а регенерация успевает
     // дойти до половины нового максимума — 27, а не 25 от прежнего.
-    const wounded = takeDamage(afterExchange(), 31, clock);
+    const wounded = takeDamage(afterExchange(), 31, occasion);
     expect(wounded.character.hitPoints.current).toBe(20);
 
-    const recovered = recoverHitPointMaximum(wounded, clock);
+    const recovered = recoverHitPointMaximum(wounded, occasion);
     expect(recovered.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
     expect(recovered.journal.at(-1)?.summaryRu).toBe(
       "Прошёл час: максимум +3, регенерация +7, очки заклинаний погашены",
@@ -2084,7 +2085,7 @@ describe("почасовое восстановление максимума х�
       ...session,
       character: withDamage(session.character, 50),
     };
-    const recovered = recoverHitPointMaximum(injured, clock);
+    const recovered = recoverHitPointMaximum(injured, occasion);
     expect(recovered.character.hitPoints.current).toBe(30);
     expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: регенерация +20");
   });
@@ -2092,11 +2093,11 @@ describe("почасовое восстановление максимума х�
 
 describe("короткий отдых — это час (FR-132, FR-173, FR-175)", () => {
   it("возвращает ступень максимума, доводит здоровье до половины и гасит очки заклинаний", () => {
-    const wounded = takeDamage(exchangeBlood(session, 3, clock), 31, clock);
+    const wounded = takeDamage(exchangeBlood(session, 3, occasion), 31, occasion);
     expect(wounded.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
     expect(wounded.character.spellPoints.remaining).toBe(3);
 
-    const rested = shortRest(wounded, clock);
+    const rested = shortRest(wounded, occasion);
     expect(rested.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
     expect(rested.character.spellPoints.remaining).toBe(0);
     expect(rested.journal.at(-1)?.summaryRu).toBe(
@@ -2105,12 +2106,12 @@ describe("короткий отдых — это час (FR-132, FR-173, FR-175)
   });
 
   it("здоровому и не занимавшему в долг отдых пишется коротко", () => {
-    expect(shortRest(session, clock).journal.at(-1)?.summaryRu).toBe("Короткий отдых");
+    expect(shortRest(session, occasion).journal.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 
   it("под подавлением максимум не восстанавливается, но очки гаснут независимо от него (FR-176)", () => {
-    const burned = takeDamage(exchangeBlood(session, 3, clock), 31, clock, { fire: true });
-    const rested = shortRest(burned, clock);
+    const burned = takeDamage(exchangeBlood(session, 3, occasion), 31, occasion, { fire: true });
+    const rested = shortRest(burned, occasion);
 
     expect(rested.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
     expect(rested.character.spellPoints.remaining).toBe(0);
@@ -2135,8 +2136,8 @@ describe("схема ритуала не влияет на механику (FR-
 
     // Двое одинаковых часов вместо одних общих: идентификаторы и время у обоих применений
     // совпадают, и сравнение идёт по существу, а не по счётчику.
-    const original = castSpell(session, { spell: ritual, ...request }, testClock());
-    const other = castSpell(session, { spell: repainted, ...request }, testClock());
+    const original = castSpell(session, { spell: ritual, ...request }, testOccasion());
+    const other = castSpell(session, { spell: repainted, ...request }, testOccasion());
 
     expect(other.character).toEqual(original.character);
     expect(other.journal.map((entry) => entry.summaryRu)).toEqual(
@@ -2147,23 +2148,23 @@ describe("схема ритуала не влияет на механику (FR-
 
 describe("сотворённое вне боя не переносится в бой (FR-145, FR-095)", () => {
   it("вне боя действие не записывается: в бою оно остаётся целым", () => {
-    const clock = testClock();
+    const occasion = testOccasion();
     const session = castSpell(
       { character: createThorne(), journal: [] },
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
-      clock,
+      occasion,
     );
 
     expect(session.journal.at(-1)?.actionUsed).toBeUndefined();
-    expect(deriveTurnEconomy(startCombat(session, clock)).actionAvailable).toBe(true);
+    expect(deriveTurnEconomy(startCombat(session, occasion)).actionAvailable).toBe(true);
   });
 
   it("в бою действие записывается по-прежнему", () => {
-    const clock = testClock();
+    const occasion = testOccasion();
     const session = castSpell(
-      startCombat({ character: createThorne(), journal: [] }, clock),
+      startCombat({ character: createThorne(), journal: [] }, occasion),
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
-      clock,
+      occasion,
     );
 
     expect(session.journal.at(-1)?.actionUsed).toBe("action");
@@ -2171,11 +2172,11 @@ describe("сотворённое вне боя не переносится в б
   });
 
   it("раундовый эффект вне боя истекает сразу: КД не входит в бой", () => {
-    const clock = testClock();
+    const occasion = testOccasion();
     const session = castSpell(
       { character: createThorne(), journal: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
-      clock,
+      occasion,
     );
 
     expect(session.character.activeEffects).toEqual([]);
@@ -2183,22 +2184,22 @@ describe("сотворённое вне боя не переносится в б
   });
 
   it("в бою раундовый эффект остаётся висеть", () => {
-    const clock = testClock();
+    const occasion = testOccasion();
     const session = castSpell(
-      startCombat({ character: createThorne(), journal: [] }, clock),
+      startCombat({ character: createThorne(), journal: [] }, occasion),
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
-      clock,
+      occasion,
     );
 
     expect(session.character.activeEffects.map((effect) => effect.spellId)).toEqual(["shield"]);
   });
 
   it("ячейка тратится в обоих случаях: сотворить игрок выбрал сам", () => {
-    const clock = testClock();
+    const occasion = testOccasion();
     const session = castSpell(
       { character: createThorne(), journal: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
-      clock,
+      occasion,
     );
 
     expect(session.character.spellSlots[1]?.remaining).toBe(3);
@@ -2221,7 +2222,7 @@ describe("расход костей хитов заклинанием (FR-135)",
         payment: { kind: "slot", slotLevel: 2 },
         hitDice: { count: 2, rolled: 9 },
       },
-      clock,
+      occasion,
     );
     expect(after.character.hitDice?.remaining).toBe(5);
     // 30 + выпавшие 9 + модификатор Интеллекта 4.
@@ -2238,7 +2239,7 @@ describe("расход костей хитов заклинанием (FR-135)",
         payment: { kind: "slot", slotLevel: 2 },
         hitDice: { count: 2, rolled: 9 },
       },
-      clock,
+      occasion,
     );
     expect(after.journal).toHaveLength(1);
     expect(after.journal[0]?.summaryRu).toContain("2 кости");
@@ -2255,7 +2256,7 @@ describe("расход костей хитов заклинанием (FR-135)",
         payment: { kind: "slot", slotLevel: 2 },
         hitDice: { count: 2, rolled: 9 },
       },
-      clock,
+      occasion,
     );
     const undone = undoLast(after);
     expect(undone.character.hitDice?.remaining).toBe(7);
@@ -2272,7 +2273,7 @@ describe("расход костей хитов заклинанием (FR-135)",
         payment: { kind: "slot", slotLevel: 2 },
         hitDice: { count: 1, rolled: 6 },
       },
-      clock,
+      occasion,
     );
     expect(after.character.hitPoints.current).toBe(60);
     expect(after.character.hitDice?.remaining).toBe(6);
@@ -2290,7 +2291,7 @@ describe("расход костей хитов заклинанием (FR-135)",
           payment: { kind: "slot", slotLevel: 2 },
           hitDice: { count: 1, rolled: 4 },
         },
-        clock,
+        occasion,
       ),
     ).toThrow("Неистраченных Костей хитов 0, а брошено 1");
   });
@@ -2306,7 +2307,7 @@ describe("расход костей хитов заклинанием (FR-135)",
           payment: { kind: "slot", slotLevel: 2 },
           hitDice: { count: 2, rolled: 7 },
         },
-        clock,
+        occasion,
       ),
     ).toThrow(DomainError);
   });
@@ -2314,12 +2315,12 @@ describe("расход костей хитов заклинанием (FR-135)",
 
 describe("отметка короткого отдыха (FR-131)", () => {
   it("короткий отдых её ставит", () => {
-    expect(shortRest(session, clock).character.shortRestSinceLongRest).toBe(true);
+    expect(shortRest(session, occasion).character.shortRestSinceLongRest).toBe(true);
   });
 
   it("долгий отдых её снимает: восстановление снова ждёт короткого", () => {
-    const rested = shortRest(session, clock);
-    expect(longRest(rested, clock).character.shortRestSinceLongRest).toBe(false);
+    const rested = shortRest(session, occasion);
+    expect(longRest(rested, occasion).character.shortRestSinceLongRest).toBe(false);
   });
 
   it("свежий персонаж отдыха ещё не знал", () => {
@@ -2332,7 +2333,7 @@ describe("отметка короткого отдыха (FR-131)", () => {
   });
 
   it("без короткого отдыха магическое восстановление отклоняется (FR-131)", () => {
-    expect(() => useArcaneRecovery(spendSpellSlot(session, 1, clock), { 1: 1 }, clock)).toThrow(
+    expect(() => useArcaneRecovery(spendSpellSlot(session, 1, occasion), { 1: 1 }, occasion)).toThrow(
       /Берётся после короткого отдыха/,
     );
   });

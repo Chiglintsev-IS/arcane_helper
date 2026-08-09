@@ -121,4 +121,18 @@ describe("настоящее сохранение игрока", () => {
     expect(parsed.journal[2]?.undoPatch?.spellSlots?.[1]?.remaining).toBe(4);
     expect(parsed.journal[2]?.undoPatch).not.toHaveProperty("reactionAvailable");
   });
+
+  it("записи без идентификатора попытки читаются: версия формата от него не выросла", () => {
+    const parsed = parsePersisted(PLAYER_SAVE);
+
+    expect(parsed.journal).toHaveLength(3);
+    expect(parsed.journal[2]).not.toHaveProperty("commandId");
+  });
+
+  it("идентификатор попытки переживает запись и чтение", () => {
+    const [first, ...rest] = PLAYER_SAVE.journal;
+    const marked = { ...PLAYER_SAVE, journal: [{ ...first, commandId: "command-1" }, ...rest] };
+
+    expect(parsePersisted(marked).journal[0]?.commandId).toBe("command-1");
+  });
 });

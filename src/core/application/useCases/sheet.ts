@@ -18,19 +18,43 @@ import {
 } from "@/core/domain/shared/stats";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { DomainError } from "@/core/domain/shared/errors";
-import { commit, withoutRecord, type Clock, type Session } from "@/core/application/session";
+import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
 import {
   isPossibleCharacterLevel,
   type PermanentContribution,
 } from "@/core/domain/character/schema";
 
-/** Справочные поля: имени и возраста журнал не касается. */
-export type Identity = Partial<
-  Pick<
-    CharacterState,
-    "name" | "species" | "subclass" | "className" | "age" | "size" | "speed" | "proficiencies"
-  >
->;
+/**
+ * Справочные поля: имени и возраста журнал не касается.
+ *
+ * Перечнем, а не одним лишь типом: тем же списком отбирается справочная часть правки, пришедшей
+ * снаружи. Второе перечисление разошлось бы с первым, и поле, забытое в одном из двух мест, молча
+ * перестало бы правиться.
+ */
+const IDENTITY_FIELDS = [
+  "name",
+  "species",
+  "subclass",
+  "className",
+  "age",
+  "size",
+  "speed",
+  "proficiencies",
+] as const;
+
+export type Identity = Partial<Pick<CharacterState, (typeof IDENTITY_FIELDS)[number]>>;
+
+/**
+ * Справочная часть присланной правки. Прочие поля состояния отбрасываются: правка листа не дверь к
+ * ячейкам, и снаружи через неё меняют только то, чем она объявлена.
+ */
+export function identityOf(patch: Partial<CharacterState>): Identity {
+  const identity: Identity = {};
+  for (const field of IDENTITY_FIELDS) {
+    if (patch[field] !== undefined) Object.assign(identity, { [field]: patch[field] });
+  }
+  return identity;
+}
 
 export function editIdentity(session: Session, patch: Identity): Session {
   return withoutRecord(session, Character.of(session.character).withSheet(patch));
@@ -52,7 +76,7 @@ export function editAbility(
     /** Только навыки этой характеристики: чужие остаются как были. */
     skills: Partial<Record<SkillId, SkillTraining>>;
   },
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const { character } = session;
   const owned = new Set(skillsOfAbility(change.ability));
@@ -77,7 +101,7 @@ export function editAbility(
       skills: { ...skills, ...change.skills },
     }),
     { kind: "sheet_edited", summaryRu: "Правка характеристики" },
-    clock,
+    occasion,
   );
 }
 
@@ -92,7 +116,7 @@ export function editAbility(
 export function setPermanentContribution(
   session: Session,
   permanent: PermanentContribution,
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const kept = session.character.permanentContributions.filter(
     (existing) => existing.nameRu !== permanent.nameRu,
@@ -103,7 +127,7 @@ export function setPermanentContribution(
       permanentContributions: [...kept, permanent],
     }),
     { kind: "sheet_edited", summaryRu: `Постоянный вклад: ${permanent.nameRu}` },
-    clock,
+    occasion,
   );
 }
 
@@ -111,7 +135,7 @@ export function setPermanentContribution(
 export function removePermanentContribution(
   session: Session,
   nameRu: string,
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const kept = session.character.permanentContributions.filter(
     (existing) => existing.nameRu !== nameRu,
@@ -123,14 +147,14 @@ export function removePermanentContribution(
     session,
     Character.of(session.character).withSheet({ permanentContributions: kept }),
     { kind: "sheet_edited", summaryRu: `Постоянный вклад снят: ${nameRu}` },
-    clock,
+    occasion,
   );
 }
 
 export function editMarks(
   session: Session,
   marks: { exhaustion: number; inspiration: boolean },
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   return commit(
     session,
@@ -140,14 +164,14 @@ export function editMarks(
       summaryRu:
         marks.exhaustion > 0 ? `Истощение: ступень ${marks.exhaustion}` : "Отметки мастера изменены",
     },
-    clock,
+    occasion,
   );
 }
 
 export function editHealth(
   session: Session,
   change: { maximumBase: number; masterReduction: number },
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
   const vitality = root.vitality
@@ -157,7 +181,7 @@ export function editHealth(
     session,
     root.withVitality(vitality),
     { kind: "sheet_edited", summaryRu: `Максимум хитов: ${vitality.maximum}` },
-    clock,
+    occasion,
   );
 }
 
@@ -256,7 +280,7 @@ export function previewLevelChange(character: CharacterState, level: number): Le
 export function changeLevel(
   session: Session,
   next: { level: number; hitPointMaximumBase: number },
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const atLevel = leveled(session.character, next.level);
 
@@ -264,6 +288,6 @@ export function changeLevel(
     session,
     atLevel.withVitality(atLevel.vitality.withMaximumBase(next.hitPointMaximumBase)),
     { kind: "sheet_edited", summaryRu: `Уровень: ${next.level}` },
-    clock,
+    occasion,
   );
 }

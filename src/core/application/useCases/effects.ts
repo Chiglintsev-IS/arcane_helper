@@ -8,7 +8,7 @@ import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
 import type { StatContribution } from "@/core/domain/shared/stats";
 import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/core/shared/language";
-import { commit, type Clock, type Session } from "@/core/application/session";
+import { commit, type Occasion, type Session } from "@/core/application/session";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 
@@ -36,7 +36,7 @@ const CONCENTRATION_REASONS: Record<ConcentrationEnd, string> = {
 export function endConcentration(
   session: Session,
   reason: ConcentrationEnd,
-  clock: Clock,
+  occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
   const { board, spellId } = root.effects.endConcentration();
@@ -48,7 +48,7 @@ export function endConcentration(
       summaryRu: `Концентрация завершена: ${CONCENTRATION_REASONS[reason]}`,
       spellId,
     },
-    clock,
+    occasion,
   );
 }
 
@@ -65,7 +65,7 @@ export function wardingSigilAvailable(session: Session): boolean {
 }
 
 /** «Знаки ограждения»: реакция и руна превращают провал спасброска в успех. */
-export function spendRuneOnWardingSigil(session: Session, clock: Clock): Session {
+export function spendRuneOnWardingSigil(session: Session, occasion: Occasion): Session {
   const { character } = session;
   if (!wardingSigilAvailable(session)) {
     throw new DomainError(
@@ -83,7 +83,7 @@ export function spendRuneOnWardingSigil(session: Session, clock: Clock): Session
       summaryRu: "Знаки ограждения: провал спасброска считается успехом",
       actionUsed: "reaction",
     },
-    clock,
+    occasion,
   );
 }
 
@@ -91,13 +91,13 @@ export function spendRuneOnWardingSigil(session: Session, clock: Clock): Session
 function buildManualEffect(
   nameRu: string,
   contributions: readonly StatContribution[],
-  clock: Clock,
+  occasion: Occasion,
   manualKind?: ActiveEffect["manualKind"],
 ): ActiveEffect {
   return {
-    id: clock.nextId(),
+    id: occasion.nextId(),
     nameRu,
-    startedAt: clock.now(),
+    startedAt: occasion.now(),
     duration: { type: "special" },
     isConcentration: false,
     slotLevelUsed: 0,
@@ -116,7 +116,7 @@ function armorClassBonus(value: number): StatContribution {
  * Заводит активный эффект без заклинания: статус, которого нет в каталоге, либо временный вклад в
  * Класс Доспеха от союзника. Снимается тем же путём, что и любой другой активный эффект.
  */
-export function startManualEffect(session: Session, input: ManualEffectInput, clock: Clock): Session {
+export function startManualEffect(session: Session, input: ManualEffectInput, occasion: Occasion): Session {
   const nameRu = input.nameRu.trim();
   if (nameRu === "") {
     throw new DomainError("Название эффекта не может быть пустым");
@@ -132,13 +132,13 @@ export function startManualEffect(session: Session, input: ManualEffectInput, cl
   const effect = buildManualEffect(
     nameRu,
     input.armorClassBonus === undefined ? [] : [armorClassBonus(input.armorClassBonus)],
-    clock,
+    occasion,
   );
   return commit(
     session,
-    root.withEffects(root.effects.start(effect, clock.now())),
+    root.withEffects(root.effects.start(effect, occasion.now())),
     { kind: "manual_effect_started", summaryRu: `Эффект начат: ${nameRu}` },
-    clock,
+    occasion,
   );
 }
 
@@ -146,7 +146,7 @@ export function startManualEffect(session: Session, input: ManualEffectInput, cl
  * Заводит, заменяет или снимает временную поправку к КД в шапке ресурсов — одним переходом, как и
  * замена концентрации: новое значение вытесняет прежнее, а ноль снимает поправку вовсе.
  */
-export function setArmorClassAdjustment(session: Session, value: number, clock: Clock): Session {
+export function setArmorClassAdjustment(session: Session, value: number, occasion: Occasion): Session {
   if (!Number.isInteger(value)) {
     throw new DomainError("Поправка к КД должна быть целым числом");
   }
@@ -154,7 +154,7 @@ export function setArmorClassAdjustment(session: Session, value: number, clock: 
   const existing = Character.of(session.character).effects.manualEffect("armorAdjustment");
   if (value === 0) {
     if (existing === undefined) return session;
-    return endEffect(session, existing.id, clock);
+    return endEffect(session, existing.id, occasion);
   }
 
   const root = Character.of(session.character);
@@ -162,20 +162,20 @@ export function setArmorClassAdjustment(session: Session, value: number, clock: 
   const effect = buildManualEffect(
     ARMOR_CLASS_ADJUSTMENT_NAME_RU,
     [armorClassBonus(value)],
-    clock,
+    occasion,
     "armorAdjustment",
   );
 
   return commit(
     session,
-    root.withEffects(cleared.start(effect, clock.now())),
+    root.withEffects(cleared.start(effect, occasion.now())),
     { kind: "manual_effect_started", summaryRu: `Поправка к КД: ${signed(value)}` },
-    clock,
+    occasion,
   );
 }
 
 /** Ручное завершение активного эффекта. */
-export function endEffect(session: Session, effectId: string, clock: Clock): Session {
+export function endEffect(session: Session, effectId: string, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const { board, ended } = root.effects.end(effectId);
   return commit(
@@ -186,6 +186,6 @@ export function endEffect(session: Session, effectId: string, clock: Clock): Ses
       summaryRu: `Эффект завершён: ${ended.nameRu}`,
       ...(ended.spellId === undefined ? {} : { spellId: ended.spellId }),
     },
-    clock,
+    occasion,
   );
 }
