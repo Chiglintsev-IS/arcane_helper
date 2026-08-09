@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import type { CharacterState } from "@/core/domain/assembly/state";
+import { testSpellRow } from "@/ui/app/testing/stores";
 
 import {
   castingTimeLabel,
@@ -15,7 +14,7 @@ describe("castingTimeLabel (FR-033)", () => {
   it("действие, бонусное действие и реакция называются словом", () => {
     expect(castingTimeLabel({ type: "action" })).toBe("Действие");
     expect(castingTimeLabel({ type: "bonus_action" })).toBe("Бонусное");
-    expect(castingTimeLabel({ type: "reaction", reactionTrigger: "в вас попали" })).toBe("Реакция");
+    expect(castingTimeLabel({ type: "reaction" })).toBe("Реакция");
   });
 
   it("минуты и часы называются числом: «1 минута», а не «Минуты»", () => {
@@ -33,7 +32,7 @@ describe("castingTimePhrase (FR-014)", () => {
   it("действие, бонусное и реакция остаются одним словом: их не с чем спутать", () => {
     expect(castingTimePhrase({ type: "action" })).toBe("Действие");
     expect(castingTimePhrase({ type: "bonus_action" })).toBe("Бонусное");
-    expect(castingTimePhrase({ type: "reaction", reactionTrigger: "в вас попали" })).toBe("Реакция");
+    expect(castingTimePhrase({ type: "reaction" })).toBe("Реакция");
   });
 
   it("минуты и часы называют себя глаголом: «Накладывать», а не голое число", () => {
@@ -66,33 +65,28 @@ describe("durationPhrase (FR-014)", () => {
 });
 
 describe("ritualOnlyBadge (FR-219)", () => {
-  const SPELLS = loadThorneSpells();
-  const spell = (id: string) => SPELLS.find((candidate) => candidate.id === id)!;
-
-  /** Персонаж с ровно этим списком подготовленных: значок зависит только от него. */
-  const prepared = (...ids: string[]): CharacterState => ({
-    ...createThorne(),
-    preparedSpellIds: ids,
-  });
+  /** Строка заклинания у персонажа с ровно этим списком подготовленных. */
+  const row = (id: string, ...prepared: string[]) =>
+    testSpellRow(id, { ...createThorne(), preparedSpellIds: prepared });
 
   it("подготовленное значка не получает: рядом нажатая кнопка подготовки", () => {
-    expect(ritualOnlyBadge(spell("mage-armor"), prepared("mage-armor"))).toBeNull();
+    expect(ritualOnlyBadge(row("mage-armor", "mage-armor"))).toBeNull();
   });
 
   it("неподготовленное — тоже: причину скажет строка недоступности словами", () => {
-    expect(ritualOnlyBadge(spell("blink"), prepared())).toBeNull();
+    expect(ritualOnlyBadge(row("blink"))).toBeNull();
   });
 
   it("заговор значка не получает: цену он называет строкой «Без ячейки»", () => {
-    expect(ritualOnlyBadge(spell("ray-of-frost"), prepared())).toBeNull();
+    expect(ritualOnlyBadge(row("ray-of-frost"))).toBeNull();
   });
 
   it("неподготовленный ритуал остаётся: без подписи цена обещала бы ячейку", () => {
     // «Обнаружение магии» стоит «Ячейка 1 ур. или ритуал», но без подготовки способ один.
-    expect(ritualOnlyBadge(spell("detect-magic"), prepared())?.label).toBe("Ритуал");
+    expect(ritualOnlyBadge(row("detect-magic"))?.label).toBe("Ритуал");
   });
 
   it("подготовленный ритуал молчит: ячейка ему доступна наравне с ритуалом", () => {
-    expect(ritualOnlyBadge(spell("detect-magic"), prepared("detect-magic"))).toBeNull();
+    expect(ritualOnlyBadge(row("detect-magic", "detect-magic"))).toBeNull();
   });
 });

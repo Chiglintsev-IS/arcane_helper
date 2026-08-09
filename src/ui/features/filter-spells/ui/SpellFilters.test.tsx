@@ -12,8 +12,6 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
-import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
-import type { CombatRole } from "@/core/domain/catalog/combatRole";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
 import { type SpellFilters as Filters } from "@/ui/features/filter-spells/model/filters";
 import { NO_FILTERS } from "@/ui/features/filter-spells/model/filters";
@@ -22,9 +20,9 @@ afterEach(cleanup);
 
 /** Чем список делится: состав подаётся параметром, а не выводится из книги. */
 type Dividing = {
-  castingTimes: CastingTimeType[];
+  castingTimes: string[];
   prices: number[];
-  roles: CombatRole[];
+  roles: string[];
   concentration: boolean;
   ritual: boolean;
 };

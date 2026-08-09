@@ -8,9 +8,7 @@
  * выбирает слово и падеж.
  */
 
-import type { Sheet } from "@/core/domain/sheet/sheet";
-import type { Spell } from "@/core/domain/catalog/spell";
-import { bestCastPlan } from "@/core/application/casting/castOptions";
+import type { CastingView, SpellRowView } from "@/contract/views";
 import {
   AREA_SHAPES_RU,
   CHECK_DIE_RU,
@@ -26,25 +24,6 @@ export function spellListLabel(withActions: boolean): string {
 }
 
 /**
- * Почему заклинание сейчас недоступно, одной фразой; `null` — доступно.
- *
- * Спрашивают её оба списка, «Игры» и «Книги», и ответ обязан быть одним: разные слова о том же
- * запрете читаются как разные запреты.
- */
-export function unavailabilityReason(
-  spell: Spell,
-  character: Parameters<typeof bestCastPlan>[1],
-  turn: Parameters<typeof bestCastPlan>[2],
-): string | null {
-  const plan = bestCastPlan(spell, character, turn);
-  if (plan === null) return "нет доступного способа сотворения";
-  return plan.availability.warnings[0]?.reasonRu ?? null;
-}
-
-/** Числа персонажа, из которых собирается подпись разрешения. Считает их лист. */
-export type ResolutionNumbers = Pick<Sheet, "value">;
-
-/**
  * Способ разрешения одной схемой: что бросают и против чего.
  *
  * Текст отвечает на вопрос числом, которое произносят вслух, — «d20+8», «КС 16». Иконка отвечает,
@@ -53,25 +32,40 @@ export type ResolutionNumbers = Pick<Sheet, "value">;
  * заклинание тратит действие дважды.
  */
 export function resolutionBadge(
-  resolution: Spell["resolution"],
-  numbers: ResolutionNumbers,
+  resolution: SpellRowView["resolution"],
+  casting: CastingView,
 ): { label: string; icon: string } {
   switch (resolution.type) {
     case "spell_attack":
       return {
-        label: `Атака ${CHECK_DIE_RU}${signed(numbers.value("spellAttackModifier"))}`,
+        label: `Атака ${CHECK_DIE_RU}${signed(casting.spellAttackModifier)}`,
         icon: "✶",
       };
-    case "saving_throw": {
-      // Схема требует характеристику при спасброске; без неё состояние испорчено, и назвать один
-      // порог честнее, чем выдумать характеристику.
-      const ability = resolution.savingThrow;
-      const name = ability === undefined ? "Спасбросок" : `Спасбросок ${SAVING_THROW_NAMES[ability]}`;
-      return { label: `${name} КС ${numbers.value("spellSaveDc")}`, icon: "◇" };
-    }
+    case "saving_throw":
+      return {
+        label: `${savingThrowName(resolution.savingThrow)} КС ${casting.spellSaveDc}`,
+        icon: "◇",
+      };
     default:
       return { label: NO_ROLL_RU, icon: "○" };
   }
+}
+
+/**
+ * Слова правил приезжают строками, поэтому имя ищется, а не берётся ключом. Списком слов владеет
+ * ядро, здесь — только их падеж.
+ */
+const SAVING_THROWS: Readonly<Record<string, string>> = SAVING_THROW_NAMES;
+const AREA_SHAPES: Readonly<Record<string, string>> = AREA_SHAPES_RU;
+
+/** Спасбросок с характеристикой или без неё: не назвать её честнее, чем выдумать. */
+function savingThrowName(ability: string | undefined): string {
+  const named = ability === undefined ? undefined : SAVING_THROWS[ability];
+  return named === undefined ? "Спасбросок" : `Спасбросок ${named}`;
+}
+
+function shapeName(shape: string): string {
+  return AREA_SHAPES[shape] ?? shape;
 }
 
 function feet(value: number): string {
@@ -84,7 +78,7 @@ function feet(value: number): string {
  * Парная к `rangePhrase`: подпись под ярлыком «Дальность» отвечать за себя не обязана, а подпись в
  * ряду фактов через точку — обязана. То же правило действует у времени накладывания и длительности.
  */
-export function rangeLabel(range: Spell["range"]): string {
+export function rangeLabel(range: SpellRowView["range"]): string {
   switch (range.type) {
     case "self":
       return "На себя";
@@ -98,17 +92,17 @@ export function rangeLabel(range: Spell["range"]): string {
 }
 
 /** Дальность там, где ярлыка рядом нет: «Особая» одна не говорит, что именно особое. */
-export function rangePhrase(range: Spell["range"]): string {
+export function rangePhrase(range: SpellRowView["range"]): string {
   return range.type === "special" ? "Особая дальность" : rangeLabel(range);
 }
 
 /** Область под ярлыком: запятая отделяет фигуру от размера. */
-export function areaLabel(area: NonNullable<Spell["area"]>): string {
-  return `${AREA_SHAPES_RU[area.shape]}, ${feet(area.sizeFeet)}`;
+export function areaLabel(area: NonNullable<SpellRowView["area"]>): string {
+  return `${shapeName(area.shape)}, ${feet(area.sizeFeet)}`;
 }
 
 /** Область в ряду фактов: «от себя» отвечает на вопрос, откуда её отмерять. */
-export function areaPhrase(area: NonNullable<Spell["area"]>, fromSelf: boolean): string {
-  const shape = `${AREA_SHAPES_RU[area.shape]} ${feet(area.sizeFeet)}`;
+export function areaPhrase(area: NonNullable<SpellRowView["area"]>, fromSelf: boolean): string {
+  const shape = `${shapeName(area.shape)} ${feet(area.sizeFeet)}`;
   return fromSelf ? `${shape} от себя` : shape;
 }

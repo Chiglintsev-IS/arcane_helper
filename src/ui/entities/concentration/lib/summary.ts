@@ -1,3 +1,4 @@
+import type { CastingView } from "@/contract/views";
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { saveStatId } from "@/core/domain/shared/stats";
@@ -40,7 +41,12 @@ export type ConcentrationSummary = {
  * Каждый факт назван той же подписью, что в строке боевого списка: пока блок держал свои
  * формулировки, «Луч холода» показывал «атака заклинанием +8» там, где список говорил «Атака d20+8».
  */
-function mechanicsRu(spell: Spell, effect: ActiveEffect, character: CharacterState): string {
+function mechanicsRu(
+  spell: Spell,
+  effect: ActiveEffect,
+  character: CharacterState,
+  casting: CastingView,
+): string {
   const reach =
     spell.area === undefined
       ? rangePhrase(spell.range)
@@ -54,7 +60,7 @@ function mechanicsRu(spell: Spell, effect: ActiveEffect, character: CharacterSta
           characterLevel: character.level,
         })} (${spell.damage.type})`;
 
-  return [reach, resolutionBadge(spell.resolution, Character.of(character).sheet).label, damage]
+  return [reach, resolutionBadge(spell.resolution, casting).label, damage]
     .filter((part) => part !== null)
     .join(" · ");
 }
@@ -86,9 +92,11 @@ export function describeConcentration(input: {
   spell: Spell | null;
   effect: ActiveEffect;
   character: CharacterState;
+  /** Числа заклинателя: ими называется бросок в строке механики. */
+  casting: CastingView;
   journal: readonly TurnMark[];
 }): ConcentrationSummary {
-  const { spell, effect, character, journal } = input;
+  const { spell, effect, character, casting, journal } = input;
   const start = startRound(journal, effect.startedAt);
   const modifier = signed(Character.of(character).sheet.value(saveStatId("constitution")));
 
@@ -101,7 +109,7 @@ export function describeConcentration(input: {
     mechanicsLabel:
       spell === null
         ? "Правил нет в контенте: состояние из другой сборки"
-        : mechanicsRu(spell, effect, character),
+        : mechanicsRu(spell, effect, character, casting),
     breakLabel: `Урон → спасбросок Телосложения ${modifier}, КС от ${MINIMUM_CONCENTRATION_DC}`,
     shortRulesRu: spell === null ? effect.endConditionRu : spell.shortRulesRu,
     rulesAvailable: spell !== null,

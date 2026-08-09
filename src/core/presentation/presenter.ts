@@ -12,12 +12,16 @@ import type { LiveSession } from "@/core/application/session";
 
 import { toBagView } from "./views/bagView";
 import { toSheetView } from "./views/sheetView";
+import { toCastingView, toSpellRowViews, toTurnView } from "./views/spellRowsView";
 
 export function toSnapshot(live: LiveSession, version: number): Snapshot {
   return {
     version,
     sheet: toSheetView(live.session.character),
     bag: toBagView(live.session.character),
+    turn: toTurnView(live),
+    casting: toCastingView(live.session.character),
+    spells: toSpellRowViews(live),
     journal: live.session.journal.map((entry) => ({
       id: entry.id,
       at: entry.at,

@@ -4,26 +4,20 @@
  * Правило комбинирования одно: значения внутри категории соединяются «или», категории между собой —
  * «и». Пустая категория ничего не ограничивает, поэтому список без фильтров показывает всё.
  *
- * Фильтр «доступно сейчас» не повторяет логику доступности, а спрашивает её: расхождение фильтра и
- * мастера применения — та ошибка, которая заставляет игрока перестать доверять приложению.
+ * Фильтр «доступно сейчас» не повторяет логику доступности, а читает её вердикт из строки: он
+ * посчитан там же, где и причина, которую покажет мастер применения. Расхождение фильтра и мастера —
+ * та ошибка, которая заставляет игрока перестать доверять приложению.
  */
 
-import type { CharacterState } from "@/core/domain/assembly/state";
-import type { Spell } from "@/core/domain/catalog/spell";
-import type { TurnResource, TurnResources } from "@/core/application/casting/availability";
-import { canCastNow, isSpellReady, ritualAvailable } from "@/core/application/casting/castOptions";
-import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
-import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
-import { slotPriceOf } from "@/core/application/casting/castOptions";
+import type { SpellRowView } from "@/contract/views";
 
-/** Время накладывания как фильтр: минуты и часы в бою не выбирают. */
-export type CastingTimeFilter = TurnResource;
+import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
 
 export type SpellFilters = {
-  castingTimes: CastingTimeFilter[];
+  castingTimes: string[];
   /** Цена в ячейках: 0 — «Без ячейки», далее уровни. Отбирают по цене, а не по виду строки. */
   prices: number[];
-  roles: CombatRole[];
+  roles: string[];
   concentration: boolean;
   ritual: boolean;
   prepared: boolean;
@@ -43,16 +37,11 @@ export const NO_FILTERS: SpellFilters = {
 
 /** Что из категорий делит текущий список: только это и показывается переключателями. */
 export type DividingCategories = {
-  castingTimes: ReadonlySet<Spell["castingTime"]["type"]>;
+  castingTimes: ReadonlySet<string>;
   prices: number[];
-  roles: ReadonlySet<CombatRole>;
+  roles: ReadonlySet<string>;
   concentration: boolean;
   ritual: boolean;
-};
-
-export type FilterContext = {
-  character: CharacterState;
-  turn: TurnResources;
 };
 
 /** Часть отбора, общая для заклинания и для строки, заклинанием не являющейся. */
@@ -79,7 +68,6 @@ export function matchesActionRow(traits: ActionTraits, filters: SpellFilters): b
   return true;
 }
 
-
 /**
  * Категории, которые делят список: часть строк им отвечает, часть — нет.
  *
@@ -87,43 +75,39 @@ export function matchesActionRow(traits: ActionTraits, filters: SpellFilters): b
  * заранее записанный перечень оказался бы неверен в одной из двух ситуаций; переключатель же,
  * который находит весь список или ни одной строки, ничего не отбирает и только занимает полосу.
  */
-export function dividingCategories(
-  spells: readonly Spell[],
-  inFight: boolean,
-): DividingCategories {
+export function dividingCategories(spells: readonly SpellRowView[]): DividingCategories {
   const divides = (count: number): boolean => count > 0 && count < spells.length;
-  const countOf = (predicate: (spell: Spell) => boolean): number =>
+  const countOf = (predicate: (spell: SpellRowView) => boolean): number =>
     spells.filter(predicate).length;
-  const valuesDividing = <T>(pick: (spell: Spell) => T): Set<T> =>
+  const valuesDividing = <T>(pick: (spell: SpellRowView) => T): Set<T> =>
     new Set(
       [...new Set(spells.map(pick))].filter((value) => divides(countOf((s) => pick(s) === value))),
     );
 
   return {
     castingTimes: valuesDividing((spell) => spell.castingTime.type),
-    prices: [...valuesDividing((spell) => slotPriceOf(spell, inFight))].sort((a, b) => a - b),
-    roles: valuesDividing(combatRoleOf),
+    prices: [...valuesDividing((spell) => spell.slotPrice)].sort((a, b) => a - b),
+    roles: valuesDividing((spell) => spell.role),
     concentration: divides(countOf((spell) => spell.concentration)),
-    ritual: divides(countOf((spell) => ritualAvailable(spell, inFight))),
+    ritual: divides(countOf((spell) => spell.ritualAvailable)),
   };
 }
 
-function matches(spell: Spell, filters: SpellFilters, context: FilterContext): boolean {
-  if (!matchesTraits(traitsOf(spell, context.turn.inFight), filters)) return false;
-  if (filters.ritual && !ritualAvailable(spell, context.turn.inFight)) return false;
+function matches(spell: SpellRowView, filters: SpellFilters): boolean {
+  if (!matchesTraits(traitsOf(spell), filters)) return false;
+  if (filters.ritual && !spell.ritualAvailable) return false;
   // «Подготовлено» не скрывает заговоры: они не готовятся, но доступны всегда.
-  if (filters.prepared && !isSpellReady(spell, context.character)) return false;
-  if (filters.availableNow && !canCastNow(spell, context.character, context.turn)) return false;
+  if (filters.prepared && !spell.prepared) return false;
+  if (filters.availableNow && spell.unavailableReason !== undefined) return false;
   return true;
 }
 
 /** Отфильтрованный список в исходном порядке: контент упорядочен по уровню, затем по алфавиту. */
 export function filterSpells(
-  spells: readonly Spell[],
+  spells: readonly SpellRowView[],
   filters: SpellFilters,
-  context: FilterContext,
-): Spell[] {
-  return spells.filter((spell) => matches(spell, filters, context));
+): SpellRowView[] {
+  return spells.filter((spell) => matches(spell, filters));
 }
 
 /** Переключение значения внутри категории фильтров. */

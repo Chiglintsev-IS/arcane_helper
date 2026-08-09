@@ -16,18 +16,12 @@ import type { Snapshot } from "@/contract/snapshot";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createSession, type LiveSession } from "@/core/application/session";
-import { toBagView } from "@/core/presentation/views/bagView";
-import { toSheetView } from "@/core/presentation/views/sheetView";
+import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { createSessionStore } from "./sessionStore";
 
-/** Снимок только что начатой сессии: проекцию строит настоящий презентер, а не подделка рядом. */
-const FRESH: Snapshot = {
-  version: 0,
-  sheet: toSheetView(createThorne()),
-  bag: toBagView(createThorne()),
-  journal: [],
-};
+/** Снимок только что начатой сессии: проекции строит настоящий презентер, а не подделка рядом. */
+const FRESH: Snapshot = testSnapshot();
 
 function live(): LiveSession {
   return {

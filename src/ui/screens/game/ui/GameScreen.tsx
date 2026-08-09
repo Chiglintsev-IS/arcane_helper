@@ -31,7 +31,7 @@ import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
-import { spellListLabel, unavailabilityReason } from "@/ui/shared/lib/spellLabels";
+import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
 
 export function GameScreen() {
@@ -39,6 +39,7 @@ export function GameScreen() {
   const session = useSession((state) => state.session)!;
   const error = useSession((state) => state.error);
   const spells = useSession((state) => state.spellCatalog);
+  const snapshot = useSession((state) => state.snapshot)!;
   const draft = useDraft((state) => state.draft);
 
   const [filters, setFilters] = useState(NO_FILTERS);
@@ -73,30 +74,35 @@ export function GameScreen() {
       spell: spells.find((candidate) => candidate.id === effect.spellId) ?? null,
       effect,
       character,
+      casting: snapshot.casting,
       journal: session.journal,
     });
-  }, [character, spells, session.journal]);
+  }, [character, spells, snapshot.casting, session.journal]);
 
-  const inMode = spellsForScreen(spells, character, "play", inFight);
-  const shown = filterSpells(inMode, filters, context);
-  const dividing = dividingCategories(inMode, inFight);
+  const { casting } = snapshot;
+  const inMode = spellsForScreen(snapshot.spells, "play");
+  const shown = filterSpells(inMode, filters);
+  const dividing = dividingCategories(inMode);
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
   const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
+  const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
+  // Карточки тех же строк: у реакций своей проекции ещё нет, и они читают карточку из каталога.
+  const reactionSpells = spells.filter((spell) => inMode.some((row) => row.id === spell.id));
 
   const rows = shown.map((spell) => (
     <SpellCardCompact
       key={spell.id}
       spell={spell}
-      character={character}
-      unavailableReason={unavailabilityReason(spell, character, economy)}
+      casting={casting}
       onOpen={() => setOpenSpellId(spell.id)}
     />
   ));
   if (bloodShown) {
-    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play", inFight), 0, (
+    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play"), 0, (
       <BloodMagicRow
         key="blood-magic"
         character={character}
+        casting={casting}
         economy={economy}
         onOpen={() => setBloodOpen(true)}
       />
@@ -219,9 +225,11 @@ export function GameScreen() {
         ) : null}
       </div>
 
-      {openSpell === null || draft !== null ? null : (
+      {openSpell === null || openRow === null || draft !== null ? null : (
         <SpellCardDetails
           spell={openSpell}
+          row={openRow}
+          casting={casting}
           character={character}
           economy={economy}
           note={character.spellNotes[openSpell.id]}
@@ -309,7 +317,7 @@ export function GameScreen() {
 
       {reactionsOpen ? (
         <ReactionsSheet
-          spells={inMode}
+          spells={reactionSpells}
           character={character}
           reactionAvailable={economy.reactionAvailable}
           runeAvailable={wardingSigilAvailable(session)}

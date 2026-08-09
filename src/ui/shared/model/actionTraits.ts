@@ -4,18 +4,19 @@
  * Существует ради «Магии крови»: она стоит в том же списке, тратит то же действие и обязана
  * отзываться на те же переключатели. Пока фильтры принимали только заклинание, строка молча
  * оставалась на экране при любом фильтре — список говорил «вот всё, что подходит», и врал.
+ *
+ * У заклинания эти признаки уже посчитаны — они приезжают строкой проекции; здесь остаётся форма,
+ * которой и строка-не-заклинание умеет о себе рассказать.
  */
 
-import type { Spell } from "@/core/domain/catalog/spell";
-import { combatRoleOf, type CombatRole } from "@/core/domain/catalog/combatRole";
-import { slotPriceOf } from "@/core/application/casting/castOptions";
+import type { SpellRowView } from "@/contract/views";
 
 export type ActionTraits = {
-  castingTime: Spell["castingTime"]["type"];
+  castingTime: string;
   /** Цена в ячейках: 0 — не расходует ячейку. По ней строится и порядок списка, и отбор по цене. */
   level: number;
   concentration: boolean;
-  role: CombatRole;
+  role: string;
 };
 
 /** Строка «Магия крови»: обмен хитов на очки — действие в свой ход, ячейки не тратит. */
@@ -26,11 +27,11 @@ export const BLOOD_MAGIC_TRAITS: ActionTraits = {
   role: "other",
 };
 
-export function traitsOf(spell: Spell, inFight: boolean): ActionTraits {
+export function traitsOf(spell: SpellRowView): ActionTraits {
   return {
     castingTime: spell.castingTime.type,
-    level: slotPriceOf(spell, inFight),
+    level: spell.slotPrice,
     concentration: spell.concentration,
-    role: combatRoleOf(spell),
+    role: spell.role,
   };
 }

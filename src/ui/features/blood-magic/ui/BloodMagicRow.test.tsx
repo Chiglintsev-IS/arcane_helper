@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { testSnapshot } from "@/ui/app/testing/stores";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 
@@ -21,7 +22,12 @@ const IN_TURN: TurnEconomy = {
 function renderRow(economy: TurnEconomy): void {
   render(
     <ul>
-      <BloodMagicRow character={createThorne()} economy={economy} onOpen={() => {}} />
+      <BloodMagicRow
+        character={createThorne()}
+        casting={testSnapshot().casting}
+        economy={economy}
+        onOpen={() => {}}
+      />
     </ul>,
   );
 }

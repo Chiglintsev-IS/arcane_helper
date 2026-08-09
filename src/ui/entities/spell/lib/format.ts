@@ -6,8 +6,8 @@
  * выбирает слово и падеж. Аббревиатуры русские — «КС», «КД», а не DC и AC.
  */
 
+import type { SpellRowView } from "@/contract/views";
 import type { Spell } from "@/core/domain/catalog/spell";
-import type { CombatRole } from "@/core/domain/catalog/combatRole";
 import {
   longCastingTimeRu,
   plural,
@@ -15,11 +15,10 @@ import {
   type LongCastingUnit,
   type TimeUnit,
 } from "@/core/shared/language";
-import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
-import { isSpellReady } from "@/core/application/casting/castOptions";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import { type Tone } from "@/ui/shared/ui/tone";
+
+/** Заговор ячейки не стоит. Число — цена строки, а не вид заклинания. */
+const CANTRIP_LEVEL = 0;
 
 /**
  * Подпись, иконка и цвет роли в бою.
@@ -31,16 +30,25 @@ import { type Tone } from "@/ui/shared/ui/tone";
  * У роли «другое» цвета нет: серый и означает «ни то, ни другое», а третий оттенок превратил бы
  * шкалу в радугу, в которой не выделяется ничего (ux.md).
  */
-export const COMBAT_ROLE: Record<CombatRole, { label: string; icon?: string; tone: Tone }> = {
+type RoleBadge = { label: string; icon?: string; tone: Tone };
+
+const OTHER_ROLE: RoleBadge = { label: "Другое", tone: "muted" };
+
+const COMBAT_ROLE: Record<string, RoleBadge> = {
   offense: { label: "Боевое", icon: "⚔", tone: "offense" },
   defense: { label: "Защита", icon: "⛊", tone: "defense" },
-  other: { label: "Другое", tone: "muted" },
+  other: OTHER_ROLE,
 };
 
-export type CastingTimeType = Spell["castingTime"]["type"];
+/** Подпись роли по слову правил: незнакомая роль остаётся без цвета, как и «ни то, ни другое». */
+export function combatRole(role: string): RoleBadge {
+  return COMBAT_ROLE[role] ?? OTHER_ROLE;
+}
+
+type CastingTimeBadge = { label: string; icon: string; tone: Tone };
 
 /** Подпись, иконка и цвет времени накладывания. Иконка обязательна: цвет один не решает. */
-export const CASTING_TIME: Record<CastingTimeType, { label: string; icon: string; tone: Tone }> = {
+const CASTING_TIME: Record<string, CastingTimeBadge> = {
   action: { label: "Действие", icon: "●", tone: "action" },
   bonus_action: { label: "Бонусное", icon: "◆", tone: "bonus" },
   reaction: { label: "Реакция", icon: "▲", tone: "reaction" },
@@ -49,7 +57,12 @@ export const CASTING_TIME: Record<CastingTimeType, { label: string; icon: string
   hour: { label: "Часы", icon: "◷", tone: "muted" },
 };
 
-const LONG_CASTING_UNITS: Partial<Record<CastingTimeType, LongCastingUnit>> = {
+/** Значок времени накладывания: незнакомое время показывается серым, а не пропадает со строки. */
+export function castingTimeBadge(type: string): CastingTimeBadge {
+  return CASTING_TIME[type] ?? { label: type, icon: "◷", tone: "muted" };
+}
+
+const LONG_CASTING_UNITS: Record<string, LongCastingUnit | undefined> = {
   minute: "minute",
   hour: "hour",
 };
@@ -61,10 +74,10 @@ const LONG_CASTING_UNITS: Partial<Record<CastingTimeType, LongCastingUnit>> = {
  * (domain-model.md), но приблизительная подпись честнее
  * выдуманного числа.
  */
-export function castingTimeLabel(castingTime: Spell["castingTime"]): string {
+export function castingTimeLabel(castingTime: SpellRowView["castingTime"]): string {
   const unit = LONG_CASTING_UNITS[castingTime.type];
   if (unit === undefined || castingTime.value === undefined) {
-    return CASTING_TIME[castingTime.type].label;
+    return castingTimeBadge(castingTime.type).label;
   }
   return longCastingTimeRu(unit, castingTime.value);
 }
@@ -77,7 +90,7 @@ export function castingTimeLabel(castingTime: Spell["castingTime"]): string {
  * оба означали время и ни один не говорил какое: «Починка» показывала «1 минута» рядом с
  * «Мгновенно». Глагол отвечает на вопрос сразу.
  */
-export function castingTimePhrase(castingTime: Spell["castingTime"]): string {
+export function castingTimePhrase(castingTime: SpellRowView["castingTime"]): string {
   const unit = LONG_CASTING_UNITS[castingTime.type];
   if (unit === undefined || castingTime.value === undefined) {
     return castingTimeLabel(castingTime);
@@ -108,16 +121,16 @@ export function levelChipLabel(level: number): string {
  * Заговор отвечает «Без ячейки» тем же способом: это цена, а не вид заклинания, и второго значка
  * рядом для неё не заводится.
  */
-export function slotCostLabel(spell: Spell): string {
+export function slotCostLabel(spell: SpellRowView): string {
   if (spell.level === CANTRIP_LEVEL) return "Без ячейки";
-  // «От» — обещание, что ячейка повыше что-то даст; даст ли, знает каталог.
-  const slot = benefitsFromHigherSlot(spell)
+  // «От» — обещание, что ячейка повыше что-то даст; даёт ли, сказала проекция.
+  const slot = spell.benefitsFromHigherSlot
     ? `Ячейка от ${spell.level} ур.`
     : `Ячейка ${spell.level} ур.`;
   return spell.ritual ? `${slot} или ритуал` : slot;
 }
 
-export function durationLabel(duration: Spell["duration"]): string {
+export function durationLabel(duration: SpellRowView["duration"]): string {
   const value = duration.value ?? 0;
   switch (duration.type) {
     case "instant":
@@ -153,7 +166,7 @@ export function targetingLabel(targeting: Spell["targeting"]): string {
 }
 
 /** Единицы длительности в терминах морфологии. `instant` и `special` числа не несут. */
-const DURATION_UNITS: Partial<Record<Spell["duration"]["type"], TimeUnit>> = {
+const DURATION_UNITS: Record<string, TimeUnit | undefined> = {
   rounds: "round",
   minutes: "minute",
   hours: "hour",
@@ -169,22 +182,17 @@ const DURATION_UNITS: Partial<Record<Spell["duration"]["type"], TimeUnit>> = {
  * «Мгновенный эффект», а не «Мгновенно»: наречие отвечает на вопрос «как быстро творится», то есть
  * ровно на тот вопрос, от которого длительность и нужно отличить.
  */
-export function durationPhrase(duration: Spell["duration"]): string {
+export function durationPhrase(duration: SpellRowView["duration"]): string {
   if (duration.type === "instant") return "Мгновенный эффект";
   const unit = DURATION_UNITS[duration.type];
   if (unit === undefined || duration.value === undefined) return "Длительность особая";
   return `Держится ${timeSpanAccusativeRu(unit, duration.value)}`;
 }
 
-/** Формула урона с учётом уровня ячейки и уровня персонажа: заговоры растут от уровня. */
-export function damageLabel(spell: Spell, slotLevel: number, characterLevel: number): string | null {
-  if (spell.damage === undefined) return null;
-  const formula = effectiveDamage(spell.damage, {
-    spellLevel: spell.level,
-    slotLevel,
-    characterLevel,
-  });
-  return `${formula} (${spell.damage.type})`;
+/** Урон словами: формула с учётом уровня и род урона. Считает их проекция. */
+export function damageLabel(damage: SpellRowView["damage"]): string | null {
+  if (damage === undefined) return null;
+  return `${damage.formula} (${damage.type})`;
 }
 
 /**
@@ -195,10 +203,9 @@ export function damageLabel(spell: Spell, slotLevel: number, characterLevel: num
  * Подготовку значками не пересказывают: рядом стоит кнопка с галочкой, а запрет пишется словами.
  */
 export function ritualOnlyBadge(
-  spell: Spell,
-  character: CharacterState,
+  spell: SpellRowView,
 ): { label: string; icon: string; tone: Tone } | null {
-  if (spell.ritual && !isSpellReady(spell, character)) {
+  if (spell.ritual && !spell.prepared) {
     return { label: "Ритуал", icon: "❖", tone: "muted" };
   }
   return null;

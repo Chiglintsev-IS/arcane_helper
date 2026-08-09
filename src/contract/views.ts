@@ -142,7 +142,79 @@ export const bagViewSchema = z.object({
   }),
 });
 
+/**
+ * Экономия хода: что осталось потратить и на каком раунде это происходит.
+ *
+ * Вне боя ходов нет, и правила отвечают «всё доступно» независимо от журнала — признак схватки
+ * поэтому едет рядом, а не выводится показывающим из номера раунда.
+ */
+export const turnViewSchema = z.object({
+  round: whole,
+  inFight: z.boolean(),
+  actionAvailable: z.boolean(),
+  bonusActionAvailable: z.boolean(),
+  reactionAvailable: z.boolean(),
+});
+
+/**
+ * Строка списка заклинаний: карточка вместе с тем, чем она является для этого персонажа сейчас.
+ *
+ * Числа подставлены под него, а не взяты из книги: 2d8 у заговора — это его уровень. Подписи здесь
+ * нет ни одной: род броска, роль и время накладывания едут словами правил, а слово, падеж и порядок
+ * значков выбирает показывающий.
+ */
+export const spellRowViewSchema = z.object({
+  id: word,
+  nameRu: word,
+  shortRulesRu: word,
+  level: whole,
+  castingTime: z.object({ type: word, value: whole.optional() }),
+  range: z.object({ type: word, distanceFeet: whole.optional() }),
+  area: z.object({ shape: word, sizeFeet: whole }).optional(),
+  duration: z.object({ type: word, value: whole.optional() }),
+  /** Что бросают: род броска и характеристика спасброска, если он есть. */
+  resolution: z.object({ type: word, savingThrow: word.optional() }),
+  concentration: z.boolean(),
+  ritual: z.boolean(),
+  /** Роль в бою: чем бить, чем закрыться, всё прочее. */
+  role: word,
+
+  /** Цена в ячейках прямо сейчас: 0 — ячейка не нужна. Ею упорядочен список и отобрана цена. */
+  slotPrice: whole,
+  /** Даст ли ячейка повыше больше, чем своя. */
+  benefitsFromHigherSlot: z.boolean(),
+  /** Творится ли ритуалом прямо сейчас: в бою ритуального способа нет вовсе. */
+  ritualAvailable: z.boolean(),
+  /** Готово к сотворению без подготовки: заговоры — всегда, прочее — по книге. */
+  prepared: z.boolean(),
+  /** Применимо ли в этой обстановке вообще: этим и отобран боевой список. */
+  castableNow: z.boolean(),
+  /** Первая причина, по которой сейчас нельзя; нет вовсе — можно. */
+  unavailableReason: word.optional(),
+  /** Эффект этого заклинания уже висит: строка не претендует на внимание, но из списка не уходит. */
+  active: z.boolean(),
+  /** Урон с учётом уровня персонажа: формула и её род. */
+  damage: z.object({ formula: word, type: word }).optional(),
+});
+
+/**
+ * Числа заклинателя: то, чем он колдует вообще, а не этим заклинанием.
+ *
+ * Стоят раз на персонажа, а не при каждой строке: от заклинания они не зависят, и повторить их в
+ * каждой строке значило бы сорок раз прислать одно число.
+ */
+export const castingViewSchema = z.object({
+  spellAttackModifier: whole,
+  spellSaveDc: whole,
+  /** Сколько заклинаний он вправе держать подготовленными и сколько держит. */
+  preparedLimit: whole,
+  preparedCount: whole,
+});
+
 export type ContributionView = z.infer<typeof contributionViewSchema>;
+export type TurnView = z.infer<typeof turnViewSchema>;
+export type SpellRowView = z.infer<typeof spellRowViewSchema>;
+export type CastingView = z.infer<typeof castingViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
 export type StatView = z.infer<typeof statViewSchema>;

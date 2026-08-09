@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { traitsOf } from "@/ui/shared/model/actionTraits";
-import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-
-const SPELLS = loadThorneSpells();
+import { IN_FIGHT, testSpellRow } from "@/ui/app/testing/stores";
 
 describe("traitsOf", () => {
   it("признаки заклинания собираются той же функцией, что и признаки действия", () => {
-    const shield = SPELLS.find((spell) => spell.id === "shield");
-    expect(traitsOf(shield!, true)).toEqual({
+    expect(traitsOf(testSpellRow("shield", undefined, IN_FIGHT))).toEqual({
       castingTime: "reaction",
       level: 1,
       concentration: false,

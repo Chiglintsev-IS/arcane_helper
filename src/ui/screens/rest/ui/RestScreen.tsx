@@ -28,6 +28,7 @@ export function RestScreen() {
   const { session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
   const spells = useSession((state) => state.spellCatalog);
+  const snapshot = useSession((state) => state.snapshot)!;
 
   const [longRestOpen, setLongRestOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
@@ -49,11 +50,12 @@ export function RestScreen() {
       spell: spells.find((candidate) => candidate.id === effect.spellId) ?? null,
       effect,
       character,
+      casting: snapshot.casting,
       journal: session.journal,
     });
-  }, [character, spells, session.journal]);
-  const inMode = spellsForScreen(spells, character, "rest", inFight);
-  const dividing = dividingCategories(inMode, inFight);
+  }, [character, spells, snapshot.casting, session.journal]);
+  const inMode = spellsForScreen(snapshot.spells, "rest");
+  const dividing = dividingCategories(inMode);
 
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;

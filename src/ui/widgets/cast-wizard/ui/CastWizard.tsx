@@ -11,7 +11,7 @@ import {
   WizardShell,
 } from "@/ui/shared/ui/WizardShell";
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
-import { CASTING_TIME, castingTimePhrase, levelLabel } from "@/ui/entities/spell/lib/format";
+import { castingTimeBadge, castingTimePhrase, levelLabel } from "@/ui/entities/spell/lib/format";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { checkAvailability, type Availability } from "@/core/application/casting/availability";
@@ -582,7 +582,7 @@ export function CastWizard({
 
   const index = steps.indexOf(draft.step);
   const isLast = draft.step === "summary";
-  const castingTime = CASTING_TIME[draft.spell.castingTime.type];
+  const castingTime = castingTimeBadge(draft.spell.castingTime.type);
   const actions = draftStore.getState();
 
   // Замена концентрации требует явного выбора: без него дальше не пускаем. Согласие своё, а не

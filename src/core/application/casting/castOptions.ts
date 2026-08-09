@@ -131,8 +131,3 @@ export function bestCastPlan(
   }
   return best;
 }
-
-/** Есть ли хоть один способ сотворить заклинание прямо сейчас. */
-export function canCastNow(spell: Spell, character: CharacterState, turn: TurnResources): boolean {
-  return bestCastPlan(spell, character, turn)?.availability.available === true;
-}

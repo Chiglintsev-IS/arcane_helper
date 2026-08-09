@@ -1,10 +1,8 @@
 import { BLOOD_MAGIC_TRAITS, traitsOf } from "@/ui/shared/model/actionTraits";
-import { castableInSituation } from "@/core/application/casting/castOptions";
 import { describe, expect, it } from "vitest";
 
-import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { IN_FIGHT, testSpellRow, testSpellRows } from "@/ui/app/testing/stores";
 
 import {
   compareTraits,
@@ -14,11 +12,11 @@ import {
   spellsForScreen,
 } from "@/ui/shared/model/spellList";
 
-const SPELLS = loadThorneSpells();
-
 /** Список «Игры» для Торна: одна функция на обе ситуации, различает их отметка боя. */
 function playList(inFight: boolean): string[] {
-  return spellsForScreen(SPELLS, createThorne(), "play", inFight).map((spell) => spell.id);
+  return spellsForScreen(testSpellRows(undefined, inFight ? IN_FIGHT : []), "play").map(
+    (spell) => spell.id,
+  );
 }
 
 describe("вне боя: заговоры, подготовленные и ритуальные из книги (FR-209)", () => {
@@ -43,7 +41,7 @@ describe("вне боя: заговоры, подготовленные и ри�
 describe("в бою: заговоры и подготовленные, творимые внутри хода (FR-201)", () => {
   it("накладываемого минутами и часами в списке нет", () => {
     for (const id of playList(true)) {
-      const spell = SPELLS.find((candidate) => candidate.id === id)!;
+      const spell = testSpellRow(id, undefined, IN_FIGHT);
       expect(["minute", "hour"], spell.nameRu).not.toContain(spell.castingTime.type);
     }
   });
@@ -115,17 +113,18 @@ describe("порядок: сначала бесплатное, потом по �
   });
 
   it("сортировка не меняет исходный список", () => {
-    const before = SPELLS.map((spell) => spell.id);
-    orderForPlay(SPELLS, true);
-    expect(SPELLS.map((spell) => spell.id)).toEqual(before);
+    const rows = testSpellRows(undefined, IN_FIGHT);
+    const before = rows.map((spell) => spell.id);
+    orderForPlay(rows);
+    expect(rows.map((spell) => spell.id)).toEqual(before);
   });
 });
 
 describe("«Магия крови» встаёт среди того, что ячейки не стоит (FR-207, FR-210)", () => {
   it("в бою — сразу за заговорами", () => {
-    const shown = spellsForScreen(SPELLS, createThorne(), "play", true);
+    const shown = spellsForScreen(testSpellRows(undefined, IN_FIGHT), "play");
     const rows = shown.map((spell) => spell.id);
-    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play", true), 0, "магия-крови");
+    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play"), 0, "магия-крови");
 
     // Последним бесплатным идёт «Сообщение» — та же цена и та же роль «другое», что у обмена.
     expect(rows.slice(0, 5)).toEqual([
@@ -138,41 +137,45 @@ describe("«Магия крови» встаёт среди того, что я�
   });
 
   it("вне боя — за ритуалами: они тоже ничего не стоят", () => {
-    const shown = spellsForScreen(SPELLS, createThorne(), "play", false);
-    const at = positionInList(shown, BLOOD_MAGIC_TRAITS, "play", false);
+    const shown = spellsForScreen(testSpellRows(), "play");
+    const at = positionInList(shown, BLOOD_MAGIC_TRAITS, "play");
     expect(shown[at - 1]?.id).toBe("unseen-servant");
     expect(shown[at]?.id).toBe("shield");
   });
 
   it("в «Книге» место ищется уровнем: там смотрят состав, а не цену момента", () => {
-    const at = positionInList(SPELLS, BLOOD_MAGIC_TRAITS, "book", false);
-    expect(SPELLS[at]?.id).toBe("shield");
+    const rows = testSpellRows();
+    const at = positionInList(rows, BLOOD_MAGIC_TRAITS, "book");
+    expect(rows[at]?.id).toBe("shield");
   });
 
   it("строка дороже всего списка встаёт в конец, а не теряется", () => {
     const priciest = { ...BLOOD_MAGIC_TRAITS, level: 9 };
 
-    expect(positionInList(SPELLS, priciest, "book", false)).toBe(SPELLS.length);
-    expect(positionInList(SPELLS, priciest, "play", true)).toBe(SPELLS.length);
+    const rows = testSpellRows();
+    expect(positionInList(rows, priciest, "book")).toBe(rows.length);
+    const inFight = testSpellRows(undefined, IN_FIGHT);
+    expect(positionInList(inFight, priciest, "play")).toBe(inFight.length);
   });
 });
 
 describe("состав по режимам (FR-203, FR-220, FR-230)", () => {
   it("книга не отбирает ничего и порядка не трогает", () => {
-    const character = createThorne();
-    expect(spellsForScreen(SPELLS, character, "book", false)).toEqual(SPELLS);
-    expect(spellsForScreen(SPELLS, character, "book", true)).toEqual(SPELLS);
+    expect(spellsForScreen(testSpellRows(), "book")).toEqual(testSpellRows());
+    const inFight = testSpellRows(undefined, IN_FIGHT);
+    expect(spellsForScreen(inFight, "book")).toEqual(inFight);
   });
 
   it("в «Журнале» и «Листе» списка нет", () => {
     for (const mode of ["journal", "sheet", "bag", "rest"] as const) {
-      expect(spellsForScreen(SPELLS, createThorne(), mode, false), mode).toEqual([]);
+      expect(spellsForScreen(testSpellRows(), mode), mode).toEqual([]);
     }
   });
 
   it("ушедшее из «Игры» не пропадает: оно в книге", () => {
-    const book = new Set(SPELLS.map((spell) => spell.id));
-    for (const spell of SPELLS) {
+    const rows = testSpellRows(undefined, IN_FIGHT);
+    const book = new Set(spellsForScreen(rows, "book").map((spell) => spell.id));
+    for (const spell of spellsForScreen(rows, "play")) {
       expect(book.has(spell.id), `${spell.nameRu} не попал никуда`).toBe(true);
     }
   });
@@ -180,15 +183,14 @@ describe("состав по режимам (FR-203, FR-220, FR-230)", () => {
 
 describe("состав строки: цена считается тем же правилом, что и порядок", () => {
   it("признаки заклинания собираются той же функцией, что и признаки действия", () => {
-    const detectMagic = SPELLS.find((spell) => spell.id === "detect-magic")!;
-
-    expect(traitsOf(detectMagic, false)).toEqual({
+    expect(traitsOf(testSpellRow("detect-magic"))).toEqual({
       castingTime: "action",
       level: 0,
       concentration: true,
       role: "other",
     });
-    expect(traitsOf(detectMagic, true).level).toBe(1);
+    // В бою ритуального способа нет, и то же заклинание стоит свой уровень.
+    expect(traitsOf(testSpellRow("detect-magic", undefined, IN_FIGHT)).level).toBe(1);
   });
 
   it("подготовка меняет состав, а не порядок", () => {
@@ -198,8 +200,6 @@ describe("состав строки: цена считается тем же п�
       preparedSpellIds: [...character.preparedSpellIds, "detect-magic"],
     };
 
-    expect(castableInSituation(SPELLS.find((s) => s.id === "detect-magic")!, withRitual, true)).toBe(
-      true,
-    );
+    expect(testSpellRow("detect-magic", withRitual, IN_FIGHT).castableNow).toBe(true);
   });
 });

@@ -10,12 +10,18 @@ import { render, type RenderResult, cleanup } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach } from "vitest";
 
+import type { Snapshot } from "@/contract/snapshot";
+import type { SpellRowView } from "@/contract/views";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { createMemoryRepository } from "@/core/infrastructure/persistence/memoryRepository";
 import type { Clock } from "@/core/application/ports/clock";
+import type { Command } from "@/contract/commands";
+import { createSession, type LiveSession } from "@/core/application/session";
+import { applyCommand } from "@/core/presentation/controller";
+import { toSnapshot } from "@/core/presentation/presenter";
 import { createCore } from "@/core/composition";
 import { connectStores, StoreProvider } from "@/ui/app/providers/stores";
 import type { AppStores } from "@/ui/shared/model/storeContext";
@@ -51,6 +57,59 @@ export function testClock(): Clock {
  * «бой идёт» нет, и подделать его подстановкой в состояние нельзя.
  */
 export type PlaySituation = { inFight?: boolean };
+
+/**
+ * Снимок настоящего ядра без сторов и без ожидания.
+ *
+ * Нужен там, где проверяется не экран, а то, что он показывает: проекции строит тот же презентер,
+ * что и в приложении, поэтому прогон не может разойтись с ним, оставшись зелёным.
+ *
+ * Обстановка набирается командами, а не подстановкой чисел: израсходованное действие и начатый бой
+ * — следствия сыгранного, и словарь признаков рядом с ними разошёлся бы с правилами молча.
+ */
+export function testSnapshot(
+  character: CharacterState = createThorne(),
+  commands: readonly Command[] = [],
+): Snapshot {
+  const clock = testClock();
+  const builtInCatalog = loadThorneSpells();
+  let live: LiveSession = {
+    session: createSession(character),
+    spellCatalog: builtInCatalog,
+    spellCatalogSource: "built_in",
+  };
+
+  commands.forEach((command, index) => {
+    live = applyCommand(live, command, { ...clock, commandId: `command-${index}` }, {
+      builtInCatalog,
+      createInitialCharacter: () => character,
+    });
+  });
+
+  return toSnapshot(live, commands.length);
+}
+
+/** Начатый бой: та же команда, что и кнопкой на экране. */
+export const IN_FIGHT: readonly Command[] = [{ kind: "start_combat" }];
+
+/** Строки списка заклинаний из настоящего снимка: их спрашивают чаще всего остального. */
+export function testSpellRows(
+  character: CharacterState = createThorne(),
+  commands: readonly Command[] = [],
+): SpellRowView[] {
+  return testSnapshot(character, commands).spells;
+}
+
+/** Строка одного заклинания: прогон называет заклинания, а не места в списке. */
+export function testSpellRow(
+  id: string,
+  character: CharacterState = createThorne(),
+  commands: readonly Command[] = [],
+): SpellRowView {
+  const found = testSpellRows(character, commands).find((row) => row.id === id);
+  if (found === undefined) throw new Error(`нет строки ${id}`);
+  return found;
+}
 
 /** Готовые сторы с открытой сессией: компонент рендерится сразу с данными. */
 export async function createTestStores(

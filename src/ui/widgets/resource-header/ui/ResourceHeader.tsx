@@ -11,7 +11,6 @@
 
 import { Character } from "@/core/domain/assembly/character";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
-import type { CastingTimeType } from "@/ui/entities/spell/lib/format";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
@@ -214,7 +213,7 @@ export function ResourceBadges({
   character: CharacterState;
   economy: TurnEconomy;
   /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
-  bookCastingTimes: ReadonlySet<CastingTimeType>;
+  bookCastingTimes: ReadonlySet<string>;
 }) {
   const totals = Character.of(character).sheet;
   const vitality = Vitality.of(character);

@@ -3,23 +3,22 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
-import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { SpellCardCompact } from "./SpellCardCompact";
 
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
 
-const BASE_SPELL = loadThorneSpells()[0]!;
+const SNAPSHOT = testSnapshot();
+const BASE_ROW = SNAPSHOT.spells[0]!;
 
 describe("SpellCardCompact — дальность в ряду фактов без ярлыка", () => {
   it("особая дальность называет себя сама, а не показывает голое «Особая»", () => {
     render(
       <SpellCardCompact
-        spell={{ ...BASE_SPELL, range: { type: "special" } }}
-        character={createThorne()}
-        unavailableReason={null}
+        spell={{ ...BASE_ROW, range: { type: "special" } }}
+        casting={SNAPSHOT.casting}
         onOpen={() => {}}
       />,
     );

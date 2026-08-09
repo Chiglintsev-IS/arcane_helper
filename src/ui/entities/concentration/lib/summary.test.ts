@@ -1,6 +1,8 @@
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { describe, expect, it } from "vitest";
 
+import { testSnapshot } from "@/ui/app/testing/stores";
+
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
@@ -32,6 +34,9 @@ function withoutArea(id: string): Omit<Spell, "area"> {
   return rest;
 }
 
+/** Числа заклинателя Торна: их строит настоящий презентер. */
+const CASTING = testSnapshot().casting;
+
 describe("describeConcentration (FR-084)", () => {
   const journal = [
     { at: "2026-07-31T18:00:00.000Z", kind: "turn_started" },
@@ -58,6 +63,7 @@ describe("describeConcentration (FR-084)", () => {
       spell: spell(spellId),
       effect: effect({ spellId, ...overrides }),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
   }
@@ -81,6 +87,7 @@ describe("describeConcentration (FR-084)", () => {
       spell: { ...withoutArea("detect-magic"), resolution: { type: "saving_throw", savingThrow: "DEX" } },
       effect: effect(),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
 
@@ -92,6 +99,7 @@ describe("describeConcentration (FR-084)", () => {
       spell: { ...spell("ray-of-frost"), concentration: true, duration: { type: "rounds", value: 3 } },
       effect: effect({ spellId: "ray-of-frost", slotLevelUsed: 0, duration: { type: "rounds", value: 3 } }),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
 
@@ -106,6 +114,7 @@ describe("describeConcentration (FR-084)", () => {
       spell: spell("detect-magic"),
       effect: effect({ startedAt: "2026-07-31T10:00:00.000Z" }),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
 
@@ -132,6 +141,7 @@ describe("describeConcentration (FR-084)", () => {
       spell: null,
       effect: effect(),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
 
@@ -148,6 +158,7 @@ describe("describeConcentration (FR-084)", () => {
       spell: { ...withoutArea("detect-magic"), resolution: { type: "saving_throw" } },
       effect: effect(),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
 
@@ -176,6 +187,8 @@ describe("describeConcentration (FR-084)", () => {
       spell: spell("ray-of-frost"),
       effect: effect({ spellId: "ray-of-frost", slotLevelUsed: 0 }),
       character,
+      // Числа проклятого заклинателя: их считает та же проекция, что и в приложении.
+      casting: testSnapshot(character).casting,
       journal,
     });
 
@@ -192,6 +205,7 @@ describe("describeConcentration (FR-084)", () => {
       spell: { ...withoutArea("detect-magic"), range },
       effect: effect(),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
 
@@ -212,6 +226,7 @@ describe("describeConcentration (FR-084)", () => {
       },
       effect: effect(),
       character: createThorne(),
+      casting: CASTING,
       journal,
     });
 

@@ -1,22 +1,21 @@
-import type { StatId } from "@/core/domain/shared/stats";
 import { describe, expect, it } from "vitest";
 
+import type { CastingView } from "@/contract/views";
 import {
   areaLabel,
   areaPhrase,
   rangeLabel,
   rangePhrase,
   resolutionBadge,
-  type ResolutionNumbers,
 } from "@/ui/shared/lib/spellLabels";
+
+/** Числа заклинателя в том объёме, в каком их читает подпись. */
+function numbers(known: Pick<CastingView, "spellSaveDc" | "spellAttackModifier">): CastingView {
+  return { ...known, preparedLimit: 11, preparedCount: 0 };
+}
 
 /** Числа Торна: оба включают +1 от предмета, и книга их не знает. */
 const THORNE = numbers({ spellSaveDc: 16, spellAttackModifier: 8 });
-
-/** Лист в том объёме, в каком его читает подпись: величина по имени и ничего больше. */
-function numbers(known: Partial<Record<StatId, number>>): ResolutionNumbers {
-  return { value: (stat: StatId) => known[stat] ?? 0 };
-}
 
 describe("resolutionBadge (FR-211)", () => {
   it("все три способа устроены одной схемой: название проверки и число", () => {

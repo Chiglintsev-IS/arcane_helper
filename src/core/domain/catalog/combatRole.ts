@@ -13,7 +13,7 @@ import type { Spell } from "@/core/domain/catalog/spell";
 
 export const COMBAT_ROLES = ["offense", "defense", "other"] as const;
 
-export type CombatRole = (typeof COMBAT_ROLES)[number];
+type CombatRole = (typeof COMBAT_ROLES)[number];
 
 /**
  * Роль заклинания. Молчание данных читается как «другое», а не как «боевое»: предположить атаку —

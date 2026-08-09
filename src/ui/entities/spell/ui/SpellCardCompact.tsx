@@ -14,13 +14,13 @@
  * Причина недоступности пишется словами: серый цвет без объяснения оставляет игрока в тупике
  */
 
-import { Character } from "@/core/domain/assembly/character";
 import { Fragment } from "react";
 
+import type { CastingView, SpellRowView } from "@/contract/views";
 import {
-  CASTING_TIME,
-  COMBAT_ROLE,
+  castingTimeBadge,
   castingTimePhrase,
+  combatRole,
   damageLabel,
   durationPhrase,
   ritualOnlyBadge,
@@ -28,24 +28,23 @@ import {
 } from "@/ui/entities/spell/lib/format";
 import { rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { CANTRIP_LEVEL, type Spell } from "@/core/domain/catalog/spell";
-import { combatRoleOf } from "@/core/domain/catalog/combatRole";
-import { isSpellReady } from "@/core/application/casting/castOptions";
+
+/** Заговор кнопки подготовки не получает: он вне лимита. Цена, а не вид заклинания. */
+const CANTRIP_LEVEL = 0;
 
 /** Цвет рамки по роли. «Другое» цвета не получает: серое и означает «ни то, ни другое». */
-const ROLE_BORDER = {
+const ROLE_BORDER: Record<string, string> = {
   offense: "border-offense/60",
   defense: "border-defense/60",
   other: "border-slate-200 dark:border-slate-800",
-} as const;
+};
 
 /** Подложка по роли — отдельно от рамки: приглушённая строка меняет её, не трогая рамку. */
-const ROLE_BACKGROUND = {
+const ROLE_BACKGROUND: Record<string, string> = {
   offense: "bg-offense/5",
   defense: "bg-defense/5",
   other: "",
-} as const;
+};
 
 /**
  * Подложка приглушённой строки.
@@ -60,23 +59,26 @@ const DIMMED_BACKGROUND = "bg-slate-100 dark:bg-slate-900";
  * Цвет подписи роли. Тёмные варианты — не украшение: на подкрашенной подложке серый слишком светлый
  * и даёт 4.31 вместо требуемых WCAG 4.5 — это ловит прогон axe-core.
  */
-const ROLE_WORD = {
+const ROLE_WORD: Record<string, string> = {
   offense: "text-offense-strong dark:text-offense",
   defense: "text-defense-strong dark:text-defense",
   other: "text-slate-600 dark:text-slate-400",
-} as const;
+};
+
+/** Оформление по слову правил: незнакомая роль выглядит как «ни то, ни другое». */
+function roleClass(classes: Record<string, string>, role: string): string {
+  return classes[role] ?? classes.other ?? "";
+}
 
 export function SpellCardCompact({
   spell,
-  character,
-  unavailableReason,
+  casting,
   onOpen,
   onTogglePrepared,
 }: {
-  spell: Spell;
-  character: CharacterState;
-  /** Первая причина недоступности или `null`, если применить можно. */
-  unavailableReason: string | null;
+  spell: SpellRowView;
+  /** Числа заклинателя: ими называется бросок. */
+  casting: CastingView;
   onOpen: () => void;
   /**
    * Переключение подготовки. Передаётся только там, где подготовка уместна, — в «Книге»:
@@ -87,11 +89,11 @@ export function SpellCardCompact({
   // Карточка одна на все режимы: роль красит рамку и стоит в углу везде, цена называется везде.
   // Эффект уже висит — строка перестаёт претендовать на внимание, но из списка не уходит: повторное
   // применение бывает нужно.
-  const active = character.activeEffects.some((effect) => effect.spellId === spell.id);
-  const castingTime = CASTING_TIME[spell.castingTime.type];
-  const ritualOnly = ritualOnlyBadge(spell, character);
-  const resolution = resolutionBadge(spell.resolution, Character.of(character).sheet);
-  const damage = damageLabel(spell, spell.level, character.level);
+  const { active, unavailableReason } = spell;
+  const castingTime = castingTimeBadge(spell.castingTime.type);
+  const ritualOnly = ritualOnlyBadge(spell);
+  const resolution = resolutionBadge(spell.resolution, casting);
+  const damage = damageLabel(spell.damage);
   const slotCost = slotCostLabel(spell);
 
   /**
@@ -99,9 +101,9 @@ export function SpellCardCompact({
    *, поэтому слово стоит там, где вне боя стоит английское название: место уже
    * занято, и подпись достаётся списку бесплатно.
    */
-  const role = combatRoleOf(spell);
-  const dimmed = unavailableReason !== null || active;
-  const frame = `${ROLE_BORDER[role]} ${dimmed ? DIMMED_BACKGROUND : ROLE_BACKGROUND[role]}`;
+  const role = combatRole(spell.role);
+  const dimmed = unavailableReason !== undefined || active;
+  const frame = `${roleClass(ROLE_BORDER, spell.role)} ${dimmed ? DIMMED_BACKGROUND : roleClass(ROLE_BACKGROUND, spell.role)}`;
 
   /**
    * Нейтральные сведения строки. Длительность выделена контрастом: рядом с ней в значке стоит время
@@ -119,7 +121,7 @@ export function SpellCardCompact({
   ];
 
   const preparable = onTogglePrepared !== undefined && spell.level !== CANTRIP_LEVEL;
-  const isPrepared = isSpellReady(spell, character);
+  const isPrepared = spell.prepared;
 
   return (
     <li className="flex items-stretch gap-1">
@@ -134,8 +136,8 @@ export function SpellCardCompact({
  Английское название нужно, чтобы найти заклинание в чужой книге, — а в бою по книгам не
  ищут. В «Бою» тот же угол занимает роль, и строка не становится выше.
  */}
-          <span className={`shrink-0 text-[0.625rem] ${ROLE_WORD[role]}`}>
-            {COMBAT_ROLE[role].label}
+          <span className={`shrink-0 text-[0.625rem] ${roleClass(ROLE_WORD, spell.role)}`}>
+            {role.label}
           </span>
         </span>
 
@@ -184,7 +186,7 @@ export function SpellCardCompact({
           {spell.shortRulesRu}
         </span>
 
-        {unavailableReason === null ? null : (
+        {unavailableReason === undefined ? null : (
           <span className="text-xs font-medium text-reaction-strong dark:text-reaction">Недоступно: {unavailableReason}</span>
         )}
       </button>

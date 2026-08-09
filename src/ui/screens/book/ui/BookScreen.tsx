@@ -1,6 +1,5 @@
 "use client";
 
-import { Character } from "@/core/domain/assembly/character";
 import { useState } from "react";
 
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
@@ -16,13 +15,14 @@ import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
-import { spellListLabel, unavailabilityReason } from "@/ui/shared/lib/spellLabels";
+import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 
 export function BookScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
   const error = useSession((state) => state.error);
   const spells = useSession((state) => state.spellCatalog);
+  const snapshot = useSession((state) => state.snapshot)!;
   const draft = useDraft((state) => state.draft);
 
   const [filters, setFilters] = useState(NO_FILTERS);
@@ -34,20 +34,20 @@ export function BookScreen() {
   const economy = deriveTurnEconomy(session);
   const context = { character, turn: economy };
   const { inFight } = economy;
-  const limit = Character.of(character).sheet.value("preparedLimit");
+  const { casting } = snapshot;
 
-  const inMode = spellsForScreen(spells, character, "book", inFight);
-  const shown = filterSpells(inMode, filters, context);
-  const dividing = dividingCategories(inMode, inFight);
+  const inMode = spellsForScreen(snapshot.spells, "book");
+  const shown = filterSpells(inMode, filters);
+  const dividing = dividingCategories(inMode);
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
   const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
+  const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
   const rows = shown.map((spell) => (
     <SpellCardCompact
       key={spell.id}
       spell={spell}
-      character={character}
-      unavailableReason={unavailabilityReason(spell, character, economy)}
+      casting={casting}
       onOpen={() => setOpenSpellId(spell.id)}
       onTogglePrepared={
         !inFight
@@ -57,10 +57,11 @@ export function BookScreen() {
     />
   ));
   if (bloodShown) {
-    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "book", inFight), 0, (
+    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "book"), 0, (
       <BloodMagicRow
         key="blood-magic"
         character={character}
+        casting={casting}
         economy={economy}
         onOpen={() => setBloodOpen(true)}
       />
@@ -80,14 +81,14 @@ export function BookScreen() {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-col gap-2">
         <p
-          aria-label={`Подготовлено ${character.preparedSpellIds.length} из ${limit}`}
+          aria-label={`Подготовлено ${casting.preparedCount} из ${casting.preparedLimit}`}
           className={`flex-1 text-xs tabular-nums ${
-            character.preparedSpellIds.length >= limit
+            casting.preparedCount >= casting.preparedLimit
               ? "font-medium text-reaction-strong dark:text-reaction"
               : "text-slate-600 dark:text-slate-400"
           }`}
         >
-          {character.preparedSpellIds.length} из {limit}
+          {casting.preparedCount} из {casting.preparedLimit}
         </p>
       </div>
 
@@ -111,9 +112,11 @@ export function BookScreen() {
         ) : null}
       </div>
 
-      {openSpell === null || draft !== null ? null : (
+      {openSpell === null || openRow === null || draft !== null ? null : (
         <SpellCardDetails
           spell={openSpell}
+          row={openRow}
+          casting={casting}
           character={character}
           economy={economy}
           note={character.spellNotes[openSpell.id]}

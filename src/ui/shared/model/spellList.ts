@@ -4,17 +4,23 @@
  * Отбор живёт здесь, а не в компоненте, по той же причине, что и фильтры: список в бою и список в
  * мастере применения обязаны считаться одной функцией, иначе они разойдутся и приложению перестанут
  * верить.
+ *
+ * Правил здесь нет ни одного: применимость, цена и роль приезжают строкой проекции, а этот модуль
+ * решает, что показать и в каком порядке.
  */
 
-import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { type Spell } from "@/core/domain/catalog/spell";
-import type { CombatRole } from "@/core/domain/catalog/combatRole";
-import type { ScreenMode } from "@/ui/shared/model/screenMode";
-import { castableInSituation } from "@/core/application/casting/castOptions";
+import type { SpellRowView } from "@/contract/views";
 
-/** Порядок ролей внутри одной цены: сначала чем бить, потом чем закрыться, потом всё прочее. */
-const ROLE_ORDER: Record<CombatRole, number> = { offense: 0, defense: 1, other: 2 };
+import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
+import type { ScreenMode } from "@/ui/shared/model/screenMode";
+
+/**
+ * Порядок ролей внутри одной цены: сначала чем бить, потом чем закрыться, потом всё прочее.
+ *
+ * Списком, а не словарём: место роли — её номер в нём, и роль, которой в списке нет, встаёт перед
+ * всеми, не заводя ветки на случай, которого правила не знают.
+ */
+const ROLE_ORDER = ["offense", "defense", "other"];
 
 /**
  * Место строки в списке: сначала цена, потом роль.
@@ -24,7 +30,7 @@ const ROLE_ORDER: Record<CombatRole, number> = { offense: 0, defense: 1, other: 
  * половине случаев ключ ничего не упорядочивал.
  */
 export function orderKey(traits: ActionTraits): [number, number] {
-  return [traits.level, ROLE_ORDER[traits.role]];
+  return [traits.level, ROLE_ORDER.indexOf(traits.role)];
 }
 
 /**
@@ -39,10 +45,8 @@ export function compareTraits(left: ActionTraits, right: ActionTraits): number {
 }
 
 /** Порядок списка «Игры». Внутри равных ключей порядок исходный: он задан книгой. */
-export function orderForPlay(spells: readonly Spell[], inFight: boolean): Spell[] {
-  return [...spells].sort((left, right) =>
-    compareTraits(traitsOf(left, inFight), traitsOf(right, inFight)),
-  );
+export function orderForPlay(spells: readonly SpellRowView[]): SpellRowView[] {
+  return [...spells].sort((left, right) => compareTraits(traitsOf(left), traitsOf(right)));
 }
 
 /**
@@ -50,15 +54,14 @@ export function orderForPlay(spells: readonly Spell[], inFight: boolean): Spell[
  * проверка на оба списка поставила бы её не туда.
  */
 export function positionInList(
-  spells: readonly Spell[],
+  spells: readonly SpellRowView[],
   traits: ActionTraits,
   mode: ScreenMode,
-  inFight: boolean,
 ): number {
   const standsAfter =
     mode === "play"
-      ? (spell: Spell) => compareTraits(traitsOf(spell, inFight), traits) > 0
-      : (spell: Spell) => spell.level > traits.level;
+      ? (spell: SpellRowView) => compareTraits(traitsOf(spell), traits) > 0
+      : (spell: SpellRowView) => spell.level > traits.level;
   const index = spells.findIndex(standsAfter);
   return index === -1 ? spells.length : index;
 }
@@ -67,23 +70,15 @@ export function positionInList(
  * Что показывать на экране.
  *
  * «Книга» показывает весь состав в исходном порядке: там смотрят состав, а не то, чем сходить.
- * «Игра» отбирает по тому, что персонаж может сотворить сейчас, и упорядочивает ценой. Там, где
- * списка нет вовсе, он пуст.
+ * «Игра» отбирает применимое в этой обстановке и упорядочивает ценой. Там, где списка нет вовсе,
+ * он пуст.
  */
-export function spellsForScreen(
-  spells: readonly Spell[],
-  character: CharacterState,
-  mode: ScreenMode,
-  inFight: boolean,
-): Spell[] {
+export function spellsForScreen(spells: readonly SpellRowView[], mode: ScreenMode): SpellRowView[] {
   switch (mode) {
     case "book":
       return [...spells];
     case "play":
-      return orderForPlay(
-        spells.filter((spell) => castableInSituation(spell, character, inFight)),
-        inFight,
-      );
+      return orderForPlay(spells.filter((spell) => spell.castableNow));
     default:
       return [];
   }

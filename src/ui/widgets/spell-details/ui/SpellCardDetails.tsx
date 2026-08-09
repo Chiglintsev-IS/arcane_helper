@@ -11,12 +11,13 @@
 
 "use client";
 
-import { Character } from "@/core/domain/assembly/character";
 import { useState } from "react";
+
+import type { CastingView, SpellRowView } from "@/contract/views";
 
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import {
-  CASTING_TIME,
+  castingTimeBadge,
   castingTimeLabel,
   castingTimePhrase,
   durationLabel,
@@ -30,7 +31,6 @@ import { Badge } from "@/ui/shared/ui/Badge";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
-import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import { bestCastPlan, type CastOption } from "@/core/application/casting/castOptions";
 import type { TurnResources } from "@/core/application/casting/availability";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
@@ -56,6 +56,8 @@ function FALLBACK_OPTION(spell: Spell): CastOption {
 
 export function SpellCardDetails({
   spell,
+  row,
+  casting,
   character,
   economy,
   note,
@@ -64,6 +66,15 @@ export function SpellCardDetails({
   onClose,
 }: {
   spell: Spell;
+  /**
+   * Уже посчитанное про это заклинание: цена, урон, доступность.
+   *
+   * Рядом с карточкой, а не вместо неё, потому что своей проекции у подробностей ещё нет — она
+   * приходит вместе с мастером применения. Карточка уйдёт отсюда вместе с ней.
+   */
+  row: SpellRowView;
+  /** Числа заклинателя: ими называется бросок. */
+  casting: CastingView;
   character: CharacterState;
   /** Признаки хода: способ сотворения зависит от них — в бою ритуала среди способов нет. */
   economy: TurnResources;
@@ -73,8 +84,8 @@ export function SpellCardDetails({
   onClose: () => void;
 }) {
   const [diagramOpen, setDiagramOpen] = useState(false);
-  const castingTime = CASTING_TIME[spell.castingTime.type];
-  const slotCost = slotCostLabel(spell);
+  const castingTime = castingTimeBadge(spell.castingTime.type);
+  const slotCost = slotCostLabel(row);
   // Способ выбирает ядро — то же, что предложит мастер применения. Карточка, выбиравшая сама,
   // показывала в бою ритуал, которого мастер уже не предлагает.
   const option = bestCastPlan(spell, character, economy)?.option ?? FALLBACK_OPTION(spell);
@@ -83,14 +94,7 @@ export function SpellCardDetails({
   const instructions = castInstructions(spell, announcementContext);
   // Отсутствие цели — решение, а не пробел: мастер её не спрашивает.
   const shownGaps = announcement.gaps.filter((gap) => gap.placeholder !== "target");
-  const damage =
-    spell.damage === undefined
-      ? null
-      : effectiveDamage(spell.damage, {
-          spellLevel: spell.level,
-          slotLevel: spell.level,
-          characterLevel: character.level,
-        });
+  const damage = row.damage?.formula ?? null;
 
   return (
     <section
@@ -161,7 +165,7 @@ export function SpellCardDetails({
           <Row label="Цель">{targetingLabel(spell.targeting)}</Row>
           {spell.area === undefined ? null : <Row label="Область">{areaLabel(spell.area)}</Row>}
           <Row label="Разрешение">
-            {resolutionBadge(spell.resolution, Character.of(character).sheet).label}
+            {resolutionBadge(spell.resolution, casting).label}
           </Row>
           {damage === null ? null : (
             <Row label="Урон">

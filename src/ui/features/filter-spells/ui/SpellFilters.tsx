@@ -14,20 +14,19 @@
  */
 
 import { TONE_CLASS } from "@/ui/shared/ui/tone";
-import { CASTING_TIME, COMBAT_ROLE, levelChipLabel } from "@/ui/entities/spell/lib/format";
-import type { CombatRole } from "@/core/domain/catalog/combatRole";
+import { castingTimeBadge, combatRole, levelChipLabel } from "@/ui/entities/spell/lib/format";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
 import { type SpellFilters as Filters, type DividingCategories } from "@/ui/features/filter-spells/model/filters";
-import { toggleValue, type CastingTimeFilter } from "@/ui/features/filter-spells/model/filters";
+import { toggleValue } from "@/ui/features/filter-spells/model/filters";
 
 /** Порядок переключателей времени накладывания. Показываются не все — только делящие список. */
-const CASTING_TIME_FILTERS: CastingTimeFilter[] = ["action", "bonus_action", "reaction"];
+const CASTING_TIME_FILTERS = ["action", "bonus_action", "reaction"];
 
 /**
  * Роли, по которым отбирают. «Другое» переключателя не получает: оно означает «ни то, ни другое», и
  * фильтр по нему отвечал бы на вопрос, которого в бою не задают.
  */
-const ROLE_FILTERS: CombatRole[] = ["offense", "defense"];
+const ROLE_FILTERS = ["offense", "defense"];
 
 function Toggle({
   pressed,
@@ -89,24 +88,24 @@ export function SpellFilters({
           <Toggle
             key={value}
             pressed={filters.castingTimes.includes(value)}
-            tone={CASTING_TIME[value].tone}
-            icon={CASTING_TIME[value].icon}
+            tone={castingTimeBadge(value).tone}
+            icon={castingTimeBadge(value).icon}
             onClick={() =>
               onChange({ ...filters, castingTimes: toggleValue(filters.castingTimes, value) })
             }
           >
-            {CASTING_TIME[value].label}
+            {castingTimeBadge(value).label}
           </Toggle>
         ))}
         {roles.map((value) => (
           <Toggle
             key={value}
             pressed={filters.roles.includes(value)}
-            tone={COMBAT_ROLE[value].tone}
-            {...(COMBAT_ROLE[value].icon === undefined ? {} : { icon: COMBAT_ROLE[value].icon })}
+            tone={combatRole(value).tone}
+            {...(combatRole(value).icon === undefined ? {} : { icon: combatRole(value).icon })}
             onClick={() => onChange({ ...filters, roles: toggleValue(filters.roles, value) })}
           >
-            {COMBAT_ROLE[value].label}
+            {combatRole(value).label}
           </Toggle>
         ))}
         {dividing.concentration ? (

@@ -10,13 +10,13 @@
  * список, обещавший «вот всё, что подходит», врал.
  */
 
-import { Character } from "@/core/domain/assembly/character";
+import type { CastingView } from "@/contract/views";
 import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { Fragment } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
-import { COMBAT_ROLE } from "@/ui/entities/spell/lib/format";
+import { combatRole } from "@/ui/entities/spell/lib/format";
 import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { ascensionTierRate } from "@/core/domain/arcana/slots";
@@ -26,10 +26,13 @@ import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 
 export function BloodMagicRow({
   character,
+  casting,
   economy,
   onOpen,
 }: {
   character: CharacterState;
+  /** Числа заклинателя: обмен называет их тем же значком, что и заклинание. */
+  casting: CastingView;
   economy: TurnEconomy;
   onOpen: () => void;
 }) {
@@ -48,7 +51,7 @@ export function BloodMagicRow({
 
   // Обмен хитов на очки не бросает ничего, и говорит об этом тем же значком, что заклинание:
   // собственная подпись здесь однажды разошлась со словом заклинания.
-  const resolution = resolutionBadge({ type: "automatic" }, Character.of(character).sheet);
+  const resolution = resolutionBadge({ type: "automatic" }, casting);
 
   return (
     <li>
@@ -62,7 +65,7 @@ export function BloodMagicRow({
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">Магия крови</span>
           <span className="shrink-0 text-[0.625rem] text-slate-500">
-            {COMBAT_ROLE[BLOOD_MAGIC_TRAITS.role].label}
+            {combatRole(BLOOD_MAGIC_TRAITS.role).label}
           </span>
         </span>
 
