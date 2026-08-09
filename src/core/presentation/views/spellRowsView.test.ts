@@ -133,13 +133,39 @@ describe("числа под этого персонажа", () => {
     expect(row("mage-armor", createThorne(), cast).active).toBe(true);
   });
 
+  it("защита с этим заклинанием считается заранее, а без вклада её нет вовсе", () => {
+    // «Доспехи мага» назначают КД 13 + Ловкость; у Торна с надетым он не падает ниже своего.
+    expect(row("mage-armor").armorClassIfCast).toBeGreaterThan(0);
+    expect(row("ray-of-frost").armorClassIfCast).toBeUndefined();
+  });
+
   it("числа заклинателя стоят раз на персонажа, а не при каждой строке", () => {
     expect(toCastingView(createThorne())).toEqual({
       spellAttackModifier: 8,
       spellSaveDc: 16,
+      spellcastingModifier: 4,
       preparedLimit: 11,
       preparedCount: createThorne().preparedSpellIds.length,
     });
+  });
+});
+
+describe("что сделать и как объявить", () => {
+  it("собираются тем же способом, что предложит мастер применения", () => {
+    // Вне боя «Обнаружение магии» творится ритуалом — и объявление, и шаги говорят про него.
+    expect(row("detect-magic").instructions.join(" ")).toContain("10 минут");
+    expect(row("detect-magic", createThorne(), START).instructions.join(" ")).toContain("ячейка");
+  });
+
+  it("объявление называет числа этого персонажа", () => {
+    expect(row("ray-of-frost").announcement.text).toContain("8");
+  });
+
+  it("незаполненное в объявлении названо, а не замолчано", () => {
+    const gaps = row("ray-of-frost").announcement.gaps;
+
+    expect(gaps.some((gap) => gap.placeholder === "target")).toBe(true);
+    expect(gaps.every((gap) => gap.reasonRu !== "")).toBe(true);
   });
 });
 

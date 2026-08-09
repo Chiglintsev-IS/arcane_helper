@@ -10,8 +10,7 @@
 
 "use client";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { slotsInOrder } from "@/core/domain/arcana/slots";
+import type { ResourcesView } from "@/contract/views";
 
 function Stepper({
   label,
@@ -57,14 +56,14 @@ function Stepper({
 }
 
 export function ResourcesSheet({
-  character,
+  resources,
   onSpendSlot,
   onRefundSlot,
   onAdjustRunes,
   onSunlight,
   onClose,
 }: {
-  character: CharacterState;
+  resources: ResourcesView;
   onSpendSlot: (level: number) => void;
   onRefundSlot: (level: number) => void;
   onAdjustRunes: (delta: number) => void;
@@ -72,7 +71,7 @@ export function ResourcesSheet({
   onSunlight: (under: boolean) => void;
   onClose: () => void;
 }) {
-  const slots = slotsInOrder(character.spellSlots);
+  const { runes, suppression } = resources;
 
   return (
     <section
@@ -87,7 +86,7 @@ export function ResourcesSheet({
       </p>
 
       <ul aria-label="Ячейки" className="flex flex-col gap-1">
-        {slots.map((slot) => (
+        {resources.slots.map((slot) => (
           <Stepper
             key={slot.level}
             label={`Ячейка ${slot.level} ур.`}
@@ -103,11 +102,11 @@ export function ResourcesSheet({
       <ul aria-label="Руны" className="flex flex-col gap-1">
         <Stepper
           label="Руны"
-          value={`${character.runes.remaining}/${character.runes.maximum}`}
+          value={`${runes.remaining}/${runes.maximum}`}
           onMinus={() => onAdjustRunes(-1)}
           onPlus={() => onAdjustRunes(1)}
-          minusDisabled={character.runes.remaining <= 0}
-          plusDisabled={character.runes.remaining >= character.runes.maximum}
+          minusDisabled={runes.remaining <= 0}
+          plusDisabled={runes.remaining >= runes.maximum}
         />
       </ul>
 
@@ -120,10 +119,10 @@ export function ResourcesSheet({
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Состояния</h3>
         <button
           type="button"
-          aria-pressed={character.suppression.underDirectSunlight}
-          onClick={() => onSunlight(!character.suppression.underDirectSunlight)}
+          aria-pressed={suppression.underDirectSunlight}
+          onClick={() => onSunlight(!suppression.underDirectSunlight)}
           className={`min-h-11 rounded-xl border px-3 text-sm ${
-            character.suppression.underDirectSunlight
+            suppression.underDirectSunlight
               ? "border-reaction bg-reaction/10 font-medium text-reaction-strong dark:text-reaction"
               : "border-slate-200 dark:border-slate-800"
           }`}

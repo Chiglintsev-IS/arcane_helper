@@ -11,7 +11,7 @@ import {
 
 /** Числа заклинателя в том объёме, в каком их читает подпись. */
 function numbers(known: Pick<CastingView, "spellSaveDc" | "spellAttackModifier">): CastingView {
-  return { ...known, preparedLimit: 11, preparedCount: 0 };
+  return { ...known, spellcastingModifier: 4, preparedLimit: 11, preparedCount: 0 };
 }
 
 /** Числа Торна: оба включают +1 от предмета, и книга их не знает. */

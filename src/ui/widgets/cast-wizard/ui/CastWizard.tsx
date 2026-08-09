@@ -2,6 +2,8 @@
 
 "use client";
 
+import type { CastingView } from "@/contract/views";
+
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { useState } from "react";
 
@@ -19,8 +21,6 @@ import { castOptions, type CastOption } from "@/core/application/casting/castOpt
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import { hitPointCost, spellPointCost } from "@/core/domain/arcana/slots";
-import { Character } from "@/core/domain/assembly/character";
-import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import {
   hitDiceRollRange,
   isPossibleHitDiceRoll,
@@ -280,11 +280,14 @@ function SlotStep({
 function HitDiceStep({
   draft,
   character,
+  casting,
   onCount,
   onRolled,
 }: {
   draft: CastDraft;
   character: CharacterState;
+  /** Числа заклинателя: прибавка к броску костей — его модификатор, а не число этой карточки. */
+  casting: CastingView;
   onCount: (count: number) => void;
   onRolled: (rolled: number | null) => void;
 }) {
@@ -308,7 +311,7 @@ function HitDiceStep({
 
   const count = draft.hitDiceCount;
   const size = pool?.size ?? 0;
-  const modifier = cost.addsSpellcastingModifier ? Character.of(character).sheet.abilityModifier(SPELLCASTING_ABILITY) : 0;
+  const modifier = cost.addsSpellcastingModifier ? casting.spellcastingModifier : 0;
   const rolled = draft.hitDiceRolled;
   const range = count === null ? null : hitDiceRollRange(count, size);
   const outOfRange =
@@ -555,11 +558,13 @@ function SummaryStep({
 
 export function CastWizard({
   character,
+  casting,
   economy,
   onConfirm,
   error,
 }: {
   character: CharacterState;
+  casting: CastingView;
   economy: TurnEconomy;
   /** Подтверждение: единственное действие мастера, меняющее состояние персонажа. */
   onConfirm: (draft: CastDraft) => void;
@@ -671,6 +676,7 @@ export function CastWizard({
         <HitDiceStep
           draft={draft}
           character={character}
+          casting={casting}
           onCount={(count) => actions.setHitDiceCount(count)}
           onRolled={(rolled) => actions.setHitDiceRolled(rolled)}
         />

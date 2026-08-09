@@ -13,10 +13,10 @@
 
 import { useState } from "react";
 
+import type { SpellRowView } from "@/contract/views";
+
 import { Badge } from "@/ui/shared/ui/Badge";
-import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { Character } from "@/core/domain/assembly/character";
 import {
   availableTriggers,
   reactionsFor,
@@ -24,16 +24,11 @@ import {
   type ReactionTrigger,
 } from "@/core/domain/catalog/reactions";
 
-/** Что изменится в числах, если применить реакцию. Пусто — числа она не трогает. */
-function outcome(spell: Spell, character: CharacterState): string | null {
-  if (spell.contributions.length === 0) return null;
-  const root = Character.of(character);
-  return `КД ${root.sheetWith(spell).value("armorClass")} вместо ${root.sheet.value("armorClass")}`;
-}
-
 export function ReactionsSheet({
   spells,
-  character,
+  rows,
+  armorClass,
+  runesRemaining,
   reactionAvailable,
   runeAvailable,
   onCast,
@@ -41,7 +36,10 @@ export function ReactionsSheet({
   onClose,
 }: {
   spells: readonly Spell[];
-  character: CharacterState;
+  /** Строки тех же заклинаний: изменённое число приходит посчитанным, а не складывается здесь. */
+  rows: readonly SpellRowView[];
+  armorClass: number;
+  runesRemaining: number;
   reactionAvailable: boolean;
   /** Есть ли чем ответить на провал спасброска: руна и нерастраченная реакция. */
   runeAvailable: boolean;
@@ -103,7 +101,7 @@ export function ReactionsSheet({
             onClick={onSpendRune}
             className="min-h-11 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            Потратить руну · осталось {character.runes.remaining}
+            Потратить руну · осталось {runesRemaining}
           </button>
         </div>
       ) : null}
@@ -111,7 +109,7 @@ export function ReactionsSheet({
       {trigger === null || trigger === "failed_save" ? null : (
         <ul aria-label="Подходящие реакции" className="flex flex-col gap-2">
           {matching.map((spell) => {
-            const changed = outcome(spell, character);
+            const changed = rows.find((row) => row.id === spell.id)?.armorClassIfCast;
             return (
               <li key={spell.id}>
                 <button
@@ -124,9 +122,9 @@ export function ReactionsSheet({
                     {spell.castingTime.reactionTrigger}
                   </span>
                   <span className="flex flex-wrap items-center gap-1">
-                    {changed === null ? null : (
+                    {changed === undefined ? null : (
                       <Badge tone="reaction" icon="▲">
-                        {changed}
+                        КД {changed} вместо {armorClass}
                       </Badge>
                     )}
                     <Badge tone="muted" icon="◎">

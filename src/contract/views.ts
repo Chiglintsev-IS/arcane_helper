@@ -217,6 +217,21 @@ export const spellRowViewSchema = z.object({
   active: z.boolean(),
   /** Урон с учётом уровня персонажа: формула и её род. */
   damage: z.object({ formula: word, type: word }).optional(),
+  /** Каким станет Класс Доспеха, если сотворить; нет вовсе — защиты заклинание не трогает. */
+  armorClassIfCast: whole.optional(),
+
+  /**
+   * Что сделать и что сказать мастеру — способом, который предложит мастер применения.
+   *
+   * Едет со строкой, а не отдельным ответом на «расскажи про это заклинание»: способ выбирают
+   * правила, и спросить их дважды значит однажды получить два разных ответа на один вопрос.
+   */
+  instructions: z.array(word),
+  announcement: z.object({
+    text: word,
+    /** Чего в объявлении не хватает и почему: пробел назван, а не замолчан. */
+    gaps: z.array(z.object({ placeholder: word.optional(), reasonRu: word })),
+  }),
 });
 
 /**
@@ -273,6 +288,8 @@ export const concentrationViewSchema = z.object({
 export const castingViewSchema = z.object({
   spellAttackModifier: whole,
   spellSaveDc: whole,
+  /** Модификатор заклинательной характеристики: им прибавляют к броскам, которые называет карточка. */
+  spellcastingModifier: whole,
   /** Сколько заклинаний он вправе держать подготовленными и сколько держит. */
   preparedLimit: whole,
   preparedCount: whole,

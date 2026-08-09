@@ -224,8 +224,6 @@ export function GameScreen() {
           spell={openSpell}
           row={openRow}
           casting={casting}
-          character={character}
-          economy={economy}
           note={character.spellNotes[openSpell.id]}
           onCast={() => draftStore.getState().start(openSpell, context)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
@@ -300,7 +298,7 @@ export function GameScreen() {
 
       {resourcesOpen ? (
         <ResourcesSheet
-          character={character}
+          resources={snapshot.resources}
           onSpendSlot={(level) => void execute({ kind: "spend_spell_slot", slotLevel: level })}
           onRefundSlot={(level) => void execute({ kind: "refund_spell_slot", slotLevel: level })}
           onAdjustRunes={(delta) => void execute({ kind: "adjust_runes", delta })}
@@ -312,7 +310,9 @@ export function GameScreen() {
       {reactionsOpen ? (
         <ReactionsSheet
           spells={reactionSpells}
-          character={character}
+          rows={snapshot.spells}
+          armorClass={snapshot.sheet.armorClass.value}
+          runesRemaining={snapshot.resources.runes.remaining}
           reactionAvailable={economy.reactionAvailable}
           runeAvailable={wardingSigilAvailable(session)}
           onCast={(spell) => {
@@ -371,7 +371,13 @@ export function GameScreen() {
         />
       )}
 
-      <CastWizard character={character} economy={economy} onConfirm={confirm} error={error} />
+      <CastWizard
+        character={character}
+        casting={casting}
+        economy={economy}
+        onConfirm={confirm}
+        error={error}
+      />
     </div>
   );
 }

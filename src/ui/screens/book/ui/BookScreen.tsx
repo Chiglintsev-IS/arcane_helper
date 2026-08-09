@@ -117,8 +117,6 @@ export function BookScreen() {
           spell={openSpell}
           row={openRow}
           casting={casting}
-          character={character}
-          economy={economy}
           note={character.spellNotes[openSpell.id]}
           onCast={() => draftStore.getState().start(openSpell, context)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
@@ -143,7 +141,13 @@ export function BookScreen() {
         />
       ) : null}
 
-      <CastWizard character={character} economy={economy} onConfirm={confirm} error={error} />
+      <CastWizard
+        character={character}
+        casting={casting}
+        economy={economy}
+        onConfirm={confirm}
+        error={error}
+      />
     </div>
   );
 }

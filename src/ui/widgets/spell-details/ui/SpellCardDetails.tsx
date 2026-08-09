@@ -28,12 +28,7 @@ import {
 import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
-import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
-import { bestCastPlan, type CastOption } from "@/core/application/casting/castOptions";
-import type { TurnResources } from "@/core/application/casting/availability";
-import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -44,22 +39,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/**
- * Способ для карточки заклинания, которое сотворить нечем вовсе: уровень, до ячеек которого
- * персонаж не дорос, и очками он не оплачивается. Объявление всё равно должно называть уровень —
- * иначе карточка молчит о том, что читают ради него.
- */
-function FALLBACK_OPTION(spell: Spell): CastOption {
-  if (spell.level === CANTRIP_LEVEL) return { mode: "cantrip", payment: { kind: "none" } };
-  return { mode: "normal", payment: { kind: "slot", slotLevel: spell.level } };
-}
-
 export function SpellCardDetails({
   spell,
   row,
   casting,
-  character,
-  economy,
   note,
   onCast,
   onNoteChange,
@@ -67,17 +50,15 @@ export function SpellCardDetails({
 }: {
   spell: Spell;
   /**
-   * Уже посчитанное про это заклинание: цена, урон, доступность.
+   * Уже посчитанное про это заклинание: цена, урон, доступность, что сделать и как объявить.
    *
-   * Рядом с карточкой, а не вместо неё, потому что своей проекции у подробностей ещё нет — она
-   * приходит вместе с мастером применения. Карточка уйдёт отсюда вместе с ней.
+   * Рядом с карточкой, а не вместо неё, потому что художественный текст, полные правила и схема
+   * ритуала — содержимое контента, а не производные правил. Карточка уйдёт отсюда вместе с
+   * временной дверью.
    */
   row: SpellRowView;
   /** Числа заклинателя: ими называется бросок. */
   casting: CastingView;
-  character: CharacterState;
-  /** Признаки хода: способ сотворения зависит от них — в бою ритуала среди способов нет. */
-  economy: TurnResources;
   note: string | undefined;
   onCast: () => void;
   onNoteChange: (note: string) => void;
@@ -86,14 +67,8 @@ export function SpellCardDetails({
   const [diagramOpen, setDiagramOpen] = useState(false);
   const castingTime = castingTimeBadge(spell.castingTime.type);
   const slotCost = slotCostLabel(row);
-  // Способ выбирает ядро — то же, что предложит мастер применения. Карточка, выбиравшая сама,
-  // показывала в бою ритуал, которого мастер уже не предлагает.
-  const option = bestCastPlan(spell, character, economy)?.option ?? FALLBACK_OPTION(spell);
-  const announcementContext = { character, ...option };
-  const announcement = renderAnnouncement(spell, announcementContext);
-  const instructions = castInstructions(spell, announcementContext);
   // Отсутствие цели — решение, а не пробел: мастер её не спрашивает.
-  const shownGaps = announcement.gaps.filter((gap) => gap.placeholder !== "target");
+  const shownGaps = row.announcement.gaps.filter((gap) => gap.placeholder !== "target");
   const damage = row.damage?.formula ?? null;
 
   return (
@@ -148,7 +123,7 @@ export function SpellCardDetails({
         <section aria-label="Что сделать" className="flex flex-col gap-1">
           <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
           <ul className="flex flex-col gap-1 text-sm">
-            {instructions.map((step) => (
+            {row.instructions.map((step) => (
               <li key={step} className="rounded-md border border-slate-200 px-2 py-1 dark:border-slate-800">
                 {step}
               </li>
@@ -188,7 +163,7 @@ export function SpellCardDetails({
 
         <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
           <summary className="cursor-pointer text-sm font-medium">Как объявить</summary>
-          <p className="mt-2 text-sm">{announcement.text}</p>
+          <p className="mt-2 text-sm">{row.announcement.text}</p>
           {shownGaps.length === 0 ? null : (
             <ul className="mt-2 flex flex-col gap-1 text-xs text-slate-500">
               {shownGaps.map((gap) => (
