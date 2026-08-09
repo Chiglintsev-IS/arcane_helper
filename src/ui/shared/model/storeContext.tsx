@@ -2,7 +2,7 @@
  * Доступ к сторам из компонентов.
  *
  * Контекст живёт в общем слое, потому что читают его все: экран, виджет и фича. Создание сторов —
- * наоборот, дело слоя приложения: только он знает, какое хранилище и какие часы подставить.
+ * наоборот, дело слоя приложения: только он знает, каким проводом дотянуться до ядра.
  */
 
 "use client";
@@ -14,16 +14,15 @@ import type { StoreApi } from "zustand/vanilla";
 import type { SessionStoreState } from "@/ui/entities/session/model/sessionStore";
 import type { CastDraftState } from "@/ui/features/cast-spell/model/castDraftStore";
 
+/**
+ * Сторы приложения: зеркало ядра и черновик мастера.
+ *
+ * Часов здесь нет: время выгрузки и записей журнала ставит ядро, а показывающему оно не нужно ни
+ * для чего.
+ */
 export type AppStores = {
   session: StoreApi<SessionStoreState>;
   draft: StoreApi<CastDraftState>;
-  /**
-   * Часы приложения: время, которым помечается выгруженный файл.
-   *
-   * Игрового состояния ими не меняют — время записей журнала ставит ядро. Здесь оно нужно ровно
-   * затем, зачем и всякому файлу: чтобы игрок узнал свою выгрузку среди прочих.
-   */
-  now: () => string;
 };
 
 export const StoresContext = createContext<AppStores | null>(null);

@@ -14,8 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { deriveTurnEconomy } from "@/core/application/useCases/turn";
-import { renderWithStores, spell } from "@/ui/app/testing/stores";
+import { renderWithStores, shown, slotsLeft, spell } from "@/ui/app/testing/stores";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import {
   withBloodExchange,
@@ -68,7 +67,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 
   it("вне боя не показывает экономию действий (FR-001, FR-143)", async () => {
-    // Вне боя ходов нет: deriveTurnEconomy вернул бы «всё доступно» независимо от журнала, и
+    // Вне боя ходов нет: правила отвечают «всё доступно» независимо от журнала, и
     // значки сообщали бы не состояние, а неправду.
     await renderWithStores(<GameScreen />);
 
@@ -133,8 +132,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const session = stores.session.getState().session!;
-    expect(deriveTurnEconomy(session).reactionAvailable).toBe(false);
+    expect(shown(stores).turn.reactionAvailable).toBe(false);
     const spent = screen.getByLabelText("Реакция израсходована");
     expect(within(spent).getByText("Реакция")).toBeDefined();
   });
@@ -366,7 +364,7 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня: 2 из 4/ }));
     await user.click(screen.getByRole("button", { name: "Вернуть: Ячейка 1 ур." }));
 
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
+    expect(slotsLeft(stores, 1)).toBe(3);
   });
 
   it("за границы пула правка не пускает", async () => {
@@ -429,7 +427,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
 
     expect(screen.getByRole("dialog", { name: /Применение/ })).toBeDefined();
     // До подтверждения состояние не тронуто.
-    expect(stores.session.getState().session?.journal).toHaveLength(0);
+    expect(shown(stores).journal).toHaveLength(0);
   });
 
   it("израсходованная реакция не прячет варианты, а объясняет причину (FR-031)", async () => {
@@ -463,8 +461,8 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     await user.click(screen.getByRole("radio", { name: "Я провалил спасбросок" }));
     await user.click(screen.getByRole("button", { name: /Потратить руну/ }));
 
-    expect(stores.session.getState().session?.character.runes.remaining).toBe(2);
-    expect(deriveTurnEconomy(stores.session.getState().session!).reactionAvailable).toBe(false);
+    expect(shown(stores).resources.runes.remaining).toBe(2);
+    expect(shown(stores).turn.reactionAvailable).toBe(false);
   });
 
 });
@@ -481,7 +479,7 @@ describe("конец боя (FR-216, FR-221)", () => {
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
     await user.click(screen.getByRole("button", { name: "Окончить бой" }));
     await user.click(screen.getByRole("button", { name: "Да, бой закончен" }));
-    expect(stores.session.getState().session?.character.hitPoints.current).toBe(30);
+    expect(shown(stores).sheet.hitPoints.current).toBe(30);
   });
 
   it("«нет, продолжается» ничего не меняет", async () => {
@@ -493,8 +491,8 @@ describe("конец боя (FR-216, FR-221)", () => {
     await user.click(screen.getByRole("button", { name: "Нет, продолжается" }));
 
     // 15, а не 12: начало боя — это первый ход, и регенерация тролля на нём сработала.
-    expect(stores.session.getState().session?.character.hitPoints.current).toBe(15);
-    expect(stores.session.getState().session?.journal.at(-1)?.kind).toBe("combat_started");
+    expect(shown(stores).sheet.hitPoints.current).toBe(15);
+    expect(shown(stores).journal.at(-1)?.kind).toBe("combat_started");
   });
 
   it("при полном здоровье бой всё равно можно закончить, но лечения не обещает", async () => {
@@ -510,7 +508,7 @@ describe("конец боя (FR-216, FR-221)", () => {
     expect(within(sheet).queryByText(/здоровье поднимется/)).toBeNull();
 
     await user.click(within(sheet).getByRole("button", { name: "Да, бой закончен" }));
-    expect(stores.session.getState().session?.journal.at(-1)?.kind).toBe("combat_ended");
+    expect(shown(stores).journal.at(-1)?.kind).toBe("combat_ended");
   });
 
   it("отметки схватки (FR-221)", async () => {
@@ -642,7 +640,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 
     await user.click(screen.getByRole("button", { name: "Новый ход" }));
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
-    expect(deriveTurnEconomy(stores.session.getState().session!).actionAvailable).toBe(true);
+    expect(shown(stores).turn.actionAvailable).toBe(true);
   });
 
   it("«Щит» сам исчезает с началом следующего хода, КД возвращается к 14 (FR-094)", async () => {
@@ -708,8 +706,8 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     await user.click(screen.getByRole("button", { name: /Щит/ }));
     await user.type(screen.getByLabelText("Заметка"), "гасит и стрелу");
 
-    expect(stores.session.getState().session?.character.spellNotes.shield).toBe("гасит и стрелу");
-    expect(stores.session.getState().session?.journal).toHaveLength(0);
+    expect(shown(stores).spells.find((row) => row.id === "shield")?.note).toBe("гасит и стрелу");
+    expect(shown(stores).journal).toHaveLength(0);
   });
 
 });
@@ -736,7 +734,7 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
     await user.click(screen.getByRole("button", { name: "Под прямым солнечным светом" }));
 
-    expect(stores.session.getState().session?.character.suppression.underDirectSunlight).toBe(true);
+    expect(shown(stores).resources.suppression.underDirectSunlight).toBe(true);
   });
 
   it("включённый признак виден значком в шапке, а не только внутри листа", async () => {
@@ -763,7 +761,7 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
     await user.click(screen.getByRole("button", { name: "Под прямым солнечным светом" }));
 
-    expect(stores.session.getState().session?.character.suppression.underDirectSunlight).toBe(
+    expect(shown(stores).resources.suppression.underDirectSunlight).toBe(
       false,
     );
   });

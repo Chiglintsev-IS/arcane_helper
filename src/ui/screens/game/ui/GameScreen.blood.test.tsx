@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { renderWithStores } from "@/ui/app/testing/stores";
+import { renderWithStores, shown } from "@/ui/app/testing/stores";
 import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 async function openWizard(character: CharacterState = createThorne()) {
@@ -40,15 +40,14 @@ describe("инвариант FR-022 для обмена (FR-177)", () => {
     await user.click(screen.getByRole("button", { name: "Больше очков" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
-    const character = stores.session.getState().session?.character;
-    expect(character?.hitPoints).toEqual({
+    expect(shown(stores).sheet.hitPoints).toMatchObject({
       current: 60,
       maximumBase: 60,
       bloodReduction: 0,
       masterReduction: 0,
     });
-    expect(character?.spellPoints.remaining).toBe(0);
-    expect(stores.session.getState().session?.journal.at(-1)?.kind).not.toBe(
+    expect(shown(stores).resources.spellPoints).toBe(0);
+    expect(shown(stores).journal.at(-1)?.kind).not.toBe(
       "blood_exchange",
     );
   });
@@ -59,32 +58,41 @@ describe("инвариант FR-022 для обмена (FR-177)", () => {
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
     expect(screen.queryByLabelText("Магия крови")).toBeNull();
-    expect(stores.session.getState().session?.character.hitPoints.current).toBe(
+    expect(shown(stores).sheet.hitPoints.current).toBe(
       60,
     );
   });
 });
 
 describe("подтверждение обмена (FR-170, FR-172)", () => {
-  it("списывает хиты и максимум, начисляет очки и тратит действие", async () => {
+  it("списывает хиты и максимум, начисляет очки", async () => {
     const { user, stores } = await openWizard();
 
     // Бой не начат нарочно — см. комментарий в инварианте выше.
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const character = stores.session.getState().session?.character;
     // По умолчанию два очка: меньше не покупает ничего. Курс ступени 5–8 — 3 хита за очко.
-    expect(character?.hitPoints).toEqual({
+    expect(shown(stores).sheet.hitPoints).toMatchObject({
       current: 54,
       maximumBase: 60,
       bloodReduction: 6,
       masterReduction: 0,
     });
-    expect(character?.spellPoints.remaining).toBe(2);
-    expect(stores.session.getState().session?.journal.at(-1)?.actionUsed).toBe(
-      "action",
-    );
+    expect(shown(stores).resources.spellPoints).toBe(2);
+  });
+
+  it("в бою обмен тратит действие", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<GameScreen />, createThorne(), {
+      inFight: true,
+    });
+
+    await user.click(screen.getByRole("button", { name: /Магия крови/ }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(shown(stores).turn.actionAvailable).toBe(false);
   });
 
   it("закрывает мастер после подтверждения", async () => {
@@ -123,7 +131,7 @@ describe("выбор объёма (FR-178)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(
-      stores.session.getState().session?.character.spellPoints.remaining,
+      shown(stores).resources.spellPoints,
     ).toBe(4);
   });
 
@@ -183,7 +191,7 @@ describe("предупреждения (FR-031, FR-175, FR-176)", () => {
     expect(screen.getByText(/Хиты уйдут в ноль/)).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-    expect(stores.session.getState().session?.character.hitPoints.current).toBe(
+    expect(shown(stores).sheet.hitPoints.current).toBe(
       0,
     );
   });
@@ -211,7 +219,7 @@ describe("предупреждения (FR-031, FR-175, FR-176)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(
-      stores.session.getState().session?.character.spellPoints.remaining,
+      shown(stores).resources.spellPoints,
     ).toBe(2);
   });
 
@@ -271,9 +279,9 @@ describe("потеря хитов обменом не считается уро�
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     // Хиты ушли, а проверки нет: своё колдовство уроном не считается.
-    expect(stores.session.getState().session?.character.hitPoints.current).toBe(54);
+    expect(shown(stores).sheet.hitPoints.current).toBe(54);
     expect(screen.queryByText(/Проверка концентрации/)).toBeNull();
-    expect(stores.session.getState().session?.character.concentration?.spellId).toBe(
+    expect(shown(stores).concentration?.spellId).toBe(
       "detect-magic",
     );
   });

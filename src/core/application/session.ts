@@ -20,7 +20,7 @@ export type Session = {
 };
 
 /** Чем играют прямо сейчас: карточками из сборки или загруженными игроком. */
-export type SpellCatalogSource = "built_in" | "imported";
+type SpellCatalogSource = "built_in" | "imported";
 
 /**
  * Живая сессия: персонаж с журналом и карточки, по которым идёт игра.

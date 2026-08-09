@@ -57,7 +57,7 @@ function ScreenContent({ mode }: { mode: ScreenMode }) {
 
 export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
   const { session: sessionStore } = useStores();
-  const session = useSession((state) => state.session);
+  const snapshot = useSession((state) => state.snapshot);
   const status = useSession((state) => state.status);
   const error = useSession((state) => state.error);
 
@@ -71,7 +71,7 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
     }
   }, [initialMode]);
 
-  if (status === "loading" || session === null) {
+  if (status === "loading" || snapshot === null) {
     return (
       <main className="flex min-h-dvh items-center justify-center p-4 text-sm text-slate-500">
         {status === "error" ? (error ?? "Состояние не прочитано") : "Загрузка состояния…"}

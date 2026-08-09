@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { renderWithStores, spell } from "@/ui/app/testing/stores";
+import { renderWithStores, shown, spell } from "@/ui/app/testing/stores";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 
 /** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
@@ -86,10 +86,10 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     // Набор Торна ровно на пределе, поэтому сначала освобождаем место.
     await user.click(screen.getByRole("button", { name: "Снять подготовку: Отражения" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
-    expect(stores.session.getState().session?.character.preparedSpellIds).toContain("detect-magic");
+    expect(shown(stores).spells.filter((row) => row.prepared).map((row) => row.id)).toContain("detect-magic");
 
     await user.click(screen.getByRole("button", { name: "Снять подготовку: Обнаружение магии" }));
-    expect(stores.session.getState().session?.character.preparedSpellIds).not.toContain(
+    expect(shown(stores).spells.filter((row) => row.prepared).map((row) => row.id)).not.toContain(
       "detect-magic",
     );
   });

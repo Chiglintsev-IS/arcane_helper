@@ -8,9 +8,8 @@
  * поэтому её можно проверить, повторить и однажды отправить по сети. Замыкание не умеет ничего из
  * этого.
  *
- * Персонаж и каталог лежат здесь временно, на срок переезда: отображение ещё выводит числа из
- * состояния само. Оба поля уходят вместе с последним таким местом, и снимок остаётся единственным
- * чтением.
+ * Состояния персонажа здесь нет ни поля: снимок — единственное чтение, и второго способа узнать то
+ * же самое не существует.
  */
 
 import { createStore, type StoreApi } from "zustand/vanilla";
@@ -20,23 +19,10 @@ import type { ArcaneApi } from "@/contract/port";
 import type { Preview, Question } from "@/contract/questions";
 import type { Snapshot } from "@/contract/snapshot";
 
-import type { Session, SpellCatalogSource } from "@/core/application/session";
-import type { Spell } from "@/core/domain/catalog/spell";
-
 export type SessionStatus = "loading" | "ready" | "error";
-
-/** Откуда стор берёт то, чего ядро по проводу не отдаёт. Уходит вместе с проекциями. */
-export type LiveReader = () => {
-  session: Session;
-  spellCatalog: readonly Spell[];
-  spellCatalogSource: SpellCatalogSource;
-} | null;
 
 export type SessionStoreState = {
   snapshot: Snapshot | null;
-  session: Session | null;
-  spellCatalog: readonly Spell[];
-  spellCatalogSource: SpellCatalogSource;
   status: SessionStatus;
   /** Причина последнего отказа: показывается игроку, состояние при этом не испорчено. */
   error: string | null;
@@ -65,8 +51,6 @@ export type SessionStoreDependencies = {
   api: ArcaneApi;
   /** Идентификаторы попыток. Те же часы, что у ядра, но здесь они нужны только для этого. */
   nextCommandId: () => string;
-  /** Временная дверь к состоянию: отображение ещё считает по нему. */
-  readLive: LiveReader;
 };
 
 function describe(error: unknown): string {
@@ -76,41 +60,23 @@ function describe(error: unknown): string {
 export function createSessionStore(
   dependencies: SessionStoreDependencies,
 ): StoreApi<SessionStoreState> {
-  const { api, nextCommandId, readLive } = dependencies;
+  const { api, nextCommandId } = dependencies;
 
   return createStore<SessionStoreState>((set) => {
-    /** Показанное подтягивается за снимком: пока проекций нет, часть чисел живёт в состоянии. */
-    const mirror = (snapshot: Snapshot): void => {
-      const live = readLive();
-      set({
-        snapshot,
-        ...(live === null
-          ? {}
-          : {
-              session: live.session,
-              spellCatalog: live.spellCatalog,
-              spellCatalogSource: live.spellCatalogSource,
-            }),
-      });
-    };
-
     return {
       snapshot: null,
-      session: null,
-      spellCatalog: [],
-      spellCatalogSource: "built_in",
       status: "loading",
       error: null,
 
       async hydrate() {
         set({ status: "loading", error: null });
         try {
-          mirror(await api.open());
+          set({ snapshot: await api.open() });
           set({ status: "ready" });
         } catch (error: unknown) {
           // Данные остаются в хранилище: их можно выгрузить руками, а начать с чистого листа
           // молча — потерять игру.
-          set({ session: null, status: "error", error: describe(error) });
+          set({ status: "error", error: describe(error) });
         }
       },
 
@@ -121,7 +87,7 @@ export function createSessionStore(
             set({ error: result.reasonRu });
             return result.reasonRu;
           }
-          mirror(result.snapshot);
+          set({ snapshot: result.snapshot });
           set({ error: null });
           return null;
         } catch (error: unknown) {

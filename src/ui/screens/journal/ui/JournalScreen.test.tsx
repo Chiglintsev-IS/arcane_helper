@@ -15,7 +15,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { exportSnapshot } from "@/core/application/dataExchange";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { renderWithStores } from "@/ui/app/testing/stores";
+import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
 import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
@@ -30,13 +30,13 @@ async function openData(character: CharacterState = createThorne()) {
 describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => {
   it("битый файл называет причину и состояние не трогает (FR-121, FR-122)", async () => {
     const { user, stores } = await openData();
-    const before = stores.session.getState().session?.character.preparedSpellIds;
+    const before = shown(stores).spells.filter((row) => row.prepared).map((row) => row.id);
 
     await user.type(screen.getByLabelText("Данные для загрузки"), "не файл");
     await user.click(screen.getByRole("button", { name: "Загрузить" }));
 
     expect(screen.getByRole("alert").textContent).toContain("не JSON");
-    expect(stores.session.getState().session?.character.preparedSpellIds).toEqual(before);
+    expect(shown(stores).spells.filter((row) => row.prepared).map((row) => row.id)).toEqual(before);
   });
 
   it("своя выгрузка загружается обратно и восстанавливает ресурсы (FR-120)", async () => {
@@ -50,9 +50,9 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
     await user.paste(JSON.stringify(saved));
     await user.click(screen.getByRole("button", { name: "Загрузить" }));
 
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
+    expect(slotsLeft(stores, 1)).toBe(4);
     // Журнал начинается заново: записи прежнего персонажа к новому состоянию не относятся.
-    expect(stores.session.getState().session?.journal).toEqual([]);
+    expect(shown(stores).journal).toEqual([]);
   });
 
 });

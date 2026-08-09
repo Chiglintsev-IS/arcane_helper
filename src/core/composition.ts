@@ -36,15 +36,12 @@ type CoreParts = {
 };
 
 /**
- * Собранное ядро.
+ * Собранное ядро: дверь договора и ничего кроме.
  *
- * Кроме двери договора отдаёт нынешнюю живую сессию — временно, на срок переезда: отображение ещё
- * выводит числа из состояния само. Дверь уходит вместе с последним таким местом, и по сети её нет
- * вовсе, потому что состояние по проводу не ездит.
+ * Состояние наружу не отдаётся ни одним способом — ни функцией, ни полем: по сети его всё равно не
+ * передать, и вторая дверь означала бы, что снаружи считают сами.
  */
-export type Core = Backend & {
-  live(): LiveSession | null;
-};
+export type Core = Backend;
 
 export function createCore(parts: CoreParts): Core {
   const { repository, clock, createInitialCharacter, loadBuiltInCatalog } = parts;
@@ -131,10 +128,5 @@ export function createCore(parts: CoreParts): Core {
     },
   });
 
-  return {
-    read: handler.read,
-    handle: handler.handle,
-    answer: handler.answer,
-    live: () => live,
-  };
+  return handler;
 }

@@ -13,8 +13,7 @@ import { describe, expect, it } from "vitest";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { deriveTurnEconomy } from "@/core/application/useCases/turn";
-import { renderWithStores, spell } from "@/ui/app/testing/stores";
+import { renderWithStores, shown, slotsLeft, spell } from "@/ui/app/testing/stores";
 import {
   withDamage,
   withSpellPoints,
@@ -119,17 +118,17 @@ describe("инвариант FR-022: до подтверждения ресур�
     // а не более раннее — иначе он не сойдётся с тем, что тест сравнивает после отмены.
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
-    const before = structuredClone(stores.session.getState().session);
+    const before = shown(stores);
 
     await openWizard(/Доспехи мага/, { user, startCombat: false });
     await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     expect(screen.getByRole("button", { name: "Подтвердить" })).toBeDefined();
 
-    expect(stores.session.getState().session).toEqual(before);
+    expect(shown(stores)).toEqual(before);
 
     await user.click(screen.getByRole("button", { name: "Отмена" }));
-    expect(stores.session.getState().session).toEqual(before);
+    expect(shown(stores)).toEqual(before);
   });
 });
 
@@ -142,14 +141,13 @@ describe("подтверждение (FR-023, AC-11)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const session = stores.session.getState().session;
-    expect(session?.character.spellSlots[2]?.remaining).toBe(2);
-    expect(session?.character.spellSlots[1]?.remaining).toBe(4);
-    expect(session?.character.activeEffects).toHaveLength(1);
+    expect(slotsLeft(stores, 2)).toBe(2);
+    expect(slotsLeft(stores, 1)).toBe(4);
+    expect(shown(stores).effects).toHaveLength(1);
     // Две записи: «Бой начался» из `openWizard`, затем само применение.
-    expect(session?.journal).toHaveLength(2);
-    expect(session?.journal.at(-1)?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
-    expect(deriveTurnEconomy(stores.session.getState().session!).actionAvailable).toBe(false);
+    expect(shown(stores).journal).toHaveLength(2);
+    expect(shown(stores).journal.at(-1)?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
+    expect(shown(stores).turn.actionAvailable).toBe(false);
   });
 
   it("после подтверждения мастер закрывается", async () => {
@@ -224,7 +222,7 @@ describe("предупреждение вместо запрета (FR-031)", ()
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(-1);
+    expect(slotsLeft(stores, 1)).toBe(-1);
   });
 });
 
@@ -255,9 +253,8 @@ describe("замена концентрации (FR-081, AC-13)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const character = stores.session.getState().session?.character;
-    expect(character?.activeEffects.filter((effect) => effect.isConcentration)).toHaveLength(1);
-    expect(character?.concentration?.spellId).toBe("detect-magic");
+    expect(shown(stores).effects.filter((effect) => effect.isConcentration)).toHaveLength(1);
+    expect(shown(stores).concentration?.spellId).toBe("detect-magic");
   });
 
   it("отмена на шаге концентрации оставляет прежний эффект", async () => {
@@ -265,7 +262,7 @@ describe("замена концентрации (FR-081, AC-13)", () => {
     // Бой начат заранее — по той же причине, что и в тесте выше.
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
-    const before = structuredClone(stores.session.getState().session);
+    const before = shown(stores);
     await openWizard(/^Обнаружение магии/, { user, startCombat: false });
 
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -273,7 +270,7 @@ describe("замена концентрации (FR-081, AC-13)", () => {
     const step = screen.getByRole("dialog", { name: /Применение/ });
     await user.click(within(step).getAllByRole("button", { name: "Отмена" })[1]!);
 
-    expect(stores.session.getState().session).toEqual(before);
+    expect(shown(stores)).toEqual(before);
     // Мастер закрыт; открытой остаётся карточка заклинания, из которой пришли.
     expect(screen.queryByRole("dialog", { name: /Применение/ })).toBeNull();
   });
@@ -357,9 +354,8 @@ describe("руна жизни спрашивает кому (FR-156)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const after = stores.session.getState().session?.character;
-    expect(after?.temporaryHitPoints).toBe(0);
-    expect(after?.runes.remaining).toBe(2);
+    expect(shown(stores).sheet.hitPoints.temporary).toBe(0);
+    expect(shown(stores).resources.runes.remaining).toBe(2);
   });
 });
 
@@ -434,9 +430,8 @@ describe("шаг костей хитов (FR-135)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const after = stores.session.getState().session?.character;
-    expect(after?.hitDice?.remaining).toBe(5);
-    expect(after?.hitPoints.current).toBe(43);
+    expect(shown(stores).sheet.hitPoints.hitDice?.remaining).toBe(5);
+    expect(shown(stores).sheet.hitPoints.current).toBe(43);
   });
 
   it("без костей шаг объясняет, а не прячется", async () => {

@@ -11,7 +11,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { renderWithStores } from "@/ui/app/testing/stores";
+import { renderWithStores, shown } from "@/ui/app/testing/stores";
 import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
 
 describe("«Лист» (FR-230, FR-231, FR-227)", () => {
@@ -41,17 +41,20 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.click(arcana.getByRole("radio", { name: "компетентность" }));
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    const after = stores.session.getState().session;
-    expect(after?.character.abilities.intelligence).toBe(20);
+    const intelligence = shown(stores).sheet.abilities.find(
+      (ability) => ability.id === "intelligence",
+    );
+    expect(intelligence?.score).toBe(20);
     // Магия стала компетентностью; навык чужой характеристики правкой Интеллекта не задет.
-    expect(after?.character.skills).toEqual({
-      arcana: "expert",
-      investigation: "proficient",
-      nature: "proficient",
-      perception: "proficient",
-    });
+    expect(intelligence?.skills.find((skill) => skill.id === "arcana")?.training).toBe("expert");
+    expect(
+      shown(stores)
+        .sheet.abilities.flatMap((ability) => ability.skills)
+        .filter((skill) => skill.training !== undefined)
+        .map((skill) => skill.id),
+    ).toEqual(["arcana", "investigation", "nature", "perception"]);
     // Одна запись журнала на весь блок, а не три.
-    expect(after?.journal).toHaveLength(1);
+    expect(shown(stores).journal).toHaveLength(1);
     expect(screen.queryByRole("dialog", { name: "Правка: Интеллект" })).toBeNull();
     expect(screen.getByText("20 (+5)")).toBeDefined();
   });
@@ -68,8 +71,8 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.type(field, "2");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(stores.session.getState().session?.character.permanentContributions).toEqual([
-      { nameRu: "Дар богов", contribution: { stat: "spellSaveDc", kind: "bonus", value: 2 } },
+    expect(shown(stores).sheet.permanentContributions).toEqual([
+      { nameRu: "Дар богов", stat: "spellSaveDc", kind: "bonus", value: 2 },
     ]);
     expect(screen.getByText("Дар богов")).toBeDefined();
   });
@@ -87,10 +90,13 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.type(maximum, "66");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    const after = stores.session.getState().session;
-    expect(after?.character.level).toBe(8);
-    expect(after?.character.spellSlots[4]).toEqual({ maximum: 2, remaining: 2 });
-    expect(after?.journal).toHaveLength(1);
+    expect(shown(stores).sheet.level).toBe(8);
+    expect(shown(stores).resources.slots.find((slot) => slot.level === 4)).toEqual({
+      level: 4,
+      maximum: 2,
+      remaining: 2,
+    });
+    expect(shown(stores).journal).toHaveLength(1);
   });
 
   it("«Лист»: отмена шторки состояния не трогает", async () => {
@@ -100,15 +106,15 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.click(screen.getByRole("radio", { name: "Ступень 3" }));
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
-    expect(stores.session.getState().session?.character.exhaustion).toBe(0);
-    expect(stores.session.getState().session?.journal).toHaveLength(0);
+    expect(shown(stores).sheet.exhaustion).toBe(0);
+    expect(shown(stores).journal).toHaveLength(0);
   });
 
 
   it("«Лист»: отказ владельца остаётся в шторке причиной, а состояние не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    const before = stores.session.getState().session?.character.hitPoints;
+    const before = shown(stores).sheet.hitPoints;
 
     await user.click(screen.getByRole("button", { name: "Править: Здоровье" }));
     const field = screen.getByLabelText("Базовый максимум");
@@ -119,13 +125,13 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     // Шторка не решала, годится ли ноль: она передала его и показывает ответ жизнеспособности.
     expect(screen.getByRole("alert").textContent).toContain("Максимум хитов");
     expect(screen.getByRole("dialog", { name: /Правка: Здоровье/ })).toBeDefined();
-    expect(stores.session.getState().session?.character.hitPoints).toEqual(before);
+    expect(shown(stores).sheet.hitPoints).toEqual(before);
   });
 
   it("«Лист»: дробное число из шторки уходит владельцу как есть — отказ по-русски, состояние не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    const before = stores.session.getState().session?.character.hitPoints;
+    const before = shown(stores).sheet.hitPoints;
 
     await user.click(screen.getByRole("button", { name: "Править: Здоровье" }));
     const field = screen.getByLabelText("Базовый максимум");
@@ -137,6 +143,6 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     // числа проверяет уже он, словами по-русски, а не молчаливым «12».
     expect(screen.getByRole("alert").textContent).toContain("целым");
     expect(screen.getByRole("dialog", { name: /Правка: Здоровье/ })).toBeDefined();
-    expect(stores.session.getState().session?.character.hitPoints).toEqual(before);
+    expect(shown(stores).sheet.hitPoints).toEqual(before);
   });
 });

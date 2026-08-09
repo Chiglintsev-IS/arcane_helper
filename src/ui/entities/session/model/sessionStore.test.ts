@@ -14,23 +14,12 @@ import type { Preview } from "@/contract/questions";
 import type { Result } from "@/contract/result";
 import type { Snapshot } from "@/contract/snapshot";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { createSession, type LiveSession } from "@/core/application/session";
 import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { createSessionStore } from "./sessionStore";
 
 /** Снимок только что начатой сессии: проекции строит настоящий презентер, а не подделка рядом. */
 const FRESH: Snapshot = testSnapshot();
-
-function live(): LiveSession {
-  return {
-    session: createSession(createThorne()),
-    spellCatalog: loadThorneSpells(),
-    spellCatalogSource: "built_in",
-  };
-}
 
 /** Ядро-заглушка: здесь проверяется стор, а не правила, и ответы задаёт сам прогон. */
 function fakeApi(answers: Partial<ArcaneApi> = {}): {
@@ -57,13 +46,12 @@ function fakeApi(answers: Partial<ArcaneApi> = {}): {
 
 function makeStore(
   api: ArcaneApi,
-  readLive: () => LiveSession | null = () => live(),
   nextCommandId: () => string = (() => {
     let issued = 0;
     return () => `command-${++issued}`;
   })(),
 ) {
-  return createSessionStore({ api, nextCommandId, readLive });
+  return createSessionStore({ api, nextCommandId });
 }
 
 describe("открытие сессии", () => {
@@ -71,14 +59,13 @@ describe("открытие сессии", () => {
     const { api } = fakeApi();
 
     expect(makeStore(api).getState()).toMatchObject({
-      session: null,
       snapshot: null,
       status: "loading",
       error: null,
     });
   });
 
-  it("после открытия показывает снимок и состояние от ядра", async () => {
+  it("после открытия показывает снимок ядра", async () => {
     const { api } = fakeApi();
     const store = makeStore(api);
 
@@ -86,8 +73,6 @@ describe("открытие сессии", () => {
 
     expect(store.getState().status).toBe("ready");
     expect(store.getState().snapshot).toEqual(FRESH);
-    expect(store.getState().session?.character.name).toBe("Торн");
-    expect(store.getState().spellCatalogSource).toBe("built_in");
   });
 
   it("отказ ядра при открытии показывается, состояние остаётся пустым", async () => {
@@ -102,18 +87,9 @@ describe("открытие сессии", () => {
 
     expect(store.getState().status).toBe("error");
     expect(store.getState().error).toMatch(/повреждено/);
-    expect(store.getState().session).toBeNull();
+    expect(store.getState().snapshot).toBeNull();
   });
 
-  it("ядро без живой сессии зеркалить нечего: снимок всё равно приходит", async () => {
-    const { api } = fakeApi();
-    const store = makeStore(api, () => null);
-
-    await store.getState().hydrate();
-
-    expect(store.getState().snapshot).toEqual(FRESH);
-    expect(store.getState().session).toBeNull();
-  });
 });
 
 describe("отправка намерений", () => {

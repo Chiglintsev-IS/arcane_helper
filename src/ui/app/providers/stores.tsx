@@ -31,10 +31,8 @@ export function connectStores(core: Core, clock: Clock): AppStores {
     session: createSessionStore({
       api: createClient(createLocalTransport(core)),
       nextCommandId: clock.nextId,
-      readLive: () => core.live(),
     }),
     draft: createCastDraftStore(),
-    now: clock.now,
   };
 }
 

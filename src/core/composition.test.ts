@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { createClient } from "@/contract/client";
 import type { ArcaneApi } from "@/contract/port";
+import type { Snapshot } from "@/contract/snapshot";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
@@ -52,7 +53,17 @@ function connect(repository: SessionRepository = createMemoryRepository()) {
     loadBuiltInCatalog: loadThorneSpells,
   });
   const api: ArcaneApi = createClient(createLocalTransport(core));
-  return { core, api };
+  return { api };
+}
+
+/** Что ядро рассказало о себе: единственное чтение, и прогон пользуется тем же. */
+async function shown(api: ArcaneApi): Promise<Snapshot> {
+  return api.open();
+}
+
+/** Остаток ячеек уровня: их спрашивают чаще всего остального. */
+function slotsLeft(snapshot: Snapshot, level: number): number {
+  return snapshot.resources.slots.find((slot) => slot.level === level)?.remaining ?? 0;
 }
 
 /** Каждая попытка своя: одинаковый идентификатор ядро сочло бы повтором и не применило бы. */
@@ -92,34 +103,34 @@ function homebrewCatalogFile(): string {
 describe("открытие сессии", () => {
   it("на пустом хранилище начинает с чистого персонажа и сразу сохраняет", async () => {
     const repository = createMemoryRepository();
-    const { core, api } = connect(repository);
+    const { api } = connect(repository);
 
     await api.open();
 
-    expect(core.live()?.session.character.name).toBe("Торн");
+    expect((await shown(api)).sheet.name).toBe("Торн");
     // Немедленная запись: закрытие приложения сразу после старта не теряет состояние.
     expect(await repository.load()).not.toBeNull();
   });
 
   it("читает сохранённое состояние вместо создания нового", async () => {
     const wounded = withDamage(createThorne(), 43);
-    const { core, api } = connect(
+    const { api } = connect(
       createMemoryRepository(toPersisted(createSession(wounded), NOW, null)),
     );
 
     await api.open();
 
-    expect(core.live()?.session.character.hitPoints.current).toBe(17);
+    expect((await shown(api)).sheet.hitPoints.current).toBe(17);
   });
 
   it("повторное открытие ничего не пересоздаёт", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
     await api.execute(castMageArmor(1));
 
     await api.open();
 
-    expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(3);
+    expect(slotsLeft(await shown(api), 1)).toBe(3);
   });
 
   it("на повреждённом хранилище отказывает и не затирает данные", async () => {
@@ -152,7 +163,7 @@ describe("открытие сессии", () => {
     const second = connect(repository);
     const snapshot = await second.api.open();
 
-    expect(second.core.live()?.session.character.spellSlots[2]?.remaining).toBe(2);
+    expect(slotsLeft(snapshot, 2)).toBe(2);
     expect(snapshot.journal).toHaveLength(1);
   });
 });
@@ -160,13 +171,13 @@ describe("открытие сессии", () => {
 describe("применение команд", () => {
   it("применяет команду и сохраняет результат", async () => {
     const repository = createMemoryRepository();
-    const { core, api } = connect(repository);
+    const { api } = connect(repository);
     await api.open();
 
     const result = await api.execute(castMageArmor(1));
 
     expect(result.ok).toBe(true);
-    expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(3);
+    expect(slotsLeft(await shown(api), 1)).toBe(3);
     expect((await repository.load())?.character.spellSlots[1]?.remaining).toBe(3);
   });
 
@@ -182,20 +193,20 @@ describe("применение команд", () => {
   });
 
   it("любая команда работает без правок сборки", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
 
     await api.execute(castMageArmor(1));
     await api.execute(envelope({ kind: "long_rest" }));
     await api.execute(envelope({ kind: "undo_last" }));
 
-    expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(3);
+    expect(slotsLeft(await shown(api), 1)).toBe(3);
   });
 
   it("отказ по правилам возвращается причиной, состояние не меняет", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
-    const before = structuredClone(core.live()?.session.character);
+    const before = await shown(api);
 
     const result = await api.execute(
       envelope({
@@ -208,7 +219,7 @@ describe("применение команд", () => {
 
     expect(result.ok).toBe(false);
     expect(!result.ok && result.reasonRu).toMatch(/требует способа оплаты/);
-    expect(core.live()?.session.character).toEqual(before);
+    expect(await shown(api)).toEqual(before);
   });
 
   it("заклинание, которого нет в каталоге, отклоняется с причиной", async () => {
@@ -272,15 +283,15 @@ describe("применение команд", () => {
 
 describe("узнавание повтора", () => {
   it("одна попытка, доставленная дважды, применяется один раз", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
     const attemptEnvelope = castMageArmor(1);
 
     await api.execute(attemptEnvelope);
     await api.execute(attemptEnvelope);
 
-    expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(3);
-    expect(core.live()?.session.journal).toHaveLength(1);
+    expect(slotsLeft(await shown(api), 1)).toBe(3);
+    expect((await shown(api)).journal).toHaveLength(1);
   });
 
   it("повтор отвечает нынешним снимком, а не отказом", async () => {
@@ -297,23 +308,23 @@ describe("узнавание повтора", () => {
   });
 
   it("разные попытки одной и той же команды применяются каждая", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
 
     await api.execute(castMageArmor(1));
     await api.execute(castMageArmor(1));
 
-    expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(2);
+    expect(slotsLeft(await shown(api), 1)).toBe(2);
   });
 });
 
 describe("каталог заклинаний (FR-123)", () => {
   it("до импорта играем встроенным каталогом", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
 
-    expect(core.live()?.spellCatalog).toHaveLength(BUILT_IN_COUNT);
-    expect(core.live()?.spellCatalogSource).toBe("built_in");
+    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT);
+    expect((await shown(api)).catalogSource).toBe("built_in");
   });
 
   it("встроенный каталог в хранилище не попадает", async () => {
@@ -326,7 +337,7 @@ describe("каталог заклинаний (FR-123)", () => {
   });
 
   it("импорт подменяет каталог целиком", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
 
     const result = await api.execute(
@@ -334,8 +345,8 @@ describe("каталог заклинаний (FR-123)", () => {
     );
 
     expect(result.ok).toBe(true);
-    expect(core.live()?.spellCatalogSource).toBe("imported");
-    expect(core.live()?.spellCatalog.find((spell) => spell.id === "shield")?.nameRu).toBe(
+    expect((await shown(api)).catalogSource).toBe("imported");
+    expect((await shown(api)).spells.find((row) => row.id === "shield")?.nameRu).toBe(
       "Щит по-домашнему",
     );
   });
@@ -349,20 +360,20 @@ describe("каталог заклинаний (FR-123)", () => {
     const second = connect(repository);
     await second.api.open();
 
-    expect(second.core.live()?.spellCatalog).toHaveLength(BUILT_IN_COUNT + 1);
-    expect(second.core.live()?.spellCatalogSource).toBe("imported");
-    expect(second.core.live()?.session.character.spellbookSpellIds).toContain("thorne-signature");
+    expect((await shown(second.api)).spells).toHaveLength(BUILT_IN_COUNT + 1);
+    expect((await shown(second.api)).catalogSource).toBe("imported");
+    expect((await shown(second.api)).spells.map((row) => row.id)).toContain("thorne-signature");
   });
 
   it("импорт начинает журнал заново: отменять нечего", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
     await api.execute(castMageArmor(1));
 
     await api.execute(envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }));
 
-    expect(core.live()?.session.journal).toHaveLength(0);
-    expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(4);
+    expect((await shown(api)).journal).toHaveLength(0);
+    expect(slotsLeft(await shown(api), 1)).toBe(4);
   });
 
   it("файл без персонажа отклоняется с причиной", async () => {
@@ -376,7 +387,7 @@ describe("каталог заклинаний (FR-123)", () => {
 
   it("ссылка в пустоту не проходит и не оставляет половины импорта", async () => {
     const repository = createMemoryRepository();
-    const { core, api } = connect(repository);
+    const { api } = connect(repository);
     await api.open();
 
     // Файл, до которого разбор бы не допустил: карточки своего заклинания в нём нет.
@@ -386,27 +397,27 @@ describe("каталог заклинаний (FR-123)", () => {
     );
 
     expect(!result.ok && result.reasonRu).toMatch(/thorne-signature/);
-    expect(core.live()?.spellCatalogSource).toBe("built_in");
-    expect(core.live()?.session.character.spellbookSpellIds).not.toContain("thorne-signature");
+    expect((await shown(api)).catalogSource).toBe("built_in");
+    expect((await shown(api)).spells.map((row) => row.id)).not.toContain("thorne-signature");
     expect((await repository.load())?.spellCatalog).toBeUndefined();
   });
 
   it("возврат к встроенному каталогу восстанавливает карточки сборки", async () => {
     const repository = createMemoryRepository();
-    const { core, api } = connect(repository);
+    const { api } = connect(repository);
     await api.open();
     await api.execute(envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }));
 
     const result = await api.execute(envelope({ kind: "restore_built_in_catalog" }));
 
     expect(result.ok).toBe(true);
-    expect(core.live()?.spellCatalogSource).toBe("built_in");
-    expect(core.live()?.spellCatalog.find((spell) => spell.id === "shield")?.nameRu).toBe("Щит");
+    expect((await shown(api)).catalogSource).toBe("built_in");
+    expect((await shown(api)).spells.find((row) => row.id === "shield")?.nameRu).toBe("Щит");
     expect((await repository.load())?.spellCatalog).toBeUndefined();
   });
 
   it("возврат, который оставил бы подготовленное без карточки, отклоняется", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
     await api.open();
     await api.execute(envelope({ kind: "import_snapshot", raw: homebrewCatalogFile() }));
 
@@ -414,32 +425,32 @@ describe("каталог заклинаний (FR-123)", () => {
 
     expect(!result.ok && result.reasonRu).toMatch(/thorne-signature/);
     // Каталог остался прежним: молча выбросить карточку из книги приложение не вправе.
-    expect(core.live()?.spellCatalog).toHaveLength(BUILT_IN_COUNT + 1);
-    expect(core.live()?.spellCatalogSource).toBe("imported");
+    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT + 1);
+    expect((await shown(api)).catalogSource).toBe("imported");
   });
 
   it("сохранение, сделанное до своего каталога, открывается со встроенным", async () => {
     const wounded = withDamage(createThorne(), 43);
-    const { core, api } = connect(
+    const { api } = connect(
       createMemoryRepository(toPersisted(createSession(wounded), NOW, null)),
     );
 
     await api.open();
 
-    expect(core.live()?.session.character.hitPoints.current).toBe(17);
-    expect(core.live()?.spellCatalog).toHaveLength(BUILT_IN_COUNT);
-    expect(core.live()?.spellCatalogSource).toBe("built_in");
+    expect((await shown(api)).sheet.hitPoints.current).toBe(17);
+    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT);
+    expect((await shown(api)).catalogSource).toBe("built_in");
   });
 
   it("обычное действие не теряет загруженный каталог", async () => {
     const repository = createMemoryRepository();
-    const { core, api } = connect(repository);
+    const { api } = connect(repository);
     await api.open();
     await api.execute(envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }));
 
     await api.execute(envelope({ kind: "long_rest" }));
 
-    expect(core.live()?.spellCatalogSource).toBe("imported");
+    expect((await shown(api)).catalogSource).toBe("imported");
     expect((await repository.load())?.spellCatalog).toHaveLength(BUILT_IN_COUNT);
   });
 });
@@ -447,43 +458,45 @@ describe("каталог заклинаний (FR-123)", () => {
 describe("сброс", () => {
   it("забывает сделанное и начинает заново", async () => {
     const repository = createMemoryRepository();
-    const { core, api } = connect(repository);
+    const { api } = connect(repository);
     await api.open();
     await api.execute(castMageArmor(1));
 
     await api.execute(envelope({ kind: "reset" }));
 
-    expect(core.live()?.session.character.spellSlots[1]?.remaining).toBe(4);
-    expect(core.live()?.session.journal).toHaveLength(0);
+    expect(slotsLeft(await shown(api), 1)).toBe(4);
+    expect((await shown(api)).journal).toHaveLength(0);
     expect((await repository.load())?.character.spellSlots[1]?.remaining).toBe(4);
   });
 
   it("возвращает и встроенный каталог: начать заново значит начать со сборки", async () => {
     const repository = createMemoryRepository();
-    const { core, api } = connect(repository);
+    const { api } = connect(repository);
     await api.open();
     await api.execute(envelope({ kind: "import_snapshot", raw: homebrewCatalogFile() }));
 
     await api.execute(envelope({ kind: "reset" }));
 
-    expect(core.live()?.spellCatalog).toHaveLength(BUILT_IN_COUNT);
-    expect(core.live()?.spellCatalogSource).toBe("built_in");
+    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT);
+    expect((await shown(api)).catalogSource).toBe("built_in");
     expect((await repository.load())?.spellCatalog).toBeUndefined();
   });
 });
 
 describe("до открытия сессии", () => {
-  it("живой сессии ещё нет", () => {
-    const { core } = connect();
+  it("хранилища ядро не трогает, пока его не спросили", async () => {
+    const repository = createMemoryRepository();
+    connect(repository);
 
-    expect(core.live()).toBeNull();
+    // Сборка ядра сама по себе не читает и не пишет: сессия открывается первым обращением.
+    expect(await repository.load()).toBeNull();
   });
 
   it("команда открывает сессию сама: намерение не теряется", async () => {
-    const { core, api } = connect();
+    const { api } = connect();
 
     await api.execute(envelope({ kind: "long_rest" }));
 
-    expect(core.live()?.session.journal).toHaveLength(1);
+    expect((await shown(api)).journal).toHaveLength(1);
   });
 });

@@ -136,6 +136,23 @@ export async function createTestStores(
   return stores;
 }
 
+/**
+ * Что стор показывает сейчас: тот же снимок, по которому рисует экран.
+ *
+ * Прогон смотрит туда же, куда игрок: состояния у отображения нет, и «проверить по персонажу»
+ * означало бы проверять не то, что он увидит.
+ */
+export function shown(stores: AppStores): Snapshot {
+  const { snapshot } = stores.session.getState();
+  if (snapshot === null) throw new Error("сессия ещё не открыта");
+  return snapshot;
+}
+
+/** Остаток ячеек уровня: их спрашивают чаще всего остального. */
+export function slotsLeft(stores: AppStores, level: number): number {
+  return shown(stores).resources.slots.find((slot) => slot.level === level)?.remaining ?? 0;
+}
+
 export type RenderWithStores = RenderResult & { stores: AppStores };
 
 /** Рендер внутри провайдера сторов. */

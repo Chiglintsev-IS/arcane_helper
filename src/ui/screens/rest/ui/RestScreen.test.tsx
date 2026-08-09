@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { renderWithStores } from "@/ui/app/testing/stores";
+import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 import { withBloodExchange, withSpellPointsSpent } from "@/core/infrastructure/catalog/thorne/fixtures";
 import {
@@ -78,7 +78,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     const sheet = screen.getByRole("dialog", { name: "Правка ресурсов" });
     await user.click(within(sheet).getByRole("button", { name: "Потратить: Ячейка 1 ур." }));
 
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
+    expect(slotsLeft(stores, 1)).toBe(3);
   });
 
   it("карточка концентрации открывает лист и снимает концентрацию", async () => {
@@ -89,7 +89,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     const panel = screen.getByRole("dialog", { name: "Концентрация: Обнаружение магии" });
     await user.click(within(panel).getByRole("button", { name: "Снять концентрацию" }));
 
-    expect(stores.session.getState().session?.character.concentration).toBeUndefined();
+    expect(shown(stores).concentration).toBeUndefined();
   });
 
   it("перехода к полным правилам на «Привале» нет: подробная карточка живёт в других режимах", async () => {
@@ -124,7 +124,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     await user.click(screen.getByRole("button", { name: "Провал" }));
     await user.click(screen.getByRole("button", { name: "Всё равно провал" }));
 
-    expect(stores.session.getState().session?.character.concentration).toBeUndefined();
+    expect(shown(stores).concentration).toBeUndefined();
     expect(screen.queryByRole("dialog", { name: "Проверка концентрации" })).toBeNull();
   });
 });
@@ -153,7 +153,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
 
-    expect(stores.session.getState().session?.journal.at(-1)?.kind).toBe("short_rest");
+    expect(shown(stores).journal.at(-1)?.kind).toBe("short_rest");
   });
 
   it("долгий отдых требует подтверждения и возвращает ячейки (FR-133)", async () => {
@@ -162,10 +162,10 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
     await user.click(screen.getByRole("button", { name: /Долгий отдых/ }));
     // Случайное нажатие уничтожает состояние боя, поэтому между кнопкой и отдыхом стоит выбор.
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(2);
+    expect(slotsLeft(stores, 1)).toBe(2);
 
     await user.click(screen.getByRole("button", { name: "Отдохнуть" }));
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
+    expect(slotsLeft(stores, 1)).toBe(4);
   });
 
   it("отмена подтверждения ничего не меняет", async () => {
@@ -175,8 +175,8 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: /Долгий отдых/ }));
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
-    expect(stores.session.getState().session?.journal).toHaveLength(0);
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(2);
+    expect(shown(stores).journal).toHaveLength(0);
+    expect(slotsLeft(stores, 1)).toBe(2);
   });
 
   it("магическое восстановление возвращает выбранные ячейки (FR-131)", async () => {
@@ -190,8 +190,8 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
 
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
-    expect(stores.session.getState().session?.character.arcaneRecovery.remaining).toBe(3);
+    expect(slotsLeft(stores, 1)).toBe(3);
+    expect(shown(stores).recovery.arcaneRecovery.remaining).toBe(3);
   });
 
   it("набранное сверх бюджета названо причиной, а не отменено молча (FR-131)", async () => {
@@ -248,7 +248,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
-    expect(stores.session.getState().session?.character.arcaneRecovery.remaining).toBe(3);
+    expect(shown(stores).recovery.arcaneRecovery.remaining).toBe(3);
     expect(
       screen.getByRole("button", { name: "Магическое восстановление · осталось 3 уровня" }),
     ).toBeDefined();

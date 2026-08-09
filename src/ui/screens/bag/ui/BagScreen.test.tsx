@@ -10,10 +10,15 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { Equipment } from "@/core/domain/equipment/equipment";
-import { renderWithStores } from "@/ui/app/testing/stores";
+import type { ItemView } from "@/contract/views";
+import type { AppStores } from "@/ui/shared/model/storeContext";
+import { renderWithStores, shown, testSnapshot } from "@/ui/app/testing/stores";
 import { BagScreen } from "@/ui/screens/bag/ui/BagScreen";
+
+/** Вещь со своим запасом так, как её показывает сумка. */
+function itemOf(stores: AppStores, id: string): ItemView | undefined {
+  return shown(stores).bag.items.find((item) => item.id === id);
+}
 
 describe("«Сумка» (FR-234, FR-242)", () => {
   it("«Сумка»: надетая вещь двигает КД, снятая — возвращает (FR-234)", async () => {
@@ -24,9 +29,7 @@ describe("«Сумка» (FR-234, FR-242)", () => {
     await user.type(screen.getByLabelText("Новая экипировка"), "Кольцо защиты{Enter}");
 
     // Вещь легла в сумку: КД пока прежний — лежащее не действует.
-    const carried = Equipment.of(stores.session.getState().session!.character);
-    expect(carried.bagCount("кольцо-защиты")).toBe(1);
-    expect(carried.wornCount("кольцо-защиты")).toBe(0);
+    expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ bagCount: 1, wornCount: 0 });
 
     await user.click(screen.getByRole("button", { name: "Открыть: Кольцо защиты" }));
     await user.selectOptions(screen.getByLabelText("Добавить прибавку"), "armorClass");
@@ -38,12 +41,9 @@ describe("«Сумка» (FR-234, FR-242)", () => {
 
     await user.click(screen.getByRole("button", { name: "Надеть один: Кольцо защиты" }));
 
-    const worn = stores.session.getState().session?.character;
-    const equipment = Equipment.of(worn!);
-    expect(equipment.wornCount("кольцо-защиты")).toBe(1);
-    expect(equipment.bagCount("кольцо-защиты")).toBe(0);
+    expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ wornCount: 1, bagCount: 0 });
     // Персонаж при этом не тронут: вещь не меняет того, кто он.
-    expect(worn?.abilities).toEqual(createThorne().abilities);
+    expect(shown(stores).sheet.abilities).toEqual(testSnapshot().sheet.abilities);
   });
 
   it("«Сумка»: расходник тратится и пополняется со строки, деньги правятся шторкой (FR-242)", async () => {
@@ -56,8 +56,7 @@ describe("«Сумка» (FR-234, FR-242)", () => {
     await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
 
     // Ноль — состояние: строка осталась, минус выключен.
-    const bagCount = Equipment.of(stores.session.getState().session!.character).bagCount("зелье-лечения");
-    expect(bagCount).toBe(0);
+    expect(itemOf(stores, "зелье-лечения")?.bagCount).toBe(0);
     expect(
       screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }),
     ).toHaveProperty("disabled", true);
@@ -68,8 +67,8 @@ describe("«Сумка» (FR-234, FR-242)", () => {
     await user.type(gold, "215");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(stores.session.getState().session?.character.equipment.money.gold).toBe(215);
-    expect(stores.session.getState().session?.journal.at(-1)?.summaryRu).toBe("Деньги: зм 0 → 215");
+    expect(shown(stores).bag.money.find((coin) => coin.currency === "gold")?.amount).toBe(215);
+    expect(shown(stores).journal.at(-1)?.summaryRu).toBe("Деньги: зм 0 → 215");
   });
 
 });

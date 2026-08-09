@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { PlayShell } from "@/ui/app/PlayShell";
-import { renderWithStores } from "@/ui/app/testing/stores";
+import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import { withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Бой отмечен начатым: только тогда ведётся учёт хода. */
@@ -179,7 +179,7 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 
     // Сохранение — да, запись в журнал — нет: режим меняет вид, отменять в нём нечего.
-    expect(stores.session.getState().session?.journal).toHaveLength(0);
+    expect(shown(stores).journal).toHaveLength(0);
   });
 
   it("«Ритуал» спрашивает про способ, а не про признак записи (FR-002)", async () => {
@@ -211,13 +211,13 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
 
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня/ }));
     await user.click(screen.getByRole("button", { name: "Потратить: Руны" }));
-    expect(stores.session.getState().session?.character.runes.remaining).toBe(2);
+    expect(shown(stores).resources.runes.remaining).toBe(2);
 
     await user.click(screen.getByRole("button", { name: "Закрыть" }));
     // Кнопка отмены живёт только в журнале — путь к ней длиннее на одно нажатие.
     await user.click(screen.getByRole("radio", { name: /^Журнал/ }));
     await user.click(screen.getByRole("button", { name: /^Отменить/ }));
-    expect(stores.session.getState().session?.character.runes.remaining).toBe(3);
+    expect(shown(stores).resources.runes.remaining).toBe(3);
   });
 
 });
@@ -366,12 +366,12 @@ describe("режим «Журнал» (FR-114, FR-220)", () => {
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(3);
+    expect(slotsLeft(stores, 1)).toBe(3);
 
     await openJournal(user);
     await user.click(screen.getByRole("button", { name: /^Отменить/ }));
 
-    expect(stores.session.getState().session?.character.spellSlots[1]?.remaining).toBe(4);
+    expect(slotsLeft(stores, 1)).toBe(4);
     // Экран не закрылся: кнопка переехала на запись «Бой начался», и её тоже можно отменить.
     expect(screen.getByRole("button", { name: "Отменить: Бой начался" })).toBeDefined();
   });
@@ -539,7 +539,7 @@ describe("отдых и бой: отказ приходит с причиной 
       screen.getByRole("button", { name: "Долгий отдых — Пока идёт бой, долгий отдых недоступен" }),
     );
 
-    expect(stores.session.getState().session?.journal.at(-1)?.kind).not.toBe("long_rest");
+    expect(shown(stores).journal.at(-1)?.kind).not.toBe("long_rest");
     expect(screen.queryByRole("dialog", { name: "Долгий отдых?" })).toBeNull();
   });
 });

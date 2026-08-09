@@ -6,12 +6,14 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { createTestStores } from "@/ui/app/testing/stores";
+import { createTestStores, shown } from "@/ui/app/testing/stores";
 import { createBrowserStores, StoreProvider } from "@/ui/app/providers/stores";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 
 function Slots() {
-  const remaining = useSession((state) => state.session?.character.spellSlots[1]?.remaining ?? null);
+  const remaining = useSession(
+    (state) => state.snapshot?.resources.slots.find((slot) => slot.level === 1)?.remaining ?? null,
+  );
   return <output>ячейки 1 уровня: {remaining}</output>;
 }
 
@@ -60,7 +62,7 @@ describe("StoreProvider", () => {
     const stores = await createTestStores();
     // Возвращаем стор в исходное состояние: провайдер обязан вызвать загрузку сам.
     act(() => {
-      stores.session.setState({ session: null, status: "loading" });
+      stores.session.setState({ snapshot: null, status: "loading" });
     });
 
     render(
@@ -99,7 +101,7 @@ describe("сторы для браузера", () => {
     const stores = createBrowserStores();
     await stores.session.getState().hydrate();
 
-    expect(stores.session.getState().session?.character.name).toBe(createThorne().name);
+    expect(shown(stores).sheet.name).toBe(createThorne().name);
   });
 
   it("играют встроенным каталогом, пока игрок не загрузил свой (FR-123)", async () => {
@@ -107,12 +109,7 @@ describe("сторы для браузера", () => {
     const stores = createBrowserStores();
     await stores.session.getState().hydrate();
 
-    expect(stores.session.getState().spellCatalog).toHaveLength(29);
-    expect(stores.session.getState().spellCatalogSource).toBe("built_in");
-  });
-
-  it("часы приложения дают время в ISO для выгружаемого файла", () => {
-    const stores = createBrowserStores();
-    expect(Number.isNaN(Date.parse(stores.now()))).toBe(false);
+    expect(shown(stores).spells).toHaveLength(29);
+    expect(shown(stores).catalogSource).toBe("built_in");
   });
 });
