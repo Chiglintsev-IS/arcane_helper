@@ -1,9 +1,10 @@
 /**
  * Магическое восстановление.
  *
- * Игрок выбирает, какие ячейки вернуть; движок правил не даёт превысить ни суммарный бюджет, ни
- * потраченное по каждому уровню. Проверка здесь не повторяется, а вызывается: расхождение проверки
- * в интерфейсе и проверки в правилах — ровно та ошибка, из-за которой перестают доверять числам.
+ * Игрок выбирает, какие ячейки вернуть; годится ли набранное, отвечают правила — тем же ответом,
+ * которым потом откажет или согласится подтверждение. Проверка здесь не повторяется, а спрашивается:
+ * расхождение проверки в интерфейсе и проверки в правилах — ровно та ошибка, из-за которой
+ * перестают доверять числам.
  *
  * Уровни без единой потраченной ячейки не показываются: возвращать там нечего, а строка со
  * счётчиком, который нельзя увеличить, читается как неисправность.
@@ -13,42 +14,34 @@
 
 import { useState } from "react";
 
-import type { CharacterState } from "@/core/domain/assembly/state";
-import {
-  arcaneRecoveryPlanCost,
-  recoverableSlots,
-  validateArcaneRecovery,
-  type SlotRecoveryPlan,
-} from "@/core/domain/arcana/slots";
+import type { CommandOf } from "@/contract/commands";
+import type { PreviewOf, Question } from "@/contract/questions";
+import type { RecoveryView } from "@/contract/views";
+
 import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
+import { usePreview } from "@/ui/shared/model/usePreview";
+
+type SlotRecoveryPlan = CommandOf<"use_arcane_recovery">["plan"];
 
 export function ArcaneRecoverySheet({
-  character,
+  recovery,
   onConfirm,
   onCancel,
 }: {
-  character: CharacterState;
+  /** Что вернуть и сколько бюджета осталось: отбор уровней сделали правила. */
+  recovery: RecoveryView["arcaneRecovery"];
   onConfirm: (plan: SlotRecoveryPlan) => void;
   onCancel: () => void;
 }) {
   const [plan, setPlan] = useState<SlotRecoveryPlan>({});
 
-  // Остаток дневного бюджета, а не полная формула по уровню: за столом его берут частями, и то,
-  // что доступно прямо сейчас, может быть меньше теоретического максимума.
-  const budget = character.arcaneRecovery.remaining;
-  const spentBudget = arcaneRecoveryPlanCost(plan);
-
-  const recoverable = recoverableSlots(character.spellSlots);
-
-  const validation = validateArcaneRecovery(character.spellSlots, plan, budget);
+  const question: Question = { kind: "arcane_recovery_preview", plan };
+  const answer = usePreview(question);
+  const preview: PreviewOf<"arcane_recovery_preview"> | null =
+    answer?.kind === "arcane_recovery_preview" ? answer : null;
 
   const change = (level: number, delta: number): void => {
-    const next = { ...plan, [level]: Math.max(0, (plan[level] ?? 0) + delta) };
-    // Проверяем до применения: кнопка «+» не должна уводить план за бюджет молча.
-    if (delta > 0 && !validateArcaneRecovery(character.spellSlots, next, budget).valid) {
-      return;
-    }
-    setPlan(next);
+    setPlan({ ...plan, [level]: Math.max(0, (plan[level] ?? 0) + delta) });
   };
 
   return (
@@ -61,17 +54,17 @@ export function ArcaneRecoverySheet({
       <p className="text-sm">
         Суммарный уровень возвращаемых ячеек:{" "}
         <span className="font-semibold tabular-nums">
-          {spentBudget} из {budget}
+          {preview?.levelsSpent ?? 0} из {recovery.remaining}
         </span>
       </p>
 
-      {recoverable.length === 0 ? (
+      {recovery.recoverable.length === 0 ? (
         <p className="text-sm text-slate-600 dark:text-slate-400">
           Все ячейки на месте — возвращать нечего.
         </p>
       ) : (
         <ul className="flex flex-col gap-1">
-          {recoverable.map((slot) => (
+          {recovery.recoverable.map((slot) => (
             <li key={slot.level} className="flex items-center justify-between gap-2 text-sm">
               <span>
                 {slot.level} ур.{" "}
@@ -105,14 +98,15 @@ export function ArcaneRecoverySheet({
         </ul>
       )}
 
-      {validation.valid ? null : (
-        <p className="text-xs text-slate-600 dark:text-slate-400">{validation.reason}</p>
+      {/* Набрать лишнее не запрещено — запрещено вернуть: причина стоит там же, где набирают. */}
+      {preview?.unavailabilityRu === undefined ? null : (
+        <p className="text-xs text-slate-600 dark:text-slate-400">{preview.unavailabilityRu}</p>
       )}
 
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={!validation.valid}
+          disabled={preview === null || preview.unavailabilityRu !== undefined}
           onClick={() => onConfirm(plan)}
           className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
         >

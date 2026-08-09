@@ -13,6 +13,7 @@
 import { z } from "zod";
 
 import {
+  activeEffectViewSchema,
   bagViewSchema,
   bloodMagicViewSchema,
   castingViewSchema,
@@ -48,6 +49,8 @@ export const snapshotSchema = z.object({
   turn: turnViewSchema,
   /** Что держится вниманием; нет вовсе — не держится ничего. */
   concentration: concentrationViewSchema.optional(),
+  /** Что действует прямо сейчас, в порядке появления. */
+  effects: z.array(activeEffectViewSchema),
   casting: castingViewSchema,
   bloodMagic: bloodMagicViewSchema,
   spells: z.array(spellRowViewSchema),

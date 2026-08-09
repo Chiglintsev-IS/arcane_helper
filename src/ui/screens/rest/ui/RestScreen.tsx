@@ -21,7 +21,6 @@ import { spellsForScreen } from "@/ui/shared/model/spellList";
 
 export function RestScreen() {
   const { session: sessionStore } = useStores();
-  const session = useSession((state) => state.session)!;
   const snapshot = useSession((state) => state.snapshot)!;
 
   const [longRestOpen, setLongRestOpen] = useState(false);
@@ -32,7 +31,6 @@ export function RestScreen() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [checkOpen, setCheckOpen] = useState(false);
 
-  const { character } = session;
   const execute = sessionStore.getState().execute;
 
   const { concentration } = snapshot;
@@ -73,7 +71,7 @@ export function RestScreen() {
         />
 
         <ActiveEffects
-          character={character}
+          effects={snapshot.effects}
           armorClass={snapshot.sheet.armorClass.value}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
@@ -118,7 +116,7 @@ export function RestScreen() {
 
       {recoveryOpen ? (
         <ArcaneRecoverySheet
-          character={character}
+          recovery={snapshot.recovery.arcaneRecovery}
           onConfirm={async (plan) => {
             if ((await execute({ kind: "use_arcane_recovery", plan })) === null) {
               setRecoveryOpen(false);

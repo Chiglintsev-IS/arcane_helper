@@ -13,9 +13,9 @@
 
 import { useState, type FormEvent } from "react";
 
+import type { ActiveEffectView } from "@/contract/views";
+
 import { ConcentrationCard } from "@/ui/entities/concentration/ui/ConcentrationCard";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 
 /**
@@ -24,8 +24,8 @@ import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summa
  * Приложение не хранит цель эффекта, поэтому «Доспехи мага» на союзника поднимут КД Торна. Подпись
  * делает это видимым: неверный эффект снимается вручную.
  */
-function armorClassNote(effect: ActiveEffect, armorClass: number): string {
-  return effect.contributions.length === 0 ? "" : ` · КД ${armorClass}`;
+function armorClassNote(effect: ActiveEffectView, armorClass: number): string {
+  return effect.changesArmorClass ? ` · КД ${armorClass}` : "";
 }
 
 /**
@@ -59,14 +59,15 @@ function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
 }
 
 export function ActiveEffects({
-  character,
+  effects,
   armorClass,
   concentration,
   onOpenConcentration,
   onEndEffect,
   onAddStatus,
 }: {
-  character: CharacterState;
+  /** Что висит на персонаже: посчитано ядром, включая то, двигает ли эффект защиту. */
+  effects: readonly ActiveEffectView[];
   /** Действующая защита: то же число, что в шапке и на «Листе», — его считает лист. */
   armorClass: number;
   concentration: ConcentrationSummary | null;
@@ -75,8 +76,8 @@ export function ActiveEffects({
   /** Заводит статус без вклада в КД: поле стоит прямо в блоке, рядом со списком. */
   onAddStatus: (nameRu: string) => void;
 }) {
-  const concentrationEffect = character.activeEffects.find((effect) => effect.isConcentration);
-  const otherEffects = character.activeEffects.filter((effect) => !effect.isConcentration);
+  const concentrationEffect = effects.find((effect) => effect.isConcentration);
+  const otherEffects = effects.filter((effect) => !effect.isConcentration);
 
   return (
     <div className="flex flex-col gap-2">

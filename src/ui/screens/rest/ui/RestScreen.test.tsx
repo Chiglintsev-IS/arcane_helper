@@ -194,6 +194,26 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     expect(stores.session.getState().session?.character.arcaneRecovery.remaining).toBe(3);
   });
 
+  it("набранное сверх бюджета названо причиной, а не отменено молча (FR-131)", async () => {
+    const user = userEvent.setup();
+    const spent = withSpentSlots(withSpentSlots(createThorne(), 4, 1), 1, 1);
+    await atCamp(spent);
+
+    await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
+    await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
+    // Бюджет Торна — четыре уровня: ячейка четвёртого укладывается, ячейка сверх неё — уже нет.
+    await user.click(screen.getByRole("button", { name: "Вернуть ячейку 4 уровня" }));
+    expect(
+      screen.getByRole("button", { name: "Вернуть ячейки" }).hasAttribute("disabled"),
+    ).toBe(false);
+
+    await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
+    expect(screen.getByText(/превышает остаток бюджета/)).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Вернуть ячейки" }).hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
   it("исчерпанный бюджет гаснет, но остаётся с причиной (FR-131)", async () => {
     // Раньше кнопка исчезала. Пропавшая кнопка не отвечает на вопрос «почему нельзя», а за столом
     // он возникает раньше, чем игрок вспомнит правило, — требование это изменило.

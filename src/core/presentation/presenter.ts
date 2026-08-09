@@ -13,6 +13,7 @@ import type { LiveSession } from "@/core/application/session";
 import { toBagView } from "./views/bagView";
 import { toBloodMagicView } from "./views/bloodMagicView";
 import { toConcentrationView } from "./views/concentrationView";
+import { toEffectViews } from "./views/effectsView";
 import { toRecoveryView } from "./views/recoveryView";
 import { toResourcesView } from "./views/resourcesView";
 import { toSheetView } from "./views/sheetView";
@@ -29,6 +30,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     recovery: toRecoveryView(live.session),
     turn: toTurnView(live),
     ...(concentration === undefined ? {} : { concentration }),
+    effects: toEffectViews(live.session.character),
     casting: toCastingView(live.session.character),
     bloodMagic: toBloodMagicView(live.session),
     spells: toSpellRowViews(live),

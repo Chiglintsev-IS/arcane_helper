@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { createSession, type LiveSession } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { withoutHitDice } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withSpentSlots, withoutHitDice } from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { CharacterState } from "@/core/domain/assembly/state";
 
 import { answerQuestion } from "./previewer";
@@ -264,5 +264,36 @@ describe("обмен крови на очки", () => {
 
     expect(preview?.instructions.length).toBeGreaterThan(0);
     expect(preview?.announcement).toContain("6");
+  });
+});
+
+describe("магическое восстановление", () => {
+  function plan(spent: Record<string, number>, character: CharacterState = createThorne()) {
+    const preview = answerQuestion(alive(character), {
+      kind: "arcane_recovery_preview",
+      plan: spent,
+    });
+    return preview.kind === "arcane_recovery_preview" ? preview : null;
+  }
+
+  it("считает суммарный уровень набранного: им и меряется дневной бюджет", () => {
+    const spent = withSpentSlots(withSpentSlots(createThorne(), 1, 2), 3, 1);
+
+    expect(plan({ 1: 2, 3: 1 }, spent)?.levelsSpent).toBe(5);
+  });
+
+  it("набранное сверх бюджета отвечает причиной словами владельца, а не молчанием", () => {
+    // Дневной бюджет Торна — четыре уровня, а набрано пять.
+    const spent = withSpentSlots(withSpentSlots(createThorne(), 4, 1), 1, 1);
+    const answer = plan({ 4: 1, 1: 1 }, spent);
+
+    expect(answer?.levelsSpent).toBe(5);
+    expect(answer?.unavailabilityRu).toBeDefined();
+  });
+
+  it("годному плану причины не называет вовсе", () => {
+    const spent = withSpentSlots(createThorne(), 1, 1);
+
+    expect(plan({ 1: 1 }, spent)?.unavailabilityRu).toBeUndefined();
   });
 });

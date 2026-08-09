@@ -11,7 +11,11 @@
 import type { Preview, PreviewOf, Question } from "@/contract/questions";
 
 import { Character } from "@/core/domain/assembly/character";
-import { affordableSpellLevels } from "@/core/domain/arcana/slots";
+import {
+  affordableSpellLevels,
+  arcaneRecoveryPlanCost,
+  validateArcaneRecovery,
+} from "@/core/domain/arcana/slots";
 import { RUNES, runeEffect, runeUnavailability } from "@/core/domain/arcana/runes";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
@@ -145,6 +149,19 @@ export function answerQuestion(live: LiveSession, question: Question): Preview {
   }
 
   if (question.kind === "cast_preview") return castPreview(live, question);
+
+  if (question.kind === "arcane_recovery_preview") {
+    const validation = validateArcaneRecovery(
+      character.spellSlots,
+      question.plan,
+      character.arcaneRecovery.remaining,
+    );
+    return {
+      kind: "arcane_recovery_preview",
+      levelsSpent: arcaneRecoveryPlanCost(question.plan),
+      ...(validation.valid ? {} : { unavailabilityRu: validation.reason }),
+    };
+  }
 
   if (question.kind === "blood_exchange_preview") {
     const { points } = question;

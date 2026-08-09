@@ -193,8 +193,35 @@ export const recoveryViewSchema = z.object({
   combatEndRecovery: whole,
   shortRestUnavailabilityRu: word.optional(),
   longRestUnavailabilityRu: word.optional(),
-  /** Магическое восстановление: остаток дневного бюджета уровней ячеек. */
-  arcaneRecovery: z.object({ remaining: whole, unavailabilityRu: word.optional() }),
+  /**
+   * Магическое восстановление: остаток дневного бюджета уровней ячеек и что им можно вернуть.
+   *
+   * Возвращать нечего — список пуст: уровень без единой потраченной ячейки правила не предлагают, и
+   * второй отбор того же на экране разошёлся бы с первым.
+   */
+  arcaneRecovery: z.object({
+    remaining: whole,
+    unavailabilityRu: word.optional(),
+    recoverable: z.array(z.object({ level: whole, spent: whole })),
+  }),
+});
+
+/**
+ * Действующий эффект так, как его показывают: чем он назван, чем кончится и что требует каждый ход.
+ *
+ * Вкладов числами здесь нет: их считает лист, и повторить их значило бы прислать одно число дважды.
+ * Есть признак того, что вклад в защиту у эффекта имеется, — им подписывают, откуда взялась защита.
+ */
+export const activeEffectViewSchema = z.object({
+  id: word,
+  nameRu: word,
+  endConditionRu: word,
+  /** Тот самый эффект, которым держится концентрация: он показывается отдельной карточкой. */
+  isConcentration: z.boolean(),
+  /** Двигает ли эффект Класс Доспеха: «Доспехи мага» на союзника видно только так. */
+  changesArmorClass: z.boolean(),
+  /** Что придётся делать каждый ход, пока эффект держится; нет вовсе — эффект висит сам. */
+  repeatableAction: z.object({ label: word, description: word }).optional(),
 });
 
 /**
@@ -535,6 +562,7 @@ export const bloodMagicViewSchema = z.object({
   warningsRu: z.array(word),
 });
 
+export type ActiveEffectView = z.infer<typeof activeEffectViewSchema>;
 export type ContributionView = z.infer<typeof contributionViewSchema>;
 export type ConcentrationCheckView = z.infer<typeof concentrationCheckViewSchema>;
 export type ConcentrationView = z.infer<typeof concentrationViewSchema>;

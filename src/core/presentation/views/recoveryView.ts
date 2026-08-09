@@ -12,6 +12,7 @@ import type { Arcana } from "@/core/domain/arcana/arcana";
 import { Character } from "@/core/domain/assembly/character";
 import type { Session } from "@/core/application/session";
 import { hourUnavailability } from "@/core/application/useCases/health";
+import { recoverableSlots } from "@/core/domain/arcana/slots";
 import {
   arcaneRecoveryUnavailability,
   longRestUnavailability,
@@ -47,6 +48,10 @@ export function toRecoveryView(session: Session): RecoveryView {
     arcaneRecovery: {
       remaining: character.arcaneRecovery.remaining,
       ...(recovery === null ? {} : { unavailabilityRu: recovery }),
+      recoverable: recoverableSlots(character.spellSlots).map((slot) => ({
+        level: slot.level,
+        spent: slot.spent,
+      })),
     },
   };
 }

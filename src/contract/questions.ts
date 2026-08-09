@@ -51,6 +51,11 @@ export const questionSchema = z.discriminatedUnion("kind", [
   }),
   /** Во что обойдётся обмен набранного числа очков заклинаний. */
   z.object({ kind: z.literal("blood_exchange_preview"), points: numeric }),
+  /** Годится ли набранный план магического восстановления и во сколько уровней он обойдётся. */
+  z.object({
+    kind: z.literal("arcane_recovery_preview"),
+    plan: z.record(word, numeric),
+  }),
 ]);
 
 /**
@@ -118,6 +123,13 @@ export const previewSchema = z.discriminatedUnion("kind", [
     affordableSpellLevel: whole.nullable(),
     instructions: z.array(word),
     announcement: word,
+  }),
+  z.object({
+    kind: z.literal("arcane_recovery_preview"),
+    /** Суммарный уровень набранных ячеек: им и меряется дневной бюджет. */
+    levelsSpent: whole,
+    /** Что мешает вернуть набранное; нет вовсе — план годится. */
+    unavailabilityRu: word.optional(),
   }),
 ]);
 

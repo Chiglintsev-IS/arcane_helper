@@ -31,7 +31,6 @@ import { applyEdit } from "@/ui/shared/model/editing";
 
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
-  const session = useSession((state) => state.session)!;
   const error = useSession((state) => state.error);
   const snapshot = useSession((state) => state.snapshot)!;
   const draft = useDraft((state) => state.draft);
@@ -47,7 +46,6 @@ export function GameScreen() {
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [checkOpen, setCheckOpen] = useState(false);
 
-  const { character } = session;
   const execute = sessionStore.getState().execute;
   const [refusal, setRefusal] = useState<string | null>(null);
 
@@ -154,7 +152,7 @@ export function GameScreen() {
         />
 
         <ActiveEffects
-          character={character}
+          effects={snapshot.effects}
           armorClass={snapshot.sheet.armorClass.value}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
