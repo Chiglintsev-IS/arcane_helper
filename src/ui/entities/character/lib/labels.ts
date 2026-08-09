@@ -3,7 +3,7 @@
 import type { StatChoiceView } from "@/contract/views";
 import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
 
-export const ABILITY_LABELS: Readonly<Record<string, string>> = {
+const ABILITY_LABELS: Readonly<Record<string, string>> = {
   strength: "Сила",
   dexterity: "Ловкость",
   constitution: "Телосложение",
@@ -12,7 +12,7 @@ export const ABILITY_LABELS: Readonly<Record<string, string>> = {
   charisma: "Харизма",
 };
 
-export const SKILL_LABELS: Readonly<Record<string, string>> = {
+const SKILL_LABELS: Readonly<Record<string, string>> = {
   acrobatics: "Акробатика",
   animalHandling: "Уход за животными",
   arcana: "Магия",
@@ -122,7 +122,7 @@ export function statLabel(stats: readonly StatChoiceView[], stat: string): strin
 /** Имя особенности волшебника: его называет и своя шторка, и привал, и предпросмотр смены уровня. */
 export const ARCANE_RECOVERY_LABEL = "Магическое восстановление";
 
-export const SIZE_LABELS: Readonly<Record<string, string>> = {
+const SIZE_LABELS: Readonly<Record<string, string>> = {
   tiny: "Крошечный",
   small: "Маленький",
   medium: "Средний",
@@ -136,7 +136,7 @@ const TRAINING_LABELS: Readonly<Record<string, string>> = {
   expert: "компетентность",
 };
 
-/** Ярлыки прибавок: их называют и лист, и шторка вещи, и шторка прочих прибавок. */
+/** Род доспеха и род вещи словами: перечень приезжает от правил, слово к слову — здесь. */
 const ARMOR_CATEGORY_LABELS: Readonly<Record<string, string>> = {
   light: "Лёгкий",
   medium: "Средний",
@@ -151,7 +151,7 @@ const ITEM_KIND_LABELS: Readonly<Record<string, string>> = {
 };
 
 /** Полные имена монет — для полей правки кошелька. */
-export const CURRENCY_LABELS: Readonly<Record<string, string>> = {
+const CURRENCY_LABELS: Readonly<Record<string, string>> = {
   gold: "Золото",
   silver: "Серебро",
   copper: "Медь",
