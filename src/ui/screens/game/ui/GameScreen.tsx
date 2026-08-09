@@ -80,8 +80,6 @@ export function GameScreen() {
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
   const openSpell = spells.find((candidate) => candidate.id === openSpellId) ?? null;
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
-  // Карточки тех же строк: у реакций своей проекции ещё нет, и они читают карточку из каталога.
-  const reactionSpells = spells.filter((spell) => inMode.some((row) => row.id === spell.id));
 
   const rows = shown.map((spell) => (
     <SpellCardCompact
@@ -222,7 +220,6 @@ export function GameScreen() {
           spell={openSpell}
           row={openRow}
           casting={casting}
-          note={character.spellNotes[openSpell.id]}
           onCast={() => draftStore.getState().start(openSpell, openRow)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
           onClose={() => setOpenSpellId(null)}
@@ -307,15 +304,14 @@ export function GameScreen() {
 
       {reactionsOpen ? (
         <ReactionsSheet
-          spells={reactionSpells}
-          rows={snapshot.spells}
+          rows={inMode}
           armorClass={snapshot.sheet.armorClass.value}
           runesRemaining={snapshot.resources.runes.remaining}
           reactionAvailable={turn.reactionAvailable}
           runeAvailable={snapshot.resources.wardingSigilAvailable}
-          onCast={(spell) => {
-            const row = snapshot.spells.find((candidate) => candidate.id === spell.id);
-            if (row === undefined) return;
+          onCast={(row) => {
+            const spell = spells.find((candidate) => candidate.id === row.id);
+            if (spell === undefined) return;
             setReactionsOpen(false);
             draftStore.getState().start(spell, row);
           }}

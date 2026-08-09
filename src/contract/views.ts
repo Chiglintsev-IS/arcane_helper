@@ -241,6 +241,38 @@ export const castOptionViewSchema = z.object({
 });
 
 /**
+ * Карточка заклинания: то, что о нём написано в книге.
+ *
+ * Отдельно от строки, потому что отвечает на другой вопрос: строка говорит, чем заклинание является
+ * для этого персонажа сейчас, а карточка — что о нём вообще известно, и от персонажа не зависит
+ * ничем. Числа сюда не повторяются: дальность, длительность, урон и цена стоят в строке, и второй
+ * их экземпляр разошёлся бы с первым молча.
+ */
+export const spellCardViewSchema = z.object({
+  nameEn: word,
+  school: word,
+  fullRulesRu: word,
+  higherLevelsRu: word.optional(),
+  tacticalAdviceRu: word.optional(),
+  /** Кого берут целью: род цели словом правил и предел числа целей. */
+  targeting: z.object({ type: word, maximumTargets: whole.optional() }),
+  /** Что даёт успех и что провал того броска, который называет строка. */
+  successEffectRu: word.optional(),
+  failureEffectRu: word.optional(),
+  /**
+   * На что срабатывает реакция; нет вовсе — заклинание реакцией не творится.
+   *
+   * Род события — чтобы отобрать по вопросу «что произошло», фраза — чтобы прочесть её целиком:
+   * разбирать прозу строкой значит менять поведение от запятой в описании.
+   */
+  reaction: z.object({ trigger: word.optional(), textRu: word }).optional(),
+  /** Материальный компонент; нет вовсе — заклинание его не требует. */
+  material: z.object({ textRu: word, consumed: z.boolean() }).optional(),
+  /** Что произносят и что показывают руками: слова книги, а не выбор игрока. */
+  roleplay: z.object({ incantation: word, gesture: word }),
+});
+
+/**
  * Строка списка заклинаний: карточка вместе с тем, чем она является для этого персонажа сейчас.
  *
  * Числа подставлены под него, а не взяты из книги: 2d8 у заговора — это его уровень. Подписи здесь
@@ -266,6 +298,8 @@ export const spellRowViewSchema = z.object({
   spendsHitDice: z.boolean(),
   /** Нужен собственный материальный компонент: фокусировка его не заменяет. */
   ownComponentRequired: z.boolean(),
+  /** Лежит ли этот компонент в сумке: купленное поимённо, а не то, что закрывает фокусировка. */
+  ownComponentCarried: z.boolean(),
   /** Роль в бою: чем бить, чем закрыться, всё прочее. */
   role: word,
 
@@ -310,6 +344,11 @@ export const spellRowViewSchema = z.object({
     /** Чего в объявлении не хватает и почему: пробел назван, а не замолчан. */
     gaps: z.array(z.object({ placeholder: word.optional(), reasonRu: word })),
   }),
+
+  /** Заметка игрока: домашнее правило или напоминание; нет вовсе — не писал. */
+  note: text.optional(),
+  /** Что о заклинании написано: полные правила, отыгрыш и всё, чего в строке нет. */
+  card: spellCardViewSchema,
 });
 
 /**
@@ -371,6 +410,11 @@ export const castingViewSchema = z.object({
   /** Сколько заклинаний он вправе держать подготовленными и сколько держит. */
   preparedLimit: whole,
   preparedCount: whole,
+  /**
+   * Закрыты ли дешёвые материальные компоненты фокусировкой или мешочком; нет вовсе — про
+   * снаряжение персонажа ничего не известно, и вердикта о компонентах не бывает.
+   */
+  freeComponentsCovered: z.boolean().optional(),
 });
 
 /**
@@ -396,6 +440,7 @@ export type ResourcesView = z.infer<typeof resourcesViewSchema>;
 export type RecoveryView = z.infer<typeof recoveryViewSchema>;
 export type TurnView = z.infer<typeof turnViewSchema>;
 export type CastOptionView = z.infer<typeof castOptionViewSchema>;
+export type SpellCardView = z.infer<typeof spellCardViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;
 export type BloodMagicView = z.infer<typeof bloodMagicViewSchema>;

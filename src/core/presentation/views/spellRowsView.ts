@@ -9,7 +9,13 @@
  * схватка, и второй ответ на тот же вопрос разошёлся бы с ним молча.
  */
 
-import type { CastOptionView, CastingView, SpellRowView, TurnView } from "@/contract/views";
+import type {
+  CastOptionView,
+  CastingView,
+  SpellCardView,
+  SpellRowView,
+  TurnView,
+} from "@/contract/views";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Character } from "@/core/domain/assembly/character";
@@ -119,6 +125,50 @@ function castOptionView(
   };
 }
 
+/**
+ * Карточка так, как её показывают: написанное о заклинании, без единого числа этого персонажа.
+ *
+ * Персонажа функция не принимает, и это не экономия параметра: карточка одна и та же у любого, кто
+ * открыл книгу, а всё, что зависит от него, стоит в строке рядом.
+ */
+function spellCardView(spell: Spell): SpellCardView {
+  const { castingTime, components, resolution, targeting } = spell;
+
+  return {
+    nameEn: spell.nameEn,
+    school: spell.school,
+    fullRulesRu: spell.fullRulesRu,
+    ...(spell.higherLevelsRu === undefined ? {} : { higherLevelsRu: spell.higherLevelsRu }),
+    ...(spell.tacticalAdviceRu === undefined ? {} : { tacticalAdviceRu: spell.tacticalAdviceRu }),
+    targeting: {
+      type: targeting.type,
+      ...(targeting.maximumTargets === undefined
+        ? {}
+        : { maximumTargets: targeting.maximumTargets }),
+    },
+    ...(resolution.successEffect === undefined
+      ? {}
+      : { successEffectRu: resolution.successEffect }),
+    ...(resolution.failureEffect === undefined
+      ? {}
+      : { failureEffectRu: resolution.failureEffect }),
+    ...(castingTime.reactionTrigger === undefined
+      ? {}
+      : {
+          reaction: {
+            ...(castingTime.trigger === undefined ? {} : { trigger: castingTime.trigger }),
+            textRu: castingTime.reactionTrigger,
+          },
+        }),
+    ...(components.materialText === undefined
+      ? {}
+      : {
+          material: { textRu: components.materialText, consumed: components.consumed === true },
+        }),
+    roleplay: { incantation: spell.roleplay.incantation, gesture: spell.roleplay.gesture },
+  };
+}
+
 /** Каким станет Класс Доспеха, если сотворить: у заклинания без вклада в защиту — ничем. */
 function armorClassIfCast(spell: Spell, character: CharacterState): number | undefined {
   if (spell.contributions.length === 0) return undefined;
@@ -132,6 +182,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
   const announcementContext = { character, ...plans.suggested.option };
   const announcement = renderAnnouncement(spell, announcementContext);
   const armorClass = armorClassIfCast(spell, character);
+  const note = character.spellNotes[spell.id];
 
   return {
     id: spell.id,
@@ -164,6 +215,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     cantrip: spell.level === CANTRIP_LEVEL,
     spendsHitDice: spell.hitDiceCost !== undefined,
     ownComponentRequired: needsOwnComponent(spell.components),
+    ownComponentCarried: Character.of(character).equipment.hasMaterialFor(spell.id),
     role: combatRoleOf(spell),
 
     slotPrice: slotPriceOf(spell, turn.inFight),
@@ -200,6 +252,8 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
         reasonRu: gap.reasonRu,
       })),
     },
+    ...(note === undefined ? {} : { note }),
+    card: spellCardView(spell),
   };
 }
 
@@ -210,13 +264,16 @@ export function toTurnView(live: LiveSession): TurnView {
 }
 
 export function toCastingView(character: CharacterState): CastingView {
-  const sheet = Character.of(character).sheet;
+  const { sheet, equipment } = Character.of(character);
   return {
     spellAttackModifier: sheet.value("spellAttackModifier"),
     spellSaveDc: sheet.value("spellSaveDc"),
     spellcastingModifier: sheet.abilityModifier(SPELLCASTING_ABILITY),
     preparedLimit: sheet.value("preparedLimit"),
     preparedCount: character.preparedSpellIds.length,
+    // Незаведённое снаряжение вердикта не даёт: «нечем закрыть» было бы выдумкой про чужого
+    // персонажа, чьё состояние приехало из сборки, которая про компоненты не знала.
+    ...(equipment.known ? { freeComponentsCovered: equipment.replacesFreeComponents } : {}),
   };
 }
 

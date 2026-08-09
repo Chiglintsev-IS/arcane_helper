@@ -22,7 +22,6 @@ import { spellsForScreen } from "@/ui/shared/model/spellList";
 export function RestScreen() {
   const { session: sessionStore } = useStores();
   const session = useSession((state) => state.session)!;
-  const spells = useSession((state) => state.spellCatalog);
   const snapshot = useSession((state) => state.snapshot)!;
 
   const [longRestOpen, setLongRestOpen] = useState(false);
@@ -94,9 +93,9 @@ export function RestScreen() {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
         <Camp
-          character={character}
           recovery={snapshot.recovery}
-          spells={spells}
+          rows={snapshot.spells}
+          casting={snapshot.casting}
           onShortRest={() => void execute({ kind: "short_rest" })}
           onLongRest={() => setLongRestOpen(true)}
           onArcaneRecovery={() => setRecoveryOpen(true)}

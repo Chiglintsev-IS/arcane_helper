@@ -12,24 +12,22 @@
 
 "use client";
 
-import type { RecoveryView } from "@/contract/views";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import type { Spell } from "@/core/domain/catalog/spell";
+import type { CastingView, RecoveryView, SpellRowView } from "@/contract/views";
 import { CampActions } from "@/ui/features/rest/ui/CampActions";
 import { MaterialsList } from "@/ui/features/materials/ui/MaterialsList";
 
 export function Camp({
-  character,
   recovery,
-  spells,
+  rows,
+  casting,
   onShortRest,
   onLongRest,
   onArcaneRecovery,
   onToggleMaterial,
 }: {
-  character: CharacterState;
   recovery: RecoveryView;
-  spells: readonly Spell[];
+  rows: readonly SpellRowView[];
+  casting: CastingView;
   onShortRest: () => void;
   onLongRest: () => void;
   onArcaneRecovery: () => void;
@@ -44,7 +42,7 @@ export function Camp({
         onArcaneRecovery={onArcaneRecovery}
       />
 
-      <MaterialsList spells={spells} character={character} onToggle={onToggleMaterial} />
+      <MaterialsList rows={rows} casting={casting} onToggle={onToggleMaterial} />
     </div>
   );
 }

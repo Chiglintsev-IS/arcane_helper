@@ -6,8 +6,7 @@
  * выбирает слово и падеж. Аббревиатуры русские — «КС», «КД», а не DC и AC.
  */
 
-import type { SpellRowView } from "@/contract/views";
-import type { Spell } from "@/core/domain/catalog/spell";
+import type { SpellCardView, SpellRowView } from "@/contract/views";
 import {
   longCastingTimeRu,
   plural,
@@ -146,7 +145,7 @@ export function durationLabel(duration: SpellRowView["duration"]): string {
   }
 }
 
-export function targetingLabel(targeting: Spell["targeting"]): string {
+export function targetingLabel(targeting: SpellCardView["targeting"]): string {
   switch (targeting.type) {
     case "self":
       return "На себя";

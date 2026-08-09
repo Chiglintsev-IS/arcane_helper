@@ -16,16 +16,32 @@ import { useState } from "react";
 import type { SpellRowView } from "@/contract/views";
 
 import { Badge } from "@/ui/shared/ui/Badge";
-import type { Spell } from "@/core/domain/catalog/spell";
-import {
-  availableTriggers,
-  reactionsFor,
-  REACTION_TRIGGER_LABEL,
-  type ReactionTrigger,
-} from "@/core/domain/catalog/reactions";
+
+/**
+ * Вопрос «что произошло» словами игрока, а не терминами правил.
+ *
+ * Порядок — по частоте за столом: попадание случается каждый раунд, провал спасброска реже всего.
+ * Род события приезжает строкой заклинания, и подпись ищется по нему, а не берётся ключом словаря:
+ * список слов принадлежит правилам, здесь — только вопрос, которым о них спрашивают.
+ */
+const TRIGGERS: readonly { kind: string; label: string }[] = [
+  { kind: "attacked", label: "По мне попали" },
+  { kind: "elemental_damage", label: "Получаю урон стихией" },
+  { kind: "enemy_casts", label: "Враг творит заклинание" },
+  { kind: "falling", label: "Кто-то падает" },
+  { kind: "enemy_succeeds", label: "Враг преуспел в броске" },
+  { kind: "failed_save", label: "Я провалил спасбросок" },
+];
+
+/**
+ * Событие, на которое отвечает руна, а не заклинание.
+ *
+ * Вопрос о нём стоит всегда: «Знаки ограждения» — особенность подкласса, и в книге заклинаний её
+ * нет по определению. Без исключения вопрос исчез бы вместе с единственным ответом.
+ */
+const RUNE_ANSWERS = "failed_save";
 
 export function ReactionsSheet({
-  spells,
   rows,
   armorClass,
   runesRemaining,
@@ -35,21 +51,25 @@ export function ReactionsSheet({
   onSpendRune,
   onClose,
 }: {
-  spells: readonly Spell[];
-  /** Строки тех же заклинаний: изменённое число приходит посчитанным, а не складывается здесь. */
+  /** Строки того списка, из которого реакцию и творят: изменённое число приходит посчитанным. */
   rows: readonly SpellRowView[];
   armorClass: number;
   runesRemaining: number;
   reactionAvailable: boolean;
   /** Есть ли чем ответить на провал спасброска: руна и нерастраченная реакция. */
   runeAvailable: boolean;
-  onCast: (spell: Spell) => void;
+  onCast: (row: SpellRowView) => void;
   onSpendRune: () => void;
   onClose: () => void;
 }) {
-  const triggers = availableTriggers(spells);
-  const [trigger, setTrigger] = useState<ReactionTrigger | null>(null);
-  const matching = trigger === null ? [] : reactionsFor(spells, trigger);
+  const answering = (kind: string): SpellRowView[] =>
+    rows.filter((row) => row.card.reaction?.trigger === kind);
+
+  const triggers = TRIGGERS.filter(
+    ({ kind }) => kind === RUNE_ANSWERS || answering(kind).length > 0,
+  );
+  const [trigger, setTrigger] = useState<string | null>(null);
+  const matching = trigger === null ? [] : answering(trigger);
 
   return (
     <section
@@ -61,20 +81,20 @@ export function ReactionsSheet({
       <h2 className="text-base font-semibold">Что произошло?</h2>
 
       <div role="radiogroup" aria-label="Событие" className="flex flex-wrap gap-1">
-        {triggers.map((value) => (
+        {triggers.map(({ kind, label }) => (
           <button
-            key={value}
+            key={kind}
             type="button"
             role="radio"
-            aria-checked={trigger === value}
-            onClick={() => setTrigger(value)}
+            aria-checked={trigger === kind}
+            onClick={() => setTrigger(kind)}
             className={`min-h-11 grow rounded-lg border px-2 text-xs font-medium ${
-              trigger === value
+              trigger === kind
                 ? "border-reaction bg-reaction/10 text-reaction-strong dark:text-reaction"
                 : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
             }`}
           >
-            {REACTION_TRIGGER_LABEL[value]}
+            {label}
           </button>
         ))}
       </div>
@@ -89,7 +109,7 @@ export function ReactionsSheet({
         </p>
       )}
 
-      {trigger === "failed_save" ? (
+      {trigger === RUNE_ANSWERS ? (
         <div className="flex flex-col gap-2">
           <p className="text-sm">
             «Знаки ограждения»: реакция и руна превращают провал спасброска Силы, Ловкости или
@@ -106,38 +126,35 @@ export function ReactionsSheet({
         </div>
       ) : null}
 
-      {trigger === null || trigger === "failed_save" ? null : (
+      {trigger === null || trigger === RUNE_ANSWERS ? null : (
         <ul aria-label="Подходящие реакции" className="flex flex-col gap-2">
-          {matching.map((spell) => {
-            const changed = rows.find((row) => row.id === spell.id)?.armorClassIfCast;
-            return (
-              <li key={spell.id}>
-                <button
-                  type="button"
-                  onClick={() => onCast(spell)}
-                  className="flex w-full flex-col items-start gap-1 rounded-lg border border-slate-200 p-2 text-left dark:border-slate-800"
-                >
-                  <span className="font-medium leading-tight">{spell.nameRu}</span>
-                  <span className="text-xs text-slate-700 dark:text-slate-300">
-                    {spell.castingTime.reactionTrigger}
-                  </span>
-                  <span className="flex flex-wrap items-center gap-1">
-                    {changed === undefined ? null : (
-                      <Badge tone="reaction" icon="▲">
-                        КД {changed} вместо {armorClass}
-                      </Badge>
-                    )}
-                    <Badge tone="muted" icon="◎">
-                      Ячейка {spell.level} ур.
+          {matching.map((row) => (
+            <li key={row.id}>
+              <button
+                type="button"
+                onClick={() => onCast(row)}
+                className="flex w-full flex-col items-start gap-1 rounded-lg border border-slate-200 p-2 text-left dark:border-slate-800"
+              >
+                <span className="font-medium leading-tight">{row.nameRu}</span>
+                <span className="text-xs text-slate-700 dark:text-slate-300">
+                  {row.card.reaction?.textRu}
+                </span>
+                <span className="flex flex-wrap items-center gap-1">
+                  {row.armorClassIfCast === undefined ? null : (
+                    <Badge tone="reaction" icon="▲">
+                      КД {row.armorClassIfCast} вместо {armorClass}
                     </Badge>
-                  </span>
-                  <span className="text-xs italic text-slate-600 dark:text-slate-400">
-                    «{spell.roleplay.incantation}»
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+                  )}
+                  <Badge tone="muted" icon="◎">
+                    Ячейка {row.level} ур.
+                  </Badge>
+                </span>
+                <span className="text-xs italic text-slate-600 dark:text-slate-400">
+                  «{row.card.roleplay.incantation}»
+                </span>
+              </button>
+            </li>
+          ))}
         </ul>
       )}
 

@@ -13,6 +13,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   withSpellPoints,
   withSpentSlots,
+  withoutComponentRecord,
   withoutSlots,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
@@ -157,7 +158,79 @@ describe("числа под этого персонажа", () => {
       spellcastingModifier: 4,
       preparedLimit: 11,
       preparedCount: createThorne().preparedSpellIds.length,
+      freeComponentsCovered: true,
     });
+  });
+
+  it("о незаведённом снаряжении вердикта нет вовсе", () => {
+    const stranger = withoutComponentRecord(createThorne());
+
+    expect(toCastingView(stranger).freeComponentsCovered).toBeUndefined();
+  });
+});
+
+describe("карточка", () => {
+  it("едет строкой целиком: чем написана, куда целится и что говорят", () => {
+    expect(row("shield").card).toMatchObject({
+      nameEn: "Shield",
+      school: "Ограждение",
+      targeting: { type: "self" },
+      roleplay: { incantation: "Мимо! И следующая тоже." },
+    });
+    expect(row("shield").card.fullRulesRu).not.toBe("");
+  });
+
+  it("от персонажа не зависит ничем: у обездоленного она та же", () => {
+    expect(row("shield", withoutSlots(createThorne())).card).toEqual(row("shield").card);
+  });
+
+  it("реакция приезжает родом события и его фразой", () => {
+    expect(row("shield").card.reaction).toMatchObject({ trigger: "attacked" });
+    expect(row("shield").card.reaction?.textRu).toContain("попали атакой");
+    // Заклинание, которое реакцией не творится, о событии молчит, а не отвечает пустой строкой.
+    expect(row("ray-of-frost").card.reaction).toBeUndefined();
+  });
+
+  it("несказанного не выдумывает: без рода события и без совета их нет вовсе", () => {
+    // Оба поля необязательны, потому что та же схема читает пользовательский импорт: файл,
+    // выгруженный прежней сборкой, обязан открываться.
+    const found = loadThorneSpells().find((spell) => spell.id === "shield");
+    if (found === undefined) throw new Error("нет карточки реакции");
+    const { tacticalAdviceRu: _advice, ...bare } = found;
+    const { trigger: _kind, ...castingTime } = found.castingTime;
+    const shown = row("shield", createThorne(), [], [{ ...bare, castingTime }]).card;
+
+    expect(shown.tacticalAdviceRu).toBeUndefined();
+    expect(shown.reaction).toEqual({ textRu: found.castingTime.reactionTrigger });
+  });
+
+  it("спасбросок называет, что даёт успех и что провал", () => {
+    expect(row("web").card).toMatchObject({
+      successEffectRu: expect.stringContaining("не опутано"),
+      failureEffectRu: expect.stringContaining("Опутанный"),
+    });
+  });
+
+  it("свой компонент назван словами, и строка знает, лежит ли он в сумке", () => {
+    // Компонент «Опознания» — жемчужина за 100 зм: фокусировка её не заменяет.
+    expect(row("identify").card.material?.textRu).toContain("жемчуж");
+    expect(row("identify").ownComponentCarried).toBe(false);
+
+    const bought = row("identify", createThorne(), [
+      { kind: "toggle_material", spellId: "identify" },
+    ]);
+    expect(bought.ownComponentCarried).toBe(true);
+    // Заклинание без материального компонента о нём молчит.
+    expect(row("shield").card.material).toBeUndefined();
+  });
+
+  it("заметка игрока едет строкой; ненаписанной нет вовсе", () => {
+    expect(row("shield").note).toBeUndefined();
+
+    const noted = row("shield", createThorne(), [
+      { kind: "set_spell_note", spellId: "shield", note: "гасит и стрелу" },
+    ]);
+    expect(noted.note).toBe("гасит и стрелу");
   });
 });
 

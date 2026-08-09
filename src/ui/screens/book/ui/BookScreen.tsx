@@ -18,7 +18,6 @@ import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 
 export function BookScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
-  const session = useSession((state) => state.session)!;
   const error = useSession((state) => state.error);
   const spells = useSession((state) => state.spellCatalog);
   const snapshot = useSession((state) => state.snapshot)!;
@@ -28,7 +27,6 @@ export function BookScreen() {
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
 
-  const { character } = session;
   const execute = sessionStore.getState().execute;
   const turn = snapshot.turn;
   const { inFight } = turn;
@@ -117,7 +115,6 @@ export function BookScreen() {
           spell={openSpell}
           row={openRow}
           casting={casting}
-          note={character.spellNotes[openSpell.id]}
           onCast={() => draftStore.getState().start(openSpell, openRow)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openSpell.id, note })}
           onClose={() => setOpenSpellId(null)}
