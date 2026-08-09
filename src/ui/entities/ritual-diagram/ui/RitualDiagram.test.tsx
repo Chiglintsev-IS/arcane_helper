@@ -7,11 +7,11 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { spell } from "@/ui/app/testing/stores";
+import { testSpellRow } from "@/ui/app/testing/stores";
 import { RitualDiagram } from "./RitualDiagram";
 
 function diagramOf(id: string) {
-  const found = spell(id).ritualDiagram;
+  const found = testSpellRow(id).card.ritualDiagram;
   if (found === undefined) throw new Error(`у ${id} нет схемы`);
   return found;
 }

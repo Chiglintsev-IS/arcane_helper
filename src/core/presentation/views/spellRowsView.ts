@@ -43,6 +43,8 @@ import {
 import type { LiveSession } from "@/core/application/session";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 
+import { toDiagramView } from "./diagramView";
+
 /**
  * Способ для заклинания, которое сотворить нечем вовсе: уровень, до ячеек которого персонаж не
  * дорос и который не оплачивается очками. Объявление обязано называть уровень и тогда — иначе
@@ -166,6 +168,9 @@ function spellCardView(spell: Spell): SpellCardView {
           material: { textRu: components.materialText, consumed: components.consumed === true },
         }),
     roleplay: { incantation: spell.roleplay.incantation, gesture: spell.roleplay.gesture },
+    ...(spell.ritualDiagram === undefined
+      ? {}
+      : { ritualDiagram: toDiagramView(spell.ritualDiagram) }),
   };
 }
 

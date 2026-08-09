@@ -451,10 +451,12 @@ function ConcentrationStep({
  */
 function SummaryStep({
   draft,
+  row,
   preview,
   onRoleplay,
 }: {
   draft: CastDraft;
+  row: SpellRowView;
   preview: CastPreview | null;
   onRoleplay: (category: RoleplayCategory) => void;
 }) {
@@ -497,7 +499,7 @@ function SummaryStep({
       </section>
 
       {/* Схема только в ритуальном режиме: рисовать десять минут в бою нельзя. */}
-      {draft.option.mode === "ritual" && draft.spell.ritualDiagram !== undefined ? (
+      {draft.option.mode === "ritual" && row.card.ritualDiagram !== undefined ? (
         <button
           type="button"
           onClick={() => setDiagramOpen(true)}
@@ -508,7 +510,7 @@ function SummaryStep({
       ) : null}
 
       {diagramOpen ? (
-        <RitualDiagramView spell={draft.spell} onClose={() => setDiagramOpen(false)} />
+        <RitualDiagramView row={row} onClose={() => setDiagramOpen(false)} />
       ) : null}
 
       <RoleplaySection
@@ -666,6 +668,7 @@ export function CastWizard({
       {draft.step === "summary" ? (
         <SummaryStep
           draft={draft}
+          row={row}
           preview={preview}
           onRoleplay={(category) => actions.setRoleplayCategory(category)}
         />

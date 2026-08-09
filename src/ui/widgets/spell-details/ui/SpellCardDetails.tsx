@@ -105,7 +105,7 @@ export function SpellCardDetails({
         </div>
 
         {/* Рядом со значками, а не в подвале: за десять минут ритуала схему открывают первой. */}
-        {spell.ritualDiagram === undefined ? null : (
+        {card.ritualDiagram === undefined ? null : (
           <button
             type="button"
             onClick={() => setDiagramOpen(true)}
@@ -207,7 +207,7 @@ export function SpellCardDetails({
       </footer>
 
       {diagramOpen ? (
-        <RitualDiagramView spell={spell} onClose={() => setDiagramOpen(false)} />
+        <RitualDiagramView row={row} onClose={() => setDiagramOpen(false)} />
       ) : null}
     </section>
   );

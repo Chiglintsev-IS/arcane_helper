@@ -18,7 +18,7 @@ const ELEMENT_IDS = ["air", "water", "earth", "lightning", "frost"] as const;
 
 export const GLYPH_IDS = [...METAL_IDS, ...ELEMENT_IDS, ...RUNE_IDS] as const;
 
-export type GlyphId = (typeof GLYPH_IDS)[number];
+type GlyphId = (typeof GLYPH_IDS)[number];
 
 const METALS: Record<(typeof METAL_IDS)[number], Stroke[]> = {
   // ♄ свинец: крюк с перекладиной.
@@ -83,7 +83,7 @@ export const GLYPHS: Record<GlyphId, Stroke[]> = { ...METALS, ...ELEMENTS, ...RU
 /** Печати центра. Порядок штрихов — порядок рисования. */
 export const SEAL_KINDS = ["eye", "sphere", "summoning-triangle", "empty-hand"] as const;
 
-export type SealKind = (typeof SEAL_KINDS)[number];
+type SealKind = (typeof SEAL_KINDS)[number];
 
 export const SEALS: Record<SealKind, Stroke[]> = {
   // Глаз: миндаль из двух дуг, зрачок, точка.

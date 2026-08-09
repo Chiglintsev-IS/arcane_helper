@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   CENTER,
   absolute,
-  arcPath,
+  arcCommand,
   inscriptionPlacements,
+  placedStrokes,
   pointAt,
   squareSide,
   starPolygons,
@@ -79,18 +80,73 @@ describe("квадрат и дуга", () => {
     expect(squareSide(100)).toBeCloseTo(141.42, 1);
   });
 
-  it("дуга описывается путём с командой A", () => {
-    const path = arcPath(50, 50, 30, 0, 180);
-    expect(path.startsWith("M ")).toBe(true);
-    expect(path).toContain("A 30 30");
+  it("дуга описывается концами и радиусом", () => {
+    // Полкруга сверху вниз: от верхней точки к нижней.
+    expect(arcCommand(50, 50, 30, 0, 180)).toMatchObject({
+      from: { x: 50, y: 20 },
+      to: { x: 50, y: 80 },
+      r: 30,
+    });
   });
 
-  it("дуга больше полуокружности помечается флагом large-arc", () => {
-    expect(arcPath(50, 50, 30, 0, 270)).toContain(" 1 1 ");
-    expect(arcPath(50, 50, 30, 0, 90)).toContain(" 0 1 ");
+  it("дуга больше полуокружности помечается флагом", () => {
+    expect(arcCommand(50, 50, 30, 0, 270).largeArc).toBe(true);
+    expect(arcCommand(50, 50, 30, 0, 90).largeArc).toBe(false);
   });
 
   it("дуга назад ведётся против часовой: рука идёт в ту сторону, куда заказано", () => {
-    expect(arcPath(50, 50, 30, 90, 0)).toContain(" 0 0 ");
+    expect(arcCommand(50, 50, 30, 0, 90).sweep).toBe(true);
+    expect(arcCommand(50, 50, 30, 90, 0).sweep).toBe(false);
+  });
+});
+
+describe("знак на своём месте", () => {
+  it("бокс знака встаёт центром в точку и сжимается до заказанного размера", () => {
+    const [placed] = placedStrokes([{ kind: "line", x1: 0, y1: 50, x2: 100, y2: 50 }], {
+      at: { x: 200, y: 300 },
+      size: 50,
+    });
+
+    // Отрезок во всю ширину бокса становится вдвое короче размера — и стоит вокруг точки.
+    expect(placed).toEqual({ kind: "line", x1: 175, y1: 300, x2: 225, y2: 300 });
+  });
+
+  it("поворот идёт по часовой стрелке вокруг той же точки", () => {
+    const [placed] = placedStrokes([{ kind: "line", x1: 50, y1: 0, x2: 50, y2: 100 }], {
+      at: { x: 100, y: 100 },
+      size: 100,
+      rotation: 90,
+    });
+
+    // Вертикаль, повёрнутая на четверть, ложится горизонталью слева направо.
+    expect(placed).toEqual({ kind: "line", x1: 150, y1: 100, x2: 50, y2: 100 });
+  });
+
+  it("окружность и дуга везут радиус в тех же единицах, что и точки", () => {
+    const strokes = placedStrokes(
+      [
+        { kind: "circle", cx: 50, cy: 50, r: 40 },
+        { kind: "arc", cx: 50, cy: 50, r: 40, fromDegrees: 0, toDegrees: 90 },
+      ],
+      { at: { x: 500, y: 500 }, size: 50, rotation: 10 },
+    );
+
+    expect(strokes[0]).toEqual({ kind: "circle", cx: 500, cy: 500, r: 20 });
+    // Поворот знака — тот же поворот отсчёта: оба угла дуги сдвинулись на него.
+    expect(strokes[1]).toMatchObject({ r: 20, fromDegrees: 10, toDegrees: 100 });
+  });
+
+  it("ломаная и пунктир переезжают как есть: замкнутость и штрих сохраняются", () => {
+    const [placed] = placedStrokes(
+      [{ kind: "polyline", points: [[0, 0], [100, 0], [50, 100]], closed: true, dashed: true }],
+      { at: { x: 100, y: 100 }, size: 100 },
+    );
+
+    expect(placed).toEqual({
+      kind: "polyline",
+      points: [[50, 50], [150, 50], [100, 150]],
+      closed: true,
+      dashed: true,
+    });
   });
 });

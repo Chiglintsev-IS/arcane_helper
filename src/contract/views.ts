@@ -240,6 +240,66 @@ export const castOptionViewSchema = z.object({
   damage: z.object({ formula: word, type: word }).optional(),
 });
 
+const pointSchema = z.object({ x: z.number(), y: z.number() });
+
+/**
+ * Фигура рисунка в единицах листа: окружность, отрезок, ломаная, дуга или число.
+ *
+ * Дуга приезжает концами и флагами, а не углами: посчитать концы значит взять синус с косинусом, а
+ * счёт — не дело рисующего. Пунктир едет признаком: чем он нарисован — толщиной штриха и промежутка
+ * — решает перо.
+ */
+const diagramFigureSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("circle"),
+    at: pointSchema,
+    radius: z.number(),
+    dashed: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("line"),
+    from: pointSchema,
+    to: pointSchema,
+    dashed: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("polyline"),
+    points: z.array(pointSchema),
+    /** Замкнутая ломаная: последняя точка соединяется с первой. */
+    closed: z.boolean().optional(),
+    dashed: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("arc"),
+    from: pointSchema,
+    to: pointSchema,
+    radius: z.number(),
+    /** Которая из четырёх дуг: большая ли и в какую сторону ведётся. */
+    largeArc: z.boolean(),
+    sweep: z.boolean(),
+    dashed: z.boolean().optional(),
+  }),
+  z.object({ kind: z.literal("number"), at: pointSchema, size: z.number(), value: whole }),
+]);
+
+/**
+ * Схема ритуала, приехавшая начерченной.
+ *
+ * Имён знаков здесь нет ни одного: словарь знаков закрыт, принадлежит контенту и стережётся его
+ * разбором, а рисующей стороне достаётся то, что и рисуется. Вторая таблица знаков у показывающего
+ * разошлась бы с первой молча — и молча же не нарисовала бы заведённый знак.
+ */
+export const diagramViewSchema = z.object({
+  /** Сторона листа: рисунок приходит в её единицах, а во что его растянуть — дело показывающего. */
+  side: z.number(),
+  /**
+   * Слои в порядке рисования — том же, в каком их выводят рукой. Слой назван словом правил схемы:
+   * по нему рисунок разбирают и глазом, и прогоном.
+   */
+  marks: z.array(z.object({ layer: word, figures: z.array(diagramFigureSchema) })),
+  captionRu: word,
+});
+
 /**
  * Карточка заклинания: то, что о нём написано в книге.
  *
@@ -270,6 +330,8 @@ export const spellCardViewSchema = z.object({
   material: z.object({ textRu: word, consumed: z.boolean() }).optional(),
   /** Что произносят и что показывают руками: слова книги, а не выбор игрока. */
   roleplay: z.object({ incantation: word, gesture: word }),
+  /** Схема ритуала, начерченная; нет вовсе — ритуалом заклинание не творится. */
+  ritualDiagram: diagramViewSchema.optional(),
 });
 
 /**
@@ -440,6 +502,8 @@ export type ResourcesView = z.infer<typeof resourcesViewSchema>;
 export type RecoveryView = z.infer<typeof recoveryViewSchema>;
 export type TurnView = z.infer<typeof turnViewSchema>;
 export type CastOptionView = z.infer<typeof castOptionViewSchema>;
+export type DiagramFigure = z.infer<typeof diagramFigureSchema>;
+export type DiagramView = z.infer<typeof diagramViewSchema>;
 export type SpellCardView = z.infer<typeof spellCardViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;
