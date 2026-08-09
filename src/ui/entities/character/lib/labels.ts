@@ -105,6 +105,10 @@ export function trainingLabel(training: string): string {
   return labelOf(TRAINING_LABELS, training);
 }
 
+export function currencyAbbr(currency: string): string {
+  return labelOf(CURRENCY_ABBREVIATIONS, currency);
+}
+
 /** Подпись величины: ею называют строку разбора — «откуда взялось это число». */
 export function statLabel(stat: string): string {
   for (const id of SINGULAR_STAT_IDS) {

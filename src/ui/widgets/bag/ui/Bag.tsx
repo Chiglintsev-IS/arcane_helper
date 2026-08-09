@@ -1,14 +1,7 @@
 "use client";
 
-import { Character } from "@/core/domain/assembly/character";
-import { STAT_IDS } from "@/core/domain/shared/stats";
-import { statLabel } from "@/ui/entities/character/lib/labels";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
-import { Items } from "@/core/domain/items/items";
-import { CURRENCIES } from "@/core/domain/shared/schema";
-import { Equipment } from "@/core/domain/equipment/equipment";
-import { CURRENCY_ABBR } from "@/ui/entities/character/lib/labels";
+import type { BagView, ItemView } from "@/contract/views";
+import { currencyAbbr, statLabel } from "@/ui/entities/character/lib/labels";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { signed } from "@/core/shared/language";
 
@@ -16,31 +9,18 @@ import { signed } from "@/core/shared/language";
  * Разделы сумки — по категории вещи. Порядок постоянен, пустой раздел остаётся на месте со своей
  * строкой ввода: раздел, появляющийся с первой вещью, заставлял бы искать, куда её ввести.
  */
-const SECTIONS: { kind: ItemKind; titleRu: string; addLabelRu: string }[] = [
+const SECTIONS: { kind: string; titleRu: string; addLabelRu: string }[] = [
   { kind: "gear", titleRu: "Экипировка", addLabelRu: "Новая экипировка" },
   { kind: "consumable", titleRu: "Расходники", addLabelRu: "Новый расходник" },
   { kind: "ingredient", titleRu: "Ингредиенты", addLabelRu: "Новый ингредиент" },
   { kind: "other", titleRu: "Другое", addLabelRu: "Новая вещь" },
 ];
 
-/** Вещь вместе со своим запасом у конкретного персонажа — соединение для одной строки списка. */
-type BagRow = ItemDefinition & { bagCount: number; wornCount: number };
-
-/**
- * Вторая строка вещи: цена, прибавки, заметка — только то, что у вещи действительно есть.
- * Прибавка называется только у экипировки: у остальных она не действует, и показанное число лгало бы.
- */
-export function itemMeta(item: ItemDefinition): string {
-  const bonuses =
-    item.bonuses === undefined || item.kind !== "gear"
-      ? []
-      : STAT_IDS.flatMap((stat) => {
-          const value = item.bonuses?.[stat];
-          return value === undefined || value === 0 ? [] : [`${statLabel(stat)} ${signed(value)}`];
-        });
+/** Вторая строка вещи: цена, прибавки, заметка — только то, что у вещи действительно есть. */
+export function itemMeta(item: ItemView): string {
   return [
-    ...(item.price === undefined ? [] : [`${item.price.amount} ${CURRENCY_ABBR[item.price.currency]}`]),
-    ...bonuses,
+    ...(item.price === undefined ? [] : [`${item.price.amount} ${currencyAbbr(item.price.currency)}`]),
+    ...item.bonuses.map((bonus) => `${statLabel(bonus.stat)} ${signed(bonus.value)}`),
     ...(item.note === undefined ? [] : [item.note]),
   ].join(" · ");
 }
@@ -55,7 +35,7 @@ function ItemRow({
   onAdjustBagCount,
   onAdjustWornCount,
 }: {
-  item: BagRow;
+  item: ItemView;
   onOpen: () => void;
   onAdjustBagCount: (delta: number) => void;
   onAdjustWornCount: (delta: number) => void;
@@ -141,34 +121,21 @@ function ItemRow({
  * заводит вещь сразу в свою категорию — раздел и есть выбор категории, отдельного поля не нужно.
  */
 export function Bag({
-  character,
+  bag,
   onEditMoney,
   onOpenItem,
   onAddItem,
   onAdjustBagCount,
   onAdjustWornCount,
 }: {
-  character: CharacterState;
+  bag: BagView;
   onEditMoney: () => void;
   onOpenItem: (id: string) => void;
-  onAddItem: (kind: ItemKind, nameRu: string) => void;
+  onAddItem: (kind: string, nameRu: string) => void;
   onAdjustBagCount: (id: string, delta: number) => void;
   onAdjustWornCount: (id: string, delta: number) => void;
 }) {
-  const { money } = character.equipment;
-  const items = Items.of(character);
-  const equipment = Equipment.of(character);
-  const armorClass = Character.of(character).sheet.breakdown("armorClass");
-  // Доспех, по которому считается защита, называет сама свёртка: второго счёта здесь нет.
-  const wornArmorNameRu = armorClass.parts.find(
-    (part) => part.applied && part.contribution.kind === "method",
-  )?.source.nameRu;
-
-  const rows: readonly BagRow[] = items.all.map((item) => ({
-    ...item,
-    bagCount: equipment.bagCount(item.id),
-    wornCount: equipment.wornCount(item.id),
-  }));
+  const { money, items, armorClass } = bag;
 
   return (
     <div className="flex flex-col gap-2">
@@ -186,10 +153,10 @@ export function Bag({
         </div>
         {/* Все монеты стола всегда: исчезнувший ноль заставляет гадать, кончилось или забыто. */}
         <ul aria-label="Кошелёк" className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
-          {CURRENCIES.map((currency) => (
+          {money.map(({ currency, amount }) => (
             <li key={currency}>
-              <span className="text-slate-500 dark:text-slate-400">{CURRENCY_ABBR[currency]}</span>{" "}
-              {money[currency]}
+              <span className="text-slate-500 dark:text-slate-400">{currencyAbbr(currency)}</span>{" "}
+              {amount}
             </li>
           ))}
         </ul>
@@ -201,13 +168,13 @@ export function Bag({
           КД {armorClass.value}
           <span className="text-slate-500 dark:text-slate-400">
             {" · "}
-            {wornArmorNameRu ?? "без доспехов"}
+            {armorClass.wornArmorNameRu ?? "без доспехов"}
           </span>
         </p>
       </section>
 
       {SECTIONS.map((section) => {
-        const sectionItems = rows.filter((item) => item.kind === section.kind);
+        const sectionItems = items.filter((item) => item.kind === section.kind);
         return (
           <section
             key={section.kind}

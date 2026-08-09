@@ -108,7 +108,43 @@ export const sheetViewSchema = z.object({
   }),
 });
 
+/**
+ * Вещь так, как её показывает список сумки: чем она является и сколько её у персонажа.
+ *
+ * Прибавки едут теми, что действуют: чьей категории они не положены, у того их не бывает вовсе —
+ * это решает владелец вещи при записи, и второй такой проверки на экране не заводится.
+ */
+const itemViewSchema = z.object({
+  id: word,
+  nameRu: word,
+  kind: word,
+  bagCount: whole,
+  wornCount: whole,
+  price: z.object({ amount: whole, currency: word }).optional(),
+  bonuses: z.array(z.object({ stat: word, value: whole })),
+  note: text.optional(),
+});
+
+/**
+ * Сумка: деньги, вещи и защита.
+ *
+ * Класс Доспеха стоит здесь потому, что здесь его и меняют — надевая и снимая. Число то же, что на
+ * листе и в шапке «Игры»: считает его один код, и разойтись им нечем.
+ */
+export const bagViewSchema = z.object({
+  /** Все монеты стола в порядке достоинства: исчезнувший ноль заставляет гадать, где он. */
+  money: z.array(z.object({ currency: word, amount: whole })),
+  items: z.array(itemViewSchema),
+  armorClass: z.object({
+    value: whole,
+    /** Доспех, по которому считается защита; нет вовсе — доспеха на персонаже нет. */
+    wornArmorNameRu: word.optional(),
+  }),
+});
+
 export type ContributionView = z.infer<typeof contributionViewSchema>;
+export type ItemView = z.infer<typeof itemViewSchema>;
+export type BagView = z.infer<typeof bagViewSchema>;
 export type StatView = z.infer<typeof statViewSchema>;
 export type AbilityView = z.infer<typeof abilityViewSchema>;
 export type SheetView = z.infer<typeof sheetViewSchema>;

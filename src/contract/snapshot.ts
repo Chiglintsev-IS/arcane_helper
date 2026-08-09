@@ -12,7 +12,7 @@
 
 import { z } from "zod";
 
-import { sheetViewSchema } from "./views";
+import { bagViewSchema, sheetViewSchema } from "./views";
 
 /**
  * Запись журнала так, как её показывают: время, подпись и то, к чему запись относится.
@@ -32,6 +32,7 @@ export const journalEntryViewSchema = z.object({
 export const snapshotSchema = z.object({
   version: z.number().int().nonnegative(),
   sheet: sheetViewSchema,
+  bag: bagViewSchema,
   journal: z.array(journalEntryViewSchema),
 });
 
