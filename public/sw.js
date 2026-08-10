@@ -58,8 +58,16 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   // Кэшируется только собственная статика: чужие домены приложению не нужны, а запись их ответов
-  // в свой кэш означала бы хранить то, за что оно не отвечает.
-  if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
+  // в свой кэш означала бы хранить то, за что оно не отвечает. Бэкенд — тоже не статика: снимок
+  // из кэша показывал бы вчерашнюю игру и не менялся бы больше никогда.
+  const address = new URL(request.url);
+  if (
+    request.method !== "GET" ||
+    address.origin !== self.location.origin ||
+    address.pathname.includes("/api/")
+  ) {
+    return;
+  }
 
   event.respondWith(
     caches.match(request).then((cached) => {

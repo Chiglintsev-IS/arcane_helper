@@ -14,13 +14,15 @@
     "typecheck": "tsc --noEmit",
     "check:docs": "python3 scripts/check-docs.py --strict-link-remnants",
     "test:e2e": "npm run build && playwright test",
+    "build:backend": "NEXT_PUBLIC_ARCANE_BACKEND=http next build",
+    "test:e2e:backend": "npm run build:backend && playwright test --config playwright.backend.config.ts",
     "test:e2e:only": "playwright test",
     "check:layers": "python3 scripts/check-layers.py",
     "check:dead": "python3 scripts/check-dead-code.py",
     "check:rules": "python3 scripts/check-rules.py",
     "check:implicit": "python3 scripts/check-implicit.py",
     "verify": "npm run check:docs && npm run check:layers && npm run check:dead && npm run check:rules && npm run check:implicit && npm run typecheck && npm run test:coverage && npm run build",
-    "verify:full": "npm run verify && npm run test:e2e:only"
+    "verify:full": "npm run verify && npm run test:e2e:only && npm run test:e2e:backend"
   },
   "dependencies": {
     "dexie": "^4.4.4",

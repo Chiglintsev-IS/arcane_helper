@@ -57,6 +57,17 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * Ответ отстал от показанного: две команды в полёте возвращаются в любом порядке, и снимок
+ * прежней вернул бы экран в прошлое — с потраченной ячейкой на месте.
+ *
+ * Сравнение только для ответов. Чтение приносит новую правду целиком: ядро могло начаться заново,
+ * и его версия тогда меньше показанной.
+ */
+function outdated(shown: Snapshot | null, answered: Snapshot): boolean {
+  return shown !== null && answered.version < shown.version;
+}
+
 export function createSessionStore(
   dependencies: SessionStoreDependencies,
 ): StoreApi<SessionStoreState> {
@@ -87,8 +98,10 @@ export function createSessionStore(
             set({ error: result.reasonRu });
             return result.reasonRu;
           }
-          set({ snapshot: result.snapshot });
-          set({ error: null });
+          set((shown) => ({
+            snapshot: outdated(shown.snapshot, result.snapshot) ? shown.snapshot : result.snapshot,
+            error: null,
+          }));
           return null;
         } catch (error: unknown) {
           const reason = describe(error);

@@ -17,6 +17,9 @@
 Использование внутри своего файла импортёром не считается: это ошибка не «символ мёртв», а
 «лишнее слово `export`» — снять его и есть починка.
 
+Импортом считается и отложенная форма — `const { … } = await import("…")`: символом пользуются так
+же, и не считать её значило бы объявить мёртвым ровно то, что приезжает выбором провода.
+
 Совпадение ищется парой (модуль, имя), а не словом: одноимённые символы в разных модулях иначе
 прикрывают друг друга, и мёртвый экспорт остаётся незамеченным, пока живо чужое такое же имя.
 
@@ -72,9 +75,6 @@ ALLOWED_TEST_ONLY: set[tuple[str, str]] = {
     # реализации, и проверяется он общим набором.
     ("src/core/application/ports/sessionRepository.ts", "StorageCorruptedError"),
     ("src/core/application/ports/sessionRepository.ts", "StorageVersionError"),
-    # Сторы на хранилище в памяти: реализация порта для прогонов и для помощников компонентных
-    # прогонов. В браузере работает Dexie, и подменять её в рабочем коде нечем и незачем.
-    ("src/core/infrastructure/persistence/memoryRepository.ts", "createMemoryRepository"),
     # Форма ячеек заклинаний: рабочий путь всегда несёт её частью состояния персонажа, типизированного
     # схемой, и называет её по имени только тест, строящий фикстуру уровня ячеек напрямую.
     ("src/core/domain/arcana/slots.ts", "SpellSlots"),
@@ -87,6 +87,11 @@ EXPORT_LIST = re.compile(
     r"^export\s+(?:type\s+)?\{([^}]*)\}(?:\s*from\s*[\"']([^\"']+)[\"'])?", re.M | re.S
 )
 IMPORT_LIST = re.compile(r"import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*[\"']([^\"']+)[\"']", re.S)
+# Отложенный импорт: `const { … } = await import("…")`. Символ им пользуются так же, и не считать
+# его импортом значило бы объявить мёртвым всё, что приезжает выбором провода.
+DYNAMIC_IMPORT_LIST = re.compile(
+    r"\{([^{}]*)\}\s*=\s*await\s+import\(\s*[\"']([^\"']+)[\"']\s*\)", re.S
+)
 VITEST = re.compile(r"from\s*[\"']vitest[\"']")
 
 errors: list[str] = []
@@ -159,7 +164,10 @@ def collect() -> tuple[dict[tuple[str, str], int], set[tuple[str, str]]]:
         run = is_run(path, text)
 
         if not run:
-            for names, specifier in IMPORT_LIST.findall(text):
+            for names, specifier in [
+                *IMPORT_LIST.findall(text),
+                *DYNAMIC_IMPORT_LIST.findall(text),
+            ]:
                 target = resolve(specifier, path)
                 if target is None:
                     continue

@@ -114,6 +114,33 @@ describe("отправка намерений", () => {
     expect(store.getState().error).toBeNull();
   });
 
+  it("ответ, отставший от показанного, экран назад не тянет", async () => {
+    // Две команды в полёте возвращаются в любом порядке: по сети это обычное дело.
+    let answered = 0;
+    const { api } = fakeApi({
+      execute: async () => ({
+        ok: true,
+        snapshot: { ...FRESH, version: ++answered === 1 ? 3 : 2 },
+      }),
+    });
+    const store = makeStore(api);
+    await store.getState().hydrate();
+
+    await store.getState().execute({ kind: "long_rest" });
+    expect(await store.getState().execute({ kind: "long_rest" })).toBeNull();
+
+    expect(store.getState().snapshot?.version).toBe(3);
+  });
+
+  it("первый же ответ показывается: показанного ещё нет", async () => {
+    const { api } = fakeApi();
+    const store = makeStore(api);
+
+    await store.getState().execute({ kind: "long_rest" });
+
+    expect(store.getState().snapshot?.version).toBe(1);
+  });
+
   it("отказ по правилам доезжает до экрана словами", async () => {
     const { api } = fakeApi({
       execute: async () => ({ ok: false, reasonRu: "Заклинание с ячейкой требует способа оплаты" }),

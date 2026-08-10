@@ -10,6 +10,7 @@ import { render, type RenderResult, cleanup } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach } from "vitest";
 
+import { createClient } from "@/contract/client";
 import type { Snapshot } from "@/contract/snapshot";
 import type { SpellRowView } from "@/contract/views";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -21,6 +22,7 @@ import type { Clock } from "@/core/application/ports/clock";
 import type { Command } from "@/contract/commands";
 import { createSession, type LiveSession } from "@/core/application/session";
 import { applyCommand } from "@/core/presentation/controller";
+import { createLocalTransport } from "@/core/presentation/localTransport";
 import { toSnapshot } from "@/core/presentation/presenter";
 import { createCore } from "@/core/composition";
 import { connectStores, StoreProvider } from "@/ui/app/providers/stores";
@@ -120,15 +122,13 @@ export async function createTestStores(
   situation: PlaySituation = {},
 ): Promise<AppStores> {
   const clock = testClock();
-  const stores = connectStores(
-    createCore({
-      repository: createMemoryRepository(),
-      clock,
-      createInitialCharacter: () => character,
-      loadBuiltInCatalog: () => [...(situation.catalog ?? loadThorneSpells())],
-    }),
+  const core = createCore({
+    repository: createMemoryRepository(),
     clock,
-  );
+    createInitialCharacter: () => character,
+    loadBuiltInCatalog: () => [...(situation.catalog ?? loadThorneSpells())],
+  });
+  const stores = connectStores(createClient(createLocalTransport(core)), clock.nextId);
   await stores.session.getState().hydrate();
   if (situation.inFight === true) {
     await stores.session.getState().execute({ kind: "start_combat" });
