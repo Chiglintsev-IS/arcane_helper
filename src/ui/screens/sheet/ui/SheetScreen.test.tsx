@@ -61,24 +61,6 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(screen.getByText("20 (+5)")).toBeDefined();
   });
 
-  it("«Лист»: постоянный вклад заводится одной шторкой и двигает число (FR-246)", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<SheetScreen />);
-    await user.click(screen.getByRole("button", { name: "Править: Постоянные вклады" }));
-
-    await user.type(screen.getByLabelText("Откуда"), "Дар богов");
-    await user.selectOptions(screen.getByLabelText("Величина"), "spellSaveDc");
-    const field = screen.getByLabelText("Число");
-    await user.clear(field);
-    await user.type(field, "2");
-    await user.click(screen.getByRole("button", { name: "Сохранить" }));
-
-    expect(shown(stores).sheet.permanentContributions).toEqual([
-      { nameRu: "Дар богов", stat: "spellSaveDc", kind: "bonus", value: 2 },
-    ]);
-    expect(screen.getByText("Дар богов")).toBeDefined();
-  });
-
   it("«Лист»: языки правятся своей шторкой, а владения — своей (FR-230)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);

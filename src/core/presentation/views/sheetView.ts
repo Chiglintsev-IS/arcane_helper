@@ -9,35 +9,13 @@
  * называет их показывающий. Слово, придуманное здесь, стало бы вторым именем той же вещи.
  */
 
-import type { ContributionView, SheetView } from "@/contract/views";
+import type { SheetView } from "@/contract/views";
 
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { skillsOfAbility } from "@/core/domain/character/skills";
-import {
-  ABILITIES,
-  abilityStatId,
-  saveStatId,
-  skillStatId,
-  type StatContribution,
-} from "@/core/domain/shared/stats";
+import { ABILITIES, abilityStatId, saveStatId, skillStatId } from "@/core/domain/shared/stats";
 import { Vitality } from "@/core/domain/vitality/vitality";
-
-/** На сколько вклад двигает величину: у способа счёта это его основание. */
-function contributionValue(contribution: StatContribution): number {
-  return contribution.kind === "method" ? contribution.method.base : contribution.value;
-}
-
-function permanentViews(
-  character: CharacterState,
-): readonly (ContributionView & { stat: string })[] {
-  return character.permanentContributions.map(({ nameRu, contribution }) => ({
-    nameRu,
-    stat: contribution.stat,
-    kind: contribution.kind,
-    value: contributionValue(contribution),
-  }));
-}
 
 export function toSheetView(character: CharacterState): SheetView {
   const sheet = Character.of(character).sheet;
@@ -71,8 +49,6 @@ export function toSheetView(character: CharacterState): SheetView {
 
     exhaustion: character.exhaustion,
     inspiration: character.inspiration,
-
-    permanentContributions: [...permanentViews(character)],
 
     abilities: ABILITIES.map((ability) => ({
       id: ability,

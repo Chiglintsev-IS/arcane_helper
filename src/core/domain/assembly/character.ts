@@ -34,7 +34,6 @@ type SheetField =
   | "abilities"
   | "saveProficiencies"
   | "skills"
-  | "permanentContributions"
   | "exhaustion"
   | "inspiration"
   | "level";
@@ -93,26 +92,13 @@ export class Character {
    */
   sheetWith(spell: Parameters<EffectBoard["contributionsWith"]>[0]): Sheet {
     return Sheet.of(this.state, [
-      ...this.permanentContributions(),
       ...this.equipment.contributions(this.items),
       ...this.effects.contributionsWith(spell),
     ]);
   }
 
   private contributions(): readonly SourcedContribution[] {
-    return [
-      ...this.permanentContributions(),
-      ...this.equipment.contributions(this.items),
-      ...this.effects.contributions(),
-    ];
-  }
-
-  /** Постоянные вклады персонажа — раса, дар, слово мастера: без вещи и без срока. */
-  private permanentContributions(): readonly SourcedContribution[] {
-    return this.state.permanentContributions.map(({ nameRu, contribution }) => ({
-      source: { origin: "permanent", nameRu },
-      contribution,
-    }));
+    return [...this.equipment.contributions(this.items), ...this.effects.contributions()];
   }
 
   withArcana(arcana: Arcana): Character {

@@ -50,14 +50,16 @@ const VERSION_ONE = {
 };
 
 describe("приведение состояния версии 1", () => {
-  it("ни одно число не едет: прежние производные становятся постоянными назначениями", () => {
+  it("числа, введённые руками, снимаются, а считанные из основания остаются", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_ONE));
     const sheet = Character.of(state).sheet;
-    expect(sheet.value("spellSaveDc")).toBe(16);
-    expect(sheet.value("spellAttackModifier")).toBe(8);
-    expect(sheet.value(saveStatId("constitution"))).toBe(4);
-    // Прибавка версии 1 не называла вещи — она переезжает в постоянные вклады: 10 + 2 + 2.
-    expect(sheet.value("armorClass")).toBe(14);
+    // Версия 1 хранила КС и атаку числами; теперь они считаются из Интеллекта 18 и уровня 7.
+    expect(sheet.value("spellSaveDc")).toBe(15);
+    expect(sheet.value("spellAttackModifier")).toBe(7);
+    // Владений спасбросками версия 1 не знала: Телосложение 10 (+0), и ничего сверх.
+    expect(sheet.value(saveStatId("constitution"))).toBe(0);
+    // База 10 и прибавка +2 вещи не называли: остаётся 10 + Ловкость 2.
+    expect(sheet.value("armorClass")).toBe(12);
   });
 
   it("Интеллект переносится, Ловкость выводится из модификатора, остальные неизвестны", () => {
@@ -102,7 +104,7 @@ describe("приведение состояния версии 1", () => {
     expect(migrateCharacterState(already)).toBe(already);
   });
 
-  it("версия 2 переносит базу защиты перебивкой, а прибавки — персонажу, компоненты не теряя", () => {
+  it("версия 2 доносит компоненты, а числа, введённые руками, снимает", () => {
     const versionTwo = {
       ...VERSION_ONE,
       abilities: createThorne().abilities,
@@ -113,20 +115,12 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(versionTwo));
 
-    // Имя доспеха приведение не выдумывает: отличная от 10 база становится способом счёта.
-    expect(state.permanentContributions).toContainEqual({
-      nameRu: "Введено руками",
-      contribution: {
-        stat: "armorClass",
-        kind: "method",
-        method: { family: "armor", base: 13 },
-      },
-    });
-    // 13 + Ловкость 2 + прибавка 2.
-    expect(Character.of(state).sheet.value("armorClass")).toBe(17);
-    expect(Character.of(state).sheet.value("spellSaveDc")).toBe(16);
-    // Владений спасбросками версия 2 не знала: Мудрость 12 (+1) и прибавка предмета +1.
-    expect(Character.of(state).sheet.value(saveStatId("wisdom"))).toBe(2);
+    // Ни база доспеха без вещи, ни прибавка без вещи до нынешней формы не доезжают: величина
+    // складывается из надетого и действующего, а надеть приведению нечего.
+    expect(Character.of(state).sheet.value("armorClass")).toBe(12);
+    expect(Character.of(state).sheet.value("spellSaveDc")).toBe(15);
+    // Владений спасбросками версия 2 не знала: Мудрость 12 (+1) и ничего сверх.
+    expect(Character.of(state).sheet.value(saveStatId("wisdom"))).toBe(1);
     expect(state.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
     expect(state.equipment.bag).toEqual([]);
     expect(state.equipment.worn).toEqual([]);
@@ -143,8 +137,6 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(bare));
 
-    // База 10 — умолчание, а не выбор игрока: вклада из неё не делается.
-    expect(state.permanentContributions).toEqual([]);
     expect(Character.of(state).sheet.value("armorClass")).toBe(12);
     expect(state.equipment.components).toBeUndefined();
   });
@@ -156,13 +148,11 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(withComponents));
     expect(state.equipment.components?.spellcastingFocus).toBe(true);
-    expect(state.permanentContributions).toContainEqual({
-      nameRu: "Прочая прибавка",
-      contribution: { stat: "armorClass", kind: "bonus", value: 2 },
-    });
+    // Прибавка версии 1 вещи не называла — доехать ей не в чем, и приведение её снимает.
+    expect(Character.of(state).sheet.value("armorClass")).toBe(12);
   });
 
-  it("перебивки навыков и спасбросков становятся назначениями своих величин", () => {
+  it("перебивки навыков и спасбросков снимаются: числа считаются заново", () => {
     const overridden = {
       ...createThorne(),
       overrides: { saves: { wisdom: 9 }, skills: { arcana: 12 } },
@@ -170,8 +160,9 @@ describe("приведение состояния версии 1", () => {
     const state = characterStateSchema.parse(migrateCharacterState(overridden));
     const sheet = Character.of(state).sheet;
 
-    expect(sheet.value(saveStatId("wisdom"))).toBe(9);
-    expect(sheet.value(skillStatId("arcana"))).toBe(12);
+    // Мудрость 12 (+1) с владением и плащом; Магия — Интеллект 4, владение 3 и фокусировка.
+    expect(sheet.value(saveStatId("wisdom"))).toBe(5);
+    expect(sheet.value(skillStatId("arcana"))).toBe(7);
   });
 
   it("вклад эффекта прежней формы становится вкладом в величину", () => {
@@ -204,11 +195,11 @@ describe("приведение состояния версии 1", () => {
     expect(contributionsOf(migrateCharacterState(withEffect({ kind: "bonus" })))).toEqual([]);
   });
 
-  it("прежнее поле прибавок не затирает уже заведённое: приведение дописывает, а не заменяет", () => {
+  it("прибавка без вещи снимается, где бы она ни лежала — у персонажа или в снаряжении", () => {
     const base = createThorne();
     const legacy = {
       ...base,
-      miscBonuses: { spellcasting: 0, armorClass: 3, savingThrows: 0 },
+      miscBonuses: { spellcasting: 0, armorClass: 3, savingThrows: 0, лихость: 5 },
       equipment: {
         ...base.equipment,
         otherBonuses: { spellcasting: 0, armorClass: 9, savingThrows: 0 },
@@ -216,23 +207,9 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(legacy));
 
-    // Действует уже заведённое поле, а прежнее из снаряжения — не перевес, а след.
-    expect(state.permanentContributions).toEqual([
-      { nameRu: "Прочая прибавка", contribution: { stat: "armorClass", kind: "bonus", value: 3 } },
-    ]);
-  });
-
-  it("прежняя прибавка, названная величиной, остаётся собой; выдуманное слово — не вклад", () => {
-    const base = createThorne();
-    const legacy = {
-      ...base,
-      miscBonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0, initiative: 2, лихость: 5 },
-    };
-    const state = characterStateSchema.parse(migrateCharacterState(legacy));
-
-    expect(state.permanentContributions).toEqual([
-      { nameRu: "Прочая прибавка", contribution: { stat: "initiative", kind: "bonus", value: 2 } },
-    ]);
+    // Ни +3, ни +9 в защиту не приходят: вещи за ними нет, а слагаемого без вещи форма не знает.
+    expect(Character.of(state).sheet.value("armorClass")).toBe(14);
+    expect("miscBonuses" in state).toBe(false);
   });
 
   it("вещи, уже разведённые по местам, приводятся и без снаряжения прежней формы", () => {
@@ -293,8 +270,9 @@ describe("приведение состояния версии 1", () => {
     const abilities = fieldsOf(migrated.abilities);
     expect(abilities.intelligence).toBe(10);
     expect(abilities.dexterity).toBe(10);
-    // Ни одного вклада: приводить нечего, и выдумывать приведение не станет.
-    expect(migrated.permanentContributions).toEqual([]);
+    // Слагаемых без вещи приведение не заводит: выдумывать ему нечего.
+    expect("overrides" in migrated).toBe(false);
+    expect("miscBonuses" in migrated).toBe(false);
   });
 
   describe("признак магического восстановления становится дневным бюджетом", () => {
@@ -410,6 +388,24 @@ describe("приведение состояния версии 1", () => {
       expect(characterStateSchema.safeParse(migrated).success).toBe(true);
     });
 
+    it("прибавка вещи, названная величиной, остаётся собой; выдуманное слово — не прибавка", () => {
+      const migrated = migrateCharacterState(
+        withLegacyItems([
+          {
+            id: "ring",
+            nameRu: "Кольцо",
+            kind: "gear",
+            bonuses: { spellcasting: 1, initiative: 2, лихость: 5 },
+          },
+        ]),
+      );
+      expect(fieldsOf(definitionsOf(migrated)[0]).bonuses).toEqual({
+        spellSaveDc: 1,
+        spellAttackModifier: 1,
+        initiative: 2,
+      });
+    });
+
     it("надетый ингредиент прежней сборки остаётся собой, его запас идёт в сумку", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
@@ -462,41 +458,25 @@ describe("приведение состояния версии 1", () => {
     });
   });
 
-  describe("«прибавки без вещи» становятся постоянными вкладами персонажа", () => {
+  describe("«прибавки без вещи» снимаются вместе со своим прежним полем", () => {
     const bonuses = { spellcasting: 1, armorClass: 2, savingThrows: 0 };
-    /** Сохранение версии 3: прибавки лежат в снаряжении, а поля постоянных вкладов ещё нет. */
+    /** Сохранение версии 3: прибавки лежат в снаряжении и вещи не называют. */
     const legacyState = () => {
-      const { permanentContributions: _absent, ...state } = fieldsOf(createThorne());
+      const state = fieldsOf(createThorne());
       return {
         ...state,
         equipment: { ...fieldsOf(state.equipment), otherBonuses: bonuses },
       };
     };
 
-    /** Прибавка словом «магия» — две величины: КС спасброска и модификатор атаки. */
-    const migratedBonuses = [
-      { nameRu: "Прочая прибавка", contribution: { stat: "spellSaveDc", kind: "bonus", value: 1 } },
-      {
-        nameRu: "Прочая прибавка",
-        contribution: { stat: "spellAttackModifier", kind: "bonus", value: 1 },
-      },
-      { nameRu: "Прочая прибавка", contribution: { stat: "armorClass", kind: "bonus", value: 2 } },
-    ];
-
-    it("прибавки переезжают из снаряжения к персонажу, называя каждую величину", () => {
+    it("прибавка без вещи не переезжает никуда: она снимается", () => {
       const migrated = fieldsOf(migrateCharacterState(legacyState()));
-      expect(migrated.permanentContributions).toEqual(migratedBonuses);
       expect("otherBonuses" in fieldsOf(migrated.equipment)).toBe(false);
-    });
-
-    it("уже заведённые постоянные вклады не затираются прежним полем", () => {
-      const own = {
-        nameRu: "Дар",
-        contribution: { stat: "initiative", kind: "bonus", value: 9 },
-      };
-      const both = { ...legacyState(), permanentContributions: [own] };
-      const migrated = fieldsOf(migrateCharacterState(both));
-      expect(migrated.permanentContributions).toEqual([own, ...migratedBonuses]);
+      expect("miscBonuses" in migrated).toBe(false);
+      // Защита осталась той, что дают надетые вещи: 10 + Ловкость 2 + мантия 1 + плащ 1.
+      expect(
+        Character.of(characterStateSchema.parse(migrated)).sheet.value("armorClass"),
+      ).toBe(14);
     });
 
     it("состояние без прежнего поля проходит насквозь той же ссылкой", () => {
@@ -507,8 +487,74 @@ describe("приведение состояния версии 1", () => {
     it("снимок отмены приводится так же, как состояние", () => {
       const patch = { equipment: { items: [], otherBonuses: bonuses } };
       const migrated = fieldsOf(migrateUndoPatch(patch));
-      expect(migrated.permanentContributions).toEqual(migratedBonuses);
+      expect("miscBonuses" in migrated).toBe(false);
       expect("otherBonuses" in fieldsOf(migrated.equipment)).toBe(false);
+    });
+  });
+
+  describe("хранимая база защиты переезжает на надетый доспех", () => {
+    /** Сохранение версии 4: база лежит в снаряжении, а вещи ещё плоским списком. */
+    const withStoredBase = (base: unknown, items: unknown[]) => {
+      const state = createThorne();
+      return {
+        ...state,
+        itemDefinitions: [],
+        equipment: { ...state.equipment, armorClassBase: base, items },
+      };
+    };
+    const definitionsOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(migrated).itemDefinitions);
+    const armorOf = (migrated: unknown): unknown =>
+      fieldsOf(definitionsOf(migrated)[0]).armor;
+
+    it("надет ровно один — база достаётся ему", () => {
+      const migrated = migrateCharacterState(
+        withStoredBase(16, [{ id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true }]),
+      );
+      expect(armorOf(migrated)).toEqual({ base: 16 });
+    });
+
+    it("база без доспехов не переезжает: это умолчание, а не выбор игрока", () => {
+      const migrated = migrateCharacterState(
+        withStoredBase(10, [{ id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true }]),
+      );
+      expect(armorOf(migrated)).toBeUndefined();
+    });
+
+    it("база не числом не переезжает: приведение читает числа, а не что попало", () => {
+      const migrated = migrateCharacterState(
+        withStoredBase("шестнадцать", [
+          { id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true },
+        ]),
+      );
+      expect(armorOf(migrated)).toBeUndefined();
+    });
+
+    it("надето не одно — база не переезжает: угаданный доспех врал бы числом", () => {
+      const migrated = migrateCharacterState(
+        withStoredBase(16, [
+          { id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true },
+          { id: "cloak", nameRu: "Плащ", kind: "gear", worn: true },
+        ]),
+      );
+      expect(armorOf(migrated)).toBeUndefined();
+    });
+
+    it("надетому доспеху база не приписывается второй раз", () => {
+      const migrated = migrateCharacterState(
+        withStoredBase(16, [
+          { id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true, armorBase: 14 },
+        ]),
+      );
+      expect(armorOf(migrated)).toEqual({ base: 14 });
+    });
+
+    it("вещей нет вовсе — базе некуда переезжать, и снаряжение её теряет", () => {
+      const migrated = migrateCharacterState({
+        ...createThorne(),
+        equipment: { ...createThorne().equipment, armorClassBase: 16 },
+      });
+      expect("armorClassBase" in fieldsOf(fieldsOf(migrated).equipment)).toBe(false);
     });
   });
 
@@ -674,10 +720,10 @@ const VERSION_SIX = createThorne();
 
 describe("сохранение каждой версии открывается целиком, и числа за столом не едут", () => {
   it.each([
-    ["1", VERSION_ONE, { current: 51, maximumBase: 60, armorClass: 14, saveDc: 16 }],
-    // У версий 2–4 назначенной КС нет: число считается от характеристик, и прибавки предмета к
-    // магии в этих сохранениях не было — 8 + 3 + 4.
-    ["2", VERSION_TWO, { current: 51, maximumBase: 60, armorClass: 14, saveDc: 15 }],
+    // Числа, введённые руками, до нынешней формы не доезжают: КС считается от характеристик и
+    // уровня, а защита — от надетого. Вещей ни в одном из этих сохранений нет.
+    ["1", VERSION_ONE, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
+    ["2", VERSION_TWO, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
     ["3", VERSION_THREE, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
     ["4", VERSION_FOUR, { current: 51, maximumBase: 60, armorClass: 18, saveDc: 15 }],
     ["5", VERSION_FIVE, { current: 60, maximumBase: 60, armorClass: 14, saveDc: 16 }],

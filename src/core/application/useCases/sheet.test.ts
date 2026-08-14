@@ -12,8 +12,6 @@ import {
   editHealth,
   editIdentity,
   editMarks,
-  removePermanentContribution,
-  setPermanentContribution,
 } from "./sheet";
 
 const session = () => ({ character: createThorne(), journal: [] });
@@ -65,11 +63,24 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("перебитый лимит подготовки за уровнем не идёт, и сдвига ему не обещают", () => {
-    const overridden = setPermanentContribution(
-      session(),
-      { nameRu: "Слово мастера", contribution: { stat: "preparedLimit", kind: "assignment", value: 20 } },
-      occasion,
-    ).character;
+    // Слово мастера, назначившее число, — эффект: у него есть окончание, и лист его не хранит.
+    const overridden = {
+      ...createThorne(),
+      activeEffects: [
+        {
+          id: "master-word",
+          nameRu: "Слово мастера",
+          startedAt: "2026-08-08T00:00:00.000Z",
+          duration: { type: "special" as const },
+          isConcentration: false,
+          slotLevelUsed: 0,
+          endConditionRu: "Пока мастер не снимет.",
+          contributions: [
+            { stat: "preparedLimit" as const, kind: "assignment" as const, value: 20 },
+          ],
+        },
+      ],
+    };
 
     const preview = previewLevelChange(overridden, 9);
 
@@ -239,51 +250,6 @@ describe("правка листа", () => {
     expect(after.journal[0]?.summaryRu).toBe("Отметки мастера изменены");
   });
 
-  it("постоянный вклад правится с листа и двигает КС заклинаний", () => {
-    const blessed = setPermanentContribution(
-      session(),
-      { nameRu: "Благословение", contribution: { stat: "spellSaveDc", kind: "bonus", value: 3 } },
-      occasion,
-    );
-    // 8 + 3 (мастерство) + 4 (Интеллект) + 1 (фокусировка) + 3 (благословение).
-    expect(Character.of(blessed.character).sheet.value("spellSaveDc")).toBe(19);
-    expect(blessed.journal[0]?.summaryRu).toBe("Постоянный вклад: Благословение");
-
-    const undone = undoLast(blessed);
-    expect(undone.character.permanentContributions).toEqual([]);
-  });
-
-  it("одноимённый вклад заменяется, а не удваивается", () => {
-    const once = setPermanentContribution(
-      session(),
-      { nameRu: "Дар", contribution: { stat: "armorClass", kind: "bonus", value: 1 } },
-      occasion,
-    );
-    const twice = setPermanentContribution(
-      once,
-      { nameRu: "Дар", contribution: { stat: "armorClass", kind: "bonus", value: 2 } },
-      occasion,
-    );
-
-    expect(twice.character.permanentContributions).toHaveLength(1);
-    expect(Character.of(twice.character).sheet.value("armorClass")).toBe(16);
-  });
-
-  it("назначение ставится и снимается по имени, а несуществующее снять нельзя", () => {
-    const set = setPermanentContribution(
-      session(),
-      { nameRu: "Слово мастера", contribution: { stat: "spellSaveDc", kind: "assignment", value: 18 } },
-      occasion,
-    );
-    expect(Character.of(set.character).sheet.value("spellSaveDc")).toBe(18);
-
-    const cleared = removePermanentContribution(set, "Слово мастера", occasion);
-    expect(Character.of(cleared.character).sheet.value("spellSaveDc")).toBe(16);
-    expect(cleared.journal.at(-1)?.summaryRu).toBe("Постоянный вклад снят: Слово мастера");
-
-    expect(() => removePermanentContribution(session(), "Нету", occasion)).toThrow("Нету");
-  });
-
   it("здоровье правится базой и снижением мастера", () => {
     const after = editHealth(session(), { maximumBase: 70, masterReduction: 10 }, occasion);
     expect(after.character.hitPoints).toEqual({
@@ -306,23 +272,4 @@ describe("правка листа", () => {
     expect(before.character.abilities.strength).toBe(8);
   });
 
-  it("назначенная база защиты приходит способом счёта и спорит с доспехом", () => {
-    const set = setPermanentContribution(
-      session(),
-      {
-        nameRu: "Чешуя тролля",
-        contribution: {
-          stat: "armorClass",
-          kind: "method",
-          method: { family: "armor", base: 14 },
-        },
-      },
-      occasion,
-    );
-    // 14 + Ловкость 2 + мантия 1 + плащ 1.
-    expect(Character.of(set.character).sheet.value("armorClass")).toBe(18);
-
-    const cleared = removePermanentContribution(set, "Чешуя тролля", occasion);
-    expect(Character.of(cleared.character).sheet.value("armorClass")).toBe(14);
-  });
 });

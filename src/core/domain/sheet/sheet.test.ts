@@ -3,30 +3,35 @@ import { describe, expect, it } from "vitest";
 import { Character } from "@/core/domain/assembly/character";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import type { PermanentContribution } from "@/core/domain/character/schema";
-import { saveStatId, skillStatId } from "@/core/domain/shared/stats";
+import {
+  saveStatId,
+  skillStatId,
+  type SourcedContribution,
+  type StatId,
+} from "@/core/domain/shared/stats";
 
 import { Sheet } from "./sheet";
 
 const sheetOf = (state: CharacterState = createThorne()) => Character.of(state).sheet;
 
-/** Персонаж с постоянными вкладами: то, чем прежде были перебивка и прочая прибавка. */
-function withPermanent(...permanent: PermanentContribution[]): CharacterState {
-  return { ...createThorne(), permanentContributions: permanent };
-}
+/**
+ * Лист с принесёнными вкладами и без вещей: собирает их тот, кто вещами и эффектами владеет, а
+ * здесь их приносит прогон — свёртка не спрашивает, кто отправитель.
+ */
+const sheetBringing = (...brought: SourcedContribution[]) => Sheet.of(createThorne(), brought);
 
-const assigned = (stat: PermanentContribution["contribution"]["stat"], value: number) => ({
-  nameRu: "Слово мастера",
-  contribution: { stat, kind: "assignment", value } as const,
+const assigned = (stat: StatId, value: number): SourcedContribution => ({
+  source: { origin: "effect", nameRu: "Слово мастера" },
+  contribution: { stat, kind: "assignment", value },
 });
 
-const granted = (stat: PermanentContribution["contribution"]["stat"], value: number) => ({
-  nameRu: "Благословение",
-  contribution: { stat, kind: "bonus", value } as const,
+const granted = (stat: StatId, value: number): SourcedContribution => ({
+  source: { origin: "effect", nameRu: "Благословение" },
+  contribution: { stat, kind: "bonus", value },
 });
 
 describe("производные числа листа", () => {
-  it("числа Торна сходятся с листом персонажа без единого постоянного вклада", () => {
+  it("числа Торна сходятся с листом персонажа: одно основание и надетое", () => {
     const sheet = sheetOf();
     expect(sheet.value("proficiencyBonus")).toBe(3);
     expect(sheet.value("spellSaveDc")).toBe(16);
@@ -46,14 +51,12 @@ describe("производные числа листа", () => {
     expect(sheet.value("passivePerception")).toBe(14);
   });
 
-  it("постоянные вклады персонажа складываются с надетым", () => {
-    const blessed = sheetOf(
-      withPermanent(granted("spellSaveDc", 2), granted(saveStatId("constitution"), 1)),
-    );
-    // КС 16 = 8 + 3 + 4 + 1 (фокусировка); благословение +2 поверх.
-    expect(blessed.value("spellSaveDc")).toBe(18);
-    // Спасбросок Телосложения 4 = 3 + 1 (плащ); дар +1 поверх.
-    expect(blessed.value(saveStatId("constitution"))).toBe(5);
+  it("принесённые прибавки ложатся поверх основания", () => {
+    const blessed = sheetBringing(granted("spellSaveDc", 2), granted(saveStatId("constitution"), 1));
+    // КС без вещей 15 = 8 + 3 + 4; благословение +2 поверх.
+    expect(blessed.value("spellSaveDc")).toBe(17);
+    // Спасбросок Телосложения 3 без владения; дар +1 поверх.
+    expect(blessed.value(saveStatId("constitution"))).toBe(4);
   });
 
   it("инициатива двигается за Мудростью, а не только за Ловкостью", () => {
@@ -79,30 +82,31 @@ describe("производные числа листа", () => {
   });
 
   it("назначение перекрывает формулу, соседнего числа не задевая", () => {
-    const assignedSheet = sheetOf(
-      withPermanent(assigned("spellSaveDc", 18), assigned(saveStatId("constitution"), 9)),
+    const assignedSheet = sheetBringing(
+      assigned("spellSaveDc", 18),
+      assigned(saveStatId("constitution"), 9),
     );
     expect(assignedSheet.value("spellSaveDc")).toBe(18);
     expect(assignedSheet.value(saveStatId("constitution"))).toBe(9);
-    expect(assignedSheet.value("spellAttackModifier")).toBe(8);
+    expect(assignedSheet.value("spellAttackModifier")).toBe(7);
   });
 
   it("назначенный бонус мастерства доходит до КС, атаки, спасбросков и навыков", () => {
-    const assignedSheet = sheetOf(withPermanent(assigned("proficiencyBonus", 5)));
+    const assignedSheet = sheetBringing(assigned("proficiencyBonus", 5));
 
     expect(assignedSheet.value("proficiencyBonus")).toBe(5);
-    expect(assignedSheet.value(saveStatId("intelligence"))).toBe(10);
+    expect(assignedSheet.value(saveStatId("intelligence"))).toBe(9);
     expect(assignedSheet.value(skillStatId("arcana"))).toBe(9);
     // КС и атака заклинаний читают назначенный бонус, а не пересчитывают его из уровня.
-    expect(assignedSheet.value("spellSaveDc")).toBe(18);
-    expect(assignedSheet.value("spellAttackModifier")).toBe(10);
+    expect(assignedSheet.value("spellSaveDc")).toBe(17);
+    expect(assignedSheet.value("spellAttackModifier")).toBe(9);
   });
 
   it("назначение навыка перекрывает счёт по владению", () => {
-    const state = withPermanent(assigned(skillStatId("arcana"), 12));
-    expect(sheetOf({ ...state, skills: { arcana: "proficient" } }).value(skillStatId("arcana"))).toBe(
-      12,
-    );
+    const trained = { ...createThorne(), skills: { arcana: "proficient" as const } };
+    expect(
+      Sheet.of(trained, [assigned(skillStatId("arcana"), 12)]).value(skillStatId("arcana")),
+    ).toBe(12);
   });
 
   it("правка Интеллекта двигает КС, атаку и лимит подготовки", () => {
@@ -168,8 +172,12 @@ describe("Класс Доспеха складывается той же свё�
   });
 
   it("назначение перекрывает и доспех, и заклинание", () => {
-    const state = withPermanent(assigned("armorClass", 19));
-    expect(Character.of(state).sheetWith(shield).value("armorClass")).toBe(19);
+    expect(
+      Sheet.of(createThorne(), [
+        assigned("armorClass", 19),
+        { source: { origin: "effect", nameRu: "Щит" }, contribution: shield.contributions[0] },
+      ]).value("armorClass"),
+    ).toBe(19);
   });
 });
 

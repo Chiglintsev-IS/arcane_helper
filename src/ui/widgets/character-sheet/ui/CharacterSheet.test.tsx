@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { CharacterSheet } from "./CharacterSheet";
 
@@ -14,7 +13,6 @@ describe("режим «Лист»", () => {
   it("одна колонка базы: без вкладок, без чисел боя, без вещей (FR-230)", () => {
     render(
       <CharacterSheet
-        stats={toChoicesView().stats}
         sheet={toSheetView(createThorne())}
         onEdit={() => {}}
       />,
@@ -36,7 +34,6 @@ describe("режим «Лист»", () => {
     const state = createThorne();
     render(
       <CharacterSheet
-        stats={toChoicesView().stats}
         sheet={toSheetView({
           ...state,
           temporaryHitPoints: 5,
@@ -58,7 +55,6 @@ describe("режим «Лист»", () => {
     const onEdit = vi.fn();
     render(
       <CharacterSheet
-        stats={toChoicesView().stats}
         sheet={toSheetView(createThorne())}
         onEdit={onEdit}
       />,
@@ -67,27 +63,18 @@ describe("режим «Лист»", () => {
     expect(screen.getByRole("button", { name: "Править: Интеллект" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Править: Уровень" })).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: "Править: Постоянные вклады" }));
-    expect(onEdit).toHaveBeenCalledWith({ block: "permanent" });
+    await user.click(screen.getByRole("button", { name: "Править: Языки" }));
+    expect(onEdit).toHaveBeenCalledWith({ block: "languages" });
   });
 
   it("подсказка стоит рядом со значением, а не вместо него", () => {
     const state = createThorne();
     render(
       <CharacterSheet
-        stats={toChoicesView().stats}
-        sheet={toSheetView({
-          ...state,
-          permanentContributions: [
-            {
-              nameRu: "Дар богов",
-              contribution: { stat: "initiative", kind: "bonus", value: 5 },
-            },
-          ],
-        })}
+        sheet={toSheetView({ ...state, skills: { arcana: "expert" } })}
         onEdit={() => {}}
       />,
     );
-    expect(screen.getByText("(Инициатива)")).toBeDefined();
+    expect(screen.getByText("(компетентность)")).toBeDefined();
   });
 });

@@ -2,9 +2,11 @@
  * Приведение состояния прежней версии.
  *
  * Обновление приложения не имеет права терять данные, поэтому сохранение версии 1 читается, а не
- * отвергается. Прежние производные числа становятся постоянными назначениями: пока игрок не
- * заполнит характеристики, за столом действуют ровно те числа, что были, и в разборе видно, что
- * они введены руками.
+ * отвергается: вещи, эффекты, ресурсы и характеристики доезжают до нынешней формы.
+ *
+ * Числа, введённые руками мимо вещи и мимо срока, до неё не доезжают: величина складывается из
+ * надетого и действующего, и слагаемого без того и другого нынешняя форма не знает. Приведение их
+ * снимает, а не выдумывает им вещь.
  */
 
 import { z } from "zod";
@@ -16,14 +18,7 @@ import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/items/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
-import {
-  ABILITIES,
-  SKILL_IDS,
-  isStatId,
-  saveStatId,
-  skillStatId,
-  type StatId,
-} from "@/core/domain/shared/stats";
+import { ABILITIES, isStatId, saveStatId, type StatId } from "@/core/domain/shared/stats";
 
 const UNKNOWN_ABILITY_SCORE = 10;
 
@@ -153,28 +148,41 @@ function migrateItemCategories(state: unknown): unknown {
 }
 
 /**
- * Хранимая база КД из снаряжения становится перебивкой листа.
+ * Хранимая база КД из снаряжения переезжает на надетый доспех.
  *
- * База, равная базе без доспехов, перебивкой не становится: это не выбор игрока, а умолчание.
- * Имя доспеха приведение не выдумывает — отличное от умолчания число честнее хранить перебивкой,
- * пока игрок не заведёт доспех сам.
+ * База принадлежит доспеху, а не сумке: у прежней формы имени доспеха при ней не было, зато была
+ * надетая вещь, и число возвращается ей. База, равная базе без доспехов, не переезжает — это
+ * умолчание, а не выбор игрока; не переезжает она и тогда, когда надето не одно: угаданный доспех
+ * врал бы числом, а имени доспеха приведение не выдумывает.
  */
 function migrateArmorBase(state: unknown): unknown {
   const split = splitArmorBase(state);
   if (split === null) return state;
 
   const fields = fieldsOf(state);
-  const known = fieldsOf(fields.overrides);
-  const keepDerived =
-    typeof split.base !== "number" ||
-    split.base === UNARMORED_ARMOR_CLASS_BASE ||
-    known.armorClassBase !== undefined;
+  const { equipment, base } = split;
+  const items = Array.isArray(equipment.items) ? equipment.items : [];
+  const worn = items.flatMap((item, index) => (isBareWornItem(item) ? [index] : []));
+  const only = worn.length === 1 ? worn[0] : undefined;
 
-  return {
-    ...fields,
-    equipment: split.equipment,
-    ...(keepDerived ? {} : { overrides: { ...known, armorClassBase: split.base } }),
-  };
+  if (only === undefined || typeof base !== "number" || base === UNARMORED_ARMOR_CLASS_BASE) {
+    return { ...fields, equipment };
+  }
+
+  const armored = [...items];
+  armored[only] = { ...fieldsOf(items[only]), armor: { base } };
+  return { ...fields, equipment: { ...equipment, items: armored } };
+}
+
+/**
+ * Надетая вещь, доспеха у которой ещё нет: ей и принадлежала хранимая база.
+ *
+ * Про `armorBase` прежней формы здесь не спрашивают: род вещи приводится раньше, и до этого места
+ * доезжает уже `armor`.
+ */
+function isBareWornItem(item: unknown): boolean {
+  const fields = fieldsOf(item);
+  return fields.worn === true && fields.armor === undefined;
 }
 
 /**
@@ -307,36 +315,12 @@ function withoutForgottenFields(patch: unknown): unknown {
  * принадлежность проверяется у того набора ключей, который получился.
  */
 
-/**
- * Подписи, под которыми прежние поля персонажа становятся постоянными вкладами.
- *
- * Заморожены на дате приведения: нынешние подписи вправе меняться, прошлые сохранения — нет. Имя
- * обязательно, потому что разбор без него не отвечает на «откуда взялось это число», а прежние
- * поля своего имени не несли — приведение честно говорит, что имени не знает.
- */
-const LEGACY_OVERRIDE_NAME_RU = "Введено руками";
-const LEGACY_MISC_BONUS_NAME_RU = "Прочая прибавка";
-
 /** Прежние прибавки предмета словом: за каждым словом стоял свой набор величин. */
 const LEGACY_BONUS_TARGETS: Record<string, readonly StatId[]> = {
   spellcasting: ["spellSaveDc", "spellAttackModifier"],
   armorClass: ["armorClass"],
   savingThrows: ABILITIES.map(saveStatId),
 };
-
-/** Прежние перебивки, чьё имя совпадает с именем величины. */
-const LEGACY_OVERRIDE_STATS: readonly StatId[] = [
-  "proficiencyBonus",
-  "spellSaveDc",
-  "spellAttackModifier",
-  "preparedLimit",
-  "initiative",
-  "passivePerception",
-];
-
-function permanent(nameRu: string, contribution: unknown): unknown {
-  return { nameRu, contribution };
-}
 
 /**
  * Прибавки прежней формы — величинами словаря: слово раскрывается в свои величины, ноль не
@@ -364,64 +348,15 @@ function namedByLegacyWords(bonuses: unknown): boolean {
 }
 
 /**
- * Перебивки и прочие прибавки персонажа становятся постоянными вкладами.
- *
- * Перебивка — назначение: она перекрывала итог, и назначение делает то же, только протекает дальше.
- * Перебитая база защиты — способ счёта от доспеха: игрок называл число, от которого считается
- * защита, а не саму защиту. Ни одно действующее число при этом не меняется.
+ * Числа, введённые руками, снимаются: перебивка и прочая прибавка жили мимо вещи и мимо срока, а
+ * нынешняя форма складывает величину только из надетого и действующего.
  */
-function migratePermanentContributions(state: unknown): unknown {
+function dropHandEnteredNumbers(state: unknown): unknown {
   const fields = fieldsOf(state);
   if (fields.overrides === undefined && fields.miscBonuses === undefined) return state;
 
-  const { overrides, miscBonuses, ...rest } = fields;
-  const known = fieldsOf(overrides);
-  const contributions: unknown[] = [];
-
-  for (const stat of LEGACY_OVERRIDE_STATS) {
-    const value = known[stat];
-    if (typeof value !== "number") continue;
-    contributions.push(permanent(LEGACY_OVERRIDE_NAME_RU, { stat, kind: "assignment", value }));
-  }
-
-  const saves = fieldsOf(known.saves);
-  for (const ability of ABILITIES) {
-    const value = saves[ability];
-    if (typeof value !== "number") continue;
-    contributions.push(
-      permanent(LEGACY_OVERRIDE_NAME_RU, {
-        stat: saveStatId(ability),
-        kind: "assignment",
-        value,
-      }),
-    );
-  }
-
-  const skills = fieldsOf(known.skills);
-  for (const skill of SKILL_IDS) {
-    const value = skills[skill];
-    if (typeof value !== "number") continue;
-    contributions.push(
-      permanent(LEGACY_OVERRIDE_NAME_RU, { stat: skillStatId(skill), kind: "assignment", value }),
-    );
-  }
-
-  if (typeof known.armorClassBase === "number") {
-    contributions.push(
-      permanent(LEGACY_OVERRIDE_NAME_RU, {
-        stat: "armorClass",
-        kind: "method",
-        method: { family: "armor", base: known.armorClassBase },
-      }),
-    );
-  }
-
-  for (const [stat, value] of Object.entries(bonusesToStats(miscBonuses))) {
-    contributions.push(permanent(LEGACY_MISC_BONUS_NAME_RU, { stat, kind: "bonus", value }));
-  }
-
-  const previous = Array.isArray(fields.permanentContributions) ? fields.permanentContributions : [];
-  return { ...rest, permanentContributions: [...previous, ...contributions] };
+  const { overrides: _overrides, miscBonuses: _miscBonuses, ...rest } = fields;
+  return rest;
 }
 
 /**
@@ -502,7 +437,7 @@ export function migrateUndoPatch(patch: unknown): unknown {
   return withoutForgottenFields(
     migrateEffectShapes(
       migrateAdjustmentMarker(
-        migratePermanentContributions(
+        dropHandEnteredNumbers(
           migrateItemShapes(
             migrateItemsSplit(
               migrateArmorBasePatch(
@@ -519,7 +454,7 @@ export function migrateUndoPatch(patch: unknown): unknown {
 export function migrateCharacterState(raw: unknown): unknown {
   return migrateEffectShapes(
     migrateAdjustmentMarker(
-      migratePermanentContributions(
+      dropHandEnteredNumbers(
         migrateItemShapes(
           migrateItemsSplit(
             migrateArmorBase(

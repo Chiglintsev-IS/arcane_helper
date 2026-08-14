@@ -19,7 +19,6 @@ import { RUNE_TARGETS } from "@/core/domain/arcana/runes";
 import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
 import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
-import { permanentContributionOf } from "@/core/domain/character/schema";
 import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ABILITIES, SKILL_IDS, type SkillId } from "@/core/domain/shared/stats";
@@ -76,8 +75,6 @@ import {
   editIdentity,
   editMarks,
   identityOf,
-  removePermanentContribution,
-  setPermanentContribution,
 } from "@/core/application/useCases/sheet";
 import { beginTurn, endCombat, startCombat } from "@/core/application/useCases/turn";
 
@@ -303,12 +300,6 @@ export function applyCommand(
           occasion,
         ),
       );
-    case "set_permanent_contribution":
-      return changed(
-        setPermanentContribution(session, permanentContributionOf(command.permanent), occasion),
-      );
-    case "remove_permanent_contribution":
-      return changed(removePermanentContribution(session, command.nameRu, occasion));
     case "edit_marks":
       return changed(
         editMarks(

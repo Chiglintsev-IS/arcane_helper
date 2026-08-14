@@ -12,7 +12,6 @@ import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentityShe
 import { LanguagesSheet } from "@/ui/features/edit-character-sheet/ui/LanguagesSheet";
 import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
 import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
-import { PermanentContributionSheet } from "@/ui/features/edit-character-sheet/ui/PermanentContributionSheet";
 import { ProficienciesSheet } from "@/ui/features/edit-character-sheet/ui/ProficienciesSheet";
 import { applyEdit } from "@/ui/shared/model/editing";
 
@@ -44,7 +43,7 @@ export function SheetScreen() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-      <CharacterSheet sheet={sheet} stats={choices.stats} onEdit={openSheet} />
+      <CharacterSheet sheet={sheet} onEdit={openSheet} />
 
       {open?.block === "identity" ? (
         <IdentitySheet
@@ -107,21 +106,6 @@ export function SheetScreen() {
           error={refusal}
           onCancel={closeSheet}
           onSave={(marks) => void save({ kind: "edit_marks", ...marks }, closeSheet)}
-        />
-      ) : null}
-
-      {open?.block === "permanent" ? (
-        <PermanentContributionSheet
-          contributions={sheet.permanentContributions}
-          choices={choices}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(permanent) =>
-            void save({ kind: "set_permanent_contribution", permanent }, closeSheet)
-          }
-          onRemove={(nameRu) =>
-            void save({ kind: "remove_permanent_contribution", nameRu }, closeSheet)
-          }
         />
       ) : null}
     </div>

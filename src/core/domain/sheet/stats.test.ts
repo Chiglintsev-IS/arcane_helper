@@ -28,7 +28,7 @@ const THORNE: StatFoundation = {
 
 function resolved(...contributions: StatContribution[]) {
   const brought = contributions.map((contribution) => ({
-    source: { origin: "permanent", nameRu: "проба" },
+    source: { origin: "effect", nameRu: "проба" },
     contribution,
   }));
   const stats = resolveStats(statsOf(THORNE), brought);

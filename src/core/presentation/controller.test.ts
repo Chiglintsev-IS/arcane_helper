@@ -401,30 +401,6 @@ describe("лист персонажа", () => {
     ).toMatch(/владение навыком/);
   });
 
-  it("постоянный вклад заводится и снимается по имени", () => {
-    const added = run([
-      {
-        kind: "set_permanent_contribution",
-        permanent: { nameRu: "Дар предков", contribution: { stat: "armorClass", kind: "bonus", value: 1 } },
-      },
-    ]);
-    expect(added.session.character.permanentContributions).toHaveLength(1);
-
-    const removed = run([{ kind: "remove_permanent_contribution", nameRu: "Дар предков" }], added);
-    expect(removed.session.character.permanentContributions).toHaveLength(0);
-  });
-
-  it("вклад, не прошедший объявления, отвергается с причиной", () => {
-    expect(
-      refusal([
-        {
-          kind: "set_permanent_contribution",
-          permanent: { nameRu: "Ерунда", contribution: { stat: "чепуха", kind: "bonus", value: 1 } },
-        },
-      ]),
-    ).toMatch(/постоянный вклад/);
-  });
-
   it("отметки мастера и здоровье правятся", () => {
     const live = run([
       { kind: "edit_marks", exhaustion: 2, inspiration: true },

@@ -12,14 +12,13 @@
  * Ничего не считается: числа приезжают проекцией, здесь выбираются слова и порядок.
  */
 
-import type { AbilityView, ChoicesView, ContributionView, SheetView } from "@/contract/views";
+import type { AbilityView, SheetView } from "@/contract/views";
 
 import {
   abilityLabel,
   orDash,
   sizeLabel,
   skillLabel,
-  statLabel,
   trainingLabel,
 } from "@/ui/entities/character/lib/labels";
 import { signed } from "@/shared/language";
@@ -34,7 +33,7 @@ export type SheetRow = { labelRu: string; value: string; hint?: string };
  * поиска той же записи по имени между блоком и шторкой не заводится.
  */
 export type SheetEdit =
-  | { block: "identity" | "level" | "marks" | "permanent" | "proficiencies" | "languages" }
+  | { block: "identity" | "level" | "marks" | "proficiencies" | "languages" }
   | { block: "ability"; ability: AbilityView };
 
 export type SheetBlockData = {
@@ -46,13 +45,6 @@ export type SheetBlockData = {
   /** Вторая кнопка блока: у «Кто он» уровень правится отдельно — он тянет за собой ресурсы. */
   secondary?: { labelRu: string; edit: SheetEdit };
 };
-
-/** Чем вклад двигает число — словами строки разбора, а не именем рода вклада. */
-function contributionValue({ kind, value }: ContributionView): string {
-  if (kind === "bonus") return signed(value);
-  if (kind === "assignment") return `= ${value}`;
-  return `база ${value}`;
-}
 
 /**
  * Блок одной характеристики: значение с модификатором, спасбросок, её навыки.
@@ -84,7 +76,7 @@ function abilityBlock(ability: AbilityView): SheetBlockData {
   };
 }
 
-export function sheetBlocks(sheet: SheetView, stats: ChoicesView["stats"]): SheetBlockData[] {
+export function sheetBlocks(sheet: SheetView): SheetBlockData[] {
   return [
     {
       id: "identity",
@@ -112,20 +104,6 @@ export function sheetBlocks(sheet: SheetView, stats: ChoicesView["stats"]): Shee
         },
         { labelRu: "Вдохновение", value: sheet.inspiration ? "есть" : "нет" },
       ],
-    },
-    /**
-     * Постоянные вклады — свойство самого Торна: раса, дар, благословение, слово мастера. Вклад с
-     * вещью правится у вещи в «Сумке», а этой карточке принадлежит тот, у которого вещи нет.
-     */
-    {
-      id: "permanentContributions",
-      titleRu: "Постоянные вклады",
-      edit: { block: "permanent" },
-      rows: sheet.permanentContributions.map((permanent) => ({
-        labelRu: permanent.nameRu,
-        value: contributionValue(permanent),
-        hint: statLabel(stats, permanent.stat),
-      })),
     },
     ...sheet.abilities.map(abilityBlock),
     /**

@@ -125,14 +125,19 @@ describe("describeConcentration (FR-084)", () => {
     const base = createThorne();
     const character: CharacterState = {
       ...base,
-      permanentContributions: [
+      activeEffects: [
         {
+          id: "curse",
           nameRu: "Проклятие",
-          contribution: { stat: "spellAttackModifier", kind: "assignment", value: -1 },
-        },
-        {
-          nameRu: "Проклятие",
-          contribution: { stat: "save:constitution", kind: "assignment", value: -2 },
+          startedAt: "2026-08-08T00:00:00.000Z",
+          duration: { type: "special" },
+          isConcentration: false,
+          slotLevelUsed: 0,
+          endConditionRu: "Пока мастер не снимет.",
+          contributions: [
+            { stat: "spellAttackModifier", kind: "bonus", value: -9 },
+            { stat: "save:constitution", kind: "bonus", value: -6 },
+          ],
         },
       ],
     };

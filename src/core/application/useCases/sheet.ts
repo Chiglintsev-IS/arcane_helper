@@ -17,12 +17,8 @@ import {
   type SkillId,
 } from "@/core/domain/shared/stats";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { DomainError } from "@/core/domain/shared/errors";
 import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
-import {
-  isPossibleCharacterLevel,
-  type PermanentContribution,
-} from "@/core/domain/character/schema";
+import { isPossibleCharacterLevel } from "@/core/domain/character/schema";
 
 /**
  * Справочные поля: имени и возраста журнал не касается.
@@ -106,50 +102,6 @@ export function editAbility(
 }
 
 
-
-/**
- * Заводит или заменяет постоянный вклад: раса, дар, слово мастера — без вещи и без срока.
- *
- * Правка базы, а не эффект, и потому обратима журналом, как всякая правка листа. Одноимённый вклад
- * заменяется, а не удваивается: игрок правит уже записанное, а не заводит второе такое же.
- */
-export function setPermanentContribution(
-  session: Session,
-  permanent: PermanentContribution,
-  occasion: Occasion,
-): Session {
-  const kept = session.character.permanentContributions.filter(
-    (existing) => existing.nameRu !== permanent.nameRu,
-  );
-  return commit(
-    session,
-    Character.of(session.character).withSheet({
-      permanentContributions: [...kept, permanent],
-    }),
-    { kind: "sheet_edited", summaryRu: `Постоянный вклад: ${permanent.nameRu}` },
-    occasion,
-  );
-}
-
-/** Снимает постоянный вклад по имени: снятое возвращается журналом, как всякая правка. */
-export function removePermanentContribution(
-  session: Session,
-  nameRu: string,
-  occasion: Occasion,
-): Session {
-  const kept = session.character.permanentContributions.filter(
-    (existing) => existing.nameRu !== nameRu,
-  );
-  if (kept.length === session.character.permanentContributions.length) {
-    throw new DomainError(`Постоянного вклада «${nameRu}» у персонажа нет`);
-  }
-  return commit(
-    session,
-    Character.of(session.character).withSheet({ permanentContributions: kept }),
-    { kind: "sheet_edited", summaryRu: `Постоянный вклад снят: ${nameRu}` },
-    occasion,
-  );
-}
 
 export function editMarks(
   session: Session,

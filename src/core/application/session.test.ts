@@ -1794,10 +1794,16 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
       ...session,
       character: {
         ...session.character,
-        permanentContributions: [
+        activeEffects: [
           {
+            id: "narrowed",
             nameRu: "Слово мастера",
-            contribution: { stat: "preparedLimit", kind: "assignment", value: 3 },
+            startedAt: "2026-08-08T00:00:00.000Z",
+            duration: { type: "special" },
+            isConcentration: false,
+            slotLevelUsed: 0,
+            endConditionRu: "Пока мастер не снимет.",
+            contributions: [{ stat: "preparedLimit", kind: "bonus", value: -8 }],
           },
         ],
         preparedSpellIds: session.character.spellbookSpellIds.slice(0, 3),

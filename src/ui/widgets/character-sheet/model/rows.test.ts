@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { sheetBlocks } from "./rows";
 
 /** Проекцию строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
-const blocksOf = (character: CharacterState) =>
-  sheetBlocks(toSheetView(character), toChoicesView().stats);
+const blocksOf = (character: CharacterState) => sheetBlocks(toSheetView(character));
 
 const blockById = (id: string) => blocksOf(createThorne()).find((block) => block.id === id);
 
@@ -17,7 +15,6 @@ describe("блоки листа", () => {
     expect(blocksOf(createThorne()).map((block) => block.id)).toEqual([
       "identity",
       "marks",
-      "permanentContributions",
       "ability:strength",
       "ability:dexterity",
       "ability:constitution",
@@ -26,28 +23,6 @@ describe("блоки листа", () => {
       "ability:charisma",
       "proficiencies",
       "languages",
-    ]);
-  });
-
-  it("постоянные вклады — карточка листа: вклад без вещи принадлежит персонажу (FR-243)", () => {
-    const blessed = {
-      ...createThorne(),
-      permanentContributions: [
-        { nameRu: "Дар", contribution: { stat: "spellSaveDc", kind: "bonus", value: 1 } as const },
-        { nameRu: "Проклятие", contribution: { stat: "armorClass", kind: "bonus", value: -1 } as const },
-        {
-          nameRu: "Слово мастера",
-          contribution: { stat: "initiative", kind: "assignment", value: 5 } as const,
-        },
-      ],
-    };
-    const block = blocksOf(blessed).find((candidate) => candidate.id === "permanentContributions");
-
-    expect(block?.edit).toEqual({ block: "permanent" });
-    expect(block?.rows).toEqual([
-      { labelRu: "Дар", value: "+1", hint: "КС спасброска" },
-      { labelRu: "Проклятие", value: "−1", hint: "Класс Доспеха" },
-      { labelRu: "Слово мастера", value: "= 5", hint: "Инициатива" },
     ]);
   });
 
@@ -69,18 +44,6 @@ describe("блоки листа", () => {
     expect(rows).toContainEqual({ labelRu: "Истощение", value: "ступень 3" });
     expect(rows).toContainEqual({ labelRu: "Вдохновение", value: "есть" });
     expect(blockById("marks")?.rows).toContainEqual({ labelRu: "Истощение", value: "нет" });
-  });
-
-  it("постоянные вклады стоят своим блоком: имя, число и величина (FR-246)", () => {
-    const withGift = {
-      ...createThorne(),
-      permanentContributions: [
-        { nameRu: "Дар богов", contribution: { stat: "initiative", kind: "bonus", value: 5 } as const },
-      ],
-    };
-    const rows =
-      blocksOf(withGift).find((block) => block.id === "permanentContributions")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Дар богов", value: "+5", hint: "Инициатива" });
   });
 
   it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {

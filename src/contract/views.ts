@@ -63,19 +63,6 @@ export const choicesViewSchema = z.object({
   abilityScore: z.object({ minimum: whole, maximum: whole }),
 });
 
-/**
- * Вклад так, как его показывают: чей он, чем двигает число и на сколько.
- *
- * Кем вклад отвергнут, здесь не бывает: «кольчуга победила „Доспехи мага“» — ответ на вопрос,
- * которого за столом не задают.
- */
-export const contributionViewSchema = z.object({
-  nameRu: word,
-  /** Род вклада: способ счёта, прибавка или назначение. */
-  kind: word,
-  value: whole,
-});
-
 const skillViewSchema = z.object({
   id: word,
   value: whole,
@@ -136,9 +123,6 @@ export const sheetViewSchema = z.object({
 
   exhaustion: whole,
   inspiration: z.boolean(),
-
-  /** Постоянные вклады — свойства самого персонажа: раса, дар, благословение, слово мастера. */
-  permanentContributions: z.array(contributionViewSchema.extend({ stat: word })),
 
   abilities: z.array(abilityViewSchema),
 
@@ -603,7 +587,6 @@ export const bloodMagicViewSchema = z.object({
 });
 
 export type ActiveEffectView = z.infer<typeof activeEffectViewSchema>;
-export type ContributionView = z.infer<typeof contributionViewSchema>;
 export type ConcentrationCheckView = z.infer<typeof concentrationCheckViewSchema>;
 export type ConcentrationView = z.infer<typeof concentrationViewSchema>;
 export type ResourcesView = z.infer<typeof resourcesViewSchema>;

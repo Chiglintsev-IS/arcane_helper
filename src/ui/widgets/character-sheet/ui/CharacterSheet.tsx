@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChoicesView, SheetView } from "@/contract/views";
+import type { SheetView } from "@/contract/views";
 import { sheetBlocks, type SheetEdit } from "../model/rows";
 import { SheetBlock } from "./SheetBlock";
 
@@ -11,17 +11,14 @@ import { SheetBlock } from "./SheetBlock";
  */
 export function CharacterSheet({
   sheet,
-  stats,
   onEdit,
 }: {
   sheet: SheetView;
-  /** Величины с разбором: ими подписаны строки постоянных вкладов. */
-  stats: ChoicesView["stats"];
   onEdit: (edit: SheetEdit) => void;
 }) {
   return (
     <div className="flex flex-col gap-2">
-      {sheetBlocks(sheet, stats).map((block) => (
+      {sheetBlocks(sheet).map((block) => (
         <SheetBlock
           key={block.id}
           block={block}

@@ -141,7 +141,6 @@ describe("форма состояния", () => {
       "itemDefinitions",
       "level",
       "name",
-      "permanentContributions",
       "preparedSpellIds",
       "proficiencies",
       "roleplayPreferences",
@@ -304,7 +303,6 @@ describe("состояние целиком", () => {
     expect(thorneState.speed).toBe(30);
     expect(thorneState.exhaustion).toBe(0);
     expect(thorneState.inspiration).toBe(false);
-    expect(thorneState.permanentContributions).toEqual([]);
   });
 
   it("отсутствующие поля получают значение по умолчанию: обновление не теряет данных", () => {

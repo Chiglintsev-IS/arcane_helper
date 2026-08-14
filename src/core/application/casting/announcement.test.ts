@@ -29,6 +29,17 @@ function context(overrides: Partial<AnnouncementContext> = {}): AnnouncementCont
   return { character: thorne, mode: "normal", payment: { kind: "none" }, ...overrides };
 }
 
+/** Проклятие мастера: у него есть окончание, значит это эффект, а не свойство Торна. */
+const CURSE = {
+  id: "curse",
+  nameRu: "Проклятие",
+  startedAt: "2026-08-08T00:00:00.000Z",
+  duration: { type: "special" },
+  isConcentration: false,
+  slotLevelUsed: 0,
+  endConditionRu: "Пока мастер не снимет.",
+} as const;
+
 describe("renderAnnouncement: подстановки (FR-041)", () => {
   it("подставляет цель, дальность, модификатор атаки и урон заговора по уровню персонажа", () => {
     const announcement = renderAnnouncement(
@@ -65,10 +76,10 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
   it("сохраняет знак отрицательного модификатора атаки", () => {
     const cursed: CharacterState = {
       ...thorne,
-      permanentContributions: [
+      activeEffects: [
         {
-          nameRu: "Проклятие",
-          contribution: { stat: "spellAttackModifier", kind: "assignment", value: -1 },
+          ...CURSE,
+          contributions: [{ stat: "spellAttackModifier", kind: "bonus", value: -9 }],
         },
       ],
     };
@@ -382,10 +393,10 @@ describe("castInstructions: что сделать этому персонажу 
   it("отрицательный модификатор атаки сохраняет знак", () => {
     const cursed: CharacterState = {
       ...thorne,
-      permanentContributions: [
+      activeEffects: [
         {
-          nameRu: "Проклятие",
-          contribution: { stat: "spellAttackModifier", kind: "assignment", value: -2 },
+          ...CURSE,
+          contributions: [{ stat: "spellAttackModifier", kind: "bonus", value: -10 }],
         },
       ],
     };

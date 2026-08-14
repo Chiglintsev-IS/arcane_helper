@@ -74,32 +74,6 @@ describe("разбор", () => {
     expect(thorne().armorClass).toBe(14);
     expect(armored.armorClass).toBe(18);
   });
-
-  it("постоянный вклад доходит до Класса Доспеха назначением", () => {
-    const state = createThorne();
-    const assigned = toSheetView({
-      ...state,
-      permanentContributions: [
-        { nameRu: "Слово мастера", contribution: { stat: "armorClass", kind: "assignment", value: 20 } },
-      ],
-    });
-
-    expect(assigned.armorClass).toBe(20);
-  });
-
-  it("постоянный вклад едет со своей величиной: назвать её — дело показывающего", () => {
-    const state = createThorne();
-    const blessed = toSheetView({
-      ...state,
-      permanentContributions: [
-        { nameRu: "Дар богов", contribution: { stat: "initiative", kind: "bonus", value: 5 } },
-      ],
-    });
-
-    expect(blessed.permanentContributions).toEqual([
-      { nameRu: "Дар богов", stat: "initiative", kind: "bonus", value: 5 },
-    ]);
-  });
 });
 
 describe("здоровье", () => {

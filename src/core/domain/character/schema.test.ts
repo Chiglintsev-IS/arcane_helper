@@ -1,4 +1,3 @@
-import type { PermanentContribution } from "@/core/domain/character/schema";
 import { saveStatId } from "@/core/domain/shared/stats";
 import { describe, expect, it } from "vitest";
 
@@ -107,46 +106,6 @@ describe("правка листа проходит объявления поле
     expect(refusal({ speed: -5 })).toContain("speed");
   });
 
-  it("дробный постоянный вклад не сохраняется, а отрицательный сохраняется: минус бывает", () => {
-    const permanent = (value: number): PermanentContribution[] => [
-      { nameRu: "Проклятие", contribution: { stat: "initiative", kind: "bonus", value } },
-    ];
-    expect(refusal({ permanentContributions: permanent(1.5) })).toContain("permanentContributions");
-    expect(
-      Character.of(createThorne())
-        .withSheet({ permanentContributions: permanent(-1) })
-        .toState().permanentContributions,
-    ).toEqual(permanent(-1));
-  });
-
-  it("постоянный вклад без имени не сохраняется: разбор без имени ни на что не отвечает", () => {
-    expect(
-      refusal({
-        permanentContributions: [
-          { nameRu: "  ", contribution: { stat: "armorClass", kind: "bonus", value: 1 } },
-        ],
-      }),
-    ).toContain("permanentContributions");
-  });
-
-  it("второе назначение на ту же величину отвергается с причиной", () => {
-    const assigned = (nameRu: string): PermanentContribution => ({
-      nameRu,
-      contribution: { stat: "armorClass", kind: "assignment", value: 18 },
-    });
-
-    expect(
-      Character.of(createThorne())
-        .withSheet({ permanentContributions: [assigned("Слово мастера")] })
-        .toState().permanentContributions,
-    ).toHaveLength(1);
-
-    const twice = refusal({
-      permanentContributions: [assigned("Слово мастера"), assigned("Дар")],
-    });
-    expect(twice).toContain("уже назначено число");
-    expect(twice).toContain("armorClass");
-  });
 
   it("правка, прошедшая объявления, доходит до состояния", () => {
     expect(Character.of(createThorne()).withSheet({ age: 142 }).toState().age).toBe(142);

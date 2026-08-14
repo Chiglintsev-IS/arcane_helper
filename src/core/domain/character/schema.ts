@@ -13,8 +13,8 @@ import {
   MAXIMUM_EXHAUSTION,
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
-import { nonEmpty, parsedOrRefused, russianSchemaErrors } from "@/core/domain/shared/schema";
-import { ABILITIES, SKILL_IDS, statContributionSchema } from "@/core/domain/shared/stats";
+import { nonEmpty, russianSchemaErrors } from "@/core/domain/shared/schema";
+import { ABILITIES, SKILL_IDS } from "@/core/domain/shared/stats";
 
 import { SKILL_TRAINING } from "./skills";
 
@@ -102,54 +102,6 @@ function reasonsOf(error: z.ZodError): string {
   return error.issues.map((issue) => issue.message).join("; ");
 }
 
-/**
- * Постоянный вклад: прибавка или назначение без вещи и без срока — раса, дар, слово мастера.
- *
- * Свойство персонажа, а не эффект: у эффекта есть окончание, а у расы его нет. Правится он с
- * «Листа» и обратим журналом, как всякая правка базы.
- *
- * Имя рядом со вкладом обязательно: «откуда взялось +2» — вопрос, который за столом задают чаще
- * самого числа, и разбор без имени на него не отвечает.
- */
-const permanentContributionSchema = z.object({
-  nameRu: nonEmpty,
-  contribution: statContributionSchema,
-});
-
-/**
- * Постоянный вклад из сообщения снаружи: объявление проверяет его само и отказывает с причиной.
- *
- * Наружу отдаётся сужение, а не схема: пусти схему за границу, и её начнут расширять на месте, а
- * объявление вклада перестанет быть одним.
- */
-export function permanentContributionOf(value: unknown): PermanentContribution {
-  return parsedOrRefused(permanentContributionSchema, value, "постоянный вклад");
-}
-
-/**
- * Двух назначений на одну величину не бывает.
- *
- * Движок конфликтов не разрешает и наибольшее не выбирает: тихий выбор решал бы за игрока, какое из
- * двух слов мастера считать настоящим. Второе отклоняется с причиной, и снять прежнее — его дело.
- */
-const permanentContributions = z
-  .array(permanentContributionSchema)
-  .superRefine((permanent, context) => {
-    const assigned = new Set<string>();
-    for (const [index, { contribution }] of permanent.entries()) {
-      if (contribution.kind !== "assignment") continue;
-      if (assigned.has(contribution.stat)) {
-        context.addIssue({
-          code: "custom",
-          path: [index],
-          message: `Величине «${contribution.stat}» уже назначено число: снимите прежнее назначение, второго не бывает`,
-        });
-      }
-      assigned.add(contribution.stat);
-    }
-  })
-  .default([]);
-
 /** Поля контекста для сборки полной схемы состояния. */
 export const CHARACTER_FIELDS = {
   id: nonEmpty,
@@ -176,7 +128,6 @@ export const CHARACTER_FIELDS = {
     })
     .default({ weapons: [], armor: [], tools: [], languages: [] }),
 
-  permanentContributions,
 
   /** Отметки на листе: их ставят и снимают там же, где смотрят, — на «Листе». */
   exhaustion: z.number().int().min(0).max(MAXIMUM_EXHAUSTION).default(0),
@@ -188,4 +139,3 @@ export const CHARACTER_FIELDS = {
 const characterSchema = z.object(CHARACTER_FIELDS);
 
 export type CharacterFields = DeepReadonly<z.infer<typeof characterSchema>>;
-export type PermanentContribution = DeepReadonly<z.infer<typeof permanentContributionSchema>>;

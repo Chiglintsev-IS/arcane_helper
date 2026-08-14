@@ -117,10 +117,6 @@ export const commandSchema = z.discriminatedUnion("kind", [
     saveProficient: z.boolean(),
     skills: z.record(word, word),
   }),
-  command("set_permanent_contribution", {
-    permanent: z.looseObject({ nameRu: word }),
-  }),
-  command("remove_permanent_contribution", { nameRu: word }),
   command("edit_marks", { exhaustion: numeric, inspiration: z.boolean() }),
   command("edit_health", { maximumBase: numeric, masterReduction: numeric }),
   command("change_level", { level: numeric, hitPointMaximumBase: numeric }),

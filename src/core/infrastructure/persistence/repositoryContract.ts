@@ -203,11 +203,10 @@ export function describeParsingContract(): void {
     expect(() => parsePersisted(broken)).toThrow(/savedAt/);
   });
 
-  it("версию старее приводит, а не отвергает: обновление не теряет данных", () => {
+  it("версию старее приводит, а не отвергает: сохранение открывается целиком", () => {
     const legacy = snapshot();
     // Полей нынешней формы у версии 1 не было — из образца они убираются вместе с их владельцами.
-    const { abilities, equipment, hitPoints, permanentContributions, ...character } =
-      legacy.character;
+    const { abilities, equipment, hitPoints, ...character } = legacy.character;
     const before = parsePersisted({
       ...legacy,
       schemaVersion: 1,
@@ -222,10 +221,10 @@ export function describeParsingContract(): void {
       },
     });
     const totals = Character.of(before.character).sheet;
-    // Числа версии 1 действуют прежними: перебивка стала постоянным назначением.
-    expect(totals.value("spellSaveDc")).toBe(16);
-    // Прибавка версии 1 не называла вещи — она читается постоянным вкладом персонажа: 10 + 2 + 2.
-    expect(totals.value("armorClass")).toBe(14);
+    // Числа версии 1 считаются заново: КС — из Интеллекта 18 и уровня 7, защита — 10 + Ловкость 2.
+    // Введённое руками до нынешней формы не доезжает: величину складывают надетое и действующее.
+    expect(totals.value("spellSaveDc")).toBe(15);
+    expect(totals.value("armorClass")).toBe(12);
   });
 
   it("испорченное сохранение остаётся повреждением, сколько бы ни стояло в версии", () => {
