@@ -46,7 +46,17 @@ const RAW: unknown = {
     nature: "proficient",
     perception: "proficient",
   },
-  proficiencies: { weapons: [], armor: [], tools: [], languages: [] },
+  /**
+   * Владения волшебника из «Книги игрока»: пять видов оружия и ни одного доспеха — класс не даёт
+   * владения доспехами вовсе. Инструменты и языки игроком не названы и потому пусты: пустой список
+   * честнее правдоподобного.
+   */
+  proficiencies: {
+    weapons: ["Кинжал", "Дротик", "Праща", "Боевой посох", "Лёгкий арбалет"],
+    armor: [],
+    tools: [],
+    languages: [],
+  },
   exhaustion: 0,
   inspiration: false,
 

@@ -50,6 +50,9 @@ describe("подсхема персонажа", () => {
       nature: "proficient",
       perception: "proficient",
     });
+    // Владения волшебника из «Книги игрока»: доспехами класс не владеет вовсе.
+    expect(thorneState.proficiencies.weapons).toContain("Боевой посох");
+    expect(thorneState.proficiencies.armor).toEqual([]);
   });
 
   it("профиль отыгрыша без тона отклоняется", () => {
