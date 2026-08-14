@@ -76,12 +76,6 @@ export const contributionViewSchema = z.object({
   value: whole,
 });
 
-/** Величина вместе с разбором: итог и то, из чего он сложился. */
-export const statViewSchema = z.object({
-  value: whole,
-  parts: z.array(contributionViewSchema),
-});
-
 const skillViewSchema = z.object({
   id: word,
   value: whole,
@@ -134,7 +128,11 @@ export const sheetViewSchema = z.object({
   subclass: text,
 
   hitPoints: hitPointsViewSchema,
-  armorClass: statViewSchema,
+  /**
+   * Итог защиты — числом и без разбора: складывают его характеристики, доспех, заклинания и слово
+   * мастера, а показывает шапка «Игры». На «Листе» его нет: лист не меняет того, что двигает игра.
+   */
+  armorClass: whole,
 
   exhaustion: whole,
   inspiration: z.boolean(),
@@ -622,7 +620,6 @@ export type CastingView = z.infer<typeof castingViewSchema>;
 export type BloodMagicView = z.infer<typeof bloodMagicViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
-export type StatView = z.infer<typeof statViewSchema>;
 export type StatChoiceView = z.infer<typeof statChoiceSchema>;
 export type ChoicesView = z.infer<typeof choicesViewSchema>;
 export type AbilityView = z.infer<typeof abilityViewSchema>;

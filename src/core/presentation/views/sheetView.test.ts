@@ -56,14 +56,7 @@ describe("величины", () => {
 });
 
 describe("разбор", () => {
-  it("Класс Доспеха приезжает итогом и вкладами с источниками", () => {
-    const { armorClass } = thorne();
-
-    expect(armorClass.value).toBe(14);
-    expect(armorClass.parts).toContainEqual({ nameRu: "Мантия +1", kind: "bonus", value: 1 });
-  });
-
-  it("способ счёта называет своё основание, а не разность", () => {
+  it("Класс Доспеха приезжает итогом, а из чего он сложился — не приезжает вовсе", () => {
     const state = createThorne();
     const armored = toSheetView({
       ...state,
@@ -77,14 +70,12 @@ describe("разбор", () => {
       },
     });
 
-    expect(armored.armorClass.parts).toContainEqual({
-      nameRu: "Чешуйчатый доспех",
-      kind: "method",
-      value: 14,
-    });
+    // Одно число, а не итог со слагаемыми: показывает его шапка «Игры», и разбирать его там нечем.
+    expect(thorne().armorClass).toBe(14);
+    expect(armored.armorClass).toBe(18);
   });
 
-  it("отвергнутый вклад в разбор не едет: за столом о нём не спрашивают", () => {
+  it("постоянный вклад доходит до Класса Доспеха назначением", () => {
     const state = createThorne();
     const assigned = toSheetView({
       ...state,
@@ -93,8 +84,7 @@ describe("разбор", () => {
       ],
     });
 
-    expect(assigned.armorClass.value).toBe(20);
-    expect(assigned.armorClass.parts.map((part) => part.nameRu)).toEqual(["Слово мастера"]);
+    expect(assigned.armorClass).toBe(20);
   });
 
   it("постоянный вклад едет со своей величиной: назвать её — дело показывающего", () => {

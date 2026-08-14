@@ -171,7 +171,7 @@ export function ResourceHeader({
     <section aria-label="Ресурсы" className="flex flex-col gap-2">
       <dl className="grid grid-cols-2 gap-1">
         <ArmorClassStat
-          value={`${sheet.armorClass.value}`}
+          value={`${sheet.armorClass}`}
           adjustment={resources.armorClassAdjustment}
           onOpen={onOpenArmorClass}
         />

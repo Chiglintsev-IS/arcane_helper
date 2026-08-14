@@ -21,7 +21,6 @@ describe("режим «Лист»", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Здоровье" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Отметки мастера" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Интеллект" })).toBeDefined();
     expect(screen.getByText("Лунный тролль")).toBeDefined();
@@ -33,7 +32,7 @@ describe("режим «Лист»", () => {
     expect(screen.queryByRole("heading", { name: "Навыки" })).toBeNull();
   });
 
-  it("здоровье показывает действующие числа, а не слагаемые (FR-240)", () => {
+  it("того, что двигает игра, на листе нет: ни защиты, ни хитов (FR-230)", () => {
     const state = createThorne();
     render(
       <CharacterSheet
@@ -47,11 +46,11 @@ describe("режим «Лист»", () => {
       />,
     );
 
-    expect(screen.getByText("24 из 34")).toBeDefined();
-    expect(screen.getByText("(+5 временных)")).toBeDefined();
-    // Снижение названо подсказкой у действующего максимума, а не своей строкой.
-    expect(screen.getByText("(38 −4 кровью)")).toBeDefined();
-    expect(screen.queryByText("Снижение кровью")).toBeNull();
+    // Ни блоков, ни кнопок правки: хиты правятся в «Игре», защита — надетым и заклинанием.
+    expect(screen.queryByRole("heading", { name: "Здоровье" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Класс Доспеха" })).toBeNull();
+    expect(screen.queryByText("24 из 34")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Править: Здоровье" })).toBeNull();
   });
 
   it("у каждого блока есть кнопка правки с внятным именем", async () => {

@@ -2,20 +2,17 @@
  * Строки блоков листа. Чистые функции, а не разметка: состав листа проверяется без браузера, и
  * компонент остаётся тонким.
  *
- * Лист — только база персонажа: кто он, характеристики, здоровье, отметки мастера, владения.
- * Действующие числа боя живут в шапке «Игры», вещи и деньги — в «Сумке»: три экрана отвечают на
- * три разных вопроса, и дублирование чисел между ними заставляло бы сверять их взглядом.
+ * Лист — только база персонажа: кто он, характеристики, отметки мастера, владения. Действующие
+ * числа боя живут в шапке «Игры», вещи и деньги — в «Сумке»: три экрана отвечают на три разных
+ * вопроса, и дублирование чисел между ними заставляло бы сверять их взглядом.
+ *
+ * Класс Доспеха складывается из характеристик, доспеха, заклинаний и слова мастера — то есть из
+ * того, что двигает игра, а не лист. Числа, которое лист не вправе изменить, на листе и нет.
  *
  * Ничего не считается: числа приезжают проекцией, здесь выбираются слова и порядок.
  */
 
-import type {
-  AbilityView,
-  ChoicesView,
-  ContributionView,
-  SheetView,
-  StatView,
-} from "@/contract/views";
+import type { AbilityView, ChoicesView, ContributionView, SheetView } from "@/contract/views";
 
 import {
   abilityLabel,
@@ -37,7 +34,7 @@ export type SheetRow = { labelRu: string; value: string; hint?: string };
  * поиска той же записи по имени между блоком и шторкой не заводится.
  */
 export type SheetEdit =
-  | { block: "identity" | "level" | "health" | "marks" | "permanent" }
+  | { block: "identity" | "level" | "marks" | "permanent" }
   | { block: "ability"; ability: AbilityView };
 
 export type SheetBlockData = {
@@ -55,44 +52,6 @@ function contributionValue({ kind, value }: ContributionView): string {
   if (kind === "bonus") return signed(value);
   if (kind === "assignment") return `= ${value}`;
   return `база ${value}`;
-}
-
-/** Разбор величины строками: что действует и откуда взялось. */
-function breakdownRows(stat: StatView): SheetRow[] {
-  return stat.parts.map((part) => ({ labelRu: part.nameRu, value: contributionValue(part) }));
-}
-
-/**
- * Класс Доспеха: действующее число и всё, из чего оно сложилось.
- *
- * Итог здесь тот же, что в шапке «Игры», и это не два числа, а одно: считает его один код, и
- * разойтись им нечем — прежде здесь стояла собственная раскладка, и она с шапкой расходилась.
- */
-function armorClassBlock(armorClass: StatView): SheetBlockData {
-  return {
-    id: "armorClass",
-    titleRu: "Класс Доспеха",
-    edit: { block: "permanent" },
-    rows: [
-      { labelRu: "Итог", value: String(armorClass.value) },
-      ...breakdownRows(armorClass),
-    ],
-  };
-}
-
-/**
- * Откуда взялся действующий максимум хитов, когда он не равен базовому: снижения названы, но
- * место занимает одно число, а не четыре строки слагаемых. Целый максимум подсказки не требует —
- * объяснять нечего.
- *
- * Минус типографский: дефис в этой позиции на узком экране читается как перенос строки.
- */
-function maximumOrigin({ maximumBase, bloodReduction, masterReduction }: SheetView["hitPoints"]): string | null {
-  const parts = [
-    bloodReduction === 0 ? null : `−${bloodReduction} кровью`,
-    masterReduction === 0 ? null : `−${masterReduction} мастером`,
-  ].filter((part) => part !== null);
-  return parts.length === 0 ? null : `${maximumBase} ${parts.join(", ")}`;
 }
 
 /**
@@ -126,9 +85,6 @@ function abilityBlock(ability: AbilityView): SheetBlockData {
 }
 
 export function sheetBlocks(sheet: SheetView, stats: ChoicesView["stats"]): SheetBlockData[] {
-  const { hitPoints } = sheet;
-  const maximumHint = maximumOrigin(hitPoints);
-
   return [
     {
       id: "identity",
@@ -145,33 +101,6 @@ export function sheetBlocks(sheet: SheetView, stats: ChoicesView["stats"]): Shee
         { labelRu: "Подкласс", value: orDash(sheet.subclass) },
       ],
     },
-    {
-      id: "health",
-      titleRu: "Здоровье",
-      edit: { block: "health" },
-      rows: [
-        {
-          labelRu: "Хиты",
-          value: `${hitPoints.current} из ${hitPoints.maximum}`,
-          ...(hitPoints.temporary === 0
-            ? {}
-            : { hint: `${signed(hitPoints.temporary)} временных` }),
-        },
-        {
-          labelRu: "Максимум",
-          value: String(hitPoints.maximum),
-          ...(maximumHint === null ? {} : { hint: maximumHint }),
-        },
-        {
-          labelRu: "Кости хитов",
-          value:
-            hitPoints.hitDice === undefined
-              ? "—"
-              : `${hitPoints.hitDice.remaining} из ${hitPoints.hitDice.total} по d${hitPoints.hitDice.size}`,
-        },
-      ],
-    },
-    armorClassBlock(sheet.armorClass),
     {
       id: "marks",
       titleRu: "Отметки мастера",

@@ -2,45 +2,106 @@
 
 import { useState } from "react";
 
+import type { SheetView } from "@/contract/views";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+import { usePreview } from "@/ui/shared/model/usePreview";
 
-type Kind = "damage" | "heal" | "temporary";
+/**
+ * Хиты правятся там, где их получают и теряют, — в «Игре» и в «Привале».
+ *
+ * Максимум стоит здесь же четвёртой вкладкой, а не на «Листе»: его двигают уровень, кровавое
+ * колдовство и слово мастера — всё это случается за столом, а не при заполнении листа.
+ */
+type Kind = "damage" | "heal" | "temporary" | "maximum";
 
 const TABS: { kind: Kind; label: string }[] = [
   { kind: "damage", label: "Урон" },
   { kind: "heal", label: "Лечение" },
   { kind: "temporary", label: "Временные" },
+  { kind: "maximum", label: "Максимум" },
 ];
 
 const HINTS: Record<Kind, string> = {
   damage: "Списывается сначала с временных хитов, потом с текущих.",
   heal: "Выше максимума не поднимет; максимум учитывает снижение от магии крови и от мастера.",
   temporary: "Не складываются: новое значение заменяет прежнее, если оно больше.",
+  maximum: "База растёт с уровнем; снижение мастера держится, пока он его не снимет.",
 };
 
+const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
+  damage: "Полученный урон",
+  heal: "Вылечено",
+  temporary: "Временные хиты",
+};
+
+const fieldClass =
+  "min-h-11 rounded-lg border border-slate-200 px-3 text-base tabular-nums dark:border-slate-800 dark:bg-slate-900";
+
+function NumberField({
+  labelRu,
+  value,
+  min,
+  onChange,
+}: {
+  labelRu: string;
+  value: string;
+  min: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="font-medium">{labelRu}</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={min}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={fieldClass}
+      />
+    </label>
+  );
+}
+
 export function HitPointsSheet({
+  hitPoints,
   onDamage,
   onHeal,
   onTemporary,
+  onMaximum,
   onCancel,
   error = null,
 }: {
   /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
+  hitPoints: SheetView["hitPoints"];
   onDamage: (damage: number, fire: boolean) => void;
   onHeal: (amount: number) => void;
   onTemporary: (amount: number) => void;
+  onMaximum: (change: { maximumBase: number; masterReduction: number }) => void;
   onCancel: () => void;
 }) {
   const [kind, setKind] = useState<Kind>("damage");
   const [value, setValue] = useState("");
   const [fire, setFire] = useState(false);
+  const [baseText, setBaseText] = useState(String(hitPoints.maximumBase));
+  const [masterText, setMasterText] = useState(String(hitPoints.masterReduction));
   const amount = requiredFieldNumber(value);
+
+  const maximumBase = requiredFieldNumber(baseText);
+  const masterReduction = requiredFieldNumber(masterText);
+  // Незаполненное поле не спрашивают: спрашивать не о чем, пока число не набрано.
+  const filled = !Number.isNaN(maximumBase) && !Number.isNaN(masterReduction);
+  const preview = usePreview(
+    kind === "maximum" && filled ? { kind: "health_preview", maximumBase, masterReduction } : null,
+  );
+  const effective = preview?.kind === "health_preview" ? preview.effectiveMaximum : null;
 
   const submit = (): void => {
     if (kind === "damage") return onDamage(amount, fire);
     if (kind === "heal") return onHeal(amount);
-    return onTemporary(amount);
+    if (kind === "temporary") return onTemporary(amount);
+    return onMaximum({ maximumBase, masterReduction });
   };
 
   return (
@@ -70,21 +131,29 @@ export function HitPointsSheet({
         ))}
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">
-          {kind === "damage" ? "Полученный урон" : kind === "heal" ? "Вылечено" : "Временные хиты"}
-        </span>
-        <input
-          type="number"
-          inputMode="numeric"
-          min={1}
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          className="min-h-11 rounded-lg border border-slate-200 px-3 text-base tabular-nums dark:border-slate-800 dark:bg-slate-900"
-        />
-      </label>
+      {kind === "maximum" ? (
+        <>
+          <NumberField labelRu="Базовый максимум" value={baseText} min={1} onChange={setBaseText} />
+          <NumberField
+            labelRu="Снижение мастера"
+            value={masterText}
+            min={0}
+            onChange={setMasterText}
+          />
+        </>
+      ) : (
+        <NumberField labelRu={FIELD_LABELS[kind]} value={value} min={1} onChange={setValue} />
+      )}
 
       <p className="text-xs text-slate-600 dark:text-slate-400">{HINTS[kind]}</p>
+
+      {kind === "maximum" ? (
+        // Снижение кровью ведёт кровавое колдовство: правка руками разошлась бы с почасовым возвратом.
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Снижение кровью — {hitPoints.bloodReduction}, возвращается по часу и здесь не правится.
+          Действующий максимум станет {effective ?? "—"}.
+        </p>
+      ) : null}
 
       {kind === "damage" ? (
         <label className="flex items-center gap-2 text-sm">

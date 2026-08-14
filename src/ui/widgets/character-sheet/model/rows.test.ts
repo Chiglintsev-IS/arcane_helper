@@ -16,8 +16,6 @@ describe("блоки листа", () => {
   it("лист — только база персонажа, порядком бумажного листа (FR-230)", () => {
     expect(blocksOf(createThorne()).map((block) => block.id)).toEqual([
       "identity",
-      "health",
-      "armorClass",
       "marks",
       "permanentContributions",
       "ability:strength",
@@ -63,40 +61,6 @@ describe("блоки листа", () => {
     expect(blockById("identity")?.rows).toContainEqual({ labelRu: "Возраст", value: "—" });
   });
 
-  it("здоровье показывает действующее число, а снижения называет подсказкой (FR-240)", () => {
-    const state = createThorne();
-    const hurt = {
-      ...state,
-      hitPoints: { current: 30, maximumBase: 60, bloodReduction: 6, masterReduction: 4 },
-    };
-    const rows = blocksOf(hurt).find((block) => block.id === "health")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Хиты", value: "30 из 50" });
-    expect(rows).toContainEqual({
-      labelRu: "Максимум",
-      value: "50",
-      hint: "60 −6 кровью, −4 мастером",
-    });
-  });
-
-  it("целый максимум подсказки не несёт: объяснять нечего", () => {
-    const rows = blockById("health")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Максимум", value: "60" });
-  });
-
-  it("временные хиты видны на листе сразу, как только они есть (FR-240)", () => {
-    const state = createThorne();
-    const rows =
-      blocksOf({ ...state, temporaryHitPoints: 5 }).find((block) => block.id === "health")?.rows ??
-      [];
-    expect(rows).toContainEqual({ labelRu: "Хиты", value: "60 из 60", hint: "+5 временных" });
-  });
-
-  it("состояние без Костей хитов называет их прочерком", () => {
-    const { hitDice: _none, ...withoutDice } = createThorne();
-    const rows = blocksOf(withoutDice).find((block) => block.id === "health")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Кости хитов", value: "—" });
-  });
-
   it("отметки мастера читаются словами", () => {
     const state = createThorne();
     const marked = { ...state, exhaustion: 3, inspiration: true };
@@ -118,14 +82,19 @@ describe("блоки листа", () => {
     expect(rows).toContainEqual({ labelRu: "Дар богов", value: "+5", hint: "Инициатива" });
   });
 
-  it("блок КД показывает итог и разбор с источниками", () => {
-    const rows = blockById("armorClass")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Итог", value: "14" });
-    expect(rows).toContainEqual({ labelRu: "Мантия +1", value: "+1" });
-    expect(rows).toContainEqual({ labelRu: "Плащ защиты", value: "+1" });
+  it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {
+    const ids = blocksOf(createThorne()).map((block) => block.id);
+    expect(ids).not.toContain("combatNumbers");
+    expect(ids).not.toContain("inventory");
+    expect(ids).not.toContain("armorClassBase");
+    expect(ids).not.toContain("itemBonuses");
+    // Хиты и Кости хитов двигает игра: их дом — шапка «Игры» и «Привал», а не лист.
+    expect(ids).not.toContain("health");
+    expect(blocksOf(createThorne()).flatMap((block) => block.rows.map((row) => row.labelRu))).not
+      .toContain("Кости хитов");
   });
 
-  it("надетый доспех виден в разборе своей базой", () => {
+  it("Класса Доспеха на листе нет: надетое и заклинания двигают его в «Игре» (FR-230)", () => {
     const state = createThorne();
     const withArmor = {
       ...state,
@@ -138,17 +107,11 @@ describe("блоки листа", () => {
         worn: [...state.equipment.worn, { itemId: "scale-mail", count: 1 }],
       },
     };
-    const rows = blocksOf(withArmor).find((block) => block.id === "armorClass")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Чешуйчатый доспех", value: "база 14" });
-    expect(rows).toContainEqual({ labelRu: "Итог", value: "18" });
-  });
-
-  it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {
-    const ids = blocksOf(createThorne()).map((block) => block.id);
-    expect(ids).not.toContain("combatNumbers");
-    expect(ids).not.toContain("inventory");
-    expect(ids).not.toContain("armorClassBase");
-    expect(ids).not.toContain("itemBonuses");
+    // Ни блока, ни разбора, ни строки итога: КД на листе не показывают, потому что не правят.
+    expect(blocksOf(withArmor).map((block) => block.id)).not.toContain("armorClass");
+    expect(blocksOf(withArmor).flatMap((block) => block.rows.map((row) => row.labelRu))).not.toContain(
+      "Чешуйчатый доспех",
+    );
   });
 
   it("характеристика держит значение, спасбросок и свои навыки — как на бумажном листе", () => {

@@ -72,7 +72,7 @@ export function RestScreen() {
 
         <ActiveEffects
           effects={snapshot.effects}
-          armorClass={snapshot.sheet.armorClass.value}
+          armorClass={snapshot.sheet.armorClass}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
@@ -139,8 +139,12 @@ export function RestScreen() {
 
       {damageOpen ? (
         <HitPointsSheet
+          hitPoints={snapshot.sheet.hitPoints}
           onCancel={() => setDamageOpen(false)}
           onDamage={recordDamage}
+          onMaximum={async (change) => {
+            if ((await execute({ kind: "edit_health", ...change })) === null) setDamageOpen(false);
+          }}
           onHeal={async (amount) => {
             if ((await execute({ kind: "heal", amount })) === null) setDamageOpen(false);
           }}

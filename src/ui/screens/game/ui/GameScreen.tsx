@@ -153,7 +153,7 @@ export function GameScreen() {
 
         <ActiveEffects
           effects={snapshot.effects}
-          armorClass={snapshot.sheet.armorClass.value}
+          armorClass={snapshot.sheet.armorClass}
           concentration={concentrationSummary}
           onOpenConcentration={() => setPanelOpen(true)}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
@@ -300,7 +300,7 @@ export function GameScreen() {
       {reactionsOpen ? (
         <ReactionsSheet
           rows={inMode}
-          armorClass={snapshot.sheet.armorClass.value}
+          armorClass={snapshot.sheet.armorClass}
           runesRemaining={snapshot.resources.runes.remaining}
           reactionAvailable={turn.reactionAvailable}
           runeAvailable={snapshot.resources.wardingSigilAvailable}
@@ -320,11 +320,15 @@ export function GameScreen() {
       {damageOpen ? (
         <HitPointsSheet
           error={refusal}
+          hitPoints={snapshot.sheet.hitPoints}
           onCancel={() => {
             setRefusal(null);
             setDamageOpen(false);
           }}
           onDamage={recordDamage}
+          onMaximum={(change) =>
+            void saveEdit({ kind: "edit_health", ...change }, () => setDamageOpen(false))
+          }
           onHeal={(amount) =>
             void saveEdit({ kind: "heal", amount }, () => setDamageOpen(false))
           }

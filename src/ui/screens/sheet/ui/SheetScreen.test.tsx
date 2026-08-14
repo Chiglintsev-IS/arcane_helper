@@ -18,14 +18,16 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист» показывает персонажа целиком и ничего из боя (FR-230)", async () => {
     await renderWithStores(<SheetScreen />);
 
-    // Лист — база персонажа одной колонкой: кто он и его здоровье.
+    // Лист — база персонажа одной колонкой: кто он и его отметки.
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Здоровье" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Отметки мастера" })).toBeDefined();
     // Ни шапки, ни списка, ни отметок схватки: лист отвечает, кто он, а не что он делает сейчас.
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
     expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
     // Чисел боя на листе нет: они стоят в шапке «Игры», а перебивки — в отметках мастера.
     expect(screen.queryByRole("heading", { name: "Числа боя" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Здоровье" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Класс Доспеха" })).toBeNull();
   });
 
   it("«Лист»: правка характеристики доходит до состояния и в журнал (FR-231)", async () => {
@@ -114,35 +116,35 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист»: отказ владельца остаётся в шторке причиной, а состояние не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    const before = shown(stores).sheet.hitPoints;
+    const before = shown(stores).sheet.abilities;
 
-    await user.click(screen.getByRole("button", { name: "Править: Здоровье" }));
-    const field = screen.getByLabelText("Базовый максимум");
+    await user.click(screen.getByRole("button", { name: "Править: Интеллект" }));
+    const field = screen.getByLabelText("Значение");
     await user.clear(field);
-    await user.type(field, "0");
+    await user.type(field, "40");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Шторка не решала, годится ли ноль: она передала его и показывает ответ жизнеспособности.
-    expect(screen.getByRole("alert").textContent).toContain("Максимум хитов");
-    expect(screen.getByRole("dialog", { name: /Правка: Здоровье/ })).toBeDefined();
-    expect(shown(stores).sheet.hitPoints).toEqual(before);
+    // Шторка не решала, бывает ли сорок: она передала число и показывает ответ персонажа.
+    expect(screen.getByRole("alert").textContent).toContain("не годится");
+    expect(screen.getByRole("dialog", { name: /Правка: Интеллект/ })).toBeDefined();
+    expect(shown(stores).sheet.abilities).toEqual(before);
   });
 
   it("«Лист»: дробное число из шторки уходит владельцу как есть — отказ по-русски, состояние не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    const before = shown(stores).sheet.hitPoints;
+    const before = shown(stores).sheet.abilities;
 
-    await user.click(screen.getByRole("button", { name: "Править: Здоровье" }));
-    const field = screen.getByLabelText("Базовый максимум");
+    await user.click(screen.getByRole("button", { name: "Править: Интеллект" }));
+    const field = screen.getByLabelText("Значение");
     await user.clear(field);
     await user.type(field, "12.5");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     // «12.5» не округляется и не обрезается в шторке: доходит до владельца дробным, и целость
     // числа проверяет уже он, словами по-русски, а не молчаливым «12».
-    expect(screen.getByRole("alert").textContent).toContain("целым");
-    expect(screen.getByRole("dialog", { name: /Правка: Здоровье/ })).toBeDefined();
-    expect(shown(stores).sheet.hitPoints).toEqual(before);
+    expect(screen.getByRole("alert").textContent).toContain("целое число");
+    expect(screen.getByRole("dialog", { name: /Правка: Интеллект/ })).toBeDefined();
+    expect(shown(stores).sheet.abilities).toEqual(before);
   });
 });

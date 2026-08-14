@@ -8,7 +8,6 @@ import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
 import { CharacterSheet } from "@/ui/widgets/character-sheet/ui/CharacterSheet";
 import type { SheetEdit } from "@/ui/widgets/character-sheet/model/rows";
-import { HealthSheet } from "@/ui/features/edit-character-sheet/ui/HealthSheet";
 import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
 import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
 import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
@@ -76,15 +75,6 @@ export function SheetScreen() {
           onSave={(change) => void save({ kind: "edit_ability", ...change }, closeSheet)}
         />
       )}
-
-      {open?.block === "health" ? (
-        <HealthSheet
-          hitPoints={sheet.hitPoints}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(change) => void save({ kind: "edit_health", ...change }, closeSheet)}
-        />
-      ) : null}
 
       {open?.block === "marks" ? (
         <MarksSheet

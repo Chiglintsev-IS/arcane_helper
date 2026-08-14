@@ -9,43 +9,23 @@
  * называет их показывающий. Слово, придуманное здесь, стало бы вторым именем той же вещи.
  */
 
-import type { ContributionView, SheetView, StatView } from "@/contract/views";
+import type { ContributionView, SheetView } from "@/contract/views";
 
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { skillsOfAbility } from "@/core/domain/character/skills";
-import type { Sheet } from "@/core/domain/sheet/sheet";
 import {
   ABILITIES,
   abilityStatId,
   saveStatId,
   skillStatId,
   type StatContribution,
-  type StatId,
 } from "@/core/domain/shared/stats";
 import { Vitality } from "@/core/domain/vitality/vitality";
 
 /** На сколько вклад двигает величину: у способа счёта это его основание. */
 function contributionValue(contribution: StatContribution): number {
   return contribution.kind === "method" ? contribution.method.base : contribution.value;
-}
-
-/**
- * Величина с разбором. В разбор идёт только принятое: отвергнутый вклад отвечает на вопрос,
- * которого за столом не задают, а строку на узком экране занимает.
- */
-function statView(sheet: Sheet, stat: StatId): StatView {
-  const breakdown = sheet.breakdown(stat);
-  return {
-    value: breakdown.value,
-    parts: breakdown.parts
-      .filter((part) => part.applied)
-      .map((part) => ({
-        nameRu: part.source.nameRu,
-        kind: part.contribution.kind,
-        value: contributionValue(part.contribution),
-      })),
-  };
 }
 
 function permanentViews(
@@ -87,7 +67,7 @@ export function toSheetView(character: CharacterState): SheetView {
         : { hitDice: { remaining: hitDice.remaining, total: hitDice.total, size: hitDice.size } }),
     },
 
-    armorClass: statView(sheet, "armorClass"),
+    armorClass: sheet.value("armorClass"),
 
     exhaustion: character.exhaustion,
     inspiration: character.inspiration,
