@@ -10,15 +10,12 @@ import { IdentitySheet } from "./IdentitySheet";
 afterEach(cleanup);
 
 describe("шторка «кто он»", () => {
-  it("кто он: список владений режется по запятой, пустая строка даёт пустой список", async () => {
-    const onSave = vi.fn();
-    render(<IdentitySheet choices={toChoicesView()} sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
+  it("кто он: владений и языков здесь нет — их правят свои шторки (FR-230)", () => {
+    render(<IdentitySheet choices={toChoicesView()} sheet={testSnapshot().sheet} onSave={() => {}} onCancel={() => {}} />);
 
-    await userEvent.type(screen.getByLabelText("Языки"), "общий, троллий ,");
-    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-
-    expect(onSave.mock.calls[0]?.[0].proficiencies.languages).toEqual(["общий", "троллий"]);
-    expect(onSave.mock.calls[0]?.[0].proficiencies.tools).toEqual([]);
+    expect(screen.queryByLabelText("Языки")).toBeNull();
+    expect(screen.queryByLabelText("Оружие")).toBeNull();
+    expect(screen.getByLabelText("Вид")).toBeDefined();
   });
 
   it("кто он: размер выбирается кнопкой, возраст числом", async () => {

@@ -9,9 +9,11 @@ import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet
 import { CharacterSheet } from "@/ui/widgets/character-sheet/ui/CharacterSheet";
 import type { SheetEdit } from "@/ui/widgets/character-sheet/model/rows";
 import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
+import { LanguagesSheet } from "@/ui/features/edit-character-sheet/ui/LanguagesSheet";
 import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
 import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { PermanentContributionSheet } from "@/ui/features/edit-character-sheet/ui/PermanentContributionSheet";
+import { ProficienciesSheet } from "@/ui/features/edit-character-sheet/ui/ProficienciesSheet";
 import { applyEdit } from "@/ui/shared/model/editing";
 
 export function SheetScreen() {
@@ -75,6 +77,28 @@ export function SheetScreen() {
           onSave={(change) => void save({ kind: "edit_ability", ...change }, closeSheet)}
         />
       )}
+
+      {open?.block === "proficiencies" ? (
+        <ProficienciesSheet
+          proficiencies={sheet.proficiencies}
+          error={refusal}
+          onCancel={closeSheet}
+          onSave={(proficiencies) =>
+            void save({ kind: "edit_identity", patch: { proficiencies } }, closeSheet)
+          }
+        />
+      ) : null}
+
+      {open?.block === "languages" ? (
+        <LanguagesSheet
+          proficiencies={sheet.proficiencies}
+          error={refusal}
+          onCancel={closeSheet}
+          onSave={(proficiencies) =>
+            void save({ kind: "edit_identity", patch: { proficiencies } }, closeSheet)
+          }
+        />
+      ) : null}
 
       {open?.block === "marks" ? (
         <MarksSheet

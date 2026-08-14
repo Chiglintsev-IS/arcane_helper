@@ -7,19 +7,6 @@ import { sizeLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
-/**
- * Список владений вводится строкой через запятую: четыре отдельных редактора списков стоили бы
- * четырёх экранов ради данных, которые за всю игру правят однажды.
- *
- * Пустая строка даёт пустой список, а не список с пустой строкой: схема пустых имён не принимает.
- */
-function asList(text: string): string[] {
-  return text
-    .split(",")
-    .map((part) => part.trim())
-    .filter((part) => part !== "");
-}
-
 /** Справочная часть листа: что шторка набирает и отдаёт владельцу. Что из этого он примет — его дело. */
 type IdentityPatch = {
   name: string;
@@ -29,7 +16,6 @@ type IdentityPatch = {
   age: number;
   size: string;
   speed: number;
-  proficiencies: { weapons: string[]; armor: string[]; tools: string[]; languages: string[] };
 };
 
 export function IdentitySheet({
@@ -55,10 +41,6 @@ export function IdentitySheet({
   const [ageText, setAgeText] = useState(String(sheet.age));
   const [size, setSize] = useState(sheet.size);
   const [speedText, setSpeedText] = useState(String(sheet.speed));
-  const [weapons, setWeapons] = useState(sheet.proficiencies.weapons.join(", "));
-  const [armor, setArmor] = useState(sheet.proficiencies.armor.join(", "));
-  const [tools, setTools] = useState(sheet.proficiencies.tools.join(", "));
-  const [languages, setLanguages] = useState(sheet.proficiencies.languages.join(", "));
 
   const age = requiredFieldNumber(ageText);
   const speed = requiredFieldNumber(speedText);
@@ -77,12 +59,6 @@ export function IdentitySheet({
           age,
           size,
           speed,
-          proficiencies: {
-            weapons: asList(weapons),
-            armor: asList(armor),
-            tools: asList(tools),
-            languages: asList(languages),
-          },
         })
       }
     >
@@ -113,11 +89,6 @@ export function IdentitySheet({
       </div>
 
       <NumberField labelRu="Скорость" value={speedText} onChange={setSpeedText} min={0} />
-
-      <TextField labelRu="Оружие" value={weapons} onChange={setWeapons} />
-      <TextField labelRu="Доспехи" value={armor} onChange={setArmor} />
-      <TextField labelRu="Инструменты" value={tools} onChange={setTools} />
-      <TextField labelRu="Языки" value={languages} onChange={setLanguages} />
     </EditSheetFrame>
   );
 }

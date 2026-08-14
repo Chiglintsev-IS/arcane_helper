@@ -79,6 +79,25 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(screen.getByText("Дар богов")).toBeDefined();
   });
 
+  it("«Лист»: языки правятся своей шторкой, а владения — своей (FR-230)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<SheetScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Править: Владения" }));
+    await user.type(screen.getByLabelText("Инструменты"), "Инструменты кузнеца");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    await user.click(screen.getByRole("button", { name: "Править: Языки" }));
+    await user.type(screen.getByLabelText("Знает"), "Общий, Троллий");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Правка языков не унесла с собой инструменты: шторка отдаёт владения целиком, а не своей частью.
+    expect(shown(stores).sheet.proficiencies.tools).toEqual(["Инструменты кузнеца"]);
+    expect(shown(stores).sheet.proficiencies.languages).toEqual(["Общий", "Троллий"]);
+    // Справочная правка записи журнала не создаёт: журнал возвращает ресурсы, а не текст.
+    expect(shown(stores).journal).toHaveLength(0);
+  });
+
   it("«Лист»: уровень пересчитывает ресурсы одной записью (FR-227)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);

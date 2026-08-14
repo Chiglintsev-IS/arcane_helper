@@ -34,7 +34,7 @@ export type SheetRow = { labelRu: string; value: string; hint?: string };
  * поиска той же записи по имени между блоком и шторкой не заводится.
  */
 export type SheetEdit =
-  | { block: "identity" | "level" | "marks" | "permanent" }
+  | { block: "identity" | "level" | "marks" | "permanent" | "proficiencies" | "languages" }
   | { block: "ability"; ability: AbilityView };
 
 export type SheetBlockData = {
@@ -128,16 +128,29 @@ export function sheetBlocks(sheet: SheetView, stats: ChoicesView["stats"]): Shee
       })),
     },
     ...sheet.abilities.map(abilityBlock),
+    /**
+     * Чем он умеет пользоваться. Слова «снаряжение» здесь нет: снаряжение — то, что лежит в сумке,
+     * а владение оружием и доспехами остаётся при Торне и голым.
+     */
     {
       id: "proficiencies",
-      titleRu: "Снаряжение и языки",
-      edit: { block: "identity" },
+      titleRu: "Владения",
+      edit: { block: "proficiencies" },
       rows: [
         { labelRu: "Оружие", value: orDash(sheet.proficiencies.weapons.join(", ")) },
         { labelRu: "Доспехи", value: orDash(sheet.proficiencies.armor.join(", ")) },
         { labelRu: "Инструменты", value: orDash(sheet.proficiencies.tools.join(", ")) },
-        { labelRu: "Языки", value: orDash(sheet.proficiencies.languages.join(", ")) },
       ],
+    },
+    /**
+     * Языки стоят своей карточкой: за столом их спрашивают отдельным вопросом — «а он поймёт, что
+     * там написано» — и ответ ищут не среди инструментов.
+     */
+    {
+      id: "languages",
+      titleRu: "Языки",
+      edit: { block: "languages" },
+      rows: [{ labelRu: "Знает", value: orDash(sheet.proficiencies.languages.join(", ")) }],
     },
   ];
 }

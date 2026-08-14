@@ -25,6 +25,7 @@ describe("блоки листа", () => {
       "ability:wisdom",
       "ability:charisma",
       "proficiencies",
+      "languages",
     ]);
   });
 
@@ -173,21 +174,36 @@ describe("блоки листа", () => {
       labelRu: "Уровень",
       edit: { block: "level" },
     });
-    // Снаряжение и языки правятся тем же окном, что и «Кто он»: это одна запись листа.
-    expect(blockById("proficiencies")?.edit).toEqual({ block: "identity" });
+    // У владений и языков своя шторка: правят их порознь, потому что и спрашивают порознь.
+    expect(blockById("proficiencies")?.edit).toEqual({ block: "proficiencies" });
+    expect(blockById("languages")?.edit).toEqual({ block: "languages" });
   });
 
-  it("пустой список владений называется прочерком", () => {
-    expect(blockById("proficiencies")?.rows).toContainEqual({ labelRu: "Языки", value: "—" });
-  });
-
-  it("заполненный список владений перечисляется через запятую", () => {
+  it("владения и языки стоят порознь, а снаряжения на листе нет вовсе (FR-230)", () => {
     const state = createThorne();
     const armed = {
       ...state,
-      proficiencies: { ...state.proficiencies, languages: ["Общий", "Великаний"] },
+      proficiencies: {
+        ...state.proficiencies,
+        tools: ["Алхимические принадлежности", "Инструменты кузнеца"],
+        languages: ["Общий", "Великаний"],
+      },
     };
-    const rows = blocksOf(armed).find((block) => block.id === "proficiencies")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Языки", value: "Общий, Великаний" });
+    const proficiencies = blocksOf(armed).find((block) => block.id === "proficiencies");
+    const languages = blocksOf(armed).find((block) => block.id === "languages");
+
+    // Владение вещью — умение самого Торна; снаряжение — то, что лежит в сумке, и слова этого здесь нет.
+    expect(blocksOf(armed).map((block) => block.titleRu)).not.toContain("Снаряжение и языки");
+    expect(proficiencies?.rows).toContainEqual({
+      labelRu: "Инструменты",
+      value: "Алхимические принадлежности, Инструменты кузнеца",
+    });
+    expect(proficiencies?.rows.map((row) => row.labelRu)).toEqual(["Оружие", "Доспехи", "Инструменты"]);
+    expect(languages?.rows).toEqual([{ labelRu: "Знает", value: "Общий, Великаний" }]);
+  });
+
+  it("пустой список владений называется прочерком", () => {
+    expect(blockById("languages")?.rows).toContainEqual({ labelRu: "Знает", value: "—" });
+    expect(blockById("proficiencies")?.rows).toContainEqual({ labelRu: "Доспехи", value: "—" });
   });
 });
