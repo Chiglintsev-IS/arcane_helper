@@ -219,7 +219,8 @@ export function HitPointsSheet({
       ) : null}
 
       {kind === "damage" ? (
-        <label className="flex items-center gap-2 text-sm">
+        // Нажимают строку целиком, а не квадрат: высоту зоны даёт метка, та же, что у кнопок.
+        <label className="flex min-h-11 items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={fire}

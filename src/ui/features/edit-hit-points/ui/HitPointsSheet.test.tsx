@@ -37,6 +37,14 @@ async function openHitPoints(
   );
 }
 
+/**
+ * Наименьшая высота, объявленная классами элемента: стилей в прогоне нет, и сравнивать можно
+ * только объявленное — зато сравнивать с тем, чья зона нажатия уже законна.
+ */
+function leastHeight(element: Element | null): string | undefined {
+  return element?.className.split(" ").find((token) => token.startsWith("min-h-"));
+}
+
 describe("шторка хитов", () => {
   it("хиты: урон, лечение, временные и максимум правятся одной шторкой (FR-230)", async () => {
     await openHitPoints();
@@ -103,6 +111,18 @@ describe("шторка хитов", () => {
     // Набранное отвечает за себя само: причина уходит с первым же прикосновением к полю.
     await userEvent.type(field, "7");
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("урон огнём: отметку ставит вся строка, а не квадрат (FR-205)", async () => {
+    await openHitPoints();
+
+    // Попадают в строку, а не в квадрат: нажатие по словам ставит отметку.
+    await userEvent.click(screen.getByText("Урон огнём"));
+    expect(screen.getByRole("checkbox", { name: "Урон огнём", checked: true })).toBeDefined();
+
+    // И высота строки — та же, что у кнопки записи: зона нажатия у обеих одна.
+    const row = screen.getByRole("checkbox", { name: "Урон огнём" }).closest("label");
+    expect(leastHeight(row)).toBe(leastHeight(screen.getByRole("button", { name: "Записать" })));
   });
 
   it("хиты: сохранение отдаёт базу и снижение мастера", async () => {
