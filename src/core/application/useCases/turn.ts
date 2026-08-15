@@ -70,7 +70,7 @@ function advanceTurn(
 
 /** Сколько здоровья вернёт конец боя. Ноль — восстанавливать нечего. */
 export function combatEndRecovery(character: CharacterState): number {
-  return Character.of(character).vitality.combatEndRecovery();
+  return Character.of(character).vitality.continuousRegenerationDue();
 }
 
 /**
@@ -80,12 +80,12 @@ export function combatEndRecovery(character: CharacterState): number {
  */
 export function endCombat(session: Session, occasion: Occasion): Session {
   const root = Character.of(session.character);
-  const restored = root.vitality.combatEndRecovery();
+  const { vitality, healed } = root.vitality.regeneratedContinuously();
   const { board, expired } = root.effects.afterCombat();
-  const after = root.withEffects(board).withVitality(root.vitality.healUpTo(restored).vitality);
+  const after = root.withEffects(board).withVitality(vitality);
 
   const notes = [
-    ...(restored > 0 ? [`восстановлено ${restored} до половины максимума`] : []),
+    ...(healed > 0 ? [`восстановлено ${healed} до половины максимума`] : []),
     ...expiryNotes(expired),
   ];
   return commit(

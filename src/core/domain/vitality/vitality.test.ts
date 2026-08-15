@@ -67,6 +67,49 @@ describe("снижение максимума мастером", () => {
   });
 });
 
+describe("порог регенерации", () => {
+  const healthy = () =>
+    Vitality.of({
+      hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
+      temporaryHitPoints: 0,
+      hitDice: { total: 7, size: 6, remaining: 7 },
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
+    });
+
+  it("непрерывная регенерация меряет тот же действующий максимум, что и ход", () => {
+    const bled = healthy().exchangeBlood(9, 3).vitality.withMasterReduction(9);
+    const wounded = bled.takeDamage(20).vitality;
+    expect(wounded.maximum).toBe(42);
+
+    expect(wounded.current).toBe(22);
+    expect(wounded.regenerationDue(7)).toBe(0);
+    expect(wounded.continuousRegenerationDue()).toBe(0);
+
+    const lower = wounded.takeDamage(2).vitality;
+    expect(lower.regenerationDue(7)).toBeGreaterThan(0);
+    expect(lower.regeneratedContinuously().vitality.current).toBe(21);
+  });
+
+  it("подавление и ноль хитов выключают непрерывную регенерацию", () => {
+    const wounded = healthy().takeDamage(50).vitality;
+    expect(wounded.continuousRegenerationDue()).toBeGreaterThan(0);
+
+    expect(wounded.setSunlight(true).continuousRegenerationDue()).toBe(0);
+    expect(wounded.takeDamage(1, { fire: true }).vitality.continuousRegenerationDue()).toBe(0);
+    expect(wounded.takeDamage(10).vitality.continuousRegenerationDue()).toBe(0);
+  });
+
+  it("час поднимает ступень максимума и лечит уже от неё", () => {
+    const bled = healthy().exchangeBlood(9, 3).vitality;
+    const { vitality, returned, healed } = bled.takeDamage(31).vitality.afterAnHour(7);
+
+    expect(returned).toBe(3);
+    expect(vitality.maximum).toBe(54);
+    expect(healed).toBe(7);
+    expect(vitality.current).toBe(27);
+  });
+});
+
 describe("срок подавления огнём", () => {
   const burned = () => {
     const base = Vitality.of({

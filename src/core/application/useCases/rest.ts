@@ -71,6 +71,10 @@ export function longRest(session: Session, occasion: Occasion): Session {
  * Часом он не является, поэтому следствий часа за собой не ведёт: снижённый кровавым колдовством
  * максимум остаётся на месте, накопленные очки заклинаний доживают до отметки часа. Регенерация за
  * это время до половины доходит — вне схватки она идёт непрерывно и отдыха не ждёт.
+ *
+ * Срок подавления огнём кончается раньше, чем считается регенерация: он длится до конца следующего
+ * хода, а отдых длиннее хода — держать её эти минуты огню уже нечем. Солнце же признак, а не срок,
+ * и отдыхом оно не снимается: под ним регенерации не будет и за десять минут.
  */
 export function shortRest(session: Session, occasion: Occasion): Session {
   const unavailability = shortRestUnavailability(session);
@@ -78,11 +82,9 @@ export function shortRest(session: Session, occasion: Occasion): Session {
     throw new DomainError(unavailability);
   }
   const root = Character.of(session.character);
-  const { vitality, healed } = root.vitality.regeneratedByShortRest();
+  const { vitality, healed } = root.vitality.clearFireSuppression().regeneratedContinuously();
 
-  const after = root
-    .withVitality(vitality.clearFireSuppression())
-    .withArcana(root.arcana.markShortRest());
+  const after = root.withVitality(vitality).withArcana(root.arcana.markShortRest());
 
   return commit(
     session,

@@ -734,12 +734,16 @@ describe("урон, подавление и регенерация (FR-180…FR-
     expect(Vitality.of(downed.character).regenerationDue(downed.character.level)).toBe(0);
   });
 
-  it("порог регенерации считается от снижённого максимума", () => {
-    const exchanged = exchangeBlood(session, 10, occasion);
+  it("порог регенерации едет за действующим максимумом", () => {
     // Максимум стал 30, текущее 30 — половина не пройдена.
+    const exchanged = exchangeBlood(session, 10, occasion);
     expect(Vitality.of(exchanged.character).regenerationDue(exchanged.character.level)).toBe(0);
     const wounded = takeDamage(exchanged, 20, occasion);
     expect(Vitality.of(wounded.character).regenerationDue(wounded.character.level)).toBe(3);
+
+    // Снижение мастером роняет тот же максимум до 18: те же 10 хитов теперь выше половины.
+    const lowered = { ...wounded, character: withMasterReduction(wounded.character, 12) };
+    expect(Vitality.of(lowered.character).regenerationDue(lowered.character.level)).toBe(0);
   });
 });
 
@@ -2011,6 +2015,20 @@ describe("конец боя (FR-216)", () => {
     expect(endCombat(spent, occasion).character.hitPoints.current).toBe(25);
   });
 
+  it("под солнцем конец боя не лечит: подавленная регенерация не идёт и вне схватки (FR-181)", () => {
+    const sunlit = setSunlight(wounded(12), true, occasion);
+    expect(combatEndRecovery(sunlit.character)).toBe(0);
+
+    const after = endCombat(sunlit, occasion);
+    expect(after.character.hitPoints.current).toBe(12);
+    expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен");
+  });
+
+  it("сбитому с ног конец боя не лечит: при нуле хитов регенерация не идёт", () => {
+    expect(combatEndRecovery(wounded(0).character)).toBe(0);
+    expect(endCombat(wounded(0), occasion).character.hitPoints.current).toBe(0);
+  });
+
   it("восстановление обратимо (FR-111)", () => {
     expect(undoLast(endCombat(wounded(12), occasion)).character.hitPoints.current).toBe(12);
   });
@@ -2201,11 +2219,22 @@ describe("короткий отдых не делает того, что дел�
     expect(shortRest(session, occasion).journal.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 
-  it("подавленному регенерация не идёт, и лечить отдыху нечем (FR-176)", () => {
+  it("обожжённому короткий отдых регенерацию возвращает: отдых длиннее срока огня (FR-266)", () => {
     const burned = takeDamage(exchangeBlood(session, 3, occasion), 31, occasion, { fire: true });
-    const rested = shortRest(burned, occasion);
+    expect(Vitality.of(burned.character).firedUpon).toBe(true);
 
-    expect(rested.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
+    const rested = shortRest(burned, occasion);
+    expect(Vitality.of(rested.character).firedUpon).toBe(false);
+    expect(rested.character.hitPoints.current).toBe(25);
+    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · регенерация +5");
+  });
+
+  it("под солнцем короткий отдых не лечит: признак его переживает (FR-181)", () => {
+    const wounded = takeDamage(exchangeBlood(session, 3, occasion), 31, occasion);
+    const rested = shortRest(setSunlight(wounded, true, occasion), occasion);
+
+    expect(rested.character.suppression.underDirectSunlight).toBe(true);
+    expect(rested.character.hitPoints.current).toBe(20);
     expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 

@@ -212,12 +212,34 @@ export class Vitality {
     };
   }
 
-  /** Регенерация тролля: ниже половины максимума и только пока особенности не подавлены. */
+  /**
+   * Идёт ли регенерация прямо сейчас. Ответ один на все отрезки времени, за которые её считают:
+   * подавление и ноль хитов выключают её и на своём ходу, и вне схватки.
+   */
+  private get regenerating(): boolean {
+    return !this.suppressed && this.current > 0;
+  }
+
+  /** Регенерация тролля за свой ход: ниже половины действующего максимума — того, что сейчас. */
   regenerationDue(characterLevel: number): number {
-    if (this.suppressed) return 0;
-    if (this.current <= 0) return 0;
+    if (!this.regenerating) return 0;
     if (this.current >= this.maximum / 2) return 0;
     return regenerationPerTurn(characterLevel);
+  }
+
+  /** Сколько долечит непрерывная регенерация: до половины действующего максимума. */
+  continuousRegenerationDue(): number {
+    if (!this.regenerating) return 0;
+    return Math.max(0, Math.floor(this.maximum / 2) - this.current);
+  }
+
+  /**
+   * Непрерывная регенерация вне схватки. Час, короткий отдых и конец боя доводят хиты до половины
+   * одним и тем же правилом: отрезок времени решает, когда её считать, а не докуда она достаёт.
+   */
+  regeneratedContinuously(): { vitality: Vitality; healed: number } {
+    const { vitality, restored } = this.healUpTo(this.continuousRegenerationDue());
+    return { vitality, healed: restored };
   }
 
   /**
@@ -227,34 +249,11 @@ export class Vitality {
   afterAnHour(characterLevel: number): { vitality: Vitality; returned: number; healed: number } {
     if (this.suppressed) return { vitality: this, returned: 0, healed: 0 };
     const returned = Math.min(maximumRecoveryPerHour(characterLevel), this.bloodReduction);
-    const maximum = this.maximum + returned;
-    const current = Math.max(this.current, Math.floor(maximum / 2));
-    return {
-      vitality: this.with({
-        hitPoints: {
-          ...this.state.hitPoints,
-          current,
-          bloodReduction: this.bloodReduction - returned,
-        },
-      }),
-      returned,
-      healed: current - this.current,
-    };
-  }
-
-  /** Сколько вернёт конец боя: регенерация вне схватки идёт непрерывно до половины максимума. */
-  combatEndRecovery(): number {
-    return Math.max(0, Math.floor(this.maximum / 2) - this.current);
-  }
-
-  /**
-   * Регенерация за время короткого отдыха: та же непрерывная, что и вне боя, до половины максимума.
-   * Самого максимума отдых не возвращает — ступень поднимает только полный час.
-   */
-  regeneratedByShortRest(): { vitality: Vitality; healed: number } {
-    if (this.suppressed) return { vitality: this, healed: 0 };
-    const { vitality, restored } = this.healUpTo(this.combatEndRecovery());
-    return { vitality, healed: restored };
+    const grown = this.with({
+      hitPoints: { ...this.state.hitPoints, bloodReduction: this.bloodReduction - returned },
+    });
+    const { vitality, healed } = grown.regeneratedContinuously();
+    return { vitality, returned, healed };
   }
 
   setSunlight(underSunlight: boolean): Vitality {
