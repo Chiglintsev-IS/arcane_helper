@@ -1,16 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import type { ChoicesView, ItemView } from "@/contract/views";
 
 import { itemMeta } from "../lib/itemMeta";
-
-/** Видимых фактов без счёта. Сверх них строка называет число, а вещь целиком показывает шторка. */
-const VISIBLE_FACTS = 3;
-
-/** Прятать за счётом единственный факт нельзя: счёт занимает не меньше места, чем он сам. */
-const LEAST_HIDDEN = 2;
 
 /**
  * Строка вещи: имя со своим числом и подробностями — кнопка, открывающая вещь целиком; справа — то,
@@ -21,6 +15,10 @@ const LEAST_HIDDEN = 2;
  * запас, у надеваемой — глагол, и знает об этом список, в котором строка стоит. Число приезжает
  * словами по той же причине: «надето» и «в сумке» — два разных счёта, и назвать свой обязан тот,
  * кто строку показывает.
+ *
+ * Прибавок строка не прячет и ради них не растёт: место берётся у повторов. Число в плашке стоит
+ * впереди и один раз, имена при нём переносятся по одному, а плашка остаётся целой и на двух
+ * строках — перечень с числом у каждого имени занял бы больше при том же составе.
  */
 export function ItemRow({
   item,
@@ -38,8 +36,6 @@ export function ItemRow({
   children?: ReactNode;
 }) {
   const { facts, note } = itemMeta(item, stats);
-  const hiddenCount = facts.length - VISIBLE_FACTS >= LEAST_HIDDEN ? facts.length - VISIBLE_FACTS : 0;
-  const visibleFacts = hiddenCount === 0 ? facts : facts.slice(0, VISIBLE_FACTS);
 
   return (
     <li className="flex items-center gap-2">
@@ -57,27 +53,26 @@ export function ItemRow({
             </span>
           )}
         </span>
-        {visibleFacts.length === 0 && note === undefined ? null : (
+        {facts.length === 0 && note === undefined ? null : (
           <span className="mt-1 flex flex-wrap items-center gap-1">
-            {visibleFacts.map((fact) => (
+            {facts.map((fact) => (
               <span
-                key={fact.labelRu}
-                className="whitespace-nowrap rounded-md bg-slate-100 px-1.5 py-0.5 text-xs leading-tight text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
+                key={`${fact.valueRu} ${fact.labelsRu.join(" ")}`}
+                className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs leading-tight text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
               >
-                {fact.labelRu}
-                {fact.valueRu === undefined ? null : (
-                  <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                  {fact.valueRu}
+                </span>
+                {fact.labelsRu.map((labelRu) => (
+                  <Fragment key={labelRu}>
                     {" "}
-                    {fact.valueRu}
-                  </span>
-                )}
+                    <span className="whitespace-nowrap">
+                      {labelRu === fact.labelsRu.at(-1) ? labelRu : `${labelRu},`}
+                    </span>
+                  </Fragment>
+                ))}
               </span>
             ))}
-            {hiddenCount === 0 ? null : (
-              <span className="whitespace-nowrap rounded-md border border-dashed border-slate-300 px-1.5 py-0.5 text-xs leading-tight text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                ещё {hiddenCount}
-              </span>
-            )}
             {note === undefined ? null : (
               <span className="min-w-0 text-xs leading-snug text-slate-500 dark:text-slate-400">
                 {note}

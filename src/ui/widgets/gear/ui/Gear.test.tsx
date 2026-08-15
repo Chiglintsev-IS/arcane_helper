@@ -63,7 +63,7 @@ describe("экран «Экипировка»", () => {
     // Надетое Торна стоит в своём разделе, и прибавка вещи читается целиком.
     const worn = screen.getByRole("list", { name: "На мне" });
     const cloak = within(worn).getByText("Плащ защиты").closest("li");
-    expect(cloak?.textContent).toContain("Класс Доспеха +1");
+    expect(cloak?.textContent).toContain("+1 Класс Доспеха, Все спасброски");
     expect(cloak?.textContent).toContain("надето 1");
 
     // Счётного и денег в режиме нет: их считают, а не надевают.

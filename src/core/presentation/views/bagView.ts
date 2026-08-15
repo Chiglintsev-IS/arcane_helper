@@ -7,7 +7,8 @@
  * Прибавки едут все, что у вещи записаны: чьей категории они не положены, у того их и нет —
  * владелец вещи снимает их при записи, и повторять его отбор здесь значило бы завести вторую
  * проверку того же правила. Едут они дважды: перечнем по величинам — для правки, и фактами — для
- * чтения. Чем факт назван, решает лист, а не эта проекция и не тот, кому она едет.
+ * чтения. Сколько чисел вещь называет и что стоит при каждом, решает лист, а не эта проекция и не
+ * тот, кому она едет.
  */
 
 import type { BagView, ItemView } from "@/contract/views";
@@ -35,7 +36,10 @@ function itemView(item: ItemDefinition, equipment: Equipment): ItemView {
     wornCount: equipment.wornCount(item.id),
     ...(item.price === undefined ? {} : { price: item.price }),
     bonuses,
-    bonusFacts: [...bonusFactsOf(bonuses)],
+    bonusFacts: bonusFactsOf(bonuses).map((fact) => ({
+      value: fact.value,
+      targets: fact.targets.map((target) => ({ kind: target.kind, id: target.id })),
+    })),
     ...(item.armor === undefined
       ? {}
       : {

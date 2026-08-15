@@ -31,12 +31,9 @@ function wornOf(id: string): ItemView {
 
 describe("вторая строка вещи", () => {
   it("однородное приходит одним фактом: спасброски плаща защиты — целое", () => {
-    // Семь чисел плаща — два факта: имя семейства называет владелец, строка его не пересобирает.
+    // Семь чисел плаща — одна прибавка при двух именах: свернул их владелец, строка не пересобирает.
     expect(itemMeta(wornOf("cloak-of-protection"), stats)).toEqual({
-      facts: [
-        { labelRu: "Класс Доспеха", valueRu: "+1" },
-        { labelRu: "Все спасброски", valueRu: "+1" },
-      ],
+      facts: [{ valueRu: "+1", labelsRu: ["Класс Доспеха", "Все спасброски"] }],
       note: undefined,
     });
   });
@@ -54,7 +51,7 @@ describe("вторая строка вещи", () => {
         }),
         stats,
       ),
-    ).toEqual({ facts: [{ labelRu: "50 зм", valueRu: undefined }], note: undefined });
+    ).toEqual({ facts: [{ valueRu: "50", labelsRu: ["зм"] }], note: undefined });
     // Прибавки стоят раньше цены: за столом вещь спрашивают о том, что она делает, а не почём она.
     expect(
       itemMeta(
@@ -70,26 +67,26 @@ describe("вторая строка вещи", () => {
       ),
     ).toEqual({
       facts: [
-        { labelRu: "Класс Доспеха", valueRu: "+1" },
-        { labelRu: "Спасбросок: Телосложение", valueRu: "+1" },
-        { labelRu: "3500 зм", valueRu: undefined },
+        { valueRu: "+1", labelsRu: ["Класс Доспеха", "Спасбросок: Телосложение"] },
+        { valueRu: "3500", labelsRu: ["зм"] },
       ],
       note: "фамильное",
     });
+    // Числа разные — прибавки разные, и каждая называет свои величины.
     expect(
       itemMeta(
         viewOf({
           id: "staff",
           nameRu: "Посох",
           kind: "gear",
-          bonuses: { spellSaveDc: 2, spellAttackModifier: 2 },
+          bonuses: { armorClass: 1, spellSaveDc: 2, spellAttackModifier: 2 },
         }),
         stats,
       ),
     ).toEqual({
       facts: [
-        { labelRu: "КС спасброска", valueRu: "+2" },
-        { labelRu: "Атака заклинанием", valueRu: "+2" },
+        { valueRu: "+1", labelsRu: ["Класс Доспеха"] },
+        { valueRu: "+2", labelsRu: ["КС спасброска", "Атака заклинанием"] },
       ],
       note: undefined,
     });

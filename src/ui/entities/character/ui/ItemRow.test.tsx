@@ -46,6 +46,12 @@ function renderRow(item: ItemView, countRu?: string) {
   );
 }
 
+/** Плашка целиком: число ищется по нему самому, а вокруг него стоит всё, что оно двигает. */
+function factAt(valueRu: string): string {
+  const value = screen.getByText(valueRu);
+  return value.parentElement?.textContent ?? "";
+}
+
 const staff: ItemDefinition = {
   id: "staff-of-power",
   nameRu: "Посох силы",
@@ -63,18 +69,27 @@ describe("строка вещи", () => {
     expect(within(open).getByText("надето 1")).toBeDefined();
   });
 
-  it("факт — своя плашка: имя величины при своём числе, перенос между фактами (FR-250)", () => {
-    renderRow(viewOf(staff));
+  it("факт — своя плашка: число один раз и всё, что оно двигает (FR-250)", () => {
+    renderRow(
+      viewOf({
+        ...staff,
+        bonuses: { armorClass: 1, spellSaveDc: 2, spellAttackModifier: 2 },
+        price: { amount: 3500, currency: "gold" },
+      }),
+    );
 
-    // Плашка целиком держит имя величины и её число: неделимость — свойство элемента.
-    expect(screen.getByText("КС спасброска").textContent).toBe("КС спасброска +2");
-    expect(screen.getByText("Атака заклинанием").textContent).toBe("Атака заклинанием +2");
+    // Плашка целиком держит число и всё, что этим числом названо: неделимость — свойство элемента.
+    expect(factAt("+2")).toBe("+2 КС спасброска, Атака заклинанием");
+    // Числа разные — плашки разные, и своё число каждая называет сама.
+    expect(factAt("+1")).toBe("+1 Класс Доспеха");
+    // Цена устроена так же: число, а при нём монета.
+    expect(factAt("3500")).toBe("3500 зм");
 
     // Заметка — свободный текст после фактов, а не плашка.
     expect(screen.getByText("требует настройки")).toBeDefined();
   });
 
-  it("фактов сверх видимых — «ещё N», а не молчаливый обрыв (FR-250)", () => {
+  it("прибавка не прячется за счётом: пять величин названы все (FR-250)", () => {
     renderRow(
       viewOf({
         id: "circlet-of-everything",
@@ -90,41 +105,18 @@ describe("строка вещи", () => {
       }),
     );
 
-    expect(screen.getByText("Класс Доспеха")).toBeDefined();
-    expect(screen.getByText("КС спасброска")).toBeDefined();
-    expect(screen.getByText("Атака заклинанием")).toBeDefined();
-    expect(screen.queryByText("Инициатива")).toBeNull();
-    expect(screen.getByText("ещё 2")).toBeDefined();
+    expect(factAt("+1")).toBe(
+      "+1 Класс Доспеха, КС спасброска, Атака заклинанием, Инициатива, Пассивная внимательность",
+    );
+    expect(screen.queryByText(/ещё/)).toBeNull();
   });
 
   it("однородное стоит одним фактом: шесть спасбросков не режутся счётом (FR-250)", () => {
     renderRow(wornOf("cloak-of-protection"));
 
-    // Плащ двигает семь чисел, и все семь на строке названы: КД — своим фактом, спасброски — целым.
-    expect(screen.getByText("Класс Доспеха").textContent).toBe("Класс Доспеха +1");
-    expect(screen.getByText("Все спасброски").textContent).toBe("Все спасброски +1");
+    // Плащ двигает семь чисел, и все семь на строке названы: КД — своим именем, спасброски — целым.
+    expect(factAt("+1")).toBe("+1 Класс Доспеха, Все спасброски");
     expect(screen.queryByText(/Спасбросок:/)).toBeNull();
-    expect(screen.queryByText(/^ещё/)).toBeNull();
-  });
-
-  it("четыре факта видны все: за «ещё» не прячется единственный (FR-250)", () => {
-    renderRow(
-      viewOf({
-        id: "bracers-of-defense",
-        nameRu: "Наручи защиты",
-        kind: "gear",
-        bonuses: {
-          armorClass: 1,
-          "save:strength": 1,
-          "save:dexterity": 1,
-          "save:constitution": 1,
-        },
-      }),
-    );
-
-    // Три спасброска из шести — не «все»: неполное семейство остаётся перечнем, и он виден целиком.
-    expect(screen.getByText("Спасбросок: Телосложение")).toBeDefined();
-    expect(screen.queryByText(/^ещё/)).toBeNull();
   });
 
   it("у вещи без подробностей второй строки нет вовсе (FR-250)", () => {

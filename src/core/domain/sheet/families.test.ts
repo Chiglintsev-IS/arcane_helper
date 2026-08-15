@@ -13,29 +13,89 @@ const ALL_SAVES = [
 ] as const;
 
 describe("семейства величин", () => {
-  it("равная прибавка всем спасброскам — один факт, неполная и неравная — перечень", () => {
-    // Плащ защиты: КД остаётся своим фактом, шесть спасбросков становятся одним и стоят на месте
-    // первого из них — порядок прибавок свёртка не переставляет.
+  it("равная прибавка всем спасброскам — одно имя, неполная и неравная — перечень", () => {
+    // Плащ защиты: шесть спасбросков зовутся одним именем и стоят на месте первого из них — порядок
+    // величин свёртка не переставляет.
     expect(bonusFactsOf([{ stat: "armorClass", value: 1 }, ...ALL_SAVES])).toEqual([
-      { kind: "stat", id: "armorClass", value: 1 },
-      { kind: "family", id: "saves", value: 1 },
+      {
+        value: 1,
+        targets: [
+          { kind: "stat", id: "armorClass" },
+          { kind: "family", id: "saves" },
+        ],
+      },
     ]);
 
-    // Названы не все шесть — имени у целого нет, и каждая величина остаётся своим фактом.
+    // Названы не все шесть — имени у целого нет, и каждая величина зовётся своим именем.
     expect(bonusFactsOf(ALL_SAVES.slice(0, 3))).toEqual([
-      { kind: "stat", id: "save:strength", value: 1 },
-      { kind: "stat", id: "save:dexterity", value: 1 },
-      { kind: "stat", id: "save:constitution", value: 1 },
+      {
+        value: 1,
+        targets: [
+          { kind: "stat", id: "save:strength" },
+          { kind: "stat", id: "save:dexterity" },
+          { kind: "stat", id: "save:constitution" },
+        ],
+      },
     ]);
 
     // Недостача первой величины семейства значит ровно то же, что недостача любой другой.
-    expect(bonusFactsOf(ALL_SAVES.slice(1))).toHaveLength(5);
+    expect(bonusFactsOf(ALL_SAVES.slice(1)).flatMap((fact) => fact.targets)).toHaveLength(5);
 
-    // Числа разные — прибавка не одна, а шесть, и назвать её одной значило бы соврать про пять.
+    // Числа разные — имени у целого нет, и о каждой величине говорят отдельно.
     expect(
-      bonusFactsOf([...ALL_SAVES.slice(0, 5), { stat: "save:charisma", value: 2 }]),
+      bonusFactsOf([...ALL_SAVES.slice(0, 5), { stat: "save:charisma", value: 2 }]).flatMap(
+        (fact) => fact.targets,
+      ),
     ).toHaveLength(6);
+  });
+});
+
+describe("прибавки вещи по числам", () => {
+  it("равные числа — одна прибавка при всех своих величинах", () => {
+    // Венец, двигающий пять величин на одно и то же: число сказано один раз, перечень идёт после.
+    expect(
+      bonusFactsOf([
+        { stat: "armorClass", value: 1 },
+        { stat: "spellSaveDc", value: 1 },
+        { stat: "initiative", value: 1 },
+      ]),
+    ).toEqual([
+      {
+        value: 1,
+        targets: [
+          { kind: "stat", id: "armorClass" },
+          { kind: "stat", id: "spellSaveDc" },
+          { kind: "stat", id: "initiative" },
+        ],
+      },
+    ]);
 
     expect(bonusFactsOf([])).toEqual([]);
+  });
+
+  it("разные числа — разные прибавки, каждая на месте первой своей величины", () => {
+    expect(
+      bonusFactsOf([
+        { stat: "armorClass", value: 2 },
+        { stat: "spellSaveDc", value: 1 },
+        { stat: "spellAttackModifier", value: 2 },
+        { stat: "initiative", value: 1 },
+      ]),
+    ).toEqual([
+      {
+        value: 2,
+        targets: [
+          { kind: "stat", id: "armorClass" },
+          { kind: "stat", id: "spellAttackModifier" },
+        ],
+      },
+      {
+        value: 1,
+        targets: [
+          { kind: "stat", id: "spellSaveDc" },
+          { kind: "stat", id: "initiative" },
+        ],
+      },
+    ]);
   });
 });

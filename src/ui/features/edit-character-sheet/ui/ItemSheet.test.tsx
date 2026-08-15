@@ -61,8 +61,13 @@ describe("шторка вещи", () => {
             { stat: "save:constitution", value: 1 },
           ],
           bonusFacts: [
-            { kind: "stat", id: "armorClass", value: 1 },
-            { kind: "stat", id: "save:constitution", value: 1 },
+            {
+              value: 1,
+              targets: [
+                { kind: "stat", id: "armorClass" },
+                { kind: "stat", id: "save:constitution" },
+              ],
+            },
           ],
           bagCount: 0,
           wornCount: 1,
