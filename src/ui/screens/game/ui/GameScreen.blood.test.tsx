@@ -199,7 +199,7 @@ describe("предупреждения (FR-031, FR-175, FR-176)", () => {
   it("подавление солнцем названо причиной и проходится «Применить всё равно»", async () => {
     const sunlit = {
       ...createThorne(),
-      suppression: { firedUpon: false, underDirectSunlight: true },
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
     const { user, stores } = await openWizard(sunlit);
 

@@ -8,7 +8,7 @@ describe("снижение максимума мастером", () => {
     hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
     temporaryHitPoints: 0,
     hitDice: { total: 7, size: 6, remaining: 7 },
-    suppression: { firedUpon: false, underDirectSunlight: false },
+    suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
   });
 
   it("действующий максимум вычитает оба снижения", () => {
@@ -64,5 +64,42 @@ describe("снижение максимума мастером", () => {
     expect(() => Vitality.of(base()).withMaximumBase(1.5)).toThrow(DomainError);
     expect(() => Vitality.of(base()).withMasterReduction(-1)).toThrow(DomainError);
     expect(() => Vitality.of(base()).withMasterReduction(1.5)).toThrow(DomainError);
+  });
+});
+
+describe("срок подавления огнём", () => {
+  const burned = () => {
+    const base = Vitality.of({
+      hitPoints: { current: 20, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
+      temporaryHitPoints: 0,
+      hitDice: { total: 7, size: 6, remaining: 7 },
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
+    });
+    return base.takeDamage(5, { fire: true }).vitality;
+  };
+
+  it("подавление огнём переживает начало следующего хода", () => {
+    const nextTurn = burned().afterTurnStart();
+    expect(nextTurn.firedUpon).toBe(true);
+    expect(nextTurn.regenerationDue(7)).toBe(0);
+  });
+
+  it("отметка за сроком снимает подавление огнём", () => {
+    const afterNextTurn = burned().afterTurnStart().afterTurnStart();
+    expect(afterNextTurn.firedUpon).toBe(false);
+    expect(afterNextTurn.regenerationDue(7)).toBeGreaterThan(0);
+  });
+
+  it("повторный урон огнём начинает срок сначала", () => {
+    const again = burned().afterTurnStart().takeDamage(3, { fire: true }).vitality;
+    expect(again.afterTurnStart().firedUpon).toBe(true);
+  });
+
+  it("отдых кончает срок целиком, отметок не дожидаясь", () => {
+    expect(burned().clearFireSuppression().firedUpon).toBe(false);
+  });
+
+  it("отметка хода без подавления ничего не отмеряет", () => {
+    expect(burned().clearFireSuppression().afterTurnStart().firedUpon).toBe(false);
   });
 });

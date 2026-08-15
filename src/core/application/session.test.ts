@@ -693,11 +693,23 @@ describe("урон, подавление и регенерация (FR-180…FR-
     expect(takeDamage(session, 70, occasion).character.hitPoints.current).toBe(0);
   });
 
-  it("огненный урон подавляет особенности до начала хода", () => {
+  it("огненный урон подавляет особенности до конца следующего хода", () => {
     const burned = takeDamage(session, 5, occasion, { fire: true });
-    expect(burned.character.suppression.firedUpon).toBe(true);
+    expect(Vitality.of(burned.character).firedUpon).toBe(true);
     expect(burned.journal.at(-1)?.summaryRu).toContain("огонь");
-    expect(beginTurn(burned, occasion).character.suppression.firedUpon).toBe(false);
+
+    const nextTurn = beginTurn(burned, occasion);
+    expect(Vitality.of(nextTurn.character).firedUpon).toBe(true);
+    expect(Vitality.of(beginTurn(nextTurn, occasion).character).firedUpon).toBe(false);
+  });
+
+  it("регенерация возвращается ходом позже подавления огнём", () => {
+    const burned = takeDamage(takeDamage(session, 40, occasion), 1, occasion, { fire: true });
+    const wounded = burned.character.hitPoints.current;
+
+    const nextTurn = beginTurn(burned, occasion);
+    expect(nextTurn.character.hitPoints.current).toBe(wounded);
+    expect(beginTurn(nextTurn, occasion).character.hitPoints.current).toBeGreaterThan(wounded);
   });
 
   it.each([0, -3, 1.5])("отклоняет урон %s", (damage) => {

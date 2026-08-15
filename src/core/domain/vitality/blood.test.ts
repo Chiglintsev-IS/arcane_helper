@@ -2,10 +2,12 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
 import {
+  FIRE_SUPPRESSION_TURN_STARTS,
   LONG_REST_HOURS,
   maximumRecoveryPerHour,
   maximumReductionAfterHours,
   regenerationPerTurn,
+  suppressedByFire,
   traitsSuppressed,
   woundsFromExchange,
 } from "@/core/domain/vitality/blood";
@@ -78,11 +80,16 @@ describe("снижённый максимум за несколько часов
 
 describe("подавление особенностей", () => {
   it.each([
-    [{ firedUpon: false, underDirectSunlight: false }, false],
-    [{ firedUpon: true, underDirectSunlight: false }, true],
-    [{ firedUpon: false, underDirectSunlight: true }, true],
-    [{ firedUpon: true, underDirectSunlight: true }, true],
+    [{ firedUponTurnStarts: 0, underDirectSunlight: false }, false],
+    [{ firedUponTurnStarts: FIRE_SUPPRESSION_TURN_STARTS, underDirectSunlight: false }, true],
+    [{ firedUponTurnStarts: 0, underDirectSunlight: true }, true],
+    [{ firedUponTurnStarts: FIRE_SUPPRESSION_TURN_STARTS, underDirectSunlight: true }, true],
   ])("состояние %o подавляет: %s", (state, expected) => {
     expect(traitsSuppressed(state)).toBe(expected);
+  });
+
+  it("неотмеренный остаток срока подавляет так же, как целый срок", () => {
+    expect(suppressedByFire({ firedUponTurnStarts: 1, underDirectSunlight: false })).toBe(true);
+    expect(suppressedByFire({ firedUponTurnStarts: 0, underDirectSunlight: false })).toBe(false);
   });
 });

@@ -137,7 +137,7 @@ export function recoverHitPointMaximum(session: Session, occasion: Occasion): Se
   if (returned <= 0 && healed <= 0 && !hadSpellPoints) {
     if (root.vitality.suppressed && root.vitality.bloodReduction > 0) {
       throw new DomainError(
-        session.character.suppression.firedUpon
+        root.vitality.firedUpon
           ? "Урон огнём подавил особенности: максимум пока не восстанавливается"
           : "Под прямым солнечным светом особенности не действуют",
       );

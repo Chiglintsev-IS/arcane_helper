@@ -19,6 +19,7 @@ import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/items
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { ABILITIES, isStatId, saveStatId, type StatId } from "@/core/domain/shared/stats";
+import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
 
 const UNKNOWN_ABILITY_SCORE = 10;
 
@@ -491,6 +492,27 @@ function migrateEffectContributions(effect: unknown): unknown {
   };
 }
 
+/**
+ * Подавление огнём прежней формы: признак «урон получен» вместо срока.
+ *
+ * Признак стоял ровно до первой отметки начала хода, поэтому целым сроком он и становится: отмерить
+ * из него было ещё нечего.
+ */
+function migrateFireSuppression(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const suppression = fieldsOf(fields.suppression);
+  const { firedUpon, ...rest } = suppression;
+  if (typeof firedUpon !== "boolean") return state;
+
+  return {
+    ...fields,
+    suppression: {
+      ...rest,
+      firedUponTurnStarts: firedUpon ? FIRE_SUPPRESSION_TURN_STARTS : 0,
+    },
+  };
+}
+
 /** Одно слово прежней формы на всё, чего время не отмеряет. */
 const LEGACY_UNTIMED_DURATION = "special";
 
@@ -536,7 +558,9 @@ export function migrateUndoPatch(patch: unknown): unknown {
             migrateItemShapes(
               migrateItemsSplit(
                 migrateArmorBasePatch(
-                  migrateMiscBonuses(migrateItemCategories(migrateItemShapes(patch))),
+                  migrateMiscBonuses(
+                    migrateItemCategories(migrateItemShapes(migrateFireSuppression(patch))),
+                  ),
                 ),
               ),
             ),
@@ -558,7 +582,9 @@ export function migrateCharacterState(raw: unknown): unknown {
                 migrateArmorBase(
                   migrateMiscBonuses(
                     migrateItemCategories(
-                      migrateItemShapes(migrateArcaneRecovery(migrateShape(raw))),
+                      migrateItemShapes(
+                        migrateArcaneRecovery(migrateFireSuppression(migrateShape(raw))),
+                      ),
                     ),
                   ),
                 ),

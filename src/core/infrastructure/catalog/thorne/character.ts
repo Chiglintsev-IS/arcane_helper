@@ -193,7 +193,7 @@ const RAW: unknown = {
   hitDice: { total: 7, size: 6, remaining: 7 },
   runes: { maximum: RUNES_MAXIMUM, remaining: RUNES_MAXIMUM },
   spellPoints: { remaining: 0 },
-  suppression: { firedUpon: false, underDirectSunlight: false },
+  suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
 
   spellNotes: {},
   roleplayPreferences: {},

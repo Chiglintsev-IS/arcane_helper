@@ -7,6 +7,7 @@ import { z } from "zod";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { fieldsOf } from "@/core/domain/shared/fields";
+import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
 import { migrateCharacterState, migrateUndoPatch } from "./migration";
 import { characterStateSchema } from "./state";
 
@@ -100,6 +101,7 @@ describe("приведение состояния версии 1", () => {
       abilities: createThorne().abilities,
       equipment: createThorne().equipment,
       arcaneRecovery: createThorne().arcaneRecovery,
+      suppression: createThorne().suppression,
     };
     expect(migrateCharacterState(already)).toBe(already);
   });
@@ -862,5 +864,29 @@ describe("отметка фокусировки становится вещью"
     const returned = listOf(fieldsOf(migrateUndoPatch(patch)).itemDefinitions);
 
     expect(returned.map((item) => fieldsOf(item).spellcastingFocus)).toEqual([true]);
+  });
+});
+
+describe("подавление огнём прежней формы", () => {
+  it("признак огня прежней формы становится сроком", () => {
+    const burned = characterStateSchema.parse(
+      migrateCharacterState({
+        ...VERSION_ONE,
+        suppression: { firedUpon: true, underDirectSunlight: false },
+      }),
+    );
+    expect(burned.suppression.firedUponTurnStarts).toBe(FIRE_SUPPRESSION_TURN_STARTS);
+
+    const cooled = characterStateSchema.parse(migrateCharacterState(VERSION_ONE));
+    expect(cooled.suppression.firedUponTurnStarts).toBe(0);
+  });
+
+  it("снимок отмены со старым признаком приводится вместе с состоянием", () => {
+    const patch = migrateUndoPatch({
+      suppression: { firedUpon: true, underDirectSunlight: false },
+    });
+    expect(fieldsOf(fieldsOf(patch).suppression).firedUponTurnStarts).toBe(
+      FIRE_SUPPRESSION_TURN_STARTS,
+    );
   });
 });

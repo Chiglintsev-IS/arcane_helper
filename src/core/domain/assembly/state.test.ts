@@ -77,7 +77,7 @@ function thorne(): unknown {
     hitPoints: { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 },
     runes: { maximum: 3, remaining: 2 },
     spellPoints: { remaining: 3 },
-    suppression: { firedUpon: false, underDirectSunlight: false },
+    suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
     spellNotes: { web: "Мастер считает, что паутина не горит." },
     roleplayPreferences: {
       web: {

@@ -70,15 +70,27 @@ export function maximumReductionAfterHours(
   return Math.max(0, reduction - maximumRecoveryPerHour(level) * hours);
 }
 
+/**
+ * Срок подавления уроном огнём: до конца следующего хода. Конца хода приложение не отмечает, и срок
+ * отмеряют две отметки его начала — первая открывает тот самый следующий ход, вторая стоит за его
+ * концом.
+ */
+export const FIRE_SUPPRESSION_TURN_STARTS = 2;
+
 type SuppressionState = {
-  /** Урон огнём получен: особенности не работают до конца следующего хода. */
-  firedUpon: boolean;
+  /** Сколько отметок начала хода ещё отмеряют подавление уроном огнём; ноль — срок вышел. */
+  firedUponTurnStarts: number;
   underDirectSunlight: boolean;
 };
 
+/** Идёт ли ещё срок, начатый уроном огнём. */
+export function suppressedByFire(state: SuppressionState): boolean {
+  return state.firedUponTurnStarts > 0;
+}
+
 /** Работают ли расовые особенности прямо сейчас. */
 export function traitsSuppressed(state: SuppressionState): boolean {
-  return state.firedUpon || state.underDirectSunlight;
+  return suppressedByFire(state) || state.underDirectSunlight;
 }
 
 /**
@@ -88,7 +100,7 @@ export function traitsSuppressed(state: SuppressionState): boolean {
  * звучать одинаково, иначе игрок читает их как два разных запрета.
  */
 export function suppressionReason(state: SuppressionState): string | null {
-  if (state.firedUpon) {
+  if (suppressedByFire(state)) {
     return "Кровавое колдовство подавлено уроном огнём до конца следующего хода";
   }
   if (state.underDirectSunlight) {

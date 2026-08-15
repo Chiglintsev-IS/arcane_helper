@@ -741,7 +741,7 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
   it("включённый признак виден значком в шапке, а не только внутри листа", async () => {
     const sunlit = {
       ...createThorne(),
-      suppression: { firedUpon: false, underDirectSunlight: true },
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
     await renderWithStores(<GameScreen />, sunlit);
 
@@ -755,7 +755,7 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
     const user = userEvent.setup();
     const sunlit = {
       ...createThorne(),
-      suppression: { firedUpon: false, underDirectSunlight: true },
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
     const { stores } = await renderWithStores(<GameScreen />, sunlit);
 

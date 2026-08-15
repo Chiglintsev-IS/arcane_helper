@@ -2,8 +2,8 @@
  * Ход и схватка: начало боя, свой ход, конец боя.
  *
  * Начало хода — событие, на которое отзываются несколько доменов сразу: возвращаются ресурсы хода,
- * истекают раундовые эффекты, идёт регенерация, снимается подавление огнём. Поэтому оно живёт здесь,
- * а не внутри одного из объектов-значений.
+ * истекают раундовые эффекты, идёт регенерация, отмеряется срок подавления огнём. Поэтому оно живёт
+ * здесь, а не внутри одного из объектов-значений.
  */
 
 import { Character } from "@/core/domain/assembly/character";
@@ -52,12 +52,11 @@ function advanceTurn(
 ): Session {
   const root = Character.of(session.character);
   const encounter = encounterOf(session);
-  const healed = root.vitality.regenerationDue(root.base.level);
+  const measured = root.vitality.afterTurnStart();
+  const healed = measured.regenerationDue(root.base.level);
   const { board, expired } = root.effects.expire((effect) => encounter.roundsSince(effect.startedAt));
 
-  const after = root
-    .withEffects(board)
-    .withVitality(root.vitality.clearFireSuppression().healUpTo(healed).vitality);
+  const after = root.withEffects(board).withVitality(measured.healUpTo(healed).vitality);
 
   const notes = [...(healed > 0 ? [`регенерация +${healed}`] : []), ...expiryNotes(expired)];
   return commit(

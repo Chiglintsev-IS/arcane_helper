@@ -9,8 +9,10 @@ import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
 import {
+  FIRE_SUPPRESSION_TURN_STARTS,
   maximumRecoveryPerHour,
   regenerationPerTurn,
+  suppressedByFire,
   suppressionReason,
   traitsSuppressed,
   type Exchange,
@@ -73,6 +75,11 @@ export class Vitality {
     return traitsSuppressed(this.state.suppression);
   }
 
+  /** Подавлены ли особенности именно огнём: у двух оснований подавления разные слова и разный конец. */
+  get firedUpon(): boolean {
+    return suppressedByFire(this.state.suppression);
+  }
+
   /** Кости хитов есть не у всякого состояния: чужая выгрузка могла их не знать. */
   get hitDice(): ResourcePool | null {
     const { hitDice } = this.state;
@@ -98,7 +105,12 @@ export class Vitality {
         current: Math.max(0, this.current - (damage - absorbed)),
       },
       ...(options.fire === true
-        ? { suppression: { ...this.state.suppression, firedUpon: true } }
+        ? {
+            suppression: {
+              ...this.state.suppression,
+              firedUponTurnStarts: FIRE_SUPPRESSION_TURN_STARTS,
+            },
+          }
         : {}),
     });
     return { vitality, absorbed };
@@ -254,9 +266,24 @@ export class Vitality {
     });
   }
 
-  /** Подавление огнём держится до конца следующего хода, поэтому снимается его началом. */
+  /**
+   * Отметка начала хода отмеряет срок подавления огнём: он кончается, когда отмерять больше нечего.
+   *
+   * Регенерация спрашивается уже после отметки: она идёт в том же ходу, который отметка открыла.
+   */
+  afterTurnStart(): Vitality {
+    const { firedUponTurnStarts } = this.state.suppression;
+    return this.with({
+      suppression: {
+        ...this.state.suppression,
+        firedUponTurnStarts: Math.max(0, firedUponTurnStarts - 1),
+      },
+    });
+  }
+
+  /** Отдых длиннее хода: срок подавления огнём он кончает целиком, не отмеряя отметками. */
   clearFireSuppression(): Vitality {
-    return this.with({ suppression: { ...this.state.suppression, firedUpon: false } });
+    return this.with({ suppression: { ...this.state.suppression, firedUponTurnStarts: 0 } });
   }
 
   /**

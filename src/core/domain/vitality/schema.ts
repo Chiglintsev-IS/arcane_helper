@@ -9,6 +9,8 @@ import { z } from "zod";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
+import { FIRE_SUPPRESSION_TURN_STARTS } from "./blood";
+
 /**
  * Здоровье тремя слагаемыми: база с листа и два снижения. Действующий максимум считается.
  * Одно поле «максимум, уже уменьшенный кровью» смешивало два факта, и правка базы требовала
@@ -82,9 +84,14 @@ const hitDiceSchema = z
   })
   .optional();
 
-/** Что подавляет расовые особенности: урон огнём до конца следующего хода и прямое солнце. */
+/**
+ * Что подавляет расовые особенности: неотмеренный срок после урона огнём и прямое солнце.
+ *
+ * Остаток срока не бывает длиннее самого срока: число сверх него означало бы подавление, которого
+ * правило не даёт.
+ */
 const suppressionSchema = z.object({
-  firedUpon: z.boolean(),
+  firedUponTurnStarts: z.number().int().min(0).max(FIRE_SUPPRESSION_TURN_STARTS),
   underDirectSunlight: z.boolean(),
 });
 

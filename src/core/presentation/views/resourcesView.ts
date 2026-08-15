@@ -37,7 +37,7 @@ export function toResourcesView(session: Session): ResourcesView {
     initiative: root.sheet.value("initiative"),
     wardingSigilAvailable: wardingSigilAvailable(session),
     suppression: {
-      firedUpon: character.suppression.firedUpon,
+      firedUpon: root.vitality.firedUpon,
       underDirectSunlight: character.suppression.underDirectSunlight,
     },
   };

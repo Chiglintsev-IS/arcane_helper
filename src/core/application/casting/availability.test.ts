@@ -4,6 +4,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
+import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
 import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
@@ -574,7 +575,7 @@ describe("доступность обмена хитов на очки (FR-176, 
   it("подавление огнём и солнцем называется своими словами", () => {
     const burned = {
       ...createThorne(),
-      suppression: { firedUpon: true, underDirectSunlight: false },
+      suppression: { firedUponTurnStarts: FIRE_SUPPRESSION_TURN_STARTS, underDirectSunlight: false },
     };
     expect(exchangeWarnings(burned, ALL_TURN_RESOURCES)).toEqual([
       "Кровавое колдовство подавлено уроном огнём до конца следующего хода",
@@ -582,7 +583,7 @@ describe("доступность обмена хитов на очки (FR-176, 
 
     const sunlit = {
       ...createThorne(),
-      suppression: { firedUpon: false, underDirectSunlight: true },
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
     expect(exchangeWarnings(sunlit, ALL_TURN_RESOURCES)).toEqual([
       "Кровавое колдовство не действует под прямым солнечным светом",

@@ -59,7 +59,7 @@ const PLAYER_SAVE = {
     armorClass: { base: 10, dexterityModifier: 2, itemBonus: 2 },
     runes: { maximum: 3, remaining: 3 },
     spellPoints: { remaining: 0, createdAt: null },
-    suppression: { firedUpon: false, underDirectSunlight: false },
+    suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
     spellNotes: {},
     roleplayPreferences: {},
   },
