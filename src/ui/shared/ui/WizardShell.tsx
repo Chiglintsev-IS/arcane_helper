@@ -14,6 +14,7 @@ import type { Tone } from "@/ui/shared/ui/tone";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 
 /**
  * Заголовки шагов, общих у обоих мастеров.
@@ -75,7 +76,7 @@ export function WizardShell({
             onClick={onCancel}
             className="px-2 text-sm text-slate-500 underline"
           >
-            Отмена
+            {BUTTON_LABELS.dismiss}
           </button>
         </div>
         <div className="flex items-center gap-2">

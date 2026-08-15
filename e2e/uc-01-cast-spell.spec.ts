@@ -253,11 +253,11 @@ test("undo returns the slot through the journal screen", async ({ page }) => {
   await expect(slots.getByText("3/4")).toBeVisible();
 
   // Отмена живёт только в журнале: в бою кнопки нет вовсе.
-  await expect(page.getByRole("button", { name: /^Отменить/ })).toBeHidden();
+  await expect(page.getByRole("button", { name: /^Вернуть/ })).toBeHidden();
   await switchMode(page, /^Журнал/);
-  await page.getByRole("button", { name: /^Отменить/ }).click();
+  await page.getByRole("button", { name: /^Вернуть/ }).click();
   // Ячейку возвращают из журнала, а видят в бою: шапки ресурсов в журнале нет.
-  await expect(page.getByRole("button", { name: "Отменить: Бой начался" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Вернуть: Бой начался" })).toBeVisible();
 
   // Возврат в бой застаёт тот же бой: журнал его не заканчивает.
   await switchMode(page, /^Игра/);
@@ -364,7 +364,7 @@ test("concentration block explains the effect", async ({ page }) => {
   // КС считается по введённому урону.
   await panel.getByRole("button", { name: "Получил урон" }).click();
   await page.getByLabel("Полученный урон").fill("24");
-  await page.getByRole("button", { name: "Записать" }).click();
+  await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByRole("dialog", { name: "Проверка концентрации" })).toContainText("КС 12");
 });
 
@@ -561,7 +561,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   // Долгий отдых уничтожает состояние боя, поэтому спрашивает.
   await switchMode(page, /^Привал/);
   await page.getByRole("button", { name: /Долгий отдых/ }).click();
-  await page.getByRole("button", { name: "Отдохнуть" }).click();
+  await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
 });
 

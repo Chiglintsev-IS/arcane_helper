@@ -4,13 +4,16 @@ import { useId, useState } from "react";
 
 import type { SheetView } from "@/contract/views";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 
 /**
  * Хиты правятся там, где их получают и теряют, — в «Игре» и в «Привале».
  *
  * Максимум стоит здесь же четвёртой вкладкой, а не на «Листе»: его двигают уровень, кровавое
- * колдовство и слово мастера — всё это случается за столом, а не при заполнении листа.
+ * колдовство и слово мастера — всё это случается за столом, а не при заполнении листа. Поэтому
+ * шторка отвечает на вопрос «что случилось», и нажатие в ней подтверждает случившееся, а не
+ * сохраняет запись.
  */
 type Kind = "damage" | "heal" | "temporary" | "maximum";
 
@@ -221,14 +224,14 @@ export function HitPointsSheet({
           onClick={submit}
           className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
         >
-          Записать
+          {BUTTON_LABELS.confirm}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
         >
-          Отмена
+          {BUTTON_LABELS.dismiss}
         </button>
       </div>
     </section>

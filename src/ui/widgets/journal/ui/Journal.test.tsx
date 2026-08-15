@@ -47,17 +47,25 @@ describe("экран журнала (FR-113)", () => {
 
     // Одна кнопка на весь список: отменяется только последнее, и кнопка на остальных
     // записях обещала бы недоступное.
-    expect(screen.getAllByRole("button", { name: /^Отменить/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^Вернуть/ })).toHaveLength(1);
     expect(
-      screen.getByRole("button", { name: "Отменить: Огненный шар — ячейка 3 уровня" }),
+      screen.getByRole("button", { name: "Вернуть: Огненный шар — ячейка 3 уровня" }),
     ).toBeDefined();
+  });
+
+  it("возврат сделанного назван не отменой (FR-264)", () => {
+    render(<Journal entries={[entry("id-1", "Бой начался")]} onUndo={() => {}} onData={() => {}} />);
+
+    // Отменой уходят со шторки, ничего не изменив; здесь возвращают сделанное — дела разные.
+    expect(screen.getByRole("button", { name: "Вернуть: Бой начался" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /Отмен/ })).toBeNull();
   });
 
   it("нажатие зовёт отмену", async () => {
     const onUndo = vi.fn();
     render(<Journal entries={[entry("id-1", "Бой начался")]} onUndo={onUndo} onData={() => {}} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Вернуть/ }));
 
     expect(onUndo).toHaveBeenCalledTimes(1);
   });
@@ -76,7 +84,7 @@ describe("экран журнала (FR-113)", () => {
       <Journal entries={[older, newest]} onUndo={() => {}} onData={() => {}} />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Вернуть/ }));
     rerender(<Journal entries={[older]} onUndo={() => {}} onData={() => {}} />);
 
     const returned = screen.getByRole("status");
@@ -93,7 +101,7 @@ describe("экран журнала (FR-113)", () => {
     render(<Journal entries={entries} onUndo={() => {}} onData={() => {}} />);
 
     // Отказ ядра оставляет запись на месте, и возвращать по ней нечего.
-    await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Вернуть/ }));
 
     expect(screen.queryByRole("status")).toBeNull();
   });
@@ -103,7 +111,7 @@ describe("экран журнала (FR-113)", () => {
       <Journal entries={[entry("id-1", "Бой начался")]} onUndo={() => {}} onData={() => {}} />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Вернуть/ }));
     rerender(<Journal entries={[]} onUndo={() => {}} onData={() => {}} />);
 
     expect(screen.getByRole("status").textContent).toContain("Бой начался");
@@ -114,6 +122,6 @@ describe("экран журнала (FR-113)", () => {
     render(<Journal entries={[]} onUndo={() => {}} onData={() => {}} />);
 
     expect(screen.getByText("Пока ничего не произошло.")).toBeDefined();
-    expect(screen.queryByRole("button", { name: /^Отменить/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Вернуть/ })).toBeNull();
   });
 });

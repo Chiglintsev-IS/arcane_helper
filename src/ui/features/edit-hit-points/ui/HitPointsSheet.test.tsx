@@ -75,7 +75,7 @@ describe("шторка хитов", () => {
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));
     await userEvent.type(screen.getByLabelText("Базовый максимум"), "6");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     // Меньше уже снятого кровью — отказ жизнеспособности, а не решение шторки.
     expect(onMaximum).toHaveBeenCalledWith({ maximumBase: 6, masterReduction: 0 });
@@ -94,7 +94,7 @@ describe("шторка хитов", () => {
     const onDamage = vi.fn();
     const { stores } = await openHitPoints(createThorne(), { onDamage });
 
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     // Просьба не собрана: владельцу нечего отправить, и полосе ошибки нечего рассказать —
     // сырой разбор сообщения по-английски игрок не увидит, потому что до разбора дело не дошло.
@@ -122,7 +122,7 @@ describe("шторка хитов", () => {
 
     // И высота строки — та же, что у кнопки записи: зона нажатия у обеих одна.
     const row = screen.getByRole("checkbox", { name: "Урон огнём" }).closest("label");
-    expect(leastHeight(row)).toBe(leastHeight(screen.getByRole("button", { name: "Записать" })));
+    expect(leastHeight(row)).toBe(leastHeight(screen.getByRole("button", { name: "Подтвердить" })));
   });
 
   it("хиты: сохранение отдаёт базу и снижение мастера", async () => {
@@ -132,7 +132,7 @@ describe("шторка хитов", () => {
 
     await userEvent.clear(screen.getByLabelText("Снижение мастера"));
     await userEvent.type(screen.getByLabelText("Снижение мастера"), "10");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(onMaximum).toHaveBeenCalledWith({ maximumBase: 60, masterReduction: 10 });
   });

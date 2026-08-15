@@ -11,6 +11,7 @@ import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassShe
 import { Camp } from "@/ui/widgets/camp/ui/Camp";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
 import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
@@ -106,8 +107,8 @@ export function RestScreen() {
         <ConfirmSheet
           title="Долгий отдых?"
           body="Вернутся все ячейки и руны, снимется концентрация, закроются эффекты короче отдыха, обнулятся очки заклинаний и временные хиты."
-          confirmLabel="Отдохнуть"
-          cancelLabel="Отмена"
+          confirmLabel={BUTTON_LABELS.confirm}
+          cancelLabel={BUTTON_LABELS.dismiss}
           onConfirm={async () => {
             if ((await execute({ kind: "long_rest" })) === null) setLongRestOpen(false);
           }}

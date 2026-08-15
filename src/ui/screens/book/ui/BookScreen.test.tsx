@@ -293,7 +293,7 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     expect(screen.queryByRole("button", { name: "Поиск" })).toBeNull();
     expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
     expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Отменить/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Вернуть/ })).toBeNull();
   });
 
   it("счётчик подготовки остаётся: он отвечает на вопрос «сколько ещё можно» (FR-214)", async () => {

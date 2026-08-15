@@ -54,7 +54,7 @@ async function damage(
   await renderWithStores(<GameScreen />, character, situation);
   await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
   await userEvent.type(screen.getByLabelText("Полученный урон"), amount);
-  await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+  await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 }
 
 describe("карточка концентрации в шапке (FR-082, FR-084)", () => {
@@ -118,7 +118,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "12");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.getByText("48/60")).toBeDefined();
     expect(screen.queryByText(/Проверка концентрации/)).toBeNull();
@@ -130,7 +130,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "5");
     await userEvent.click(screen.getByLabelText("Урон огнём"));
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.getByText(/Особенности подавлены: урон огнём/)).toBeDefined();
   });
@@ -140,7 +140,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
     await userEvent.type(screen.getByLabelText("Полученный урон"), "24");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const check = screen.getByRole("dialog", { name: "Проверка концентрации" });
     expect(within(check).getByText(/КС 12/)).toBeDefined();
@@ -151,7 +151,7 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
     await renderWithStores(<GameScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.getByText("60/60")).toBeDefined();
   });
@@ -202,7 +202,7 @@ describe("поправка к КД (FR-236)", () => {
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     const dialog = screen.getByRole("dialog", { name: "Правка КД" });
     await userEvent.type(within(dialog).getByLabelText("Поправка"), "2");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Записать" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.queryByRole("dialog", { name: "Правка КД" })).toBeNull();
     expect(within(numbers).getByText("16")).toBeDefined();
@@ -215,7 +215,7 @@ describe("поправка к КД (FR-236)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     await userEvent.type(screen.getByLabelText("Поправка"), "-3");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
     expect(within(numbers).getByText("11")).toBeDefined();
@@ -227,12 +227,12 @@ describe("поправка к КД (FR-236)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     await userEvent.type(screen.getByLabelText("Поправка"), "2");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     await userEvent.clear(screen.getByLabelText("Поправка"));
     await userEvent.type(screen.getByLabelText("Поправка"), "5");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
     expect(within(numbers).getByText("19")).toBeDefined();
@@ -245,11 +245,11 @@ describe("поправка к КД (FR-236)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     await userEvent.type(screen.getByLabelText("Поправка"), "2");
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     await userEvent.clear(screen.getByLabelText("Поправка"));
-    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
     expect(within(numbers).getByText("14")).toBeDefined();

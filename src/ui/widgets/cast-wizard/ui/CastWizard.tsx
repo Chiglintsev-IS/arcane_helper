@@ -18,6 +18,7 @@ import {
   WIZARD_STEP_TITLES,
   WizardShell,
 } from "@/ui/shared/ui/WizardShell";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import { castingTimeBadge, castingTimePhrase, levelLabel } from "@/ui/entities/spell/lib/format";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
@@ -425,7 +426,7 @@ function ConcentrationStep({
             onClick={onCancel}
             className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 dark:border-slate-800"
           >
-            Отмена
+            {BUTTON_LABELS.dismiss}
           </button>
           <button
             type="button"
@@ -604,7 +605,7 @@ export function CastWizard({
       onCancel={() => actions.cancel()}
       footer={
         isLast
-          ? { ...back, primaryLabel: "Подтвердить", onPrimary: () => onConfirm(draft) }
+          ? { ...back, primaryLabel: BUTTON_LABELS.confirm, onPrimary: () => onConfirm(draft) }
           : {
               ...back,
               primaryLabel: "Далее",

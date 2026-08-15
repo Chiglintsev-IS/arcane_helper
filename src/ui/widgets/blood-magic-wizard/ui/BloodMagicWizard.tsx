@@ -14,6 +14,7 @@ import {
   WIZARD_STEP_TITLES,
   WizardShell,
 } from "@/ui/shared/ui/WizardShell";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import type { PreviewOf } from "@/contract/questions";
 import type { BloodMagicView, SheetView } from "@/contract/views";
 import { usePreview } from "@/ui/shared/model/usePreview";
@@ -175,7 +176,11 @@ export function BloodMagicWizard({
       onCancel={onCancel}
       footer={
         isLast
-          ? { ...back, primaryLabel: "Подтвердить", onPrimary: () => onConfirm(points, allowAnyway) }
+          ? {
+              ...back,
+              primaryLabel: BUTTON_LABELS.confirm,
+              onPrimary: () => onConfirm(points, allowAnyway),
+            }
           : {
               ...back,
               primaryLabel: "Далее",

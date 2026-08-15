@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+
 /**
  * Правка поправки к КД: одно число со знаком, как «Хиты» правят временные хиты. Новое значение
  * заменяет прежнее, а ноль снимает поправку вовсе.
+ *
+ * Поправку кладёт на стол мастер, и потому нажатие здесь не правит запись листа, а совершает
+ * случившееся: слово на кнопке то же, каким подтверждают урон и сотворение.
  */
 export function ArmorClassSheet({
   value,
@@ -56,14 +61,14 @@ export function ArmorClassSheet({
           onClick={() => onSave(parsed)}
           className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
         >
-          Записать
+          {BUTTON_LABELS.confirm}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
         >
-          Отмена
+          {BUTTON_LABELS.dismiss}
         </button>
       </div>
     </section>

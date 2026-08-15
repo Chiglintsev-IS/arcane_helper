@@ -19,6 +19,7 @@ import type { PreviewOf, Question } from "@/contract/questions";
 import type { RecoveryView } from "@/contract/views";
 
 import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 
 type SlotRecoveryPlan = CommandOf<"use_arcane_recovery">["plan"];
@@ -110,14 +111,14 @@ export function ArcaneRecoverySheet({
           onClick={() => onConfirm(plan)}
           className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
         >
-          Вернуть ячейки
+          {BUTTON_LABELS.confirm}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
         >
-          Отмена
+          {BUTTON_LABELS.dismiss}
         </button>
       </div>
     </section>

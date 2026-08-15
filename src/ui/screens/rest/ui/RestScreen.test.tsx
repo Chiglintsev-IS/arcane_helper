@@ -53,7 +53,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     await user.click(screen.getByRole("button", { name: /^КД 14/ }));
     const sheet = screen.getByRole("dialog", { name: "Правка КД" });
     await user.type(within(sheet).getByLabelText("Поправка"), "2");
-    await user.click(within(sheet).getByRole("button", { name: "Записать" }));
+    await user.click(within(sheet).getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.queryByRole("dialog", { name: "Правка КД" })).toBeNull();
     expect(screen.getByRole("button", { name: /^КД 16/ })).toBeDefined();
@@ -65,7 +65,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
 
     await user.click(screen.getByRole("button", { name: /^Хиты/ }));
     await user.type(screen.getByLabelText("Полученный урон"), "12");
-    await user.click(screen.getByRole("button", { name: "Записать" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.getByText("48/60")).toBeDefined();
   });
@@ -107,7 +107,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
 
     await user.click(screen.getByRole("button", { name: /^Хиты/ }));
     await user.type(screen.getByLabelText("Полученный урон"), "24");
-    await user.click(screen.getByRole("button", { name: "Записать" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const check = screen.getByRole("dialog", { name: "Проверка концентрации" });
     expect(within(check).getByText(/КС 12/)).toBeDefined();
@@ -119,7 +119,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
 
     await user.click(screen.getByRole("button", { name: /^Хиты/ }));
     await user.type(screen.getByLabelText("Полученный урон"), "24");
-    await user.click(screen.getByRole("button", { name: "Записать" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     // Руна и реакция на месте, поэтому провал сначала предлагает «Знаки ограждения».
     await user.click(screen.getByRole("button", { name: "Провал" }));
     await user.click(screen.getByRole("button", { name: "Всё равно провал" }));
@@ -164,7 +164,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     // Случайное нажатие уничтожает состояние боя, поэтому между кнопкой и отдыхом стоит выбор.
     expect(slotsLeft(stores, 1)).toBe(2);
 
-    await user.click(screen.getByRole("button", { name: "Отдохнуть" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     expect(slotsLeft(stores, 1)).toBe(4);
   });
 
@@ -188,7 +188,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
     await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
-    await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(slotsLeft(stores, 1)).toBe(3);
     expect(shown(stores).recovery.arcaneRecovery.remaining).toBe(3);
@@ -204,13 +204,13 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     // Бюджет Торна — четыре уровня: ячейка четвёртого укладывается, ячейка сверх неё — уже нет.
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 4 уровня" }));
     expect(
-      screen.getByRole("button", { name: "Вернуть ячейки" }).hasAttribute("disabled"),
+      screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled"),
     ).toBe(false);
 
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
     expect(screen.getByText(/превышает остаток бюджета/)).toBeDefined();
     expect(
-      screen.getByRole("button", { name: "Вернуть ячейки" }).hasAttribute("disabled"),
+      screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled"),
     ).toBe(true);
   });
 
@@ -258,7 +258,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
     await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
-    await user.click(screen.getByRole("button", { name: "Вернуть ячейки" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     expect(shown(stores).recovery.arcaneRecovery.remaining).toBe(3);
     expect(
       screen.getByRole("button", { name: "Магическое восстановление · осталось 3 уровня" }),

@@ -17,6 +17,7 @@ import { useState } from "react";
 
 import type { RoleplayVariantView, SpellCardView, SpellRowView } from "@/contract/views";
 
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -187,7 +188,7 @@ function Variants({
               Добавить
             </button>
             <button type="button" onClick={() => setOwnText(null)} className={ACTION_CLASS}>
-              Отмена
+              {BUTTON_LABELS.dismiss}
             </button>
           </div>
         </div>
