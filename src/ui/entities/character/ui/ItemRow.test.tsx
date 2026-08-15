@@ -56,17 +56,55 @@ describe("строка вещи", () => {
     expect(within(open).getByText("надето 1")).toBeDefined();
   });
 
-  it("факт второй строки — неделимый элемент: перенос идёт между фактами (FR-250)", () => {
+  it("факт — своя плашка: имя величины при своём числе, перенос между фактами (FR-250)", () => {
     renderRow(staff);
 
-    // Точное совпадение находит факт только тогда, когда он стоит собственным элементом,
-    // а не куском общей фразы: неделимость — свойство элемента.
-    expect(screen.getByText("КС спасброска +2")).toBeDefined();
-    expect(screen.getByText("Атака заклинанием +2")).toBeDefined();
+    // Плашка целиком держит имя величины и её число: неделимость — свойство элемента.
+    expect(screen.getByText("КС спасброска").textContent).toBe("КС спасброска +2");
+    expect(screen.getByText("Атака заклинанием").textContent).toBe("Атака заклинанием +2");
 
-    // Заметка — свободный текст после фактов, с тем же разделителем.
-    const open = screen.getByRole("button", { name: "Открыть: Посох силы" });
-    expect(open.textContent).toContain("Атака заклинанием +2 · требует настройки");
+    // Заметка — свободный текст после фактов, а не плашка.
+    expect(screen.getByText("требует настройки")).toBeDefined();
+  });
+
+  it("фактов сверх видимых — «ещё N», а не молчаливый обрыв (FR-250)", () => {
+    renderRow({
+      id: "cloak-of-everything",
+      nameRu: "Плащ всего",
+      kind: "gear",
+      bonuses: {
+        armorClass: 1,
+        "save:strength": 1,
+        "save:dexterity": 1,
+        "save:constitution": 1,
+        "save:intelligence": 1,
+        "save:wisdom": 1,
+        "save:charisma": 1,
+      },
+    });
+
+    expect(screen.getByText("Класс Доспеха")).toBeDefined();
+    expect(screen.getByText("Спасбросок: Сила")).toBeDefined();
+    expect(screen.getByText("Спасбросок: Ловкость")).toBeDefined();
+    expect(screen.queryByText("Спасбросок: Телосложение")).toBeNull();
+    expect(screen.getByText("ещё 4")).toBeDefined();
+  });
+
+  it("четыре факта видны все: за «ещё» не прячется единственный (FR-250)", () => {
+    renderRow({
+      id: "bracers-of-defense",
+      nameRu: "Наручи защиты",
+      kind: "gear",
+      bonuses: {
+        armorClass: 1,
+        "save:strength": 1,
+        "save:dexterity": 1,
+        "save:constitution": 1,
+      },
+    });
+
+    expect(screen.getByText("Спасбросок: Телосложение")).toBeDefined();
+    expect(screen.queryByText(/^ещё/)).toBeNull();
   });
 
   it("у вещи без подробностей второй строки нет вовсе (FR-250)", () => {

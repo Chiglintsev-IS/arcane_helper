@@ -36,7 +36,8 @@ describe("вторая строка вещи", () => {
         }),
         stats,
       ),
-    ).toEqual({ facts: ["50 зм"], note: undefined });
+    ).toEqual({ facts: [{ labelRu: "50 зм", valueRu: undefined }], note: undefined });
+    // Прибавки стоят раньше цены: за столом вещь спрашивают о том, что она делает, а не почём она.
     expect(
       itemMeta(
         viewOf({
@@ -44,12 +45,17 @@ describe("вторая строка вещи", () => {
           nameRu: "Кольцо",
           kind: "gear",
           note: "фамильное",
+          price: { amount: 3500, currency: "gold" },
           bonuses: { armorClass: 1, "save:constitution": 1 },
         }),
         stats,
       ),
     ).toEqual({
-      facts: ["Класс Доспеха +1", "Спасбросок: Телосложение +1"],
+      facts: [
+        { labelRu: "Класс Доспеха", valueRu: "+1" },
+        { labelRu: "Спасбросок: Телосложение", valueRu: "+1" },
+        { labelRu: "3500 зм", valueRu: undefined },
+      ],
       note: "фамильное",
     });
     expect(
@@ -62,7 +68,13 @@ describe("вторая строка вещи", () => {
         }),
         stats,
       ),
-    ).toEqual({ facts: ["КС спасброска +2", "Атака заклинанием +2"], note: undefined });
+    ).toEqual({
+      facts: [
+        { labelRu: "КС спасброска", valueRu: "+2" },
+        { labelRu: "Атака заклинанием", valueRu: "+2" },
+      ],
+      note: undefined,
+    });
     expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }), stats)).toEqual({
       facts: [],
       note: undefined,

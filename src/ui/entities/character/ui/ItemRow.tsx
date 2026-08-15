@@ -1,12 +1,16 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import type { ChoicesView, ItemView } from "@/contract/views";
 
 import { itemMeta } from "../lib/itemMeta";
 
-const FACT_SEPARATOR = " · ";
+/** Видимых фактов без счёта. Сверх них строка называет число, а вещь целиком показывает шторка. */
+const VISIBLE_FACTS = 3;
+
+/** Прятать за счётом единственный факт нельзя: счёт занимает не меньше места, чем он сам. */
+const LEAST_HIDDEN = 2;
 
 /**
  * Строка вещи: имя со своим числом и подробностями — кнопка, открывающая вещь целиком; справа — то,
@@ -34,7 +38,8 @@ export function ItemRow({
   children?: ReactNode;
 }) {
   const { facts, note } = itemMeta(item, stats);
-  const hasDetails = facts.length > 0 || note !== undefined;
+  const hiddenCount = facts.length - VISIBLE_FACTS >= LEAST_HIDDEN ? facts.length - VISIBLE_FACTS : 0;
+  const visibleFacts = hiddenCount === 0 ? facts : facts.slice(0, VISIBLE_FACTS);
 
   return (
     <li className="flex items-center gap-2">
@@ -42,7 +47,7 @@ export function ItemRow({
         type="button"
         onClick={onOpen}
         aria-label={`Открыть: ${item.nameRu}`}
-        className="min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-900"
+        className="min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-900"
       >
         <span className="flex items-baseline justify-between gap-2">
           <span className="min-w-0 text-sm font-medium">{item.nameRu}</span>
@@ -52,24 +57,31 @@ export function ItemRow({
             </span>
           )}
         </span>
-        {/*
-         * Подробности — не больше двух строк, и перенос идёт между фактами: рваная посередине
-         * прибавка читается как две. Целиком вещь показывает своя шторка, и открывает её эта же
-         * строка.
-         */}
-        {!hasDetails ? null : (
-          <span className="line-clamp-2 text-xs leading-snug text-slate-500 dark:text-slate-400">
-            {facts.map((fact, index) => (
-              <Fragment key={fact}>
-                {index === 0 ? null : FACT_SEPARATOR}
-                <span className="whitespace-nowrap">{fact}</span>
-              </Fragment>
+        {visibleFacts.length === 0 && note === undefined ? null : (
+          <span className="mt-1 flex flex-wrap items-center gap-1">
+            {visibleFacts.map((fact) => (
+              <span
+                key={fact.labelRu}
+                className="whitespace-nowrap rounded-md bg-slate-100 px-1.5 py-0.5 text-xs leading-tight text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
+              >
+                {fact.labelRu}
+                {fact.valueRu === undefined ? null : (
+                  <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                    {" "}
+                    {fact.valueRu}
+                  </span>
+                )}
+              </span>
             ))}
+            {hiddenCount === 0 ? null : (
+              <span className="whitespace-nowrap rounded-md border border-dashed border-slate-300 px-1.5 py-0.5 text-xs leading-tight text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                ещё {hiddenCount}
+              </span>
+            )}
             {note === undefined ? null : (
-              <Fragment>
-                {facts.length === 0 ? null : FACT_SEPARATOR}
+              <span className="min-w-0 text-xs leading-snug text-slate-500 dark:text-slate-400">
                 {note}
-              </Fragment>
+              </span>
             )}
           </span>
         )}
