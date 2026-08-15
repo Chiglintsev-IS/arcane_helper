@@ -8,6 +8,7 @@ import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
+import { GearScreen } from "@/ui/screens/gear/ui/GearScreen";
 import { BagScreen } from "@/ui/screens/bag/ui/BagScreen";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
@@ -46,6 +47,8 @@ function ScreenContent({ mode }: { mode: ScreenMode }) {
       return <BookScreen />;
     case "sheet":
       return <SheetScreen />;
+    case "gear":
+      return <GearScreen />;
     case "bag":
       return <BagScreen />;
     case "rest":

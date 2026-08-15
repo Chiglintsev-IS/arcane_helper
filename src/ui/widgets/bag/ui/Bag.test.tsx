@@ -6,10 +6,9 @@ import userEvent from "@testing-library/user-event";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
-import type { ItemView } from "@/contract/views";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
-import { Bag, itemMeta } from "./Bag";
+import { Bag } from "./Bag";
 
 afterEach(cleanup);
 
@@ -22,11 +21,10 @@ const NOOP = {
   onOpenItem: () => {},
   onAddItem: () => {},
   onAdjustBagCount: () => {},
-  onAdjustWornCount: () => {},
 };
 
-/** Персонаж с добавленными вещами и их запасом в сумке/надетом — поверх обычного снаряжения Торна. */
-function withStock(entries: { definition: ItemDefinition; bag?: number; worn?: number }[]): CharacterState {
+/** Персонаж с добавленными вещами и их запасом в сумке — поверх обычного снаряжения Торна. */
+function withStock(entries: { definition: ItemDefinition; bag?: number }[]): CharacterState {
   const state = createThorne();
   return {
     ...state,
@@ -39,23 +37,8 @@ function withStock(entries: { definition: ItemDefinition; bag?: number; worn?: n
           .filter((entry) => (entry.bag ?? 0) > 0)
           .map((entry) => ({ itemId: entry.definition.id, count: entry.bag ?? 0 })),
       ],
-      worn: [
-        ...state.equipment.worn,
-        ...entries
-          .filter((entry) => (entry.worn ?? 0) > 0)
-          .map((entry) => ({ itemId: entry.definition.id, count: entry.worn ?? 0 })),
-      ],
     },
   };
-}
-
-/** Вещь строкой списка: проекцию строит настоящий презентер, а не подделка рядом. */
-function viewOf(definition: ItemDefinition): ItemView {
-  const found = toBagView(withStock([{ definition }])).items.find(
-    (item) => item.id === definition.id,
-  );
-  if (found === undefined) throw new Error(`нет вещи ${definition.id}`);
-  return found;
 }
 
 const potion: ItemDefinition = {
@@ -66,15 +49,18 @@ const potion: ItemDefinition = {
 };
 
 describe("экран «Сумка»", () => {
-  it("держит деньги, четыре раздела категорий и доспех (FR-242)", () => {
+  it("держит кошелёк и три счётных раздела (FR-242)", () => {
     render(<Bag bag={toBagView(createThorne())} {...NOOP} />);
 
     expect(screen.getByRole("heading", { name: "Деньги" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Экипировка" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Расходники" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Ингредиенты" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Другое" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Доспех" })).toBeDefined();
+
+    // Надеваемое живёт своим режимом вместе с числом, которое от него зависит.
+    expect(screen.queryByRole("heading", { name: "Экипировка" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Защита" })).toBeNull();
+    expect(screen.queryByText(/без доспехов/)).toBeNull();
     // Прибавки без вещи — свойство персонажа: их карточка живёт на «Листе», не в сумке.
     expect(screen.queryByRole("heading", { name: "Прибавки без вещи" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Прочие прибавки" })).toBeNull();
@@ -93,7 +79,7 @@ describe("экран «Сумка»", () => {
     render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 3 }]))} {...NOOP} />);
 
     const consumables = screen.getByRole("list", { name: "Расходники" });
-    expect(within(consumables).getByText("Зелье лечения ×3")).toBeDefined();
+    expect(within(consumables).getByText("Зелье лечения")).toBeDefined();
     // Раздел без вещей списка не держит, но строка ввода в нём есть.
     expect(screen.queryByRole("list", { name: "Ингредиенты" })).toBeNull();
     expect(screen.getByLabelText("Новый ингредиент")).toBeDefined();
@@ -110,6 +96,10 @@ describe("экран «Сумка»", () => {
       />,
     );
 
+    // Запас стоит между кнопками, которые его двигают.
+    const row = within(screen.getByRole("list", { name: "Расходники" })).getByRole("listitem");
+    expect(row.textContent).toContain("3");
+
     await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
     await user.click(screen.getByRole("button", { name: "Добавить один в сумку: Зелье лечения" }));
 
@@ -120,24 +110,12 @@ describe("экран «Сумка»", () => {
   it("ноль — состояние: кончившийся расходник виден нулём, а минус выключен (FR-239)", () => {
     render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 0 }]))} {...NOOP} />);
 
-    expect(screen.getByText("Зелье лечения ×0")).toBeDefined();
+    const row = within(screen.getByRole("list", { name: "Расходники" })).getByRole("listitem");
+    expect(row.textContent).toContain("Зелье лечения");
+    expect(row.textContent).toContain("0");
     expect(
       screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }),
     ).toHaveProperty("disabled", true);
-  });
-
-  it("экипировка снимается и надевается кнопками строки, счёт в сумке у неё есть тоже (FR-238)", async () => {
-    const user = userEvent.setup();
-    const onAdjustWornCount = vi.fn();
-    render(<Bag bag={toBagView(createThorne())} {...NOOP} onAdjustWornCount={onAdjustWornCount} />);
-
-    await user.click(screen.getByRole("button", { name: "Снять один: Плащ защиты" }));
-    expect(onAdjustWornCount).toHaveBeenCalledWith("cloak-of-protection", -1);
-    // Плащ надет и не лежит в сумке — надеть больше нечего, кнопка выключена.
-    expect(screen.getByRole("button", { name: "Надеть один: Плащ защиты" })).toHaveProperty(
-      "disabled",
-      true,
-    );
   });
 
   it("быстрый ввод заводит вещь сразу в категорию раздела (FR-241)", async () => {
@@ -156,61 +134,24 @@ describe("экран «Сумка»", () => {
   it("нажатие на вещь открывает её целиком (FR-241)", async () => {
     const user = userEvent.setup();
     const onOpenItem = vi.fn();
-    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 3 }]))} {...NOOP} onOpenItem={onOpenItem} />);
+    render(
+      <Bag
+        bag={toBagView(withStock([{ definition: potion, bag: 3 }]))}
+        {...NOOP}
+        onOpenItem={onOpenItem}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Открыть: Зелье лечения" }));
     expect(onOpenItem).toHaveBeenCalledWith("healing-potion");
   });
 
-  it("вторая строка вещи называет цену, прибавки и заметку — только то, что есть", () => {
-    // Прибавки приезжают теми, что действуют: чьей категории они не положены, у того их и нет —
-    // это стережёт владелец вещи, и второй такой проверки здесь не заводится.
-    expect(itemMeta(viewOf(potion), stats)).toBe("50 зм");
-    expect(
-      itemMeta(
-        viewOf({
-          id: "ring",
-          nameRu: "Кольцо",
-          kind: "gear",
-          note: "фамильное",
-          bonuses: { armorClass: 1, "save:constitution": 1 },
-        }),
-        stats,
-      ),
-    ).toBe("Класс Доспеха +1 · Спасбросок: Телосложение +1 · фамильное");
-    expect(
-      itemMeta(
-        viewOf({
-          id: "staff",
-          nameRu: "Посох",
-          kind: "gear",
-          bonuses: { spellSaveDc: 2, spellAttackModifier: 2 },
-        }),
-        stats,
-      ),
-    ).toBe("КС спасброска +2 · Атака заклинанием +2");
-    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }), stats)).toBe("");
-  });
-
-  it("деньги открывают свою шторку, а доспех правится у самой вещи", () => {
+  it("деньги правятся своей шторкой, и открывает её строка кошелька", async () => {
+    const user = userEvent.setup();
     const onEditMoney = vi.fn();
     render(<Bag bag={toBagView(createThorne())} {...NOOP} onEditMoney={onEditMoney} />);
 
-    expect(screen.queryByRole("button", { name: "Править: Доспех" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Править: Деньги" })).toBeDefined();
-  });
-
-  it("у экипировки счёт сумки и надетого называется числом всегда, у другой категории — только не единица", () => {
-    const daggers: ItemDefinition = { id: "dagger", nameRu: "Кинжал", kind: "gear" };
-    render(<Bag bag={toBagView(withStock([{ definition: daggers, bag: 2 }]))} {...NOOP} />);
-    expect(screen.getByText("Кинжал · сумка 2 · надето 0")).toBeDefined();
-
-    cleanup();
-    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 2 }]))} {...NOOP} />);
-    expect(screen.getByText("Зелье лечения ×2")).toBeDefined();
-
-    cleanup();
-    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 1 }]))} {...NOOP} />);
-    expect(screen.getByText("Зелье лечения")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Править: Деньги" }));
+    expect(onEditMoney).toHaveBeenCalled();
   });
 });

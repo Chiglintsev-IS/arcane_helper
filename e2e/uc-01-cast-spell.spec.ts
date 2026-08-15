@@ -421,6 +421,12 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
   await scan("лист персонажа");
 
+  // Экипировка — свой экран сверки: защита, надетое со своим глаголом и запас со своим вводом.
+  await switchMode(page, /^Экипировка/);
+  await expect(page.getByRole("heading", { name: "Защита" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Снять один: Плащ защиты" })).toBeVisible();
+  await scan("экипировка");
+
   // Сумка — свой экран сверки: кошелёк, разделы категорий, строки ввода и шторка одной вещи.
   await switchMode(page, /^Сумка/);
   await expect(page.getByRole("heading", { name: "Деньги" })).toBeVisible();
