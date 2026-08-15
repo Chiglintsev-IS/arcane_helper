@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { CommandOf } from "@/contract/commands";
 import type { PreviewOf, Question } from "@/contract/questions";
@@ -35,6 +35,7 @@ export function ArcaneRecoverySheet({
   onCancel: () => void;
 }) {
   const [plan, setPlan] = useState<SlotRecoveryPlan>({});
+  const titleId = useId();
 
   const question: Question = { kind: "arcane_recovery_preview", plan };
   const answer = usePreview(question);
@@ -49,15 +50,22 @@ export function ArcaneRecoverySheet({
     <section
       role="dialog"
       aria-modal="true"
-      aria-label={ARCANE_RECOVERY_LABEL}
+      aria-labelledby={titleId}
       className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
-      <p className="text-sm">
-        Суммарный уровень возвращаемых ячеек:{" "}
-        <span className="font-semibold tabular-nums">
-          {preview?.levelsSpent ?? 0} из {recovery.remaining}
-        </span>
-      </p>
+      <header className="flex flex-col gap-0.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id={titleId} className="text-base font-semibold leading-tight">
+            {ARCANE_RECOVERY_LABEL}
+          </h2>
+          <span className="shrink-0 text-sm font-semibold tabular-nums">
+            {preview?.levelsSpent ?? 0} из {recovery.remaining}
+          </span>
+        </div>
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Суммарный уровень возвращаемых ячеек
+        </p>
+      </header>
 
       {recovery.recoverable.length === 0 ? (
         <p className="text-sm text-slate-600 dark:text-slate-400">
