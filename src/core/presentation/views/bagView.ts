@@ -6,7 +6,8 @@
  *
  * Прибавки едут все, что у вещи записаны: чьей категории они не положены, у того их и нет —
  * владелец вещи снимает их при записи, и повторять его отбор здесь значило бы завести вторую
- * проверку того же правила.
+ * проверку того же правила. Едут они дважды: перечнем по величинам — для правки, и фактами — для
+ * чтения. Чем факт назван, решает лист, а не эта проекция и не тот, кому она едет.
  */
 
 import type { BagView, ItemView } from "@/contract/views";
@@ -16,10 +17,16 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition } from "@/core/domain/items/schema";
+import { bonusFactsOf } from "@/core/domain/sheet/families";
 import { CURRENCIES } from "@/core/domain/shared/schema";
 import { STAT_IDS } from "@/core/domain/shared/stats";
 
 function itemView(item: ItemDefinition, equipment: Equipment): ItemView {
+  const bonuses = STAT_IDS.flatMap((stat) => {
+    const value = item.bonuses?.[stat];
+    return value === undefined ? [] : [{ stat, value }];
+  });
+
   return {
     id: item.id,
     nameRu: item.nameRu,
@@ -27,10 +34,8 @@ function itemView(item: ItemDefinition, equipment: Equipment): ItemView {
     bagCount: equipment.bagCount(item.id),
     wornCount: equipment.wornCount(item.id),
     ...(item.price === undefined ? {} : { price: item.price }),
-    bonuses: STAT_IDS.flatMap((stat) => {
-      const value = item.bonuses?.[stat];
-      return value === undefined ? [] : [{ stat, value }];
-    }),
+    bonuses,
+    bonusFacts: [...bonusFactsOf(bonuses)],
     ...(item.armor === undefined
       ? {}
       : {

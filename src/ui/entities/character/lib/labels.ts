@@ -119,6 +119,21 @@ export function statLabel(stats: readonly StatChoiceView[], stat: string): strin
   return abilityLabel(named.of);
 }
 
+/** Наборы величин, о которых правила говорят целиком; перечень их приезжает от того, кто их свёл. */
+const STAT_FAMILY_LABELS: Readonly<Record<string, string>> = {
+  saves: "Все спасброски",
+};
+
+/**
+ * Подпись семейства величин: стоит рядом с подписью величины и по той же причине.
+ *
+ * Чем факт назван — одной величиной или целым семейством, — решает тот, кто их считает; здесь к его
+ * ответу подбирается слово.
+ */
+export function statFamilyLabel(family: string): string {
+  return labelOf(STAT_FAMILY_LABELS, family);
+}
+
 /** Имя особенности волшебника: его называет и своя шторка, и привал, и предпросмотр смены уровня. */
 export const ARCANE_RECOVERY_LABEL = "Магическое восстановление";
 

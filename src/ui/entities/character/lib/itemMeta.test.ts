@@ -22,7 +22,25 @@ function viewOf(definition: ItemDefinition): ItemView {
   return found;
 }
 
+/** Надетая вещь Торна: она и есть предмет разговора, а её копия рядом отвечала бы за себя. */
+function wornOf(id: string): ItemView {
+  const found = toBagView(createThorne()).items.find((item) => item.id === id);
+  if (found === undefined) throw new Error(`нет вещи ${id}`);
+  return found;
+}
+
 describe("вторая строка вещи", () => {
+  it("однородное приходит одним фактом: спасброски плаща защиты — целое", () => {
+    // Семь чисел плаща — два факта: имя семейства называет владелец, строка его не пересобирает.
+    expect(itemMeta(wornOf("cloak-of-protection"), stats)).toEqual({
+      facts: [
+        { labelRu: "Класс Доспеха", valueRu: "+1" },
+        { labelRu: "Все спасброски", valueRu: "+1" },
+      ],
+      note: undefined,
+    });
+  });
+
   it("цена и прибавки — неделимые факты второй строки, заметка — свободный текст", () => {
     // Прибавки приезжают теми, что действуют: чьей категории они не положены, у того их и нет —
     // это стережёт владелец вещи, и второй такой проверки здесь не заводится.
