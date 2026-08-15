@@ -40,8 +40,13 @@ export function ItemRow({
         className="min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1 text-left hover:bg-slate-100 dark:hover:bg-slate-900"
       >
         <span className="block text-sm">{item.nameRu}</span>
+        {/*
+         * Подробности — две строки: у вещи, которая двигает все шесть спасбросков, перечень
+         * занимает треть экрана и отодвигает за край соседние вещи. Целиком вещь показывает своя
+         * шторка, и открывает её эта же строка.
+         */}
         {meta === "" ? null : (
-          <span className="block text-xs leading-snug text-slate-500 dark:text-slate-400">
+          <span className="line-clamp-2 text-xs leading-snug text-slate-500 dark:text-slate-400">
             {meta}
           </span>
         )}
