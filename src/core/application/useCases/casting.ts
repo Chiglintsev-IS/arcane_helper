@@ -29,6 +29,7 @@ import {
   type PaymentChoice,
   type TurnResource,
 } from "@/core/application/casting/availability";
+import { materialOf } from "@/core/application/casting/material";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 import { deriveTurnEconomy, inFight } from "./turn";
 
@@ -96,6 +97,24 @@ function applyRune(root: Character, request: CastRequest): Character {
   return spent.withVitality(
     spent.vitality.grantTemporary(lifeRuneTemporaryHitPoints(request.payment.slotLevel)),
   );
+}
+
+/**
+ * Расходуемый компонент сгорает применением, и журнал называет сгоревшее: молча уменьшившийся запас
+ * читался бы за столом как ошибка приложения.
+ *
+ * Пустой сумке гореть нечем. Мастер вправе разрешить сотворение без компонента — вещи из этого
+ * разрешения не берётся, и отказывать после разрешения приложению не за что.
+ */
+function burnMaterial(root: Character, spell: Spell): { root: Character; note: string } {
+  const material = materialOf(spell.components);
+  if (material === undefined || !material.consumed || !root.equipment.carries(material.id)) {
+    return { root, note: "" };
+  }
+  return {
+    root: root.withEquipment(root.equipment.adjustBagCount(material.id, -1)),
+    note: ` · компонент израсходован: ${material.nameRu}`,
+  };
 }
 
 /** Что руна добавит к строке журнала: применённая руна не должна менять хиты молча. */
@@ -187,6 +206,9 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
   root = applyPayment(root, request);
   root = applyRune(root, request);
 
+  const burned = burnMaterial(root, spell);
+  root = burned.root;
+
   const effect = buildEffect(request, occasion);
   /*
  * Раундовый эффект вне схватки не успевает начаться: раундов нет, значит эффект истёк бы в тот же
@@ -236,7 +258,7 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
     root,
     {
       kind: spell.castingTime.type === "reaction" ? "reaction_cast" : "spell_cast",
-      summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}${hitDiceNote}${expiredNote}`,
+      summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}${burned.note}${hitDiceNote}${expiredNote}`,
       spellId: spell.id,
       slotLevel: level,
       // Вне схватки ход не отслеживается, значит и тратить нечего: записанное действие

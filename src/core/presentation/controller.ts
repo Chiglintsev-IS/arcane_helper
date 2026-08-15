@@ -241,7 +241,7 @@ export function applyCommand(
     case "toggle_preparation":
       return changed(togglePreparation(session, spellOf(spellCatalog, command.spellId), occasion));
     case "toggle_material":
-      return changed(toggleMaterial(session, command.spellId, occasion));
+      return changed(toggleMaterial(session, spellOf(spellCatalog, command.spellId), occasion));
     case "set_spell_note":
       return changed(setSpellNote(session, command.spellId, command.note));
 

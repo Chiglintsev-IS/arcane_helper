@@ -52,14 +52,10 @@ const equipmentSchema = z
     /**
      * Сведения о компонентах. Необязательные: отсутствие записи — не пустая сумка, а незнание,
      * и вердикта о компонентах в этом случае нет вовсе.
+     *
+     * Самих компонентов здесь нет: материал — вещь, и лежит он в сумке своим запасом.
      */
-    components: z
-      .object({
-        componentPouch: z.boolean(),
-        /** Идентификаторы заклинаний, чей дорогой компонент есть в сумке. */
-        materialsForSpellIds: z.array(nonEmpty),
-      })
-      .optional(),
+    components: z.object({ componentPouch: z.boolean() }).optional(),
   })
   .default({
     bag: [],

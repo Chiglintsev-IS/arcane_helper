@@ -38,7 +38,7 @@ function applied(
  */
 export function addItem(
   session: Session,
-  item: { nameRu: string; kind: ItemKind },
+  item: { nameRu: string; kind: ItemKind; price?: ItemDefinition["price"] },
   occasion: Occasion,
 ): Session {
   const id = Items.idFromName(item.nameRu);

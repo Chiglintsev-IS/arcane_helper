@@ -11,7 +11,8 @@ import {
   type LongCastingUnit,
 } from "@/shared/language";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
-import { CANTRIP_LEVEL, needsOwnComponent } from "@/core/domain/catalog/spell";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
+import { materialCoveredByFocus, materialOf } from "@/core/application/casting/material";
 
 /** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
 export type TurnResource = "action" | "bonus_action" | "reaction";
@@ -83,7 +84,6 @@ type AvailabilityWarning = {
 export type Availability = {
   available: boolean;
   warnings: AvailabilityWarning[];
-  componentReminders: string[];
 };
 
 /** Полученные согласия. Отсутствующее согласие оставляет предупреждение в силе. */
@@ -284,51 +284,53 @@ function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
   ];
 }
 
-/** Без записи о снаряжении вердикта нет: состояние могло прийти из сборки, которая про него не знала. */
+/**
+ * Материал спрашивают у сумки: он вещь, и наличие его — её запас.
+ *
+ * Без записи о снаряжении вердикта нет: состояние могло прийти из сборки, которая про компоненты не
+ * знала.
+ */
 function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character } = input;
-  const { equipment, items } = Character.of(character);
-  const { components } = spell;
-  if (!equipment.known || !components.material) return [];
+  const { equipment } = Character.of(character);
+  const material = materialOf(spell.components);
+  if (!equipment.known || material === undefined) return [];
+  if (materialCoveredByFocus(spell.components, character)) return [];
+  if (equipment.carries(material.id)) return [];
 
-  if (needsOwnComponent(components)) {
-    if (equipment.hasMaterialFor(spell.id)) return [];
-    const cost =
-      components.costGp === undefined ? "" : ` (${components.costGp} ${CURRENCY_ABBREVIATIONS.gold})`;
-    return [
-      {
-        code: "no_component",
-        reasonRu: `Нет компонента${cost}: ${components.materialText ?? "материальный компонент"}`,
-        enforcement: "advisory",
-      },
-    ];
-  }
-
-  if (equipment.replacesFreeComponents(items)) return [];
   return [
     {
       code: "no_component",
-      reasonRu: "Нет ни фокусировки, ни мешочка с компонентами",
+      reasonRu: `Нет компонента: ${material.nameRu}`,
       enforcement: "advisory",
     },
   ];
 }
 
-/** Перечень требований словами, а не вердикт: «В, С, М» за столом не читается. */
-export function componentRequirements(components: Spell["components"]): string[] {
+/**
+ * Перечень требований словами, а не вердикт: «В, С, М» за столом не читается.
+ *
+ * Закрытый компонент не называется вовсе: он ничего не требует, а строка о нём в момент действия
+ * заняла бы место того, что делать всё-таки надо.
+ */
+export function componentRequirements(
+  components: Spell["components"],
+  materialCovered: boolean,
+): string[] {
   const requirements: string[] = [];
 
   if (components.verbal) requirements.push("Произнести вслух");
   if (components.somatic) requirements.push("Жест свободной рукой");
 
-  if (components.material && components.materialText !== undefined) {
+  const material = materialOf(components);
+  if (material !== undefined && !materialCovered) {
     const notes: string[] = [];
     if (components.costGp !== undefined) {
       notes.push(`${components.costGp} ${CURRENCY_ABBREVIATIONS.gold}, фокусировка не заменяет`);
     }
-    if (components.consumed === true) notes.push("расходуется");
+    if (material.consumed) notes.push("расходуется");
     const suffix = notes.length === 0 ? "" : ` — ${notes.join(", ")}`;
-    requirements.push(`Компонент: ${components.materialText}${suffix}`);
+    requirements.push(`Компонент: ${material.nameRu}${suffix}`);
   }
 
   return requirements;
@@ -356,11 +358,7 @@ export function checkAvailability(input: AvailabilityInput): Availability {
     ...checkConcentration(input),
   ];
 
-  return {
-    available: warnings.length === 0,
-    warnings,
-    componentReminders: componentRequirements(input.spell.components),
-  };
+  return { available: warnings.length === 0, warnings };
 }
 
 /**

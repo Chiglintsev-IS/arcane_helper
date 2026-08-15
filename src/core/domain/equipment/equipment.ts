@@ -136,28 +136,14 @@ export class Equipment {
     );
   }
 
-  /** Лежит ли в сумке дорогой компонент конкретного заклинания: фокусировка его не заменяет. */
-  hasMaterialFor(spellId: string): boolean {
-    return this.data.components?.materialsForSpellIds.includes(spellId) === true;
-  }
-
-  toggleMaterial(spellId: string): { equipment: Equipment; owned: boolean } {
-    const { components } = this.data;
-    if (components === undefined) {
-      throw new DomainError("У персонажа не заведено снаряжение");
-    }
-    const owned = components.materialsForSpellIds.includes(spellId);
-    return {
-      equipment: this.with({
-        components: {
-          ...components,
-          materialsForSpellIds: owned
-            ? components.materialsForSpellIds.filter((id) => id !== spellId)
-            : [...components.materialsForSpellIds, spellId],
-        },
-      }),
-      owned: !owned,
-    };
+  /**
+   * Есть ли вещь в сумке хоть одна.
+   *
+   * Материальный компонент спрашивают этим же вопросом: он вещь, и второй отметки о нём не бывает —
+   * отметка пережила бы его расход и разошлась бы с сумкой молча.
+   */
+  carries(itemId: string): boolean {
+    return this.bagCount(itemId) > 0;
   }
 
   /**

@@ -8,14 +8,17 @@ import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
 import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { Character } from "@/core/domain/assembly/character";
 import {
   ACTION_SPENT_MESSAGES,
   ALL_TURN_RESOURCES,
   checkAvailability,
+  componentRequirements,
   exchangeWarnings,
   withoutConsent,
   type Availability,
 } from "@/core/application/casting/availability";
+import { materialCoveredByFocus, materialOf } from "@/core/application/casting/material";
 
 /** Вход проверки и одно её предупреждение: формы называет подпись, отдельных имён им не нужно. */
 type AvailabilityInput = Parameters<typeof checkAvailability>[0];
@@ -349,9 +352,13 @@ describe("checkAvailability: концентрация (FR-030, FR-081)", () => {
   });
 });
 
-describe("checkAvailability: компоненты (FR-030, OQ-06)", () => {
+describe("перечень требований (FR-030)", () => {
+  const requirements = (target: Spell, character: CharacterState = createThorne()) =>
+    componentRequirements(target.components, materialCoveredByFocus(target.components, character));
+
   it("перечисляет действия словами, а не аббревиатурой «В, С, М»", () => {
-    expect(check({ spell: mageArmor }).componentReminders).toEqual([
+    // Фокусировки нет, поэтому кожа «Доспехов мага» названа: закрытая, она молчала бы.
+    expect(requirements(mageArmor, withoutSpellcastingFocus(createThorne()))).toEqual([
       "Произнести вслух",
       "Жест свободной рукой",
       "Компонент: кусок обработанной кожи",
@@ -359,30 +366,16 @@ describe("checkAvailability: компоненты (FR-030, OQ-06)", () => {
   });
 
   it("предупреждает, что фокусировка не заменяет компонент со стоимостью", () => {
-    const reminders = check({
-      spell: identify,
-      mode: "ritual",
-      payment: { kind: "none" },
-    }).componentReminders;
     // Жемчужина «Опознания» стоит 100 зм и фокусировкой не заменяется, но заклинанием не
     // расходуется: в описании этого не сказано, а по общему правилу материал тратится только
     // тогда, когда это сказано прямо. Расходуемый компонент проверяется следующим тестом.
-    expect(reminders).toContain(
+    expect(requirements(identify)).toContain(
       "Компонент: жемчужина стоимостью не менее 100 зм — 100 зм, фокусировка не заменяет",
     );
   });
 
   it("отмечает расходуемый компонент", () => {
-    const consuming: Spell = {
-      ...identify,
-      components: { ...identify.components, consumed: true },
-    };
-    const reminders = check({
-      spell: consuming,
-      mode: "ritual",
-      payment: { kind: "none" },
-    }).componentReminders;
-    expect(reminders.at(-1)).toMatch(/расходуется/);
+    expect(requirements(findFamiliar).at(-1)).toMatch(/расходуется/);
   });
 
   it("заклинание без компонентов напоминаний не порождает", () => {
@@ -390,7 +383,7 @@ describe("checkAvailability: компоненты (FR-030, OQ-06)", () => {
       ...mageArmor,
       components: { verbal: false, somatic: false, material: false },
     };
-    expect(check({ spell: silent }).componentReminders).toEqual([]);
+    expect(requirements(silent)).toEqual([]);
   });
 });
 
@@ -421,104 +414,52 @@ describe("checkAvailability: несколько нарушений сразу", 
 });
 
 describe("наличие компонентов (FR-030, OQ-06)", () => {
-  const identify = spell("identify");
-  const mageArmor = spell("mage-armor");
-
-  function withEquipment(
-    components: NonNullable<CharacterState["equipment"]["components"]>,
-  ): CharacterState {
-    const base = createThorne();
-    return { ...base, equipment: { ...base.equipment, components } };
+  /** Компонент куплен и лежит в сумке: он вещь и попадает туда как всякая вещь. */
+  function withMaterialInBag(character: CharacterState, forSpell: Spell): CharacterState {
+    const material = materialOf(forSpell.components);
+    if (material === undefined) throw new Error(`«${forSpell.nameRu}» материала не требует`);
+    const root = Character.of(character);
+    return root
+      .withItems(root.items.addDefinition(material))
+      .withEquipment(root.equipment.adjustBagCount(material.id, 1))
+      .toState();
   }
 
-  it("дорогого компонента нет в сумке — предупреждение с ценой", () => {
-    const warnings = checkAvailability({
-      spell: identify,
-      character: createThorne(),
-      turn: ALL_TURN_RESOURCES,
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    }).warnings;
+  const missingComponent = (target: Spell, character: CharacterState = createThorne()) =>
+    check({ spell: target, character }).warnings.find(
+      (warning) => warning.code === "no_component",
+    );
 
-    const missing = warnings.find((warning) => warning.code === "no_component");
-    expect(missing?.reasonRu).toContain("100 зм");
+  it("дорогой компонент проверяется запасом в сумке (FR-268)", () => {
+    const missing = missingComponent(identify);
+    expect(missing?.reasonRu).toContain("жемчужина");
     // Проходимо: мастер вправе разрешить, а игрок — вспомнить, что жемчужина всё-таки есть.
     expect(missing?.enforcement).toBe("advisory");
+
+    expect(missingComponent(identify, withMaterialInBag(createThorne(), identify))).toBeUndefined();
   });
 
-  it("купленный компонент предупреждения не даёт", () => {
-    const bought = withEquipment({ componentPouch: false, materialsForSpellIds: ["identify"] });
-    const warnings = checkAvailability({
-      spell: identify,
-      character: bought,
-      turn: ALL_TURN_RESOURCES,
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    }).warnings;
-
-    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
+  it("закрытый фокусировкой компонент не проверяется и требованием не называется (FR-268)", () => {
+    const covered = mageArmor.components;
+    expect(missingComponent(mageArmor)).toBeUndefined();
+    expect(componentRequirements(covered, materialCoveredByFocus(covered, createThorne()))).toEqual([
+      "Произнести вслух",
+      "Жест свободной рукой",
+    ]);
   });
 
-  it("компонент без стоимости закрывает фокусировка", () => {
-    const warnings = checkAvailability({
-      spell: mageArmor,
-      character: createThorne(),
-      turn: ALL_TURN_RESOURCES,
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    }).warnings;
-
-    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
-  });
-
-  it("без фокусировки и мешочка не закрывает ничего", () => {
+  it("без фокусировки и мешочка компонент спрашивают у сумки", () => {
     const empty = withoutSpellcastingFocus(createThorne());
-    const warnings = checkAvailability({
-      spell: mageArmor,
-      character: empty,
-      turn: ALL_TURN_RESOURCES,
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    }).warnings;
 
-    expect(warnings.find((warning) => warning.code === "no_component")?.reasonRu).toContain(
-      "ни мешочка",
-    );
-  });
-
-  it("расходуемый компонент без цены и без описания тоже называется", () => {
-    // Такое приходит импортом чужой книги: цена не указана, текста нет — но расходуемое
-    // фокусировка всё равно не заменяет, и молчать об этом нельзя.
-    const imported: Spell = {
-      ...identify,
-      components: { verbal: true, somatic: true, material: true, consumed: true },
-    };
-    const warnings = checkAvailability({
-      spell: imported,
-      character: createThorne(),
-      turn: ALL_TURN_RESOURCES,
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    }).warnings;
-
-    expect(warnings.find((warning) => warning.code === "no_component")?.reasonRu).toBe(
-      "Нет компонента: материальный компонент",
-    );
+    expect(missingComponent(mageArmor, empty)?.reasonRu).toContain("кусок обработанной кожи");
+    expect(missingComponent(mageArmor, withMaterialInBag(empty, mageArmor))).toBeUndefined();
   });
 
   it("состоянию без записи о снаряжении вердикта не выдумывает", () => {
     const base = createThorne();
     const { components: _none, ...withoutComponents } = base.equipment;
-    const unknown = { ...base, equipment: withoutComponents };
-    const warnings = checkAvailability({
-      spell: identify,
-      character: unknown,
-      turn: ALL_TURN_RESOURCES,
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    }).warnings;
 
-    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
+    expect(missingComponent(identify, { ...base, equipment: withoutComponents })).toBeUndefined();
   });
 });
 

@@ -15,11 +15,13 @@ import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
+import { Items } from "@/core/domain/items/items";
 import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/items/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { ABILITIES, isStatId, saveStatId, type StatId } from "@/core/domain/shared/stats";
 import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
+import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
 
 const UNKNOWN_ABILITY_SCORE = 10;
 
@@ -335,6 +337,71 @@ function migrateSpellcastingFocus(state: unknown): unknown {
 }
 
 /**
+ * Вещи, которыми прежние сохранения называли купленные дорогие компоненты, — по заклинанию.
+ *
+ * Заморожены на дате приведения: слова карточки вправе меняться, а прошлые сохранения — нет.
+ * Каталога у приведения нет, спросить карточку негде, и потому названия стоят здесь целиком.
+ */
+const LEGACY_BOUGHT_MATERIALS: Record<
+  string,
+  { nameRu: string; kind: string; price: { amount: number; currency: string } }
+> = {
+  identify: {
+    nameRu: `жемчужина стоимостью не менее 100 ${CURRENCY_ABBREVIATIONS.gold}`,
+    kind: "other",
+    price: { amount: 100, currency: "gold" },
+  },
+  "find-familiar": {
+    nameRu:
+      `уголь, благовония и травы стоимостью 10 ${CURRENCY_ABBREVIATIONS.gold},` +
+      " сжигаемые в огне в латунной жаровне",
+    kind: "consumable",
+    price: { amount: 10, currency: "gold" },
+  },
+};
+
+/**
+ * Отметка «компонент куплен» становится вещью в сумке: отметкой компонент нельзя было ни посчитать,
+ * ни потратить, ни купить наравне с прочими вещами.
+ *
+ * Заклинание, которого замороженный список не знает, вещи не получает: назвать её могут только слова
+ * его карточки, а выдуманное имя осталось бы в сумке навсегда и с карточкой не встретилось.
+ *
+ * Снимку отмены это приведение не достаётся — по той же причине, по которой не достаётся отметка
+ * фокусировки: снимок возвращает ровно те поля, которые в нём лежат, и дописанный в него список
+ * вещей стёр бы отменой все прочие заведённые.
+ */
+function migrateBoughtMaterials(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const equipment = fieldsOf(fields.equipment);
+  const { materialsForSpellIds, ...rest } = fieldsOf(equipment.components);
+  // Порченую запись приведение не разбирает: её отвергает объявление снаряжения.
+  if (!Array.isArray(materialsForSpellIds) || !Array.isArray(equipment.bag)) return state;
+
+  const bought = materialsForSpellIds.flatMap((spellId: unknown) => {
+    const material = typeof spellId === "string" ? LEGACY_BOUGHT_MATERIALS[spellId] : undefined;
+    return material === undefined ? [] : [{ id: Items.idFromName(material.nameRu), ...material }];
+  });
+
+  const definitions: unknown[] = Array.isArray(fields.itemDefinitions)
+    ? [...fields.itemDefinitions]
+    : [];
+  const bag: unknown[] = [...equipment.bag];
+  for (const material of bought) {
+    if (!definitions.some((item) => fieldsOf(item).id === material.id)) definitions.push(material);
+    if (!bag.some((entry) => fieldsOf(entry).itemId === material.id)) {
+      bag.push({ itemId: material.id, count: 1 });
+    }
+  }
+
+  return {
+    ...fields,
+    itemDefinitions: definitions,
+    equipment: { ...equipment, components: rest, bag },
+  };
+}
+
+/**
  * Имя, которым прежние версии опознавали поправку к КД среди активных эффектов. Заморожено на дате
  * приведения: нынешняя подпись поправки вправе меняться, а прошлые сохранения — нет.
  */
@@ -573,17 +640,19 @@ export function migrateUndoPatch(patch: unknown): unknown {
 
 export function migrateCharacterState(raw: unknown): unknown {
   return migrateFocusItems(
-    migrateSpellcastingFocus(
-      migrateEffectShapes(
-        migrateAdjustmentMarker(
-          dropHandEnteredNumbers(
-            migrateItemShapes(
-              migrateItemsSplit(
-                migrateArmorBase(
-                  migrateMiscBonuses(
-                    migrateItemCategories(
-                      migrateItemShapes(
-                        migrateArcaneRecovery(migrateFireSuppression(migrateShape(raw))),
+    migrateBoughtMaterials(
+      migrateSpellcastingFocus(
+        migrateEffectShapes(
+          migrateAdjustmentMarker(
+            dropHandEnteredNumbers(
+              migrateItemShapes(
+                migrateItemsSplit(
+                  migrateArmorBase(
+                    migrateMiscBonuses(
+                      migrateItemCategories(
+                        migrateItemShapes(
+                          migrateArcaneRecovery(migrateFireSuppression(migrateShape(raw))),
+                        ),
                       ),
                     ),
                   ),

@@ -4,6 +4,9 @@
 
 import { Character } from "@/core/domain/assembly/character";
 import type { Spell } from "@/core/domain/catalog/spell";
+import { DomainError } from "@/core/domain/shared/errors";
+import { materialOf } from "@/core/application/casting/material";
+import { addItem, adjustBagCount } from "@/core/application/useCases/equipment";
 import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
 
 /**
@@ -33,24 +36,19 @@ export function togglePreparation(session: Session, spell: Spell, occasion: Occa
 }
 
 /**
- * Отметить дорогой компонент купленным или потраченным.
+ * Купить материальный компонент или потратить купленный.
  *
- * Списка предметов у приложения нет: есть ровно то, что нужно проверке доступности, — лежит ли в
- * сумке компонент конкретного заклинания.
+ * Компонент — вещь, поэтому и покупка его, и трата — обычные правки сумки: своих слов у них нет, и
+ * второй способ положить вещь в сумку разошёлся бы с первым на первой же правке.
  */
-export function toggleMaterial(session: Session, spellId: string, occasion: Occasion): Session {
-  const root = Character.of(session.character);
-  const { equipment, owned } = root.equipment.toggleMaterial(spellId);
-  return commit(
-    session,
-    root.withEquipment(equipment),
-    {
-      kind: "manual_adjustment",
-      summaryRu: owned ? `Компонент куплен: ${spellId}` : `Компонент израсходован: ${spellId}`,
-      spellId,
-    },
-    occasion,
-  );
+export function toggleMaterial(session: Session, spell: Spell, occasion: Occasion): Session {
+  const material = materialOf(spell.components);
+  if (material === undefined) {
+    throw new DomainError(`«${spell.nameRu}» материального компонента не требует`);
+  }
+  return Character.of(session.character).equipment.carries(material.id)
+    ? adjustBagCount(session, material.id, -1, occasion)
+    : addItem(session, material, occasion);
 }
 
 /**

@@ -186,7 +186,7 @@ const RAW: unknown = {
       { itemId: "robe", count: 1 },
       { itemId: "cloak-of-protection", count: 1 },
     ],
-    components: { componentPouch: false, materialsForSpellIds: [] },
+    components: { componentPouch: false },
   },
   // Одна кость за уровень, размер по классу: волшебник — d6. Расовые «11 очков здоровья»
   // на счёт костей не влияют: это надбавка к максимуму, а не замена кости.

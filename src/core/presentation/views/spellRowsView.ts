@@ -30,6 +30,7 @@ import {
   checkAvailability,
   componentRequirements,
 } from "@/core/application/casting/availability";
+import { materialCoveredByFocus, materialOf } from "@/core/application/casting/material";
 import {
   castPlans,
   castableInSituation,
@@ -223,6 +224,8 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
   const announcement = renderAnnouncement(spell, announcementContext);
   const armorClass = armorClassIfCast(spell, character);
   const note = character.spellNotes[spell.id];
+  const material = materialOf(spell.components);
+  const materialCovered = materialCoveredByFocus(spell.components, character);
 
   return {
     id: spell.id,
@@ -255,7 +258,8 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     cantrip: spell.level === CANTRIP_LEVEL,
     spendsHitDice: spell.hitDiceCost !== undefined,
     ownComponentRequired: needsOwnComponent(spell.components),
-    ownComponentCarried: Character.of(character).equipment.hasMaterialFor(spell.id),
+    ownComponentCarried:
+      material !== undefined && Character.of(character).equipment.carries(material.id),
     role: combatRoleOf(spell),
 
     slotPrice: slotPriceOf(spell, turn.inFight),
@@ -283,7 +287,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
       castOptionView(first, plans, spell, character),
       ...rest.map((plan) => castOptionView(plan, plans, spell, character)),
     ],
-    componentReminders: componentRequirements(spell.components),
+    componentReminders: componentRequirements(spell.components, materialCovered),
     instructions: castInstructions(spell, announcementContext),
     announcement: {
       text: announcement.text,

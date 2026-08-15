@@ -214,9 +214,6 @@ describe("снаряжение", () => {
 
     expect(gear().known).toBe(true);
     expect(Equipment.of({ ...base, equipment: withoutComponents }).known).toBe(false);
-    expect(() =>
-      Equipment.of({ ...base, equipment: withoutComponents }).toggleMaterial("identify"),
-    ).toThrow(DomainError);
   });
 
   it("надетая фокусировка закрывает компоненты без стоимости, лежащая в сумке — нет", () => {
@@ -230,19 +227,18 @@ describe("снаряжение", () => {
 
   it("мешочек закрывает компоненты и без фокусировки", () => {
     const stowed = withoutSpellcastingFocus(createThorne());
-    const components = { componentPouch: true, materialsForSpellIds: [] };
+    const components = { componentPouch: true };
     const pouch = Equipment.of({ ...stowed, equipment: { ...stowed.equipment, components } });
 
     expect(pouch.replacesFreeComponents(Items.of(stowed))).toBe(true);
   });
 
-  it("дорогой компонент ищется поимённо: фокусировка его не заменяет", () => {
-    expect(gear().hasMaterialFor("identify")).toBe(false);
+  it("вещь есть у того, у кого она в сумке: ноль — не наличие", () => {
+    expect(gear().carries("rope")).toBe(false);
 
-    const bought = gear().toggleMaterial("identify");
-    expect(bought.owned).toBe(true);
-    expect(bought.equipment.hasMaterialFor("identify")).toBe(true);
-    expect(bought.equipment.toggleMaterial("identify").owned).toBe(false);
+    const bought = gear().adjustBagCount("rope", 1);
+    expect(bought.carries("rope")).toBe(true);
+    expect(bought.adjustBagCount("rope", -1).carries("rope")).toBe(false);
   });
 });
 

@@ -8,6 +8,7 @@ import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
+import { Items } from "@/core/domain/items/items";
 import { migrateCharacterState, migrateUndoPatch } from "./migration";
 import { characterStateSchema } from "./state";
 
@@ -123,10 +124,12 @@ describe("приведение состояния версии 1", () => {
     expect(Character.of(state).sheet.value("spellSaveDc")).toBe(15);
     // Владений спасбросками версия 2 не знала: Мудрость 12 (+1) и ничего сверх.
     expect(Character.of(state).sheet.value(saveStatId("wisdom"))).toBe(1);
-    expect(state.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
-    expect(state.equipment.bag).toEqual([]);
-    // Вещей у версии 2 не было ни одной, кроме той, которой она называла фокусировку отметкой.
-    expect(state.itemDefinitions.map((item) => item.nameRu)).toEqual(["Магическая фокусировка"]);
+    // Вещей у версии 2 не было ни одной, кроме той, которой она называла фокусировку отметкой, и
+    // той, которой она называла купленный компонент.
+    expect(state.itemDefinitions.map((item) => item.nameRu)).toEqual([
+      "Магическая фокусировка",
+      "жемчужина стоимостью не менее 100 зм",
+    ]);
     expect(state.equipment.worn.map((entry) => entry.itemId)).toEqual(["spellcasting-focus"]);
   });
 
@@ -787,13 +790,19 @@ describe("сохранение каждой версии открывается 
   it("рода вещей версии 3 становятся категориями, надетость вне экипировки снимается", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_THREE));
     // Третья вещь — фокусировка: отметка версии 3 переехала на неё, и она единственная надета.
+    // Четвёртая — жемчужина: ею версия 3 называла купленный компонент «Опознания».
     expect(state.itemDefinitions.map((item) => item.kind)).toEqual([
       "consumable",
       "other",
       "gear",
+      "other",
     ]);
     // Верёвка была отмечена надетой в старой форме, но не экипировка — её запас переходит в сумку.
-    expect(state.equipment.bag.map((entry) => entry.itemId)).toEqual(["healing-potion", "rope"]);
+    expect(state.equipment.bag.map((entry) => entry.itemId)).toEqual([
+      "healing-potion",
+      "rope",
+      Items.idFromName("жемчужина стоимостью не менее 100 зм"),
+    ]);
     expect(state.equipment.worn.map((entry) => entry.itemId)).toEqual(["spellcasting-focus"]);
   });
 });
@@ -888,5 +897,86 @@ describe("подавление огнём прежней формы", () => {
     expect(fieldsOf(fieldsOf(patch).suppression).firedUponTurnStarts).toBe(
       FIRE_SUPPRESSION_TURN_STARTS,
     );
+  });
+});
+
+describe("отметка купленного компонента становится вещью", () => {
+  const LIST = "materialsForSpellIds";
+
+  /** Сохранение, где дорогой компонент был отмечен купленным при заклинании. */
+  const withBought = (spellIds: unknown) => {
+    const thorne = createThorne();
+    return {
+      ...thorne,
+      equipment: {
+        ...thorne.equipment,
+        components: { componentPouch: false, [LIST]: spellIds },
+      },
+    };
+  };
+
+  const componentsOf = (save: unknown): Record<string, unknown> =>
+    fieldsOf(fieldsOf(fieldsOf(migrateCharacterState(save)).equipment).components);
+
+  it("купленный компонент прежнего сохранения становится вещью в сумке", () => {
+    const state = characterStateSchema.parse(migrateCharacterState(withBought(["identify"])));
+    const pearl = state.itemDefinitions.find((item) => item.nameRu.startsWith("жемчужина"));
+
+    expect(pearl).toMatchObject({ kind: "other", price: { amount: 100, currency: "gold" } });
+    expect(state.equipment.bag).toContainEqual({ itemId: pearl?.id, count: 1 });
+    // Отметки при заклинании после приведения не остаётся: вторым способом сказать то же самое
+    // она разошлась бы с сумкой на первом же расходе.
+    expect(componentsOf(withBought(["identify"]))).not.toHaveProperty(LIST);
+  });
+
+  it("пустой список вещей не заводит, а сумку Торна оставляет как была", () => {
+    const state = characterStateSchema.parse(migrateCharacterState(withBought([])));
+
+    expect(state.itemDefinitions).toEqual(createThorne().itemDefinitions);
+    expect(state.equipment.bag).toEqual(createThorne().equipment.bag);
+    expect(componentsOf(withBought([]))).not.toHaveProperty(LIST);
+  });
+
+  it("незнакомое заклинание вещи не получает: назвать её нечем", () => {
+    // Каталога у приведения нет, а имя вещи знают только слова карточки: выдуманное осталось бы в
+    // сумке навсегда и с карточкой не встретилось бы никогда.
+    const state = characterStateSchema.parse(migrateCharacterState(withBought(["fireball", 7])));
+
+    expect(state.itemDefinitions).toEqual(createThorne().itemDefinitions);
+    expect(state.equipment.bag).toEqual(createThorne().equipment.bag);
+  });
+
+  it("уже заведённая вещь второй не становится", () => {
+    // Сохранение, где список пережил приведение: вещь у компонента уже есть, и вторая её запись
+    // означала бы вторую жемчужину из ниоткуда.
+    const once = fieldsOf(migrateCharacterState(withBought(["identify"])));
+    const again = characterStateSchema.parse(
+      migrateCharacterState({
+        ...once,
+        equipment: {
+          ...fieldsOf(once.equipment),
+          components: { componentPouch: false, [LIST]: ["identify"] },
+        },
+      }),
+    );
+    const pearls = (name: string) => name.startsWith("жемчужина");
+
+    expect(again.itemDefinitions.filter((item) => pearls(item.nameRu))).toHaveLength(1);
+    expect(again.equipment.bag.filter((entry) => pearls(entry.itemId))).toHaveLength(1);
+  });
+
+  it("порченую запись приведение не разбирает: отвечает за неё объявление", () => {
+    // Ни отметка не списком, ни сумка не списком приведению не поддаются: починенная наугад, они
+    // прошли бы объявление, и порча стала бы состоянием персонажа.
+    const brokenList = withBought("identify");
+    expect(migrateCharacterState(brokenList)).toBe(brokenList);
+
+    const thorne = createThorne();
+    const brokenBag = {
+      ...thorne,
+      equipment: { bag: "порча", components: { componentPouch: false, [LIST]: ["identify"] } },
+    };
+    expect(migrateCharacterState(brokenBag)).toBe(brokenBag);
+    expect(() => characterStateSchema.parse(migrateCharacterState(brokenBag))).toThrow();
   });
 });

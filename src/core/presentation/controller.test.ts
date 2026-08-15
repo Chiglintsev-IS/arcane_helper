@@ -201,10 +201,12 @@ describe("книга", () => {
     expect(live.session.character.preparedSpellIds).not.toContain("mage-armor");
   });
 
-  it("отметка компонента переключается", () => {
+  it("компонент кладётся в сумку вещью", () => {
     const live = run([{ kind: "toggle_material", spellId: "identify" }]);
 
-    expect(live.session.character.equipment.components?.materialsForSpellIds).toContain("identify");
+    expect(live.session.character.itemDefinitions.map((item) => item.nameRu)).toContain(
+      "жемчужина стоимостью не менее 100 зм",
+    );
   });
 
   it("заметка к заклинанию сохраняется и журнала не касается", () => {

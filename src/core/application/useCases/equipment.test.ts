@@ -187,7 +187,7 @@ describe("правка снаряжения", () => {
     // Вещь ушла в сумку — и вместе с ней вердикт «компонент закрыт»: второй записи о фокусировке
     // нет, поэтому пережить снятие ему нечем.
     const stowed = adjustWornCount(worn, FOCUS_ID, -1, occasion);
-    expect(componentReasons(stowed.character)[0]).toContain("ни мешочка");
+    expect(componentReasons(stowed.character)[0]).toContain("кусок обработанной кожи");
 
     expect(componentReasons(undoLast(stowed).character)).toEqual([]);
   });

@@ -15,6 +15,7 @@ import { saveStatId } from "@/core/domain/shared/stats";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
 import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
+import { materialCoveredByFocus } from "@/core/application/casting/material";
 import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/shared/language";
 import {
   hitPointCost,
@@ -198,7 +199,9 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
   const { character } = context;
   const totals = Character.of(character).sheet;
   const level = castLevel(spell, context.payment);
-  const steps: string[] = [...componentRequirements(spell.components)];
+  const steps: string[] = [
+    ...componentRequirements(spell.components, materialCoveredByFocus(spell.components, character)),
+  ];
 
   if (context.payment.kind === "slot") {
     steps.push(`Спишется ячейка ${level} уровня`);

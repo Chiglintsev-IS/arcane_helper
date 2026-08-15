@@ -1,4 +1,5 @@
 import { Character } from "@/core/domain/assembly/character";
+import { Items } from "@/core/domain/items/items";
 import { saveStatId } from "@/core/domain/shared/stats";
 import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
 import {
@@ -1870,28 +1871,56 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   });
 });
 
-describe("дорогие компоненты (FR-030)", () => {
-  it("отмечается купленным и обратно израсходованным", () => {
-    const bought = toggleMaterial(session, "identify", occasion);
-    expect(bought.character.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
-    expect(bought.journal.at(-1)?.summaryRu).toBe("Компонент куплен: identify");
+describe("материальные компоненты (FR-030, FR-268)", () => {
+  const pearl = "жемчужина стоимостью не менее 100 зм";
+  const ashes = "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне";
 
-    const spent = toggleMaterial(bought, "identify", occasion);
-    expect(spent.character.equipment.components?.materialsForSpellIds).toEqual([]);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Компонент израсходован: identify");
+  /** Сколько компонента лежит в сумке: он вещь, и спрашивают о нём как о вещи. */
+  function inBag(current: Session, nameRu: string): number {
+    return Character.of(current.character).equipment.bagCount(Items.idFromName(nameRu));
+  }
+
+  const ritual = { mode: "ritual" as const, payment: { kind: "none" as const } };
+
+  it("компонент покупается вещью, и журнал называет её словами карточки (FR-268)", () => {
+    const bought = toggleMaterial(session, spell("identify"), occasion);
+    expect(inBag(bought, pearl)).toBe(1);
+    expect(bought.journal.at(-1)?.summaryRu).toBe(`Добавлено: ${pearl} (стало 1)`);
+
+    const spent = toggleMaterial(bought, spell("identify"), occasion);
+    expect(inBag(spent, pearl)).toBe(0);
+    expect(spent.journal.at(-1)?.summaryRu).toBe(`Потрачено: ${pearl} (в сумке 0)`);
   });
 
   it("обратимо, как любой расход (FR-111)", () => {
-    const bought = toggleMaterial(session, "identify", occasion);
-    expect(undoLast(bought).character.equipment.components?.materialsForSpellIds).toEqual([]);
+    const bought = toggleMaterial(session, spell("identify"), occasion);
+    expect(inBag(undoLast(bought), pearl)).toBe(0);
   });
 
-  it("состоянию без снаряжения отвечает причиной", () => {
-    const { components: _none, ...withoutComponents } = session.character.equipment;
-    const unknown = { ...session.character, equipment: withoutComponents };
-    expect(() => toggleMaterial(createSession(unknown), "identify", occasion)).toThrow(
-      /не заведено снаряжение/,
+  it("заклинанию без материального компонента отвечает причиной", () => {
+    expect(() => toggleMaterial(session, spell("shield"), occasion)).toThrow(
+      /материального компонента/,
     );
+  });
+
+  it("расходуемый компонент списывается сотворением и возвращается отменой", () => {
+    const bought = toggleMaterial(session, spell("find-familiar"), occasion);
+    expect(inBag(bought, ashes)).toBe(1);
+
+    const cast = castSpell(bought, { spell: spell("find-familiar"), ...ritual }, occasion);
+    expect(inBag(cast, ashes)).toBe(0);
+    // Молча уменьшившийся запас читался бы за столом как ошибка приложения.
+    expect(cast.journal.at(-1)?.summaryRu).toContain(`компонент израсходован: ${ashes}`);
+
+    // Одна запись на одно нажатие: отмена возвращает и ритуал, и сгоревшее в нём.
+    expect(inBag(undoLast(cast), ashes)).toBe(1);
+  });
+
+  it("нечему гореть — сотворение проходит молча", () => {
+    const cast = castSpell(session, { spell: spell("find-familiar"), ...ritual }, occasion);
+
+    expect(inBag(cast, ashes)).toBe(0);
+    expect(cast.journal.at(-1)?.summaryRu).not.toContain("компонент");
   });
 });
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
+import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
   bloodExchangeAnnouncement,
@@ -327,14 +328,19 @@ describe("castInstructions: что сделать этому персонажу 
   });
 
   it("перечисляет компоненты действиями, а не буквами", () => {
-    const steps = castInstructions(
-      spell("mage-armor"),
-      context({ payment: { kind: "slot", slotLevel: 1 } }),
-    );
+    const slot = { payment: { kind: "slot" as const, slotLevel: 1 } };
+    const steps = castInstructions(spell("mage-armor"), context(slot));
 
     expect(steps[0]).toBe("Произнести вслух");
     expect(steps[1]).toBe("Жест свободной рукой");
-    expect(steps[2]).toBe("Компонент: кусок обработанной кожи");
+    // Кожу «Доспехов мага» закрывает надетая фокусировка: в момент действия делать с ней нечего,
+    // и строка о ней заняла бы место того, что сделать всё-таки надо.
+    expect(steps[2]).not.toContain("Компонент");
+
+    const stowed = context({ ...slot, character: withoutSpellcastingFocus(thorne) });
+    expect(castInstructions(spell("mage-armor"), stowed)[2]).toBe(
+      "Компонент: кусок обработанной кожи",
+    );
   });
 
   it("называет, что спишется: ячейка, кровь или ничего", () => {
