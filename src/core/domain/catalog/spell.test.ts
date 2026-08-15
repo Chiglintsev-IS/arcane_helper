@@ -169,6 +169,13 @@ describe("обязательные связи полей", () => {
       .toContain("не относится");
   });
 
+  it("длительность без числа отвергается", () => {
+    for (const duration of [{ type: "rounds" }, { type: "minutes" }, { type: "hours" }]) {
+      expect(firstError(mutate(web(), (draft) => { draft.duration = duration; })))
+        .toContain("обязана указывать число");
+    }
+  });
+
   it("дальность «distance» без расстояния отклоняется", () => {
     expect(firstError(mutate(web(), (draft) => { draft.range = { type: "distance" }; })))
       .toContain("расстояние");

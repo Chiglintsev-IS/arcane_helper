@@ -108,10 +108,21 @@ const componentsSchema = z
     path: ["materialText"],
   });
 
-const durationSchema = z.object({
-  type: z.enum(["instant", "rounds", "minutes", "hours", "special"]),
-  value: z.number().int().positive().optional(),
-});
+/** Считаемые сроки: у них число и есть длительность, а его отсутствие читается нулём. */
+const COUNTED_DURATION_TYPES: readonly string[] = ["rounds", "minutes", "hours"];
+
+const durationSchema = z
+  .object({
+    type: z.enum(["instant", "rounds", "minutes", "hours", "special"]),
+    value: z.number().int().positive().optional(),
+  })
+  .refine(
+    (duration) => !COUNTED_DURATION_TYPES.includes(duration.type) || duration.value !== undefined,
+    {
+      message: "Длительность в раундах, минутах или часах обязана указывать число",
+      path: ["value"],
+    },
+  );
 
 const targetingSchema = z.object({
   // "object" добавлен вместе с первой партией контента: «Починка» и «Опознание» целятся в предмет.
