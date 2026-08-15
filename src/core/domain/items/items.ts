@@ -7,11 +7,7 @@
 
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import {
-  alignedItemDefinition,
-  assertItemDefinition,
-  withoutEmptyBonuses,
-} from "./schema";
+import { alignedItemDefinition, assertItemDefinition } from "./schema";
 import type { ItemDefinition } from "./schema";
 
 type ItemsState = { itemDefinitions: readonly ItemDefinition[] };
@@ -69,7 +65,7 @@ export class Items {
 
   /** Правка вещи целиком. Поля, которых её категории не положено, снимаются, а не отвергаются. */
   replaceDefinition(item: ItemDefinition): Items {
-    const stored = alignedItemDefinition(withoutEmptyBonuses(item));
+    const stored = alignedItemDefinition(item);
     if (!this.data.some((existing) => existing.id === item.id)) {
       throw new DomainError(`Вещи «${item.id}» нет среди заведённых`);
     }

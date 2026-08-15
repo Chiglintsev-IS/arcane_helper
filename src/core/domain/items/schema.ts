@@ -97,12 +97,35 @@ export function withoutGearOnlyFields(
   return rest;
 }
 
-const itemDefinitionSchema = itemDefinitionFields.superRefine((item, context) => {
-  if (item.kind === "gear") return;
-  for (const field of filledGearOnlyFields(item)) {
-    context.addIssue({ code: "custom", path: [field], message: gearOnlyRefusal(item.nameRu) });
-  }
-});
+/**
+ * Прибавка из одних нулей не хранится вовсе: верёвка не участвует в счёте Класса Доспеха.
+ *
+ * Нулевые величины снимаются поимённо, а не только целиком: сохранённая «защита 0» означала бы, что
+ * верёвка в разборе Класса Доспеха строкой стоит. Пустой перечень — то же самое: «прибавок не
+ * набрано» и «прибавок не бывает» приезжают из разных рук, а означают одно.
+ */
+function withoutEmptyBonuses(item: ItemFields): ItemFields {
+  const { bonuses, ...rest } = item;
+  if (bonuses === undefined) return item;
+  const contributing = Object.entries(bonuses).filter(([, value]) => value !== 0);
+  return contributing.length === 0 ? rest : { ...rest, bonuses: Object.fromEntries(contributing) };
+}
+
+/**
+ * Объявление вещи: сперва привести набранное к хранимому, потом судить.
+ *
+ * Порядок здесь и есть правило. Пустой перечень прибавок — не прибавки: судить по нему значило бы
+ * отказать расходнику за поле, которого у него после приведения не остаётся, и отказ говорил бы про
+ * прибавки тому, кто их не набирал.
+ */
+const itemDefinitionSchema = itemDefinitionFields
+  .transform(withoutEmptyBonuses)
+  .superRefine((item, context) => {
+    if (item.kind === "gear") return;
+    for (const field of filledGearOnlyFields(item)) {
+      context.addIssue({ code: "custom", path: [field], message: gearOnlyRefusal(item.nameRu) });
+    }
+  });
 
 export type ItemDefinition = DeepReadonly<z.infer<typeof itemDefinitionSchema>>;
 export type ItemKind = (typeof ITEM_KINDS)[number];
@@ -130,19 +153,6 @@ export function itemDefinitionOf(value: unknown): ItemDefinition {
 export function alignedItemDefinition(item: ItemDefinition): ItemDefinition {
   const aligned = item.kind === "gear" ? item : withoutGearOnlyFields(item);
   return parsedOrRefused(itemDefinitionSchema, aligned, "вещь");
-}
-
-/**
- * Прибавка из одних нулей не хранится вовсе: верёвка не участвует в счёте Класса Доспеха.
- *
- * Нулевые величины снимаются поимённо, а не только целиком: сохранённая «защита 0» означала бы, что
- * верёвка в разборе Класса Доспеха строкой стоит.
- */
-export function withoutEmptyBonuses(item: ItemDefinition): ItemDefinition {
-  const { bonuses, ...rest } = item;
-  if (bonuses === undefined) return item;
-  const contributing = Object.entries(bonuses).filter(([, value]) => value !== 0);
-  return contributing.length === 0 ? rest : { ...rest, bonuses: Object.fromEntries(contributing) };
 }
 
 /** Поля контекста для сборки полной схемы состояния. */

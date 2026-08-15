@@ -38,4 +38,18 @@ describe("«Сумка» (FR-242)", () => {
     expect(shown(stores).bag.money.find((coin) => coin.currency === "gold")?.amount).toBe(215);
     expect(shown(stores).journal.at(-1)?.summaryRu).toBe("Деньги: зм 0 → 215");
   });
+
+  it("«Сумка»: вещь без прибавок меняет категорию, а не получает отказ про прибавки (FR-235)", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<BagScreen />);
+
+    await user.type(screen.getByLabelText("Новый ингредиент"), "Пыль{Enter}");
+    await user.click(screen.getByRole("button", { name: "Открыть: Пыль" }));
+    await user.click(screen.getByRole("radio", { name: "Другое" }));
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(shown(stores).bag.items.find((item) => item.id === "пыль")?.kind).toBe("other");
+    // Шторка закрылась сама: отказа не было.
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
 });

@@ -7,7 +7,7 @@ import {
   assertItemDefinition,
   filledGearOnlyFields,
   gearOnlyRefusal,
-  withoutEmptyBonuses,
+  itemDefinitionOf,
   withoutGearOnlyFields,
 } from "@/core/domain/items/schema";
 import type { ItemDefinition } from "@/core/domain/items/schema";
@@ -106,12 +106,22 @@ describe("assertItemDefinition и alignedItemDefinition", () => {
   });
 
   it("прибавка из одних нулей не хранится: верёвка не участвует в счёте Класса Доспеха", () => {
-    expect("bonuses" in withoutEmptyBonuses({ ...armored, bonuses: { armorClass: 0 } })).toBe(false);
+    expect("bonuses" in itemDefinitionOf({ ...armored, bonuses: { armorClass: 0 } })).toBe(false);
 
-    const contributing = withoutEmptyBonuses({
+    const contributing = itemDefinitionOf({
       ...armored,
       bonuses: { armorClass: 1, "save:wisdom": 0 },
     });
     expect(contributing.bonuses).toEqual({ armorClass: 1 });
+  });
+
+  it("пустой перечень прибавок — не прибавки: расходнику за него не отказывают", () => {
+    // Шторка вещи отдаёт набранное как есть, и «ничего не набрано» приезжает пустым перечнем.
+    // Отказ на нём говорил бы про прибавки тому, кто их не набирал.
+    const typed = itemDefinitionOf({ ...potion, kind: "other", bonuses: {} });
+    expect("bonuses" in typed).toBe(false);
+    expect(() => itemDefinitionOf({ ...potion, bonuses: { armorClass: 1 } })).toThrow(
+      /не экипировка/,
+    );
   });
 });
