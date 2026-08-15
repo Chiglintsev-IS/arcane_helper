@@ -9,8 +9,11 @@ describe("судьба срока при долгом отдыхе", () => {
     expect(outlastsLongRest({ type: "hours" })).toBe(false);
   });
 
-  it("срок, который отмеряет не время, долгий отдых переживает", () => {
+  it("срок, который отмеряет само заклинание, долгий отдых переживает", () => {
     expect(outlastsLongRest({ type: "until_spell_ends" })).toBe(true);
-    expect(outlastsLongRest({ type: "until_removed" })).toBe(true);
+  });
+
+  it("срок, который отмеряет рука игрока, долгого отдыха не переживает", () => {
+    expect(outlastsLongRest({ type: "until_removed" })).toBe(false);
   });
 });

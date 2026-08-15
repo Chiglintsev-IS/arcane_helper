@@ -810,7 +810,7 @@ describe("отдых и восстановление", () => {
     expect(undone.character.hitPoints).toEqual(spent.character.hitPoints);
   });
 
-  it("долгий отдых оставляет сроки, которые отмеряет не время", () => {
+  it("долгий отдых оставляет срок заклинания и снимает отметку, заведённую рукой", () => {
     const untimed: Spell = { ...spell("mage-armor"), duration: { type: "special" } };
     let current = castSpell(
       session,
@@ -822,8 +822,16 @@ describe("отдых и восстановление", () => {
 
     expect(current.character.activeEffects.map((effect) => effect.duration.type)).toEqual([
       "until_spell_ends",
-      "until_removed",
     ]);
+  });
+
+  it("долгий отдых называет снятое, а отмена его возвращает", () => {
+    const marked = startManualEffect(session, { nameRu: "Отравлен" }, occasion);
+    const rested = longRest(marked, occasion);
+
+    expect(rested.character.activeEffects).toEqual([]);
+    expect(rested.journal.at(-1)?.summaryRu).toBe("Долгий отдых · «Отравлен» истёк");
+    expect(undoLast(rested).character.activeEffects).toHaveLength(1);
   });
 
   it("короткий отдых ячейки не восстанавливает (FR-132)", () => {

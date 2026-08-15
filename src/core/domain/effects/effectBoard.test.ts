@@ -125,8 +125,9 @@ describe("EffectBoard.afterLongRest", () => {
       duration: { type: "until_spell_ends" },
       isConcentration: true,
     });
-    const board = emptyBoard().start(held, held.startedAt).afterLongRest();
+    const { board, expired } = emptyBoard().start(held, held.startedAt).afterLongRest();
 
     expect(board.toState()).toEqual({ activeEffects: [] });
+    expect(expired).toEqual([held]);
   });
 });

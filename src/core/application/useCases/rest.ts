@@ -17,7 +17,12 @@ import { hitDiceRegainedOnLongRest } from "@/core/domain/vitality/hitDice";
 import { SHORT_REST_DURATION_RU } from "@/core/domain/vitality/shortRest";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 import { regenerationNote } from "./health";
-import { inFight } from "./turn";
+import { expiryNotes, inFight } from "./turn";
+
+/** Заголовок отдыха с тем, что он попутно закрыл; без снятого — один заголовок. */
+function restSummary(title: string, notes: readonly string[]): string {
+  return notes.length === 0 ? title : `${title} · ${notes.join(", ")}`;
+}
 
 /**
  * Долгий отдых. Восстанавливает всё, включая руны и здоровье, и снимает концентрацию.
@@ -46,12 +51,18 @@ export function longRest(session: Session, occasion: Occasion): Session {
     // Половина костей, округляя вниз. Персонажу без костей отдых их не выдумывает.
     .restoreHitDice(dice === undefined ? 0 : hitDiceRegainedOnLongRest(dice.total));
 
+  const { board, expired } = root.effects.afterLongRest();
   const after = root
     .withVitality(vitality)
     .withArcana(root.arcana.restoredByLongRest())
-    .withEffects(root.effects.afterLongRest());
+    .withEffects(board);
 
-  return commit(session, after, { kind: "long_rest", summaryRu: "Долгий отдых" }, occasion);
+  return commit(
+    session,
+    after,
+    { kind: "long_rest", summaryRu: restSummary("Долгий отдых", expiryNotes(expired)) },
+    occasion,
+  );
 }
 
 /**
@@ -73,14 +84,10 @@ export function shortRest(session: Session, occasion: Occasion): Session {
     .withVitality(vitality.clearFireSuppression())
     .withArcana(root.arcana.markShortRest());
 
-  const notes = regenerationNote(healed);
   return commit(
     session,
     after,
-    {
-      kind: "short_rest",
-      summaryRu: notes.length === 0 ? "Короткий отдых" : `Короткий отдых · ${notes.join(", ")}`,
-    },
+    { kind: "short_rest", summaryRu: restSummary("Короткий отдых", regenerationNote(healed)) },
     occasion,
   );
 }

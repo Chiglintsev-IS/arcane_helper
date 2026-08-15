@@ -138,13 +138,16 @@ export class EffectBoard {
    * Концентрация сна не переживает ни при каком сроке, и её эффект уходит вместе с ней: эффект
    * концентрации без самой концентрации — такая же испорченная доска, как и обратное.
    */
-  afterLongRest(): EffectBoard {
-    return this.with(
-      this.state.activeEffects.filter(
-        (effect) => !effect.isConcentration && outlastsLongRest(effect.duration),
-      ),
-      undefined,
-    );
+  afterLongRest(): Expiry {
+    const kept: ActiveEffect[] = [];
+    const expired: ActiveEffect[] = [];
+
+    for (const effect of this.state.activeEffects) {
+      const survives = !effect.isConcentration && outlastsLongRest(effect.duration);
+      (survives ? kept : expired).push(effect);
+    }
+
+    return { board: this.with(kept, undefined), expired };
   }
 
   /**

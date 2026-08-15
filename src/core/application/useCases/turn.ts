@@ -17,7 +17,8 @@ function encounterOf(session: Session): Encounter {
   return Encounter.fromJournal(session.journal);
 }
 
-function expiryNotes(expired: readonly ActiveEffect[]): string[] {
+/** Ушедшее с доски — строкой на эффект. Слово одно, каким бы событием срок ни кончился. */
+export function expiryNotes(expired: readonly ActiveEffect[]): string[] {
   return expired.map((effect) => `«${effect.nameRu}» истёк`);
 }
 
