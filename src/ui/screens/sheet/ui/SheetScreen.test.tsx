@@ -54,7 +54,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
         .sheet.abilities.flatMap((ability) => ability.skills)
         .filter((skill) => skill.training !== undefined)
         .map((skill) => skill.id),
-    ).toEqual(["arcana", "investigation", "nature", "perception"]);
+    ).toEqual(["sleightOfHand", "arcana", "investigation", "nature", "perception", "survival"]);
     // Одна запись журнала на весь блок, а не три.
     expect(shown(stores).journal).toHaveLength(1);
     expect(screen.queryByRole("dialog", { name: "Правка: Интеллект" })).toBeNull();

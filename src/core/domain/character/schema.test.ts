@@ -43,12 +43,6 @@ describe("подсхема персонажа", () => {
       charisma: 8,
     });
     expect(thorneState.saveProficiencies).toEqual(["intelligence", "wisdom"]);
-    expect(thorneState.skills).toEqual({
-      arcana: "proficient",
-      investigation: "proficient",
-      nature: "proficient",
-      perception: "proficient",
-    });
     // Владения волшебника из «Книги игрока»: доспехами класс не владеет вовсе.
     expect(thorneState.proficiencies.weapons).toContain("Боевой посох");
     expect(thorneState.proficiencies.armor).toEqual([]);

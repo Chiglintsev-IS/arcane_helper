@@ -45,6 +45,8 @@ const RAW: unknown = {
     investigation: "proficient",
     nature: "proficient",
     perception: "proficient",
+    sleightOfHand: "proficient",
+    survival: "proficient",
   },
   /**
    * Владения волшебника из «Книги игрока»: пять видов оружия и ни одного доспеха — класс не даёт
