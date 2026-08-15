@@ -54,7 +54,8 @@ export function RestScreen() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-col gap-2">
+      {/* Поля те же, что у «Игры»: одна и та же шапка не вправе стоять в двух режимах по-разному. */}
+      <div className="flex shrink-0 flex-col gap-2 px-3 pt-2">
         <ResourceHeader
           sheet={snapshot.sheet}
           resources={snapshot.resources}

@@ -65,6 +65,22 @@ function selected(title: string): boolean {
   return screen.getByRole("radio", { name: new RegExp(`^${title}`) }).getAttribute("aria-checked") === "true";
 }
 
+/**
+ * Поля, в которых стоит шапка: ближайший предок, задающий ей горизонтальный отступ.
+ *
+ * Тестовый DOM разметку не раскладывает — стилей в нём нет, — поэтому одинаковость полей читается
+ * по самому отступу, а не по измеренной ширине плитки.
+ */
+function gutterOfHeader(): string {
+  let node = screen.getByLabelText("Ресурсы").parentElement;
+  while (node !== null) {
+    const gutter = [...node.classList].find((name) => name.startsWith("px-"));
+    if (gutter !== undefined) return gutter;
+    node = node.parentElement;
+  }
+  return "";
+}
+
 /** Лист концентрации открывается с карточки в шапке «Игры». */
 async function openPanel(): Promise<void> {
   await renderWithStores(<PlayShell />, concentrating());
@@ -200,6 +216,19 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
     expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
+  });
+
+  it("шапка одинакова в «Игре» и «Привале»", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<PlayShell />);
+
+    const inGame = gutterOfHeader();
+
+    await user.click(screen.getByRole("radio", { name: /^Привал/ }));
+
+    // Шапка без полей упирается плиткой в край экрана, и то же число стоит в двух режимах по-разному.
+    expect(inGame).not.toBe("");
+    expect(gutterOfHeader()).toBe(inGame);
   });
 
 });
