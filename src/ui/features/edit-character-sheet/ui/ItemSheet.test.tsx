@@ -171,7 +171,7 @@ describe("шторка вещи", () => {
     expect(onSave.mock.calls[0]?.[0].price).toEqual({ amount: 1.5, currency: "gold" });
   });
 
-  it("вещь: пустое поле прибавки уходит владельцу — отказывает он", async () => {
+  it("вещь: пустая прибавка не уходит владельцу и отказывает у поля", async () => {
     const onSave = vi.fn();
     render(
       <ItemSheet choices={toChoicesView()}
@@ -193,10 +193,19 @@ describe("шторка вещи", () => {
 
     await userEvent.selectOptions(screen.getByLabelText("Добавить прибавку"), "armorClass");
     await userEvent.click(screen.getByRole("button", { name: "Добавить" }));
-    await userEvent.clear(screen.getByLabelText("Класс Доспеха"));
+    const bonus = screen.getByLabelText("Класс Доспеха");
+    await userEvent.clear(bonus);
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(onSave.mock.calls[0]?.[0].bonuses.armorClass).toBeNaN();
+    // Прибавка без числа — несобранная просьба: пустая цена рядом при этом законна и молчит.
+    expect(onSave).not.toHaveBeenCalled();
+    const reason = screen.getByRole("alert");
+    expect(reason.textContent).toBe("Наберите число");
+    expect(bonus.getAttribute("aria-describedby")).toBe(reason.getAttribute("id"));
+    expect(screen.getByLabelText("Цена").getAttribute("aria-invalid")).toBe("false");
+
+    await userEvent.type(bonus, "1");
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("вещь: удаление стоит в её же шторке, включено только при пустом запасе (FR-241)", async () => {

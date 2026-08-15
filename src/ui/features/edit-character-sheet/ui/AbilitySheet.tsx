@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { AbilityView, ChoicesView } from "@/contract/views";
 import { abilityLabel, skillLabel, trainingLabel } from "@/ui/entities/character/lib/labels";
-import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 /** Набранные владения: навык и степень словами правил — их же ждёт команда. */
@@ -58,6 +58,7 @@ export function AbilitySheet({
     ),
   );
 
+  const required = useRequiredNumbers();
   const score = requiredFieldNumber(scoreText);
 
   const setTraining = (id: string, training: string | undefined): void => {
@@ -70,14 +71,17 @@ export function AbilitySheet({
       titleRu={abilityLabel(ability.id)}
       error={error}
       onCancel={onCancel}
-      onSave={() => onSave({ ability: ability.id, score, saveProficient, skills })}
+      onSave={() =>
+        required.ask([score], () => onSave({ ability: ability.id, score, saveProficient, skills }))
+      }
     >
       <NumberField
         labelRu="Значение"
         value={scoreText}
-        onChange={setScoreText}
+        onChange={required.touching(setScoreText)}
         min={choices.abilityScore.minimum}
         max={choices.abilityScore.maximum}
+        reasonRu={required.reasonOf(score)}
       />
 
       <button

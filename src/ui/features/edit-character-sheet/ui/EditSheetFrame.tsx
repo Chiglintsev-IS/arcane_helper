@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 /**
  * Рамка шторки правки: заголовок, содержимое, «Сохранить», «Отмена» и причина отказа.
@@ -64,33 +64,58 @@ export function EditSheetFrame({
   );
 }
 
-/** Числовое поле шторки: подпись слева, число справа. Одинаковое во всех восьми. */
+/**
+ * Числовое поле шторки: подпись слева, число справа. Одинаковое во всех восьми.
+ *
+ * Причина, по которой набранное не ушло, стоит второй строкой под самим полем и входит в его
+ * описание: там, где набирали, а не поверх экрана.
+ */
 export function NumberField({
   labelRu,
   value,
   onChange,
   min,
   max,
+  reasonRu = null,
 }: {
   labelRu: string;
   value: string;
   onChange: (value: string) => void;
   min?: number;
   max?: number;
+  /** Почему набранное не ушло. Причина стоит у поля, в котором набирали, а не поверх экрана. */
+  reasonRu?: string | null;
 }) {
+  const reasonId = useId();
   return (
-    <label className="flex items-center justify-between gap-2 text-sm">
-      <span>{labelRu}</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        {...(min === undefined ? {} : { min })}
-        {...(max === undefined ? {} : { max })}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 w-20 rounded-lg border border-slate-200 px-3 text-base tabular-nums dark:border-slate-800 dark:bg-slate-900"
-      />
-    </label>
+    // Причина стоит рядом с полем, но вне подписи: внутри неё она стала бы частью имени поля.
+    <div className="flex flex-col gap-1">
+      <label className="flex items-center justify-between gap-2 text-sm">
+        <span>{labelRu}</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          {...(min === undefined ? {} : { min })}
+          {...(max === undefined ? {} : { max })}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={reasonRu !== null}
+          aria-describedby={reasonRu === null ? undefined : reasonId}
+          className={`min-h-11 w-20 rounded-lg border px-3 text-base tabular-nums dark:bg-slate-900 ${
+            reasonRu === null ? "border-slate-200 dark:border-slate-800" : "border-reaction"
+          }`}
+        />
+      </label>
+      {reasonRu === null ? null : (
+        <p
+          id={reasonId}
+          role="alert"
+          className="text-xs font-medium text-reaction-strong dark:text-reaction"
+        >
+          {reasonRu}
+        </p>
+      )}
+    </div>
   );
 }
 

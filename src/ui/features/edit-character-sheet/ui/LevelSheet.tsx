@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { PreviewOf } from "@/contract/questions";
 import type { ChoicesView, SheetView } from "@/contract/views";
 import { ARCANE_RECOVERY_LABEL, DERIVED_LABELS } from "@/ui/entities/character/lib/labels";
-import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
@@ -50,11 +50,12 @@ export function LevelSheet({
   const [levelText, setLevelText] = useState(String(currentLevel));
   const [maximumText, setMaximumText] = useState(String(hitPoints.maximumBase));
 
+  const required = useRequiredNumbers();
   const level = requiredFieldNumber(levelText);
   const maximum = requiredFieldNumber(maximumText);
   // Незаполненное поле не спрашивают: что изменится «от пустого места», ответить нечем.
-  const asked = Number.isNaN(level) ? null : { kind: "level_preview" as const, level };
-  const preview = usePreview(asked);
+  const question = required.allTyped([level]) ? { kind: "level_preview" as const, level } : null;
+  const preview = usePreview(question);
   const shown = preview?.kind === "level_preview" ? preview : null;
 
   return (
@@ -62,20 +63,24 @@ export function LevelSheet({
       titleRu="Уровень"
       error={error}
       onCancel={onCancel}
-      onSave={() => onSave({ level, hitPointMaximumBase: maximum })}
+      onSave={() =>
+        required.ask([level, maximum], () => onSave({ level, hitPointMaximumBase: maximum }))
+      }
     >
       <NumberField
         labelRu="Уровень"
         value={levelText}
-        onChange={setLevelText}
+        onChange={required.touching(setLevelText)}
         min={choices.characterLevel.minimum}
         max={choices.characterLevel.maximum}
+        reasonRu={required.reasonOf(level)}
       />
       <NumberField
         labelRu="Базовый максимум хитов"
         value={maximumText}
-        onChange={setMaximumText}
+        onChange={required.touching(setMaximumText)}
         min={1}
+        reasonRu={required.reasonOf(maximum)}
       />
 
       {/* Кость бросает игрок: приложение называет среднее, но не подставляет его. */}

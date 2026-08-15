@@ -69,6 +69,30 @@ describe("шторка характеристики", () => {
     expect(screen.getByRole("alert").textContent).toContain("не годится");
   });
 
+  it("характеристика: пустое значение не уходит владельцу и отказывает у поля", async () => {
+    const onSave = vi.fn();
+    render(
+      <AbilitySheet choices={toChoicesView()}
+        ability={abilityOf("intelligence")}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+
+    const field = screen.getByLabelText("Значение");
+    await userEvent.clear(field);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Просьба не собрана: до разбора сообщения она не доходит, и сырого отказа схемы игрок не видит.
+    expect(onSave).not.toHaveBeenCalled();
+    const reason = screen.getByRole("alert");
+    expect(reason.textContent).toBe("Наберите число");
+    expect(field.getAttribute("aria-describedby")).toBe(reason.getAttribute("id"));
+
+    await userEvent.type(field, "1");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("характеристика: владение спасброском снимается переключателем", async () => {
     const onSave = vi.fn();
     render(

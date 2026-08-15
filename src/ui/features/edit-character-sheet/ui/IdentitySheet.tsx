@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { ChoicesView, SheetView } from "@/contract/views";
 import { sizeLabel } from "@/ui/entities/character/lib/labels";
-import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
 /** Справочная часть листа: что шторка набирает и отдаёт владельцу. Что из этого он примет — его дело. */
@@ -42,6 +42,7 @@ export function IdentitySheet({
   const [size, setSize] = useState(sheet.size);
   const [speedText, setSpeedText] = useState(String(sheet.speed));
 
+  const required = useRequiredNumbers();
   const age = requiredFieldNumber(ageText);
   const speed = requiredFieldNumber(speedText);
 
@@ -51,22 +52,30 @@ export function IdentitySheet({
       error={error}
       onCancel={onCancel}
       onSave={() =>
-        onSave({
-          name: name.trim(),
-          species: species.trim(),
-          className: className.trim(),
-          subclass: subclass.trim(),
-          age,
-          size,
-          speed,
-        })
+        required.ask([age, speed], () =>
+          onSave({
+            name: name.trim(),
+            species: species.trim(),
+            className: className.trim(),
+            subclass: subclass.trim(),
+            age,
+            size,
+            speed,
+          }),
+        )
       }
     >
       <TextField labelRu="Имя" value={name} onChange={setName} />
       <TextField labelRu="Вид" value={species} onChange={setSpecies} />
       <TextField labelRu="Класс" value={className} onChange={setClassName} />
       <TextField labelRu="Подкласс" value={subclass} onChange={setSubclass} />
-      <NumberField labelRu="Возраст" value={ageText} onChange={setAgeText} min={0} />
+      <NumberField
+        labelRu="Возраст"
+        value={ageText}
+        onChange={required.touching(setAgeText)}
+        min={0}
+        reasonRu={required.reasonOf(age)}
+      />
 
       <div role="radiogroup" aria-label="Размер" className="flex flex-wrap gap-1">
         {choices.creatureSizes.map((option) => (
@@ -88,7 +97,13 @@ export function IdentitySheet({
         ))}
       </div>
 
-      <NumberField labelRu="Скорость" value={speedText} onChange={setSpeedText} min={0} />
+      <NumberField
+        labelRu="Скорость"
+        value={speedText}
+        onChange={required.touching(setSpeedText)}
+        min={0}
+        reasonRu={required.reasonOf(speed)}
+      />
     </EditSheetFrame>
   );
 }

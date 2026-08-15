@@ -31,6 +31,23 @@ describe("шторка «кто он»", () => {
     expect(onSave.mock.calls[0]?.[0].age).toBe(142);
   });
 
+  it("кто он: пустая скорость не уходит владельцу и отказывает у поля", async () => {
+    const onSave = vi.fn();
+    render(<IdentitySheet choices={toChoicesView()} sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);
+
+    const speed = screen.getByLabelText("Скорость");
+    await userEvent.clear(speed);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    const reason = screen.getByRole("alert");
+    expect(reason.textContent).toBe("Наберите число");
+    expect(speed.getAttribute("aria-describedby")).toBe(reason.getAttribute("id"));
+
+    await userEvent.type(speed, "30");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("кто он: пустое имя уходит владельцу — отказывает он", async () => {
     const onSave = vi.fn();
     render(<IdentitySheet choices={toChoicesView()} sheet={testSnapshot().sheet} onSave={onSave} onCancel={() => {}} />);

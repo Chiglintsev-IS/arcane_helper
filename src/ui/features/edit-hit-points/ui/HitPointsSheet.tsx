@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 
 import type { SheetView } from "@/contract/views";
-import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { usePreview } from "@/ui/shared/model/usePreview";
 
 /**
@@ -36,9 +36,6 @@ const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
 
 const fieldClass = "min-h-11 rounded-lg border px-3 text-base tabular-nums dark:bg-slate-900";
 const quietBorder = "border-slate-200 dark:border-slate-800";
-
-/** Незаполненное поле — несобранная просьба: владельцу нечего отправлять, и причина остаётся здесь. */
-const NOT_TYPED = "Наберите число";
 
 function NumberField({
   labelRu,
@@ -107,39 +104,29 @@ export function HitPointsSheet({
   const [fire, setFire] = useState(false);
   const [baseText, setBaseText] = useState(String(hitPoints.maximumBase));
   const [masterText, setMasterText] = useState(String(hitPoints.masterReduction));
-  const [asked, setAsked] = useState(false);
+  const required = useRequiredNumbers();
   const amount = requiredFieldNumber(value);
 
   const maximumBase = requiredFieldNumber(baseText);
   const masterReduction = requiredFieldNumber(masterText);
   // Незаполненное поле не спрашивают: спрашивать не о чем, пока число не набрано.
-  const filled = !Number.isNaN(maximumBase) && !Number.isNaN(masterReduction);
+  const filled = required.allTyped([maximumBase, masterReduction]);
   const preview = usePreview(
     kind === "maximum" && filled ? { kind: "health_preview", maximumBase, masterReduction } : null,
   );
   const effective = preview?.kind === "health_preview" ? preview.effectiveMaximum : null;
 
-  /** Причина стоит у пустого поля до следующего касания: набранное отвечает за себя само. */
-  const notTyped = (typed: number): string | null =>
-    asked && Number.isNaN(typed) ? NOT_TYPED : null;
-
-  const typing =
-    (write: (next: string) => void) =>
-    (next: string): void => {
-      setAsked(false);
-      write(next);
-    };
-
   const submit = (): void => {
-    setAsked(true);
     if (kind === "maximum") {
-      if (filled) onMaximum({ maximumBase, masterReduction });
-      return;
+      return required.ask([maximumBase, masterReduction], () =>
+        onMaximum({ maximumBase, masterReduction }),
+      );
     }
-    if (Number.isNaN(amount)) return;
-    if (kind === "damage") return onDamage(amount, fire);
-    if (kind === "heal") return onHeal(amount);
-    return onTemporary(amount);
+    return required.ask([amount], () => {
+      if (kind === "damage") return onDamage(amount, fire);
+      if (kind === "heal") return onHeal(amount);
+      return onTemporary(amount);
+    });
   };
 
   return (
@@ -157,10 +144,7 @@ export function HitPointsSheet({
             type="button"
             role="radio"
             aria-checked={kind === tab.kind}
-            onClick={() => {
-              setAsked(false);
-              setKind(tab.kind);
-            }}
+            onClick={required.touching(() => setKind(tab.kind))}
             className={`min-h-11 flex-1 rounded-lg border px-2 text-sm ${
               kind === tab.kind
                 ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
@@ -178,15 +162,15 @@ export function HitPointsSheet({
             labelRu="Базовый максимум"
             value={baseText}
             min={1}
-            reasonRu={notTyped(maximumBase)}
-            onChange={typing(setBaseText)}
+            reasonRu={required.reasonOf(maximumBase)}
+            onChange={required.touching(setBaseText)}
           />
           <NumberField
             labelRu="Снижение мастера"
             value={masterText}
             min={0}
-            reasonRu={notTyped(masterReduction)}
-            onChange={typing(setMasterText)}
+            reasonRu={required.reasonOf(masterReduction)}
+            onChange={required.touching(setMasterText)}
           />
         </>
       ) : (
@@ -194,8 +178,8 @@ export function HitPointsSheet({
           labelRu={FIELD_LABELS[kind]}
           value={value}
           min={1}
-          reasonRu={notTyped(amount)}
-          onChange={typing(setValue)}
+          reasonRu={required.reasonOf(amount)}
+          onChange={required.touching(setValue)}
         />
       )}
 

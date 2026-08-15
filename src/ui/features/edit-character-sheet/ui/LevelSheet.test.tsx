@@ -92,6 +92,25 @@ describe("шторка уровня", () => {
     expect(await screen.findByText(/среднее за уровень: \+7/)).toBeDefined();
   });
 
+  it("уровень: пустое поле не уходит владельцу и отказывает у себя", async () => {
+    const onSave = vi.fn();
+    await openLevel(createThorne(), onSave);
+
+    const maximum = screen.getByLabelText("Базовый максимум хитов");
+    await userEvent.clear(maximum);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Причина стоит под пустым полем, а набранный рядом уровень своей причины не получает.
+    expect(onSave).not.toHaveBeenCalled();
+    const reason = screen.getByRole("alert");
+    expect(reason.textContent).toBe("Наберите число");
+    expect(maximum.getAttribute("aria-describedby")).toBe(reason.getAttribute("id"));
+    expect(screen.getByLabelText("Уровень").getAttribute("aria-invalid")).toBe("false");
+
+    await userEvent.type(maximum, "60");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("уровень: сохранение отдаёт уровень и введённый максимум", async () => {
     const onSave = vi.fn();
     await openLevel(createThorne(), onSave);

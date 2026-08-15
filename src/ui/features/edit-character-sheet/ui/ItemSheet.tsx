@@ -9,7 +9,7 @@ import {
   itemKindLabel,
   statLabel,
 } from "@/ui/entities/character/lib/labels";
-import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
+import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 
 /**
@@ -53,6 +53,7 @@ export function ItemSheet({
   onRemove: () => void;
   onCancel: () => void;
 }) {
+  const required = useRequiredNumbers();
   const [kind, setKind] = useState(item.kind);
   const [note, setNote] = useState(item.note ?? "");
   const [priceAmount, setPriceAmount] = useState(
@@ -78,8 +79,14 @@ export function ItemSheet({
 
   const { bagCount, wornCount } = item;
 
-  const numbers: Record<string, number> = {};
-  for (const [stat, text] of bonuses) numbers[stat] = requiredFieldNumber(text);
+  const typedBonuses = bonuses.map(([stat, text]) => ({
+    stat,
+    text,
+    value: requiredFieldNumber(text),
+  }));
+  const numbers: Record<string, number> = Object.fromEntries(
+    typedBonuses.map((bonus) => [bonus.stat, bonus.value]),
+  );
   // Пустая цена — вещь без цены, а не цена ноль: у находки её может не назвать и мастер.
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
   // Пустая база — вещь не доспех: кольцо защищает прибавкой, а не заменой базы.
@@ -91,17 +98,21 @@ export function ItemSheet({
       error={error}
       onCancel={onCancel}
       onSave={() =>
-        onSave({
-          id: item.id,
-          nameRu: item.nameRu,
-          kind,
-          ...(amount === undefined ? {} : { price: { amount, currency } }),
-          ...(note.trim() === "" ? {} : { note: note.trim() }),
-          bonuses: numbers,
-          ...(base === undefined
-            ? {}
-            : { armor: { base, ...(category === "" ? {} : { category }) } }),
-        })
+        required.ask(
+          typedBonuses.map((bonus) => bonus.value),
+          () =>
+            onSave({
+              id: item.id,
+              nameRu: item.nameRu,
+              kind,
+              ...(amount === undefined ? {} : { price: { amount, currency } }),
+              ...(note.trim() === "" ? {} : { note: note.trim() }),
+              bonuses: numbers,
+              ...(base === undefined
+                ? {}
+                : { armor: { base, ...(category === "" ? {} : { category }) } }),
+            }),
+        )
       }
     >
       {/*
@@ -204,14 +215,15 @@ export function ItemSheet({
       {/* Прибавки и база доспеха — свойства экипировки: зелье действует, когда его пьют. */}
       {kind === "gear" ? (
         <>
-          {bonuses.map(([stat, text]) => (
+          {typedBonuses.map((bonus) => (
             <NumberField
-              key={stat}
-              labelRu={statLabel(choices.stats, stat)}
-              value={text}
-              onChange={(next) =>
-                setBonuses(bonuses.map((row) => (row[0] === stat ? [stat, next] : row)))
-              }
+              key={bonus.stat}
+              labelRu={statLabel(choices.stats, bonus.stat)}
+              value={bonus.text}
+              onChange={required.touching((next: string) =>
+                setBonuses(bonuses.map((row) => (row[0] === bonus.stat ? [bonus.stat, next] : row))),
+              )}
+              reasonRu={required.reasonOf(bonus.value)}
             />
           ))}
 

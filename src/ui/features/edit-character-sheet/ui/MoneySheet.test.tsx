@@ -30,7 +30,36 @@ describe("шторка денег", () => {
     expect(onSave).toHaveBeenCalledWith({ gold: 215, silver: 30, copper: 12 });
   });
 
-  it("деньги: отрицательное и пустое уходят владельцу — отказывает он", async () => {
+  it("деньги: пустая монета не уходит владельцу и отказывает у своего поля", async () => {
+    const onSave = vi.fn();
+    render(
+      <MoneySheet
+        money={[
+          { currency: "gold", amount: 15 },
+          { currency: "silver", amount: 30 },
+          { currency: "copper", amount: 12 },
+        ]}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+
+    const silver = screen.getByLabelText("Серебро");
+    await userEvent.clear(silver);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Причину называет та монета, которой не набрали: соседние поля молчат.
+    expect(onSave).not.toHaveBeenCalled();
+    const reason = screen.getByRole("alert");
+    expect(reason.textContent).toBe("Наберите число");
+    expect(silver.getAttribute("aria-describedby")).toBe(reason.getAttribute("id"));
+    expect(screen.getByLabelText("Золото").getAttribute("aria-invalid")).toBe("false");
+
+    await userEvent.type(silver, "30");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("деньги: отрицательное уходит владельцу — отказывает он", async () => {
     const onSave = vi.fn();
     render(
       <MoneySheet
