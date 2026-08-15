@@ -12,6 +12,7 @@
 import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
 
 import { DERIVED_LABELS, skillLabel } from "@/ui/entities/character/lib/labels";
+import { RESOURCES_EDIT_LABEL } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
@@ -133,7 +134,7 @@ function SlotCounter({
       <button
         type="button"
         onClick={onEdit}
-        aria-label={`Ячейки ${level} уровня: ${remaining} из ${maximum}. Правка ресурсов`}
+        aria-label={`Ячейки ${level} уровня: ${remaining} из ${maximum}. ${RESOURCES_EDIT_LABEL}`}
         className={`w-full rounded-md border px-1 py-1 text-center ${
           exhausted
             ? "border-slate-200 text-slate-500 dark:border-slate-800"

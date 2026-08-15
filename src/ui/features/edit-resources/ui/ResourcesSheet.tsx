@@ -10,7 +10,12 @@
 
 "use client";
 
+import { useId } from "react";
+
 import type { ResourcesView } from "@/contract/views";
+
+/** Имя дела: им зовётся и сама шторка, и плитка, которая её открывает. */
+export const RESOURCES_EDIT_LABEL = "Правка ресурсов";
 
 function Stepper({
   label,
@@ -72,14 +77,19 @@ export function ResourcesSheet({
   onClose: () => void;
 }) {
   const { runes, suppression } = resources;
+  const titleId = useId();
 
   return (
     <section
       role="dialog"
       aria-modal="true"
-      aria-label="Правка ресурсов"
+      aria-labelledby={titleId}
       className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
+      <h2 id={titleId} className="text-base font-semibold leading-tight">
+        {RESOURCES_EDIT_LABEL}
+      </h2>
+
       <p className="text-xs text-slate-600 dark:text-slate-400">
         Для случаев вне модели приложения: эффект предмета, решение мастера, ошибка в списании.
         Каждая правка попадает в журнал и отменяется там же — в режиме «Журнал».
