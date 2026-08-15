@@ -459,6 +459,22 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("магическое восстановление");
 });
 
+/**
+ * Прогон выше идёт в светлой теме — той, что браузер отдаёт по умолчанию. Полоса переключения
+ * сверяется и в тёмной: с неё начинается любой путь по экранам, и подпись выбранного режима лежит
+ * там на подложке, которой в светлой теме нет.
+ */
+test("the mode switcher passes axe-core in the dark theme", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+
+  const results = await new AxeBuilder({ page })
+    .include('[role="radiogroup"]')
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+
+  expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+});
+
 test("reactions in one tap", async ({ page }) => {
   // Триггер приходит в чужой ход: путь от события до результата обязан быть коротким.
   // Имя точное по той же причине, что и в прогоне axe: «реакции» есть и в тексте «Электрошока».
