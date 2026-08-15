@@ -16,6 +16,9 @@ import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 
+/** Почему в бою нет ни одной кнопки подготовки: счёт без этой строки обещает то, чего на экране нет. */
+const PREPARATION_OUT_OF_FIGHT = "подготовку меняют вне боя";
+
 export function BookScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
   const error = useSession((state) => state.error);
@@ -71,7 +74,9 @@ export function BookScreen() {
     ));
   }
   const listLabel = spellListLabel(bloodShown);
-  const counted = `${casting.preparedCount} из ${casting.preparedLimit}`;
+  const counted = `${casting.preparedCount} из ${casting.preparedLimit}${
+    inFight ? ` · ${PREPARATION_OUT_OF_FIGHT}` : ""
+  }`;
 
   const confirm = async (confirmed: CastDraft): Promise<void> => {
     const failure = await execute(toCastCommand(confirmed));

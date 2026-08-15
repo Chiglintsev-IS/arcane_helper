@@ -94,6 +94,16 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     );
   });
 
+  it("в бою счётчик называет причину (FR-214, FR-217)", async () => {
+    await renderWithStores(<BookScreen />, createThorne(), { inFight: true });
+
+    // Кнопок подготовки в бою нет ни одной — значит счёт обязан сказать, отчего их нет.
+    expect(screen.queryByRole("button", { name: /^Подготовить: / })).toBeNull();
+    expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/).textContent).toContain(
+      "подготовку меняют вне боя",
+    );
+  });
+
   it("считает подготовленное и не считает заговоры (FR-102)", async () => {
     await inBookMode();
 
