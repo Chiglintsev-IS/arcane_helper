@@ -587,7 +587,12 @@ describe("приведение состояния версии 1", () => {
     it("эффект нынешней формы проходит насквозь той же ссылкой", () => {
       const { armorClass: _converted, ...current } = legacyAdjustment;
       const marked = withEffects([
-        { ...current, manualKind: "armorAdjustment", contributions: [] },
+        {
+          ...current,
+          duration: { type: "until_removed" },
+          manualKind: "armorAdjustment",
+          contributions: [],
+        },
       ]);
       expect(migrateCharacterState(marked)).toBe(marked);
 
@@ -608,6 +613,43 @@ describe("приведение состояния версии 1", () => {
     it("снимок отмены приводится так же, как состояние", () => {
       const patch = { activeEffects: [legacyAdjustment] };
       expect(fieldsOf(effectsOf(migrateUndoPatch(patch))[0]).manualKind).toBe("armorAdjustment");
+    });
+  });
+
+  describe("особый срок прежней формы", () => {
+    /** Одно слово прежней формы на всё, чего время не отмеряло. */
+    const legacyUntimed = (overrides: Record<string, unknown>) => ({
+      id: "legacy",
+      nameRu: "Проклятие",
+      startedAt: "2026-07-31T12:00:00.000Z",
+      duration: { type: "special" },
+      isConcentration: false,
+      slotLevelUsed: 0,
+      contributions: [],
+      endConditionRu: "Пока мастер не снимет.",
+      ...overrides,
+    });
+
+    const durationTypesOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(migrated).activeEffects).map(
+        (effect) => fieldsOf(fieldsOf(effect).duration).type,
+      );
+
+    it("прежний особый срок расходится по тому, чем он кончался", () => {
+      const migrated = migrateCharacterState({
+        ...createThorne(),
+        activeEffects: [
+          legacyUntimed({ id: "familiar", spellId: "find-familiar" }),
+          legacyUntimed({ id: "status" }),
+        ],
+      });
+
+      expect(durationTypesOf(migrated)).toEqual(["until_spell_ends", "until_removed"]);
+    });
+
+    it("снимок отмены получает тот же срок, что и состояние", () => {
+      const patch = { activeEffects: [legacyUntimed({ spellId: "web" })] };
+      expect(durationTypesOf(migrateUndoPatch(patch))).toEqual(["until_spell_ends"]);
     });
   });
 

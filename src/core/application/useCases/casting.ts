@@ -120,7 +120,7 @@ function slotLevelUsed(request: CastRequest): number {
  * на единственный вопрос, который задают за столом, — сколько ещё держится.
  */
 function endConditionRu(duration: ActiveEffect["duration"], concentration: boolean): string {
-  if (duration.type === "special") {
+  if (duration.type === "until_spell_ends") {
     return concentration ? "До конца концентрации; длительность особая." : "Длительность особая.";
   }
   const held = durationWithRoundsRu(duration);
@@ -132,9 +132,10 @@ function buildEffect(request: CastRequest, occasion: Occasion): ActiveEffect | n
   const { spell } = request;
   if (spell.duration.type === "instant") return null;
 
+  // Карточка называет срок особым — значит отмеряет его само заклинание, а не часы.
   const duration: ActiveEffect["duration"] =
     spell.duration.type === "special"
-      ? { type: "special" }
+      ? { type: "until_spell_ends" }
       : {
           type: spell.duration.type,
           ...(spell.duration.value === undefined ? {} : { value: spell.duration.value }),

@@ -797,15 +797,20 @@ describe("отдых и восстановление", () => {
     expect(undone.character.hitPoints).toEqual(spent.character.hitPoints);
   });
 
-  it("долгий отдых сохраняет эффекты с особой длительностью", () => {
-    const special: Spell = { ...spell("mage-armor"), duration: { type: "special" } };
+  it("долгий отдых оставляет сроки, которые отмеряет не время", () => {
+    const untimed: Spell = { ...spell("mage-armor"), duration: { type: "special" } };
     let current = castSpell(
       session,
-      { spell: special, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      { spell: untimed, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
       occasion,
     );
+    current = startManualEffect(current, { nameRu: "Отравлен" }, occasion);
     current = longRest(current, occasion);
-    expect(current.character.activeEffects).toHaveLength(1);
+
+    expect(current.character.activeEffects.map((effect) => effect.duration.type)).toEqual([
+      "until_spell_ends",
+      "until_removed",
+    ]);
   });
 
   it("короткий отдых ячейки не восстанавливает (FR-132)", () => {
@@ -1414,7 +1419,7 @@ describe("активный эффект без указанной длитель
       { spell: special, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
       occasion,
     );
-    expect(after.character.activeEffects[0]?.duration).toEqual({ type: "special" });
+    expect(after.character.activeEffects[0]?.duration).toEqual({ type: "until_spell_ends" });
   });
 
 });
@@ -1800,7 +1805,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
             id: "narrowed",
             nameRu: "Слово мастера",
             startedAt: "2026-08-08T00:00:00.000Z",
-            duration: { type: "special" },
+            duration: { type: "until_removed" },
             isConcentration: false,
             slotLevelUsed: 0,
             endConditionRu: "Пока мастер не снимет.",

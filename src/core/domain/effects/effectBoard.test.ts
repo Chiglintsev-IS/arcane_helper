@@ -16,7 +16,7 @@ function manualEffect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
     id: "manual-1",
     nameRu: "Опутанный",
     startedAt: "2026-08-02T00:00:00.000Z",
-    duration: { type: "special" },
+    duration: { type: "until_removed" },
     isConcentration: false,
     slotLevelUsed: 0,
     contributions: [],
@@ -112,5 +112,21 @@ describe("вклады действующего", () => {
     expect(board.manualEffect("armorAdjustment")?.id).toBe("e-1");
     expect(board.manualAdjustment("armorAdjustment")).toBe(-2);
     expect(emptyBoard().manualAdjustment("armorAdjustment")).toBe(0);
+  });
+});
+
+describe("EffectBoard.afterLongRest", () => {
+  it("долгий отдых уносит концентрацию вместе с её эффектом", () => {
+    // Особый срок концентрации сам по себе отдых пережил бы, но спящий не концентрируется.
+    const held = manualEffect({
+      id: "e-1",
+      spellId: "web",
+      nameRu: "Паутина",
+      duration: { type: "until_spell_ends" },
+      isConcentration: true,
+    });
+    const board = emptyBoard().start(held, held.startedAt).afterLongRest();
+
+    expect(board.toState()).toEqual({ activeEffects: [] });
   });
 });

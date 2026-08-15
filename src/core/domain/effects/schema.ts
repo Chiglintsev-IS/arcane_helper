@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 import { MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
+import { effectDurationSchema } from "@/core/domain/effects/duration";
 import { isoDateTime, nonEmpty } from "@/core/domain/shared/schema";
 import { statContributionSchema } from "@/core/domain/shared/stats";
 
@@ -21,10 +22,7 @@ const activeEffectSchema = z.object({
 
   startedAt: isoDateTime,
 
-  duration: z.object({
-    type: z.enum(["rounds", "minutes", "hours", "special"]),
-    value: z.number().int().positive().optional(),
-  }),
+  duration: effectDurationSchema,
 
   isConcentration: z.boolean(),
   slotLevelUsed: z.number().int().min(0).max(MAXIMUM_SPELL_LEVEL),

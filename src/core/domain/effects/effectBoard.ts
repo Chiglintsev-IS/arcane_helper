@@ -6,6 +6,7 @@
  * состояние.
  */
 
+import { outlastsLongRest } from "@/core/domain/effects/duration";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { Spell } from "@/core/domain/catalog/spell";
@@ -131,10 +132,17 @@ export class EffectBoard {
     };
   }
 
-  /** Долгий отдых закрывает всё, что короче него; «до рассеивания» и подобное остаётся. */
+  /**
+   * Долгий отдых. Переживёт ли его эффект, отвечает его собственный срок.
+   *
+   * Концентрация сна не переживает ни при каком сроке, и её эффект уходит вместе с ней: эффект
+   * концентрации без самой концентрации — такая же испорченная доска, как и обратное.
+   */
   afterLongRest(): EffectBoard {
     return this.with(
-      this.state.activeEffects.filter((effect) => effect.duration.type === "special"),
+      this.state.activeEffects.filter(
+        (effect) => !effect.isConcentration && outlastsLongRest(effect.duration),
+      ),
       undefined,
     );
   }

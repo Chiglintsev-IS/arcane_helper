@@ -423,12 +423,38 @@ function migrateEffectContributions(effect: unknown): unknown {
   };
 }
 
+/** Одно слово прежней формы на всё, чего время не отмеряет. */
+const LEGACY_UNTIMED_DURATION = "special";
+
+/**
+ * Особый срок прежней формы расходится по тому, чем он кончался: срок эффекта заклинания отмеряет
+ * само заклинание, срок заведённого руками — рука игрока. Различает их сама запись: у ручного
+ * эффекта заклинания нет, и угадывать приведению нечего.
+ */
+function migrateEffectDuration(effect: unknown): unknown {
+  const fields = fieldsOf(effect);
+  const duration = fieldsOf(fields.duration);
+  if (duration.type !== LEGACY_UNTIMED_DURATION) return effect;
+
+  return {
+    ...fields,
+    duration: {
+      ...duration,
+      type: fields.spellId === undefined ? "until_removed" : "until_spell_ends",
+    },
+  };
+}
+
+function migrateEffect(effect: unknown): unknown {
+  return migrateEffectDuration(migrateEffectContributions(effect));
+}
+
 function migrateEffectShapes(state: unknown): unknown {
   const fields = fieldsOf(state);
   const { activeEffects } = fields;
   if (!Array.isArray(activeEffects)) return state;
 
-  const effects = activeEffects.map(migrateEffectContributions);
+  const effects = activeEffects.map(migrateEffect);
   if (effects.every((effect, index) => effect === activeEffects[index])) return state;
   return { ...fields, activeEffects: effects };
 }

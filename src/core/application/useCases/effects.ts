@@ -98,7 +98,7 @@ function buildManualEffect(
     id: occasion.nextId(),
     nameRu,
     startedAt: occasion.now(),
-    duration: { type: "special" },
+    duration: { type: "until_removed" },
     isConcentration: false,
     slotLevelUsed: 0,
     contributions,

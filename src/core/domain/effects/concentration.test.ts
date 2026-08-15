@@ -127,7 +127,8 @@ describe("durationWithRoundsRu", () => {
     [{ type: "minutes", value: 1 } as const, "до 1 минуты (10 раундов)"],
     [{ type: "minutes", value: 10 } as const, "до 10 минут"],
     [{ type: "hours", value: 1 } as const, "до 1 часа"],
-    [{ type: "special" } as const, "особая длительность"],
+    [{ type: "until_spell_ends" } as const, "особая длительность"],
+    [{ type: "until_removed" } as const, "особая длительность"],
     [{ type: "minutes" } as const, "до 0 минут (0 раундов)"],
   ])("%o читается как «%s»", (duration, expected) => {
     expect(durationWithRoundsRu(duration)).toBe(expected);

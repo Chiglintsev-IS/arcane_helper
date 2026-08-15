@@ -71,7 +71,7 @@ describe("предпросмотр смены уровня", () => {
           id: "master-word",
           nameRu: "Слово мастера",
           startedAt: "2026-08-08T00:00:00.000Z",
-          duration: { type: "special" as const },
+          duration: { type: "until_removed" as const },
           isConcentration: false,
           slotLevelUsed: 0,
           endConditionRu: "Пока мастер не снимет.",
