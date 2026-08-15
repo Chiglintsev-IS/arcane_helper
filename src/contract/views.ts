@@ -215,6 +215,11 @@ export const recoveryViewSchema = z.object({
   }),
   /** Сколько хитов вернёт окончание боя; ноль — лечить нечего. */
   combatEndRecovery: whole,
+  /**
+   * Сколько длится короткий отдых, словами правил. Приходит готовым, потому что длительность —
+   * правило игры: набранная в подписи, она разошлась бы с той, которую называет отказ в бою.
+   */
+  shortRestDurationRu: word,
   shortRestUnavailabilityRu: word.optional(),
   longRestUnavailabilityRu: word.optional(),
   /**

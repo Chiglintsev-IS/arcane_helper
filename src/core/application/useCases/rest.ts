@@ -14,8 +14,9 @@ import type { SlotRecoveryPlan } from "@/core/domain/arcana/slots";
 import { DomainError } from "@/core/domain/shared/errors";
 import { LONG_REST_HOURS, maximumReductionAfterHours } from "@/core/domain/vitality/blood";
 import { hitDiceRegainedOnLongRest } from "@/core/domain/vitality/hitDice";
+import { SHORT_REST_DURATION_RU } from "@/core/domain/vitality/shortRest";
 import { commit, type Occasion, type Session } from "@/core/application/session";
-import { hourNotes } from "./health";
+import { regenerationNote } from "./health";
 import { inFight } from "./turn";
 
 /**
@@ -56,9 +57,9 @@ export function longRest(session: Session, occasion: Occasion): Session {
 /**
  * Короткий отдых. Ячеек сам по себе не восстанавливает.
  *
- * Короткий отдых — это час, и час делает всё, что делает час: возвращает ступень снижённого
- * максимума, даёт регенерации дойти до половины и гасит очки заклинаний. Отдельная кнопка «Прошёл
- * час» рядом с ним не должна значить больше, чем сам отдых.
+ * Часом он не является, поэтому следствий часа за собой не ведёт: снижённый кровавым колдовством
+ * максимум остаётся на месте, накопленные очки заклинаний доживают до отметки часа. Регенерация за
+ * это время до половины доходит — вне схватки она идёт непрерывно и отдыха не ждёт.
  */
 export function shortRest(session: Session, occasion: Occasion): Session {
   const unavailability = shortRestUnavailability(session);
@@ -66,14 +67,13 @@ export function shortRest(session: Session, occasion: Occasion): Session {
     throw new DomainError(unavailability);
   }
   const root = Character.of(session.character);
-  const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
-  const hadSpellPoints = root.arcana.spellPoints > 0;
+  const { vitality, healed } = root.vitality.regeneratedByShortRest();
 
   const after = root
     .withVitality(vitality.clearFireSuppression())
-    .withArcana(root.arcana.expireSpellPoints().markShortRest());
+    .withArcana(root.arcana.markShortRest());
 
-  const notes = hourNotes(returned, healed, hadSpellPoints);
+  const notes = regenerationNote(healed);
   return commit(
     session,
     after,
@@ -96,8 +96,10 @@ export function shortRest(session: Session, occasion: Occasion): Session {
  * короткого отдыха» бессмысленно — короткого отдыха сейчас тоже нет.
  */
 export function shortRestUnavailability(session: Session): string | null {
-  return inFight(session) ? "Пока идёт бой, короткий отдых недоступен" : null;
+  return inFight(session) ? IN_FIGHT_SHORT_REST_REASON : null;
 }
+
+const IN_FIGHT_SHORT_REST_REASON = `Пока идёт бой, короткий отдых недоступен: ${SHORT_REST_DURATION_RU} между двумя ходами не проходят`;
 
 export function longRestUnavailability(session: Session): string | null {
   return inFight(session) ? "Пока идёт бой, долгий отдых недоступен" : null;

@@ -5,6 +5,7 @@ import {
   arcaneRecoveryUnavailability,
   longRest,
   shortRest,
+  shortRestUnavailability,
   useArcaneRecovery,
 } from "@/core/application/useCases/rest";
 import {
@@ -2120,31 +2121,52 @@ describe("почасовое восстановление максимума х�
   });
 })
 
-describe("короткий отдых — это час (FR-132, FR-173, FR-175)", () => {
-  it("возвращает ступень максимума, доводит здоровье до половины и гасит очки заклинаний", () => {
+describe("короткий отдых не делает того, что делает час", () => {
+  it("ступень снижённого максимума остаётся на месте, а очки заклинаний не гаснут", () => {
     const wounded = takeDamage(exchangeBlood(session, 3, occasion), 31, occasion);
     expect(wounded.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
     expect(wounded.character.spellPoints.remaining).toBe(3);
 
+    // Регенерация вне схватки идёт непрерывно, поэтому до половины прежнего максимума — 51 — она
+    // доходит и за эти минуты. Сам максимум при этом не растёт: ступень поднимает только час.
     const rested = shortRest(wounded, occasion);
-    expect(rested.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
-    expect(rested.character.spellPoints.remaining).toBe(0);
-    expect(rested.journal.at(-1)?.summaryRu).toBe(
-      "Короткий отдых · максимум +3, регенерация +7, очки заклинаний погашены",
-    );
+    expect(rested.character.hitPoints).toEqual({ current: 25, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
+    expect(rested.character.spellPoints.remaining).toBe(3);
+    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · регенерация +5");
   });
 
-  it("здоровому и не занимавшему в долг отдых пишется коротко", () => {
+  it("час после такого отдыха возвращает ступень и гасит очки — своё он делает по-прежнему", () => {
+    const wounded = takeDamage(exchangeBlood(session, 3, occasion), 31, occasion);
+    const afterHour = recoverHitPointMaximum(shortRest(wounded, occasion), occasion);
+
+    expect(afterHour.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
+    expect(afterHour.character.spellPoints.remaining).toBe(0);
+  });
+
+  it("здоровому отдых пишется коротко", () => {
     expect(shortRest(session, occasion).journal.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 
-  it("под подавлением максимум не восстанавливается, но очки гаснут независимо от него (FR-176)", () => {
+  it("подавленному регенерация не идёт, и лечить отдыху нечем (FR-176)", () => {
     const burned = takeDamage(exchangeBlood(session, 3, occasion), 31, occasion, { fire: true });
     const rested = shortRest(burned, occasion);
 
     expect(rested.character.hitPoints).toEqual({ current: 20, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
-    expect(rested.character.spellPoints.remaining).toBe(0);
-    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · очки заклинаний погашены");
+    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых");
+  });
+
+  it("магическое восстановление отдых открывает по-прежнему (FR-131)", () => {
+    expect(arcaneRecoveryUnavailability(session)).toBe("Берётся после короткого отдыха");
+    expect(arcaneRecoveryUnavailability(shortRest(session, occasion))).toBeNull();
+  });
+
+  it("в бою отдых отказывает и называет свою длительность (FR-215)", () => {
+    const fighting = startCombat(session, occasion);
+
+    expect(shortRestUnavailability(fighting)).toBe(
+      "Пока идёт бой, короткий отдых недоступен: 10 минут между двумя ходами не проходят",
+    );
+    expect(() => shortRest(fighting, occasion)).toThrow(DomainError);
   });
 })
 

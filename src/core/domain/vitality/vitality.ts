@@ -235,6 +235,16 @@ export class Vitality {
     return Math.max(0, Math.floor(this.maximum / 2) - this.current);
   }
 
+  /**
+   * Регенерация за время короткого отдыха: та же непрерывная, что и вне боя, до половины максимума.
+   * Самого максимума отдых не возвращает — ступень поднимает только полный час.
+   */
+  regeneratedByShortRest(): { vitality: Vitality; healed: number } {
+    if (this.suppressed) return { vitality: this, healed: 0 };
+    const { vitality, restored } = this.healUpTo(this.combatEndRecovery());
+    return { vitality, healed: restored };
+  }
+
   setSunlight(underSunlight: boolean): Vitality {
     if (this.state.suppression.underDirectSunlight === underSunlight) {
       throw new DomainError("Признак солнечного света уже в этом состоянии");

@@ -13,6 +13,7 @@ import { Character } from "@/core/domain/assembly/character";
 import type { Session } from "@/core/application/session";
 import { hourUnavailability } from "@/core/application/useCases/health";
 import { recoverableSlots } from "@/core/domain/arcana/slots";
+import { SHORT_REST_DURATION_RU } from "@/core/domain/vitality/shortRest";
 import {
   arcaneRecoveryUnavailability,
   longRestUnavailability,
@@ -43,6 +44,7 @@ export function toRecoveryView(session: Session): RecoveryView {
       ...(hour === null ? {} : { unavailabilityRu: hour }),
     },
     combatEndRecovery: combatEndRecovery(character),
+    shortRestDurationRu: SHORT_REST_DURATION_RU,
     ...(shortRest === null ? {} : { shortRestUnavailabilityRu: shortRest }),
     ...(longRest === null ? {} : { longRestUnavailabilityRu: longRest }),
     arcaneRecovery: {

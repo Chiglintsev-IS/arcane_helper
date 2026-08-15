@@ -87,14 +87,21 @@ export function exchangeBlood(
 }
 
 /**
- * Строки журнала одного часа: что вернулось максимуму, что долечила регенерация, что погашено
- * очками заклинаний. Общие для отдельной отметки часа и короткого отдыха — короткий отдых им и
- * является.
+ * Что долечила регенерация. Строка одна на все отрезки времени, за которые она идёт: назвать её
+ * дважды значило бы получить два разных слова об одном и том же росте хитов.
  */
-export function hourNotes(returned: number, healed: number, hadSpellPoints: boolean): string[] {
+export function regenerationNote(healed: number): string[] {
+  return healed > 0 ? [`регенерация +${healed}`] : [];
+}
+
+/**
+ * Строки журнала одного часа: что вернулось максимуму, что долечила регенерация, что погашено
+ * очками заклинаний. Последние два — следствия именно часа, и короче часа за ними не идут.
+ */
+function hourNotes(returned: number, healed: number, hadSpellPoints: boolean): string[] {
   return [
     ...(returned > 0 ? [`максимум +${returned}`] : []),
-    ...(healed > 0 ? [`регенерация +${healed}`] : []),
+    ...regenerationNote(healed),
     ...(hadSpellPoints ? ["очки заклинаний погашены"] : []),
   ];
 }

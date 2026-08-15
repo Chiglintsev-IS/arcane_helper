@@ -540,7 +540,7 @@ describe("отдых и бой: отказ приходит с причиной 
     await user.click(screen.getByRole("radio", { name: /^Привал/ }));
 
     const shortRest = screen.getByRole("button", {
-      name: "Короткий отдых · час Пока идёт бой, короткий отдых недоступен",
+      name: "Короткий отдых · 10 минут Пока идёт бой, короткий отдых недоступен: 10 минут между двумя ходами не проходят",
     });
     expect(shortRest.hasAttribute("disabled")).toBe(true);
 
