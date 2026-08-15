@@ -17,7 +17,7 @@ import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext"
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 
 /** Почему в бою нет ни одной кнопки подготовки: счёт без этой строки обещает то, чего на экране нет. */
-const PREPARATION_OUT_OF_FIGHT = "подготовку меняют вне боя";
+const PREPARATION_OUT_OF_FIGHT = "Подготовку меняют вне боя";
 
 export function BookScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
@@ -74,9 +74,10 @@ export function BookScreen() {
     ));
   }
   const listLabel = spellListLabel(bloodShown);
-  const counted = `${casting.preparedCount} из ${casting.preparedLimit}${
-    inFight ? ` · ${PREPARATION_OUT_OF_FIGHT}` : ""
-  }`;
+  const counted = `${casting.preparedCount} из ${casting.preparedLimit}`;
+  const refused = !inFight && preparationRefusal !== null;
+  const reason = inFight ? PREPARATION_OUT_OF_FIGHT : preparationRefusal;
+  const reasonTail = reason === null ? "" : ` · ${reason}`;
 
   const confirm = async (confirmed: CastDraft): Promise<void> => {
     const failure = await execute(toCastCommand(confirmed));
@@ -91,14 +92,15 @@ export function BookScreen() {
       <div className="flex shrink-0 flex-col gap-2 px-3 pt-2">
         <p
           role="status"
-          aria-label={preparationRefusal ?? `Подготовлено ${counted}`}
-          className={`text-xs tabular-nums ${
-            preparationRefusal === null
-              ? "text-slate-600 dark:text-slate-400"
-              : "font-medium text-reaction-strong dark:text-reaction"
-          }`}
+          aria-label={`Подготовлено ${counted}${reasonTail}`}
+          className="text-xs tabular-nums text-slate-600 dark:text-slate-400"
         >
-          {preparationRefusal ?? counted}
+          {counted}
+          {reasonTail === "" ? null : (
+            <span className={refused ? "font-medium text-reaction-strong dark:text-reaction" : ""}>
+              {reasonTail}
+            </span>
+          )}
         </p>
       </div>
 

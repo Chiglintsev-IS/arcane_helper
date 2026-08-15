@@ -80,9 +80,7 @@ export class Spellbook {
 
     const wasPrepared = this.isPrepared(spellId);
     if (!wasPrepared && this.state.preparedSpellIds.length >= limit) {
-      throw new DomainError(
-        `Подготовлено ${this.state.preparedSpellIds.length} из ${limit}: сначала снимите другое заклинание`,
-      );
+      throw new DomainError("Снимите другое заклинание");
     }
 
     return {

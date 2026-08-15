@@ -1844,9 +1844,12 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
 
   it("лимит — жёсткое ограничение, а не предупреждение (FR-101)", () => {
     // Единственное место, где приложение отказывает без «всё равно»: это правило подготовки, и
-    // мастер здесь исключений не делает.
-    expect(() => togglePreparation(atLimitOfThree(), spell("identify"), occasion)).toThrow(
-      /Подготовлено 3 из 3/,
+    // мастер здесь исключений не делает. Отказ на трёх подготовленных и означает, что предел стал
+    // тремя: своим счётом отказ не хвалится — его называет тот, кто счёт показывает.
+    const narrowed = atLimitOfThree();
+    expect(narrowed.character.preparedSpellIds).toHaveLength(3);
+    expect(() => togglePreparation(narrowed, spell("identify"), occasion)).toThrow(
+      /Снимите другое заклинание/,
     );
   });
 
@@ -1860,7 +1863,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   it("набор Торна начинается ровно на пределе: 11 из 11 (FR-101)", () => {
     expect(session.character.preparedSpellIds).toHaveLength(LIMIT);
     expect(() => togglePreparation(session, spell("blink"), occasion)).toThrow(
-      /Подготовлено 11 из 11/,
+      /Снимите другое заклинание/,
     );
   });
 
