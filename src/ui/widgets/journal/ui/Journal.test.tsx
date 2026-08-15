@@ -69,6 +69,47 @@ describe("экран журнала (FR-113)", () => {
     expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeDefined();
   });
 
+  it("отмена называет возвращённое", async () => {
+    const older = entry("id-1", "Бой начался");
+    const newest = entry("id-2", "Магическое восстановление: 1×3 ур.");
+    const { rerender } = render(
+      <Journal entries={[older, newest]} onUndo={() => {}} onData={() => {}} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
+    rerender(<Journal entries={[older]} onUndo={() => {}} onData={() => {}} />);
+
+    const returned = screen.getByRole("status");
+    expect(returned.textContent).toContain("Вернулось");
+    expect(returned.textContent).toContain("Магическое восстановление: 1×3 ур.");
+    // Строка встаёт на место исчезнувшей записи: иначе кнопка отмены следующей осталась бы
+    // ровно под тем же пальцем.
+    const list = screen.getByRole("list", { name: "Журнал событий" });
+    expect(returned.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("отклонённая отмена ничего не обещает", async () => {
+    const entries = [entry("id-1", "Бой начался"), entry("id-2", "Огненный шар")];
+    render(<Journal entries={entries} onUndo={() => {}} onData={() => {}} />);
+
+    // Отказ ядра оставляет запись на месте, и возвращать по ней нечего.
+    await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
+
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("отмена последней записи оставляет строку в пустом журнале", async () => {
+    const { rerender } = render(
+      <Journal entries={[entry("id-1", "Бой начался")]} onUndo={() => {}} onData={() => {}} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /^Отменить/ }));
+    rerender(<Journal entries={[]} onUndo={() => {}} onData={() => {}} />);
+
+    expect(screen.getByRole("status").textContent).toContain("Бой начался");
+    expect(screen.getByText("Пока ничего не произошло.")).toBeDefined();
+  });
+
   it("пустой журнал объясняет, а не показывает кнопку", () => {
     render(<Journal entries={[]} onUndo={() => {}} onData={() => {}} />);
 

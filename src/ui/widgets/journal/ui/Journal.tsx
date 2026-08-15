@@ -5,8 +5,18 @@
  * отмены стоит только на ней — отменяется лишь последнее действие, а кнопка на остальных записях
  * была бы обещанием несуществующего.
  *
+ * Отменённая запись не исчезает молча: на её месте встаёт строка о возвращённом, и кнопка отмены
+ * следующей записи оказывается ниже точки прошлого нажатия. Слова строке даёт сама запись — экран
+ * пересказывает случившееся её словами, а не своими.
+ *
  * Компонент презентационный: записи приходят параметром, отмена и выгрузка — обратными вызовами.
+ * Удалась ли отмена, он узнаёт по записям: отклонённая оставляет запись на месте, и обещать тогда
+ * нечего.
  */
+
+"use client";
+
+import { useState } from "react";
 
 import type { Snapshot } from "@/contract/snapshot";
 
@@ -34,6 +44,9 @@ export function Journal({
 }) {
   const newestFirst = [...entries].reverse();
 
+  const [asked, setAsked] = useState<{ id: string; summaryRu: string } | null>(null);
+  const returned = asked !== null && entries.every((entry) => entry.id !== asked.id) ? asked : null;
+
   return (
     <div className="flex flex-col gap-2">
       <button
@@ -43,6 +56,18 @@ export function Journal({
       >
         Данные
       </button>
+
+      {returned === null ? null : (
+        <div
+          role="status"
+          className="flex flex-col gap-1 rounded-lg border border-dashed border-slate-400 p-2 dark:border-slate-600"
+        >
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
+            Вернулось
+          </span>
+          <span className="text-sm leading-tight">{returned.summaryRu}</span>
+        </div>
+      )}
 
       {newestFirst.length === 0 ? (
         <p className="text-sm text-slate-600 dark:text-slate-400">Пока ничего не произошло.</p>
@@ -60,7 +85,10 @@ export function Journal({
               {index === 0 ? (
                 <button
                   type="button"
-                  onClick={onUndo}
+                  onClick={() => {
+                    setAsked({ id: entry.id, summaryRu: entry.summaryRu });
+                    onUndo();
+                  }}
                   aria-label={`Отменить: ${entry.summaryRu}`}
                   className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
                 >
