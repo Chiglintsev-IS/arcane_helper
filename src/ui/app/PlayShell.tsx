@@ -89,11 +89,18 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
 
   return (
     <main className="flex h-dvh flex-col">
-      <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
+      <div className="relative flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
         <ModeSwitcher mode={mode} onChange={changeMode} />
 
+        {/*
+ Полоса висит под шапкой поверх содержимого: в потоке она сдвигала список ровно в тот момент,
+ когда игрок метил в его строку.
+ */}
         {error === null ? null : (
-          <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-xs">
+          <p
+            role="alert"
+            className="absolute inset-x-3 top-full z-20 mt-2 rounded-lg border border-reaction bg-slate-50 p-2 text-xs font-medium text-reaction-strong shadow-lg dark:bg-slate-900 dark:text-reaction"
+          >
             {error}{" "}
             <button
               type="button"

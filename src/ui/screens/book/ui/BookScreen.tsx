@@ -25,6 +25,7 @@ export function BookScreen() {
   const [filters, setFilters] = useState(NO_FILTERS);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
+  const [preparationRefusal, setPreparationRefusal] = useState<string | null>(null);
 
   const execute = sessionStore.getState().execute;
   const turn = snapshot.turn;
@@ -32,6 +33,16 @@ export function BookScreen() {
   const { casting } = snapshot;
   // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
   const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spellId) ?? null;
+
+  /*
+   * Отказ подготовки читается у счётчика, а не общей полосой: полоса стоит у верхнего края, кнопка
+   * — в строке списка, и один отказ, названный в двух местах, читается как два разных.
+   */
+  const togglePreparation = async (spellId: string): Promise<void> => {
+    const failure = await execute({ kind: "toggle_preparation", spellId });
+    setPreparationRefusal(failure);
+    if (failure !== null) sessionStore.getState().dismissError();
+  };
 
   const inMode = spellsForScreen(snapshot.spells, "book");
   const shown = filterSpells(inMode, filters);
@@ -45,11 +56,7 @@ export function BookScreen() {
       spell={spell}
       casting={casting}
       onOpen={() => setOpenSpellId(spell.id)}
-      onTogglePrepared={
-        !inFight
-          ? () => void execute({ kind: "toggle_preparation", spellId: spell.id })
-          : undefined
-      }
+      onTogglePrepared={!inFight ? () => void togglePreparation(spell.id) : undefined}
     />
   ));
   if (bloodShown) {
@@ -64,6 +71,7 @@ export function BookScreen() {
     ));
   }
   const listLabel = spellListLabel(bloodShown);
+  const counted = `${casting.preparedCount} из ${casting.preparedLimit}`;
 
   const confirm = async (confirmed: CastDraft): Promise<void> => {
     const failure = await execute(toCastCommand(confirmed));
@@ -75,16 +83,17 @@ export function BookScreen() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-col gap-2">
+      <div className="flex shrink-0 flex-col gap-2 px-3 pt-2">
         <p
-          aria-label={`Подготовлено ${casting.preparedCount} из ${casting.preparedLimit}`}
-          className={`flex-1 text-xs tabular-nums ${
-            casting.preparedCount >= casting.preparedLimit
-              ? "font-medium text-reaction-strong dark:text-reaction"
-              : "text-slate-600 dark:text-slate-400"
+          role="status"
+          aria-label={preparationRefusal ?? `Подготовлено ${counted}`}
+          className={`text-xs tabular-nums ${
+            preparationRefusal === null
+              ? "text-slate-600 dark:text-slate-400"
+              : "font-medium text-reaction-strong dark:text-reaction"
           }`}
         >
-          {casting.preparedCount} из {casting.preparedLimit}
+          {preparationRefusal ?? counted}
         </p>
       </div>
 

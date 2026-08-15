@@ -250,22 +250,19 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     expect(list.queryByText("Отражения")).toBeNull();
   });
 
-  it("двенадцатое заклинание упирается в лимит и объясняет причину (FR-101)", async () => {
-    const user = userEvent.setup();
-    // В книге Торна восемь записей, а лимит 11 — до края не дотянуться. Понижаем Интеллект до 8:
-    // лимит становится 6 (модификатор −1 плюс уровень 7), и шесть подготовленных его исчерпывают.
-    const overloaded = {
-      ...createThorne(),
-      abilities: { ...createThorne().abilities, intelligence: 8 },
-      preparedSpellIds: [...createThorne().spellbookSpellIds].slice(0, 6),
-    };
-    await renderWithStores(<PlayShell initialMode="book" />, overloaded);
+  it("отказ по лимиту не двигает список (FR-101)", async () => {
+    // Набор Торна занимает предел целиком: двенадцатое упирается в него без подготовки состояния.
+    const { user } = await inBookMode();
 
-    expect(screen.getByLabelText("Подготовлено 6 из 6")).toBeDefined();
-    // Седьмое: подготовки нет ровно у двух записей книги, берём первую попавшуюся.
-    await user.click(screen.getAllByRole("button", { name: /^Подготовить: / })[0]!);
+    const counter = screen.getByLabelText(/^Подготовлено \d+ из \d+/);
+    await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
 
-    expect(screen.getByRole("alert").textContent).toContain("Подготовлено 6 из 6");
+    // Ответ пришёл в тот же узел, в котором стоял счёт: над списком не прибавилось ни строки, и
+    // строка, по которой метил палец, осталась на месте.
+    expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/)).toBe(counter);
+    expect(counter.textContent).toContain("сначала снимите другое");
+    // Полоса оболочки того же отказа не повторяет: она стоит у верхнего края, а кнопка — в списке.
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
 });
