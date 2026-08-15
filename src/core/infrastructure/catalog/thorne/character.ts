@@ -27,7 +27,7 @@ const RAW: unknown = {
   subclass: "Создатель рун",
   // Возраст не назван игроком: пустое поле честнее выдуманного.
   age: 0,
-  size: "large",
+  size: "medium",
   speed: 30,
 
   abilities: {

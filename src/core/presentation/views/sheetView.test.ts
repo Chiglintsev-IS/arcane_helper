@@ -106,7 +106,7 @@ describe("кто он", () => {
     expect(thorne()).toMatchObject({
       name: "Торн",
       species: "Лунный тролль",
-      size: "large",
+      size: "medium",
       speed: 30,
       className: "Волшебник",
       level: 7,

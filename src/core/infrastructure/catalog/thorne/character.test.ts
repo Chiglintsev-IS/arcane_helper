@@ -17,4 +17,8 @@ describe("Торн сверяется с бумажным листом", () => {
       survival: "proficient",
     });
   });
+
+  it("размер Торна совпадает с листом", () => {
+    expect(createThorne().size).toBe("medium");
+  });
 });

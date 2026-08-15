@@ -299,7 +299,6 @@ describe("состояние целиком", () => {
     const thorneState = createThorne();
     expect(thorneState.species).toBe("Лунный тролль");
     expect(thorneState.subclass).toBe("Создатель рун");
-    expect(thorneState.size).toBe("large");
     expect(thorneState.speed).toBe(30);
     expect(thorneState.exhaustion).toBe(0);
     expect(thorneState.inspiration).toBe(false);
