@@ -17,20 +17,26 @@ import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
 import { signed } from "@/shared/language";
 
 /**
- * Ярлык ресурса хода. Подпись одна и та же в обоих состояниях: израсходованность несут знак и
- * пониженная контрастность, а словами её называет доступное имя, которое ставит вызывающий.
+ * Ярлык того, чем платят: ресурса хода и пула с остатком.
+ *
+ * Подпись одна и та же в обоих состояниях: израсходованность несут знак и пониженная контрастность,
+ * а словами её называет доступное имя, которое ставит вызывающий. Цвет отвечает на вопрос «есть ли
+ * ещё»: постоянный отвечал бы «да» и при нуле, и пустой пул был бы неотличим от полного.
  */
-function TurnResource({
+function SpendableResource({
   available,
   tone,
+  icon,
   children,
 }: {
   available: boolean;
   tone: Tone;
+  /** Знак ресурса, пока им есть чем платить: кончившийся носит знак отказа. */
+  icon: string;
   children: React.ReactNode;
 }) {
   return (
-    <Badge tone={available ? tone : "muted"} icon={available ? "✓" : "✗"}>
+    <Badge tone={available ? tone : "muted"} icon={available ? icon : "✗"}>
       {children}
     </Badge>
   );
@@ -215,6 +221,8 @@ export function ResourceBadges({
 }) {
   const { hitPoints } = sheet;
   const { inFight } = turn;
+  const { hitDice } = hitPoints;
+  const diceLeft = hitDice !== undefined && hitDice.remaining > 0;
 
   return (
     <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
@@ -224,9 +232,9 @@ export function ResourceBadges({
          * искал бы число заново там, где секунду назад стояло другое.
          */}
         <li aria-label={`Кости хитов ${hitDiceLabel(hitPoints.hitDice)}`}>
-          <Badge tone="muted" icon="✚">
+          <SpendableResource available={diceLeft} tone="muted" icon="✚">
             Кости {hitDiceLabel(hitPoints.hitDice)}
-          </Badge>
+          </SpendableResource>
         </li>
         {/*
          * Подпись короткая, доступное имя полное: на 320 пикселях «Пассивное восприятие» забирает
@@ -242,14 +250,14 @@ export function ResourceBadges({
          * вдвое выше. Правка рун открывается плиткой ячейки — там же, где правятся ячейки.
          */}
         <li>
-          <Badge tone="ritual" icon="❖">
+          <SpendableResource available={resources.runes.remaining > 0} tone="ritual" icon="❖">
             Руны {resources.runes.remaining}/{resources.runes.maximum}
-          </Badge>
+          </SpendableResource>
         </li>
         <li>
-          <Badge tone="muted" icon="✚">
+          <SpendableResource available={resources.spellPoints > 0} tone="muted" icon="✚">
             Очки {resources.spellPoints}
-          </Badge>
+          </SpendableResource>
         </li>
         {/*
          * Приходящее с боем встаёт за постоянной частью, ничего не сдвигая: инициатива, затем
@@ -318,9 +326,9 @@ export function ResourceBadges({
         {inFight ? (
           <>
             <li aria-label={turn.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
-              <TurnResource available={turn.actionAvailable} tone="action">
+              <SpendableResource available={turn.actionAvailable} tone="action" icon="✓">
                 Действие
-              </TurnResource>
+              </SpendableResource>
             </li>
             {/* Бонусного действия нет ни у одной карточки — тратить его не на что. */}
             {bookCastingTimes.has("bonus_action") ? (
@@ -331,15 +339,15 @@ export function ResourceBadges({
                     : "Бонусное действие израсходовано"
                 }
               >
-                <TurnResource available={turn.bonusActionAvailable} tone="bonus">
+                <SpendableResource available={turn.bonusActionAvailable} tone="bonus" icon="✓">
                   Бонусное
-                </TurnResource>
+                </SpendableResource>
               </li>
             ) : null}
             <li aria-label={turn.reactionAvailable ? "Реакция доступна" : "Реакция израсходована"}>
-              <TurnResource available={turn.reactionAvailable} tone="reaction">
+              <SpendableResource available={turn.reactionAvailable} tone="reaction" icon="✓">
                 Реакция
-              </TurnResource>
+              </SpendableResource>
             </li>
           </>
         ) : null}
