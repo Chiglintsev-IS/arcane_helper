@@ -201,7 +201,7 @@ describe("объявление мастеру (FR-041, AC-12)", () => {
   });
 });
 
-describe("порядок итогового шага (FR-253)", () => {
+describe("порядок итогового шага (FR-255)", () => {
   /** Блоки шага сверху вниз: раскладку в jsdom заменяет порядок в разметке. */
   function blockLabels(): (string | null)[] {
     const wizard = screen.getByRole("dialog", { name: /Применение/ });
