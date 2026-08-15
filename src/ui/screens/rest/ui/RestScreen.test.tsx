@@ -219,7 +219,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     // он возникает раньше, чем игрок вспомнит правило, — требование это изменило.
     await atCamp(withoutArcaneRecovery(createThorne()));
     const button = screen.getByRole("button", {
-      name: "Магическое восстановление · осталось 0 уровней — Дневной бюджет восстановления исчерпан до следующего долгого отдыха",
+      name: "Магическое восстановление · осталось 0 уровней Дневной бюджет восстановления исчерпан до следующего долгого отдыха",
     });
     expect(button.hasAttribute("disabled")).toBe(true);
   });
@@ -231,13 +231,24 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     // Причина названа словами на самой кнопке, и лечится она соседней — в том же ряду. Остаток
     // бюджета виден в подписи ещё до того, как отдых его открыл.
     const blocked = screen.getByRole("button", {
-      name: "Магическое восстановление · осталось 4 уровня — Берётся после короткого отдыха",
+      name: "Магическое восстановление · осталось 4 уровня Берётся после короткого отдыха",
     });
     expect(blocked.hasAttribute("disabled")).toBe(true);
 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
     const available = screen.getByRole("button", { name: "Магическое восстановление · осталось 4 уровня" });
     expect(available.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("причина недоступности видна без наведения (FR-131)", async () => {
+    await atCamp(withSpentSlots(createThorne(), 1, 1));
+
+    // Причина стоит строкой внутри кнопки. Всплывающая подсказка её не заменяет: за столом наводить
+    // нечем, и причина, доступная только курсору, не показана вовсе.
+    const blocked = screen.getByRole("button", { name: /^Магическое восстановление/ });
+    expect(within(blocked).getByText("Берётся после короткого отдыха")).toBeDefined();
+    expect(blocked.hasAttribute("title")).toBe(false);
+    expect(blocked.querySelector("[title]")).toBeNull();
   });
 
   it("частичное восстановление уменьшает остаток бюджета в подписи кнопки (FR-131)", async () => {

@@ -307,7 +307,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
 
     const button = screen.getByRole("button", {
-      name: "Прошёл час · максимум +3 — Пока идёт бой, час пройти не может",
+      name: "Прошёл час · максимум +3 Пока идёт бой, час пройти не может",
     });
     expect(button.hasAttribute("disabled")).toBe(true);
   });
