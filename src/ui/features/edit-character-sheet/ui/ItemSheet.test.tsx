@@ -237,7 +237,7 @@ describe("шторка вещи", () => {
           nameRu: "Шлем",
           kind: "gear",
           bonuses: [{ stat: "armorClass", value: 1 }],
-          bonusFacts: [{ kind: "stat", id: "armorClass", value: 1 }],
+          bonusFacts: [{ value: 1, targets: [{ kind: "stat", id: "armorClass" }] }],
           bagCount: 1,
           wornCount: 0,
           spellcastingFocus: false,
