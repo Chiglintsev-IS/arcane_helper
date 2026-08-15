@@ -1990,6 +1990,29 @@ describe("конец боя (FR-216)", () => {
     });
   });
 
+  it("конец боя снимает раундовое", () => {
+    let current = withTurnTracking(session);
+    current = castSpell(
+      current,
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      occasion,
+    );
+    current = castSpell(
+      current,
+      { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      occasion,
+    );
+    expect(current.character.activeEffects.map((effect) => effect.nameRu)).toEqual([
+      "Доспехи мага",
+      "Щит",
+    ]);
+
+    const ended = endCombat(current, occasion);
+    expect(ended.character.activeEffects.map((effect) => effect.nameRu)).toEqual(["Доспехи мага"]);
+    expect(ended.journal.at(-1)?.summaryRu).toBe("Бой закончен: «Щит» истёк");
+    expect(undoLast(ended).character.activeEffects).toHaveLength(2);
+  });
+
   it("отмена возвращает и счёт раундов прежнего боя (FR-111)", () => {
     let current = withTurnTracking(session);
     for (let round = 0; round < 2; round += 1) current = beginTurn(current, occasion);

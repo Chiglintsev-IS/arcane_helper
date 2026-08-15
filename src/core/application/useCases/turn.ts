@@ -9,11 +9,16 @@
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Encounter, type TurnEconomy } from "@/core/domain/encounter/encounter";
+import type { ActiveEffect } from "@/core/domain/effects/schema";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 
 
 function encounterOf(session: Session): Encounter {
   return Encounter.fromJournal(session.journal);
+}
+
+function expiryNotes(expired: readonly ActiveEffect[]): string[] {
+  return expired.map((effect) => `«${effect.nameRu}» истёк`);
 }
 
 /** Идёт ли бой прямо сейчас. Ответ один на всё приложение, и он выводится из журнала. */
@@ -54,10 +59,7 @@ function advanceTurn(
     .withEffects(board)
     .withVitality(root.vitality.clearFireSuppression().healUpTo(healed).vitality);
 
-  const notes = [
-    ...(healed > 0 ? [`регенерация +${healed}`] : []),
-    ...expired.map((effect) => `«${effect.nameRu}» истёк`),
-  ];
+  const notes = [...(healed > 0 ? [`регенерация +${healed}`] : []), ...expiryNotes(expired)];
   return commit(
     session,
     after,
@@ -72,23 +74,26 @@ export function combatEndRecovery(character: CharacterState): number {
 }
 
 /**
- * Конец боя: отметка о факте, а восстановление тролля — её следствие.
+ * Конец боя: отметка о факте, а восстановление тролля и истечение раундового — её следствия.
  *
  * Запись появляется всегда, даже когда лечить нечего: от неё считаются раунды следующего боя.
  */
 export function endCombat(session: Session, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const restored = root.vitality.combatEndRecovery();
-  const after = root.withVitality(root.vitality.healUpTo(restored).vitality);
+  const { board, expired } = root.effects.afterCombat();
+  const after = root.withEffects(board).withVitality(root.vitality.healUpTo(restored).vitality);
+
+  const notes = [
+    ...(restored > 0 ? [`восстановлено ${restored} до половины максимума`] : []),
+    ...expiryNotes(expired),
+  ];
   return commit(
     session,
     after,
     {
       kind: "combat_ended",
-      summaryRu:
-        restored === 0
-          ? "Бой закончен"
-          : `Бой закончен: восстановлено ${restored} до половины максимума`,
+      summaryRu: notes.length === 0 ? "Бой закончен" : `Бой закончен: ${notes.join(", ")}`,
     },
     occasion,
   );

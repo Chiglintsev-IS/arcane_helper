@@ -14,6 +14,9 @@ import type { ActiveEffect, EffectsState } from "./schema";
 
 type EffectBoardState = EffectsState;
 
+/** Доска после истечения и то, что с неё ушло: подпись в журнале обязана назвать снятое. */
+type Expiry = { board: EffectBoard; expired: ActiveEffect[] };
+
 /** Отчего концентрация кончилась — перечнем: тем же списком сужается слово, пришедшее снаружи. */
 export const CONCENTRATION_ENDS = ["manual", "failed_check", "replaced", "long_rest"] as const;
 
@@ -99,10 +102,16 @@ export class EffectBoard {
    * Истечение раундовых эффектов. Сколько раундов прошло, решает вызывающий: раунды считаются по
    * журналу, а доска эффектов про журнал не знает.
    */
-  expire(elapsedRounds: (effect: ActiveEffect) => number): {
-    board: EffectBoard;
-    expired: ActiveEffect[];
-  } {
+  expire(elapsedRounds: (effect: ActiveEffect) => number): Expiry {
+    return this.dropRounds((effect, rounds) => elapsedRounds(effect) >= rounds);
+  }
+
+  /** Конец схватки: раундов вне боя нет, и раундовое кончается вместе с ней — весь остаток сразу. */
+  afterCombat(): Expiry {
+    return this.dropRounds(() => true);
+  }
+
+  private dropRounds(isOver: (effect: ActiveEffect, rounds: number) => boolean): Expiry {
     const kept: ActiveEffect[] = [];
     const expired: ActiveEffect[] = [];
 
@@ -112,7 +121,7 @@ export class EffectBoard {
         kept.push(effect);
         continue;
       }
-      (elapsedRounds(effect) >= rounds ? expired : kept).push(effect);
+      (isOver(effect, rounds) ? expired : kept).push(effect);
     }
 
     const losesConcentration = expired.some((effect) => effect.isConcentration);
