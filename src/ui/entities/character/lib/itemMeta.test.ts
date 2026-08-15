@@ -23,7 +23,7 @@ function viewOf(definition: ItemDefinition): ItemView {
 }
 
 describe("вторая строка вещи", () => {
-  it("называет цену, прибавки и заметку — только то, что есть", () => {
+  it("цена и прибавки — неделимые факты второй строки, заметка — свободный текст", () => {
     // Прибавки приезжают теми, что действуют: чьей категории они не положены, у того их и нет —
     // это стережёт владелец вещи, и второй такой проверки здесь не заводится.
     expect(
@@ -36,7 +36,7 @@ describe("вторая строка вещи", () => {
         }),
         stats,
       ),
-    ).toBe("50 зм");
+    ).toEqual({ facts: ["50 зм"], note: undefined });
     expect(
       itemMeta(
         viewOf({
@@ -48,7 +48,10 @@ describe("вторая строка вещи", () => {
         }),
         stats,
       ),
-    ).toBe("Класс Доспеха +1 · Спасбросок: Телосложение +1 · фамильное");
+    ).toEqual({
+      facts: ["Класс Доспеха +1", "Спасбросок: Телосложение +1"],
+      note: "фамильное",
+    });
     expect(
       itemMeta(
         viewOf({
@@ -59,7 +62,10 @@ describe("вторая строка вещи", () => {
         }),
         stats,
       ),
-    ).toBe("КС спасброска +2 · Атака заклинанием +2");
-    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }), stats)).toBe("");
+    ).toEqual({ facts: ["КС спасброска +2", "Атака заклинанием +2"], note: undefined });
+    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }), stats)).toEqual({
+      facts: [],
+      note: undefined,
+    });
   });
 });
