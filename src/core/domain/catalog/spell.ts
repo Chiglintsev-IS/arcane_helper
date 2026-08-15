@@ -13,6 +13,7 @@ import { GLYPH_IDS, SEAL_KINDS } from "@/core/domain/catalog/diagram/glyphs";
 import { isRune } from "@/core/domain/catalog/diagram/futhark";
 import { COMBAT_ROLES } from "@/core/domain/catalog/combatRole";
 import { REACTION_TRIGGERS } from "@/core/domain/catalog/reactions";
+import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { nonEmpty } from "@/core/domain/shared/schema";
 import { statContributionSchema } from "@/core/domain/shared/stats";
@@ -380,16 +381,51 @@ const spellShape = z.object({
   announcementTemplate: nonEmpty,
 });
 
-/** Все художественные тексты заклинания одним списком — для проверки. */
-function roleplayTexts(roleplay: z.infer<typeof roleplaySchema>): string[] {
-  return [
-    roleplay.incantation,
-    roleplay.gesture,
-    roleplay.visualEffect,
-    ...roleplay.completeVariants.short,
-    ...roleplay.completeVariants.atmospheric,
-    ...roleplay.completeVariants.sarcastic,
+type RoleplayEntry = { path: (string | number)[]; text: string };
+
+/** Все художественные тексты заклинания с их местом в карточке — для проверки. */
+function roleplayEntries(roleplay: z.infer<typeof roleplaySchema>): RoleplayEntry[] {
+  const entries: RoleplayEntry[] = [
+    { path: ["incantation"], text: roleplay.incantation },
+    { path: ["gesture"], text: roleplay.gesture },
+    { path: ["visualEffect"], text: roleplay.visualEffect },
   ];
+  for (const category of ROLEPLAY_CATEGORIES) {
+    for (const [index, text] of roleplay.completeVariants[category].entries()) {
+      entries.push({ path: ["completeVariants", category, index], text });
+    }
+  }
+  return entries;
+}
+
+function roleplayTexts(roleplay: z.infer<typeof roleplaySchema>): string[] {
+  return roleplayEntries(roleplay).map((entry) => entry.text);
+}
+
+/** Возглас — восклицание: голос, поднятый в момент сотворения. */
+const EXCLAMATION = "!";
+
+/** Слова, которыми текст называет руку заклинателя: жест прописывается ею. */
+const HAND_WORDS = [
+  "жест",
+  "рук",
+  "ладон",
+  "палец",
+  "пальц",
+  "кулак",
+  "взмах",
+  "щёлк",
+  "щелк",
+  "черти",
+] as const;
+
+const NON_LETTERS = /[^\p{L}]+/u;
+
+function handWord(text: string): string | undefined {
+  return text
+    .toLowerCase()
+    .split(NON_LETTERS)
+    .find((word) => HAND_WORDS.some((marker) => word.startsWith(marker)));
 }
 
 function countCompleteVariants(roleplay: z.infer<typeof roleplaySchema>): number {
@@ -450,6 +486,26 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
       path: ["roleplay", "completeVariants"],
       message: `Нужно минимум ${MINIMUM_COMPLETE_VARIANTS} варианта отыгрыша, найдено ${countCompleteVariants(spell.roleplay)}`,
     });
+  }
+
+  // Предписывают компоненты: чего они не требуют, того художественный слой не велит делать.
+  if (!spell.components.verbal && spell.roleplay.incantation.includes(EXCLAMATION)) {
+    context.addIssue({
+      code: "custom",
+      path: ["roleplay", "incantation"],
+      message: `«${spell.nameRu}» творится молча: возглас в реплике предписывает речь, которой компоненты не требуют`,
+    });
+  }
+  if (!spell.components.somatic) {
+    for (const entry of roleplayEntries(spell.roleplay)) {
+      const hand = handWord(entry.text);
+      if (hand === undefined) continue;
+      context.addIssue({
+        code: "custom",
+        path: ["roleplay", ...entry.path],
+        message: `«${spell.nameRu}» творится без рук: «${hand}» предписывает жест, которого компоненты не требуют`,
+      });
+    }
   }
 
   //: подстановки только из закрытого словаря — остальное приложению нечем заполнить.

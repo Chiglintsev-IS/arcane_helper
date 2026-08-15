@@ -269,6 +269,72 @@ describe("минимум художественного контента (FR-050
   });
 });
 
+describe("отыгрыш против компонентов", () => {
+  /** Заклинание, которое творится молча: голоса компоненты не требуют. */
+  const voiceless = (incantation: string): unknown =>
+    mutate(
+      withRoleplay((roleplay) => {
+        roleplay.incantation = incantation;
+      }),
+      (draft) => {
+        draft.components = { verbal: false, somatic: true, material: false };
+      },
+    );
+
+  /** Заклинание, которое творится без рук: соматики компоненты не требуют. */
+  const handless = (change: (roleplay: Record<string, unknown>) => void): unknown =>
+    mutate(withRoleplay(change), (draft) => {
+      draft.components = { verbal: true, somatic: false, material: false };
+    });
+
+  const wordless = (roleplay: Record<string, unknown>): void => {
+    roleplay.gesture = "Делает полшага вперёд и не завершает его.";
+    roleplay.completeVariants = {
+      short: ["Шагает — и оказывается за спиной у противника."],
+      atmospheric: ["Иней оседает там, где он только что стоял."],
+      sarcastic: ["«Продолжайте без меня», — доносится уже издалека."],
+    };
+  };
+
+  it("возглас в реплике молча творимого заклинания отклоняется", () => {
+    expect(firstError(voiceless("Замри! Ноль по Кельвину."))).toContain("творится молча");
+  });
+
+  it("реплика без возгласа принимается: молчащее заклинание говорить не запрещает", () => {
+    expect(spellSchema.safeParse(voiceless("Ноль по Кельвину.")).success).toBe(true);
+  });
+
+  it("рука в жесте заклинания без соматики отклоняется, и отказ называет слово", () => {
+    expect(
+      firstError(
+        handless((roleplay) => {
+          wordless(roleplay);
+          roleplay.gesture = "Разжимает ладонь вниз.";
+        }),
+      ),
+    ).toContain("«ладонь» предписывает жест");
+  });
+
+  it("рука находится и в готовом варианте отыгрыша, а не только в жесте", () => {
+    expect(
+      firstError(
+        handless((roleplay) => {
+          wordless(roleplay);
+          roleplay.completeVariants = {
+            short: ["Короткий взмах — и падение становится спуском."],
+            atmospheric: ["Воздух под сорвавшимися густеет и держит."],
+            sarcastic: ["«Перо в кармане было», — доносится сверху."],
+          };
+        }),
+      ),
+    ).toContain("«взмах» предписывает жест");
+  });
+
+  it("текст, не называющий рук, принимается: предписывать нечего", () => {
+    expect(spellSchema.safeParse(handless(wordless)).success).toBe(true);
+  });
+});
+
 describe("подстановки объявления (FR-041)", () => {
   it("отклоняет подстановку вне закрытого словаря", () => {
     expect(

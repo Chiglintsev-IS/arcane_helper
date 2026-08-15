@@ -7,7 +7,8 @@ import {
   loadThorneSpells,
   parseSpells,
 } from "./index";
-import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
+import { CANTRIP_LEVEL, spellSchema } from "@/core/domain/catalog/spell";
+import { fieldsOf } from "@/core/domain/shared/fields";
 
 const spells = loadThorneSpells();
 
@@ -254,6 +255,33 @@ describe("покрытие механик первой партией", () => {
       "identify",
       "unseen-servant",
     ]);
+  });
+});
+
+describe("отыгрыш против компонентов", () => {
+  it("отыгрыш не предписывает того, чего не требуют компоненты", () => {
+    // Судит схема: прогон подставляет в живую карточку возглас и жест и ждёт отказа. Правило здесь
+    // не повторяется — вторая его копия расходится с настоящей на первой же правке.
+    const silent = spells.filter((spell) => !spell.components.verbal);
+    const handless = spells.filter((spell) => !spell.components.somatic);
+    expect(silent.length, "молча творимых карточек в книге нет").toBeGreaterThan(0);
+    expect(handless.length, "карточек, творимых без рук, в книге нет").toBeGreaterThan(0);
+
+    for (const spell of silent) {
+      const shouting = fieldsOf(structuredClone(spell));
+      const roleplay = fieldsOf(shouting.roleplay);
+      roleplay.incantation = `Стой! ${spell.roleplay.incantation}`;
+      shouting.roleplay = roleplay;
+      expect(spellSchema.safeParse(shouting).success, spell.nameRu).toBe(false);
+    }
+
+    for (const spell of handless) {
+      const gesturing = fieldsOf(structuredClone(spell));
+      const roleplay = fieldsOf(gesturing.roleplay);
+      roleplay.gesture = `${spell.roleplay.gesture} Ладонь вниз.`;
+      gesturing.roleplay = roleplay;
+      expect(spellSchema.safeParse(gesturing).success, spell.nameRu).toBe(false);
+    }
   });
 });
 
