@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { SheetView } from "@/contract/views";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
@@ -34,32 +34,53 @@ const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
   temporary: "Временные хиты",
 };
 
-const fieldClass =
-  "min-h-11 rounded-lg border border-slate-200 px-3 text-base tabular-nums dark:border-slate-800 dark:bg-slate-900";
+const fieldClass = "min-h-11 rounded-lg border px-3 text-base tabular-nums dark:bg-slate-900";
+const quietBorder = "border-slate-200 dark:border-slate-800";
+
+/** Незаполненное поле — несобранная просьба: владельцу нечего отправлять, и причина остаётся здесь. */
+const NOT_TYPED = "Наберите число";
 
 function NumberField({
   labelRu,
   value,
   min,
+  reasonRu,
   onChange,
 }: {
   labelRu: string;
   value: string;
   min: number;
+  /** Почему набранное не ушло. Причина стоит у поля, в котором набирали, а не поверх экрана. */
+  reasonRu: string | null;
   onChange: (value: string) => void;
 }) {
+  const reasonId = useId();
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium">{labelRu}</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={min}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={fieldClass}
-      />
-    </label>
+    // Причина стоит рядом с полем, но вне подписи: внутри неё она стала бы частью имени поля.
+    <div className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1">
+        <span className="font-medium">{labelRu}</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={min}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={reasonRu !== null}
+          aria-describedby={reasonRu === null ? undefined : reasonId}
+          className={`${fieldClass} ${reasonRu === null ? quietBorder : "border-reaction"}`}
+        />
+      </label>
+      {reasonRu === null ? null : (
+        <p
+          id={reasonId}
+          role="alert"
+          className="text-xs font-medium text-reaction-strong dark:text-reaction"
+        >
+          {reasonRu}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -86,6 +107,7 @@ export function HitPointsSheet({
   const [fire, setFire] = useState(false);
   const [baseText, setBaseText] = useState(String(hitPoints.maximumBase));
   const [masterText, setMasterText] = useState(String(hitPoints.masterReduction));
+  const [asked, setAsked] = useState(false);
   const amount = requiredFieldNumber(value);
 
   const maximumBase = requiredFieldNumber(baseText);
@@ -97,11 +119,27 @@ export function HitPointsSheet({
   );
   const effective = preview?.kind === "health_preview" ? preview.effectiveMaximum : null;
 
+  /** Причина стоит у пустого поля до следующего касания: набранное отвечает за себя само. */
+  const notTyped = (typed: number): string | null =>
+    asked && Number.isNaN(typed) ? NOT_TYPED : null;
+
+  const typing =
+    (write: (next: string) => void) =>
+    (next: string): void => {
+      setAsked(false);
+      write(next);
+    };
+
   const submit = (): void => {
+    setAsked(true);
+    if (kind === "maximum") {
+      if (filled) onMaximum({ maximumBase, masterReduction });
+      return;
+    }
+    if (Number.isNaN(amount)) return;
     if (kind === "damage") return onDamage(amount, fire);
     if (kind === "heal") return onHeal(amount);
-    if (kind === "temporary") return onTemporary(amount);
-    return onMaximum({ maximumBase, masterReduction });
+    return onTemporary(amount);
   };
 
   return (
@@ -119,7 +157,10 @@ export function HitPointsSheet({
             type="button"
             role="radio"
             aria-checked={kind === tab.kind}
-            onClick={() => setKind(tab.kind)}
+            onClick={() => {
+              setAsked(false);
+              setKind(tab.kind);
+            }}
             className={`min-h-11 flex-1 rounded-lg border px-2 text-sm ${
               kind === tab.kind
                 ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
@@ -133,16 +174,38 @@ export function HitPointsSheet({
 
       {kind === "maximum" ? (
         <>
-          <NumberField labelRu="Базовый максимум" value={baseText} min={1} onChange={setBaseText} />
+          <NumberField
+            labelRu="Базовый максимум"
+            value={baseText}
+            min={1}
+            reasonRu={notTyped(maximumBase)}
+            onChange={typing(setBaseText)}
+          />
           <NumberField
             labelRu="Снижение мастера"
             value={masterText}
             min={0}
-            onChange={setMasterText}
+            reasonRu={notTyped(masterReduction)}
+            onChange={typing(setMasterText)}
           />
         </>
       ) : (
-        <NumberField labelRu={FIELD_LABELS[kind]} value={value} min={1} onChange={setValue} />
+        <NumberField
+          labelRu={FIELD_LABELS[kind]}
+          value={value}
+          min={1}
+          reasonRu={notTyped(amount)}
+          onChange={typing(setValue)}
+        />
+      )}
+
+      {error === null ? null : (
+        <p
+          role="alert"
+          className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm text-reaction-strong dark:text-reaction"
+        >
+          {error}
+        </p>
       )}
 
       <p className="text-xs text-slate-600 dark:text-slate-400">{HINTS[kind]}</p>
@@ -166,12 +229,6 @@ export function HitPointsSheet({
           <span>Урон огнём</span>
         </label>
       ) : null}
-
-      {error === null ? null : (
-        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
-          {error}
-        </p>
-      )}
 
       <div className="flex gap-2">
         <button

@@ -6,8 +6,14 @@ import { describe, expect, it, vi } from "vitest";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { withBloodExchange, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
-import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
+import { renderWithStores, testSnapshot, type RenderWithStores } from "@/ui/app/testing/stores";
 import { HitPointsSheet } from "./HitPointsSheet";
+
+/** Кому шторка отдаёт набранное: прогон подставляет только тех, за кем следит. */
+type Handlers = {
+  onDamage?: (damage: number, fire: boolean) => void;
+  onMaximum?: (change: { maximumBase: number; masterReduction: number }) => void;
+};
 
 /**
  * Шторка рендерится на настоящем ядре: действующий максимум от набранного считает жизнеспособность,
@@ -15,16 +21,16 @@ import { HitPointsSheet } from "./HitPointsSheet";
  */
 async function openHitPoints(
   character: CharacterState = createThorne(),
-  onMaximum: (change: { maximumBase: number; masterReduction: number }) => void = () => {},
-): Promise<void> {
+  handlers: Handlers = {},
+): Promise<RenderWithStores> {
   const { sheet } = testSnapshot(character);
-  await renderWithStores(
+  return renderWithStores(
     <HitPointsSheet
       hitPoints={sheet.hitPoints}
-      onDamage={() => {}}
+      onDamage={handlers.onDamage ?? (() => {})}
       onHeal={() => {}}
       onTemporary={() => {}}
-      onMaximum={onMaximum}
+      onMaximum={handlers.onMaximum ?? (() => {})}
       onCancel={() => {}}
     />,
     character,
@@ -56,7 +62,7 @@ describe("шторка хитов", () => {
     // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
     const onMaximum = vi.fn();
     const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
-    await openHitPoints(hurt, onMaximum);
+    await openHitPoints(hurt, { onMaximum });
     await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));
@@ -76,9 +82,32 @@ describe("шторка хитов", () => {
     expect(screen.getByText(/Действующий максимум станет —/)).toBeDefined();
   });
 
+  it("пустое поле урона отказывает у поля, а не полосой", async () => {
+    const onDamage = vi.fn();
+    const { stores } = await openHitPoints(createThorne(), { onDamage });
+
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
+
+    // Просьба не собрана: владельцу нечего отправить, и полосе ошибки нечего рассказать —
+    // сырой разбор сообщения по-английски игрок не увидит, потому что до разбора дело не дошло.
+    expect(onDamage).not.toHaveBeenCalled();
+    expect(stores.session.getState().error).toBeNull();
+
+    // Причина стоит у самого поля и входит в его описание — её слышит и тот, кто экран слушает.
+    const field = screen.getByLabelText("Полученный урон");
+    const reason = screen.getByRole("alert");
+    expect(reason.textContent).toBe("Наберите число");
+    expect(field.getAttribute("aria-describedby")).toBe(reason.getAttribute("id"));
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+
+    // Набранное отвечает за себя само: причина уходит с первым же прикосновением к полю.
+    await userEvent.type(field, "7");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("хиты: сохранение отдаёт базу и снижение мастера", async () => {
     const onMaximum = vi.fn();
-    await openHitPoints(createThorne(), onMaximum);
+    await openHitPoints(createThorne(), { onMaximum });
     await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
 
     await userEvent.clear(screen.getByLabelText("Снижение мастера"));
