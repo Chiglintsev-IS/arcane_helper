@@ -18,7 +18,7 @@ import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/Con
 import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
-import { ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
+import { REACTIONS_LABEL, ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
 import { ResourceBadges, ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
@@ -184,7 +184,7 @@ export function GameScreen() {
             onClick={() => setReactionsOpen(true)}
             className="min-h-11 grow whitespace-nowrap rounded-xl border border-reaction px-1 text-sm font-semibold text-reaction-strong dark:text-reaction"
           >
-            Реакции
+            {REACTIONS_LABEL}
           </button>
           <HourMark
             nextHour={snapshot.recovery.nextHour}

@@ -11,11 +11,14 @@
 
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { SpellRowView } from "@/contract/views";
 
 import { Badge } from "@/ui/shared/ui/Badge";
+
+/** Имя дела: им зовётся и сама шторка, и кнопка, которая её открывает. */
+export const REACTIONS_LABEL = "Реакции";
 
 /**
  * Вопрос «что произошло» словами игрока, а не терминами правил.
@@ -70,17 +73,26 @@ export function ReactionsSheet({
   );
   const [trigger, setTrigger] = useState<string | null>(null);
   const matching = trigger === null ? [] : answering(trigger);
+  const titleId = useId();
+  const questionId = useId();
 
   return (
     <section
       role="dialog"
       aria-modal="true"
-      aria-label="Реакции"
+      aria-labelledby={titleId}
       className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
-      <h2 className="text-base font-semibold">Что произошло?</h2>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id={titleId} className="text-base font-semibold leading-tight">
+          {REACTIONS_LABEL}
+        </h2>
+        <span id={questionId} className="shrink-0 text-sm text-slate-600 dark:text-slate-400">
+          Что произошло?
+        </span>
+      </div>
 
-      <div role="radiogroup" aria-label="Событие" className="flex flex-wrap gap-1">
+      <div role="radiogroup" aria-labelledby={questionId} className="flex flex-wrap gap-1">
         {triggers.map(({ kind, label }) => (
           <button
             key={kind}
