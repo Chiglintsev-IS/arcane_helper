@@ -441,10 +441,12 @@ function ConcentrationStep({
 }
 
 /**
- * Итоговый экран: что сделать, что сказать мастеру, отыгрыш — три раздельных блока
+ * Итоговый экран: что сказать мастеру, отыгрыш, что сделать — три раздельных блока.
  *
- * Первым идёт «Что сделать»: за столом нужен не пересказ правил, а числа этого персонажа —
- * «бросьте d20 + 8», а не «атака заклинанием, модификатор +8».
+ * Порядок — порядок хода за столом: сначала произносят, потом отыгрывают, потом действуют. Поэтому
+ * объявление стоит первым и видно целиком, а инструкция — последней и напоминанием: числа этого
+ * персонажа («бросьте d20 + 8», а не «атака заклинанием») нужны после ответа мастера, но нужны
+ * целиком, и потому она не сворачивается.
  */
 function SummaryStep({
   draft,
@@ -465,25 +467,11 @@ function SummaryStep({
 
   return (
     <div className="flex flex-col gap-3">
-      <section aria-label="Что сделать" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
-        <ol className="flex flex-col gap-1 text-sm">
-          {(preview?.instructions ?? []).map((step) => (
-            <li
-              key={step}
-              className="rounded-lg border border-slate-200 px-2 py-1 dark:border-slate-800"
-            >
-              {step}
-            </li>
-          ))}
-        </ol>
-      </section>
-
       <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
           Сказать мастеру
         </h3>
-        <p className="rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-800">
+        <p className="rounded-lg border border-slate-200 p-2 text-base leading-snug dark:border-slate-800">
           {preview?.announcement.text ?? ""}
         </p>
         {shownGaps.length === 0 ? null : (
@@ -493,6 +481,21 @@ function SummaryStep({
             ))}
           </ul>
         )}
+      </section>
+
+      <RoleplaySection
+        spellId={row.id}
+        category={draft.roleplayCategory}
+        onCategory={onRoleplay}
+      />
+
+      <section aria-label="Что сделать" className="flex flex-col gap-1">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
+        <ol className="flex list-inside list-decimal flex-col gap-1 text-sm text-slate-600 dark:text-slate-400">
+          {(preview?.instructions ?? []).map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
       </section>
 
       {/* Схема только в ритуальном режиме: рисовать десять минут в бою нельзя. */}
@@ -509,12 +512,6 @@ function SummaryStep({
       {diagramOpen ? (
         <RitualDiagramView row={row} onClose={() => setDiagramOpen(false)} />
       ) : null}
-
-      <RoleplaySection
-        spellId={row.id}
-        category={draft.roleplayCategory}
-        onCategory={onRoleplay}
-      />
     </div>
   );
 }

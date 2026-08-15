@@ -201,6 +201,44 @@ describe("объявление мастеру (FR-041, AC-12)", () => {
   });
 });
 
+describe("порядок итогового шага (FR-253)", () => {
+  /** Блоки шага сверху вниз: раскладку в jsdom заменяет порядок в разметке. */
+  function blockLabels(): (string | null)[] {
+    const wizard = screen.getByRole("dialog", { name: /Применение/ });
+    return Array.from(wizard.querySelectorAll("section[aria-label]")).map((block) =>
+      block.getAttribute("aria-label"),
+    );
+  }
+
+  it("формулировка мастеру видна без прокрутки", async () => {
+    // «Молния»: объявление длинное — уровень ячейки, дальность, спасбросок и урон, — и именно на
+    // нём прежний порядок уводил произносимое под сгиб.
+    await renderWithStores(<GameScreen />);
+
+    const user = await openWizard(/^Молния/);
+    await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+
+    const announcement = screen.getByLabelText("Объявление мастеру");
+    // Выше объявления нет ничего: ни соседа в блоке шага, ни блока над ним в прокручиваемом теле.
+    expect(announcement.previousElementSibling).toBeNull();
+    expect(announcement.parentElement?.previousElementSibling).toBeNull();
+    expect(blockLabels()).toEqual(["Объявление мастеру", "Отыгрыш", "Что сделать"]);
+  });
+
+  it("инструкция остаётся целиком, а не уходит за раскрытие", async () => {
+    await renderWithStores(<GameScreen />);
+
+    const user = await openWizard(/^Молния/);
+    await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+
+    const instructions = screen.getByLabelText("Что сделать");
+    expect(instructions.querySelector("details")).toBeNull();
+    expect(within(instructions).getAllByRole("listitem").length).toBeGreaterThan(0);
+  });
+});
+
 describe("предупреждение вместо запрета (FR-031)", () => {
   it("без свободных ячеек показывает причину и не пускает дальше без разрешения", async () => {
     await renderWithStores(<GameScreen />, spentSlots());
