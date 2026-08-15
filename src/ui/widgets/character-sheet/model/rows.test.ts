@@ -23,7 +23,24 @@ describe("блоки листа", () => {
       "ability:charisma",
       "proficiencies",
       "languages",
+      "features",
     ]);
+  });
+
+  it("особенности стоят своей карточкой и читаются фразой (FR-230)", () => {
+    const block = blockById("features");
+
+    expect(block?.features?.map((feature) => feature.nameRu)).toEqual(["Рунный почерк"]);
+    expect(block?.features?.[0]?.summaryRu).toContain("Минута изучения записи");
+    // Ни строки со значением у правого края, ни кнопки правки: справку читают фразой, а
+    // особенность приходит с происхождением, а не заводится руками.
+    expect(block?.rows).toEqual([]);
+    expect(block?.edit).toBeUndefined();
+  });
+
+  it("особенностей нет ни одной — карточка остаётся пустым списком", () => {
+    const featureless = blocksOf({ ...createThorne(), features: [] });
+    expect(featureless.find((block) => block.id === "features")?.features).toEqual([]);
   });
 
   it("кто он — вид, возраст и класс с уровнем", () => {

@@ -1,39 +1,43 @@
 "use client";
 
-import type { SheetBlockData } from "../model/rows";
+import { DASH } from "@/ui/entities/character/lib/labels";
+
+import type { SheetBlockData, SheetEdit } from "../model/rows";
 
 export function SheetBlock({
   block,
   onEdit,
-  onSecondaryEdit,
 }: {
   block: SheetBlockData;
-  onEdit: () => void;
-  onSecondaryEdit: () => void;
+  onEdit: (edit: SheetEdit) => void;
 }) {
+  const { edit, secondary, features } = block;
+
   return (
     <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{block.titleRu}</h2>
         <div className="flex gap-1">
-          {block.secondary === undefined ? null : (
+          {secondary === undefined ? null : (
             <button
               type="button"
-              onClick={onSecondaryEdit}
-              aria-label={`Править: ${block.secondary.labelRu}`}
+              onClick={() => onEdit(secondary.edit)}
+              aria-label={`Править: ${secondary.labelRu}`}
               className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
             >
-              {block.secondary.labelRu}
+              {secondary.labelRu}
             </button>
           )}
-          <button
-            type="button"
-            onClick={onEdit}
-            aria-label={`Править: ${block.titleRu}`}
-            className="min-h-11 min-w-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
-          >
-            Править
-          </button>
+          {edit === undefined ? null : (
+            <button
+              type="button"
+              onClick={() => onEdit(edit)}
+              aria-label={`Править: ${block.titleRu}`}
+              className="min-h-11 min-w-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+            >
+              Править
+            </button>
+          )}
         </div>
       </div>
       <dl className="flex flex-col gap-0.5 text-sm">
@@ -49,6 +53,20 @@ export function SheetBlock({
           </div>
         ))}
       </dl>
+      {features === undefined ? null : features.length === 0 ? (
+        <p className="text-sm text-slate-600 dark:text-slate-400">{DASH}</p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {features.map((feature) => (
+            <li key={feature.nameRu} className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">{feature.nameRu}</span>
+              <span className="text-xs leading-snug text-slate-600 dark:text-slate-400">
+                {feature.summaryRu}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

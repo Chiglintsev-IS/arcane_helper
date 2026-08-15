@@ -72,5 +72,10 @@ export function toSheetView(character: CharacterState): SheetView {
       tools: [...character.proficiencies.tools],
       languages: [...character.proficiencies.languages],
     },
+
+    features: character.features.map((feature) => ({
+      nameRu: feature.nameRu,
+      summaryRu: feature.summaryRu,
+    })),
   };
 }

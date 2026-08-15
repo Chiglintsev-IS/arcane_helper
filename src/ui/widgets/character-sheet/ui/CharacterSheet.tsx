@@ -19,12 +19,7 @@ export function CharacterSheet({
   return (
     <div className="flex flex-col gap-2">
       {sheetBlocks(sheet).map((block) => (
-        <SheetBlock
-          key={block.id}
-          block={block}
-          onEdit={() => onEdit(block.edit)}
-          onSecondaryEdit={() => onEdit(block.secondary?.edit ?? block.edit)}
-        />
+        <SheetBlock key={block.id} block={block} onEdit={onEdit} />
       ))}
     </div>
   );

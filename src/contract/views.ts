@@ -99,6 +99,12 @@ const hitPointsViewSchema = z.object({
 });
 
 /**
+ * Особенность: название и то, что она даёт, — словами. Чисел здесь нет вовсе: величину двигает
+ * вклад, и складывает её лист.
+ */
+const characterFeatureViewSchema = z.object({ nameRu: word, summaryRu: word });
+
+/**
  * Лист персонажа: база, отметки мастера и всё, что из них следует.
  *
  * Действующих чисел боя здесь нет — ячеек, рун, очков, эффектов: у них своя проекция, потому что
@@ -132,6 +138,8 @@ export const sheetViewSchema = z.object({
     tools: z.array(word),
     languages: z.array(word),
   }),
+
+  features: z.array(characterFeatureViewSchema),
 });
 
 /**

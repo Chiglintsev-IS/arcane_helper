@@ -157,7 +157,10 @@ const CURRENCY_LABELS: Readonly<Record<string, string>> = {
   copper: "Медь",
 };
 
+/** Прочерк на месте незаполненного: одна черта на все пустые места листа. */
+export const DASH = "—";
+
 /** Пустое справочное поле — прочерк: ноль здесь читался бы как настоящий ноль. */
 export function orDash(value: string | number): string {
-  return value === "" || value === 0 ? "—" : String(value);
+  return value === "" || value === 0 ? DASH : String(value);
 }

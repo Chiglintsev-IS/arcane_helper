@@ -134,6 +134,7 @@ describe("форма состояния", () => {
       "concentration",
       "equipment",
       "exhaustion",
+      "features",
       "hitDice",
       "hitPoints",
       "id",
@@ -305,7 +306,7 @@ describe("состояние целиком", () => {
   });
 
   it("отсутствующие поля получают значение по умолчанию: обновление не теряет данных", () => {
-    const { species: _s, skills: _k, exhaustion: _e, ...withoutNew } = createThorne();
+    const { species: _s, skills: _k, exhaustion: _e, features: _f, ...withoutNew } = createThorne();
     const parsed = characterStateSchema.parse({
       ...withoutNew,
       abilities: createThorne().abilities,
@@ -313,5 +314,6 @@ describe("состояние целиком", () => {
     expect(parsed.species).toBe("");
     expect(parsed.skills).toEqual({});
     expect(parsed.exhaustion).toBe(0);
+    expect(parsed.features).toEqual([]);
   });
 });

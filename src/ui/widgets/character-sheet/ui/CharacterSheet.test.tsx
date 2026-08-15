@@ -50,7 +50,7 @@ describe("режим «Лист»", () => {
     expect(screen.queryByRole("button", { name: "Править: Здоровье" })).toBeNull();
   });
 
-  it("у каждого блока есть кнопка правки с внятным именем", async () => {
+  it("правимый блок называет свою кнопку внятным именем", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();
     render(
@@ -65,6 +65,25 @@ describe("режим «Лист»", () => {
 
     await user.click(screen.getByRole("button", { name: "Править: Языки" }));
     expect(onEdit).toHaveBeenCalledWith({ block: "languages" });
+  });
+
+  it("«Лист»: особенность стоит карточкой и правки не предлагает (FR-230)", () => {
+    render(<CharacterSheet sheet={toSheetView(createThorne())} onEdit={() => {}} />);
+
+    expect(screen.getByRole("heading", { name: "Особенности" })).toBeDefined();
+    expect(screen.getByText("Рунный почерк")).toBeDefined();
+    expect(screen.getByText(/Минута изучения записи/)).toBeDefined();
+    // Кнопки нет вовсе: погашенная обещала бы правку того, чего за столом не правят.
+    expect(screen.queryByRole("button", { name: "Править: Особенности" })).toBeNull();
+  });
+
+  it("особенностей нет ни одной — карточка называет пустоту прочерком", () => {
+    const state = createThorne();
+    render(<CharacterSheet sheet={toSheetView({ ...state, features: [] })} onEdit={() => {}} />);
+
+    const card = screen.getByRole("heading", { name: "Особенности" }).closest("section");
+    expect(card?.textContent).toContain("—");
+    expect(card?.textContent).not.toContain("Рунный почерк");
   });
 
   it("подсказка стоит рядом со значением, а не вместо него", () => {

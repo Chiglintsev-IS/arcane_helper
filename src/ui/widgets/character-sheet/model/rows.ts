@@ -40,10 +40,15 @@ export type SheetBlockData = {
   id: string;
   titleRu: string;
   rows: SheetRow[];
-  /** Какую шторку открывает «Править»: у блока характеристики она своя, а не общая. */
-  edit: SheetEdit;
+  /**
+   * Какую шторку открывает «Править»: у блока характеристики она своя, а не общая. Нет вовсе —
+   * блок не правят, и кнопки у него не бывает.
+   */
+  edit?: SheetEdit;
   /** Вторая кнопка блока: у «Кто он» уровень правится отдельно — он тянет за собой ресурсы. */
   secondary?: { labelRu: string; edit: SheetEdit };
+  /** Особенности блока: название и фраза под ним, а не значение у правого края. */
+  features?: SheetView["features"];
 };
 
 /**
@@ -129,6 +134,17 @@ export function sheetBlocks(sheet: SheetView): SheetBlockData[] {
       titleRu: "Языки",
       edit: { block: "languages" },
       rows: [{ labelRu: "Знает", value: orDash(sheet.proficiencies.languages.join(", ")) }],
+    },
+    /**
+     * Особенности: то, чем персонаж располагает по происхождению. Правки у карточки нет — руками
+     * особенность не заводят, — а название с фразой под ним стоят вместо строки со значением:
+     * справку читают вслух, и в треть экрана она не встаёт.
+     */
+    {
+      id: "features",
+      titleRu: "Особенности",
+      rows: [],
+      features: sheet.features,
     },
   ];
 }

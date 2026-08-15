@@ -16,6 +16,7 @@ import {
 import { nonEmpty, russianSchemaErrors } from "@/core/domain/shared/schema";
 import { ABILITIES, SKILL_IDS } from "@/core/domain/shared/stats";
 
+import { characterFeaturesSchema } from "./features";
 import { SKILL_TRAINING } from "./skills";
 
 const roleplayProfileSchema = z.object({
@@ -128,6 +129,7 @@ export const CHARACTER_FIELDS = {
     })
     .default({ weapons: [], armor: [], tools: [], languages: [] }),
 
+  features: characterFeaturesSchema,
 
   /** Отметки на листе: их ставят и снимают там же, где смотрят, — на «Листе». */
   exhaustion: z.number().int().min(0).max(MAXIMUM_EXHAUSTION).default(0),
