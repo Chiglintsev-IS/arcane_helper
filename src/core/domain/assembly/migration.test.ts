@@ -123,8 +123,9 @@ describe("приведение состояния версии 1", () => {
     expect(Character.of(state).sheet.value(saveStatId("wisdom"))).toBe(1);
     expect(state.equipment.components?.materialsForSpellIds).toEqual(["identify"]);
     expect(state.equipment.bag).toEqual([]);
-    expect(state.equipment.worn).toEqual([]);
-    expect(state.itemDefinitions).toEqual([]);
+    // Вещей у версии 2 не было ни одной, кроме той, которой она называла фокусировку отметкой.
+    expect(state.itemDefinitions.map((item) => item.nameRu)).toEqual(["Магическая фокусировка"]);
+    expect(state.equipment.worn.map((entry) => entry.itemId)).toEqual(["spellcasting-focus"]);
   });
 
   it("версия 2 без снаряжения и без прибавок получает умолчания и остаётся без компонентов", () => {
@@ -147,7 +148,7 @@ describe("приведение состояния версии 1", () => {
       equipment: { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: [] },
     };
     const state = characterStateSchema.parse(migrateCharacterState(withComponents));
-    expect(state.equipment.components?.spellcastingFocus).toBe(true);
+    expect(state.equipment.components?.componentPouch).toBe(false);
     // Прибавка версии 1 вещи не называла — доехать ей не в чем, и приведение её снимает.
     expect(Character.of(state).sheet.value("armorClass")).toBe(12);
   });
@@ -783,9 +784,83 @@ describe("сохранение каждой версии открывается 
 
   it("рода вещей версии 3 становятся категориями, надетость вне экипировки снимается", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_THREE));
-    expect(state.itemDefinitions.map((item) => item.kind)).toEqual(["consumable", "other"]);
+    // Третья вещь — фокусировка: отметка версии 3 переехала на неё, и она единственная надета.
+    expect(state.itemDefinitions.map((item) => item.kind)).toEqual([
+      "consumable",
+      "other",
+      "gear",
+    ]);
     // Верёвка была отмечена надетой в старой форме, но не экипировка — её запас переходит в сумку.
     expect(state.equipment.bag.map((entry) => entry.itemId)).toEqual(["healing-potion", "rope"]);
+    expect(state.equipment.worn.map((entry) => entry.itemId)).toEqual(["spellcasting-focus"]);
+  });
+});
+
+describe("отметка фокусировки становится вещью", () => {
+  const FLAG = "spellcastingFocus";
+
+  /** Компоненты прежней формы: отметка фокусировки лежала при персонаже, рядом с мешочком. */
+  const components = (spellcastingFocus: boolean) => ({
+    componentPouch: false,
+    materialsForSpellIds: [],
+    spellcastingFocus,
+  });
+
+  /** Сохранение с вещами Торна: вещь у фокусировки была, а отметки на ней ещё нет. */
+  const withItems = () => {
+    const thorne = createThorne();
+    return {
+      ...thorne,
+      itemDefinitions: thorne.itemDefinitions.map(({ spellcastingFocus: _moved, ...item }) => item),
+      equipment: { ...thorne.equipment, components: components(true) },
+    };
+  };
+
+  /** Сохранение без единой вещи и без надетого: отметке нечего назвать. */
+  const withoutItems = (spellcastingFocus: boolean) => {
+    const { itemDefinitions: _none, ...thorne } = createThorne();
+    return { ...thorne, equipment: { bag: [], components: components(spellcastingFocus) } };
+  };
+
+  const componentsOf = (save: unknown): Record<string, unknown> =>
+    fieldsOf(fieldsOf(fieldsOf(migrateCharacterState(save)).equipment).components);
+
+  it("отметка фокусировки становится надетой вещью", () => {
+    const state = characterStateSchema.parse(migrateCharacterState(withItems()));
+    const focus = state.itemDefinitions.filter((item) => item.spellcastingFocus === true);
+
+    // Вещь у сохранения уже была: приведение отмечает её, а второй такой же не заводит.
+    expect(focus.map((item) => item.nameRu)).toEqual(["Магическая фокусировка +1"]);
+    expect(state.equipment.worn).toEqual(createThorne().equipment.worn);
+    expect(componentsOf(withItems())).not.toHaveProperty(FLAG);
+  });
+
+  it("снятая отметка вещи не заводит: фокусировки у персонажа не было", () => {
+    const state = characterStateSchema.parse(migrateCharacterState(withoutItems(false)));
+
+    expect(state.itemDefinitions).toEqual([]);
     expect(state.equipment.worn).toEqual([]);
+    expect(componentsOf(withoutItems(false))).not.toHaveProperty(FLAG);
+  });
+
+  it("отметке без вещи приведение заводит вещь: фокусировка не теряется", () => {
+    const state = characterStateSchema.parse(migrateCharacterState(withoutItems(true)));
+    const [focus] = state.itemDefinitions;
+
+    expect(focus?.nameRu).toBe("Магическая фокусировка");
+    expect(focus?.spellcastingFocus).toBe(true);
+    expect(state.equipment.worn).toEqual([{ itemId: focus?.id, count: 1 }]);
+    // Прибавок заведённой вещи приведение не выдумывает: игрок про них ничего не говорил.
+    expect(focus?.bonuses).toBeUndefined();
+  });
+
+  it("снимок отмены доносит отметку на самой вещи", () => {
+    const stored = createThorne().itemDefinitions.filter((item) => item.spellcastingFocus === true);
+    const patch = {
+      itemDefinitions: stored.map(({ spellcastingFocus: _moved, ...item }) => item),
+    };
+    const returned = listOf(fieldsOf(migrateUndoPatch(patch)).itemDefinitions);
+
+    expect(returned.map((item) => fieldsOf(item).spellcastingFocus)).toEqual([true]);
   });
 });

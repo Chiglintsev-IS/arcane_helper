@@ -305,7 +305,7 @@ export function toTurnView(live: LiveSession): TurnView {
 }
 
 export function toCastingView(character: CharacterState): CastingView {
-  const { sheet, equipment } = Character.of(character);
+  const { sheet, equipment, items } = Character.of(character);
   return {
     spellAttackModifier: sheet.value("spellAttackModifier"),
     spellSaveDc: sheet.value("spellSaveDc"),
@@ -314,7 +314,7 @@ export function toCastingView(character: CharacterState): CastingView {
     preparedCount: character.preparedSpellIds.length,
     // Незаведённое снаряжение вердикта не даёт: «нечем закрыть» было бы выдумкой про чужого
     // персонажа, чьё состояние приехало из сборки, которая про компоненты не знала.
-    ...(equipment.known ? { freeComponentsCovered: equipment.replacesFreeComponents } : {}),
+    ...(equipment.known ? { freeComponentsCovered: equipment.replacesFreeComponents(items) } : {}),
   };
 }
 

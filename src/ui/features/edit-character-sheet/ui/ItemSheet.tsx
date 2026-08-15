@@ -28,6 +28,7 @@ type ItemPatch = {
   note?: string;
   bonuses: Record<string, number>;
   armor?: { base: number; category?: string };
+  spellcastingFocus?: true;
 };
 
 export function ItemSheet({
@@ -76,6 +77,7 @@ export function ItemSheet({
     item.armor === undefined ? "" : String(item.armor.base),
   );
   const [category, setCategory] = useState(item.armor?.category ?? "");
+  const [focus, setFocus] = useState(item.spellcastingFocus);
 
   const { bagCount, wornCount } = item;
 
@@ -111,6 +113,7 @@ export function ItemSheet({
               ...(base === undefined
                 ? {}
                 : { armor: { base, ...(category === "" ? {} : { category }) } }),
+              ...(focus ? { spellcastingFocus: focus } : {}),
             }),
         )
       }
@@ -212,9 +215,26 @@ export function ItemSheet({
         ))}
       </div>
 
-      {/* Прибавки и база доспеха — свойства экипировки: зелье действует, когда его пьют. */}
+      {/* Прибавки, база и фокусировка — свойства экипировки: зелье действует, когда его пьют. */}
       {kind === "gear" ? (
         <>
+          <button
+            type="button"
+            aria-pressed={focus}
+            onClick={() => setFocus(!focus)}
+            className={`min-h-11 rounded-lg border px-2 text-xs ${
+              focus
+                ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
+                : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+            }`}
+          >
+            Магическая фокусировка
+          </button>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Надетая фокусировка закрывает материальные компоненты без указанной стоимости. Снимете —
+            компоненты снова понадобятся.
+          </p>
+
           {typedBonuses.map((bonus) => (
             <NumberField
               key={bonus.stat}

@@ -55,6 +55,17 @@ describe("подсхема вещи", () => {
     expect(withDefinition({ ...potion, kind: "gear", bonuses, armor }).success).toBe(true);
   });
 
+  it("отметка фокусировки бывает только у экипировки (FR-260)", () => {
+    const spellcastingFocus = true;
+    expect(withDefinition({ ...potion, spellcastingFocus }).success).toBe(false);
+    // Та же отметка у экипировки проходит: магию проводят тем, что носят.
+    expect(withDefinition({ ...potion, kind: "gear", spellcastingFocus }).success).toBe(true);
+    // Отметка утвердительная: хранимое «нет» было бы вторым способом сказать «не фокусировка».
+    expect(withDefinition({ ...potion, kind: "gear", spellcastingFocus: false }).success).toBe(
+      false,
+    );
+  });
+
   it("прибавка называет величину словаря, и выдуманной величины не бывает (FR-247)", () => {
     const gear = { id: "ring", nameRu: "Кольцо", kind: "gear" };
     expect(withDefinition({ ...gear, bonuses: { "save:wisdom": 1 } }).success).toBe(true);

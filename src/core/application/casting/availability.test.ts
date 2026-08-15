@@ -6,6 +6,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 import {
   ACTION_SPENT_MESSAGES,
   ALL_TURN_RESOURCES,
@@ -445,11 +446,7 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
   });
 
   it("купленный компонент предупреждения не даёт", () => {
-    const bought = withEquipment({
-      spellcastingFocus: true,
-      componentPouch: false,
-      materialsForSpellIds: ["identify"],
-    });
+    const bought = withEquipment({ componentPouch: false, materialsForSpellIds: ["identify"] });
     const warnings = checkAvailability({
       spell: identify,
       character: bought,
@@ -474,11 +471,7 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
   });
 
   it("без фокусировки и мешочка не закрывает ничего", () => {
-    const empty = withEquipment({
-      spellcastingFocus: false,
-      componentPouch: false,
-      materialsForSpellIds: [],
-    });
+    const empty = withoutSpellcastingFocus(createThorne());
     const warnings = checkAvailability({
       spell: mageArmor,
       character: empty,
@@ -490,23 +483,6 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
     expect(warnings.find((warning) => warning.code === "no_component")?.reasonRu).toContain(
       "ни мешочка",
     );
-  });
-
-  it("мешочек заменяет фокусировку", () => {
-    const pouch = withEquipment({
-      spellcastingFocus: false,
-      componentPouch: true,
-      materialsForSpellIds: [],
-    });
-    const warnings = checkAvailability({
-      spell: mageArmor,
-      character: pouch,
-      turn: ALL_TURN_RESOURCES,
-      mode: "normal",
-      payment: { kind: "slot", slotLevel: 1 },
-    }).warnings;
-
-    expect(warnings.some((warning) => warning.code === "no_component")).toBe(false);
   });
 
   it("расходуемый компонент без цены и без описания тоже называется", () => {

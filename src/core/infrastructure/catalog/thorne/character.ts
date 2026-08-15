@@ -148,6 +148,7 @@ const RAW: unknown = {
       id: "spellcasting-focus",
       nameRu: "Магическая фокусировка +1",
       kind: "gear",
+      spellcastingFocus: true,
       bonuses: { spellSaveDc: 1, spellAttackModifier: 1 },
     },
     {
@@ -185,7 +186,7 @@ const RAW: unknown = {
       { itemId: "robe", count: 1 },
       { itemId: "cloak-of-protection", count: 1 },
     ],
-    components: { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: [] },
+    components: { componentPouch: false, materialsForSpellIds: [] },
   },
   // Одна кость за уровень, размер по классу: волшебник — d6. Расовые «11 очков здоровья»
   // на счёт костей не влияют: это надбавка к максимуму, а не замена кости.

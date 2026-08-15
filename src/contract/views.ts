@@ -158,6 +158,8 @@ const itemViewSchema = z.object({
   bonuses: z.array(z.object({ stat: word, value: whole })),
   /** База защиты и род доспеха; нет вовсе — вещь доспехом не является. */
   armor: z.object({ base: whole, category: word.optional() }).optional(),
+  /** Вещь, которой проводят магию: надетая, она закрывает материальные компоненты без стоимости. */
+  spellcastingFocus: z.boolean(),
   note: text.optional(),
 });
 

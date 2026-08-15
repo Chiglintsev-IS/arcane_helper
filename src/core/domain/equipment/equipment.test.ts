@@ -6,6 +6,7 @@ import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 import type { SourcedContribution, StatId } from "@/core/domain/shared/stats";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Сколько принесённые вклады прибавляют к величине: снаряжение итога не считает, а прибавки видны. */
 function bonusFor(brought: readonly SourcedContribution[], stat: StatId): number {
@@ -213,16 +214,29 @@ describe("снаряжение", () => {
 
     expect(gear().known).toBe(true);
     expect(Equipment.of({ ...base, equipment: withoutComponents }).known).toBe(false);
-    expect(Equipment.of({ ...base, equipment: withoutComponents }).replacesFreeComponents).toBe(
-      false,
-    );
     expect(() =>
       Equipment.of({ ...base, equipment: withoutComponents }).toggleMaterial("identify"),
     ).toThrow(DomainError);
   });
 
-  it("фокусировка заменяет компоненты без стоимости, дорогой ищется поимённо", () => {
-    expect(gear().replacesFreeComponents).toBe(true);
+  it("надетая фокусировка закрывает компоненты без стоимости, лежащая в сумке — нет", () => {
+    const thorne = createThorne();
+    expect(Equipment.of(thorne).replacesFreeComponents(Items.of(thorne))).toBe(true);
+
+    // Та же вещь, снятая в сумку: фокусировкой она быть не перестала, а проводить магию нечем.
+    const stowed = withoutSpellcastingFocus(thorne);
+    expect(Equipment.of(stowed).replacesFreeComponents(Items.of(stowed))).toBe(false);
+  });
+
+  it("мешочек закрывает компоненты и без фокусировки", () => {
+    const stowed = withoutSpellcastingFocus(createThorne());
+    const components = { componentPouch: true, materialsForSpellIds: [] };
+    const pouch = Equipment.of({ ...stowed, equipment: { ...stowed.equipment, components } });
+
+    expect(pouch.replacesFreeComponents(Items.of(stowed))).toBe(true);
+  });
+
+  it("дорогой компонент ищется поимённо: фокусировка его не заменяет", () => {
     expect(gear().hasMaterialFor("identify")).toBe(false);
 
     const bought = gear().toggleMaterial("identify");

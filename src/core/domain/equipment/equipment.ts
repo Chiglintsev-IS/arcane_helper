@@ -120,10 +120,20 @@ export class Equipment {
     return this.data.components !== undefined;
   }
 
-  /** Заменяет ли что-нибудь материальные компоненты без стоимости. */
-  get replacesFreeComponents(): boolean {
-    const { components } = this.data;
-    return components !== undefined && (components.spellcastingFocus || components.componentPouch);
+  /**
+   * Заменяет ли что-нибудь материальные компоненты без стоимости.
+   *
+   * Про фокусировку спрашивают надетое, а не отдельную отметку: отметка пережила бы снятие вещи и
+   * разошлась бы с ней молча — вещь сняли, а компонент всё ещё считался бы закрытым.
+   */
+  replacesFreeComponents(items: Items): boolean {
+    return this.wearsSpellcastingFocus(items) || this.data.components?.componentPouch === true;
+  }
+
+  private wearsSpellcastingFocus(items: Items): boolean {
+    return this.data.worn.some(
+      (entry) => entry.count > 0 && items.find(entry.itemId)?.spellcastingFocus === true,
+    );
   }
 
   /** Лежит ли в сумке дорогой компонент конкретного заклинания: фокусировка его не заменяет. */

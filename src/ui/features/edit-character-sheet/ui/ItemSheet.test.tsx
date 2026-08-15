@@ -19,6 +19,7 @@ describe("шторка вещи", () => {
           kind: "other",
           bagCount: 1,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={onSave}
@@ -60,6 +61,7 @@ describe("шторка вещи", () => {
           ],
           bagCount: 0,
           wornCount: 1,
+          spellcastingFocus: false,
         }}
         onSave={onSave}
         onAdjustBagCount={() => {}}
@@ -96,6 +98,7 @@ describe("шторка вещи", () => {
           kind: "consumable",
           bagCount: 2,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={() => {}}
@@ -123,6 +126,7 @@ describe("шторка вещи", () => {
           price: { amount: 50, currency: "gold" },
           bagCount: 1,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={onSave}
@@ -154,6 +158,7 @@ describe("шторка вещи", () => {
           kind: "consumable",
           bagCount: 1,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={onSave}
@@ -181,6 +186,7 @@ describe("шторка вещи", () => {
           kind: "gear",
           bagCount: 1,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={onSave}
@@ -218,6 +224,7 @@ describe("шторка вещи", () => {
           kind: "consumable",
           bagCount: 0,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={() => {}}
@@ -241,6 +248,7 @@ describe("шторка вещи", () => {
           kind: "consumable",
           bagCount: 2,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={() => {}}
@@ -267,6 +275,7 @@ describe("шторка вещи", () => {
           kind: "gear",
           bagCount: 2,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={() => {}}
@@ -292,6 +301,7 @@ describe("шторка вещи", () => {
           kind: "consumable",
           bagCount: 0,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={() => {}}
@@ -317,6 +327,7 @@ describe("шторка вещи", () => {
           kind: "gear",
           bagCount: 1,
           wornCount: 1,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={() => {}}
@@ -342,6 +353,7 @@ describe("шторка вещи", () => {
           kind: "consumable",
           bagCount: 1,
           wornCount: 0,
+          spellcastingFocus: false,
           bonuses: [],
         }}
         onSave={() => {}}
@@ -352,5 +364,45 @@ describe("шторка вещи", () => {
       />,
     );
     expect(screen.queryByText("Надето")).toBeNull();
+  });
+
+  it("вещь: экипировку отмечают магической фокусировкой (FR-260)", async () => {
+    const onSave = vi.fn();
+    render(
+      <ItemSheet choices={toChoicesView()}
+        item={{
+          id: "жезл",
+          nameRu: "Рунный жезл",
+          kind: "gear",
+          bagCount: 0,
+          wornCount: 1,
+          spellcastingFocus: false,
+          bonuses: [],
+        }}
+        onSave={onSave}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    const focus = screen.getByRole("button", { name: "Магическая фокусировка" });
+    expect(focus.getAttribute("aria-pressed")).toBe("false");
+
+    await userEvent.click(focus);
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onSave).toHaveBeenCalledWith({
+      id: "жезл",
+      nameRu: "Рунный жезл",
+      kind: "gear",
+      bonuses: {},
+      spellcastingFocus: true,
+    });
+
+    // Отметка — свойство экипировки: у расходника её не спрашивают вовсе.
+    await userEvent.click(screen.getByRole("radio", { name: "Расходник" }));
+    expect(screen.queryByRole("button", { name: "Магическая фокусировка" })).toBeNull();
   });
 });

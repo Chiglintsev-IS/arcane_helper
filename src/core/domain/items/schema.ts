@@ -69,6 +69,11 @@ const itemDefinitionFields = z.object({
   bonuses: statBonusesSchema.optional(),
   /** Доспех: база и категория. У кольца поля нет вовсе. */
   armor: armorSchema.optional(),
+  /**
+   * Вещь, которой проводят магию. Отметка утвердительная и единственная: «не фокусировка» — это
+   * отсутствие поля, а хранимое «нет» было бы вторым способом сказать то же самое.
+   */
+  spellcastingFocus: z.literal(true).optional(),
 });
 
 type ItemFields = z.infer<typeof itemDefinitionFields>;
@@ -81,7 +86,11 @@ type ItemFields = z.infer<typeof itemDefinitionFields>;
  * эти свойства снимает. Второе перечисление разошлось бы с первым молча — и вещь, где новое
  * свойство лежит у расходника, перестала бы проходить объявление целиком.
  */
-const GEAR_ONLY_FIELDS = ["bonuses", "armor"] as const satisfies readonly (keyof ItemFields)[];
+const GEAR_ONLY_FIELDS = [
+  "bonuses",
+  "armor",
+  "spellcastingFocus",
+] as const satisfies readonly (keyof ItemFields)[];
 
 /** Свойства экипировки, заполненные у вещи. */
 export function filledGearOnlyFields(item: Readonly<Record<string, unknown>>): readonly string[] {

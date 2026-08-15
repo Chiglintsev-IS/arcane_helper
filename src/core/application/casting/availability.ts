@@ -287,7 +287,7 @@ function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
 /** Без записи о снаряжении вердикта нет: состояние могло прийти из сборки, которая про него не знала. */
 function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character } = input;
-  const equipment = Character.of(character).equipment;
+  const { equipment, items } = Character.of(character);
   const { components } = spell;
   if (!equipment.known || !components.material) return [];
 
@@ -304,7 +304,7 @@ function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
     ];
   }
 
-  if (equipment.replacesFreeComponents) return [];
+  if (equipment.replacesFreeComponents(items)) return [];
   return [
     {
       code: "no_component",

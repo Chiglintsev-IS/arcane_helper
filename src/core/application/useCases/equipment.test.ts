@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
 import { undoLast, type Occasion } from "@/core/application/session";
+import { ALL_TURN_RESOURCES, checkAvailability } from "@/core/application/casting/availability";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
+import type { CharacterState } from "@/core/domain/assembly/state";
+import type { Spell } from "@/core/domain/catalog/spell";
 import { addItem, adjustBagCount, adjustWornCount, editItem, editMoney, removeItem } from "./equipment";
 
 const session = () => ({ character: createThorne(), journal: [] });
@@ -24,6 +28,19 @@ const ring = { nameRu: "Кольцо защиты", kind: "gear" as const };
 const RING_ID = Items.idFromName(ring.nameRu);
 const potions = { nameRu: "Зелье лечения", kind: "consumable" as const };
 const POTION_ID = Items.idFromName(potions.nameRu);
+
+/** Фокусировка Торна: её ищут по отметке вещи, а имя вещи игрок вправе переписать. */
+const FOCUS_ID =
+  Items.of(createThorne()).all.filter((item) => item.spellcastingFocus === true)[0]?.id ?? "";
+
+function spellCard(id: string): Spell {
+  const found = loadThorneSpells().find((spell) => spell.id === id);
+  if (found === undefined) throw new Error(`нет карточки ${id}`);
+  return found;
+}
+
+/** «Доспехи мага»: материальный компонент без стоимости — тот самый, который закрывает фокусировка. */
+const mageArmor = spellCard("mage-armor");
 
 describe("правка снаряжения", () => {
   it("одноимённая находка пополняет запас, и журнал называет получившееся количество", () => {
@@ -150,6 +167,29 @@ describe("правка снаряжения", () => {
   it("правка кошелька без изменений так и называется", () => {
     const same = editMoney(session(), { gold: 0, silver: 0, copper: 0 }, occasion);
     expect(same.journal[0]?.summaryRu).toBe("Деньги: без изменений");
+  });
+
+  it("снятая фокусировка возвращает требование материала", () => {
+    const componentReasons = (character: CharacterState): string[] =>
+      checkAvailability({
+        spell: mageArmor,
+        character,
+        turn: ALL_TURN_RESOURCES,
+        mode: "normal",
+        payment: { kind: "slot", slotLevel: 1 },
+      })
+        .warnings.filter((warning) => warning.code === "no_component")
+        .map((warning) => warning.reasonRu);
+
+    const worn = session();
+    expect(componentReasons(worn.character)).toEqual([]);
+
+    // Вещь ушла в сумку — и вместе с ней вердикт «компонент закрыт»: второй записи о фокусировке
+    // нет, поэтому пережить снятие ему нечем.
+    const stowed = adjustWornCount(worn, FOCUS_ID, -1, occasion);
+    expect(componentReasons(stowed.character)[0]).toContain("ни мешочка");
+
+    expect(componentReasons(undoLast(stowed).character)).toEqual([]);
   });
 
   it("надетый доспех двигает базу КД сам, снятие возвращает базу без доспехов", () => {

@@ -266,6 +266,74 @@ function migrateMiscBonuses(state: unknown): unknown {
 }
 
 /**
+ * Вещь, которой прежние сохранения называли магическую фокусировку. Заморожена на дате приведения:
+ * нынешние имя и опознание фокусировки вправе меняться, а прошлые сохранения — нет.
+ */
+const LEGACY_FOCUS_ITEM_ID = "spellcasting-focus";
+const LEGACY_FOCUS_NAME_RU = "Магическая фокусировка";
+
+/** Та самая вещь — фокусировкой: её носят, а носят только экипировку. */
+function migrateFocusItem(item: unknown): unknown {
+  const fields = fieldsOf(item);
+  if (fields.id !== LEGACY_FOCUS_ITEM_ID || fields.spellcastingFocus === true) return item;
+  return { ...fields, kind: "gear", spellcastingFocus: true };
+}
+
+/**
+ * Отметка фокусировки переезжает на саму вещь — и в состоянии, и в снимке отмены: снимок несёт
+ * прежние вещи, и отмена по неприведённому вернула бы вещь, переставшую быть фокусировкой.
+ */
+function migrateFocusItems(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(migrateFocusItem);
+  // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
+  if (items.every((item, index) => item === stored[index])) return state;
+  return { ...fields, itemDefinitions: items };
+}
+
+/**
+ * Отметка «фокусировка есть» жила при персонаже и переживала снятие вещи; теперь фокусировка есть у
+ * того, у кого она надета.
+ *
+ * Отметку приведение не теряет: вещь, которой она называлась, надевается, а если такой вещи в
+ * сохранении нет вовсе — заводится. Прибавок ей приведение при этом не выдумывает: игрок сказал, что
+ * фокусировка у него есть, а не то, что она что-то прибавляет.
+ *
+ * Снимку отмены это приведение не достаётся. Снимок возвращает ровно те поля, которые в нём лежат, и
+ * дописанный в него список вещей стёр бы отменой все прочие заведённые вещи.
+ */
+function migrateSpellcastingFocus(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const equipment = fieldsOf(fields.equipment);
+  const components = fieldsOf(equipment.components);
+  if (!("spellcastingFocus" in components)) return state;
+
+  const { spellcastingFocus, ...rest } = components;
+  const withoutFlag = { ...equipment, components: rest };
+  if (spellcastingFocus !== true) return { ...fields, equipment: withoutFlag };
+
+  const definitions: readonly unknown[] = Array.isArray(fields.itemDefinitions)
+    ? fields.itemDefinitions
+    : [];
+  const worn: readonly unknown[] = Array.isArray(equipment.worn) ? equipment.worn : [];
+  return {
+    ...fields,
+    itemDefinitions: definitions.some((item) => fieldsOf(item).id === LEGACY_FOCUS_ITEM_ID)
+      ? definitions
+      : [...definitions, { id: LEGACY_FOCUS_ITEM_ID, nameRu: LEGACY_FOCUS_NAME_RU, kind: "gear" }],
+    equipment: {
+      ...withoutFlag,
+      worn: worn.some((entry) => fieldsOf(entry).itemId === LEGACY_FOCUS_ITEM_ID)
+        ? worn
+        : [...worn, { itemId: LEGACY_FOCUS_ITEM_ID, count: 1 }],
+    },
+  };
+}
+
+/**
  * Имя, которым прежние версии опознавали поправку к КД среди активных эффектов. Заморожено на дате
  * приведения: нынешняя подпись поправки вправе меняться, а прошлые сохранения — нет.
  */
@@ -461,13 +529,15 @@ function migrateEffectShapes(state: unknown): unknown {
 
 export function migrateUndoPatch(patch: unknown): unknown {
   return withoutForgottenFields(
-    migrateEffectShapes(
-      migrateAdjustmentMarker(
-        dropHandEnteredNumbers(
-          migrateItemShapes(
-            migrateItemsSplit(
-              migrateArmorBasePatch(
-                migrateMiscBonuses(migrateItemCategories(migrateItemShapes(patch))),
+    migrateFocusItems(
+      migrateEffectShapes(
+        migrateAdjustmentMarker(
+          dropHandEnteredNumbers(
+            migrateItemShapes(
+              migrateItemsSplit(
+                migrateArmorBasePatch(
+                  migrateMiscBonuses(migrateItemCategories(migrateItemShapes(patch))),
+                ),
               ),
             ),
           ),
@@ -478,15 +548,19 @@ export function migrateUndoPatch(patch: unknown): unknown {
 }
 
 export function migrateCharacterState(raw: unknown): unknown {
-  return migrateEffectShapes(
-    migrateAdjustmentMarker(
-      dropHandEnteredNumbers(
-        migrateItemShapes(
-          migrateItemsSplit(
-            migrateArmorBase(
-              migrateMiscBonuses(
-                migrateItemCategories(
-                  migrateItemShapes(migrateArcaneRecovery(migrateShape(raw))),
+  return migrateFocusItems(
+    migrateSpellcastingFocus(
+      migrateEffectShapes(
+        migrateAdjustmentMarker(
+          dropHandEnteredNumbers(
+            migrateItemShapes(
+              migrateItemsSplit(
+                migrateArmorBase(
+                  migrateMiscBonuses(
+                    migrateItemCategories(
+                      migrateItemShapes(migrateArcaneRecovery(migrateShape(raw))),
+                    ),
+                  ),
                 ),
               ),
             ),

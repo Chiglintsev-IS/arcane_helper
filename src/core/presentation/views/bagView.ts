@@ -39,6 +39,7 @@ function itemView(item: ItemDefinition, equipment: Equipment): ItemView {
             ...(item.armor.category === undefined ? {} : { category: item.armor.category }),
           },
         }),
+    spellcastingFocus: item.spellcastingFocus === true,
     ...(item.note === undefined ? {} : { note: item.note }),
   };
 }

@@ -141,6 +141,21 @@ export function withoutComponentRecord(character: CharacterState): CharacterStat
 }
 
 /**
+ * Фокусировка снята и лежит в сумке: ровно то, что делает с ней игрок, откладывая её.
+ *
+ * Снимается вещь, а не отметка: отметки о фокусировке не бывает — есть надетая вещь, и найти её
+ * можно только спросив у вещей, какая из них фокусировка.
+ */
+export function withoutSpellcastingFocus(character: CharacterState): CharacterState {
+  return Character.of(character)
+    .items.all.filter((item) => item.spellcastingFocus === true)
+    .reduce((state, focus) => {
+      const root = Character.of(state);
+      return root.withEquipment(root.equipment.unequip(focus.id, 1)).toState();
+    }, character);
+}
+
+/**
  * Дневной бюджет магического восстановления израсходован целиком.
  *
  * Бюджет уходит только возвратом ячеек, поэтому сначала ячейки тратятся, а потом возвращаются им:

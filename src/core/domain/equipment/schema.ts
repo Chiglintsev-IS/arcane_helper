@@ -55,7 +55,6 @@ const equipmentSchema = z
      */
     components: z
       .object({
-        spellcastingFocus: z.boolean(),
         componentPouch: z.boolean(),
         /** Идентификаторы заклинаний, чей дорогой компонент есть в сумке. */
         materialsForSpellIds: z.array(nonEmpty),
