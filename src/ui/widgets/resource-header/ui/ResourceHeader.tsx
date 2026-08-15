@@ -11,6 +11,7 @@
 
 import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
 
+import { DERIVED_LABELS, skillLabel } from "@/ui/entities/character/lib/labels";
 import { Badge } from "@/ui/shared/ui/Badge";
 import type { Tone } from "@/ui/shared/ui/tone";
 import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
@@ -227,8 +228,8 @@ export function ResourceBadges({
   return (
     <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
         {/*
-         * Постоянная часть ряда идёт первой и одинаково в бою и вне его: кости хитов, пассивное
-         * восприятие, руны, очки. Значок, исчезающий с началом боя, сдвинул бы соседей, и глаз
+         * Постоянная часть ряда идёт первой и одинаково в бою и вне его: кости хитов, пассивная
+         * внимательность, руны, очки. Значок, исчезающий с началом боя, сдвинул бы соседей, и глаз
          * искал бы число заново там, где секунду назад стояло другое.
          */}
         <li aria-label={`Кости хитов ${hitDiceLabel(hitPoints.hitDice)}`}>
@@ -237,12 +238,13 @@ export function ResourceBadges({
           </SpendableResource>
         </li>
         {/*
-         * Подпись короткая, доступное имя полное: на 320 пикселях «Пассивное восприятие» забирает
-         * целый ряд значков, а ряд здесь стоит четверти карточки списка.
+         * Подпись короткая, доступное имя полное: на 320 пикселях полное имя забирает целый ряд
+         * значков, а ряд здесь стоит четверти карточки списка. Оба слова приходят от владельца
+         * подписей: величина выведена из навыка и зовётся его именем.
          */}
-        <li aria-label={`Пассивное восприятие ${resources.passivePerception}`}>
+        <li aria-label={`${DERIVED_LABELS.passivePerception} ${resources.passivePerception}`}>
           <Badge tone="muted" icon="◉">
-            Восприятие {resources.passivePerception}
+            {skillLabel("perception")} {resources.passivePerception}
           </Badge>
         </li>
         {/*

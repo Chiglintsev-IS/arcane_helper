@@ -39,7 +39,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.clear(field);
     await user.type(field, "20");
     // Владение навыком ставится там же, где значение: на листе это один блок.
-    const arcana = within(screen.getByRole("radiogroup", { name: "Магия" }));
+    const arcana = within(screen.getByRole("radiogroup", { name: "Аркана" }));
     await user.click(arcana.getByRole("radio", { name: "компетентность" }));
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
@@ -47,7 +47,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
       (ability) => ability.id === "intelligence",
     );
     expect(intelligence?.score).toBe(20);
-    // Магия стала компетентностью; навык чужой характеристики правкой Интеллекта не задет.
+    // Аркана стала компетентностью; навык чужой характеристики правкой Интеллекта не задет.
     expect(intelligence?.skills.find((skill) => skill.id === "arcana")?.training).toBe("expert");
     expect(
       shown(stores)

@@ -96,6 +96,27 @@ describe("книга заклинаний Торна", () => {
 
 });
 
+describe("имена навыков в тексте карточек", () => {
+  it("карточки называют навык именем листа, а не прежним", () => {
+    // Карточка называет проверку словами, и прежнее имя вернётся с любой следующей — вычиткой это
+    // не ловится. «Магия» проверяется только в скобках проверки: само слово общее, и запретить его
+    // целиком значило бы запретить магию в тексте про магию.
+    const retired = [/расследован/i, /восприят/i, /\(Магия\)/];
+    for (const spell of spells) {
+      const text = JSON.stringify(spell);
+      for (const name of retired) {
+        expect(name.test(text), `${spell.nameRu}: ${name.source}`).toBe(false);
+      }
+    }
+
+    // Обратная сторона: запрет проходит и на книге, где проверок нет вовсе.
+    const named = (skill: string) =>
+      spells.filter((spell) => JSON.stringify(spell).includes(skill)).length;
+    expect(named("(Анализ)")).toBeGreaterThan(0);
+    expect(named("(Внимательность)")).toBeGreaterThan(0);
+  });
+});
+
 describe("реестр запретов (FR-160, FR-161)", () => {
   it("запрещённого нет в книге ни под русским, ни под английским названием", () => {
     for (const ban of BANNED_SPELLS) {

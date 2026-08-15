@@ -83,7 +83,7 @@ describe("Класс Доспеха", () => {
 });
 
 describe("числа начала хода", () => {
-  it("пассивное восприятие и инициатива приходят посчитанными", () => {
+  it("пассивная внимательность и инициатива приходят посчитанными", () => {
     const sheet = Character.of(createThorne()).sheet;
     const view = toResourcesView(fresh(createThorne()));
 

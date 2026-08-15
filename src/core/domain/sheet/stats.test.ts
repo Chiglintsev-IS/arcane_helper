@@ -92,7 +92,7 @@ describe("вклад протекает по графу величин", () => {
     expect(value("skill:athletics")).toBe(10);
   });
 
-  it("назначение на навык доходит до пассивного восприятия", () => {
+  it("назначение на навык доходит до пассивной внимательности", () => {
     const value = resolved({ stat: "skill:perception", kind: "assignment", value: 9 });
 
     expect(value("passivePerception")).toBe(19);

@@ -99,9 +99,9 @@ describe("блоки листа", () => {
     expect(blockById("ability:intelligence")?.rows).toEqual([
       { labelRu: "Значение", value: "18 (+4)" },
       { labelRu: "Спасбросок", value: "+8", hint: "владение" },
-      { labelRu: "Магия", value: "+7", hint: "владение" },
+      { labelRu: "Аркана", value: "+7", hint: "владение" },
       { labelRu: "История", value: "+4" },
-      { labelRu: "Расследование", value: "+7", hint: "владение" },
+      { labelRu: "Анализ", value: "+7", hint: "владение" },
       { labelRu: "Природа", value: "+7", hint: "владение" },
       { labelRu: "Религия", value: "+4" },
     ]);
@@ -127,7 +127,7 @@ describe("блоки листа", () => {
     const state = createThorne();
     const trained = { ...state, skills: { arcana: "expert" as const } };
     const rows = blocksOf(trained).find((block) => block.id === "ability:intelligence")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Магия", value: "+10", hint: "компетентность" });
+    expect(rows).toContainEqual({ labelRu: "Аркана", value: "+10", hint: "компетентность" });
   });
 
   it("спасбросок без владения подсказки не несёт", () => {

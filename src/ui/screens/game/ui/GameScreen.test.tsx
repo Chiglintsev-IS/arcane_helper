@@ -180,7 +180,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    expect(screen.getByLabelText("Пассивное восприятие 14")).toBeDefined();
+    expect(screen.getByLabelText("Пассивная внимательность 14")).toBeDefined();
     expect(screen.queryByText(/Инициатива/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
@@ -191,7 +191,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
       .map((item) => item.textContent ?? "");
     expect(badges.slice(0, 6)).toEqual([
       "✚Кости 7d6",
-      "◉Восприятие 14",
+      "◉Внимательность 14",
       "❖Руны 3/3",
       // Очков у Торна нет, пока он не разменял кровь: пустой пул носит знак отказа.
       "✗Очки 0",

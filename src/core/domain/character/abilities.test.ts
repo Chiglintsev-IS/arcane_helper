@@ -89,7 +89,7 @@ describe("производные числа листа", () => {
     expect(skillModifier({ score: 18, training: "expert", proficiencyBonus: 3 })).toBe(10);
   });
 
-  it("пассивное восприятие — десять плюс навык Восприятия", () => {
+  it("пассивная внимательность — десять плюс навык Внимательности", () => {
     expect(passivePerception(skillModifier({ score: 12, training: undefined, proficiencyBonus: 3 }))).toBe(11);
   });
 

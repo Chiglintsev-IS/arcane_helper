@@ -15,16 +15,16 @@ const ABILITY_LABELS: Readonly<Record<string, string>> = {
 const SKILL_LABELS: Readonly<Record<string, string>> = {
   acrobatics: "Акробатика",
   animalHandling: "Уход за животными",
-  arcana: "Магия",
+  arcana: "Аркана",
   athletics: "Атлетика",
   deception: "Обман",
   history: "История",
   insight: "Проницательность",
   intimidation: "Запугивание",
-  investigation: "Расследование",
+  investigation: "Анализ",
   medicine: "Медицина",
   nature: "Природа",
-  perception: "Восприятие",
+  perception: "Внимательность",
   performance: "Выступление",
   persuasion: "Убеждение",
   religion: "Религия",
@@ -49,7 +49,7 @@ export const DERIVED_LABELS: Record<(typeof DERIVED_STAT_IDS)[number], string> =
   spellAttackModifier: "Атака заклинанием",
   preparedLimit: "Лимит подготовки",
   initiative: "Инициатива",
-  passivePerception: "Пассивное восприятие",
+  passivePerception: "Пассивная внимательность",
 };
 
 /** Величины, у которых имя ничем не уточняется: подпись у каждой своя. */

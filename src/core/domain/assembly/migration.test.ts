@@ -161,7 +161,7 @@ describe("приведение состояния версии 1", () => {
     const state = characterStateSchema.parse(migrateCharacterState(overridden));
     const sheet = Character.of(state).sheet;
 
-    // Мудрость 12 (+1) с владением и плащом; Магия — Интеллект 4, владение 3 и фокусировка.
+    // Мудрость 12 (+1) с владением и плащом; Аркана — Интеллект 4, владение 3 и фокусировка.
     expect(sheet.value(saveStatId("wisdom"))).toBe(5);
     expect(sheet.value(skillStatId("arcana"))).toBe(7);
   });

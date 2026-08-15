@@ -31,7 +31,7 @@ describe("шторка характеристики", () => {
     );
 
     // Ровно пять навыков Интеллекта и ни одного чужого: блок и шторка держат одно и то же.
-    expect(screen.getByRole("radiogroup", { name: "Магия" })).toBeDefined();
+    expect(screen.getByRole("radiogroup", { name: "Аркана" })).toBeDefined();
     expect(screen.queryByRole("radiogroup", { name: "Скрытность" })).toBeNull();
 
     const field = screen.getByLabelText("Значение");
@@ -119,7 +119,7 @@ describe("шторка характеристики", () => {
       />,
     );
 
-    const arcana = screen.getByRole("radiogroup", { name: "Магия" });
+    const arcana = screen.getByRole("radiogroup", { name: "Аркана" });
     await userEvent.click(within(arcana).getByRole("radio", { name: "компетентность" }));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
@@ -141,7 +141,7 @@ describe("шторка характеристики", () => {
       />,
     );
 
-    const arcana = screen.getByRole("radiogroup", { name: "Магия" });
+    const arcana = screen.getByRole("radiogroup", { name: "Аркана" });
     await userEvent.click(within(arcana).getByRole("radio", { name: "нет" }));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
