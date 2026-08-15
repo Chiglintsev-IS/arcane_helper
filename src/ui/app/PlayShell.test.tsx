@@ -461,7 +461,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Успех" }));
 
     expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
-    expect(screen.queryByRole("dialog", { name: "Проверка концентрации" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: /^Проверка концентрации/ })).toBeNull();
 
     await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     // Последняя запись журнала — урон, а не результат проверки.

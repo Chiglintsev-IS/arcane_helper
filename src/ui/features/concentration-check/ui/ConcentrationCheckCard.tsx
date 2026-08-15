@@ -9,7 +9,7 @@
  * игроку и эффекта, и ячейки.
  */
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import type { ConcentrationCheckView } from "@/contract/views";
 import { checkGuidanceRu } from "@/ui/features/concentration-check/lib/checkGuidance";
@@ -31,16 +31,19 @@ export function ConcentrationCheckCard({
   onFail: () => void;
 }) {
   const [runeOffered, setRuneOffered] = useState(false);
+  const titleId = useId();
 
   return (
     <section
       role="dialog"
       aria-modal="true"
-      aria-label="Проверка концентрации"
+      aria-labelledby={titleId}
       className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
       <div>
-        <h2 className="text-sm font-semibold">Проверка концентрации: «{spellNameRu}»</h2>
+        <h2 id={titleId} className="text-sm font-semibold">
+          Проверка концентрации: «{spellNameRu}»
+        </h2>
         <p className="text-sm">
           Спасбросок Телосложения против КС {check.dc}, модификатор {signed(check.modifier)}
         </p>

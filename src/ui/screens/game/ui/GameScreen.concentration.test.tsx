@@ -142,9 +142,25 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
     await userEvent.type(screen.getByLabelText("Полученный урон"), "24");
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const check = screen.getByRole("dialog", { name: "Проверка концентрации" });
+    const check = screen.getByRole("dialog", { name: /^Проверка концентрации/ });
     expect(within(check).getByText(/КС 12/)).toBeDefined();
     expect(within(check).getByText(/нужно 8 и выше/)).toBeDefined();
+  });
+
+  it("проверка концентрации: имя шторки — её заголовок (FR-274)", async () => {
+    await renderWithStores(<GameScreen />, concentrating());
+
+    await userEvent.click(screen.getByRole("button", { name: /^Хиты/ }));
+    await userEvent.type(screen.getByLabelText("Полученный урон"), "24");
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const check = screen.getByRole("dialog", { name: /^Проверка концентрации/ });
+    const title = within(check).getByRole("heading");
+
+    // Заголовок называет и проверку, и заклинание, которое ею держат: имя шторки — он сам.
+    expect(check.getAttribute("aria-labelledby")).toBe(title.id);
+    expect(check.hasAttribute("aria-label")).toBe(false);
+    expect(title.textContent).toContain("Обнаружение магии");
   });
 
   it("не принимает ноль и не пишет пустую запись", async () => {

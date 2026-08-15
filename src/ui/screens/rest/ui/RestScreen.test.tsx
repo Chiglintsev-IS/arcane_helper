@@ -109,7 +109,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     await user.type(screen.getByLabelText("Полученный урон"), "24");
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const check = screen.getByRole("dialog", { name: "Проверка концентрации" });
+    const check = screen.getByRole("dialog", { name: /^Проверка концентрации/ });
     expect(within(check).getByText(/КС 12/)).toBeDefined();
   });
 
@@ -125,7 +125,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     await user.click(screen.getByRole("button", { name: "Всё равно провал" }));
 
     expect(shown(stores).concentration).toBeUndefined();
-    expect(screen.queryByRole("dialog", { name: "Проверка концентрации" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: /^Проверка концентрации/ })).toBeNull();
   });
 });
 

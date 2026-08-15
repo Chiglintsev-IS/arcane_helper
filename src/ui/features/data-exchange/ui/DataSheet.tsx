@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export function DataSheet({
   exportText,
@@ -34,6 +34,7 @@ export function DataSheet({
   onClose: () => void;
 }) {
   const [raw, setRaw] = useState("");
+  const titleId = useId();
 
   const download = (): void => {
     const url = URL.createObjectURL(new Blob([exportText], { type: "application/json" }));
@@ -53,10 +54,14 @@ export function DataSheet({
     <section
       role="dialog"
       aria-modal="true"
-      aria-label="Данные"
+      aria-labelledby={titleId}
       className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
-      <h2 className="text-base font-semibold">Выгрузка</h2>
+      <h2 id={titleId} className="text-base font-semibold">
+        Данные
+      </h2>
+
+      <h3 className="text-sm font-semibold">Выгрузка</h3>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -78,7 +83,7 @@ export function DataSheet({
  Чем играют сейчас — раньше кнопки загрузки: игрок должен видеть, что именно он собирается
  заменить, а не узнавать об этом после.
  */}
-      <h2 className="text-base font-semibold">Каталог заклинаний</h2>
+      <h3 className="text-sm font-semibold">Каталог заклинаний</h3>
       <p className="text-xs text-slate-600 dark:text-slate-400">
         {catalogSource === "imported"
           ? "Сейчас действуют карточки из загруженного файла."
@@ -94,7 +99,7 @@ export function DataSheet({
         </button>
       ) : null}
 
-      <h2 className="text-base font-semibold">Загрузка</h2>
+      <h3 className="text-sm font-semibold">Загрузка</h3>
       <p className="text-xs text-slate-600 dark:text-slate-400">
         Заменяет персонажа целиком: подготовку, остаток ресурсов, заметки. Карточки из файла тоже
         становятся действующими и остаются после перезапуска.
