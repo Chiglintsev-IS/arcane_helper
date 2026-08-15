@@ -19,8 +19,8 @@ import type { NextConfig } from "next";
  */
 const networked = process.env.NEXT_PUBLIC_ARCANE_BACKEND === "http";
 
-/** Расширения файлов-маршрутов. Первое существует только в сетевой сборке. */
-const BACKEND_ROUTES = ["backend.ts", "tsx", "ts"];
+/** Расширения файлов, которые сборка считает маршрутами. Первое существует только в сетевой. */
+const NETWORKED_PAGE_EXTENSIONS = ["backend.ts", "tsx", "ts"];
 
 /**
  * Подкаталог, если приложение лежит не в корне домена: GitHub Pages отдаёт проект по адресу вида
@@ -32,7 +32,7 @@ const BACKEND_ROUTES = ["backend.ts", "tsx", "ts"];
 const basePath = process.env.BASE_PATH ?? "";
 
 const nextConfig: NextConfig = {
-  ...(networked ? { pageExtensions: BACKEND_ROUTES } : { output: "export" as const }),
+  ...(networked ? { pageExtensions: NETWORKED_PAGE_EXTENSIONS } : { output: "export" as const }),
   ...(basePath === "" ? {} : { basePath, assetPrefix: basePath }),
   reactStrictMode: true,
   images: { unoptimized: true },
