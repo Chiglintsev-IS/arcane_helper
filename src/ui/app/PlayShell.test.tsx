@@ -411,7 +411,7 @@ describe("одно дело — одно слово (FR-264)", () => {
 
     // Хиты отвечают на вопрос «что случилось»: урон и лечение происходят, а не заполняются.
     await user.click(screen.getByRole("button", { name: /^Хиты/ }));
-    const events = within(screen.getByRole("dialog", { name: "Правка хитов" }));
+    const events = within(screen.getByRole("dialog", { name: "Хиты" }));
     expect(events.getByRole("button", { name: "Подтвердить" })).toBeDefined();
     expect(events.queryByRole("button", { name: "Сохранить" })).toBeNull();
     await user.click(events.getByRole("button", { name: "Отмена" }));

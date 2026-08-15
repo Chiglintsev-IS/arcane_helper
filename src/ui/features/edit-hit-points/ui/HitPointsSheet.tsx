@@ -102,6 +102,8 @@ export function HitPointsSheet({
   onMaximum: (change: { maximumBase: number; masterReduction: number }) => void;
   onCancel: () => void;
 }) {
+  const titleId = useId();
+  const questionId = useId();
   const [kind, setKind] = useState<Kind>("damage");
   const [value, setValue] = useState("");
   const [fire, setFire] = useState(false);
@@ -136,11 +138,19 @@ export function HitPointsSheet({
     <section
       role="dialog"
       aria-modal="true"
-      // Имя листа отличается от подписи поля: иначе доступное имя ведёт к двум элементам сразу.
-      aria-label="Правка хитов"
+      aria-labelledby={titleId}
       className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
-      <div role="radiogroup" aria-label="Что случилось" className="flex gap-1">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id={titleId} className="text-base font-semibold leading-tight">
+          Хиты
+        </h2>
+        <span id={questionId} className="shrink-0 text-sm text-slate-600 dark:text-slate-400">
+          Что случилось?
+        </span>
+      </div>
+
+      <div role="radiogroup" aria-labelledby={questionId} className="flex gap-1">
         {TABS.map((tab) => (
           <button
             key={tab.kind}

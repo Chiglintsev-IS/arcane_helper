@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -44,6 +44,32 @@ async function openHitPoints(
 function leastHeight(element: Element | null): string | undefined {
   return element?.className.split(" ").find((token) => token.startsWith("min-h-"));
 }
+
+describe("шторка хитов называет своё дело (FR-274)", () => {
+  it("хиты: заголовок называет дело, и он же — имя шторки", async () => {
+    await openHitPoints();
+
+    const sheet = screen.getByRole("dialog", { name: "Хиты" });
+    const title = within(sheet).getByRole("heading", { name: "Хиты" });
+
+    // Имя шторки не вторая копия заголовка, а он сам: расходиться двум строкам здесь не с чем.
+    expect(sheet.getAttribute("aria-labelledby")).toBe(title.id);
+    expect(sheet.hasAttribute("aria-label")).toBe(false);
+
+    // Случившееся за столом правкой не зовётся: этим словом зовут запись, которую сохраняют.
+    expect(title.textContent).not.toContain("Правка");
+  });
+
+  it("хиты: вопрос о случившемся виден и ведёт выбор", async () => {
+    await openHitPoints();
+
+    const question = screen.getByText("Что случилось?");
+    const events = screen.getByRole("radiogroup", { name: "Что случилось?" });
+
+    // Вопрос назван один раз: слышащий его и видящий читают одну и ту же строку.
+    expect(events.getAttribute("aria-labelledby")).toBe(question.id);
+  });
+});
 
 describe("шторка хитов", () => {
   it("хиты: урон, лечение, временные и максимум правятся одной шторкой (FR-230)", async () => {
