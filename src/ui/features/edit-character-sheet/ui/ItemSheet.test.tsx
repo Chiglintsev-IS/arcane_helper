@@ -223,6 +223,45 @@ describe("шторка вещи", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("вещь: пустая прибавка, уехавшая с экрана, не держит сохранение", async () => {
+    const onSave = vi.fn();
+    render(
+      <ItemSheet choices={toChoicesView()}
+        item={{
+          id: "шлем",
+          nameRu: "Шлем",
+          kind: "gear",
+          bonuses: [{ stat: "armorClass", value: 1 }],
+          bonusFacts: [{ kind: "stat", id: "armorClass", value: 1 }],
+          bagCount: 1,
+          wornCount: 0,
+          spellcastingFocus: false,
+        }}
+        onSave={onSave}
+        onAdjustBagCount={() => {}}
+        onAdjustWornCount={() => {}}
+        onRemove={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+
+    await userEvent.clear(screen.getByLabelText("Класс Доспеха"));
+    await userEvent.click(screen.getByRole("radio", { name: "Расходник" }));
+    // Поле ушло вместе с прибавками: причине негде было бы встать, и просить о ней не о чем.
+    expect(screen.queryByLabelText("Класс Доспеха")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    // Нажатие не молчит: просьба собралась без ушедшего поля и ушла владельцу.
+    expect(onSave).toHaveBeenCalledWith({
+      id: "шлем",
+      nameRu: "Шлем",
+      kind: "consumable",
+      bonuses: {},
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("вещь: удаление стоит в её же шторке, включено только при пустом запасе (FR-241)", async () => {
     const onRemove = vi.fn();
     render(

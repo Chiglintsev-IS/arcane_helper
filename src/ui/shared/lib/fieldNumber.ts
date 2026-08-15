@@ -23,6 +23,8 @@ export function requiredFieldNumber(text: string): number {
 const NOT_TYPED = "Наберите число";
 
 type RequiredNumbers = {
+  /** Набрано ли число: у пустого места числа нет, и просьбе отдавать оттуда нечего. */
+  typed: (value: number) => boolean;
   /** Набрано ли всё: у пустого места не спрашивают ни владельца, ни предпросмотр. */
   allTyped: (values: readonly number[]) => boolean;
   /** Причина под полем: появляется от просьбы и стоит, пока к вводу не прикоснулись. */
@@ -42,12 +44,13 @@ type RequiredNumbers = {
  */
 export function useRequiredNumbers(): RequiredNumbers {
   const [asked, setAsked] = useState(false);
-  const allTyped = (values: readonly number[]): boolean =>
-    values.every((value) => !Number.isNaN(value));
+  const typed = (value: number): boolean => !Number.isNaN(value);
+  const allTyped = (values: readonly number[]): boolean => values.every(typed);
 
   return {
+    typed,
     allTyped,
-    reasonOf: (value) => (asked && Number.isNaN(value) ? NOT_TYPED : null),
+    reasonOf: (value) => (asked && !typed(value) ? NOT_TYPED : null),
     touching:
       (write) =>
       (next) => {

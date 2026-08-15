@@ -86,8 +86,14 @@ export function ItemSheet({
     text,
     value: requiredFieldNumber(text),
   }));
+  /** Прибавки на экране: у вещи вне экипировки их полей нет, и незаполненное в них ничего не ждёт. */
+  const shownBonuses = kind === "gear" ? typedBonuses : [];
+  // Прибавка без числа — не прибавка: в просьбу она не входит, а пока её поле на экране, просьба и
+  // не уходит — причину называет само поле.
   const numbers: Record<string, number> = Object.fromEntries(
-    typedBonuses.map((bonus) => [bonus.stat, bonus.value]),
+    typedBonuses
+      .filter((bonus) => required.typed(bonus.value))
+      .map((bonus) => [bonus.stat, bonus.value]),
   );
   // Пустая цена — вещь без цены, а не цена ноль: у находки её может не назвать и мастер.
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
@@ -101,7 +107,7 @@ export function ItemSheet({
       onCancel={onCancel}
       onSave={() =>
         required.ask(
-          typedBonuses.map((bonus) => bonus.value),
+          shownBonuses.map((bonus) => bonus.value),
           () =>
             onSave({
               id: item.id,
@@ -235,7 +241,7 @@ export function ItemSheet({
             компоненты снова понадобятся.
           </p>
 
-          {typedBonuses.map((bonus) => (
+          {shownBonuses.map((bonus) => (
             <NumberField
               key={bonus.stat}
               labelRu={statLabel(choices.stats, bonus.stat)}
