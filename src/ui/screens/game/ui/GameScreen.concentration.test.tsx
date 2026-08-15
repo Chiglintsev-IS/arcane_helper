@@ -200,11 +200,11 @@ describe("поправка к КД (FR-236)", () => {
     expect(within(numbers).getByText("14")).toBeDefined();
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
-    const dialog = screen.getByRole("dialog", { name: "Правка КД" });
+    const dialog = screen.getByRole("dialog", { name: "КД" });
     await userEvent.type(within(dialog).getByLabelText("Поправка"), "2");
     await userEvent.click(within(dialog).getByRole("button", { name: "Подтвердить" }));
 
-    expect(screen.queryByRole("dialog", { name: "Правка КД" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "КД" })).toBeNull();
     expect(within(numbers).getByText("16")).toBeDefined();
     expect(within(numbers).getByRole("button", { name: /^КД 16\. Правка: поправка/ })).toBeDefined();
     expect(within(numbers).getByText("КД +2")).toBeDefined();

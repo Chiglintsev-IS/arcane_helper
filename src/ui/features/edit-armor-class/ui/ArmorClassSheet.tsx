@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 
 /**
- * Правка поправки к КД: одно число со знаком, как «Хиты» правят временные хиты. Новое значение
- * заменяет прежнее, а ноль снимает поправку вовсе.
+ * Поправка к КД: одно число со знаком, как «Хиты» правят временные хиты. Новое значение заменяет
+ * прежнее, а ноль снимает поправку вовсе.
  *
  * Поправку кладёт на стол мастер, и потому нажатие здесь не правит запись листа, а совершает
- * случившееся: слово на кнопке то же, каким подтверждают урон и сотворение.
+ * случившееся: слово на кнопке то же, каким подтверждают урон и сотворение. Тем же признаком выбран
+ * и заголовок — он называет число, которого поправка касается, а самоё поправку называет поле.
  */
 export function ArmorClassSheet({
   value,
@@ -23,6 +24,7 @@ export function ArmorClassSheet({
   onSave: (value: number) => void;
   onCancel: () => void;
 }) {
+  const titleId = useId();
   const [text, setText] = useState(value === 0 ? "" : String(value));
   const trimmed = text.trim();
   const parsed = trimmed === "" ? 0 : Number(trimmed);
@@ -31,9 +33,13 @@ export function ArmorClassSheet({
     <section
       role="dialog"
       aria-modal="true"
-      aria-label="Правка КД"
+      aria-labelledby={titleId}
       className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
     >
+      <h2 id={titleId} className="text-base font-semibold leading-tight">
+        КД
+      </h2>
+
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium">Поправка</span>
         <input

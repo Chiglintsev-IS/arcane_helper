@@ -51,11 +51,11 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     await renderWithStores(<RestScreen />);
 
     await user.click(screen.getByRole("button", { name: /^КД 14/ }));
-    const sheet = screen.getByRole("dialog", { name: "Правка КД" });
+    const sheet = screen.getByRole("dialog", { name: "КД" });
     await user.type(within(sheet).getByLabelText("Поправка"), "2");
     await user.click(within(sheet).getByRole("button", { name: "Подтвердить" }));
 
-    expect(screen.queryByRole("dialog", { name: "Правка КД" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "КД" })).toBeNull();
     expect(screen.getByRole("button", { name: /^КД 16/ })).toBeDefined();
   });
 
