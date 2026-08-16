@@ -11,27 +11,28 @@
  * Поиск встаёт на место ввода и возвращает его тем же нажатием: пишущий новую запись и ищущий старую
  * спрашивают разное, а два поля подряд заставляли бы выбирать, в которое из них печатать.
  *
+ * Ряд ввода занят одним делом целиком: подписи внутри поля нет, а у кнопки поиска вместо слова знак.
+ * Имя режима, написанное второй раз внутри единственного поля экрана, и слово рядом со знаком того же
+ * дела отняли бы место у самой записи, не назвав ничего нового.
+ *
  * Компонент презентационный: записи приходят параметром, а что с ними сделать — обратными вызовами.
  */
 
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 
 import type { Snapshot } from "@/contract/snapshot";
 import { matchesQuery } from "@/ui/shared/lib/searchable";
 import { timeRu } from "@/ui/shared/lib/timeRu";
-import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
+import { GrowingField } from "@/ui/shared/ui/GrowingField";
+import { Magnifier } from "@/ui/shared/ui/Magnifier";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 type WorldNote = Snapshot["notes"][number];
 
-/**
- * Кнопка носит короткое слово, а называется целиком: полное имя растянуло бы строку ввода до
- * ширины, на которой в поле не видно набранного, а слышащий экран обязан получить вопрос целиком.
- */
 const SEARCH_LABEL = "Поиск по слову";
-const SEARCH_SHORT = "Поиск";
+const NOTE_LABEL = "Заметка";
 const EDIT_LABEL = "Править";
 const REMOVE_LABEL = "Убрать";
 
@@ -48,8 +49,7 @@ function Time({ at }: { at: string }) {
 /**
  * Строка записи: сама себе и текст, и его правка.
  *
- * Набранное вступает в силу по «Ввод» — тем же способом, каким заводится новая запись. Пустое поле
- * не уходит владельцу: просить его не о чем.
+ * Правит её то же поле, каким заводят новую: у правки и у нового текста способ один.
  *
  * «Убрать» стоит только в раскрытой строке. Возврата у удаления нет, и одиночное касание по
  * закрытой строке его не совершает.
@@ -65,14 +65,6 @@ function NoteRow({
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const named = `${EDIT_LABEL}: ${note.text}`;
-
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    const text = (draft ?? "").trim();
-    if (text === "") return;
-    if (text !== note.text) onEdit(text);
-    setDraft(null);
-  };
 
   if (draft === null) {
     return (
@@ -92,20 +84,17 @@ function NoteRow({
 
   return (
     <li className={`flex flex-col gap-1 rounded-xl p-2 ${SURFACE_GROUP}`}>
-      <form onSubmit={submit}>
-        <input
-          type="text"
-          autoFocus
-          value={draft}
-          aria-label={named}
-          enterKeyHint="done"
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setDraft(null);
-          }}
-          className={`min-h-11 w-full rounded-lg px-2 text-sm outline-none ${SURFACE_CONTROL}`}
-        />
-      </form>
+      <GrowingField
+        value={draft}
+        labelRu={named}
+        autoFocus
+        onChange={setDraft}
+        onSubmit={(text) => {
+          if (text !== note.text) onEdit(text);
+          setDraft(null);
+        }}
+        onCancel={() => setDraft(null)}
+      />
 
       <div className="flex items-center justify-between gap-2">
         <Time at={note.at} />
@@ -135,14 +124,23 @@ export function WorldNotes({
   onRemove: (noteId: string) => void;
 }) {
   const [query, setQuery] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const found = [...notes].reverse().filter((note) => matchesQuery(note.text, query ?? ""));
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           {query === null ? (
-            <QuickAddField labelRu="Заметка" onAdd={onAdd} />
+            <GrowingField
+              value={draft}
+              labelRu={NOTE_LABEL}
+              onChange={setDraft}
+              onSubmit={(text) => {
+                onAdd(text);
+                setDraft("");
+              }}
+            />
           ) : (
             <input
               type="search"
@@ -165,11 +163,11 @@ export function WorldNotes({
           aria-pressed={query !== null}
           aria-label={SEARCH_LABEL}
           onClick={() => setQuery(query === null ? "" : null)}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${
+          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
             query === null ? SURFACE_CONTROL : SELECTED
           }`}
         >
-          {SEARCH_SHORT}
+          <Magnifier />
         </button>
       </div>
 
