@@ -22,8 +22,8 @@ async function openFreshApp(page: Page): Promise<void> {
     });
   });
   await page.reload();
-  // Признак загрузки — ячейки: заголовка с именем в шапке нет, а ячейки есть в «Игре» всегда.
-  await expect(page.getByLabel("Ячейки заклинаний")).toBeVisible();
+  // Признак загрузки — ряд оплаты: заголовка с именем в шапке нет, а ячейки есть в «Игре» всегда.
+  await expect(page.getByLabel("Чем платить")).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -42,12 +42,15 @@ test("play-screen renders all resource blocks", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Торн" })).toBeHidden();
   // КД без активных эффектов: 10 базы + 2 Ловкости + 2 предметов. Чисел заклинателя в шапке нет —
   // их называет строка действия.
-  await expect(resources.getByText("14", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^КД 14/ })).toBeVisible();
   await expect(resources.getByText("Атака", { exact: true })).toBeHidden();
 
-  const slots = page.getByLabel("Ячейки заклинаний");
-  await expect(slots.getByRole("listitem")).toHaveCount(4);
-  await expect(slots.getByText("4/4")).toBeVisible();
+  // Ряд оплаты — один: четыре уровня ячеек и три пула отвечают на один вопрос.
+  const paying = page.getByLabel("Чем платить");
+  await expect(paying.getByRole("listitem")).toHaveCount(7);
+  await expect(paying.getByText("4/4").first()).toBeVisible();
+  await expect(paying).toContainText("Руны");
+  await expect(paying).toContainText("Кости d6");
 
   // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет. Экономия хода
   // приходит с боем, а бонусное действие появилось вместе с «Туманным шагом».
@@ -87,7 +90,7 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   const pinned = await page.evaluate(() => {
     const card = document.querySelector('[aria-label^="Заклинания"] li');
     const hitPoints = document.querySelector('[aria-label^="Хиты"]');
-    const slots = document.querySelector('[aria-label="Ячейки заклинаний"]');
+    const slots = document.querySelector('[aria-label="Чем платить"]');
     if (card === null || hitPoints === null || slots === null) throw new Error("нет узлов");
     // Прокручиваемый предок: первый, чьё содержимое выше собственной высоты.
     let area = card.parentElement;
@@ -233,7 +236,7 @@ test("book mode shows only the book", async ({ page }) => {
   await switchMode(page, /^Книга/);
 
   await expect(page.getByRole("region", { name: "Ресурсы" })).toHaveCount(0);
-  await expect(page.getByLabel("Ячейки заклинаний")).toHaveCount(0);
+  await expect(page.getByLabel("Чем платить")).toHaveCount(0);
   await expect(page.getByLabel("Прочие ресурсы")).toHaveCount(0);
 
   // Остаётся то, ради чего книгу открывают: состав, подготовка со счётчиком и фильтры. «Магия
@@ -283,14 +286,14 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
-  const slots = page.getByLabel("Ячейки заклинаний");
+  const slots = page.getByLabel("Чем платить");
   await expect(slots.getByText("2/3")).toBeVisible();
   await expect(slots.getByText("4/4")).toBeVisible();
   await expect(page.getByLabel("Активные эффекты")).toContainText("Доспехи мага");
 });
 
 test("undo returns the slot through the journal screen", async ({ page }) => {
-  const slots = page.getByLabel("Ячейки заклинаний");
+  const slots = page.getByLabel("Чем платить");
 
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
@@ -351,7 +354,7 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
 
   // Новый уровень дошёл до ячеек: смена уровня — не только строка листа.
   await switchMode(page, /^Игра/);
-  await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
+  await expect(page.getByLabel("Чем платить")).toContainText("4/4");
 });
 
 test("reaction shows when it returns", async ({ page }) => {
@@ -594,7 +597,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  await expect(page.getByLabel("Ячейки заклинаний")).toContainText("3/4");
+  await expect(page.getByLabel("Чем платить")).toContainText("3/4");
 
   // Бой заканчивают кнопкой, а не вкладкой: вкладка на состояние игры не влияет.
   await page.getByRole("button", { name: "Окончить бой" }).click();
@@ -609,7 +612,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await switchMode(page, /^Привал/);
   await page.getByRole("button", { name: /Долгий отдых/ }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
+  await expect(page.getByLabel("Чем платить")).toContainText("4/4");
 });
 
 test("combat keeps camp mode reachable, but rest refuses with a reason", async ({ page }) => {
@@ -624,7 +627,7 @@ test("combat keeps camp mode reachable, but rest refuses with a reason", async (
   await expect(longRest).toBeDisabled();
 
   // Ячейки не тронуты: клик по выключенной кнопке в браузере не срабатывает вовсе.
-  await expect(page.getByLabel("Ячейки заклинаний")).toContainText("4/4");
+  await expect(page.getByLabel("Чем платить")).toContainText("4/4");
 });
 
 test("blood exchange goes through the wizard, not one tap", async ({ page }) => {
@@ -633,7 +636,7 @@ test("blood exchange goes through the wizard, not one tap", async ({ page }) => 
   await page.getByRole("button", { name: /Магия крови/ }).click();
 
   // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется.
-  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Очки 0");
+  await expect(page.getByLabel("Чем платить")).toContainText("Очки0");
   await expect(page.getByLabel("Сколько очков создать")).toContainText("6 хитов");
 
   // Счётчик создаёт запас на два заклинания первого уровня одним действием.
@@ -645,6 +648,6 @@ test("blood exchange goes through the wizard, not one tap", async ({ page }) => 
   await expect(page.getByText("Действием обмениваю 12 хитов на 4 очка заклинаний.")).toBeVisible();
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Очки 4");
+  await expect(page.getByLabel("Чем платить")).toContainText("Очки4");
   await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 12");
 });

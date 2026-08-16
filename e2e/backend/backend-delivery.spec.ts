@@ -19,7 +19,7 @@ async function startFreshParty(page: Page): Promise<void> {
   });
   await page.goto("/");
   await started;
-  await expect(page.getByLabel("Ячейки заклинаний")).toBeVisible();
+  await expect(page.getByLabel("Чем платить")).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {

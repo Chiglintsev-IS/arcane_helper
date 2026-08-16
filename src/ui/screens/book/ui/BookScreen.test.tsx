@@ -287,7 +287,7 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     await inBookMode();
 
     expect(screen.queryByRole("region", { name: "Ресурсы" })).toBeNull();
-    expect(screen.queryByLabelText("Ячейки заклинаний")).toBeNull();
+    expect(screen.queryByLabelText("Чем платить")).toBeNull();
     expect(screen.queryByLabelText("Прочие ресурсы")).toBeNull();
   });
 

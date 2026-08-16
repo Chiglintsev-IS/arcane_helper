@@ -58,12 +58,13 @@ describe("состав экрана (FR-001, AC-14)", () => {
     const numbers = screen.getByLabelText("Ресурсы");
     // КД: 10 базы + 2 Ловкости + 2 предметов. Чисел заклинателя в шапке нет — их называет строка
     // действия, а шапка о том, что тратится и чем защищаются.
-    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
     expect(within(numbers).queryByText("Атака")).toBeNull();
 
-    const slots = screen.getByLabelText("Ячейки заклинаний");
-    expect(within(slots).getAllByRole("listitem")).toHaveLength(4);
-    expect(within(slots).getByText("4/4")).toBeDefined();
+    const paying = screen.getByLabelText("Чем платить");
+    // Четыре уровня ячеек и три пула: вопрос у них один, и ряд поэтому один.
+    expect(within(paying).getAllByRole("listitem")).toHaveLength(7);
+    expect(within(paying).getAllByText("4/4").length).toBeGreaterThan(0);
   });
 
   it("вне боя не показывает экономию действий (FR-001, FR-143)", async () => {
@@ -107,7 +108,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await renderWithStores(<GameScreen />);
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
 
     // Применение проверяется в начатом бою: до «Начать бой» причина добавила бы лишний
     // шаг мастера, а этот тест — про КД, а не про сам факт начала боя.
@@ -117,7 +118,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    expect(within(numbers).getByText("17")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 17/ })).toBeDefined();
     // Вклад подписан на строке эффекта: игрок видит, откуда взялось новое число.
     expect(screen.getByText(/Доспехи мага · КД 17/)).toBeDefined();
   });
@@ -169,35 +170,37 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    expect(screen.getByLabelText("Кости хитов 7d6")).toBeDefined();
+    const paying = () => within(screen.getByLabelText("Чем платить"));
+    expect(paying().getByText("Кости d6")).toBeDefined();
 
-    // Постоянная часть ряда с началом боя не меняется: значку незачем прыгать.
+    // Закреплённая часть с началом боя не меняется: плитке незачем прыгать.
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
-    expect(screen.getByLabelText("Кости хитов 7d6")).toBeDefined();
+    expect(paying().getByText("Кости d6")).toBeDefined();
   });
 
-  it("инициатива приходит с боем и встаёт за постоянной частью (FR-232)", async () => {
+  it("постоянное стоит плиткой, а не значком (FR-232)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    expect(screen.getByLabelText("Пассивная внимательность 14")).toBeDefined();
+    // Числа, которые за бой не меняются, стоят плитками закреплённой части.
+    const header = within(screen.getByLabelText("Ресурсы"));
+    expect(header.getByText("Внимательность")).toBeDefined();
+    const paying = within(screen.getByLabelText("Чем платить"));
+    expect(paying.getByText("Кости d6")).toBeDefined();
+    expect(paying.getByText("Руны")).toBeDefined();
+    // Очков у Торна нет, пока он не разменял кровь: пустой пул носит знак отказа.
+    expect(paying.getByText(/Очки/).textContent).toContain("✗");
     expect(screen.queryByText(/Инициатива/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
-    // Постоянная часть на месте, инициатива и раунд встали за ней.
+    // Начавшийся бой ни одну плитку не сдвинул: значком пришло только то, что случилось.
     const badges = within(screen.getByLabelText("Прочие ресурсы"))
       .getAllByRole("listitem")
       .map((item) => item.textContent ?? "");
-    expect(badges.slice(0, 6)).toEqual([
-      "✚Кости 7d6",
-      "◉Внимательность 14",
-      "❖Руны 3/3",
-      // Очков у Торна нет, пока он не разменял кровь: пустой пул носит знак отказа.
-      "✗Очки 0",
-      "◔Инициатива +1",
-      "◷Раунд 1",
-    ]);
+    expect(badges.slice(0, 2)).toEqual(["◔Инициатива +1", "◷Раунд 1"]);
+    expect(badges.join(" ")).not.toContain("Кости");
+    expect(badges.join(" ")).not.toContain("Внимательность");
   });
 
   it("истощение видно значком со ступенью (FR-232)", async () => {
@@ -296,7 +299,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
     // На 7 уровне возвращается 3 за час: максимум 51 → 54, текущие не растут.
     expect(screen.getByLabelText("Ресурсы").textContent).toContain("51/54");
-    expect(screen.getByLabelText("Прочие ресурсы").textContent).toContain("Очки 0");
+    expect(screen.getByLabelText("Чем платить").textContent).toContain("Очки");
   });
 
   it("бой запрещает час: кнопка остаётся видимой, но недоступной с причиной (FR-215)", async () => {
@@ -654,13 +657,13 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("19")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 19/ })).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Новый ход" }));
 
     // Пока строка эффекта висит, шапка показывает КД 19 — число, которое игрок называет мастеру.
     expect(screen.queryByText(/Щит · КД 19/)).toBeNull();
-    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
   });
 
 });
@@ -774,17 +777,19 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    const outOfFight = within(screen.getByLabelText("Прочие ресурсы"));
+    const outOfFight = screen.getByLabelText("Чем платить");
     expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
-    expect(outOfFight.getByText(/Руны 3\/3/)).toBeDefined();
-    expect(outOfFight.getByText(/Очки 0/)).toBeDefined();
+    expect(outOfFight.textContent).toContain("Руны");
+    expect(outOfFight.textContent).toContain("3/3");
+    expect(outOfFight.textContent).toContain("Очки");
 
     await user.click(screen.getByRole("button", { name: "Начать бой" }));
 
-    const inFight = within(screen.getByLabelText("Прочие ресурсы"));
+    const inFight = screen.getByLabelText("Чем платить");
     expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
-    expect(inFight.getByText(/Руны 3\/3/)).toBeDefined();
-    expect(inFight.getByText(/Очки 0/)).toBeDefined();
+    expect(inFight.textContent).toContain("Руны");
+    expect(inFight.textContent).toContain("3/3");
+    expect(inFight.textContent).toContain("Очки");
   });
 
 });
@@ -801,9 +806,7 @@ describe("«Знаки ограждения» вне боя (FR-153)", () => {
 
     await user.click(within(sheet).getByRole("button", { name: /Потратить руну/ }));
 
-    expect(screen.getByLabelText(/Ячейки заклинаний/).textContent).toBeDefined();
-    const badges = screen.getByLabelText("Прочие ресурсы");
-    expect(within(badges).getByText(/Руны 2\/3/)).toBeDefined();
+    expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
   });
 
 });

@@ -213,7 +213,7 @@ describe("поправка к КД (FR-236)", () => {
     await renderWithStores(<GameScreen />);
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     const dialog = screen.getByRole("dialog", { name: "КД" });
@@ -251,7 +251,7 @@ describe("поправка к КД (FR-236)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("19")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 19/ })).toBeDefined();
     expect(within(numbers).getByText("КД +5")).toBeDefined();
     expect(within(numbers).queryByText("КД +2")).toBeNull();
   });
@@ -268,7 +268,7 @@ describe("поправка к КД (FR-236)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
     expect(within(numbers).queryByText(/КД [+−]/)).toBeNull();
   });
 

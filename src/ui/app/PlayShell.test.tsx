@@ -162,7 +162,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    expect(within(screen.getByLabelText("Ресурсы")).getByText("17")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 17/ })).toBeDefined();
 
     // Отменяют только в журнале. Шапки там нет, но блок действующего есть: отмена уносит эффект,
     // и это видно на том же экране, где нажали кнопку.
@@ -171,7 +171,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(screen.queryByText(/Доспехи мага · КД/)).toBeNull();
 
     await user.click(screen.getByRole("radio", { name: /^Игра/ }));
-    expect(within(screen.getByLabelText("Ресурсы")).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
   });
 
 });
@@ -477,7 +477,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Потратить руну" }));
 
     expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
-    expect(screen.getByText(/Руны 2\/3/)).toBeDefined();
+    expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
     // Значок траты реакции есть только в бою — он проверяется до ухода в журнал.
     expect(screen.getByLabelText(/Реакция израсходована/)).toBeDefined();
 
@@ -630,7 +630,7 @@ describe("экран показывает только своё (FR-217, FR-220)
 
     // Ни ячеек, ни чисел боя, ни номера раунда: журнал отвечает, что уже случилось.
     expect(screen.queryByRole("region", { name: "Ресурсы" })).toBeNull();
-    expect(screen.queryByLabelText("Ячейки заклинаний")).toBeNull();
+    expect(screen.queryByLabelText("Чем платить")).toBeNull();
     expect(screen.queryByLabelText("Действие доступно")).toBeNull();
     expect(screen.queryByText(/Раунд/)).toBeNull();
   });
@@ -654,14 +654,14 @@ describe("шапка ресурсов принадлежит «Игре», а н
     await renderWithStores(<PlayShell />);
 
     const inCombat = within(screen.getByLabelText("Ресурсы"));
-    expect(inCombat.getByLabelText("Ячейки заклинаний")).toBeDefined();
+    expect(inCombat.getByLabelText("Чем платить")).toBeDefined();
     expect(inCombat.getByRole("button", { name: /^КД/ })).toBeDefined();
 
     await user.click(screen.getByRole("radio", { name: /^Книга/ }));
 
     // Книга отвечает, что персонаж знает, а не чем он за это заплатит: ни ячеек, ни чисел боя.
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
-    expect(screen.queryByLabelText("Ячейки заклинаний")).toBeNull();
+    expect(screen.queryByLabelText("Чем платить")).toBeNull();
     expect(screen.queryByText("КД")).toBeNull();
   });
 });
