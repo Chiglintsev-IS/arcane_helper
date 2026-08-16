@@ -87,17 +87,57 @@ describe("экран «Сумка»", () => {
     expect(titles).toEqual(["Деньги", "Расходники", "Ингредиенты", "Другое", "Чего не хватает"]);
   });
 
-  it("заведённая вещь в нехватке не повторяется: её ноль стоит своей строкой (FR-296)", () => {
+  it("истраченная до нуля вещь ушла из своей категории в список покупок (FR-302)", () => {
     const pearl = materialOf(spellOf("identify").components);
     if (pearl === undefined) throw new Error("«Опознание» материала не требует");
 
     render(<Bag bag={toBagView(withStock([{ definition: pearl, bag: 0 }]), spells)} {...NOOP} />);
 
-    // Ноль виден там же, где его пополняют, — своей строкой в своей категории.
-    const row = within(screen.getByRole("list", { name: "Другое" })).getByText(pearl.nameRu);
-    expect(row).toBeDefined();
-    // И второй раз — в нехватке — та же вещь не стоит: это было бы то же самое, сказанное дважды.
-    expect(within(screen.getByRole("list", { name: "Купить" })).queryByText(pearl.nameRu)).toBeNull();
+    // Перед вылазкой ноль ищут в списке покупок, а не по категориям.
+    expect(
+      within(screen.getByRole("list", { name: "Купить" })).getByText(pearl.nameRu),
+    ).toBeDefined();
+    // Переезд, а не копия: в своей категории вещи на это время нет вовсе.
+    expect(screen.queryByRole("list", { name: "Другое" })?.textContent ?? "").not.toContain(
+      pearl.nameRu,
+    );
+  });
+
+  it("пополненная вещь вернулась в свою категорию из списка покупок (FR-302)", () => {
+    const pearl = materialOf(spellOf("identify").components);
+    if (pearl === undefined) throw new Error("«Опознание» материала не требует");
+
+    render(<Bag bag={toBagView(withStock([{ definition: pearl, bag: 1 }]), spells)} {...NOOP} />);
+
+    expect(within(screen.getByRole("list", { name: "Другое" })).getByText(pearl.nameRu)).toBeDefined();
+    expect(
+      within(screen.getByRole("list", { name: "Купить" })).queryByText(pearl.nameRu),
+    ).toBeNull();
+  });
+
+  it("список покупок пополняет заведённое той же кнопкой, что заводит незаведённое (FR-302)", async () => {
+    const user = userEvent.setup();
+    const onAdjustBagCount = vi.fn();
+    const onBuyMaterial = vi.fn();
+    const pearl = materialOf(spellOf("identify").components);
+    if (pearl === undefined) throw new Error("«Опознание» материала не требует");
+
+    render(
+      <Bag
+        bag={toBagView(withStock([{ definition: pearl, bag: 0 }]), spells)}
+        {...NOOP}
+        onAdjustBagCount={onAdjustBagCount}
+        onBuyMaterial={onBuyMaterial}
+      />,
+    );
+
+    // У заведённой вещи плюс тот же, каким её пополняли в категории.
+    await user.click(screen.getByRole("button", { name: `Добавить один в сумку: ${pearl.nameRu}` }));
+    expect(onAdjustBagCount).toHaveBeenCalledWith(pearl.id, 1);
+
+    // Незаведённую тот же плюс заводит по словам карточки.
+    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: уголь/ }));
+    expect(onBuyMaterial).toHaveBeenCalledWith("find-familiar");
   });
 
   it("кошелёк показывает все три монеты стола, включая нули (FR-242)", () => {

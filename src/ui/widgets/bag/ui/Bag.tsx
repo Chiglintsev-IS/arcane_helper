@@ -44,6 +44,11 @@ export function Bag({
   onBuyMaterial: (spellId: string) => void;
 }) {
   const { money, items, missingMaterials } = bag;
+  // Уехавшее в список покупок из своей категории ушло: переезд, а не копия — один и тот же ноль,
+  // стоящий в двух разделах, спрашивался бы дважды.
+  const shopping = new Set(
+    missingMaterials.flatMap((need) => (need.itemId === undefined ? [] : [need.itemId])),
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -72,7 +77,9 @@ export function Bag({
       </section>
 
       {SECTIONS.map((section) => {
-        const sectionItems = items.filter((item) => item.kind === section.kind);
+        const sectionItems = items.filter(
+          (item) => item.kind === section.kind && !shopping.has(item.id),
+        );
         return (
           <ItemSection
             key={section.kind}
@@ -122,8 +129,13 @@ export function Bag({
         );
       })}
 
-      {/* Последним: сумка отвечает, что в ней есть, а нехватка — чего в ней не заводили. */}
-      <MissingMaterials missing={missingMaterials} onBuy={onBuyMaterial} />
+      {/* Последним: сумка отвечает, что в ней есть, а нехватка — что придётся купить. */}
+      <MissingMaterials
+        missing={missingMaterials}
+        onBuy={onBuyMaterial}
+        onOpenItem={onOpenItem}
+        onRefill={(itemId) => onAdjustBagCount(itemId, 1)}
+      />
     </div>
   );
 }
