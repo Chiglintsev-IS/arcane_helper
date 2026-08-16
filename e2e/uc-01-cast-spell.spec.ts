@@ -30,6 +30,14 @@ test.beforeEach(async ({ page }) => {
   await openFreshApp(page);
 });
 
+/**
+ * Первая строка списка — та, что стоит первой на экране.
+ *
+ * Уже творённое уезжает своим разделом выше упорядоченного ценой списка, поэтому бюджет меряется
+ * по разделу, когда он есть: строка под ним первой не является.
+ */
+const FIRST_ROW = '[aria-label="Часто"] li, [aria-label^="Заклинания"] li';
+
 /** Смена режима: она ничего не спрашивает — бой начинают и заканчивают кнопками в самом бою. */
 async function switchMode(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).click();
@@ -93,8 +101,8 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   // Список, в котором не видно целиком ни одной строки, не список, а щель. Мерить его нужно после
   // прокрутки: закреплены только хиты и ячейки, остальное уезжает — и вопрос в том, хватает ли
   // высоты под закреплённой полосой на строку целиком.
-  const pinned = await page.evaluate(() => {
-    const card = document.querySelector('[aria-label^="Заклинания"] li');
+  const pinned = await page.evaluate((firstRow) => {
+    const card = document.querySelector(firstRow);
     const hitPoints = document.querySelector('[aria-label^="Хиты"]');
     const slots = document.querySelector('[aria-label="Чем платить"]');
     if (card === null || hitPoints === null || slots === null) throw new Error("нет узлов");
@@ -110,7 +118,7 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
       pinnedBottom: pinnedBottom(),
       hitPointsTop: Math.round(hitPoints.getBoundingClientRect().top),
     };
-  });
+  }, FIRST_ROW);
 
   expect(pinned.cardTop, "строка встала под закреплённой полосой").toBeGreaterThanOrEqual(
     pinned.pinnedBottom - 1,
@@ -207,8 +215,8 @@ test("the first spell row is whole on screen at 320, 375 and 390", async ({ page
   ]) {
     await page.setViewportSize(size);
 
-    const shown = await page.evaluate(() => {
-      const first = document.querySelector('[aria-label^="Заклинания"] li');
+    const shown = await page.evaluate((firstRow) => {
+      const first = document.querySelector(firstRow);
       if (first === null) throw new Error("список пуст");
       // Меряется непрокрученный экран: строка, до которой надо доскроллить, за столом не найдена.
       let area = first.parentElement;
@@ -220,7 +228,7 @@ test("the first spell row is whole on screen at 320, 375 and 390", async ({ page
         pageOverflow: document.documentElement.scrollHeight - window.innerHeight,
         sideways: document.documentElement.scrollWidth - window.innerWidth,
       };
-    });
+    }, FIRST_ROW);
 
     expect(shown.bottom, `первая строка целиком на ${size.width}`).toBeLessThanOrEqual(
       shown.viewport,

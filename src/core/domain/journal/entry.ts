@@ -38,6 +38,16 @@ type JournalKind = (typeof JOURNAL_KINDS)[number];
 /** Что потрачено внутри хода. Словарь один на журнал и на проверку доступности. */
 export type TurnResource = "action" | "bonus_action" | "reaction";
 
+/**
+ * Записано ли записью сотворение — своим ходом или реакцией в чужой.
+ *
+ * Видов сотворения два, и знать об этом полагается одному месту: читающий, который перечислит их
+ * сам, забудет реакцию в тот день, когда её вид переименуют.
+ */
+export function isCast(entry: Pick<JournalEntry, "kind">): boolean {
+  return entry.kind === "spell_cast" || entry.kind === "reaction_cast";
+}
+
 export type JournalEntry<TState = Record<string, unknown>> = {
   readonly id: string;
   readonly at: string;

@@ -288,6 +288,35 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 
 });
 
+describe("раздел «Часто» (FR-307)", () => {
+  it("«Часто» стоит над списком и не повторяет своих строк ниже (FR-307)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<GameScreen />);
+
+    // Творится настоящим применением: раздел собирается из случившегося, и подставить его нечем.
+    await user.click(
+      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /Луч холода/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const frequent = within(screen.getByLabelText("Часто"));
+    expect(frequent.getByRole("button", { name: /Луч холода/ })).toBeDefined();
+    // Ниже той же строки нет: одна строка в двух местах спрашивала бы дважды об одном.
+    const rest = within(screen.getByLabelText(/^Заклинания/));
+    expect(rest.queryByRole("button", { name: /Луч холода/ })).toBeNull();
+    expect(rest.getByRole("button", { name: /Электрошок/ })).toBeDefined();
+  });
+
+  it("не творили ничего — раздела «Часто» нет (FR-307)", async () => {
+    await renderWithStores(<GameScreen />);
+
+    expect(screen.queryByLabelText("Часто")).toBeNull();
+    expect(within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /Луч холода/ }))
+      .toBeDefined();
+  });
+});
+
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
   it("«Прошёл час» доступен в «Игре» и в «Привале» одной и той же кнопкой (FR-173, FR-175)", async () => {
     const user = userEvent.setup();

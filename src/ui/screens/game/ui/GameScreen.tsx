@@ -6,6 +6,7 @@ import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import type { Command } from "@/contract/commands";
+import type { SpellRowView } from "@/contract/views";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
@@ -31,6 +32,12 @@ import { applyEdit } from "@/ui/shared/model/editing";
 import { signed } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 import { TONE_CLASS } from "@/ui/shared/ui/tone";
+
+/**
+ * Имя раздела уже творённого: одно слово и одна строка на заголовок и на произносимое имя списка.
+ * Второе имя тому же разделу читалось бы как второй раздел.
+ */
+const FREQUENT_LABEL = "Часто";
 
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
@@ -96,16 +103,28 @@ export function GameScreen() {
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
-  const rows = shown.map((spell) => (
+  /*
+   * Уже творённое уезжает наверх своим разделом и в упорядоченном ценой списке не остаётся: та же
+   * строка в двух местах отняла бы место и спросила бы дважды об одном. Что творили чаще прочего,
+   * знает ядро — здесь только место на экране.
+   */
+  const frequent = snapshot.frequentSpellIds.flatMap((id) =>
+    shown.filter((spell) => spell.id === id),
+  );
+  const others = shown.filter((spell) => !snapshot.frequentSpellIds.includes(spell.id));
+
+  const card = (spell: SpellRowView) => (
     <SpellCardCompact
       key={spell.id}
       spell={spell}
       casting={casting}
       onOpen={() => openSpell(spell.id)}
     />
-  ));
+  );
+
+  const rows = others.map(card);
   if (bloodShown) {
-    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play"), 0, (
+    rows.splice(positionInList(others, BLOOD_MAGIC_TRAITS, "play"), 0, (
       <BloodMagicRow
         key="blood-magic"
         bloodMagic={snapshot.bloodMagic}
@@ -275,12 +294,31 @@ export function GameScreen() {
           </p>
         )}
 
+        {/*
+         * Раздел уже творённого: заголовок и отступ пошире — единственное, чем он отделён от
+         * остального списка. Рамка тут была бы второй рамкой приложения, а линия края отмечает
+         * уход под закреплённое, а не границу раздела.
+         */}
+        {frequent.length === 0 ? null : (
+          <>
+            <h2 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
+              {FREQUENT_LABEL}
+            </h2>
+            <ul aria-label={FREQUENT_LABEL} className="flex flex-col gap-2">
+              {frequent.map(card)}
+            </ul>
+          </>
+        )}
+
         {rows.length > 0 ? (
-          <ul aria-label={listLabel} className="flex flex-col gap-2">
+          <ul
+            aria-label={listLabel}
+            className={`flex flex-col gap-2 ${frequent.length === 0 ? "" : "mt-2"}`}
+          >
             {rows}
           </ul>
         ) : null}
-        {rows.length === 0 ? (
+        {rows.length === 0 && frequent.length === 0 ? (
           <p className="text-sm">Под выбранные фильтры не подходит ни одно заклинание.</p>
         ) : null}
       </div>
