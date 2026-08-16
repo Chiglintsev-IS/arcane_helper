@@ -11,6 +11,7 @@
 
 import type { SpellRowView } from "@/contract/views";
 
+import { matchesQuery } from "@/ui/shared/lib/searchable";
 import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
 
 export type SpellFilters = {
@@ -47,25 +48,9 @@ export type DividingCategories = {
   ritual: boolean;
 };
 
-/**
- * Название в том виде, в каком его набирают на телефоне: без разницы в регистре и без «ё».
- *
- * «Ё» лежит под удержанием клавиши «е», и набирают её редко: «полет» обязан находить «Полёт», иначе
- * поиск отвечает пустым списком на верно названное заклинание.
- */
-function searchable(value: string): string {
-  return value.trim().toLocaleLowerCase("ru").replaceAll("ё", "е");
-}
-
-/** Совпадение по названию. Пустой запрос совпадает со всем: это пустая категория, а не отказ. */
-function matchesName(nameRu: string, query: string): boolean {
-  const sought = searchable(query);
-  return sought === "" || searchable(nameRu).includes(sought);
-}
-
 /** Часть отбора, общая для заклинания и для строки, заклинанием не являющейся. */
 export function matchesTraits(traits: ActionTraits, filters: SpellFilters): boolean {
-  if (!matchesName(traits.nameRu, filters.query)) return false;
+  if (!matchesQuery(traits.nameRu, filters.query)) return false;
   if (filters.castingTimes.length > 0 && !filters.castingTimes.some((v) => v === traits.castingTime)) {
     return false;
   }
