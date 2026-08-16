@@ -19,6 +19,8 @@ describe("проекция знания об ингредиентах", () => {
           { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
           { number: 3, nameRu: "Взрыв", rarity: "rare" },
         ],
+        // Стол не говорил, что свойств больше нет: пока не сказал, знание вида неполно.
+        propertiesExhausted: false,
       },
     ]);
   });
@@ -27,7 +29,7 @@ describe("проекция знания об ингредиентах", () => {
     const noted = withIngredientKnowledge(createThorne(), "Багровый корень");
 
     expect(toCraftingView(noted).ingredients).toEqual([
-      { nameRu: "Багровый корень", properties: [] },
+      { nameRu: "Багровый корень", properties: [], propertiesExhausted: false },
     ]);
   });
 

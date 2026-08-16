@@ -75,6 +75,27 @@ describe("«Ремесло»", () => {
     expect(screen.queryByText(/из \d/)).toBeNull();
   });
 
+  it("с отметкой счёт раскрытого называет знаменатель", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(
+      <CraftingScreen />,
+      withIngredientKnowledge(createThorne(), MOON_HERB, [
+        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+        { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
+      ]),
+    );
+
+    await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
+    await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
+
+    // Знаменатель приходит только от стола: с его словом «два» становится «два из двух».
+    expect(await knownList().findByText("раскрыто 2 из 2")).toBeDefined();
+
+    // Сказанное за столом бывает и ошибкой: снятая отметка возвращает счёт без знаменателя.
+    await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
+    expect(await knownList().findByText("раскрыто 2 · следующее не исследовано")).toBeDefined();
+  });
+
   it("«Ремесло»: записанный вид без раскрытого остаётся строкой", async () => {
     await renderWithStores(
       <CraftingScreen />,
@@ -191,6 +212,19 @@ describe("«Ремесло»: запись знания", () => {
     expect(known?.properties).toEqual([
       { number: 1, nameRu: "Лечение здоровья", rarity: "uncommon" },
     ]);
+  });
+
+  it("шторка раскрытия названа тем же делом, что и дверь", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CraftingScreen />, withIngredientKnowledge(createThorne(), MOON_HERB));
+
+    const door = `Раскрыть свойство: ${MOON_HERB}`;
+    await user.click(screen.getByRole("button", { name: door }));
+
+    // Дверь названа делом и видом; за ней стоит то же имя — два имени одного дела читались бы
+    // как два разных дела. Заголовок при этом называет вид: слово дела уже прочитано на двери.
+    const sheet = within(screen.getByRole("dialog", { name: door }));
+    expect(sheet.getByRole("heading", { name: MOON_HERB })).toBeDefined();
   });
 
   it("«Ремесло»: отказ владельца стоит в той шторке, где набирали", async () => {

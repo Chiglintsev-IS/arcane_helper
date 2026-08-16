@@ -1,9 +1,9 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 
 import type { CommandOf } from "@/contract/commands";
-import type { ChoicesView } from "@/contract/views";
+import type { ChoicesView, IngredientKnowledgeView } from "@/contract/views";
 
 import {
   DIRECTION_LABELS,
@@ -15,29 +15,48 @@ import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
+ * Имя двери раскрытия и имя её шторки: слово дела и вид, которого оно касается.
+ *
+ * Слово принадлежит шторке, а вид приходит одним значением: дверь пишет экран, шторку — этот файл,
+ * а читает их за столом один человек, и два имени одного дела он читает как два разных дела.
+ */
+export function revealPropertyName(nameRu: string): string {
+  return `Раскрыть свойство: ${nameRu}`;
+}
+
+/**
  * Раскрытие свойства у записанного вида.
  *
  * Название приходит из закрытого перечня, а не из свободного поля: совпадение считается тождеством
  * названий, и «лечит», набранное руками, не совпало бы с «Лечением здоровья» никогда. Редкость
  * называет игрок: справочник её не печатает, и вывести приложению не из чего.
+ *
+ * Заголовок называет вид, а произносимое имя добавляет к нему слово дела: заголовку тут стоять
+ * предметом — за дверью набирают про этот самый корень, и повторять слово дела глазами незачем.
+ *
+ * Здесь же стол говорит, что свойств у вида больше нет: сказать это можно только про тот вид, чьё
+ * знание перед глазами, а строке списка эта отметка стоила бы места у каждого вида разом.
  */
 export function RevealPropertySheet({
-  nameRu,
+  ingredient,
   choices,
   refusalRu,
   onConfirm,
+  onExhausted,
   onForget,
   onCancel,
 }: {
-  nameRu: string;
+  ingredient: IngredientKnowledgeView;
   choices: ChoicesView;
   /** Почему записать не вышло; нет вовсе — отказа не было. */
   refusalRu: string | null;
   onConfirm: (command: CommandOf<"reveal_property">) => void;
+  /** Установил ли стол, что свойств больше нет: отметка ставится и снимается одинаково. */
+  onExhausted: (exhausted: boolean) => void;
   onForget: () => void;
   onCancel: () => void;
 }) {
-  const titleId = useId();
+  const nameRu = ingredient.nameRu;
   const [propertyRu, setPropertyRu] = useState("");
   const [number, setNumber] = useState(choices.propertyNumbers[0] ?? 1);
   const [rarity, setRarity] = useState(choices.alchemicalRarities[0] ?? "");
@@ -46,12 +65,10 @@ export function RevealPropertySheet({
     <section
       role="dialog"
       aria-modal="true"
-      aria-labelledby={titleId}
+      aria-label={revealPropertyName(nameRu)}
       className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
-      <h2 id={titleId} className="text-base font-semibold leading-tight">
-        {nameRu}
-      </h2>
+      <h2 className="text-base font-semibold leading-tight">{nameRu}</h2>
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-slate-600 dark:text-slate-400">Свойство</span>
@@ -105,6 +122,20 @@ export function RevealPropertySheet({
           </select>
         </label>
       </div>
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={ingredient.propertiesExhausted}
+        onClick={() => onExhausted(!ingredient.propertiesExhausted)}
+        className={`min-h-11 rounded-lg px-3 text-sm ${
+          ingredient.propertiesExhausted
+            ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
+            : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+        }`}
+      >
+        Свойств у вида больше нет
+      </button>
 
       {refusalRu === null ? null : (
         <p className="text-xs text-slate-700 dark:text-slate-300">{refusalRu}</p>

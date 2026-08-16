@@ -167,6 +167,27 @@ export function revealProperty(
   );
 }
 
+/**
+ * Записывает, установил ли стол, что свойств у вида больше нет.
+ *
+ * Через журнал, как всякая правка знания: с отметки счёт раскрытого называется со знаменателем, и
+ * ошибочно поставленная возвращается тем же путём, что и всё прочее записанное.
+ */
+export function markPropertiesExhausted(
+  session: Session,
+  mark: { nameRu: string; exhausted: boolean },
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  const named = mark.exhausted ? "У вида больше нет свойств" : "У вида могут быть ещё свойства";
+  return commit(
+    session,
+    root.withCrafting(root.crafting.markPropertiesExhausted(mark.nameRu, mark.exhausted)),
+    { kind: "sheet_edited", summaryRu: `${named}: ${mark.nameRu}` },
+    occasion,
+  );
+}
+
 /** Забывает вид целиком: записанное по ошибке иначе осталось бы навсегда. */
 export function forgetIngredient(session: Session, nameRu: string, occasion: Occasion): Session {
   const root = Character.of(session.character);

@@ -153,6 +153,10 @@ export class Crafting {
     return this.with([...this.data, noted]);
   }
 
+  private replacing(nameRu: string, ingredient: IngredientKnowledge): Crafting {
+    return this.with(this.data.map((one) => (one.nameRu === nameRu ? ingredient : one)));
+  }
+
   /**
    * Раскрывает свойство под его номером.
    *
@@ -161,12 +165,24 @@ export class Crafting {
    */
   revealProperty(nameRu: string, property: RevealedProperty): Crafting {
     const known = this.located(nameRu);
-    const revealed = ingredientKnowledgeOf({
-      ...known,
-      properties: [...known.properties, property],
-    });
-    return this.with(
-      this.data.map((ingredient) => (ingredient.nameRu === nameRu ? revealed : ingredient)),
+    return this.replacing(
+      nameRu,
+      ingredientKnowledgeOf({ ...known, properties: [...known.properties, property] }),
+    );
+  }
+
+  /**
+   * Отмечает, что свойств у вида больше нет, — и снимает отметку тем же путём.
+   *
+   * Установить это приложению не из чего: справочник называет потолок глубины и молчит о том,
+   * сколько свойств у корня. Отметку кладёт стол, и снимается она так же, как ставится, — узнанное
+   * за столом бывает и ошибкой.
+   */
+  markPropertiesExhausted(nameRu: string, exhausted: boolean): Crafting {
+    const known = this.located(nameRu);
+    return this.replacing(
+      nameRu,
+      ingredientKnowledgeOf({ ...known, propertiesExhausted: exhausted }),
     );
   }
 

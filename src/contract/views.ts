@@ -289,6 +289,8 @@ const ingredientKnowledgeViewSchema = z.object({
   nameRu: word,
   /** По возрастанию номера; пусто — вид записан, а узнать про него ещё ничего не успели. */
   properties: z.array(revealedPropertyViewSchema),
+  /** Установил ли стол, что свойств больше нет: только отсюда счёт раскрытого берёт знаменатель. */
+  propertiesExhausted: z.boolean(),
 });
 
 /**

@@ -14,7 +14,10 @@ import {
   propertyNumberRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { WorkshopSheet } from "@/ui/features/edit-workshop/ui/WorkshopSheet";
-import { RevealPropertySheet } from "@/ui/features/reveal-property/ui/RevealPropertySheet";
+import {
+  RevealPropertySheet,
+  revealPropertyName,
+} from "@/ui/features/reveal-property/ui/RevealPropertySheet";
 import { RecipeBench, type RecipeDraft } from "@/ui/widgets/recipe-bench/ui/RecipeBench";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
@@ -36,8 +39,15 @@ function emptyDraft(standard: ChoicesView["recipeForm"]["standard"]): RecipeDraf
   return { ...standard, kinds: [], mainProperty: null, suppressed: [], limitations: [] };
 }
 
-function revealedCountRu(count: number): string {
-  return `раскрыто ${count} · следующее не исследовано`;
+/**
+ * Счёт раскрытого. Знаменатель у него берётся только от отметки стола: сколько у вида свойств
+ * всего, приложение не знает, и потолок правил фактом вида не является.
+ */
+function revealedCountRu(ingredient: IngredientKnowledgeView): string {
+  const count = ingredient.properties.length;
+  return ingredient.propertiesExhausted
+    ? `раскрыто ${count} из ${count}`
+    : `раскрыто ${count} · следующее не исследовано`;
 }
 
 /**
@@ -46,8 +56,9 @@ function revealedCountRu(count: number): string {
  * Словом, а не одной лишь ступенью подложки: разница ступеней на тёмной теме видна хуже, чем
  * кажется при свете, а второй строкой отметка отняла бы место у каждого вида разом.
  */
-function chosenMarkRu(chosen: boolean, count: number): string {
-  return chosen ? `в составе · ${revealedCountRu(count)}` : revealedCountRu(count);
+function chosenMarkRu(chosen: boolean, ingredient: IngredientKnowledgeView): string {
+  const revealed = revealedCountRu(ingredient);
+  return chosen ? `в составе · ${revealed}` : revealed;
 }
 
 function KnownIngredient({
@@ -74,7 +85,7 @@ function KnownIngredient({
         <span className="flex flex-col gap-0.5">
           <span className="text-base font-semibold leading-tight">{ingredient.nameRu}</span>
           <span className="text-xs text-slate-600 dark:text-slate-400">
-            {chosenMarkRu(chosen, ingredient.properties.length)}
+            {chosenMarkRu(chosen, ingredient)}
           </span>
         </span>
 
@@ -97,7 +108,7 @@ function KnownIngredient({
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`Раскрыть свойство: ${ingredient.nameRu}`}
+        aria-label={revealPropertyName(ingredient.nameRu)}
         className={`min-h-11 min-w-11 shrink-0 rounded-xl text-lg ${SURFACE_GROUP}`}
       >
         <span aria-hidden="true">+</span>
@@ -156,6 +167,9 @@ export function CraftingScreen() {
       if (reason === null) close();
     });
   };
+
+  /** Открытый вид берётся из снимка заново: записанное в шторке видно ей самой сразу. */
+  const openedIngredient = crafting.ingredients.find((one) => one.nameRu === opened);
 
   const kits = crafting.workshop.apparatus
     .map((kit) => `${labelled(DIRECTION_LABELS, kit.direction)} — ${kit.gradeRu}`)
@@ -238,14 +252,22 @@ export function CraftingScreen() {
         />
       ) : null}
 
-      {opened === null ? null : (
+      {openedIngredient === undefined ? null : (
         <RevealPropertySheet
-          nameRu={opened}
+          ingredient={openedIngredient}
           choices={choices}
           refusalRu={refusalRu}
           onConfirm={(command) => send(command, () => setOpened(null))}
+          onExhausted={(exhausted) =>
+            send(
+              { kind: "mark_properties_exhausted", nameRu: openedIngredient.nameRu, exhausted },
+              () => undefined,
+            )
+          }
           onForget={() =>
-            send({ kind: "forget_ingredient", nameRu: opened }, () => setOpened(null))
+            send({ kind: "forget_ingredient", nameRu: openedIngredient.nameRu }, () =>
+              setOpened(null),
+            )
           }
           onCancel={() => {
             setRefusalRu(null);

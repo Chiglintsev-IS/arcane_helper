@@ -41,6 +41,7 @@ import { castSpell } from "@/core/application/useCases/casting";
 import {
   craftBatch,
   forgetIngredient,
+  markPropertiesExhausted,
   noteIngredient,
   revealProperty,
   setWorkshop,
@@ -337,6 +338,14 @@ export function applyCommand(
       return changed(noteIngredient(session, command.nameRu, occasion));
     case "forget_ingredient":
       return changed(forgetIngredient(session, command.nameRu, occasion));
+    case "mark_properties_exhausted":
+      return changed(
+        markPropertiesExhausted(
+          session,
+          { nameRu: command.nameRu, exhausted: command.exhausted },
+          occasion,
+        ),
+      );
     case "reveal_property":
       return changed(
         revealProperty(
