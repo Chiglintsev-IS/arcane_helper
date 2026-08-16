@@ -10,10 +10,32 @@ import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
+import type { Apparatus } from "./apparatus";
+import { batchFrom } from "./batch";
+import type { Batch } from "./batch";
+import { recipeDifficulty, tierOf } from "./recipe";
+import type { PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { ingredientKnowledgeOf } from "./schema";
 import type { IngredientKnowledge, RevealedProperty } from "./schema";
 
 type CraftingState = { ingredientKnowledge: readonly IngredientKnowledge[] };
+
+/** Видов в составе — от двух до четырёх: меньше не даёт совпадения, больше справочник не берёт. */
+const FEWEST_KINDS = 2;
+const MOST_KINDS = 4;
+
+function tooFewKindsRefusal(): string {
+  return "Состав собирается не меньше чем из двух разных видов ингредиентов";
+}
+
+function tooManyKindsRefusal(): string {
+  return "Состав собирается не больше чем из четырёх разных видов ингредиентов";
+}
+
+/** Отказ выбрать за игрока, какая из двух записанных редкостей одного свойства настоящая. */
+function unevenRarityRefusal(name: string, sources: readonly string[]): string {
+  return `Свойство «${name}» записано с разной редкостью у видов: ${sources.join(", ")}`;
+}
 
 export class Crafting {
   private static readonly KEYS = [
@@ -82,6 +104,68 @@ export class Crafting {
   forgetIngredient(nameRu: string): Crafting {
     this.located(nameRu);
     return this.with(this.data.filter((ingredient) => ingredient.nameRu !== nameRu));
+  }
+
+  /**
+   * Свойства, совпавшие у выбранных видов, — все до одного.
+   *
+   * Все, а не то, ради которого состав задуман: пока состав не очищен, потребитель подвергается
+   * каждому совпавшему свойству, и умолчать о непрошенном значит соврать о том, что он выпьет.
+   *
+   * Источником считается вид, а не порция: две порции одного корня остаются одним источником и
+   * совпадения с самим собой не дают.
+   */
+  matches(kinds: readonly string[]): readonly PropertyMatch[] {
+    const distinct = [...new Set(kinds)];
+    if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
+    if (distinct.length > MOST_KINDS) throw new DomainError(tooManyKindsRefusal());
+
+    const gathered = new Map<
+      RevealedProperty["nameRu"],
+      { rarity: RevealedProperty["rarity"]; sources: string[] }
+    >();
+    for (const ingredient of distinct.map((kind) => this.located(kind))) {
+      for (const property of ingredient.properties) {
+        const found = gathered.get(property.nameRu);
+        if (found === undefined) {
+          gathered.set(property.nameRu, { rarity: property.rarity, sources: [ingredient.nameRu] });
+          continue;
+        }
+        found.sources.push(ingredient.nameRu);
+        if (found.rarity !== property.rarity) {
+          throw new DomainError(unevenRarityRefusal(property.nameRu, found.sources));
+        }
+      }
+    }
+
+    return [...gathered]
+      .filter(([, found]) => found.sources.length >= FEWEST_KINDS)
+      .map(([nameRu, found]) => ({
+        nameRu,
+        rarity: found.rarity,
+        sources: found.sources,
+        tier: tierOf(found.sources.length),
+      }));
+  }
+
+  /**
+   * Сложность рецепта: справочник считает её от совпавшего в составе, а не от одного лишь замысла.
+   *
+   * Здесь, а не в двух местах: совпадения выясняются по записанному знанию, и второй вычислитель
+   * сложности разошёлся бы с этим знанием при первой же правке справочника.
+   */
+  difficultyOf(formula: RecipeFormula, apparatus: Apparatus): RecipeDifficulty {
+    return recipeDifficulty(this.matches(formula.kinds), formula, apparatus);
+  }
+
+  /**
+   * Что выйдет из заложенной партии: время, расходники и число готовых единиц.
+   *
+   * Сложность выше предела оснащения — не «сложно», а невозможно, и отказ называет, чем именно
+   * набрано лишнее: погашенная кнопка на этот вопрос не отвечает.
+   */
+  batchOf(formula: RecipeFormula, apparatus: Apparatus, portions: number): Batch {
+    return batchFrom(this.difficultyOf(formula, apparatus), apparatus, portions);
   }
 
   /**
