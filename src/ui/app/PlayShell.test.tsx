@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 /**
- * Оболочка: панель режимов, полоса ошибки и выбор режима, переживающий перезапуск.
+ * Оболочка: панель режимов, полосы над ней и выбор режима, переживающий перезапуск.
  *
  * Хранилище режима — настоящее `localStorage` тестового DOM: подмена его моком проверяла бы мок, а
  * ломается здесь именно чтение чужого значения.
@@ -717,6 +717,74 @@ describe("шапка ресурсов принадлежит «Игре», а н
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
     expect(screen.queryByLabelText("Чем платить")).toBeNull();
     expect(screen.queryByText("КД")).toBeNull();
+  });
+});
+
+describe("полоса обновления (FR-325)", () => {
+  /**
+   * Единственная подмена здесь — платформа: регистрации работников в тестовом DOM нет вовсе, и
+   * предложить обновиться не с чего. Свойство описывается заново, поэтому за ним и убирают заново.
+   */
+  function updateWaits(): void {
+    const registration = { waiting: { postMessage: () => {} }, addEventListener: () => {} };
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: { register: async () => registration, addEventListener: () => {}, controller: null },
+    });
+  }
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "serviceWorker");
+  });
+
+  /**
+   * Чем полосе задано место: ближайший предок, назначающий ей край — экрана или соседа.
+   *
+   * Тестовый DOM разметку не раскладывает — стилей в нём нет, — поэтому «стоит над панелью»
+   * читается по самому месту, а не по измеренным координатам.
+   */
+  function placeOf(node: HTMLElement): HTMLElement | null {
+    let current: HTMLElement | null = node;
+    while (current !== null) {
+      if ([...current.classList].some((name) => name.startsWith("bottom-"))) return current;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
+  it("полоса обновления не закрывает панель режимов", async () => {
+    updateWaits();
+    const user = userEvent.setup();
+    await renderWithStores(<PlayShell />);
+
+    const bar = await screen.findByRole("status");
+    const panel = screen.getByRole("navigation", { name: "Режим экрана" });
+    const place = placeOf(bar);
+
+    // Нижний край полосы — верхний край панели: высота панели приходит от самой панели, а числом
+    // она разъехалась бы с ней на первой же правке ряда ячеек.
+    expect(place?.classList.contains("bottom-full")).toBe(true);
+    expect(place?.parentElement?.contains(panel)).toBe(true);
+    expect(place?.contains(panel)).toBe(false);
+
+    // Пока полоса висит, навигация работает: другой у приложения нет.
+    await user.click(screen.getByRole("button", { name: /^Журнал/ }));
+    expect(selected("Журнал")).toBe(true);
+    expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
+  });
+
+  it("«Позже» убирает полосу до следующего запуска", async () => {
+    updateWaits();
+    const user = userEvent.setup();
+    await renderWithStores(<PlayShell />);
+
+    const bar = await screen.findByRole("status");
+    await user.click(within(bar).getByRole("button", { name: "Позже" }));
+
+    // Предложение, от которого нельзя отказаться, за столом читается как поломка: приходит оно в
+    // начале вечера, а перезагрузка посреди боя стоит хода.
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: /^Игра/ })).toBeDefined();
   });
 });
 

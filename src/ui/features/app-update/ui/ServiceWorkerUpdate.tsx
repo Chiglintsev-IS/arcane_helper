@@ -6,6 +6,9 @@
  *
  * Проверка обновлений никогда не блокирует запуск: без сети регистрация просто не удаётся, и
  * приложение продолжает работать на прежней версии.
+ *
+ * Места на экране полоса себе не берёт: где стоят полосы оболочки, решает оболочка. Прикреплённая
+ * к нижнему краю экрана, она накрыла бы панель режимов, а другой навигации в приложении нет.
  */
 
 "use client";
@@ -15,6 +18,7 @@ import { SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 export function ServiceWorkerUpdate() {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
+  const [postponed, setPostponed] = useState(false);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -39,28 +43,37 @@ export function ServiceWorkerUpdate() {
     });
   }, []);
 
-  if (waiting === null) return null;
+  if (waiting === null || postponed) return null;
 
   return (
     <div
       role="status"
-      className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 p-3 text-sm ${SURFACE_PANEL}`}
+      className={`flex items-center justify-between gap-2 rounded-lg p-2 text-sm ${SURFACE_PANEL}`}
     >
-      <span>Готово обновление приложения.</span>
-      <button
-        type="button"
-        onClick={() => {
-          waiting.postMessage("SKIP_WAITING");
-          // Перезагрузка после смены управляющего работника: иначе часть страницы осталась бы от
-          // прежней версии.
-          navigator.serviceWorker.addEventListener("controllerchange", () => {
-            window.location.reload();
-          });
-        }}
-        className="min-h-11 shrink-0 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
-      >
-        Обновить
-      </button>
+      <span>Готово обновление.</span>
+      <span className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={() => setPostponed(true)}
+          className="min-h-11 px-2 text-sm underline"
+        >
+          Позже
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            waiting.postMessage("SKIP_WAITING");
+            // Перезагрузка после смены управляющего работника: иначе часть страницы осталась бы от
+            // прежней версии.
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+              window.location.reload();
+            });
+          }}
+          className="min-h-11 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+        >
+          Обновить
+        </button>
+      </span>
     </div>
   );
 }

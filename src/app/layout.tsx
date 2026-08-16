@@ -1,7 +1,5 @@
 import type { Metadata, Viewport } from "next";
 
-import { ServiceWorkerUpdate } from "@/ui/features/app-update/ui/ServiceWorkerUpdate";
-
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -43,7 +41,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       <body className="bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
         {children}
-        <ServiceWorkerUpdate />
       </body>
     </html>
   );
