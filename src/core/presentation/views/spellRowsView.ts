@@ -19,6 +19,7 @@ import type {
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Character } from "@/core/domain/assembly/character";
+import { isCast } from "@/core/domain/journal/entry";
 import { hitPointCost, spellPointCost, RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
@@ -337,6 +338,35 @@ export function toSpellRowViews(live: LiveSession): SpellRowView[] {
   const { character } = live.session;
   const turn = deriveTurnEconomy(live.session);
   return live.spellCatalog.map((spell) => spellRowView(spell, character, turn));
+}
+
+/**
+ * Сколько строк уносит с собой раздел уже творённого.
+ *
+ * Пять — потолок, а не обещание: раздел, в который уехала треть списка, перестаёт отвечать на
+ * вопрос «что повторить» и становится вторым списком того же самого.
+ */
+const FREQUENT_LIMIT = 5;
+
+/**
+ * Что творили чаще прочего, чаще творённое первым; при равном счёте раньше стоит творённое позже.
+ *
+ * Считается по журналу, а не отдельным счётчиком: счётчик пережил бы возврат сотворения, и раздел
+ * обещал бы повтор тому, чего уже не было. Пустым список бывает и это ответ: до первого сотворения
+ * повторять нечего.
+ */
+export function toFrequentSpellIds(live: LiveSession): string[] {
+  const casts = new Map<string, { count: number; last: number }>();
+  live.session.journal.forEach((entry, index) => {
+    const spellId = isCast(entry) ? entry.spellId : undefined;
+    if (spellId === undefined) return;
+    casts.set(spellId, { count: (casts.get(spellId)?.count ?? 0) + 1, last: index });
+  });
+
+  return [...casts.entries()]
+    .sort(([, left], [, right]) => right.count - left.count || right.last - left.last)
+    .slice(0, FREQUENT_LIMIT)
+    .map(([spellId]) => spellId);
 }
 
 /**
