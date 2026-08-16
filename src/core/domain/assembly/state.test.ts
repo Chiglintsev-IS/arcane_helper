@@ -8,6 +8,7 @@ import {
 } from "@/core/domain/assembly/state";
 import { ARCANA_FIELDS } from "@/core/domain/arcana/schema";
 import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
+import { CRAFTING_FIELDS } from "@/core/domain/crafting/schema";
 import { EFFECTS_FIELDS } from "@/core/domain/effects/schema";
 import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
 import { ITEMS_FIELDS } from "@/core/domain/items/schema";
@@ -112,6 +113,7 @@ function firstError(input: unknown): string {
 const strictStateSchema = z.strictObject({
   ...CHARACTER_FIELDS,
   ...ARCANA_FIELDS,
+  ...CRAFTING_FIELDS,
   ...EFFECTS_FIELDS,
   ...EQUIPMENT_FIELDS,
   ...ITEMS_FIELDS,
@@ -138,6 +140,7 @@ describe("форма состояния", () => {
       "hitDice",
       "hitPoints",
       "id",
+      "ingredientKnowledge",
       "inspiration",
       "itemDefinitions",
       "level",

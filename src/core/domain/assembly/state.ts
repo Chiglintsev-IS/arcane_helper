@@ -14,6 +14,7 @@ import { z } from "zod";
 
 import { ARCANA_FIELDS } from "@/core/domain/arcana/schema";
 import { CHARACTER_FIELDS } from "@/core/domain/character/schema";
+import { CRAFTING_FIELDS } from "@/core/domain/crafting/schema";
 import { EFFECTS_FIELDS, refineEffects } from "@/core/domain/effects/schema";
 import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
 import { ITEMS_FIELDS } from "@/core/domain/items/schema";
@@ -29,6 +30,7 @@ export const EXPORT_SCHEMA_VERSION = 7;
 const STATE_FIELDS = {
   ...CHARACTER_FIELDS,
   ...ARCANA_FIELDS,
+  ...CRAFTING_FIELDS,
   ...EFFECTS_FIELDS,
   ...EQUIPMENT_FIELDS,
   ...ITEMS_FIELDS,
