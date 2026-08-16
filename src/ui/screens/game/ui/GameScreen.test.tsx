@@ -243,16 +243,16 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
 });
 
 describe("фильтры (FR-002, FR-003, AC-07)", () => {
-  it("фильтр по времени накладывания оставляет только подходящие заклинания", async () => {
+  it("фильтр по роли оставляет только подходящие заклинания", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Реакция" }));
+    await user.click(screen.getByRole("button", { name: "Защита" }));
 
-    // Три подготовленные реакции: «Щит», «Поглощение стихий», «Контрзаклинание». «Падение
-    // пёрышком» в стартовый набор не входит.
+    // Семь защитных строк из двадцати: «Щит», «Поглощение стихий», «Доспехи мага», «Туманный шаг»,
+    // «Отражения», «Невидимость», «Контрзаклинание».
     const list = screen.getByLabelText(/^Заклинания/);
-    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(7);
     expect(within(list).getByText("Щит")).toBeDefined();
     expect(within(list).getByText("Контрзаклинание")).toBeDefined();
   });
@@ -261,8 +261,8 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Реакция" }));
-    await user.click(screen.getByRole("button", { name: "Действие" }));
+    await user.click(screen.getByRole("button", { name: "Защита" }));
+    await user.click(screen.getByRole("button", { name: "Боевое" }));
 
     const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).getAllByRole("listitem").length).toBeGreaterThan(2);
@@ -274,15 +274,15 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    // Реакции, которую держат вниманием, у Торна нет: ни одна из его реакций не концентрационная.
-    await user.click(screen.getByRole("button", { name: "Реакция" }));
-    await user.click(screen.getByRole("button", { name: "Концентрация" }));
+    // Боевого ритуала у Торна нет: ритуалом он ищет фамильяра, опознаёт и осматривается.
+    await user.click(screen.getByRole("button", { name: "Боевое" }));
+    await user.click(screen.getByRole("button", { name: "Ритуал" }));
 
     expect(screen.getByText(/не подходит ни одно заклинание/)).toBeDefined();
     // Кнопки сброса нет: выбранное снимают там же, где поставили.
     expect(screen.queryByRole("button", { name: /Сбросить/ })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Концентрация" }));
+    await user.click(screen.getByRole("button", { name: "Ритуал" }));
     expect(screen.getByLabelText(/^Заклинания/)).toBeDefined();
   });
 
@@ -555,14 +555,14 @@ describe("магия крови в списке действий (FR-207)", () =
 
     expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
 
-    // Она тратит действие, значит фильтр действия её оставляет…
-    await user.click(screen.getByRole("button", { name: "Действие" }));
-    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
-
-    // …а фильтр реакции убирает: строка, остающаяся при любом фильтре, делает список лживым.
-    await user.click(screen.getByRole("button", { name: "Действие" }));
-    await user.click(screen.getByRole("button", { name: "Реакция" }));
+    // Вниманием её не держат, значит фильтр концентрации её убирает: строка, остающаяся при любом
+    // фильтре, делает список лживым…
+    await user.click(screen.getByRole("button", { name: "Концентрация" }));
     expect(screen.queryByRole("button", { name: /Магия крови/ })).toBeNull();
+
+    // …а снятый фильтр возвращает её на место.
+    await user.click(screen.getByRole("button", { name: "Концентрация" }));
+    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
   });
 
 });

@@ -130,7 +130,6 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
 describe("магия крови в списке действий (FR-207)", () => {
   it("её роль — «другое», и фильтр «Боевое» её тоже убирает", async () => {
     const user = userEvent.setup();
-    // Отбор по роли живёт в «Книге»: в «Игре» полоса фильтров укладывается в один ряд без него.
     await renderWithStores(<BookScreen />);
 
     await user.click(screen.getByRole("button", { name: "Боевое" }));

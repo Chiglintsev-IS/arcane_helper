@@ -76,14 +76,16 @@ describe("состав фильтров идёт от списка (FR-002)", ()
   });
 
   it("не показывает того, что список не делит", () => {
-    // Ровно нынешнее состояние книги Торна: бонусного действия нет ни у одной карточки.
-    renderFilters({
-      castingTimes: ["action", "reaction", "minute", "hour"],
-      prices: [0, 1],
-      roles: ["offense", "defense", "other"],
-      concentration: true,
-      ritual: true,
-    });
+    renderFilters(
+      {
+        castingTimes: ["action", "reaction", "minute", "hour"],
+        prices: [0, 1],
+        roles: ["offense", "defense", "other"],
+        concentration: true,
+        ritual: true,
+      },
+      { mode: "book" },
+    );
 
     expect(screen.queryByRole("button", { name: "Бонусное" })).toBeNull();
     expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
@@ -106,19 +108,26 @@ describe("состав фильтров идёт от списка (FR-002)", ()
   });
 });
 
-describe("роль отбирает только в «Книге» (FR-002)", () => {
-  it("в «Книге» переключатели роли есть", () => {
-    renderFilters(EVERYTHING, { mode: "book" });
+describe("роль отбирает и в «Игре» (FR-212)", () => {
+  it("в «Игре» роль встаёт на место времени накладывания", () => {
+    renderFilters(EVERYTHING);
 
     expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Защита" })).toBeDefined();
+    for (const name of ["Действие", "Бонусное", "Реакция"]) {
+      expect(screen.queryByRole("button", { name }), name).toBeNull();
+    }
+
+    // И ни одной кнопкой больше: полоса «Игры» задаёт четыре вопроса — где строка, зачем она,
+    // держат ли её вниманием и берёт ли ритуал. Ряд над списком стоит строки списка.
+    expect(screen.getAllByRole("button")).toHaveLength(5);
   });
 
-  it("в «Игре» их нет: полоса обязана уложиться в один ряд", () => {
-    renderFilters(EVERYTHING);
+  it("в «Книге» рядом стоят и роль, и время накладывания", () => {
+    renderFilters(EVERYTHING, { mode: "book" });
 
-    expect(screen.queryByRole("button", { name: "Боевое" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Защита" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
   });
 });
 
