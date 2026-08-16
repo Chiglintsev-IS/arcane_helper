@@ -7,9 +7,16 @@
 
 import { z } from "zod";
 
-import { ALCHEMICAL_RARITIES, isAlchemicalPropertyName } from "@/core/domain/catalog/alchemy";
+import {
+  ALCHEMICAL_RARITIES,
+  ALCHEMY_DIRECTIONS,
+  isAlchemicalPropertyName,
+} from "@/core/domain/catalog/alchemy";
+import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
+import { APPARATUS_GRADES } from "./apparatus";
+import { KNOWN_RECIPE_FIELDS } from "./recipe";
 
 /**
  * Глубже четвёртого свойства у ингредиента не бывает — предел справочника.
@@ -18,6 +25,12 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
  * четырёх различных номеров в этих границах не набрать. Второго счёта на то же самое нет.
  */
 const DEEPEST_PROPERTY_NUMBER = 4;
+
+/** Номера, под которыми свойство бывает раскрыто: их перечень и есть предел глубины. */
+export const PROPERTY_NUMBERS: readonly number[] = Array.from(
+  { length: DEEPEST_PROPERTY_NUMBER },
+  (_unused, index) => index + 1,
+);
 
 /** Отказ назвать свойство словом вне перечня: совпадение считается тождеством названий. */
 function unknownPropertyRefusal(name: string): string {
@@ -110,7 +123,54 @@ export function ingredientKnowledgeOf(value: unknown): IngredientKnowledge {
   return parsedOrRefused(ingredientKnowledgeSchema, value, "знание об ингредиенте");
 }
 
+/** Раскрытое свойство, годное к записи: проверенное объявлением и отвергнутое с причиной. */
+export function revealedPropertyOf(value: unknown): RevealedProperty {
+  return parsedOrRefused(revealedPropertyFields, value, "раскрытое свойство");
+}
+
+/**
+ * Чем алхимик оснащён по каждому направлению.
+ *
+ * Отсутствие записи и есть «набора нет»: пустой отметки о ненайденном не заводится, и работа по
+ * такому направлению идёт импровизацией — так её и считает предел оснащения.
+ */
+const apparatusFields = {
+  potions: z.enum(APPARATUS_GRADES).optional(),
+  poisons: z.enum(APPARATUS_GRADES).optional(),
+  transmutation: z.enum(APPARATUS_GRADES).optional(),
+} satisfies Record<AlchemyDirection, z.ZodType>;
+
+/**
+ * Мастерская алхимика: чем он оснащён и каким направлениям обучен.
+ *
+ * Названо одно и другое вместе, потому что и правится оно вместе: садясь за работу, алхимик
+ * объявляет и набор, и умение. Направление, названное дважды, обучения не удваивает.
+ */
+const alchemyWorkshopSchema = z
+  .object({
+    alchemyApparatus: z.object(apparatusFields),
+    studiedDirections: z.array(z.enum(ALCHEMY_DIRECTIONS)),
+  })
+  .transform((workshop) => ({
+    ...workshop,
+    studiedDirections: [...new Set(workshop.studiedDirections)],
+  }));
+
+type AlchemyWorkshop = DeepReadonly<z.infer<typeof alchemyWorkshopSchema>>;
+
+/** Мастерская, годная к хранению: проверенная объявлением и отвергнутая с причиной. */
+export function alchemyWorkshopOf(value: unknown): AlchemyWorkshop {
+  return parsedOrRefused(alchemyWorkshopSchema, value, "мастерскую алхимика");
+}
+
 /** Поля контекста для сборки полной схемы состояния. */
 export const CRAFTING_FIELDS = {
   ingredientKnowledge: z.array(ingredientKnowledgeSchema).default([]),
+  alchemyApparatus: z.object(apparatusFields).default({}),
+  /**
+   * Направления, которым алхимик обучен: их профильный навык прибавляет к проверке бонус
+   * мастерства. Само число бонуса здесь не хранится — его знает лист.
+   */
+  studiedDirections: z.array(z.enum(ALCHEMY_DIRECTIONS)).default([]),
+  ...KNOWN_RECIPE_FIELDS,
 };

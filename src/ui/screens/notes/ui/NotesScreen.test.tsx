@@ -17,6 +17,10 @@ import { NotesScreen } from "@/ui/screens/notes/ui/NotesScreen";
 
 const BARON = "Барон обещал мост";
 
+/** Запись длиной в три строки узкого экрана: на ней и видно, сколько поле показывает. */
+const LONG =
+  "Барон обещал мост к весне, но мельник видел волка у брода и просит проводить его до города, покуда светло и дорога суха";
+
 const EMPTY_RU = "Пока ничего не записано.";
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -78,6 +82,34 @@ describe("режим «Заметки» (FR-321)", () => {
     await user.click(screen.getByRole("button", { name: "Убрать: Барон обещал мост к весне" }));
 
     expect(screen.getByText(EMPTY_RU)).toBeDefined();
+  });
+
+  it("поле правки заметки высотой в текст", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<NotesScreen />);
+    await write(user, LONG);
+
+    await user.click(screen.getByRole("button", { name: `Править: ${LONG}` }));
+
+    // Раскрытая строка показывает запись целиком: уместившееся в одну строку — не вся запись, а её
+    // хвост, и опечатку в середине пришлось бы искать прокруткой вслепую.
+    expect(rows()[0]?.textContent).toContain(LONG);
+
+    // Новая запись набирается таким же полем: у правки и у ввода способ один.
+    await user.keyboard("{Escape}");
+    await user.type(screen.getByRole("textbox", { name: "Заметка" }), LONG);
+
+    expect(screen.getAllByText(LONG).length).toBeGreaterThan(0);
+  });
+
+  it("имя поля и кнопки поиска остаётся произносимым, а места не занимает (FR-321)", async () => {
+    await renderWithStores(<NotesScreen />);
+
+    // Имя режима, написанное внутри единственного поля экрана, — то же слово дважды: место оно
+    // отнимает у самой записи. Слышащий экран получает вопрос целиком и без подписи.
+    expect(screen.getByRole("textbox", { name: "Заметка" })).toBeDefined();
+    expect(screen.queryByText("Заметка")).toBeNull();
+    expect(screen.getByRole("button", { name: "Поиск по слову" }).textContent).toBe("");
   });
 
   it("свежее сверху, и время стоит в строке записи (FR-321)", async () => {

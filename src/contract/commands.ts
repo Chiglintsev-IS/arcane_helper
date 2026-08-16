@@ -115,6 +115,37 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("adjust_worn_count", { itemId: word, delta: numeric }),
   command("edit_money", { money: z.record(word, numeric) }),
 
+  // Ремесло
+  /**
+   * Замысел состава едет целиком объектом: перечни справочника — правило, и сужает пришедшее слово
+   * их владелец. Договор ручается лишь за то, что это объект и что порций названо число.
+   */
+  command("craft_batch", {
+    formula: z.looseObject({}),
+    portions: numeric,
+    /** Кубик кидает игрок: что выпало на проверке разработки и что выпало на аварии. */
+    rolled: numeric.optional(),
+    mishapRolled: numeric.optional(),
+    /** Отдельный риск рецепта: его называет мастер, и тогда проверки требует каждая партия. */
+    risky: z.boolean().optional(),
+  }),
+
+  command("note_ingredient", { nameRu: word }),
+  command("forget_ingredient", { nameRu: word }),
+  /** Название и редкость раскрытого называет стол: справочник редкости не печатает. */
+  command("reveal_property", {
+    nameRu: word,
+    number: numeric,
+    propertyRu: word,
+    rarity: word,
+  }),
+
+  /** Мастерская: чем алхимик оснащён по каждому направлению и каким из них обучен. */
+  command("set_alchemy_workshop", {
+    apparatus: z.record(word, word),
+    studiedDirections: z.array(word),
+  }),
+
   // Лист персонажа
   command("edit_identity", { patch: z.looseObject({}) }),
   command("edit_ability", {

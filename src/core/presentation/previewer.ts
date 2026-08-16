@@ -31,6 +31,12 @@ import {
   maximumHitDiceForCast,
 } from "@/core/domain/vitality/hitDice";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
+import type { Batch } from "@/core/domain/crafting/batch";
+import { ALCHEMY_ABILITY } from "@/core/domain/crafting/development";
+import type { DevelopmentCheck } from "@/core/domain/crafting/development";
+import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
+import type { PropertyMatch, RecipeDifficulty } from "@/core/domain/crafting/recipe";
+import { refusalOf } from "@/core/domain/shared/errors";
 import type { PaymentChoice } from "@/core/application/casting/availability";
 import {
   bloodExchangeAnnouncement,
@@ -150,6 +156,71 @@ function castPreview(live: LiveSession, question: CastQuestion): Preview {
   };
 }
 
+type RecipeQuestion = Extract<Question, { kind: "recipe_preview" }>;
+
+/**
+ * Чем обернётся замысел, собранный на верстаке.
+ *
+ * Считается по шагам и до первого отказа: наполовину собранный состав — обычное состояние верстака,
+ * и уже посчитанное игрок обязан видеть вместе с причиной, по которой счёт дальше не пошёл. Отказ
+ * приходит от владельца правила слово в слово: пересказанный здесь, он разошёлся бы с тем, которым
+ * откажет само изготовление.
+ */
+function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
+  const root = Character.of(live.session.character);
+  const crafting = root.crafting;
+  let matches: readonly PropertyMatch[] = [];
+  let difficulty: RecipeDifficulty | null = null;
+  let check: DevelopmentCheck | null = null;
+  let batch: Batch | null = null;
+  let known = false;
+  let refusalRu: string | undefined;
+
+  try {
+    const formula = recipeFormulaOf(question.formula);
+    matches = crafting.matches(formula.kinds);
+    known = crafting.knows(formula);
+    difficulty = crafting.difficultyOf(formula, crafting.apparatus);
+    check = crafting.checkFor(difficulty.directions, {
+      proficiencyBonus: root.sheet.value("proficiencyBonus"),
+      abilityModifier: root.sheet.abilityModifier(ALCHEMY_ABILITY),
+    });
+    batch = crafting.batchOf(formula, crafting.apparatus, question.portions);
+  } catch (error: unknown) {
+    refusalRu = refusalOf(error);
+  }
+
+  return {
+    kind: "recipe_preview",
+    matches: matches.map((match) => ({
+      nameRu: match.nameRu,
+      rarity: match.rarity,
+      sources: [...match.sources],
+      tier: match.tier,
+    })),
+    difficulty:
+      difficulty === null
+        ? null
+        : {
+            total: difficulty.total,
+            parts: difficulty.parts.map((part) => ({ ...part })),
+            mainRu: difficulty.mainRu,
+          },
+    batch:
+      batch === null
+        ? null
+        : {
+            minutes: batch.minutes,
+            consumablesRu: batch.consumables.nameRu,
+            consumablesGold: batch.consumablesGold,
+            units: batch.units,
+          },
+    check: check === null ? null : { bonus: check.bonus, unstudied: [...check.unstudied] },
+    known,
+    ...(refusalRu === undefined ? {} : { refusalRu }),
+  };
+}
+
 export function answerQuestion(live: LiveSession, question: Question, now: string): Preview {
   const { character } = live.session;
 
@@ -172,6 +243,8 @@ export function answerQuestion(live: LiveSession, question: Question, now: strin
   }
 
   if (question.kind === "cast_preview") return castPreview(live, question);
+
+  if (question.kind === "recipe_preview") return recipePreview(live, question);
 
   if (question.kind === "arcane_recovery_preview") {
     const validation = validateArcaneRecovery(

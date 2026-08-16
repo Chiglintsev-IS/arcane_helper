@@ -238,15 +238,17 @@ export function SpellCardCompact({
           </span>
         )}
 
-        {/* Нейтральные сведения — текстом через точку: рамка вокруг каждого не добавляла смысла. */}
+        {/*
+ Нейтральные сведения — текстом через точку: рамка вокруг каждого не добавляла смысла.
+
+ Разделитель своего тона не заводит и берёт тон ряда: тон ряда назван парой — свой у тёмной темы,
+ свой у светлой, — а одиночный тон, светлый по тёмной подложке, на белой давал 2.63 при требуемых
+ 4.5.
+ */}
         <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-slate-600 dark:text-slate-400">
           {facts.map((fact, index) => (
             <Fragment key={fact.text}>
-              {index === 0 ? null : (
-                <span aria-hidden="true" className="text-slate-400">
-                  ·
-                </span>
-              )}
+              {index === 0 ? null : <span aria-hidden="true">·</span>}
               <span className={fact.strong ? STRONG : ""}>{fact.text}</span>
             </Fragment>
           ))}

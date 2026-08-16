@@ -1,0 +1,122 @@
+"use client";
+
+import { useId, useState } from "react";
+
+import type { CommandOf } from "@/contract/commands";
+import type { ChoicesView, CraftingView } from "@/contract/views";
+
+import { DIRECTION_LABELS, labelled } from "@/ui/entities/crafting/lib/labels";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+
+/**
+ * Мастерская: чем алхимик оснащён по каждому направлению и каким из них обучен.
+ *
+ * Оба поля стоят в одной строке направления, потому что отвечают на один вопрос — что по нему
+ * вообще возможно: набор задаёт предел работы, обучение — бонус её проверки. Разведённые по двум
+ * спискам, они заставили бы читать про зельеварение дважды.
+ */
+
+const NO_KIT_RU = "Набора нет";
+
+export function WorkshopSheet({
+  workshop,
+  choices,
+  refusalRu,
+  onConfirm,
+  onCancel,
+}: {
+  workshop: CraftingView["workshop"];
+  choices: ChoicesView;
+  /** Почему записать не вышло; нет вовсе — отказа не было. */
+  refusalRu: string | null;
+  onConfirm: (next: CommandOf<"set_alchemy_workshop">) => void;
+  onCancel: () => void;
+}) {
+  const titleId = useId();
+  const [apparatus, setApparatus] = useState<Record<string, string>>(
+    Object.fromEntries(workshop.apparatus.map((kit) => [kit.direction, kit.gradeRu])),
+  );
+  const [studied, setStudied] = useState<readonly string[]>(workshop.studiedDirections);
+
+  const withGrade = (direction: string, grade: string): void => {
+    const { [direction]: _dropped, ...rest } = apparatus;
+    setApparatus(grade === "" ? rest : { ...rest, [direction]: grade });
+  };
+
+  return (
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+    >
+      <h2 id={titleId} className="text-base font-semibold leading-tight">
+        Мастерская
+      </h2>
+
+      <ul className="flex flex-col gap-3">
+        {choices.alchemyDirections.map((direction) => (
+          <li key={direction} className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-600 dark:text-slate-400">
+                {labelled(DIRECTION_LABELS, direction)}
+              </span>
+              <select
+                value={apparatus[direction] ?? ""}
+                onChange={(event) => withGrade(direction, event.target.value)}
+                className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+              >
+                <option value="">{NO_KIT_RU}</option>
+                {choices.apparatusGrades.map((grade) => (
+                  <option key={grade} value={grade}>
+                    {grade}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              aria-pressed={studied.includes(direction)}
+              onClick={() =>
+                setStudied(
+                  studied.includes(direction)
+                    ? studied.filter((named) => named !== direction)
+                    : [...studied, direction],
+                )
+              }
+              className={`min-h-11 rounded-lg px-2 text-xs ${SURFACE_CONTROL} ${
+                studied.includes(direction) ? "font-semibold" : ""
+              }`}
+            >
+              Направление изучено
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {refusalRu === null ? null : (
+        <p className="text-xs text-slate-700 dark:text-slate-300">{refusalRu}</p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            onConfirm({ kind: "set_alchemy_workshop", apparatus, studiedDirections: [...studied] })
+          }
+          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+        >
+          {BUTTON_LABELS.save}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+        >
+          {BUTTON_LABELS.dismiss}
+        </button>
+      </div>
+    </section>
+  );
+}

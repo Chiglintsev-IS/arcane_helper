@@ -11,22 +11,56 @@
 
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 
-/** Походные комплекты и стационарные лабораторные модули: предел сложности и предел партии. */
+/** Надёжный походный комплект — тот, которым работает алхимик этой сборки. */
+export const RELIABLE_FIELD_KIT = "Надёжный походный комплект";
+
+/** Качества оснащения в порядке справочника: сперва походные комплекты, затем модули. */
+export const APPARATUS_GRADES = [
+  "Обычный походный комплект",
+  RELIABLE_FIELD_KIT,
+  "Профессиональный походный комплект",
+  "Мастерский походный комплект",
+  "Базовый лабораторный модуль",
+  "Оснащённый лабораторный модуль",
+  "Профессиональный лабораторный модуль",
+  "Мастерский лабораторный модуль",
+  "Великий лабораторный модуль",
+] as const;
+
+type ApparatusGrade = (typeof APPARATUS_GRADES)[number];
+
+/**
+ * Походные комплекты и стационарные лабораторные модули: предел сложности, предел партии и то,
+ * стационарен ли набор. Стационарность — не украшение таблицы: глубокое исследование третьего и
+ * четвёртого свойства бывает только в лаборатории.
+ */
 const APPARATUS_LIMITS = {
-  "Обычный походный комплект": { hardest: 15, batch: 3 },
-  "Надёжный походный комплект": { hardest: 20, batch: 6 },
-  "Профессиональный походный комплект": { hardest: 25, batch: 10 },
-  "Мастерский походный комплект": { hardest: 30, batch: 15 },
-  "Базовый лабораторный модуль": { hardest: 20, batch: 10 },
-  "Оснащённый лабораторный модуль": { hardest: 25, batch: 20 },
-  "Профессиональный лабораторный модуль": { hardest: 30, batch: 40 },
-  "Мастерский лабораторный модуль": { hardest: 35, batch: 80 },
-  "Великий лабораторный модуль": { hardest: 45, batch: 150 },
-} as const;
+  "Обычный походный комплект": { hardest: 15, batch: 3, stationary: false },
+  [RELIABLE_FIELD_KIT]: { hardest: 20, batch: 6, stationary: false },
+  "Профессиональный походный комплект": { hardest: 25, batch: 10, stationary: false },
+  "Мастерский походный комплект": { hardest: 30, batch: 15, stationary: false },
+  "Базовый лабораторный модуль": { hardest: 20, batch: 10, stationary: true },
+  "Оснащённый лабораторный модуль": { hardest: 25, batch: 20, stationary: true },
+  "Профессиональный лабораторный модуль": { hardest: 30, batch: 40, stationary: true },
+  "Мастерский лабораторный модуль": { hardest: 35, batch: 80, stationary: true },
+  "Великий лабораторный модуль": { hardest: 45, batch: 150, stationary: true },
+} as const satisfies Record<
+  ApparatusGrade,
+  { hardest: number; batch: number; stationary: boolean }
+>;
+
+/** Набор одного направления: чем он ограничен и стационарен ли. Нет вовсе — набора по нему нет. */
+export function apparatusOf(
+  direction: AlchemyDirection,
+  apparatus: Apparatus,
+): { readonly hardest: number; readonly batch: number; readonly stationary: boolean } | undefined {
+  const grade = apparatus[direction];
+  return grade === undefined ? undefined : APPARATUS_LIMITS[grade];
+}
 
 /** Чем алхимик оснащён по каждому направлению; названного набора у направления может и не быть. */
 export type Apparatus = {
-  readonly [direction in AlchemyDirection]?: keyof typeof APPARATUS_LIMITS;
+  readonly [direction in AlchemyDirection]?: ApparatusGrade | undefined;
 };
 
 /** Импровизированные сосуды: то, чем работают, когда профильного набора нет ни одного. */

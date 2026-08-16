@@ -20,7 +20,11 @@ import { type Tone } from "@/ui/shared/ui/tone";
 const CANTRIP_LEVEL = 0;
 
 /**
- * Подпись, иконка и цвет роли в бою.
+ * Подпись и цвет роли в бою.
+ *
+ * Значка у роли нет нигде: подпись стоит рядом с цветом всюду, где роль называют, и значок был бы
+ * тем же словом второй раз — а собственное место в полосе фильтров он занимает, и место это стоит
+ * ряда (ux.md).
  *
  * «Боевое», а не «Атака»: слово «Атака» на той же строке уже занято способом разрешения — броском
  * d20 против КД. Два смысла под одним словом в соседних значках сделали бы и значок, и фильтр
@@ -29,13 +33,13 @@ const CANTRIP_LEVEL = 0;
  * У роли «другое» цвета нет: серый и означает «ни то, ни другое», а третий оттенок превратил бы
  * шкалу в радугу, в которой не выделяется ничего (ux.md).
  */
-type RoleBadge = { label: string; icon?: string; tone: Tone };
+type RoleBadge = { label: string; tone: Tone };
 
 const OTHER_ROLE: RoleBadge = { label: "Другое", tone: "muted" };
 
 const COMBAT_ROLE: Record<string, RoleBadge> = {
-  offense: { label: "Боевое", icon: "⚔", tone: "offense" },
-  defense: { label: "Защита", icon: "⛊", tone: "defense" },
+  offense: { label: "Боевое", tone: "offense" },
+  defense: { label: "Защита", tone: "defense" },
   other: OTHER_ROLE,
 };
 

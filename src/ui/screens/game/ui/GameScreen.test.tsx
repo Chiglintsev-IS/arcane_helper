@@ -292,16 +292,18 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 });
 
 describe("раздел «Часто» (FR-307)", () => {
+  /** Творится настоящим применением: раздел собирается из случившегося, и подставить его нечем. */
+  async function cast(user: ReturnType<typeof userEvent.setup>, name: RegExp): Promise<void> {
+    await user.click(within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+  }
+
   it("«Часто» стоит над списком и не повторяет своих строк ниже (FR-307)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    // Творится настоящим применением: раздел собирается из случившегося, и подставить его нечем.
-    await user.click(
-      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /Луч холода/ }),
-    );
-    await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    await cast(user, /Луч холода/);
 
     const frequent = within(screen.getByLabelText("Часто"));
     expect(frequent.getByRole("button", { name: /Луч холода/ })).toBeDefined();
@@ -309,6 +311,26 @@ describe("раздел «Часто» (FR-307)", () => {
     const rest = within(screen.getByLabelText(/^Заклинания/));
     expect(rest.queryByRole("button", { name: /Луч холода/ })).toBeNull();
     expect(rest.getByRole("button", { name: /Электрошок/ })).toBeDefined();
+  });
+
+  it("«Часто» стоит одной строкой имён (FR-307)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<GameScreen />);
+
+    await cast(user, /Луч холода/);
+    await cast(user, /Электрошок/);
+
+    // В ряду одни имена: чем платить, что бросать и сколько урона — вопросы карточки, а
+    // повторяющий их не задаёт. Позже творённое стоит выше при равном счёте.
+    const frequent = within(screen.getByLabelText("Часто"));
+    expect(frequent.getAllByRole("button").map((named) => named.textContent)).toEqual([
+      "Электрошок",
+      "Луч холода",
+    ]);
+
+    // Имя ведёт в ту же карточку и тот же мастер: своего пути у ряда нет.
+    await user.click(frequent.getByRole("button", { name: "Луч холода" }));
+    expect(screen.getByRole("button", { name: "Сотворить" })).toBeDefined();
   });
 
   it("не творили ничего — раздела «Часто» нет (FR-307)", async () => {
