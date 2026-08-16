@@ -4,6 +4,7 @@ import type { BagView, ChoicesView } from "@/contract/views";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
 import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
 import { ItemSection } from "@/ui/shared/ui/ItemSection";
+import { EDIT_LABEL, editName } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
@@ -42,6 +43,7 @@ export function Bag({
   onAdjustBagCount: (id: string, delta: number) => void;
 }) {
   const { money, items, missingMaterials } = bag;
+  const moneyRu = "Деньги";
   // Уехавшее в список покупок из своей категории ушло: переезд, а не копия — один и тот же ноль,
   // стоящий в двух разделах, спрашивался бы дважды.
   const shopping = new Set(
@@ -51,7 +53,7 @@ export function Bag({
   return (
     <div className="flex flex-col gap-2">
       <section className={`flex items-center gap-3 rounded-xl px-3 py-2 ${SURFACE_GROUP}`}>
-        <h2 className="shrink-0 text-sm font-semibold">Деньги</h2>
+        <h2 className="shrink-0 text-sm font-semibold">{moneyRu}</h2>
         {/* Все монеты стола всегда: исчезнувший ноль заставляет гадать, кончился или забыт. */}
         <ul
           aria-label="Кошелёк"
@@ -67,10 +69,10 @@ export function Bag({
         <button
           type="button"
           onClick={onEditMoney}
-          aria-label="Править: Деньги"
+          aria-label={editName(moneyRu)}
           className={`min-h-11 shrink-0 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
         >
-          Править
+          {EDIT_LABEL}
         </button>
       </section>
 

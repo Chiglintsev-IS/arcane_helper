@@ -370,7 +370,7 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
   // Лист — база персонажа одной колонкой, без вкладок.
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Править: Уровень" }).click();
+  await page.getByRole("button", { name: "Правка: Уровень" }).click();
   const levelSheet = page.getByRole("dialog", { name: "Правка: Уровень" });
   await levelSheet.getByRole("spinbutton", { name: "Уровень" }).fill("8");
   await levelSheet.getByRole("spinbutton", { name: "Базовый максимум хитов" }).fill("66");
@@ -516,12 +516,12 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 
   await page.getByRole("textbox", { name: "Новый расходник" }).fill("Зелье лечения");
   await page.getByRole("textbox", { name: "Новый расходник" }).press("Enter");
-  await page.getByRole("button", { name: "Открыть: Зелье лечения" }).click();
+  await page.getByRole("button", { name: "Правка: Зелье лечения" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Зелье лечения" })).toBeVisible();
   await scan("шторка вещи");
   await page.getByRole("button", { name: "Отмена" }).click();
 
-  await page.getByRole("button", { name: "Править: Деньги" }).click();
+  await page.getByRole("button", { name: "Правка: Деньги" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Деньги" })).toBeVisible();
   await scan("шторка денег");
   await page.getByRole("button", { name: "Отмена" }).click();
@@ -533,7 +533,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 
   await switchToSheet(page);
 
-  await page.getByRole("button", { name: "Править: Интеллект" }).click();
+  await page.getByRole("button", { name: "Правка: Интеллект" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
   await scan("шторка правки листа");
   await page.getByRole("button", { name: "Отмена" }).click();

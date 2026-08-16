@@ -14,7 +14,9 @@
 
 import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
 
+import { ARMOR_CLASS_ADJUSTMENT } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { DERIVED_LABELS, skillLabel } from "@/ui/entities/character/lib/labels";
+import { HIT_POINTS_EVENTS } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { RESOURCES_EDIT_LABEL } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { Badge } from "@/ui/shared/ui/Badge";
 import { type Tone } from "@/ui/shared/ui/tone";
@@ -74,7 +76,8 @@ function TileCaption({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Плитка КД — кнопка, как и плитка хитов: временная поправка правится там же, где она видна.
+ * Плитка КД — кнопка, как и плитка хитов: поправку мастера кладут там же, где видно само число.
+ * Правкой дверь не зовётся — за ней подтверждают случившееся за столом, а не сохраняют запись.
  */
 function ArmorClassStat({
   value,
@@ -93,7 +96,7 @@ function ArmorClassStat({
         <button
           type="button"
           onClick={onOpen}
-          aria-label={`КД ${value}. Правка: поправка`}
+          aria-label={`КД ${value}. ${ARMOR_CLASS_ADJUSTMENT}`}
           className="w-full px-2 py-1 text-left"
         >
           <TileCaption>КД{adjustment !== 0 ? ` ${signed(adjustment)}` : ""}</TileCaption>
@@ -105,8 +108,8 @@ function ArmorClassStat({
 }
 
 /**
- * Плитка хитов — кнопка: урон, лечение и временные хиты правятся отсюда. Число, которое
- * чаще всего меняется, и место, где его меняют, — одно и то же.
+ * Плитка хитов — кнопка: случившееся за столом подтверждают отсюда. Число, которое чаще всего
+ * меняется, и место, где его меняют, — одно и то же, и зовутся они одним словом.
  */
 function HitPointsStat({
   value,
@@ -125,7 +128,7 @@ function HitPointsStat({
         <button
           type="button"
           onClick={onOpen}
-          aria-label={`Хиты ${value}. Правка: урон, лечение, временные`}
+          aria-label={`Хиты ${value}. ${HIT_POINTS_EVENTS}`}
           className="w-full px-2 py-1 text-left"
         >
           <TileCaption>Хиты{temporary > 0 ? ` +${temporary}` : ""}</TileCaption>

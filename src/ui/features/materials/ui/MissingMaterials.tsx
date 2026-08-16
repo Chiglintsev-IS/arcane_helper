@@ -8,8 +8,8 @@
  * стоит здесь именно потому, что запаса нет, и ноль при каждом имени повторял бы имя самих покупок.
  *
  * Строки устроены одинаково, заведена вещь или ещё нет: то же имя, те же подробности, то же
- * прибавление в сумку одним нажатием. Заведённая сверх того открывается своей шторкой; незаведённой
- * открывать нечего, и открывающего действия у неё нет вовсе, а не есть погашенное.
+ * прибавление в сумку одним нажатием. Заведённая сверх того правится своей шторкой; у незаведённой
+ * править нечего, и двери у неё нет вовсе, а не есть погашенная.
  *
  * Закрытое надетой фокусировкой названо одним перечнем имён: покупать его не обязательно, а строка
  * на каждое заняла бы половину экрана под то, чем не пользуются, — при том что знать о нём надо,
@@ -21,6 +21,7 @@
 import type { MissingMaterialView } from "@/contract/views";
 import { neededForLine } from "@/ui/entities/character/lib/itemMeta";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
+import { editName } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /** Тело строки: одно и то же у заведённой вещи и у той, которой ещё нет. */
@@ -58,7 +59,7 @@ export function MissingMaterials({
   missing: readonly MissingMaterialView[];
   /** Завести компонент карточки и положить одну штуку в сумку. */
   onBuy: (spellId: string) => void;
-  /** Открыть заведённую вещь целиком: правка, запас и удаление живут в её шторке. */
+  /** Правка заведённой вещи целиком: и запас, и удаление живут в той же шторке. */
   onOpenItem: (itemId: string) => void;
   /** Положить одну штуку заведённой вещи: тот же плюс, каким её пополняют в категории. */
   onRefill: (itemId: string) => void;
@@ -88,7 +89,7 @@ export function MissingMaterials({
                 ) : (
                   <button
                     type="button"
-                    aria-label={`Открыть: ${need.nameRu}`}
+                    aria-label={editName(need.nameRu)}
                     onClick={() => onOpenItem(itemId)}
                     className={`${ROW} hover:bg-slate-100 dark:hover:bg-slate-900`}
                   >

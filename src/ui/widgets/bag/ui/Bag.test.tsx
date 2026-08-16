@@ -185,7 +185,7 @@ describe("«Сумка» в «Вещах»", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Открыть: Зелье лечения" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Зелье лечения" }));
     expect(onOpenItem).toHaveBeenCalledWith("healing-potion");
   });
 
@@ -194,7 +194,7 @@ describe("«Сумка» в «Вещах»", () => {
     const onEditMoney = vi.fn();
     render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} onEditMoney={onEditMoney} />);
 
-    await user.click(screen.getByRole("button", { name: "Править: Деньги" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Деньги" }));
     expect(onEditMoney).toHaveBeenCalled();
   });
 });

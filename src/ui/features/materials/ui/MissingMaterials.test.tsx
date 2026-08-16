@@ -107,13 +107,13 @@ describe("«Покупки» в «Вещах»", () => {
     }
 
     // Заведённая вещь открывается и пополняется своей строкой — переезд ничего у неё не отнял.
-    await user.click(screen.getByRole("button", { name: `Открыть: ${pearl.nameRu}` }));
+    await user.click(screen.getByRole("button", { name: `Правка: ${pearl.nameRu}` }));
     expect(onOpenItem).toHaveBeenCalledWith(pearl.id);
     await user.click(screen.getByRole("button", { name: `Добавить один в сумку: ${pearl.nameRu}` }));
     expect(onRefill).toHaveBeenCalledWith(pearl.id);
 
     // Незаведённой вещи открывать нечего: открывающего действия у её строки нет вовсе.
-    expect(screen.queryByRole("button", { name: /Открыть: уголь/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Правка: уголь/ })).toBeNull();
   });
 
   it("список покупок пополняет заведённое той же кнопкой, что заводит незаведённое (FR-302)", async () => {

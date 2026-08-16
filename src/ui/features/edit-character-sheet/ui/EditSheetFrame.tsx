@@ -2,7 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 
-import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
@@ -38,7 +38,7 @@ export function EditSheetFrame({
     <section
       role="dialog"
       aria-modal="true"
-      aria-label={`Правка: ${titleRu}`}
+      aria-label={editName(titleRu)}
       className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <h2 className="text-sm font-semibold">{titleRu}</h2>

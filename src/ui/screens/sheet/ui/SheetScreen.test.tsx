@@ -33,7 +33,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист»: правка характеристики доходит до состояния и в журнал (FR-231)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    await user.click(screen.getByRole("button", { name: "Править: Интеллект" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
 
     const field = screen.getByLabelText("Значение");
     await user.clear(field);
@@ -65,11 +65,11 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Править: Владения" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Владения" }));
     await user.type(screen.getByLabelText("Инструменты"), "Инструменты кузнеца");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    await user.click(screen.getByRole("button", { name: "Править: Языки" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Языки" }));
     await user.type(screen.getByLabelText("Знает"), "Общий, Троллий");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
@@ -83,7 +83,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист»: уровень пересчитывает ресурсы одной записью (FR-227)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    await user.click(screen.getByRole("button", { name: "Править: Уровень" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Уровень" }));
 
     const level = screen.getByLabelText("Уровень");
     await user.clear(level);
@@ -105,7 +105,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист»: отмена шторки состояния не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    await user.click(screen.getByRole("button", { name: "Править: Отметки мастера" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Отметки мастера" }));
     await user.click(screen.getByRole("radio", { name: "Ступень 3" }));
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
@@ -119,7 +119,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     const { stores } = await renderWithStores(<SheetScreen />);
     const before = shown(stores).sheet.abilities;
 
-    await user.click(screen.getByRole("button", { name: "Править: Интеллект" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
     const field = screen.getByLabelText("Значение");
     await user.clear(field);
     await user.type(field, "40");
@@ -136,7 +136,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     const { stores } = await renderWithStores(<SheetScreen />);
     const before = shown(stores).sheet.abilities;
 
-    await user.click(screen.getByRole("button", { name: "Править: Интеллект" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
     const field = screen.getByLabelText("Значение");
     await user.clear(field);
     await user.type(field, "12.5");

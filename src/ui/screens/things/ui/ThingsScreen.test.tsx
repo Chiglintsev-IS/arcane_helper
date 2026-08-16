@@ -83,7 +83,7 @@ describe("«Вещи» (FR-304)", () => {
     expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ bagCount: 1, wornCount: 0 });
     expect(shown(stores).bag.armorClass.value).toBe(before);
 
-    await user.click(screen.getByRole("button", { name: "Открыть: Кольцо защиты" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Кольцо защиты" }));
     await user.selectOptions(screen.getByLabelText("Добавить прибавку"), "armorClass");
     await user.click(screen.getByRole("button", { name: "Добавить" }));
     const armorField = screen.getByLabelText("Класс Доспеха");
@@ -121,7 +121,7 @@ describe("«Вещи» (FR-304)", () => {
       screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }),
     ).toHaveProperty("disabled", true);
 
-    await user.click(screen.getByRole("button", { name: "Править: Деньги" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Деньги" }));
     const gold = screen.getByLabelText("Золото");
     await user.clear(gold);
     await user.type(gold, "215");
@@ -136,7 +136,7 @@ describe("«Вещи» (FR-304)", () => {
     const { stores } = await renderWithStores(<ThingsScreen initialPart="bag" />);
 
     await user.type(screen.getByLabelText("Новый ингредиент"), "Пыль{Enter}");
-    await user.click(screen.getByRole("button", { name: "Открыть: Пыль" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Пыль" }));
     await user.click(screen.getByRole("radio", { name: "Другое" }));
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
@@ -158,6 +158,6 @@ describe("«Вещи» (FR-304)", () => {
 
     // Купленное ищут там, где лежит остальное счётное, а не там, где его выбирали.
     await user.click(screen.getByRole("radio", { name: "Сумка" }));
-    expect(screen.getByRole("button", { name: /^Открыть: уголь/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Правка: уголь/ })).toBeDefined();
   });
 });

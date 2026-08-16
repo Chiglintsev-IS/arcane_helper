@@ -128,7 +128,7 @@ describe("экран «Экипировка»", () => {
     const spare = within(screen.getByRole("list", { name: "Про запас" }));
     expect(spare.getByText("в сумке 0")).toBeDefined();
 
-    await user.click(spare.getByRole("button", { name: "Открыть: Кольцо защиты" }));
+    await user.click(spare.getByRole("button", { name: "Правка: Кольцо защиты" }));
     expect(onOpenItem).toHaveBeenCalledWith("ring-of-protection");
   });
 });
