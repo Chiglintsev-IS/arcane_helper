@@ -151,7 +151,7 @@ describe("чем вещь требуется", () => {
 });
 
 describe("чего не хватает", () => {
-  it("не хватает того, чего среди вещей нет вовсе, и срочное идёт первым (FR-296)", () => {
+  it("в списке покупок стоит то, без чего не сотворить, и срочное идёт первым (FR-296)", () => {
     const missing = toBagView(createThorne(), spells).missingMaterials;
 
     // Срочное впереди: без него сотворить нельзя, а закрытое фокусировкой лишь ждёт её снятия.
@@ -170,16 +170,42 @@ describe("чего не хватает", () => {
     });
   });
 
-  it("заведённая вещь в нехватку не попадает даже с пустым запасом", () => {
+  it("истраченная до нуля вещь стоит в списке покупок со всем, что у неё было (FR-302)", () => {
     const bought = withComponentOf("identify");
-    const carried = toBagView(bought, spells);
-    expect(carried.missingMaterials.some((need) => need.spellId === "identify")).toBe(false);
+    // Лежащее в сумке покупать не надо: пока запас есть, вещь в список покупок не едет.
+    expect(toBagView(bought, spells).missingMaterials.some((need) => need.itemId === pearlId)).toBe(
+      false,
+    );
 
-    // Запас истрачен, но вещь заведена — её ноль стоит своей строкой, а не второй записью нехватки.
     const root = Character.of(bought);
     const emptied = root.withEquipment(root.equipment.adjustBagCount(pearlId, -1)).toState();
     const view = toBagView(emptied, spells);
+
+    // Ноль требуемого — вопрос лавки, и вещь едет строкой со всем, что у неё было.
+    expect(view.missingMaterials.find((need) => need.spellId === "identify")).toMatchObject({
+      itemId: pearlId,
+      price: { amount: 100, currency: "gold" },
+      neededForRu: ["Опознание"],
+    });
+    // Запись никуда не делась: ею вещь открывают и ею же пополняют.
     expect(view.items.find((item) => item.id === pearlId)?.bagCount).toBe(0);
-    expect(view.missingMaterials.some((need) => need.spellId === "identify")).toBe(false);
+
+    // Написанное рукой едет со строкой: переезд не отнимает у неё ничего.
+    const stored = Character.of(emptied).items.find(pearlId);
+    if (stored === undefined) throw new Error("жемчужина не заведена");
+    const shop = "у ювелира в порту";
+    const noted = Character.of(emptied);
+    const withNote = noted.withItems(noted.items.replaceDefinition({ ...stored, note: shop }));
+    expect(
+      toBagView(withNote.toState(), spells).missingMaterials.find((need) => need.itemId === pearlId)
+        ?.note,
+    ).toBe(shop);
+  });
+
+  it("вещь, которой не требует никто, с нулём в список покупок не едет (FR-302)", () => {
+    const view = toBagView(withStock(rope, { bag: 0 }), spells);
+
+    expect(view.items.find((item) => item.id === "rope")?.bagCount).toBe(0);
+    expect(view.missingMaterials.some((need) => need.nameRu === rope.nameRu)).toBe(false);
   });
 });

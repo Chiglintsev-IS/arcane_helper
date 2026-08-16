@@ -63,16 +63,24 @@ function itemView(
   };
 }
 
-/** Требование, под которое вещи ещё нет: чем оно называется и во что обойдётся. */
-function missingView(need: MaterialNeed): MissingMaterialView {
+/**
+ * Требование, под которое запаса нет: чем оно называется, во что обойдётся и чем его пополнять.
+ *
+ * Заведённая вещь отвечает о себе сама — своей ценой, своей заметкой и своей записью: переезд в
+ * список покупок ничего у неё не отнимает, кроме места.
+ */
+function missingView(need: MaterialNeed, item: ItemDefinition | undefined): MissingMaterialView {
   const { material } = need;
+  const price = item === undefined ? material.price : item.price;
   return {
     spellId: need.spellId,
     nameRu: material.nameRu,
-    ...(material.price === undefined ? {} : { price: material.price }),
+    ...(price === undefined ? {} : { price }),
     consumed: material.consumed,
     neededForRu: need.spellNamesRu,
     coveredByFocus: need.coveredByFocus,
+    ...(item === undefined ? {} : { itemId: item.id }),
+    ...(item?.note === undefined ? {} : { note: item.note }),
   };
 }
 
@@ -84,14 +92,15 @@ export function toBagView(character: CharacterState, spells: readonly Spell[]): 
   const allNeeds = materialNeeds(spells, character);
   const needs = new Map(allNeeds.map((need) => [need.material.id, need] as const));
 
-  // Не хватает того, чего среди вещей нет вовсе: заведённое стоит своей строкой со своим запасом,
-  // и пустой запас — тоже её строка. Срочное впереди: без него сотворить нельзя, а закрытое
-  // фокусировкой лишь ждёт случая, когда фокусировку снимут.
-  const missing = allNeeds.filter((need) => items.find(need.material.id) === undefined);
-  const [urgent, covered] = [
-    missing.filter((need) => !need.coveredByFocus),
-    missing.filter((need) => need.coveredByFocus),
-  ];
+  // Не хватает того, чего в сумке нет: и незаведённого, и заведённого с пустым запасом — второе
+  // едет со своей записью и из своих вещей на это время уходит. Закрытое фокусировкой не срочно и
+  // потому никуда не переезжает: покупать его не обязательно, а пополняют его там, где оно лежит.
+  const urgent = allNeeds.filter(
+    (need) => !need.coveredByFocus && equipment.bagCount(need.material.id) === 0,
+  );
+  const covered = allNeeds.filter(
+    (need) => need.coveredByFocus && items.find(need.material.id) === undefined,
+  );
 
   // Доспех, по которому считается защита, называет сама свёртка: второго счёта здесь нет.
   const wornArmor = armorClass.parts.find(
@@ -101,7 +110,9 @@ export function toBagView(character: CharacterState, spells: readonly Spell[]): 
   return {
     money: CURRENCIES.map((currency) => ({ currency, amount: money[currency] })),
     items: items.all.map((item) => itemView(item, equipment, needs.get(item.id))),
-    missingMaterials: [...urgent, ...covered].map(missingView),
+    missingMaterials: [...urgent, ...covered].map((need) =>
+      missingView(need, items.find(need.material.id)),
+    ),
     armorClass: {
       value: armorClass.value,
       ...(wornArmor === undefined ? {} : { wornArmorNameRu: wornArmor.source.nameRu }),
