@@ -63,12 +63,17 @@ test("play-screen renders all resource blocks", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^КД 14/ })).toBeVisible();
   await expect(resources.getByText("Атака", { exact: true })).toBeHidden();
 
-  // Ряд оплаты — один: четыре уровня ячеек и три пула отвечают на один вопрос.
+  // Ряд оплаты — один: четыре уровня ячеек и три пула отвечают на один вопрос. Нажимаемых мест в
+  // нём два: ячейки всех уровней ведут в одну правку, руны — в неё же, а кости и очки правки не
+  // имеют вовсе.
   const paying = page.getByLabel("Чем платить");
-  await expect(paying.getByRole("listitem")).toHaveCount(7);
+  await expect(paying.getByRole("button")).toHaveCount(2);
   await expect(paying.getByText("4/4").first()).toBeVisible();
+  await expect(paying).toContainText("1 ур.");
+  await expect(paying).toContainText("4 ур.");
   await expect(paying).toContainText("Руны");
   await expect(paying).toContainText("Кости d6");
+  await expect(paying).toContainText("Очки");
 
   // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет. Экономия хода
   // приходит с боем, а бонусное действие появилось вместе с «Туманным шагом».
@@ -92,6 +97,17 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
   expect(layout.documentHeight).toBeLessThanOrEqual(layout.viewportHeight);
   expect(layout.horizontalOverflow).toBeLessThanOrEqual(0);
   await expect(page.getByLabel("Заклинания")).toBeVisible();
+
+  // Ряд оплаты умещается целиком: он не переносится и не прокручивается, поэтому плитка, начатая
+  // за краем, за столом не существует, а страница о её выезде молчит — обрезает её предок.
+  const paying = await page.getByLabel("Чем платить").evaluate((node) => ({
+    over: node.scrollWidth - node.clientWidth,
+    beyondEdge: [...node.querySelectorAll("li")].filter(
+      (tile) => tile.getBoundingClientRect().right > window.innerWidth,
+    ).length,
+  }));
+  expect(paying.over, "ряд оплаты не шире своего места").toBeLessThanOrEqual(0);
+  expect(paying.beyondEdge, "ни одна плитка не ушла за край").toBe(0);
 });
 
 test("combat keeps the first card whole, the book keeps the first row", async ({ page }) => {

@@ -61,8 +61,11 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(within(screen.getByLabelText("Ресурсы")).queryByText("Атака")).toBeNull();
 
     const paying = screen.getByLabelText("Чем платить");
-    // Четыре уровня ячеек и три пула: вопрос у них один, и ряд поэтому один.
-    expect(within(paying).getAllByRole("listitem")).toHaveLength(7);
+    // Четыре уровня ячеек и три пула: вопрос у них один, и ряд поэтому один. Ячейки всех уровней
+    // ведут в одну правку и стоят в ряду одним нажимаемым местом.
+    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур.", "Руны", "Кости", "Очки"]) {
+      expect(paying.textContent).toContain(named);
+    }
     expect(within(paying).getAllByText("4/4").length).toBeGreaterThan(0);
   });
 
@@ -187,8 +190,8 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const paying = within(screen.getByLabelText("Чем платить"));
     expect(paying.getByText("Кости d6")).toBeDefined();
     expect(paying.getByText("Руны")).toBeDefined();
-    // Очков у Торна нет, пока он не разменял кровь: пустой пул носит знак отказа.
-    expect(paying.getByText(/Очки/).textContent).toContain("✗");
+    // Очков у Торна нет, пока он не разменял кровь: пустой пул носит знак отказа при остатке.
+    expect(paying.getByText(/Очки/).closest("li")?.textContent).toContain("✗");
     expect(screen.queryByText(/Инициатива/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
