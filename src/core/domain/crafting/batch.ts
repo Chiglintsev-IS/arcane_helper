@@ -9,6 +9,8 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/shared/language";
 import { apparatusLimits } from "./apparatus";
 import type { Apparatus } from "./apparatus";
+import { consumablesOf, startedHours } from "./consumables";
+import type { Consumables } from "./consumables";
 import { LOWEST_DIFFICULTY } from "./recipe";
 import type { RecipeDifficulty } from "./recipe";
 
@@ -16,23 +18,12 @@ import type { RecipeDifficulty } from "./recipe";
 const DIFFICULTY_BAND = 5;
 const SHORTEST_BATCH_MINUTES = 15;
 const LONGER_PER_BAND = 2;
-const MINUTES_PER_HOUR = 60;
 
 /** Одна единица сверх каждых четырёх заложенных порций: на стенках сосудов теряется меньше. */
 const PORTIONS_PER_BONUS_UNIT = 4;
 
 /** Один часовой комплект расходников обслуживает столько рецептурных порций. */
 const PORTIONS_PER_CONSUMABLE_KIT = 5;
-
-type Consumables = { readonly nameRu: string; readonly goldPerStartedHour: number };
-
-/** Класс расходников по итоговой сложности и цена его комплекта за начатый час. */
-function consumablesOf(difficulty: number): Consumables {
-  if (difficulty <= 19) return { nameRu: "Обычные", goldPerStartedHour: 1 };
-  if (difficulty <= 29) return { nameRu: "Очищенные", goldPerStartedHour: 3 };
-  if (difficulty <= 39) return { nameRu: "Высокоточные", goldPerStartedHour: 10 };
-  return { nameRu: "Экзотические", goldPerStartedHour: 30 };
-}
 
 function batchMinutes(difficulty: number): number {
   const band = Math.floor((difficulty - LOWEST_DIFFICULTY) / DIFFICULTY_BAND);
@@ -96,7 +87,7 @@ export function batchFrom(
     consumables,
     consumablesGold:
       consumables.goldPerStartedHour *
-      Math.ceil(minutes / MINUTES_PER_HOUR) *
+      startedHours(minutes) *
       Math.ceil(portions / PORTIONS_PER_CONSUMABLE_KIT),
     units: portions + Math.floor(portions / PORTIONS_PER_BONUS_UNIT),
   };

@@ -9,7 +9,7 @@
  * тождеством названий, а свободный текст «лечит» со свойством «Лечение здоровья» не совпадёт.
  */
 
-const ALCHEMY_DIRECTIONS = ["potions", "poisons", "transmutation"] as const;
+export const ALCHEMY_DIRECTIONS = ["potions", "poisons", "transmutation"] as const;
 
 export type AlchemyDirection = (typeof ALCHEMY_DIRECTIONS)[number];
 
@@ -257,6 +257,10 @@ const DIRECTION_BY_PROPERTY = {
 } as const satisfies Record<string, AlchemyDirection>;
 
 type AlchemicalPropertyName = keyof typeof DIRECTION_BY_PROPERTY;
+
+/** Перечень целиком: название и направление каждого свойства, в порядке справочника. */
+export const ALCHEMICAL_PROPERTIES: readonly { nameRu: string; direction: AlchemyDirection }[] =
+  Object.entries(DIRECTION_BY_PROPERTY).map(([nameRu, direction]) => ({ nameRu, direction }));
 
 /** Есть ли такое свойство в справочнике. Названия вне перечня не бывает. */
 export function isAlchemicalPropertyName(value: string): value is AlchemicalPropertyName {

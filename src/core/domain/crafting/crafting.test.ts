@@ -5,7 +5,12 @@ import { Crafting } from "./crafting";
 import type { RecipeFormula } from "./recipe";
 import type { RevealedProperty } from "./schema";
 
-const EMPTY = { ingredientKnowledge: [] };
+const EMPTY = {
+  ingredientKnowledge: [],
+  alchemyApparatus: {},
+  studiedDirections: [],
+  knownRecipes: [],
+};
 
 function withMoonHerb(): Crafting {
   return Crafting.of(EMPTY).noteIngredient("Лунная трава");
@@ -97,7 +102,7 @@ describe("ремесло", () => {
   });
 
   it("ремесло владеет только своим полем состояния", () => {
-    expect(Crafting.of(EMPTY).toState()).toEqual({ ingredientKnowledge: [] });
+    expect(Crafting.of(EMPTY).toState()).toEqual(EMPTY);
   });
 });
 
@@ -342,6 +347,29 @@ describe("сложность рецепта", () => {
     ).toThrow(/Взрыв/);
   });
 
+  it("неназванным основным становится самый редкий из оставшихся", () => {
+    const rarest = grand(healingAndPoison(), { mainProperty: null });
+
+    // «Ядовитый урон» редкий, «Лечение здоровья» обычное: правила берут редкое основным.
+    expect(rarest.mainRu).toBe("Ядовитый урон");
+    expect(rarest.total).toBe(17);
+  });
+
+  it("подавление, снявшее всё, оставляет состав без единого свойства", () => {
+    expect(() =>
+      grand(sharingHealing(TWO_KINDS), {
+        mainProperty: null,
+        suppressed: ["Лечение здоровья"],
+      }),
+    ).toThrow(/не осталось ни одного свойства/);
+  });
+
+  it("названное основным, но снятое очисткой, отвергается своим именем", () => {
+    expect(() =>
+      grand(healingAndPoison(), { mainProperty: "Ядовитый урон", purification: "beneficial" }),
+    ).toThrow(/«Ядовитый урон» в нём нет/);
+  });
+
   it("основным бывает только оставшееся в составе свойство", () => {
     expect(() =>
       grand(healingAndPoison(), { purification: "harmful" }),
@@ -349,7 +377,85 @@ describe("сложность рецепта", () => {
   });
 });
 
+describe("порядок исследования", () => {
+  const equipped = (known: Crafting): Crafting =>
+    Crafting.of({ ...known.toState(), alchemyApparatus: TORN_KITS });
+
+  it("следующим исследуют наименьший нераскрытый номер, и через него не перепрыгивают", () => {
+    const known = equipped(withMoonHerb());
+
+    expect(known.researchPlanFor("Лунная трава", 1, "common", "potions").minutes).toBe(10);
+    expect(() => known.researchPlanFor("Лунная трава", 2, "common", "potions")).toThrow(
+      /сейчас это свойство под номером 1/,
+    );
+  });
+
+  it("раскрытое глубже порядка не отменяет: следующим остаётся пропуск в середине", () => {
+    const skipped = equipped(
+      withMoonHerb().revealProperty("Лунная трава", {
+        number: 3,
+        nameRu: "Взрыв",
+        rarity: "rare",
+      }),
+    );
+
+    expect(skipped.researchPlanFor("Лунная трава", 1, "common", "potions").number).toBe(1);
+    expect(() => skipped.researchPlanFor("Лунная трава", 3, "common", "potions")).toThrow(
+      /сейчас это свойство под номером 1/,
+    );
+  });
+
+  it("у вида со всеми четырьмя свойствами исследовать нечего", () => {
+    const full = equipped(
+      ([
+        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+        { number: 2, nameRu: "Пробуждение", rarity: "common" },
+        { number: 3, nameRu: "Взрыв", rarity: "rare" },
+        { number: 4, nameRu: "Храбрость", rarity: "common" },
+      ] as const).reduce<Crafting>(
+        (known, property) => known.revealProperty("Лунная трава", property),
+        withMoonHerb(),
+      ),
+    );
+
+    expect(() => full.researchPlanFor("Лунная трава", 1, "common", "potions")).toThrow(
+      /раскрыты все свойства/,
+    );
+  });
+});
+
+describe("записанный рецепт", () => {
+  const known = sharingHealing(TWO_KINDS);
+
+  it("замена даже одного вида даёт другую формулу и новую разработку", () => {
+    const developed = known.recordRecipe(STANDARD, false);
+
+    expect(developed.knows(STANDARD)).toBe(true);
+    expect(developed.knows({ ...STANDARD, kinds: ["Лунная трава", "Пепельный гриб"] })).toBe(false);
+  });
+
+  it("рецепт с отдельным риском записан, но проверки не отменяет", () => {
+    expect(known.recordRecipe(STANDARD, true).knows(STANDARD)).toBe(false);
+  });
+
+  it("второй раз тот же рецепт второй записи не заводит, а соседний остаётся", () => {
+    const other = { ...STANDARD, duration: "1 минута" } as const;
+    const both = known.recordRecipe(STANDARD, false).recordRecipe(other, false);
+    const again = both.recordRecipe(STANDARD, false);
+
+    expect(again.toState().knownRecipes).toHaveLength(2);
+    expect(again.knows(other)).toBe(true);
+  });
+});
+
 describe("партия и предел оснащения", () => {
+  it("оснащение записано у алхимика и достаётся работе", () => {
+    const equipped = Crafting.of({ ...EMPTY, alchemyApparatus: TORN_KITS });
+
+    expect(equipped.apparatus).toEqual(TORN_KITS);
+    expect(Crafting.of(EMPTY).apparatus).toEqual({});
+  });
+
   it("предел оснащения Торна даёт из шести порций семь единиц", () => {
     const batch = sharingHealing(TWO_KINDS).batchOf(STANDARD, TORN_KITS, 6);
 

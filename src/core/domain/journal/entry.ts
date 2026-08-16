@@ -31,6 +31,7 @@ export const JOURNAL_KINDS = [
   "combat_ended",
   "suppression_changed",
   "sheet_edited",
+  "batch_crafted",
 ] as const;
 
 type JournalKind = (typeof JOURNAL_KINDS)[number];

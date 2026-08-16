@@ -13,12 +13,21 @@ import { ownedFields } from "@/core/domain/shared/ownedFields";
 import type { Apparatus } from "./apparatus";
 import { batchFrom } from "./batch";
 import type { Batch } from "./batch";
-import { recipeDifficulty, tierOf } from "./recipe";
-import type { PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
-import { ingredientKnowledgeOf } from "./schema";
+import { developmentCheck } from "./development";
+import type { CheckNumbers, DevelopmentCheck } from "./development";
+import { recipeDifficulty, recipeSignature, tierOf } from "./recipe";
+import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
+import { researchPlan } from "./research";
+import type { ResearchPlan } from "./research";
+import { alchemyWorkshopOf, ingredientKnowledgeOf } from "./schema";
 import type { IngredientKnowledge, RevealedProperty } from "./schema";
 
-type CraftingState = { ingredientKnowledge: readonly IngredientKnowledge[] };
+type CraftingState = {
+  ingredientKnowledge: readonly IngredientKnowledge[];
+  alchemyApparatus: Apparatus;
+  studiedDirections: readonly AlchemyDirection[];
+  knownRecipes: readonly KnownRecipe[];
+};
 
 /** Видов в составе — от двух до четырёх: меньше не даёт совпадения, больше справочник не берёт. */
 const FEWEST_KINDS = 2;
@@ -37,9 +46,23 @@ function unevenRarityRefusal(name: string, sources: readonly string[]): string {
   return `Свойство «${name}» записано с разной редкостью у видов: ${sources.join(", ")}`;
 }
 
+/** Номера, по которым идёт целенаправленное исследование, — в порядке справочника. */
+const RESEARCH_NUMBERS = [1, 2, 3, 4];
+
+function nothingLeftRefusal(nameRu: string): string {
+  return `Про «${nameRu}» раскрыты все свойства, какие справочник допускает`;
+}
+
+function outOfOrderRefusal(next: number): string {
+  return `Целенаправленно исследуют следующее по порядку: сейчас это свойство под номером ${next}`;
+}
+
 export class Crafting {
   private static readonly KEYS = [
     "ingredientKnowledge",
+    "alchemyApparatus",
+    "studiedDirections",
+    "knownRecipes",
   ] as const satisfies readonly (keyof CraftingState)[];
 
   private constructor(private readonly state: CraftingState) {}
@@ -53,11 +76,58 @@ export class Crafting {
   }
 
   private with(ingredientKnowledge: readonly IngredientKnowledge[]): Crafting {
-    return new Crafting({ ingredientKnowledge });
+    return new Crafting({ ...this.state, ingredientKnowledge });
   }
 
   get all(): readonly IngredientKnowledge[] {
     return this.data;
+  }
+
+  /** Чем алхимик работает: качество набора по каждому направлению, где он есть. */
+  get apparatus(): Apparatus {
+    return this.state.alchemyApparatus;
+  }
+
+  /** Обучен ли алхимик направлению: от этого зависит бонус мастерства в его проверке. */
+  studies(direction: AlchemyDirection): boolean {
+    return this.state.studiedDirections.includes(direction);
+  }
+
+  /** Записывает мастерскую целиком: оснащение и обучение — один и тот же факт об алхимике. */
+  withWorkshop(workshop: unknown): Crafting {
+    return new Crafting({ ...this.state, ...alchemyWorkshopOf(workshop) });
+  }
+
+  /**
+   * Чем работа прибавляется к броску разработки.
+   *
+   * Числа приходят доводом с листа: своих у ремесла нет и быть не может — бонус мастерства и
+   * модификатор характеристики принадлежат листу, и второй их счёт разошёлся бы с ним молча.
+   */
+  checkFor(directions: readonly AlchemyDirection[], numbers: CheckNumbers): DevelopmentCheck {
+    return developmentCheck(directions, this.state.studiedDirections, numbers);
+  }
+
+  /**
+   * Записан ли рецепт настолько, что его повторяют без броска.
+   *
+   * Рецепт с отдельным риском записан, но проверки не отменяет: справочник требует её для каждой
+   * его партии. Оснащение здесь не спрашивается — на него ответит сама работа, отказом с причиной.
+   */
+  knows(formula: RecipeFormula): boolean {
+    const signature = recipeSignature(formula);
+    return this.state.knownRecipes.some(
+      (known) => !known.risky && recipeSignature(known.formula) === signature,
+    );
+  }
+
+  /** Записывает разработанный рецепт. Записанный второй раз второй записи не заводит. */
+  recordRecipe(formula: RecipeFormula, risky: boolean): Crafting {
+    const signature = recipeSignature(formula);
+    const others = this.state.knownRecipes.filter(
+      (known) => recipeSignature(known.formula) !== signature,
+    );
+    return new Crafting({ ...this.state, knownRecipes: [...others, { formula, risky }] });
   }
 
   /** Вид опознаётся своим названием: двух записей об одном виде не бывает. */
@@ -98,6 +168,37 @@ export class Crafting {
     return this.with(
       this.data.map((ingredient) => (ingredient.nameRu === nameRu ? revealed : ingredient)),
     );
+  }
+
+  /**
+   * Какое свойство вида исследуют следующим: наименьший нераскрытый номер.
+   *
+   * Целенаправленно исследуют по порядку, и через нераскрытое не перепрыгивают. Раскрытое глубже
+   * порядка этому не мешает: экспериментальное смешивание открывает и то, что лежит ниже, а
+   * пропуск в середине остаётся тем самым следующим номером.
+   */
+  private nextResearchable(nameRu: string): number {
+    const revealed = new Set(this.located(nameRu).properties.map((property) => property.number));
+    const next = RESEARCH_NUMBERS.find((number) => !revealed.has(number));
+    if (next === undefined) throw new DomainError(nothingLeftRefusal(nameRu));
+    return next;
+  }
+
+  /**
+   * Во что обойдётся раскрытие названного свойства вида.
+   *
+   * Оснащение берётся записанное, порядок стережёт сам вид: цену свойства, до которого ещё не
+   * добрались, называть незачем — за неё не возьмутся.
+   */
+  researchPlanFor(
+    nameRu: string,
+    number: number,
+    rarity: RevealedProperty["rarity"],
+    direction: AlchemyDirection,
+  ): ResearchPlan {
+    const next = this.nextResearchable(nameRu);
+    if (number !== next) throw new DomainError(outOfOrderRefusal(next));
+    return researchPlan({ number, rarity, direction, apparatus: this.apparatus });
   }
 
   /** Забывает вид целиком: записанное по ошибке иначе осталось бы навсегда. */

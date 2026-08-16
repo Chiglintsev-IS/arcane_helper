@@ -8,9 +8,12 @@
  * направление. Приложение считает цену формы, а действие остаётся столу.
  */
 
-import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
+import { z } from "zod";
+
+import { ALCHEMICAL_RARITIES, alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
+import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { apparatusLimits, IMPROVISED_DIFFICULTY } from "./apparatus";
 import type { Apparatus } from "./apparatus";
 import type { RevealedProperty } from "./schema";
@@ -165,7 +168,8 @@ type KeptPolarity = keyof typeof OPPOSITE_POLARITY;
 /** Замысел состава: из чего собран и в какой форме проявляется. */
 export type RecipeFormula = {
   readonly kinds: readonly string[];
-  readonly mainProperty: string;
+  /** Названный основной эффект; не назван — его выбирают правила, по самой высокой редкости. */
+  readonly mainProperty: string | null;
   readonly duration: keyof typeof DURATION_DIFFICULTY | null;
   readonly onset: keyof typeof ONSET_DIFFICULTY;
   readonly fullRepeats: number;
@@ -176,6 +180,112 @@ export type RecipeFormula = {
   readonly suppressed: readonly string[];
   readonly limitations: readonly (keyof typeof LIMITATION_DIFFICULTY)[];
 };
+
+/**
+ * Слово из таблицы справочника: принимается то, что в ней есть, и отвергается всякое другое.
+ *
+ * Сужает пришедшую строку сам владелец таблицы: перечень, повторённый на границе, разошёлся бы с
+ * этим при первой же правке справочника — и молча принял бы форму, которой уже нет.
+ */
+function fromTable<TTable extends object>(table: TTable, what: string) {
+  return z.string().refine((value): value is Extract<keyof TTable, string> => value in table, {
+    error: (issue) => `справочник не знает: ${what} «${String(issue.input)}»`,
+  });
+}
+
+const recipeFormulaSchema = z.object({
+  kinds: z.array(nonEmpty),
+  mainProperty: nonEmpty.nullable(),
+  duration: fromTable(DURATION_DIFFICULTY, "длительность").nullable(),
+  onset: fromTable(ONSET_DIFFICULTY, "начало действия"),
+  fullRepeats: z.number(),
+  reach: fromTable(REACH_DIFFICULTY, "цели и область"),
+  application: fromTable(APPLICATION_DIFFICULTY, "способ применения"),
+  resistance: fromTable(RESISTANCE_DIFFICULTY, "сопротивление"),
+  purification: fromTable(OPPOSITE_POLARITY, "очистка").nullable(),
+  suppressed: z.array(nonEmpty),
+  limitations: z.array(fromTable(LIMITATION_DIFFICULTY, "ограничение")),
+});
+
+/**
+ * Перечни, из которых собирают замысел, — те же таблицы, которыми он и оценивается.
+ *
+ * Отдаются наружу целиком, потому что поле выбора обязано предлагать ровно то, что справочник
+ * принимает: второй список тех же слов разъехался бы с первым и предложил бы форму, которой нет.
+ */
+export const RECIPE_CHOICES = {
+  /**
+   * Стандартная форма справочника: одна цель, немедленное начало, одно срабатывание и профильное
+   * применение. Изменение стандартной формы и есть то, что меняет сложность, — значит форма
+   * принадлежит правилам, а не полю, с которого её набирают.
+   */
+  standard: {
+    duration: null,
+    onset: "Немедленно",
+    fullRepeats: 0,
+    reach: "Одна цель, предмет или участок",
+    application: "Выпить, накормить или нанести на неподвижную цель",
+    resistance: "Положительное воздействие на добровольную цель",
+    purification: null,
+  },
+  durations: Object.keys(DURATION_DIFFICULTY),
+  onsets: Object.keys(ONSET_DIFFICULTY),
+  reaches: Object.keys(REACH_DIFFICULTY),
+  applications: Object.keys(APPLICATION_DIFFICULTY),
+  resistances: Object.keys(RESISTANCE_DIFFICULTY),
+  limitations: Object.keys(LIMITATION_DIFFICULTY),
+  purifications: Object.keys(OPPOSITE_POLARITY),
+};
+
+/** Замысел, годный к счёту: проверенный объявлением и отвергнутый с причиной. */
+export function recipeFormulaOf(value: unknown): RecipeFormula {
+  return parsedOrRefused(recipeFormulaSchema, value, "замысел состава");
+}
+
+/**
+ * Записанный рецепт: формула, которую однажды разработали, и отметка отдельного риска.
+ *
+ * Риск приходит от игрока, а не выводится: справочник называет его описанием эффекта, а описаний
+ * эффектов в приложении нет вовсе — их место остаётся столу. Рецепт с риском записан, но проверки
+ * не отменяет: её требует каждая его партия.
+ */
+const knownRecipeSchema = z.object({
+  formula: recipeFormulaSchema,
+  risky: z.boolean(),
+});
+
+export type KnownRecipe = { readonly formula: RecipeFormula; readonly risky: boolean };
+
+/** Поле контекста: рецепты, разработанные однажды и потому повторяемые. */
+export const KNOWN_RECIPE_FIELDS = {
+  knownRecipes: z.array(knownRecipeSchema).default([]),
+};
+
+/**
+ * Формула в единственном её виде: порядок видов и порядок удалённого замысла не меняют.
+ *
+ * Порядок нажатий — не часть рецепта, а «те же виды ингредиентов» из справочника обязаны совпасть
+ * и тогда, когда игрок выбрал их в другом порядке.
+ */
+function canonical(formula: RecipeFormula): RecipeFormula {
+  return recipeFormulaOf({
+    ...formula,
+    kinds: [...new Set(formula.kinds)].sort(),
+    suppressed: [...new Set(formula.suppressed)].sort(),
+    limitations: [...formula.limitations].sort(),
+  });
+}
+
+/**
+ * Отпечаток формулы: по нему и узнают, тот ли это рецепт.
+ *
+ * Совпадать обязано всё разом — виды, параметры эффекта, длительность, применение и очистка, — и
+ * перечислять их по одному значило бы завести второй список полей формулы. Замена даже одного вида
+ * даёт другой отпечаток, а значит и новую разработку.
+ */
+export function recipeSignature(formula: RecipeFormula): string {
+  return JSON.stringify(canonical(formula));
+}
 
 type DifficultyPart = { readonly nameRu: string; readonly modifier: number };
 
@@ -190,6 +300,8 @@ export type RecipeDifficulty = {
   readonly parts: readonly DifficultyPart[];
   readonly total: number;
   readonly directions: readonly AlchemyDirection[];
+  /** Что сочтено основным эффектом: названное игроком либо выбранное правилами по редкости. */
+  readonly mainRu: string;
 };
 
 function repeatsRefusal(): string {
@@ -198,6 +310,32 @@ function repeatsRefusal(): string {
 
 function missingMainRefusal(name: string): string {
   return `Основным бывает только оставшееся в составе свойство, а «${name}» в нём нет`;
+}
+
+function emptyMixtureRefusal(): string {
+  return "В составе не осталось ни одного свойства: оценивать нечего";
+}
+
+/**
+ * Основной эффект, когда игрок его не назвал: самый редкий из оставшихся.
+ *
+ * Так велит справочник, и это не удобство отображения: цена основного и цена дополнительного
+ * различаются, а значит «цель неочевидна» — тоже случай, у которого есть своя цена.
+ */
+function mainOf(kept: readonly PropertyMatch[], named: string | null): PropertyMatch {
+  if (named === null) return rarestOf(kept);
+  const found = kept.find((match) => match.nameRu === named);
+  if (found === undefined) throw new DomainError(missingMainRefusal(named));
+  return found;
+}
+
+function rarestOf(kept: readonly PropertyMatch[]): PropertyMatch {
+  const rarest = kept.toSorted(
+    (one, other) =>
+      ALCHEMICAL_RARITIES.indexOf(other.rarity) - ALCHEMICAL_RARITIES.indexOf(one.rarity),
+  )[0];
+  if (rarest === undefined) throw new DomainError(emptyMixtureRefusal());
+  return rarest;
 }
 
 function nothingToPurifyRefusal(): string {
@@ -285,8 +423,7 @@ export function recipeDifficulty(
 
   const purified = afterPurification(matches, formula.purification);
   const cleansed = afterSuppression(purified.kept, matches, formula.suppressed);
-  const main = cleansed.kept.find((match) => match.nameRu === formula.mainProperty);
-  if (main === undefined) throw new DomainError(missingMainRefusal(formula.mainProperty));
+  const main = mainOf(cleansed.kept, formula.mainProperty);
 
   const directions = [
     ...new Set(cleansed.kept.map((match) => alchemyDirectionOf(match.nameRu))),
@@ -327,5 +464,6 @@ export function recipeDifficulty(
     parts,
     total: Math.max(BASE_DIFFICULTY + sum(parts.map((part) => part.modifier)), LOWEST_DIFFICULTY),
     directions,
+    mainRu: main.nameRu,
   };
 }

@@ -491,3 +491,92 @@ describe("сотворение", () => {
     expect(live.session.character.concentration?.spellId).toBe("detect-magic");
   });
 });
+
+describe("ремесло", () => {
+  const MOON_HERB = "Лунная трава";
+  const CRIMSON_ROOT = "Багровый корень";
+
+  /** Замысел в той форме, в какой он приходит с той стороны договора: словами справочника. */
+  const formula = {
+    kinds: [MOON_HERB, CRIMSON_ROOT],
+    mainProperty: "Лечение здоровья",
+    duration: null,
+    onset: "Немедленно",
+    fullRepeats: 0,
+    reach: "Одна цель, предмет или участок",
+    application: "Выпить, накормить или нанести на неподвижную цель",
+    resistance: "Положительное воздействие на добровольную цель",
+    purification: null,
+    suppressed: [],
+    limitations: [],
+  };
+
+  const stock: readonly Command[] = [
+    { kind: "add_item", nameRu: MOON_HERB, itemKind: "ingredient" },
+    { kind: "add_item", nameRu: CRIMSON_ROOT, itemKind: "ingredient" },
+  ];
+
+  it("замысел, собранный из слов справочника, доходит до изготовления", () => {
+    const known = Character.of(createThorne());
+    const withKnowledge = [MOON_HERB, CRIMSON_ROOT].reduce(
+      (crafting, kind) =>
+        crafting
+          .noteIngredient(kind)
+          .revealProperty(kind, { number: 1, nameRu: "Лечение здоровья", rarity: "common" }),
+      known.crafting,
+    );
+    const live = run([...stock, { kind: "craft_batch", formula, portions: 1, rolled: 15 }], {
+      session: createSession(known.withCrafting(withKnowledge).toState()),
+      spellCatalog: CATALOG,
+      spellCatalogSource: "built_in",
+    });
+
+    expect(live.session.journal.at(-1)?.kind).toBe("batch_crafted");
+  });
+
+  it("вид записывается, свойство раскрывается, вид забывается", () => {
+    const noted = run([
+      { kind: "note_ingredient", nameRu: MOON_HERB },
+      {
+        kind: "reveal_property",
+        nameRu: MOON_HERB,
+        number: 1,
+        propertyRu: "Лечение здоровья",
+        rarity: "common",
+      },
+    ]);
+
+    expect(noted.session.character.ingredientKnowledge[0]?.properties).toHaveLength(1);
+    expect(run([{ kind: "forget_ingredient", nameRu: MOON_HERB }], noted).session.character
+      .ingredientKnowledge).toEqual([]);
+  });
+
+  it("мастерская записывается командой и правит пределы работы", () => {
+    const equipped = run([
+      {
+        kind: "set_alchemy_workshop",
+        apparatus: { poisons: "Базовый лабораторный модуль" },
+        studiedDirections: ["poisons"],
+      },
+    ]);
+
+    expect(equipped.session.character.alchemyApparatus).toEqual({
+      poisons: "Базовый лабораторный модуль",
+    });
+    expect(equipped.session.character.studiedDirections).toEqual(["poisons"]);
+  });
+
+  it("слово, которого нет в таблице справочника, отвергается с причиной", () => {
+    expect(
+      refusal([
+        ...stock,
+        {
+          kind: "craft_batch",
+          formula: { ...formula, onset: "когда-нибудь" },
+          portions: 1,
+          rolled: 15,
+        },
+      ]),
+    ).toMatch(/начало действия/);
+  });
+});
