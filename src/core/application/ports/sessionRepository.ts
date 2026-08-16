@@ -71,6 +71,13 @@ export type PersistedSession = DeepReadonly<z.infer<typeof persistedSessionSchem
 export type SessionRepository = {
   /** Прочитать сохранённую сессию. `null` — сохранений ещё не было. */
   load(): Promise<PersistedSession | null>;
+  /**
+   * Прочитать содержимое хранилища как есть, без разбора схемой. `null` — сохранений ещё не было.
+   *
+   * Отвергнутое сохранение схему не проходит по определению, а копия, по которой его чинят руками,
+   * зависеть от схемы не вправе: разбор — это ровно то, что здесь отказало.
+   */
+  loadRaw(): Promise<unknown>;
   save(session: PersistedSession): Promise<void>;
   clear(): Promise<void>;
 };

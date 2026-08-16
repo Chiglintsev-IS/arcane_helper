@@ -16,12 +16,14 @@ import { questionSchema } from "@/contract/questions";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { LiveSession } from "@/core/application/session";
 
-import { toSnapshot } from "./presenter";
+import { toRawSave, toSnapshot } from "./presenter";
 import { answerQuestion } from "./previewer";
 
 /** Чем хендлер располагает: собранное ядро, знающее своё состояние и его версию. */
 type Application = {
   open(): Promise<{ live: LiveSession; version: number }>;
+  /** Содержимое хранилища как есть. Сессию не открывает: её открытие здесь уже отказало. */
+  readStored(): Promise<unknown>;
   execute(envelope: Envelope): Promise<{ live: LiveSession; version: number }>;
   /** Часы ядра: в выгрузке стоит время, а состояние его не хранит. */
   now(): string;
@@ -30,6 +32,7 @@ type Application = {
 /** Дверь ядра до провода: то же, что порт договора, но в сыром виде. */
 export type Backend = {
   read(): Promise<unknown>;
+  readRaw(): Promise<unknown>;
   handle(raw: unknown): Promise<unknown>;
   answer(raw: unknown): Promise<unknown>;
 };
@@ -39,6 +42,10 @@ export function createHandler(application: Application): Backend {
     async read(): Promise<unknown> {
       const { live, version } = await application.open();
       return toSnapshot(live, version);
+    },
+
+    async readRaw(): Promise<unknown> {
+      return toRawSave(await application.readStored(), application.now());
     },
 
     async handle(raw: unknown): Promise<unknown> {

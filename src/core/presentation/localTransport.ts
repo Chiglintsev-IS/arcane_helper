@@ -23,6 +23,10 @@ export function createLocalTransport(backend: Backend): Transport {
       return wire(await backend.read());
     },
 
+    async readRaw(): Promise<unknown> {
+      return wire(await backend.readRaw());
+    },
+
     async send(command: unknown): Promise<unknown> {
       return wire(await backend.handle(wire(command)));
     },

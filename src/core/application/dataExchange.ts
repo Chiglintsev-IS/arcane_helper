@@ -48,9 +48,21 @@ export function exportSnapshot(
   };
 }
 
+const FILE_PREFIX = "arcane-helper";
+
 /** Читаемое имя файла: дата в имени избавляет от папки из десяти «export (3).json». */
 export function exportFileName(now: string): string {
-  return `arcane-helper-${now.slice(0, 10)}.json`;
+  return `${FILE_PREFIX}-${now.slice(0, 10)}.json`;
+}
+
+/**
+ * Имя копии сырого сохранения — содержимого хранилища, которое разбор отверг.
+ *
+ * Названо иначе, чем файл выгрузки: загрузка такой файл не принимает, и одинаковое имя обещало бы
+ * игроку обратный путь, которого у этой копии нет. Её читают руками и по ней сохранение чинят.
+ */
+export function rawSaveFileName(now: string): string {
+  return `${FILE_PREFIX}-raw-${now.slice(0, 10)}.json`;
 }
 
 function describeIssues(error: { issues: readonly { path: PropertyKey[]; message: string }[] }): string {

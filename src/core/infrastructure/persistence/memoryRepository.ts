@@ -21,6 +21,10 @@ export function createMemoryRepository(initial?: unknown): SessionRepository {
       return parsePersisted(stored);
     },
 
+    async loadRaw(): Promise<unknown> {
+      return stored;
+    },
+
     async save(session: PersistedSession): Promise<void> {
       stored = structuredClone(session);
     },

@@ -19,6 +19,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { createMemoryRepository } from "@/core/infrastructure/persistence/memoryRepository";
 import type { Clock } from "@/core/application/ports/clock";
+import type { SessionRepository } from "@/core/application/ports/sessionRepository";
 import type { Command } from "@/contract/commands";
 import { createSession, type LiveSession } from "@/core/application/session";
 import { applyCommand } from "@/core/presentation/controller";
@@ -153,6 +154,48 @@ export function slotsLeft(stores: AppStores, level: number): number {
   return shown(stores).resources.slots.find((slot) => slot.level === level)?.remaining ?? 0;
 }
 
+/**
+ * Сторы над хранилищем, из которого сессия не открылась.
+ *
+ * Ядро и провод настоящие: испорчено ровно то, что портится в жизни, — содержимое хранилища или
+ * доступ к нему. Подделка статуса стора проверяла бы подделку.
+ */
+async function storesOver(repository: SessionRepository): Promise<AppStores> {
+  const clock = testClock();
+  const core = createCore({
+    repository,
+    clock,
+    createInitialCharacter: createThorne,
+    loadBuiltInCatalog: loadThorneSpells,
+  });
+  const stores = connectStores(createClient(createLocalTransport(core)), clock.nextId);
+  await stores.session.getState().hydrate();
+  return stores;
+}
+
+/** Рендер на готовых сторах: чем они собраны — обстановкой или отказом — выбирает сам прогон. */
+export function renderOn(stores: AppStores, ui: ReactElement): RenderWithStores {
+  return { ...render(<StoreProvider stores={stores}>{ui}</StoreProvider>), stores };
+}
+
+/** Сохранение, которое разбор отвергает: снимок на месте, состояния в нём нет. */
+export async function createStoresOverUnreadableSave(): Promise<AppStores> {
+  return storesOver(createMemoryRepository({ schemaVersion: 1, savedAt: "", character: {} }));
+}
+
+/** Хранилище, которое не отдало ничего: ни разобранного состояния, ни сырого содержимого. */
+export async function createStoresOverBrokenStorage(): Promise<AppStores> {
+  const unavailable = async (): Promise<never> => {
+    throw new Error("Хранилище недоступно");
+  };
+  return storesOver({
+    load: unavailable,
+    loadRaw: unavailable,
+    save: unavailable,
+    clear: unavailable,
+  });
+}
+
 export type RenderWithStores = RenderResult & { stores: AppStores };
 
 /** Рендер внутри провайдера сторов. */
@@ -161,7 +204,5 @@ export async function renderWithStores(
   character?: CharacterState,
   situation: PlaySituation = {},
 ): Promise<RenderWithStores> {
-  const stores = await createTestStores(character ?? createThorne(), situation);
-  const result = render(<StoreProvider stores={stores}>{ui}</StoreProvider>);
-  return { ...result, stores };
+  return renderOn(await createTestStores(character ?? createThorne(), situation), ui);
 }

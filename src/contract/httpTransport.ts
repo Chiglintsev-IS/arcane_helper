@@ -24,6 +24,10 @@ export function createHttpTransport(baseUrl: string): Transport {
       return await body(await fetch(`${baseUrl}/session`));
     },
 
+    async readRaw(): Promise<unknown> {
+      return await body(await fetch(`${baseUrl}/session/raw`));
+    },
+
     async send(command: unknown): Promise<unknown> {
       return await body(
         await fetch(`${baseUrl}/command`, {

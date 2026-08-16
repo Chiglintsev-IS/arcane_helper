@@ -50,6 +50,7 @@ function chosenWire(): Transport {
   const opened = localWire();
   return {
     read: async () => (await opened).read(),
+    readRaw: async () => (await opened).readRaw(),
     send: async (command) => (await opened).send(command),
     ask: async (question) => (await opened).ask(question),
   };

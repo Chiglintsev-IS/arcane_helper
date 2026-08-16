@@ -23,7 +23,7 @@ import {
   toPersisted,
   type SessionRepository,
 } from "@/core/application/ports/sessionRepository";
-import { applyCommand } from "@/core/presentation/controller";
+import { applyCommand, startsOver } from "@/core/presentation/controller";
 import { createHandler, type Backend } from "@/core/presentation/handler";
 
 type CoreParts = {
@@ -102,8 +102,17 @@ export function createCore(parts: CoreParts): Core {
       return { live: await opened(), version };
     },
 
+    async readStored() {
+      return repository.loadRaw();
+    },
+
     async execute(envelope: Envelope) {
-      const current = await opened();
+      /*
+       * Начать заново можно и поверх непрочитанного: этой команде прежнее состояние не нужно, а
+       * настаивать на нём значило бы отдать единственный выход тому самому отказу, из которого
+       * выходят.
+       */
+      const current = startsOver(envelope.command) ? (live ?? fresh()) : await opened();
       const occasion: Occasion = { ...clock, commandId: envelope.commandId };
       const next = applyCommand(current, envelope.command, occasion, {
         builtInCatalog,

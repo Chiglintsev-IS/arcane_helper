@@ -132,6 +132,19 @@ export function describeRepositoryContract(
     expect(loaded?.spellCatalog).toBeUndefined();
   });
 
+  it("сырое содержимое отдаётся без разбора схемой", async () => {
+    const repository = await createRepository();
+    expect(await repository.loadRaw()).toBeNull();
+
+    // Сохранение, которое разбор отвергает: копия для ручной починки на схему не смотрит.
+    const withoutShield = loadThorneSpells().filter((spell) => spell.id !== "shield");
+    const stored = toPersisted(createSession(createThorne()), SAVED_AT, withoutShield);
+    await repository.save(stored);
+
+    await expect(repository.load()).rejects.toThrow(StorageCorruptedError);
+    expect(await repository.loadRaw()).toEqual(stored);
+  });
+
   it("сохранённый каталог без нужной карточки не загружается (FR-123)", async () => {
     // Ссылочная целостность после подмены каталога — инвариант хранилища, а не свойство файла.
     const repository = await createRepository();

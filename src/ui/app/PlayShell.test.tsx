@@ -14,7 +14,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { PlayShell } from "@/ui/app/PlayShell";
-import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
+import {
+  createStoresOverUnreadableSave,
+  renderOn,
+  renderWithStores,
+  shown,
+  slotsLeft,
+} from "@/ui/app/testing/stores";
 import { withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Бой отмечен начатым: только тогда ведётся учёт хода. */
@@ -669,5 +675,17 @@ describe("шапка ресурсов принадлежит «Игре», а н
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
     expect(screen.queryByLabelText("Чем платить")).toBeNull();
     expect(screen.queryByText("КД")).toBeNull();
+  });
+});
+
+describe("нечитаемое сохранение вместо режимов (FR-311)", () => {
+  it("оболочка отдаёт выход, а не текст без кнопок", async () => {
+    renderOn(await createStoresOverUnreadableSave(), <PlayShell />);
+
+    // Играть не на чем: переключателя режимов нет, а нажать есть что.
+    expect(screen.queryByRole("radio", { name: /^Игра/ })).toBeNull();
+    expect(screen.getByRole("alert").textContent).toMatch(/повреждено/);
+    expect(screen.getByRole("button", { name: "Скачать файл" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Начать заново" })).toBeDefined();
   });
 });

@@ -37,6 +37,7 @@ function fakeApi(answers: Partial<ArcaneApi> = {}): {
           sent.push(envelope);
           return { ok: true, snapshot: { ...FRESH, version: sent.length } } satisfies Result;
         }),
+      readRaw: answers.readRaw ?? (async () => null),
       ask:
         answers.ask ??
         (async () => ({ kind: "health_preview", effectiveMaximum: 60 }) satisfies Preview),
@@ -90,6 +91,54 @@ describe("открытие сессии", () => {
     expect(store.getState().snapshot).toBeNull();
   });
 
+  it("непрочитанное сохранение остаётся под рукой сырым", async () => {
+    const copy = { fileName: "arcane-helper-raw-2026-07-31.json", text: "{\"character\":{}}" };
+    const { api } = fakeApi({
+      open: async () => {
+        throw new Error("Сохранённое состояние повреждено");
+      },
+      readRaw: async () => copy,
+    });
+    const store = makeStore(api);
+
+    await store.getState().hydrate();
+
+    // Схему оно не прошло, а копия у игрока обязана быть: по ней сохранение и починят.
+    expect(store.getState().rawSave).toEqual(copy);
+  });
+
+  it("хранилище, не отдавшее и сырого, копией не притворяется", async () => {
+    const { api } = fakeApi({
+      open: async () => {
+        throw new Error("База не открылась");
+      },
+      readRaw: async () => {
+        throw new Error("База не открылась");
+      },
+    });
+    const store = makeStore(api);
+
+    await store.getState().hydrate();
+
+    expect(store.getState().error).toMatch(/База не открылась/);
+    expect(store.getState().rawSave).toBeNull();
+  });
+
+  it("начатое заново уносит копию: показывать больше нечего", async () => {
+    const { api } = fakeApi({
+      open: async () => {
+        throw new Error("Сохранённое состояние повреждено");
+      },
+      readRaw: async () => ({ fileName: "raw.json", text: "{}" }),
+    });
+    const store = makeStore(api);
+    await store.getState().hydrate();
+
+    await store.getState().execute({ kind: "reset" });
+
+    expect(store.getState().status).toBe("ready");
+    expect(store.getState().rawSave).toBeNull();
+  });
 });
 
 describe("отправка намерений", () => {

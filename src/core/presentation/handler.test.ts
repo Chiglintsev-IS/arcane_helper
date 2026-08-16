@@ -27,8 +27,14 @@ const OPENED = { live: live(), version: 0 };
 /** Часы двери: снимку они не нужны, а выгрузке — да. */
 const NOW = "2026-07-31T18:00:00.000Z";
 
-function handlerThat(execute: () => Promise<{ live: LiveSession; version: number }>) {
-  return createHandler({ now: () => NOW, open: async () => OPENED, execute });
+/** Что лежит в хранилище: дверь отдаёт это копией, ни во что не разбирая. */
+const STORED = { schemaVersion: 1, savedAt: "", character: {} };
+
+function handlerThat(
+  execute: () => Promise<{ live: LiveSession; version: number }>,
+  readStored: () => Promise<unknown> = async () => STORED,
+) {
+  return createHandler({ now: () => NOW, open: async () => OPENED, readStored, execute });
 }
 
 describe("чтение", () => {
@@ -40,6 +46,21 @@ describe("чтение", () => {
     expect(snapshot).toMatchObject({ version: 0, journal: [] });
     // Состав проекции проверяет её собственный прогон; здесь важно, что она доехала.
     expect(snapshot).toHaveProperty("sheet.name", "Торн");
+  });
+
+  it("сырое содержимое едет текстом и со своим именем файла", async () => {
+    const handler = handlerThat(async () => OPENED);
+
+    const copy = await handler.readRaw();
+
+    expect(copy).toHaveProperty("fileName", "arcane-helper-raw-2026-07-31.json");
+    expect(copy).toHaveProperty("text", JSON.stringify(STORED, null, 2));
+  });
+
+  it("пустое хранилище копией не притворяется", async () => {
+    const handler = handlerThat(async () => OPENED, async () => null);
+
+    expect(await handler.readRaw()).toBeNull();
   });
 });
 

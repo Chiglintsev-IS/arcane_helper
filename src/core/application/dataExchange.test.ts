@@ -11,6 +11,7 @@ import {
   exportFileName,
   exportSnapshot,
   parseImport,
+  rawSaveFileName,
 } from "@/core/application/dataExchange";
 
 const SPELLS = loadThorneSpells();
@@ -43,6 +44,10 @@ describe("exportSnapshot (FR-120)", () => {
 
   it("имя файла содержит дату: иначе в папке десять одинаковых", () => {
     expect(exportFileName(NOW)).toBe("arcane-helper-2026-07-31.json");
+  });
+
+  it("копия непрочитанного сохранения названа иначе: загрузкой она не принимается", () => {
+    expect(rawSaveFileName(NOW)).toBe("arcane-helper-raw-2026-07-31.json");
   });
 });
 
