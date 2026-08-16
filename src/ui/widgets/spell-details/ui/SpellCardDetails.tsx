@@ -29,12 +29,46 @@ import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLab
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
 
+/** Второстепенное в этой карточке: тот же тон, каким названы ярлыки, и он проходит контраст. */
+const MUTED = "text-slate-600 dark:text-slate-400";
+
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-2 border-b border-slate-100 py-1 last:border-0 dark:border-slate-800/60">
-      <dt className="shrink-0 text-slate-600 dark:text-slate-400">{label}</dt>
+      <dt className={`shrink-0 ${MUTED}`}>{label}</dt>
       <dd className="text-right">{children}</dd>
     </div>
+  );
+}
+
+/** Чем оплачен материал. Пусто — платить нечем и незачем: вещь нужна сама по себе. */
+function materialFate(row: SpellRowView, consumed: boolean): string {
+  if (row.materialCoveredByFocus) return " (заменяет фокусировка)";
+  if (!row.ownComponentRequired) return "";
+  return consumed ? " (свой предмет, расходуется)" : " (свой предмет)";
+}
+
+/**
+ * Три компонента одной строкой: что требуется, чего не требуется и чем оплачен материал.
+ *
+ * Отсутствие названо словом, а не пропуском: молчание о голосе читается как «здесь ничего не
+ * написано», а сотворить молча — решение, которое принимают за столом. Закрытый фокусировкой
+ * материал приглушён: он назван, но делать с ним нечего.
+ */
+function Components({ row }: { row: SpellRowView }) {
+  const { verbal, somatic, material } = row.card.components;
+  const spoken = `${verbal ? "голос" : "без голоса"} · ${somatic ? "жест" : "без жеста"}`;
+
+  if (material === undefined) return <>{spoken} · без материала</>;
+
+  return (
+    <>
+      {spoken} ·{" "}
+      <span className={row.materialCoveredByFocus ? MUTED : ""}>
+        {material.textRu}
+        {materialFate(row, material.consumed)}
+      </span>
+    </>
   );
 }
 
@@ -123,6 +157,9 @@ export function SpellCardDetails({
 
         <dl aria-label="Механика" className="text-xs">
           {slotCost === null ? null : <Row label="Стоимость">{slotCost}</Row>}
+          <Row label="Компоненты">
+            <Components row={row} />
+          </Row>
           <Row label="Дальность">{rangeLabel(row.range)}</Row>
           {/* Пара строк подряд: подписанные, они сравниваются глазом и не путаются. */}
           <Row label="Накладывание">{castingTimeLabel(row.castingTime)}</Row>

@@ -11,6 +11,9 @@
  * прочее — простым текстом через точку: цена, дальность, длительность, урон читают уже после
  * того, как строку нашли, и рамка вокруг каждого была бы шумом.
  *
+ * Компоненты стоят буквами в углу имени: свой ряд стоил бы списку экрана прокрутки, а ряд фактов у
+ * половины строк уже перенесён.
+ *
  * Причина недоступности пишется словами: серый цвет без объяснения оставляет игрока в тупике
  */
 
@@ -70,6 +73,38 @@ function roleClass(classes: Record<string, string>, role: string): string {
   return classes[role] ?? classes.other ?? "";
 }
 
+/** Выделенное среди нейтрального: тем же весом на строке отмечена длительность. */
+const STRONG = "font-medium text-slate-800 dark:text-slate-200";
+
+type ComponentMark = { letter: string; wordRu: string; strong: boolean };
+
+/**
+ * Компоненты буквами: по букве на требуемое и слово к ней для тех, кто строку слушает.
+ *
+ * Не требуемое буквы не получает вовсе. Погасить лишнюю букву цветом вышло бы ровнее, но тогда
+ * единственным носителем смысла остался бы цвет, а за столом при свече он не носитель.
+ *
+ * Материал, которого фокусировка не заменяет, выделен весом: своя вещь кончается, и узнать об этом
+ * лучше до чужого хода. Девятого смыслового цвета для него не заводится — контраст внутри
+ * нейтрального нового смысла не обещает.
+ */
+function componentMarks(spell: SpellRowView): ComponentMark[] {
+  const { verbal, somatic, material } = spell.card.components;
+  const marks: ComponentMark[] = [];
+
+  if (verbal) marks.push({ letter: "В", wordRu: "голос", strong: false });
+  if (somatic) marks.push({ letter: "С", wordRu: "жест", strong: false });
+  if (material !== undefined) {
+    marks.push(
+      spell.ownComponentRequired
+        ? { letter: "М", wordRu: "свой предмет", strong: true }
+        : { letter: "М", wordRu: "материал", strong: false },
+    );
+  }
+
+  return marks;
+}
+
 export function SpellCardCompact({
   spell,
   casting,
@@ -120,6 +155,8 @@ export function SpellCardCompact({
     ...(damage === null ? [] : [{ text: `Урон ${damage}`, strong: false }]),
   ];
 
+  const marks = componentMarks(spell);
+
   const preparable = onTogglePrepared !== undefined && spell.level !== CANTRIP_LEVEL;
   const isPrepared = spell.prepared;
 
@@ -132,12 +169,25 @@ export function SpellCardCompact({
       >
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">{spell.nameRu}</span>
-          {/*
+          <span className="flex shrink-0 items-baseline gap-1.5 text-[0.625rem]">
+            {marks.length === 0 ? null : (
+              <span
+                role="img"
+                aria-label={`Компоненты: ${marks.map((mark) => mark.wordRu).join(", ")}`}
+                className="text-slate-600 dark:text-slate-400"
+              >
+                {marks.map((mark) => (
+                  <span key={mark.letter} className={mark.strong ? STRONG : ""}>
+                    {mark.letter}
+                  </span>
+                ))}
+              </span>
+            )}
+            {/*
  Английское название нужно, чтобы найти заклинание в чужой книге, — а в бою по книгам не
  ищут. В «Бою» тот же угол занимает роль, и строка не становится выше.
  */}
-          <span className={`shrink-0 text-[0.625rem] ${roleClass(ROLE_WORD, spell.role)}`}>
-            {role.label}
+            <span className={roleClass(ROLE_WORD, spell.role)}>{role.label}</span>
           </span>
         </span>
 
@@ -174,9 +224,7 @@ export function SpellCardCompact({
                   ·
                 </span>
               )}
-              <span className={fact.strong ? "font-medium text-slate-800 dark:text-slate-200" : ""}>
-                {fact.text}
-              </span>
+              <span className={fact.strong ? STRONG : ""}>{fact.text}</span>
             </Fragment>
           ))}
         </span>
