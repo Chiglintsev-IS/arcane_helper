@@ -15,7 +15,6 @@ export const REACTION_TRIGGERS = [
   "elemental_damage",
   "enemy_casts",
   "falling",
-  "enemy_succeeds",
   "failed_save",
 ] as const;
 

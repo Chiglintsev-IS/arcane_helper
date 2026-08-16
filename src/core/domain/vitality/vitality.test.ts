@@ -99,6 +99,19 @@ describe("порог регенерации", () => {
     expect(wounded.takeDamage(10).vitality.continuousRegenerationDue()).toBe(0);
   });
 
+  it("с первого же вернувшегося хита регенерация идёт снова", () => {
+    // Ноль выключает регенерацию, а не отменяет её: подняли до единицы — тролль снова затягивается.
+    const down = healthy().takeDamage(60).vitality;
+    expect(down.current).toBe(0);
+    expect(down.regenerationDue(7)).toBe(0);
+    expect(down.continuousRegenerationDue()).toBe(0);
+
+    const risen = down.heal(1).vitality;
+    expect(risen.current).toBe(1);
+    expect(risen.regenerationDue(7)).toBeGreaterThan(0);
+    expect(risen.continuousRegenerationDue()).toBeGreaterThan(0);
+  });
+
   it("час поднимает ступень максимума и лечит уже от неё", () => {
     const bled = healthy().exchangeBlood(9, 3).vitality;
     const { vitality, returned, healed } = bled.takeDamage(31).vitality.afterAnHour(7);

@@ -33,7 +33,6 @@ const TRIGGERS: readonly { kind: string; label: string }[] = [
   { kind: "elemental_damage", label: "Получаю урон стихией" },
   { kind: "enemy_casts", label: "Враг творит заклинание" },
   { kind: "falling", label: "Кто-то падает" },
-  { kind: "enemy_succeeds", label: "Враг преуспел в броске" },
   { kind: "failed_save", label: "Я провалил спасбросок" },
 ];
 

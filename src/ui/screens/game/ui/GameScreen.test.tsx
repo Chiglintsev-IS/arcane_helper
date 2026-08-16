@@ -464,11 +464,19 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
 
   it("на событие без ответа переключателя нет (FR-002)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<GameScreen />);
+    const { stores } = await renderWithStores(<GameScreen />);
 
     await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-    // «Искусная острота» в книгу не вошла — отвечать на успешный бросок врага нечем.
-    expect(screen.queryByRole("radio", { name: "Враг преуспел в броске" })).toBeNull();
+    // На падение отвечает одно «Падение пёрышком», и оно не подготовлено: события нет вовсе.
+    expect(screen.queryByRole("radio", { name: "Кто-то падает" })).toBeNull();
+    expect(screen.getByRole("radio", { name: "По мне попали" })).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Закрыть" }));
+
+    // Ответ исчез — исчезло и событие: список триггеров задаётся карточками, а не движком.
+    await stores.session.getState().execute({ kind: "toggle_preparation", spellId: "shield" });
+
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
+    expect(screen.queryByRole("radio", { name: "По мне попали" })).toBeNull();
     expect(screen.getByRole("radio", { name: "Я провалил спасбросок" })).toBeDefined();
   });
 
