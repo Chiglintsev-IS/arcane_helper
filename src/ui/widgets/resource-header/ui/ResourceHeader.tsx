@@ -1,10 +1,13 @@
 /**
  * Шапка ресурсов: чем платить и сколько осталось.
  *
- * Стоит там, где тратят и восстанавливают, — в «Игре». Хиты и ячейки закреплены и остаются на месте
- * при прокрутке: на них смотрят в каждый ход. Прочие значки уезжают вместе со списком — иначе
- * каждый новый значок отодвигал бы первую карточку за край экрана. Имени, класса и уровня в шапке
- * нет: за столом их не спрашивают, а место они занимают постоянно — их дом «Лист».
+ * Стоит там, где тратят и восстанавливают, — в «Игре». Закреплена и остаётся на месте при
+ * прокрутке: на неё смотрят в каждый ход. Имени, класса и уровня в шапке нет: за столом их не
+ * спрашивают, а место они занимают постоянно — их дом «Лист».
+ *
+ * Плиткой стоит то, что за бой не меняется, значком — то, что случается: у плитки своё место, и
+ * глаз находит её там же, где нашёл в прошлый ход. Поэтому пулы, которыми платят, стоят плитками
+ * рядом с ячейками — одним рядом, одним вопросом, — а не отдельной строкой значков под шапкой.
  *
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
@@ -14,8 +17,8 @@ import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
 import { DERIVED_LABELS, skillLabel } from "@/ui/entities/character/lib/labels";
 import { RESOURCES_EDIT_LABEL } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { Badge } from "@/ui/shared/ui/Badge";
-import type { Tone } from "@/ui/shared/ui/tone";
-import { hitDiceLabel } from "@/ui/widgets/resource-header/lib/hitDiceLabel";
+import { TONE_CLASS, type Tone } from "@/ui/shared/ui/tone";
+import { hitDicePool } from "@/ui/widgets/resource-header/lib/hitDicePool";
 import { signed } from "@/shared/language";
 
 /**
@@ -44,6 +47,15 @@ function SpendableResource({
   );
 }
 
+/** Подпись плитки: мелкая строка над числом. */
+function TileCaption({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="block whitespace-nowrap text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
+      {children}
+    </span>
+  );
+}
+
 /**
  * Плитка КД — кнопка, как и плитка хитов: временная поправка правится там же, где она видна.
  */
@@ -58,7 +70,7 @@ function ArmorClassStat({
 }) {
   // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
   return (
-    <div className="rounded-md border border-slate-200 dark:border-slate-800">
+    <div className="flex-auto rounded-md border border-slate-200 dark:border-slate-800">
       <dt className="sr-only">КД</dt>
       <dd>
         <button
@@ -67,9 +79,7 @@ function ArmorClassStat({
           aria-label={`КД ${value}. Правка: поправка`}
           className="w-full px-2 py-1 text-left"
         >
-          <span className="block text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
-            КД{adjustment !== 0 ? ` ${signed(adjustment)}` : ""}
-          </span>
+          <TileCaption>КД{adjustment !== 0 ? ` ${signed(adjustment)}` : ""}</TileCaption>
           <span className="block text-base font-semibold leading-tight tabular-nums">{value}</span>
         </button>
       </dd>
@@ -92,7 +102,7 @@ function HitPointsStat({
 }) {
   // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
   return (
-    <div className="rounded-md border border-slate-200 dark:border-slate-800">
+    <div className="flex-auto rounded-md border border-slate-200 dark:border-slate-800">
       <dt className="sr-only">Хиты</dt>
       <dd>
         <button
@@ -101,13 +111,86 @@ function HitPointsStat({
           aria-label={`Хиты ${value}. Правка: урон, лечение, временные`}
           className="w-full px-2 py-1 text-left"
         >
-          <span className="block text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
-            Хиты{temporary > 0 ? ` +${temporary}` : ""}
-          </span>
+          <TileCaption>Хиты{temporary > 0 ? ` +${temporary}` : ""}</TileCaption>
           <span className="block text-base font-semibold leading-tight tabular-nums">{value}</span>
         </button>
       </dd>
     </div>
+  );
+}
+
+/**
+ * Плитка числа, которое за бой не меняется: за ней нет правки, и рамки у неё нет — рамку в этом
+ * ряду носит то, что нажимается.
+ */
+function ConstantStat({
+  captionRu,
+  value,
+  accessibleName,
+}: {
+  captionRu: string;
+  value: string;
+  /** Полное имя величины: подпись короче его ровно настолько, насколько требует ширина ряда. */
+  accessibleName: string;
+}) {
+  return (
+    <div className="flex-auto rounded-md bg-slate-400/10 px-2 py-1">
+      <dt className="sr-only">{accessibleName}</dt>
+      <dd>
+        <TileCaption>{captionRu}</TileCaption>
+        <span className="block text-base font-semibold leading-tight tabular-nums">{value}</span>
+      </dd>
+    </div>
+  );
+}
+
+/**
+ * Плитка пула: чем платят и сколько осталось.
+ *
+ * Пока платить есть чем, плитка носит цвет своего ресурса и его знак; когда нечем — приглушена и
+ * помечена знаком отказа. Цвет отвечает на вопрос «есть ли ещё», а не на вопрос «что это».
+ */
+function PoolCounter({
+  captionRu,
+  value,
+  available,
+  tone,
+  icon,
+  action,
+}: {
+  captionRu: string;
+  value: string;
+  available: boolean;
+  tone: Tone;
+  /** Знак ресурса, пока им есть чем платить: кончившийся носит знак отказа. */
+  icon: string;
+  /** Правка пула, если она есть; без неё плитка — факт, а не кнопка. */
+  action?: { accessibleName: string; onOpen: () => void };
+}) {
+  const shown = (
+    <>
+      <TileCaption>
+        <span aria-hidden="true">{available ? icon : "✗"}</span> {captionRu}
+      </TileCaption>
+      <span className="block text-sm font-semibold leading-tight tabular-nums">{value}</span>
+    </>
+  );
+  const skin = `flex-1 rounded-md text-center ${available ? TONE_CLASS[tone] : TONE_CLASS.muted}`;
+
+  if (action === undefined) {
+    return <li className={`${skin} px-1 py-1`}>{shown}</li>;
+  }
+  return (
+    <li className={skin}>
+      <button
+        type="button"
+        onClick={action.onOpen}
+        aria-label={action.accessibleName}
+        className="w-full px-1 py-1"
+      >
+        {shown}
+      </button>
+    </li>
   );
 }
 
@@ -141,9 +224,7 @@ function SlotCounter({
             : "border-action/40 bg-action/5"
         }`}
       >
-        <span className="block text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
-          {level} ур.
-        </span>
+        <TileCaption>{level} ур.</TileCaption>
         <span className="text-sm font-semibold tabular-nums">
           {remaining}/{maximum}
         </span>
@@ -153,7 +234,7 @@ function SlotCounter({
 }
 
 /**
- * Закреплённая часть: КД, хиты и ячейки по уровням.
+ * Закреплённая часть: числа, которые называют вслух, и всё, чем платят за сотворение.
  *
  * Экономии хода она не знает намеренно — то, что остаётся на месте при прокрутке, не должно
  * перестраиваться от начала боя.
@@ -174,10 +255,11 @@ export function ResourceHeader({
   onEditResources: () => void;
 }) {
   const { hitPoints } = sheet;
+  const dice = hitDicePool(hitPoints.hitDice);
 
   return (
-    <section aria-label="Ресурсы" className="flex flex-col gap-2">
-      <dl className="grid grid-cols-2 gap-1">
+    <section aria-label="Ресурсы" className="flex flex-col gap-1">
+      <dl className="flex gap-1">
         <ArmorClassStat
           value={`${sheet.armorClass}`}
           adjustment={resources.armorClassAdjustment}
@@ -188,9 +270,19 @@ export function ResourceHeader({
           temporary={hitPoints.temporary}
           onOpen={onOpenHitPoints}
         />
+        {/*
+         * Подпись короче доступного имени: на 320 пикселях полное имя забирает целый ряд, а ряд
+         * здесь стоит четверти карточки списка. Оба слова приходят от владельца подписей: величина
+         * выведена из навыка и зовётся его именем.
+         */}
+        <ConstantStat
+          captionRu={skillLabel("perception")}
+          value={`${resources.passivePerception}`}
+          accessibleName={DERIVED_LABELS.passivePerception}
+        />
       </dl>
 
-      <ul aria-label="Ячейки заклинаний" className="flex gap-1">
+      <ul aria-label="Чем платить" className="flex gap-1">
         {resources.slots.map((slot) => (
           <SlotCounter
             key={slot.level}
@@ -200,14 +292,46 @@ export function ResourceHeader({
             onEdit={onEditResources}
           />
         ))}
+        {/*
+         * Руны правятся той же шторкой, что и ячейки: место, где число видно, и место, где его
+         * меняют, — одно и то же. Кости и очки правки не имеют — их двигают отдых и обмен кровью.
+         */}
+        <PoolCounter
+          captionRu="Руны"
+          value={`${resources.runes.remaining}/${resources.runes.maximum}`}
+          available={resources.runes.remaining > 0}
+          tone="ritual"
+          icon="❖"
+          action={{
+            accessibleName: `Руны: ${resources.runes.remaining} из ${resources.runes.maximum}. ${RESOURCES_EDIT_LABEL}`,
+            onOpen: onEditResources,
+          }}
+        />
+        <PoolCounter
+          captionRu={dice.nameRu}
+          value={dice.remaining}
+          available={dice.available}
+          tone="muted"
+          icon="✚"
+        />
+        <PoolCounter
+          captionRu="Очки"
+          value={`${resources.spellPoints}`}
+          available={resources.spellPoints > 0}
+          tone="muted"
+          icon="✚"
+        />
       </ul>
     </section>
   );
 }
 
 /**
- * Прочие значки: чем ещё располагают и что мешает. Уезжают вместе со списком — их число растёт от
- * ситуации, и закрепить их значило бы отдать прокрутке первую карточку.
+ * Значки: что случилось и что мешает. Уезжают вместе со списком — их число растёт от ситуации, и
+ * закрепить их значило бы отдать прокрутке первую карточку.
+ *
+ * Постоянного здесь нет: остаток, который за бой не меняется, стоит плиткой в закреплённой части.
+ * Значком остаётся то, чего на экране либо нет вовсе, либо оно только что изменилось.
  */
 export function ResourceBadges({
   sheet,
@@ -223,63 +347,9 @@ export function ResourceBadges({
 }) {
   const { hitPoints } = sheet;
   const { inFight } = turn;
-  const { hitDice } = hitPoints;
-  const diceLeft = hitDice !== undefined && hitDice.remaining > 0;
 
   return (
     <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
-        {/*
-         * Постоянная часть ряда идёт первой и одинаково в бою и вне его: кости хитов, пассивная
-         * внимательность, руны, очки. Значок, исчезающий с началом боя, сдвинул бы соседей, и глаз
-         * искал бы число заново там, где секунду назад стояло другое.
-         */}
-        <li aria-label={`Кости хитов ${hitDiceLabel(hitPoints.hitDice)}`}>
-          <SpendableResource available={diceLeft} tone="muted" icon="✚">
-            Кости {hitDiceLabel(hitPoints.hitDice)}
-          </SpendableResource>
-        </li>
-        {/*
-         * Подпись короткая, доступное имя полное: на 320 пикселях полное имя забирает целый ряд
-         * значков, а ряд здесь стоит четверти карточки списка. Оба слова приходят от владельца
-         * подписей: величина выведена из навыка и зовётся его именем.
-         */}
-        <li aria-label={`${DERIVED_LABELS.passivePerception} ${resources.passivePerception}`}>
-          <Badge tone="muted" icon="◉">
-            {skillLabel("perception")} {resources.passivePerception}
-          </Badge>
-        </li>
-        {/*
-         * Значок рун — не кнопка: правило 44 пикселей на зону нажатия сделало бы весь ряд значков
-         * вдвое выше. Правка рун открывается плиткой ячейки — там же, где правятся ячейки.
-         */}
-        <li>
-          <SpendableResource available={resources.runes.remaining > 0} tone="ritual" icon="❖">
-            Руны {resources.runes.remaining}/{resources.runes.maximum}
-          </SpendableResource>
-        </li>
-        <li>
-          <SpendableResource available={resources.spellPoints > 0} tone="muted" icon="✚">
-            Очки {resources.spellPoints}
-          </SpendableResource>
-        </li>
-        {/*
-         * Приходящее с боем встаёт за постоянной частью, ничего не сдвигая: инициатива, затем
-         * номер раунда. Вне боя раунда нет вовсе — число застыло бы на последнем.
-         */}
-        {inFight ? (
-          <>
-            <li>
-              <Badge tone="muted" icon="◔">
-                Инициатива {signed(resources.initiative)}
-              </Badge>
-            </li>
-            <li>
-              <Badge tone="action" icon="◷">
-                Раунд {turn.round}
-              </Badge>
-            </li>
-          </>
-        ) : null}
         {hitPoints.maximumReduction > 0 ? (
           <li>
             <Badge tone="reaction" icon="✖">
@@ -347,11 +417,6 @@ export function ResourceBadges({
                 </SpendableResource>
               </li>
             ) : null}
-            <li aria-label={turn.reactionAvailable ? "Реакция доступна" : "Реакция израсходована"}>
-              <SpendableResource available={turn.reactionAvailable} tone="reaction" icon="✓">
-                Реакция
-              </SpendableResource>
-            </li>
           </>
         ) : null}
     </ul>

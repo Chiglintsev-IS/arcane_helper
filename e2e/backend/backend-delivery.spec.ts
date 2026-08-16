@@ -19,7 +19,7 @@ async function startFreshParty(page: Page): Promise<void> {
   });
   await page.goto("/");
   await started;
-  await expect(page.getByLabel("Ячейки заклинаний")).toBeVisible();
+  await expect(page.getByLabel("Чем платить")).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -32,7 +32,7 @@ test("a party goes through the backend and the browser keeps no state", async ({
 
   // Ход играется тот же, что и без сети: команда уезжает на бэкенд, снимок приезжает обратно.
   const applied = page.waitForResponse((response) => response.url().includes("/api/arcane/command"));
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await applied;
 
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
@@ -48,7 +48,7 @@ test("a party goes through the backend and the browser keeps no state", async ({
   // Партия живёт на бэкенде: перезагрузка приносит её обратно, хотя браузеру хранить нечего.
   await page.reload();
   await expect(spent).toBeVisible();
-  await expect(page.getByLabel("Активные эффекты")).toContainText("Доспехи мага");
+  await expect(page.getByRole("button", { name: /^Действует: Доспехи мага/ })).toBeVisible();
 
   // Ни одной базы: ядро в этой сборке в браузер не приезжает, и хранить состояние тут нечему.
   expect(await page.evaluate(() => indexedDB.databases().then((bases) => bases.length))).toBe(0);

@@ -39,10 +39,10 @@ function concentrating(): CharacterState {
   };
 }
 
-/** Лист концентрации открывается с карточки в шапке. */
+/** Шторка «Действует» открывается со строки действующего. */
 async function openPanel(): Promise<void> {
   await renderWithStores(<GameScreen />, concentrating());
-  await userEvent.click(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ }));
+  await userEvent.click(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ }));
 }
 
 /** Ввод урона: он же вход в проверку концентрации, когда она идёт. */
@@ -57,31 +57,22 @@ async function damage(
   await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 }
 
-describe("карточка концентрации в шапке (FR-082, FR-084)", () => {
-  it("без концентрации карточки нет вовсе", async () => {
-    // Ряд нескролящейся шапки не тратится на сообщение об отсутствии.
+describe("строка действующего (FR-082, FR-084)", () => {
+  it("без концентрации строка остаётся и говорит, что ничего не действует", async () => {
+    // Ноль — состояние: исчезнувшая строка заставляла бы гадать, держится что-то или нет.
     await renderWithStores(<GameScreen />);
 
-    expect(screen.queryByLabelText("Концентрация")).toBeNull();
+    expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
   });
 
-  it("показывает название, ячейку, механику и чем сорвётся", async () => {
+  it("называет то, что держится, и ведёт к подробностям", async () => {
     await renderWithStores(<GameScreen />, concentrating());
 
-    const block = screen.getByLabelText("Концентрация");
-    expect(within(block).getByText("Обнаружение магии")).toBeDefined();
-    expect(within(block).getByText(/ячейка 1 ур\./)).toBeDefined();
-    expect(within(block).getByText(/Сфера 30 футов от себя · Без броска/)).toBeDefined();
-    expect(within(block).getByText(/спасбросок Телосложения \+4, КС от 10/)).toBeDefined();
-  });
+    const line = screen.getByLabelText("Действует");
+    expect(within(line).getByText(/Обнаружение магии/)).toBeDefined();
 
-  it("карточка нажимаема и ведёт к подробностям", async () => {
-    await renderWithStores(<GameScreen />, concentrating());
-
-    const card = screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ });
-    await userEvent.click(card);
-
-    expect(screen.getByRole("dialog", { name: /Концентрация/ })).toBeDefined();
+    await userEvent.click(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ }));
+    expect(screen.getByRole("dialog", { name: "Действует" })).toBeDefined();
   });
 
 });
@@ -90,7 +81,7 @@ describe("лист концентрации (FR-084, FR-091)", () => {
   it("объясняет, как работает и чем прерывается", async () => {
     await openPanel();
 
-    const panel = screen.getByRole("dialog", { name: /Концентрация/ });
+    const panel = screen.getByRole("dialog", { name: "Действует" });
     // Длительность ищется по всей строке шапки: те же «до 10 минут» стоят и в кратких правилах,
     // и одиночный поиск по ним нашёл бы два элемента вместо одного.
     expect(within(panel).getByText(/ячейка 1 ур\..*до 10 минут/)).toBeDefined();
@@ -182,7 +173,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     expect(screen.getByText(/Знаки ограждения/)).toBeDefined();
     // Эффект ещё держится: предложение обязано появиться до завершения.
-    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
   });
 
   it("без руны провал завершает концентрацию сразу", async () => {
@@ -191,7 +182,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Провал" }));
 
-    expect(screen.queryByLabelText("Концентрация")).toBeNull();
+    expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
   });
 
 });
@@ -200,6 +191,7 @@ describe("ручной статус (FR-236)", () => {
   it("пустая отправка ничего не заводит", async () => {
     await renderWithStores(<GameScreen />);
 
+    await userEvent.click(screen.getByRole("button", { name: "Действует: ничего" }));
     const field = screen.getByLabelText("Новый статус");
     await userEvent.type(field, "   {Enter}");
 
@@ -213,7 +205,7 @@ describe("поправка к КД (FR-236)", () => {
     await renderWithStores(<GameScreen />);
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     const dialog = screen.getByRole("dialog", { name: "КД" });
@@ -251,7 +243,7 @@ describe("поправка к КД (FR-236)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("19")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 19/ })).toBeDefined();
     expect(within(numbers).getByText("КД +5")).toBeDefined();
     expect(within(numbers).queryByText("КД +2")).toBeNull();
   });
@@ -268,7 +260,7 @@ describe("поправка к КД (FR-236)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
-    expect(within(numbers).getByText("14")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
     expect(within(numbers).queryByText(/КД [+−]/)).toBeNull();
   });
 

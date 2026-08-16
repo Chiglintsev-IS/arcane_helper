@@ -9,13 +9,13 @@ import type { Command } from "@/contract/commands";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
+import { ActiveEffectsSheet } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
-import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
 import { REACTIONS_LABEL, ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
@@ -28,6 +28,7 @@ import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
+import { signed } from "@/shared/language";
 
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
@@ -38,7 +39,7 @@ export function GameScreen() {
   const [filters, setFilters] = useState(NO_FILTERS);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [activeOpen, setActiveOpen] = useState(false);
   const [damageOpen, setDamageOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
@@ -101,7 +102,7 @@ export function GameScreen() {
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
     setDamageOpen(false);
-    setPanelOpen(false);
+    setActiveOpen(false);
     setCheckOpen(true);
   };
 
@@ -144,22 +145,32 @@ export function GameScreen() {
           />
         </div>
 
-        <ResourceBadges
-          sheet={snapshot.sheet}
-          resources={snapshot.resources}
-          turn={snapshot.turn}
-          bookCastingTimes={dividing.castingTimes}
-        />
+        {/*
+         * Что сейчас верно — одной строкой: что держится и что уже потрачено в этом ходу. Оба
+         * ответа об одном мгновении, и разведённые по двум строкам они стоили бы той строки
+         * списка, ради которой экран и разгружают.
+         */}
+        <div className="flex flex-wrap items-center gap-2">
+          <ActiveEffects
+            effects={snapshot.effects}
+            armorClass={snapshot.sheet.armorClass}
+            concentration={concentrationSummary}
+            onOpen={() => setActiveOpen(true)}
+          />
 
-        <ActiveEffects
-          effects={snapshot.effects}
-          armorClass={snapshot.sheet.armorClass}
-          concentration={concentrationSummary}
-          onOpenConcentration={() => setPanelOpen(true)}
-          onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
-          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
-        />
+          <ResourceBadges
+            sheet={snapshot.sheet}
+            resources={snapshot.resources}
+            turn={snapshot.turn}
+            bookCastingTimes={dividing.castingTimes}
+          />
+        </div>
 
+        {/*
+         * Число, которое произносят, стоит на кнопке, которой в этот миг и пользуются: инициативу
+         * называют, начиная бой, номер раунда — ведя ход, остаток реакции — открывая реакции.
+         * Отдельными значками они стояли бы целой строкой ради того, что и так под пальцем.
+         */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -169,22 +180,49 @@ export function GameScreen() {
             className="min-h-11 grow whitespace-nowrap rounded-xl bg-action-strong px-1 text-sm font-semibold leading-tight text-white"
           >
             {inFight ? "Окончить бой" : "Начать бой"}
+            {inFight ? null : (
+              <span className="block text-[0.625rem] font-normal leading-tight">
+                инициатива {signed(snapshot.resources.initiative)}
+              </span>
+            )}
           </button>
           {inFight ? (
             <button
               type="button"
               onClick={() => void execute({ kind: "begin_turn" })}
-              className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold text-action-strong dark:text-action"
+              className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold leading-tight text-action-strong dark:text-action"
             >
               Новый ход
+              <span className="block text-[0.625rem] font-normal leading-tight">
+                раунд {turn.round}
+              </span>
             </button>
           ) : null}
+          {/*
+           * Подпись короткая, произносимое имя полное: слово «реакция» звучит для читающей вслух
+           * программы и не занимает места там, где его нет.
+           */}
           <button
             type="button"
             onClick={() => setReactionsOpen(true)}
-            className="min-h-11 grow whitespace-nowrap rounded-xl border border-reaction px-1 text-sm font-semibold text-reaction-strong dark:text-reaction"
+            aria-label={
+              inFight
+                ? `${REACTIONS_LABEL}. Реакция ${turn.reactionAvailable ? "доступна" : "израсходована"}`
+                : REACTIONS_LABEL
+            }
+            className={`min-h-11 grow whitespace-nowrap rounded-xl border px-1 text-sm font-semibold leading-tight ${
+              turn.reactionAvailable || !inFight
+                ? "border-reaction text-reaction-strong dark:text-reaction"
+                : "border-slate-300 text-slate-500 dark:border-slate-700"
+            }`}
           >
             {REACTIONS_LABEL}
+            {inFight ? (
+              <span className="block text-[0.625rem] font-normal leading-tight">
+                <span aria-hidden="true">{turn.reactionAvailable ? "✓" : "✗"}</span>{" "}
+                {turn.reactionAvailable ? "доступна" : "израсходована"}
+              </span>
+            ) : null}
           </button>
           <HourMark
             nextHour={snapshot.recovery.nextHour}
@@ -238,20 +276,28 @@ export function GameScreen() {
         />
       ) : null}
 
-      {panelOpen && concentrationSummary !== null ? (
-        <ConcentrationPanel
-          summary={concentrationSummary}
-          onOpenSpell={() => {
-            setPanelOpen(false);
-            setOpenSpellId(concentrationSummary.spellId);
-          }}
+      {activeOpen ? (
+        <ActiveEffectsSheet
+          effects={snapshot.effects}
+          armorClass={snapshot.sheet.armorClass}
+          concentration={concentrationSummary}
+          onOpenSpell={
+            concentrationSummary === null
+              ? undefined
+              : () => {
+                  setActiveOpen(false);
+                  setOpenSpellId(concentrationSummary.spellId);
+                }
+          }
           onTakeDamage={() => setDamageOpen(true)}
-          onDrop={async () => {
+          onDropConcentration={async () => {
             if ((await execute({ kind: "end_concentration", reason: "manual" })) === null) {
-              setPanelOpen(false);
+              setActiveOpen(false);
             }
           }}
-          onClose={() => setPanelOpen(false)}
+          onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
+          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
+          onClose={() => setActiveOpen(false)}
         />
       ) : null}
 
