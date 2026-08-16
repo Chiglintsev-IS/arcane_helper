@@ -49,7 +49,7 @@ export function ItemRow({
         <span className="flex items-baseline justify-between gap-2">
           <span className="min-w-0 text-sm font-medium">{item.nameRu}</span>
           {countRu === undefined ? null : (
-            <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-slate-500 dark:text-slate-400">
+            <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-slate-600 dark:text-slate-400">
               {countRu}
             </span>
           )}
@@ -75,12 +75,12 @@ export function ItemRow({
               </span>
             ))}
             {neededFor === undefined ? null : (
-              <span className="min-w-0 text-xs leading-snug text-slate-500 dark:text-slate-400">
+              <span className="min-w-0 text-xs leading-snug text-slate-600 dark:text-slate-400">
                 {neededFor}
               </span>
             )}
             {note === undefined ? null : (
-              <span className="min-w-0 text-xs leading-snug text-slate-500 dark:text-slate-400">
+              <span className="min-w-0 text-xs leading-snug text-slate-600 dark:text-slate-400">
                 {note}
               </span>
             )}

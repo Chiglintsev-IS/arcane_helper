@@ -190,7 +190,7 @@ export function ItemSheet({
             onClick={() => setKind(choice)}
             className={`min-h-11 rounded-lg px-2 text-xs ${
               kind === choice
-                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
                 : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
             }`}
           >
@@ -213,7 +213,7 @@ export function ItemSheet({
             onClick={() => setCurrency(choice)}
             className={`min-h-11 min-w-11 rounded-lg px-2 text-xs ${
               currency === choice
-                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
                 : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
             }`}
           >
@@ -231,7 +231,7 @@ export function ItemSheet({
             onClick={() => setFocus(!focus)}
             className={`min-h-11 rounded-lg px-2 text-xs ${
               focus
-                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
                 : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
             }`}
           >
@@ -255,7 +255,7 @@ export function ItemSheet({
           ))}
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-500 dark:text-slate-400">Добавить прибавку</span>
+            <span className="text-slate-600 dark:text-slate-400">Добавить прибавку</span>
             <span className="flex gap-2">
               <select
                 value={added}
@@ -284,7 +284,7 @@ export function ItemSheet({
 
           <NumberField labelRu="База КД доспеха" value={armorBase} onChange={setArmorBase} min={1} />
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-500 dark:text-slate-400">Категория доспеха</span>
+            <span className="text-slate-600 dark:text-slate-400">Категория доспеха</span>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
@@ -311,7 +311,7 @@ export function ItemSheet({
         aria-label={`Убрать: ${item.nameRu}`}
         disabled={bagCount > 0 || wornCount > 0}
         onClick={onRemove}
-        className={`min-h-11 rounded-lg bg-reaction/10 px-2 text-xs font-medium text-reaction-strong disabled:opacity-40 dark:text-reaction ${SURFACE_CONTROL}`}
+        className={`min-h-11 rounded-lg bg-reaction/10 px-2 text-xs font-medium text-reaction-strong disabled:opacity-40 dark:text-reaction-bright ${SURFACE_CONTROL}`}
       >
         Убрать вещь
       </button>

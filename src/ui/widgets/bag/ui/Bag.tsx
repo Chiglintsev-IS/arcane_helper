@@ -59,7 +59,7 @@ export function Bag({
         >
           {money.map(({ currency, amount }) => (
             <li key={currency}>
-              <span className="text-slate-500 dark:text-slate-400">{currencyAbbr(currency)}</span>{" "}
+              <span className="text-slate-600 dark:text-slate-400">{currencyAbbr(currency)}</span>{" "}
               {amount}
             </li>
           ))}

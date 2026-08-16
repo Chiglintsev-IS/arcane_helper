@@ -62,8 +62,8 @@ const DIMMED_SURFACE = "";
  * и даёт 4.31 вместо требуемых WCAG 4.5 — это ловит прогон axe-core.
  */
 const ROLE_WORD: Record<string, string> = {
-  offense: "text-offense-strong dark:text-offense",
-  defense: "text-defense-strong dark:text-defense",
+  offense: "text-offense-strong dark:text-offense-bright",
+  defense: "text-defense-strong dark:text-defense-bright",
   other: "text-slate-600 dark:text-slate-400",
 };
 
@@ -228,7 +228,7 @@ export function SpellCardCompact({
           <span className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold tabular-nums">
             {resolution.spoken ? (
               <span className="whitespace-nowrap">
-                <span aria-hidden="true" className="text-slate-500 dark:text-slate-400">
+                <span aria-hidden="true" className="text-slate-600 dark:text-slate-400">
                   {resolution.icon}
                 </span>{" "}
                 {resolution.label}
@@ -258,7 +258,7 @@ export function SpellCardCompact({
         </span>
 
         {unavailableReason === undefined ? null : (
-          <span className="text-xs font-medium text-reaction-strong dark:text-reaction">Недоступно: {unavailableReason}</span>
+          <span className="text-xs font-medium text-reaction-strong dark:text-reaction-bright">Недоступно: {unavailableReason}</span>
         )}
       </button>
 
@@ -275,8 +275,8 @@ export function SpellCardCompact({
           aria-label={`${isPrepared ? "Снять подготовку" : "Подготовить"}: ${spell.nameRu}`}
           className={`w-11 shrink-0 rounded-lg text-lg ${
             isPrepared
-              ? "bg-ritual/20 text-ritual-strong dark:text-ritual"
-              : `text-slate-500 dark:text-slate-400 ${SURFACE_CONTROL}`
+              ? "bg-ritual/20 text-ritual-strong dark:text-ritual-bright"
+              : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
           }`}
         >
           <span aria-hidden="true">{isPrepared ? "✓" : "+"}</span>

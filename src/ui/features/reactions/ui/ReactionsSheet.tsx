@@ -103,7 +103,7 @@ export function ReactionsSheet({
             onClick={() => setTrigger(kind)}
             className={`min-h-11 grow rounded-lg px-2 text-xs font-medium ${
               trigger === kind
-                ? "bg-reaction/20 text-reaction-strong dark:text-reaction"
+                ? "bg-reaction/20 text-reaction-strong dark:text-reaction-bright"
                 : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
             }`}
           >
@@ -117,7 +117,7 @@ export function ReactionsSheet({
  может попросить исключение у мастера. Причина написана словами.
  */}
       {reactionAvailable ? null : (
-        <p className="text-xs font-medium text-reaction-strong dark:text-reaction">
+        <p className="text-xs font-medium text-reaction-strong dark:text-reaction-bright">
           Реакция
         </p>
       )}

@@ -148,8 +148,9 @@ function ConstantStat({
 /**
  * Плитка пула: чем платят и сколько осталось.
  *
- * Пока платить есть чем, плитка носит цвет своего ресурса и его знак; когда нечем — приглушена и
- * помечена знаком отказа. Цвет отвечает на вопрос «есть ли ещё», а не на вопрос «что это».
+ * Смыслового цвета плитка не берёт. Восемь оттенков заняты видом действия, ролью, концентрацией и
+ * ритуалом, и зелёная плитка рун читалась бы как ритуал, которым руна не является. На вопрос «есть
+ * ли ещё» отвечают знак и само число: знак ресурса сменяется знаком отказа, а остаток равен нулю.
  */
 function PoolCounter({
   captionRu,
@@ -199,7 +200,9 @@ function PoolCounter({
  * Ячейка уровня: остаток и максимум. Минус — долг, разрешённый «Применить всё равно».
  *
  * Плитка — кнопка правки, как и плитка хитов: место, где число видно, и место, где его меняют, —
- * одно и то же.
+ * одно и то же. Синего у неё нет по той же причине, по какой у рун нет зелёного: синий занят видом
+ * действия, а ячейка — не действие. Истраченная опускается на ступень: пустая рука не нажимается
+ * так же охотно, как полная.
  */
 function SlotCounter({
   level,
@@ -220,7 +223,7 @@ function SlotCounter({
         onClick={onEdit}
         aria-label={`Ячейки ${level} уровня: ${remaining} из ${maximum}. ${RESOURCES_EDIT_LABEL}`}
         className={`w-full rounded-md px-1 py-1 text-center ${
-          exhausted ? `text-slate-400 ${SURFACE_CONTROL}` : "bg-action/20"
+          exhausted ? `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}` : SURFACE_CONTROL
         }`}
       >
         <TileCaption>{level} ур.</TileCaption>
@@ -299,7 +302,7 @@ export function ResourceHeader({
           captionRu="Руны"
           value={`${resources.runes.remaining}/${resources.runes.maximum}`}
           available={resources.runes.remaining > 0}
-          tone="ritual"
+          tone="muted"
           icon="❖"
           action={{
             accessibleName: `Руны: ${resources.runes.remaining} из ${resources.runes.maximum}. ${RESOURCES_EDIT_LABEL}`,

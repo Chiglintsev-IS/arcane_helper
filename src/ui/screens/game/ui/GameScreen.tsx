@@ -213,7 +213,7 @@ export function GameScreen() {
             <button
               type="button"
               onClick={() => void execute({ kind: "begin_turn" })}
-              className={`min-h-11 grow whitespace-nowrap rounded-xl px-1 text-sm font-semibold leading-tight text-action-strong dark:text-action ${SURFACE_CONTROL}`}
+              className={`min-h-11 grow whitespace-nowrap rounded-xl px-1 text-sm font-semibold leading-tight text-action-strong dark:text-action-bright ${SURFACE_CONTROL}`}
             >
               Новый ход
               <span className="block text-[0.625rem] font-normal leading-tight">
@@ -235,8 +235,8 @@ export function GameScreen() {
             }
             className={`min-h-11 grow whitespace-nowrap rounded-xl px-1 text-sm font-semibold leading-tight ${
               turn.reactionAvailable || !inFight
-                ? "bg-reaction/20 text-reaction-strong dark:text-reaction"
-                : `text-slate-500 ${SURFACE_GROUP}`
+                ? "bg-reaction/20 text-reaction-strong dark:text-reaction-bright"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
             }`}
           >
             {REACTIONS_LABEL}

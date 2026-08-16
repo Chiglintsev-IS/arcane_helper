@@ -59,7 +59,7 @@ function PartSwitcher({
             onClick={() => onChange(value)}
             className={`min-h-11 flex-1 rounded-lg px-1 text-sm font-medium ${
               selected
-                ? "bg-action/20 text-action-strong dark:text-action"
+                ? "bg-action/20 text-action-strong dark:text-action-bright"
                 : "text-slate-600 dark:text-slate-400"
             }`}
           >

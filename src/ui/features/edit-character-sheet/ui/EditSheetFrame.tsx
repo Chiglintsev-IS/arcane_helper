@@ -114,7 +114,7 @@ export function NumberField({
         <p
           id={reasonId}
           role="alert"
-          className="text-xs font-medium text-reaction-strong dark:text-reaction"
+          className="text-xs font-medium text-reaction-strong dark:text-reaction-bright"
         >
           {reasonRu}
         </p>

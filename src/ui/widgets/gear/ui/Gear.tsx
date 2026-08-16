@@ -47,7 +47,7 @@ export function Gear({
         <h2 className="shrink-0 text-sm font-semibold">Защита</h2>
         <p className="text-sm tabular-nums">
           КД {armorClass.value}
-          <span className="text-slate-500 dark:text-slate-400">
+          <span className="text-slate-600 dark:text-slate-400">
             {" · "}
             {armorClass.wornArmorNameRu ?? "без доспехов"}
           </span>
@@ -103,7 +103,7 @@ export function Gear({
                     type="button"
                     aria-label={`Надеть один: ${item.nameRu}`}
                     onClick={() => onAdjustWornCount(item.id, 1)}
-                    className={`min-h-11 rounded-lg bg-action/10 px-3 text-xs font-medium text-action-strong dark:text-action ${SURFACE_CONTROL}`}
+                    className={`min-h-11 rounded-lg bg-action/10 px-3 text-xs font-medium text-action-strong dark:text-action-bright ${SURFACE_CONTROL}`}
                   >
                     надеть
                   </button>

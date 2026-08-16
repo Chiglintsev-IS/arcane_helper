@@ -48,7 +48,7 @@ export function SheetBlock({
             <dd className="tabular-nums">
               {row.value}
               {row.hint === undefined ? null : (
-                <span className="ml-1 text-xs text-slate-500">({row.hint})</span>
+                <span className="ml-1 text-xs text-slate-600 dark:text-slate-400">({row.hint})</span>
               )}
             </dd>
           </div>

@@ -127,14 +127,14 @@ export function ResourcesSheet({
  кнопку в 44 пикселя там нет, а ряд значков и так занимает пятую часть карточки.
  */}
       <section aria-label="Состояния" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Состояния</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Состояния</h3>
         <button
           type="button"
           aria-pressed={suppression.underDirectSunlight}
           onClick={() => onSunlight(!suppression.underDirectSunlight)}
           className={`min-h-11 rounded-xl px-3 text-sm ${
             suppression.underDirectSunlight
-              ? "bg-reaction/20 font-medium text-reaction-strong dark:text-reaction"
+              ? "bg-reaction/20 font-medium text-reaction-strong dark:text-reaction-bright"
               : SURFACE_CONTROL
           }`}
         >

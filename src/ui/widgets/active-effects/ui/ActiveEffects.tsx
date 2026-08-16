@@ -69,14 +69,14 @@ export function ActiveEffects({
       >
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {held.length === 0 ? (
-            <span className="text-slate-500 dark:text-slate-400">Ничего не действует</span>
+            <span className="text-slate-600 dark:text-slate-400">Ничего не действует</span>
           ) : (
             held.map((item) => (
               <span
                 key={item.key}
                 className={
                   item.concentrating
-                    ? "font-semibold text-concentration-strong dark:text-concentration"
+                    ? "font-semibold text-concentration-strong dark:text-concentration-bright"
                     : "text-slate-700 dark:text-slate-300"
                 }
               >
@@ -85,7 +85,7 @@ export function ActiveEffects({
             ))
           )}
         </span>
-        <span aria-hidden="true" className="shrink-0 text-slate-500">
+        <span aria-hidden="true" className="shrink-0 text-slate-600 dark:text-slate-400">
           ›
         </span>
       </button>

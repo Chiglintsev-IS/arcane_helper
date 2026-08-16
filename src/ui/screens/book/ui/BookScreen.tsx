@@ -116,7 +116,7 @@ export function BookScreen() {
         >
           {counted}
           {reasonTail === "" ? null : (
-            <span className={refused ? "font-medium text-reaction-strong dark:text-reaction" : ""}>
+            <span className={refused ? "font-medium text-reaction-strong dark:text-reaction-bright" : ""}>
               {reasonTail}
             </span>
           )}

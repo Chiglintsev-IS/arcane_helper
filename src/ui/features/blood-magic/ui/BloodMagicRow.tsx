@@ -57,7 +57,7 @@ export function BloodMagicRow({
       >
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">{BLOOD_MAGIC_LABEL}</span>
-          <span className="shrink-0 text-[0.625rem] text-slate-500">
+          <span className="shrink-0 text-[0.625rem] text-slate-600 dark:text-slate-400">
             {combatRole(BLOOD_MAGIC_TRAITS.role).label}
           </span>
         </span>
@@ -89,7 +89,7 @@ export function BloodMagicRow({
         </span>
 
         {reason === null ? null : (
-          <span className="text-xs font-medium text-reaction-strong dark:text-reaction">
+          <span className="text-xs font-medium text-reaction-strong dark:text-reaction-bright">
             Недоступно: {reason}
           </span>
         )}

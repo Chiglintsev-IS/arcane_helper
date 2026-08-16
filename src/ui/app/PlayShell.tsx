@@ -55,7 +55,7 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
 
   if (status === "loading" || snapshot === null) {
     return (
-      <main className="flex min-h-dvh items-center justify-center p-4 text-sm text-slate-500">
+      <main className="flex min-h-dvh items-center justify-center p-4 text-sm text-slate-600 dark:text-slate-400">
         Загрузка состояния…
       </main>
     );
@@ -80,7 +80,7 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
         {error === null ? null : (
           <p
             role="alert"
-            className={`absolute inset-x-3 bottom-full z-20 mb-2 rounded-lg p-2 text-xs font-medium text-reaction-strong dark:text-reaction ${SURFACE_PANEL}`}
+            className={`absolute inset-x-3 bottom-full z-20 mb-2 rounded-lg p-2 text-xs font-medium text-reaction-strong dark:text-reaction-bright ${SURFACE_PANEL}`}
           >
             {error}{" "}
             <button

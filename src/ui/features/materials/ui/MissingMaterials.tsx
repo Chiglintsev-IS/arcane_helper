@@ -42,7 +42,7 @@ function RowBody({ need }: { need: MissingMaterialView }) {
   return (
     <>
       <span className="block text-sm font-medium">{need.nameRu}</span>
-      <span className="mt-1 block text-xs leading-snug text-slate-500 dark:text-slate-400">
+      <span className="mt-1 block text-xs leading-snug text-slate-600 dark:text-slate-400">
         {detailsRu(need)}
       </span>
     </>
@@ -72,7 +72,7 @@ export function MissingMaterials({
   return (
     <div className="flex flex-col gap-1">
       {missing.length === 0 ? (
-        <p className="text-xs text-slate-500 dark:text-slate-400">Всё нужное лежит в сумке.</p>
+        <p className="text-xs text-slate-600 dark:text-slate-400">Всё нужное лежит в сумке.</p>
       ) : null}
 
       {rows.length === 0 ? null : (
@@ -111,7 +111,7 @@ export function MissingMaterials({
       )}
 
       {covered.length === 0 ? null : (
-        <p className="text-xs leading-snug text-slate-500 dark:text-slate-400">
+        <p className="text-xs leading-snug text-slate-600 dark:text-slate-400">
           Закрывает фокусировка, покупать не обязательно:{" "}
           {covered.map((need) => need.nameRu).join(" · ")}
         </p>

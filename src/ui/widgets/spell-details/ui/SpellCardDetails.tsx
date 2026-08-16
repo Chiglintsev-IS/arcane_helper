@@ -106,11 +106,11 @@ export function SpellCardDetails({
       <header className={`flex items-start justify-between gap-2 p-3 ${SURFACE_GROUP}`}>
         <div>
           <h2 className="text-lg font-semibold leading-tight">{row.nameRu}</h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             {card.nameEn} · {card.school} · {levelLabel(row.level)}
           </p>
         </div>
-        <button type="button" onClick={onClose} className="px-2 text-sm text-slate-500 underline">
+        <button type="button" onClick={onClose} className="px-2 text-sm text-slate-600 dark:text-slate-400 underline">
           Закрыть
         </button>
       </header>
@@ -146,7 +146,7 @@ export function SpellCardDetails({
         <p className="text-slate-700 dark:text-slate-300">{row.shortRulesRu}</p>
 
         <section aria-label="Что сделать" className="flex flex-col gap-1">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Что сделать</h3>
           <ul className="flex flex-col gap-1 text-sm">
             {row.instructions.map((step) => (
               <li key={step} className={`rounded-md px-2 py-1 ${SURFACE_GROUP}`}>
@@ -193,7 +193,7 @@ export function SpellCardDetails({
           <summary className="cursor-pointer text-sm font-medium">Как объявить</summary>
           <p className="mt-2 text-sm">{row.announcement.text}</p>
           {shownGaps.length === 0 ? null : (
-            <ul className="mt-2 flex flex-col gap-1 text-xs text-slate-500">
+            <ul className="mt-2 flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-400">
               {shownGaps.map((gap) => (
                 <li key={gap.placeholder ?? gap.reasonRu}>{gap.reasonRu}</li>
               ))}

@@ -54,8 +54,6 @@ describe("пустой пул подан пустым", () => {
     expect(pool(full, "Кости").text).toBe("✚ Кости d67/7");
     expect(pool(full, "Руны").text).toBe("❖ Руны3/3");
     expect(pool(full, "Очки").text).toBe("✚ Очки5");
-    // Цвет руны — цвет ритуала, и носит его полный пул.
-    expect(pool(full, "Руны").classes).toContain("ritual");
 
     cleanup();
     const drained = tiles(withoutRunes(withoutHitDice(createThorne())));
@@ -64,7 +62,16 @@ describe("пустой пул подан пустым", () => {
     expect(pool(drained, "Кости").text).toBe("✗ Кости d60/7");
     expect(pool(drained, "Руны").text).toBe("✗ Руны0/3");
     expect(pool(drained, "Очки").text).toBe("✗ Очки0");
-    expect(pool(drained, "Руны").classes).not.toContain("ritual");
+  });
+
+  it("пул не занимает смыслового цвета: зелёная руна читалась бы как ритуал", () => {
+    const full = tiles(withSpellPoints(createThorne(), 5));
+
+    for (const name of ["Кости", "Руны", "Очки"]) {
+      for (const tone of ["ritual", "action", "reaction", "concentration", "bonus"]) {
+        expect(pool(full, name).classes).not.toContain(tone);
+      }
+    }
   });
 
   it("постоянный цвет обещал бы остаток: пустой пул и полный не совпадают ничем", () => {
@@ -72,7 +79,8 @@ describe("пустой пул подан пустым", () => {
     cleanup();
     const drained = tiles(withoutRunes(createThorne()));
 
-    expect(pool(drained, "Руны").classes).not.toBe(pool(full, "Руны").classes);
+    // Совпадают они подложкой и расходятся тем, что цвета не требует: знаком и самим числом.
+    expect(pool(drained, "Руны").text).not.toBe(pool(full, "Руны").text);
     expect(pool(drained, "Очки").text).not.toBe(pool(full, "Очки").text);
   });
 });

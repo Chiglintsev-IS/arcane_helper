@@ -31,7 +31,7 @@ export function UnreadableSave() {
       <h1 className="text-base font-semibold">Сохранение не прочиталось</h1>
       <p
         role="alert"
-        className={`rounded-lg bg-reaction/10 p-2 text-xs text-reaction-strong dark:text-reaction ${SURFACE_GROUP}`}
+        className={`rounded-lg bg-reaction/10 p-2 text-xs text-reaction-strong dark:text-reaction-bright ${SURFACE_GROUP}`}
       >
         {reason ?? "Состояние не прочитано"}
       </p>
@@ -69,7 +69,7 @@ export function UnreadableSave() {
       <button
         type="button"
         onClick={() => setStartingOver(true)}
-        className={`min-h-11 rounded-xl px-3 text-sm text-reaction-strong dark:text-reaction ${SURFACE_CONTROL}`}
+        className={`min-h-11 rounded-xl px-3 text-sm text-reaction-strong dark:text-reaction-bright ${SURFACE_CONTROL}`}
       >
         Начать заново
       </button>

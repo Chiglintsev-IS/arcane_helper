@@ -82,7 +82,7 @@ function RuneStep({
   if (runes.unavailabilityRu !== undefined) {
     return (
       <section aria-label="Руна" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Руна</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Руна</h3>
         <p className="text-xs text-slate-600 dark:text-slate-400">{runes.unavailabilityRu}</p>
       </section>
     );
@@ -105,7 +105,7 @@ function RuneStep({
                 onClick={() => onChoose(effect.rune, effect.choosesTarget)}
                 className={`flex min-h-11 w-full flex-col items-start rounded-lg px-3 py-1 text-left ${
                   chosen
-                    ? "bg-ritual/20 text-ritual-strong dark:text-ritual"
+                    ? "bg-ritual/20 text-ritual-strong dark:text-ritual-bright"
                     : SURFACE_CONTROL
                 }`}
               >
@@ -128,7 +128,7 @@ function RuneStep({
               onClick={() => onChooseTarget(target)}
               className={`min-h-11 grow rounded-lg px-3 text-sm ${
                 draft.runeTarget === target
-                  ? "bg-ritual/20 text-ritual-strong dark:text-ritual"
+                  ? "bg-ritual/20 text-ritual-strong dark:text-ritual-bright"
                   : SURFACE_CONTROL
               }`}
             >
@@ -196,7 +196,7 @@ function AvailabilityStep({
         <button
           type="button"
           onClick={onAllowAnyway}
-          className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction ${SURFACE_CONTROL}`}
+          className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction-bright ${SURFACE_CONTROL}`}
         >
           Применить всё равно
         </button>
@@ -237,7 +237,7 @@ function SlotStep({
               onClick={() => onChoose(option)}
               className={`flex min-h-11 w-full flex-col items-start rounded-lg px-3 py-1 text-left text-sm ${
                 chosen(option)
-                  ? "bg-action/20 text-action-strong dark:text-action"
+                  ? "bg-action/20 text-action-strong dark:text-action-bright"
                   : SURFACE_CONTROL
               }`}
             >
@@ -304,7 +304,7 @@ function HitDiceStep({
                 onClick={() => onCount(option)}
                 className={`min-h-11 min-w-11 rounded-lg px-3 text-sm ${
                   count === option
-                    ? "bg-action/20 text-action-strong dark:text-action"
+                    ? "bg-action/20 text-action-strong dark:text-action-bright"
                     : SURFACE_CONTROL
                 }`}
               >
@@ -380,9 +380,9 @@ function ComponentsStep({ row, warnings }: { row: SpellRowView; warnings: CastOp
         </li>
       ))}
       {missing.length === 0 ? (
-        <li className="text-xs text-slate-500">Всё нужное есть.</li>
+        <li className="text-xs text-slate-600 dark:text-slate-400">Всё нужное есть.</li>
       ) : (
-        <li className="text-xs text-slate-500">
+        <li className="text-xs text-slate-600 dark:text-slate-400">
           Купить и положить в сумку можно в режиме «Вне боя».
         </li>
       )}
@@ -432,7 +432,7 @@ function ConcentrationStep({
           <button
             type="button"
             onClick={onReplace}
-            className={`min-h-11 flex-1 rounded-lg bg-concentration/10 px-3 font-medium text-concentration-strong dark:text-concentration ${SURFACE_CONTROL}`}
+            className={`min-h-11 flex-1 rounded-lg bg-concentration/10 px-3 font-medium text-concentration-strong dark:text-concentration-bright ${SURFACE_CONTROL}`}
           >
             Заменить концентрацию
           </button>
@@ -470,14 +470,14 @@ function SummaryStep({
   return (
     <div className="flex flex-col gap-3">
       <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
           Сказать мастеру
         </h3>
         <p className={`rounded-lg p-2 text-base leading-snug ${SURFACE_GROUP}`}>
           {preview?.announcement.text ?? ""}
         </p>
         {shownGaps.length === 0 ? null : (
-          <ul className="flex flex-col gap-1 text-xs text-slate-500">
+          <ul className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-400">
             {shownGaps.map((gap) => (
               <li key={gap.placeholder ?? gap.reasonRu}>{gap.reasonRu}</li>
             ))}
@@ -492,7 +492,7 @@ function SummaryStep({
       />
 
       <section aria-label="Что сделать" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Что сделать</h3>
         <ol className="flex list-inside list-decimal flex-col gap-1 text-sm text-slate-600 dark:text-slate-400">
           {(preview?.instructions ?? []).map((step) => (
             <li key={step}>{step}</li>

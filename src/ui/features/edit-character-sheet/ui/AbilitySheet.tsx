@@ -93,7 +93,7 @@ export function AbilitySheet({
         onClick={() => setSaveProficient(!saveProficient)}
         className={`min-h-11 rounded-lg px-3 text-sm ${
           saveProficient
-            ? "bg-action/20 font-medium text-action-strong dark:text-action"
+            ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
             : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
         }`}
       >
@@ -114,7 +114,7 @@ export function AbilitySheet({
                 onClick={() => setTraining(id, choice.training)}
                 className={`min-h-11 rounded-lg px-2 text-xs ${
                   skills[id] === choice.training
-                    ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                    ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
                     : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
                 }`}
               >

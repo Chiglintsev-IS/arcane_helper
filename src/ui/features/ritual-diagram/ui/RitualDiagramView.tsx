@@ -30,9 +30,9 @@ export function RitualDiagramView({ row, onClose }: { row: SpellRowView; onClose
       <header className={`flex items-start justify-between gap-2 p-3 ${SURFACE_GROUP}`}>
         <div>
           <h2 className="text-base font-semibold leading-tight">{row.nameRu}</h2>
-          <p className="text-xs text-slate-500">Перерисуйте на лист — это и есть ритуал</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">Перерисуйте на лист — это и есть ритуал</p>
         </div>
-        <button type="button" onClick={onClose} className="px-2 text-sm text-slate-500 underline">
+        <button type="button" onClick={onClose} className="px-2 text-sm text-slate-600 dark:text-slate-400 underline">
           Закрыть
         </button>
       </header>

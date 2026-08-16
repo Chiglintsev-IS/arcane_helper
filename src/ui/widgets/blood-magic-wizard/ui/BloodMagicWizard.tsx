@@ -107,7 +107,7 @@ function SummaryStep({ preview }: { preview: ExchangePreview | null }) {
   return (
     <div className="flex flex-col gap-3">
       <section aria-label="Что сделать" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Что сделать</h3>
         <ol className="flex flex-col gap-1 text-sm">
           {(preview?.instructions ?? []).map((step) => (
             <li key={step} className={`rounded-lg px-2 py-1 ${SURFACE_GROUP}`}>
@@ -118,7 +118,7 @@ function SummaryStep({ preview }: { preview: ExchangePreview | null }) {
       </section>
 
       <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
           Сказать мастеру
         </h3>
         <p className={`rounded-lg p-2 text-sm ${SURFACE_GROUP}`}>
@@ -211,7 +211,7 @@ export function BloodMagicWizard({
             <button
               type="button"
               onClick={() => setAllowAnyway(true)}
-              className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction ${SURFACE_CONTROL}`}
+              className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction-bright ${SURFACE_CONTROL}`}
             >
               Применить всё равно
             </button>

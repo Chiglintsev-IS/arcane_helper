@@ -88,8 +88,8 @@ function Variants({
             onClick={() => onCategory(value.id)}
             className={`min-h-11 rounded-lg px-2 text-xs ${
               shown?.id === value.id
-                ? "bg-concentration/20 text-concentration-strong dark:text-concentration"
-                : `text-slate-500 ${SURFACE_CONTROL}`
+                ? "bg-concentration/20 text-concentration-strong dark:text-concentration-bright"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
             }`}
           >
             {CATEGORY_LABELS[value.id] ?? value.id}
@@ -178,7 +178,7 @@ function Variants({
 
       {/* Отключённое не исчезает: предпочтения журналом не отменяются, и вернуть их больше нечем. */}
       {hidden.length === 0 ? null : (
-        <details className="text-xs not-italic text-slate-500">
+        <details className="text-xs not-italic text-slate-600 dark:text-slate-400">
           <summary className="min-h-11 cursor-pointer py-3">Отключено: {hidden.length}</summary>
           <ul className="flex flex-col gap-1">
             {hidden.map((variant) => (
@@ -252,7 +252,7 @@ export function RoleplaySection({
   if (collapsible) {
     return (
       <details className={`rounded-lg bg-concentration/5 p-2 ${SURFACE_GROUP}`}>
-        <summary className="cursor-pointer text-sm font-medium text-concentration-strong dark:text-concentration">Отыгрыш</summary>
+        <summary className="cursor-pointer text-sm font-medium text-concentration-strong dark:text-concentration-bright">Отыгрыш</summary>
         <div className="mt-2">
           <Variants row={row} category={shown} onCategory={change} />
         </div>
@@ -265,7 +265,7 @@ export function RoleplaySection({
       aria-label="Отыгрыш"
       className={`flex flex-col gap-2 rounded-lg bg-concentration/5 p-2 ${SURFACE_GROUP}`}
     >
-      <h3 className="text-xs font-medium uppercase tracking-wide text-concentration-strong dark:text-concentration">Отыгрыш</h3>
+      <h3 className="text-xs font-medium uppercase tracking-wide text-concentration-strong dark:text-concentration-bright">Отыгрыш</h3>
       <Variants row={row} category={shown} onCategory={change} />
     </section>
   );

@@ -519,19 +519,31 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 });
 
 /**
- * Прогон выше идёт в светлой теме — той, что браузер отдаёт по умолчанию. Панель режимов сверяется и
- * в тёмной: с неё начинается любой путь по экранам, и подпись выбранного режима лежит там на
- * подложке, которой в светлой теме нет.
+ * Прогон выше идёт в светлой теме — той, что браузер отдаёт по умолчанию. Тёмная сверяется целиком и
+ * по всем режимам: играют вечером, и подпись на подкрашенной подложке ведёт себя там иначе — цвет
+ * значения и подложка того же значения не могут быть одной светлоты.
  */
-test("the mode switcher passes axe-core in the dark theme", async ({ page }) => {
+test("every mode passes axe-core in the dark theme", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
 
-  const results = await new AxeBuilder({ page })
-    .include("nav")
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
+  const scan = async (label: string): Promise<void> => {
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(results.violations, `${label}: ${JSON.stringify(results.violations, null, 2)}`).toEqual(
+      [],
+    );
+  };
 
-  expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  await scan("игра");
+
+  for (const mode of ["Книга", "Журнал", "Вещи", "Привал"]) {
+    await switchMode(page, new RegExp(`^${mode}`));
+    await scan(mode.toLowerCase());
+  }
+
+  await switchToSheet(page);
+  await scan("лист");
 });
 
 test("reactions in one tap", async ({ page }) => {

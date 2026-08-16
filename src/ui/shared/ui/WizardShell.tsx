@@ -70,12 +70,12 @@ export function WizardShell({
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold leading-tight">{title}</h2>
-            <p className="text-xs text-slate-500">{subtitle}</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">{subtitle}</p>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="px-2 text-sm text-slate-500 underline"
+            className="px-2 text-sm text-slate-600 dark:text-slate-400 underline"
           >
             {BUTTON_LABELS.dismiss}
           </button>
@@ -84,7 +84,7 @@ export function WizardShell({
           <Badge tone={badge.tone} icon={badge.icon}>
             {badge.label}
           </Badge>
-          <p className="text-xs text-slate-500">{stepLabel}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">{stepLabel}</p>
         </div>
       </header>
 

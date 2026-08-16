@@ -18,12 +18,12 @@ export type Tone =
   | "muted";
 
 export const TONE_CLASS: Record<Tone, string> = {
-  action: "bg-action/10 text-action-strong dark:text-action",
-  bonus: "bg-bonus/10 text-bonus-strong dark:text-bonus",
-  reaction: "bg-reaction/10 text-reaction-strong dark:text-reaction",
-  concentration: "bg-concentration/10 text-concentration-strong dark:text-concentration",
-  ritual: "bg-ritual/10 text-ritual-strong dark:text-ritual",
-  offense: "bg-offense/10 text-offense-strong dark:text-offense",
-  defense: "bg-defense/10 text-defense-strong dark:text-defense",
+  action: "bg-action/10 text-action-strong dark:text-action-bright",
+  bonus: "bg-bonus/10 text-bonus-strong dark:text-bonus-bright",
+  reaction: "bg-reaction/10 text-reaction-strong dark:text-reaction-bright",
+  concentration: "bg-concentration/10 text-concentration-strong dark:text-concentration-bright",
+  ritual: "bg-ritual/10 text-ritual-strong dark:text-ritual-bright",
+  offense: "bg-offense/10 text-offense-strong dark:text-offense-bright",
+  defense: "bg-defense/10 text-defense-strong dark:text-defense-bright",
   muted: "bg-slate-400/10 text-slate-700 dark:text-slate-300",
 };

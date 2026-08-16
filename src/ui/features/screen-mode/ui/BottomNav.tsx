@@ -32,7 +32,7 @@ const MORE = "Ещё";
 function cellClass(selected: boolean): string {
   return `flex min-h-11 min-w-0 items-center justify-center rounded-lg px-0.5 text-xs font-medium ${
     selected
-      ? "bg-action/20 text-action-strong dark:text-action"
+      ? "bg-action/20 text-action-strong dark:text-action-bright"
       : "text-slate-600 dark:text-slate-400"
   }`;
 }
@@ -74,7 +74,7 @@ export function BottomNav({
               className={`flex min-h-11 flex-col items-start rounded-xl px-3 py-2 text-left ${SURFACE_CONTROL}`}
             >
               <span className="text-sm font-semibold">{LABELS[value].title}</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-slate-600 dark:text-slate-400">
                 {LABELS[value].hint}
               </span>
             </button>

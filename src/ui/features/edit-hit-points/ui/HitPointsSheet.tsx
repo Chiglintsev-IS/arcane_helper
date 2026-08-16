@@ -76,7 +76,7 @@ function NumberField({
         <p
           id={reasonId}
           role="alert"
-          className="text-xs font-medium text-reaction-strong dark:text-reaction"
+          className="text-xs font-medium text-reaction-strong dark:text-reaction-bright"
         >
           {reasonRu}
         </p>
@@ -161,7 +161,7 @@ export function HitPointsSheet({
             onClick={required.touching(() => setKind(tab.kind))}
             className={`min-h-11 flex-1 rounded-lg px-2 text-sm ${
               kind === tab.kind
-                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
                 : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
             }`}
           >
@@ -200,7 +200,7 @@ export function HitPointsSheet({
       {error === null ? null : (
         <p
           role="alert"
-          className={`rounded-lg bg-reaction/10 p-2 text-sm text-reaction-strong dark:text-reaction ${SURFACE_GROUP}`}
+          className={`rounded-lg bg-reaction/10 p-2 text-sm text-reaction-strong dark:text-reaction-bright ${SURFACE_GROUP}`}
         >
           {error}
         </p>
