@@ -480,6 +480,8 @@ export const spellRowViewSchema = z.object({
   ownComponentRequired: z.boolean(),
   /** Лежит ли компонент этого заклинания в сумке: он вещь, и наличие его — её запас. */
   ownComponentCarried: z.boolean(),
+  /** Закрыт ли материал надетой фокусировкой: закрытому не нужно ни вещи, ни покупки. */
+  materialCoveredByFocus: z.boolean(),
   /** Роль в бою: чем бить, чем закрыться, всё прочее. */
   role: word,
 

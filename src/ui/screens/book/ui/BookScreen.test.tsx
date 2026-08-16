@@ -225,8 +225,11 @@ describe("подробная карточка (FR-011, FR-012)", () => {
 
     const card = screen.getByRole("dialog", { name: /Опознание/ });
     expect(within(card).getByText(/Прорицание/)).toBeDefined();
+    // Материал назван и среди механики, и среди действий: первое отвечает «что это», второе — «что
+    // делать сейчас», и спрашивать их приходится порознь.
+    const mechanics = within(within(card).getByLabelText("Механика"));
     expect(
-      within(card).getByText(new RegExp(spell("identify").components.materialText ?? "")),
+      mechanics.getByText(new RegExp(spell("identify").components.materialText ?? "")),
     ).toBeDefined();
     expect(within(card).getByText(/фокусировка не заменяет/)).toBeDefined();
     expect(within(card).getByText("Без броска: эффект применяется сразу")).toBeDefined();

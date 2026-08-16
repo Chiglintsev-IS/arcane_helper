@@ -260,6 +260,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     ownComponentRequired: needsOwnComponent(spell.components),
     ownComponentCarried:
       material !== undefined && Character.of(character).equipment.carries(material.id),
+    materialCoveredByFocus: materialCovered,
     role: combatRoleOf(spell),
 
     slotPrice: slotPriceOf(spell, turn.inFight),
