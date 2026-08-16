@@ -14,6 +14,7 @@ import { migrateCharacterState, migrateUndoPatch } from "@/core/domain/assembly/
 import { characterStatePatchSchema, characterStateSchema } from "@/core/domain/assembly/state";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { fieldsOf } from "@/core/domain/shared/fields";
+import { parsedBySchema } from "@/core/domain/shared/schema";
 import { checkIntegrity } from "@/core/application/dataExchange";
 import { JOURNAL_KINDS } from "@/core/domain/journal/entry";
 import type { Session } from "@/core/application/session";
@@ -166,7 +167,7 @@ export function parsePersisted(raw: unknown): PersistedSession {
             : {}),
         };
 
-  const result = persistedSessionSchema.safeParse(migrated);
+  const result = parsedBySchema(persistedSessionSchema, migrated);
   if (!result.success) {
     const details = result.error.issues
       .slice(0, 3)

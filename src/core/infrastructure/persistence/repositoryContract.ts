@@ -216,6 +216,14 @@ export function describeParsingContract(): void {
     expect(() => parsePersisted(broken)).toThrow(/savedAt/);
   });
 
+  it("непрочитанное сохранение называет причину по-русски, а не словами библиотеки", () => {
+    // Эту причину игрок читает на экране выхода из непрочитанного сохранения — единственном, что у
+    // него в тот момент есть.
+    const broken = { ...snapshot(), character: { id: "thorne" } };
+    expect(() => parsePersisted(broken)).toThrow(/ожидалось|обязательн|строка/i);
+    expect(() => parsePersisted(broken)).not.toThrow(/Invalid input|expected string|Too small/);
+  });
+
   it("версию старее приводит, а не отвергает: сохранение открывается целиком", () => {
     const legacy = snapshot();
     // Полей нынешней формы у версии 1 не было — из образца они убираются вместе с их владельцами.
