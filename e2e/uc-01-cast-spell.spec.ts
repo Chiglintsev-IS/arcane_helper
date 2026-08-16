@@ -181,6 +181,53 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   expect(restBottom, "кнопки отдыха «Привала» целиком").toBeLessThanOrEqual(viewport);
 });
 
+/** Самая тяжёлая обстановка боя: схватка идёт, концентрация держится, ход начат. */
+async function holdConcentrationInCombat(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Паутина/ }).first().click();
+  await page.getByRole("button", { name: "Сотворить" }).click();
+  await page.getByRole("button", { name: /Ячейка 2 уровня/ }).first().click();
+  await page.getByRole("button", { name: "Далее" }).click();
+  await page.getByRole("button", { name: "Подтвердить" }).click();
+  await expect(page.getByRole("button", { name: "Подтвердить" })).toBeHidden();
+  await page.getByRole("button", { name: "Новый ход", exact: true }).click();
+}
+
+test("the first spell row is whole on screen at 320, 375 and 390", async ({ page }) => {
+  await holdConcentrationInCombat(page);
+
+  // Три ширины, а не одна: ряды над списком переносятся по мере сужения, и ряд, стоящий одной
+  // строкой на 390, занимает три на 320 — столько же, сколько сама строка списка.
+  for (const size of [
+    { width: 320, height: 568 },
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(size);
+
+    const shown = await page.evaluate(() => {
+      const first = document.querySelector('[aria-label^="Заклинания"] li');
+      if (first === null) throw new Error("список пуст");
+      // Меряется непрокрученный экран: строка, до которой надо доскроллить, за столом не найдена.
+      let area = first.parentElement;
+      while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
+      if (area !== null) area.scrollTop = 0;
+      return {
+        bottom: Math.round(first.getBoundingClientRect().bottom),
+        viewport: window.innerHeight,
+        pageOverflow: document.documentElement.scrollHeight - window.innerHeight,
+        sideways: document.documentElement.scrollWidth - window.innerWidth,
+      };
+    });
+
+    expect(shown.bottom, `первая строка целиком на ${size.width}`).toBeLessThanOrEqual(
+      shown.viewport,
+    );
+    expect(shown.pageOverflow, `страница не прокручивается на ${size.width}`).toBeLessThanOrEqual(0);
+    expect(shown.sideways, `нет бокового выезда на ${size.width}`).toBeLessThanOrEqual(0);
+  }
+});
+
 test("book mode shows only the book", async ({ page }) => {
   // Книга отвечает, что персонаж знает, а не чем он за это заплатит: шапки ресурсов в ней нет.
   await switchMode(page, /^Книга/);
