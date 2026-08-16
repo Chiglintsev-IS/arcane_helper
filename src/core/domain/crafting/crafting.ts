@@ -13,14 +13,18 @@ import { ownedFields } from "@/core/domain/shared/ownedFields";
 import type { Apparatus } from "./apparatus";
 import { batchFrom } from "./batch";
 import type { Batch } from "./batch";
-import { recipeDifficulty, tierOf } from "./recipe";
-import type { PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
+import { developmentCheck } from "./development";
+import type { CheckNumbers, DevelopmentCheck } from "./development";
+import { recipeDifficulty, recipeSignature, tierOf } from "./recipe";
+import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { ingredientKnowledgeOf } from "./schema";
 import type { IngredientKnowledge, RevealedProperty } from "./schema";
 
 type CraftingState = {
   ingredientKnowledge: readonly IngredientKnowledge[];
   alchemyApparatus: Apparatus;
+  studiedDirections: readonly AlchemyDirection[];
+  knownRecipes: readonly KnownRecipe[];
 };
 
 /** Видов в составе — от двух до четырёх: меньше не даёт совпадения, больше справочник не берёт. */
@@ -44,6 +48,8 @@ export class Crafting {
   private static readonly KEYS = [
     "ingredientKnowledge",
     "alchemyApparatus",
+    "studiedDirections",
+    "knownRecipes",
   ] as const satisfies readonly (keyof CraftingState)[];
 
   private constructor(private readonly state: CraftingState) {}
@@ -67,6 +73,38 @@ export class Crafting {
   /** Чем алхимик работает: качество набора по каждому направлению, где он есть. */
   get apparatus(): Apparatus {
     return this.state.alchemyApparatus;
+  }
+
+  /**
+   * Чем работа прибавляется к броску разработки.
+   *
+   * Числа приходят доводом с листа: своих у ремесла нет и быть не может — бонус мастерства и
+   * модификатор характеристики принадлежат листу, и второй их счёт разошёлся бы с ним молча.
+   */
+  checkFor(directions: readonly AlchemyDirection[], numbers: CheckNumbers): DevelopmentCheck {
+    return developmentCheck(directions, this.state.studiedDirections, numbers);
+  }
+
+  /**
+   * Записан ли рецепт настолько, что его повторяют без броска.
+   *
+   * Рецепт с отдельным риском записан, но проверки не отменяет: справочник требует её для каждой
+   * его партии. Оснащение здесь не спрашивается — на него ответит сама работа, отказом с причиной.
+   */
+  knows(formula: RecipeFormula): boolean {
+    const signature = recipeSignature(formula);
+    return this.state.knownRecipes.some(
+      (known) => !known.risky && recipeSignature(known.formula) === signature,
+    );
+  }
+
+  /** Записывает разработанный рецепт. Записанный второй раз второй записи не заводит. */
+  recordRecipe(formula: RecipeFormula, risky: boolean): Crafting {
+    const signature = recipeSignature(formula);
+    const others = this.state.knownRecipes.filter(
+      (known) => recipeSignature(known.formula) !== signature,
+    );
+    return new Crafting({ ...this.state, knownRecipes: [...others, { formula, risky }] });
   }
 
   /** Вид опознаётся своим названием: двух записей об одном виде не бывает. */

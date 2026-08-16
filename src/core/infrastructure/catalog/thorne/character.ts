@@ -197,10 +197,12 @@ const RAW: unknown = {
   suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
 
   /**
-   * Оснащение: надёжные походные комплекты по двум направлениям. Набора токсиколога Торн не держит,
-   * и работа с ядовитым свойством потому идёт импровизацией.
+   * Мастерская: надёжные походные комплекты по двум изученным направлениям. Синтезу ядов Торн не
+   * обучен и набора токсиколога не держит — работа с ядовитым свойством идёт импровизацией, а
+   * бонуса мастерства проверке не достаётся.
    */
   alchemyApparatus: { potions: RELIABLE_FIELD_KIT, transmutation: RELIABLE_FIELD_KIT },
+  studiedDirections: ["potions", "transmutation"],
 
   spellNotes: {},
   roleplayPreferences: {},

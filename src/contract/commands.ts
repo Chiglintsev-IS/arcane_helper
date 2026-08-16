@@ -120,7 +120,15 @@ export const commandSchema = z.discriminatedUnion("kind", [
    * Замысел состава едет целиком объектом: перечни справочника — правило, и сужает пришедшее слово
    * их владелец. Договор ручается лишь за то, что это объект и что порций названо число.
    */
-  command("craft_batch", { formula: z.looseObject({}), portions: numeric }),
+  command("craft_batch", {
+    formula: z.looseObject({}),
+    portions: numeric,
+    /** Кубик кидает игрок: что выпало на проверке разработки и что выпало на аварии. */
+    rolled: numeric.optional(),
+    mishapRolled: numeric.optional(),
+    /** Отдельный риск рецепта: его называет мастер, и тогда проверки требует каждая партия. */
+    risky: z.boolean().optional(),
+  }),
 
   // Лист персонажа
   command("edit_identity", { patch: z.looseObject({}) }),

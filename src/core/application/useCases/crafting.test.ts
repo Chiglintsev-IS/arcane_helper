@@ -60,18 +60,40 @@ function stocked(portionsEach: number): Session {
   );
 }
 
+const POISON = { number: 2, nameRu: "Ядовитый урон", rarity: "rare" } as const;
+
+/** Гибрид: у обоих видов совпало и лечение, и яд, а набора токсиколога у Торна нет. */
+const HYBRID: RecipeFormula = { ...STANDARD };
+
+function poisonous(): Session {
+  const known = [MOON_HERB, CRIMSON_ROOT].reduce(
+    (character, kind) => withIngredientKnowledge(character, kind, [HEALING, POISON]),
+    createThorne(),
+  );
+  return [MOON_HERB, CRIMSON_ROOT].reduce<Session>(
+    (session, kind) =>
+      adjustBagCount(
+        addItem(session, { nameRu: kind, kind: "ingredient" }, occasion),
+        Items.idFromName(kind),
+        5,
+        occasion,
+      ),
+    { character: known, journal: [] },
+  );
+}
+
 describe("изготовление состава", () => {
   it("изготовление списывает все виды одной записью журнала", () => {
     const before = stocked(6);
     const entriesBefore = before.journal.length;
 
-    const crafted = craftBatch(before, { formula: STANDARD, portions: 4 }, occasion);
+    const crafted = craftBatch(before, { formula: STANDARD, portions: 4, rolled: 15 }, occasion);
 
     expect(bagCount(crafted, MOON_HERB)).toBe(2);
     expect(bagCount(crafted, CRIMSON_ROOT)).toBe(2);
     expect(crafted.journal).toHaveLength(entriesBefore + 1);
     expect(crafted.journal.at(-1)?.summaryRu).toBe(
-      "Изготовлено: Лечение здоровья, 5 единиц. Истрачено по 4 порции: Лунная трава, Багровый корень",
+      "Изготовлено: Лечение здоровья, 5 единиц. Проверка 22 против 10. Истрачено по 4 порции: Лунная трава, Багровый корень",
     );
 
     // Одна запись — одна отмена: возвращаются оба вида разом, а не половина рецепта.
@@ -83,7 +105,9 @@ describe("изготовление состава", () => {
   it("нехватка одного вида отменяет всю работу, и второй вид остаётся нетронутым", () => {
     const scarce = adjustBagCount(stocked(2), Items.idFromName(CRIMSON_ROOT), -1, occasion);
 
-    expect(() => craftBatch(scarce, { formula: STANDARD, portions: 2 }, occasion)).toThrow(
+    expect(() =>
+      craftBatch(scarce, { formula: STANDARD, portions: 2, rolled: 15 }, occasion),
+    ).toThrow(
       /столько не потратить/,
     );
     expect(bagCount(scarce, MOON_HERB)).toBe(2);
@@ -93,8 +117,94 @@ describe("изготовление состава", () => {
     const stock = stocked(6);
 
     expect(() =>
-      craftBatch(stock, { formula: { ...STANDARD, duration: "24 часа" }, portions: 1 }, occasion),
+      craftBatch(
+        stock,
+        { formula: { ...STANDARD, duration: "24 часа" }, portions: 1, rolled: 15 },
+        occasion,
+      ),
     ).toThrow(/Сложность 22 выше предела оснащения 20\. Набрано: Длительность \+12/);
     expect(bagCount(stock, MOON_HERB)).toBe(6);
+  });
+});
+
+describe("проверка разработки", () => {
+  it("известный рецепт повторяется без броска, пока совпадают все четыре условия", () => {
+    // Первая работа — с проверкой: рецепта ещё нет, и без выпавшего изготовление не идёт.
+    const first = stocked(6);
+    expect(() => craftBatch(first, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
+      /назовите выпавшее/,
+    );
+
+    const developed = craftBatch(first, { formula: STANDARD, portions: 1, rolled: 15 }, occasion);
+
+    // Первое условие: те же виды. Порядок выбора рецепта не меняет, замена вида — меняет.
+    const reordered = { ...STANDARD, kinds: [CRIMSON_ROOT, MOON_HERB] };
+    const repeated = craftBatch(developed, { formula: reordered, portions: 1 }, occasion);
+    expect(repeated.journal.at(-1)?.summaryRu).toBe(
+      "Изготовлено: Лечение здоровья, 1 единица. Истрачено по 1 порции: Багровый корень, Лунная трава",
+    );
+
+    // Второе условие: параметры не меняются. Другая длительность — другая формула.
+    expect(() =>
+      craftBatch(developed, { formula: { ...STANDARD, duration: "1 минута" }, portions: 1 }, occasion),
+    ).toThrow(/назовите выпавшее/);
+
+    // Третье условие: оснащение выдерживает итоговую сложность.
+    expect(() =>
+      craftBatch(developed, { formula: { ...STANDARD, duration: "24 часа" }, portions: 1 }, occasion),
+    ).toThrow(/выше предела оснащения/);
+
+    // Четвёртое условие: у рецепта нет отдельного риска, требующего проверки каждой партии.
+    const risky = craftBatch(
+      stocked(6),
+      { formula: STANDARD, portions: 1, rolled: 15, risky: true },
+      occasion,
+    );
+    expect(() => craftBatch(risky, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
+      /назовите выпавшее/,
+    );
+  });
+
+  it("гибрид с ядовитым свойством роняет проверку до наименьшего бонуса", () => {
+    // Торн обучен зельеварению, но не синтезу ядов: 1к20 + 4 вместо 1к20 + 7.
+    const hybrid = poisonous();
+    const failed = craftBatch(hybrid, { formula: HYBRID, portions: 1, rolled: 11 }, occasion);
+
+    expect(failed.journal.at(-1)?.summaryRu).toContain("Не вышло: Лечение здоровья. Проверка 15");
+  });
+
+  it("провал тратит заложенное и рецепта не записывает", () => {
+    const stock = stocked(6);
+    const failed = craftBatch(stock, { formula: STANDARD, portions: 2, rolled: 2 }, occasion);
+
+    expect(bagCount(failed, MOON_HERB)).toBe(4);
+    expect(failed.journal.at(-1)?.summaryRu).toBe(
+      "Не вышло: Лечение здоровья. Проверка 9 против 10. Истрачено по 2 порции: Лунная трава, Багровый корень",
+    );
+    expect(() => craftBatch(failed, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
+      /назовите выпавшее/,
+    );
+  });
+
+  it("натуральная единица роняет рецепт и называет последствие таблицей", () => {
+    const stock = stocked(6);
+    expect(() => craftBatch(stock, { formula: STANDARD, portions: 1, rolled: 1 }, occasion)).toThrow(
+      /назовите выпавшее на d6/,
+    );
+
+    const mishap = craftBatch(
+      stock,
+      { formula: STANDARD, portions: 1, rolled: 1, mishapRolled: 5 },
+      occasion,
+    );
+    expect(mishap.journal.at(-1)?.summaryRu).toBe(
+      "Авария: Лечение здоровья. Смесь воздействует на область радиусом 1 метр. Истрачено по 1 порции: Лунная трава, Багровый корень",
+    );
+  });
+
+  it("натуральная двадцать при успехе называет свою награду", () => {
+    const crafted = craftBatch(stocked(6), { formula: STANDARD, portions: 1, rolled: 20 }, occasion);
+
+    expect(crafted.journal.at(-1)?.summaryRu).toContain("Натуральная двадцать");
   });
 });

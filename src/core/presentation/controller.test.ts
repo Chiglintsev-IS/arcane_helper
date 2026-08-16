@@ -525,7 +525,7 @@ describe("ремесло", () => {
           .revealProperty(kind, { number: 1, nameRu: "Лечение здоровья", rarity: "common" }),
       known.crafting,
     );
-    const live = run([...stock, { kind: "craft_batch", formula, portions: 1 }], {
+    const live = run([...stock, { kind: "craft_batch", formula, portions: 1, rolled: 15 }], {
       session: createSession(known.withCrafting(withKnowledge).toState()),
       spellCatalog: CATALOG,
       spellCatalogSource: "built_in",
@@ -538,7 +538,12 @@ describe("ремесло", () => {
     expect(
       refusal([
         ...stock,
-        { kind: "craft_batch", formula: { ...formula, onset: "когда-нибудь" }, portions: 1 },
+        {
+          kind: "craft_batch",
+          formula: { ...formula, onset: "когда-нибудь" },
+          portions: 1,
+          rolled: 15,
+        },
       ]),
     ).toMatch(/начало действия/);
   });

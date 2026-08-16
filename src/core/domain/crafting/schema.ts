@@ -7,11 +7,16 @@
 
 import { z } from "zod";
 
-import { ALCHEMICAL_RARITIES, isAlchemicalPropertyName } from "@/core/domain/catalog/alchemy";
+import {
+  ALCHEMICAL_RARITIES,
+  ALCHEMY_DIRECTIONS,
+  isAlchemicalPropertyName,
+} from "@/core/domain/catalog/alchemy";
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 import { APPARATUS_GRADES } from "./apparatus";
+import { KNOWN_RECIPE_FIELDS } from "./recipe";
 
 /**
  * Глубже четвёртого свойства у ингредиента не бывает — предел справочника.
@@ -128,4 +133,10 @@ const apparatusFields = {
 export const CRAFTING_FIELDS = {
   ingredientKnowledge: z.array(ingredientKnowledgeSchema).default([]),
   alchemyApparatus: z.object(apparatusFields).default({}),
+  /**
+   * Направления, которым алхимик обучен: их профильный навык прибавляет к проверке бонус
+   * мастерства. Само число бонуса здесь не хранится — его знает лист.
+   */
+  studiedDirections: z.array(z.enum(ALCHEMY_DIRECTIONS)).default([]),
+  ...KNOWN_RECIPE_FIELDS,
 };

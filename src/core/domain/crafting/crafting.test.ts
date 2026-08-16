@@ -5,7 +5,12 @@ import { Crafting } from "./crafting";
 import type { RecipeFormula } from "./recipe";
 import type { RevealedProperty } from "./schema";
 
-const EMPTY = { ingredientKnowledge: [], alchemyApparatus: {} };
+const EMPTY = {
+  ingredientKnowledge: [],
+  alchemyApparatus: {},
+  studiedDirections: [],
+  knownRecipes: [],
+};
 
 function withMoonHerb(): Crafting {
   return Crafting.of(EMPTY).noteIngredient("Лунная трава");
@@ -346,6 +351,30 @@ describe("сложность рецепта", () => {
     expect(() =>
       grand(healingAndPoison(), { purification: "harmful" }),
     ).toThrow(/Лечение здоровья/);
+  });
+});
+
+describe("записанный рецепт", () => {
+  const known = sharingHealing(TWO_KINDS);
+
+  it("замена даже одного вида даёт другую формулу и новую разработку", () => {
+    const developed = known.recordRecipe(STANDARD, false);
+
+    expect(developed.knows(STANDARD)).toBe(true);
+    expect(developed.knows({ ...STANDARD, kinds: ["Лунная трава", "Пепельный гриб"] })).toBe(false);
+  });
+
+  it("рецепт с отдельным риском записан, но проверки не отменяет", () => {
+    expect(known.recordRecipe(STANDARD, true).knows(STANDARD)).toBe(false);
+  });
+
+  it("второй раз тот же рецепт второй записи не заводит, а соседний остаётся", () => {
+    const other = { ...STANDARD, duration: "1 минута" } as const;
+    const both = known.recordRecipe(STANDARD, false).recordRecipe(other, false);
+    const again = both.recordRecipe(STANDARD, false);
+
+    expect(again.toState().knownRecipes).toHaveLength(2);
+    expect(again.knows(other)).toBe(true);
   });
 });
 

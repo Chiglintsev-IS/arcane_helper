@@ -9,7 +9,7 @@
  * тождеством названий, а свободный текст «лечит» со свойством «Лечение здоровья» не совпадёт.
  */
 
-const ALCHEMY_DIRECTIONS = ["potions", "poisons", "transmutation"] as const;
+export const ALCHEMY_DIRECTIONS = ["potions", "poisons", "transmutation"] as const;
 
 export type AlchemyDirection = (typeof ALCHEMY_DIRECTIONS)[number];
 

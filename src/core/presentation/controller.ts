@@ -315,7 +315,13 @@ export function applyCommand(
       return changed(
         craftBatch(
           session,
-          { formula: recipeFormulaOf(command.formula), portions: command.portions },
+          {
+            formula: recipeFormulaOf(command.formula),
+            portions: command.portions,
+            rolled: command.rolled,
+            mishapRolled: command.mishapRolled,
+            risky: command.risky,
+          },
           occasion,
         ),
       );

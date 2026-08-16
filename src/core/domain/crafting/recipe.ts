@@ -211,6 +211,51 @@ export function recipeFormulaOf(value: unknown): RecipeFormula {
   return parsedOrRefused(recipeFormulaSchema, value, "замысел состава");
 }
 
+/**
+ * Записанный рецепт: формула, которую однажды разработали, и отметка отдельного риска.
+ *
+ * Риск приходит от игрока, а не выводится: справочник называет его описанием эффекта, а описаний
+ * эффектов в приложении нет вовсе — их место остаётся столу. Рецепт с риском записан, но проверки
+ * не отменяет: её требует каждая его партия.
+ */
+const knownRecipeSchema = z.object({
+  formula: recipeFormulaSchema,
+  risky: z.boolean(),
+});
+
+export type KnownRecipe = { readonly formula: RecipeFormula; readonly risky: boolean };
+
+/** Поле контекста: рецепты, разработанные однажды и потому повторяемые. */
+export const KNOWN_RECIPE_FIELDS = {
+  knownRecipes: z.array(knownRecipeSchema).default([]),
+};
+
+/**
+ * Формула в единственном её виде: порядок видов и порядок удалённого замысла не меняют.
+ *
+ * Порядок нажатий — не часть рецепта, а «те же виды ингредиентов» из справочника обязаны совпасть
+ * и тогда, когда игрок выбрал их в другом порядке.
+ */
+function canonical(formula: RecipeFormula): RecipeFormula {
+  return recipeFormulaOf({
+    ...formula,
+    kinds: [...new Set(formula.kinds)].sort(),
+    suppressed: [...new Set(formula.suppressed)].sort(),
+    limitations: [...formula.limitations].sort(),
+  });
+}
+
+/**
+ * Отпечаток формулы: по нему и узнают, тот ли это рецепт.
+ *
+ * Совпадать обязано всё разом — виды, параметры эффекта, длительность, применение и очистка, — и
+ * перечислять их по одному значило бы завести второй список полей формулы. Замена даже одного вида
+ * даёт другой отпечаток, а значит и новую разработку.
+ */
+export function recipeSignature(formula: RecipeFormula): string {
+  return JSON.stringify(canonical(formula));
+}
+
 type DifficultyPart = { readonly nameRu: string; readonly modifier: number };
 
 /**
