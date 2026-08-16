@@ -11,6 +11,8 @@
 import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
+import { apparatusLimits, IMPROVISED_DIFFICULTY } from "./apparatus";
+import type { Apparatus } from "./apparatus";
 import type { RevealedProperty } from "./schema";
 
 /** Ступень усиления: обычная, усиленная, концентрированная. */
@@ -40,7 +42,7 @@ export function tierOf(sources: number): MatchTier {
 
 /** Всякий рецепт начинается с десяти и после всех поправок не опускается ниже пяти. */
 const BASE_DIFFICULTY = 10;
-const LOWEST_DIFFICULTY = 5;
+export const LOWEST_DIFFICULTY = 5;
 
 /** Редкость эффекта: основной оплачивается по своей колонке, каждый дополнительный — по своей. */
 const EFFECT_DIFFICULTY = {
@@ -177,10 +179,17 @@ export type RecipeFormula = {
 
 type DifficultyPart = { readonly nameRu: string; readonly modifier: number };
 
-/** Сложность рецепта: итог и то, из чего он набран. */
+/**
+ * Сложность рецепта: итог, то, из чего он набран, и направления, которых работа касается.
+ *
+ * Направления здесь, а не рядом: они выясняются по оставшемуся в составе, и от них же зависит
+ * поправка за оснащение. Гибрид идёт одной проверкой, и бонус ей достаётся наименьший среди этих
+ * направлений — числа проверки спрашивают у листа, ремесло называет только направления.
+ */
 export type RecipeDifficulty = {
   readonly parts: readonly DifficultyPart[];
   readonly total: number;
+  readonly directions: readonly AlchemyDirection[];
 };
 
 function repeatsRefusal(): string {
@@ -268,6 +277,7 @@ function rarityDifficulty(kept: readonly PropertyMatch[], main: PropertyMatch): 
 export function recipeDifficulty(
   matches: readonly PropertyMatch[],
   formula: RecipeFormula,
+  apparatus: Apparatus,
 ): RecipeDifficulty {
   if (!Number.isInteger(formula.fullRepeats) || formula.fullRepeats < 0) {
     throw new DomainError(repeatsRefusal());
@@ -278,6 +288,9 @@ export function recipeDifficulty(
   const main = cleansed.kept.find((match) => match.nameRu === formula.mainProperty);
   if (main === undefined) throw new DomainError(missingMainRefusal(formula.mainProperty));
 
+  const directions = [
+    ...new Set(cleansed.kept.map((match) => alchemyDirectionOf(match.nameRu))),
+  ];
   const parts: readonly DifficultyPart[] = [
     { nameRu: "Редкость эффектов", modifier: rarityDifficulty(cleansed.kept, main) },
     {
@@ -304,13 +317,15 @@ export function recipeDifficulty(
         MOST_LIMITATION_RELIEF,
       ),
     },
+    {
+      nameRu: "Оснащение",
+      modifier: IMPROVISED_DIFFICULTY * apparatusLimits(directions, apparatus).improvised,
+    },
   ];
 
   return {
     parts,
-    total: Math.max(
-      BASE_DIFFICULTY + sum(parts.map((part) => part.modifier)),
-      LOWEST_DIFFICULTY,
-    ),
+    total: Math.max(BASE_DIFFICULTY + sum(parts.map((part) => part.modifier)), LOWEST_DIFFICULTY),
+    directions,
   };
 }

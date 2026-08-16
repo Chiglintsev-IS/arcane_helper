@@ -10,6 +10,9 @@ import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
+import type { Apparatus } from "./apparatus";
+import { batchFrom } from "./batch";
+import type { Batch } from "./batch";
 import { recipeDifficulty, tierOf } from "./recipe";
 import type { PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { ingredientKnowledgeOf } from "./schema";
@@ -151,8 +154,18 @@ export class Crafting {
    * Здесь, а не в двух местах: совпадения выясняются по записанному знанию, и второй вычислитель
    * сложности разошёлся бы с этим знанием при первой же правке справочника.
    */
-  difficultyOf(formula: RecipeFormula): RecipeDifficulty {
-    return recipeDifficulty(this.matches(formula.kinds), formula);
+  difficultyOf(formula: RecipeFormula, apparatus: Apparatus): RecipeDifficulty {
+    return recipeDifficulty(this.matches(formula.kinds), formula, apparatus);
+  }
+
+  /**
+   * Что выйдет из заложенной партии: время, расходники и число готовых единиц.
+   *
+   * Сложность выше предела оснащения — не «сложно», а невозможно, и отказ называет, чем именно
+   * набрано лишнее: погашенная кнопка на этот вопрос не отвечает.
+   */
+  batchOf(formula: RecipeFormula, apparatus: Apparatus, portions: number): Batch {
+    return batchFrom(this.difficultyOf(formula, apparatus), apparatus, portions);
   }
 
   /**
