@@ -151,10 +151,12 @@ export function SpellCardCompact({
     { text: slotCost, strong: false },
     { text: rangePhrase(spell.range), strong: false },
     { text: durationPhrase(spell.duration), strong: true },
-    ...(damage === null ? [] : [{ text: `Урон ${damage}`, strong: false }]),
   ];
 
   const marks = componentMarks(spell);
+
+  // Громкая строка появляется, только когда есть что произнести: пустая заняла бы место молчанием.
+  const loud = resolution.spoken || damage !== null;
 
   const preparable = onTogglePrepared !== undefined && spell.level !== CANTRIP_LEVEL;
   const isPrepared = spell.prepared;
@@ -204,15 +206,37 @@ export function SpellCardCompact({
               Уже действует
             </Badge>
           ) : null}
-          <Badge tone="muted" icon={resolution.icon}>
-            {resolution.label}
-          </Badge>
           {spell.concentration ? (
             <Badge tone="concentration" icon="✦">
               Концентрация
             </Badge>
           ) : null}
+          {/* Броска нет — называть нечего, и строка остаётся значком среди прочих значков. */}
+          {resolution.spoken ? null : (
+            <Badge tone="muted" icon={resolution.icon}>
+              {resolution.label}
+            </Badge>
+          )}
         </span>
+
+        {/*
+         * Громкая строка: то, что игрок назовёт мастеру вслух. Урон стоит здесь, а не среди цены и
+         * дальности, по той же причине — его произносят. Ряд нейтральных сведений от этого
+         * перестал переноситься на вторую строку, и карточка стала ниже, а не выше.
+         */}
+        {!loud ? null : (
+          <span className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold tabular-nums">
+            {resolution.spoken ? (
+              <span className="whitespace-nowrap">
+                <span aria-hidden="true" className="text-slate-500 dark:text-slate-400">
+                  {resolution.icon}
+                </span>{" "}
+                {resolution.label}
+              </span>
+            ) : null}
+            {damage === null ? null : <span className="whitespace-nowrap">Урон {damage}</span>}
+          </span>
+        )}
 
         {/* Нейтральные сведения — текстом через точку: рамка вокруг каждого не добавляла смысла. */}
         <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-slate-600 dark:text-slate-400">

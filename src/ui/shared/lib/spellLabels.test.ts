@@ -54,7 +54,16 @@ describe("resolutionBadge (FR-211)", () => {
     const none = resolutionBadge({ type: "automatic" }, THORNE);
 
     expect([attack.icon, save.icon, none.icon]).toEqual(["✶", "◇", "○"]);
-    expect(Object.keys(attack)).toEqual(["label", "icon"]);
+    expect(Object.keys(attack)).toEqual(["label", "icon", "spoken"]);
+  });
+
+  it("произносят вслух то, внутри чего есть число: отсутствие броска не называют", () => {
+    const spoken = (resolution: Parameters<typeof resolutionBadge>[0]): boolean =>
+      resolutionBadge(resolution, THORNE).spoken;
+
+    expect(spoken({ type: "spell_attack" })).toBe(true);
+    expect(spoken({ type: "saving_throw", savingThrow: "DEX" })).toBe(true);
+    expect(spoken({ type: "automatic" })).toBe(false);
   });
 });
 

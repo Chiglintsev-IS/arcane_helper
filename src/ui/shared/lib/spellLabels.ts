@@ -30,24 +30,29 @@ export function spellListLabel(withActions: boolean): string {
  * кто бросает: заклинатель, цель или никто. Цвета подпись не несёт: восемь смысловых цветов заняты
  * экономией хода, ролью в бою, концентрацией и ритуалом, и синий на числе атаки означал бы, что
  * заклинание тратит действие дважды.
+ *
+ * Отсюда же видно, произносят ли подпись вслух: бросок называют мастеру, отсутствие броска — нет.
+ * Решает это владелец подписи, потому что только он знает, у каких способов внутри есть число.
  */
 export function resolutionBadge(
   resolution: SpellRowView["resolution"],
   casting: CastingView,
-): { label: string; icon: string } {
+): { label: string; icon: string; spoken: boolean } {
   switch (resolution.type) {
     case "spell_attack":
       return {
         label: `Атака ${CHECK_DIE_RU}${signed(casting.spellAttackModifier)}`,
         icon: "✶",
+        spoken: true,
       };
     case "saving_throw":
       return {
         label: `${savingThrowName(resolution.savingThrow)} КС ${casting.spellSaveDc}`,
         icon: "◇",
+        spoken: true,
       };
     default:
-      return { label: NO_ROLL_RU, icon: "○" };
+      return { label: NO_ROLL_RU, icon: "○", spoken: false };
   }
 }
 
