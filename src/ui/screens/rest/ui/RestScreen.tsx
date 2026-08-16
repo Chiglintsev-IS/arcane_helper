@@ -94,12 +94,9 @@ export function RestScreen() {
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
         <Camp
           recovery={snapshot.recovery}
-          rows={snapshot.spells}
-          casting={snapshot.casting}
           onShortRest={() => void execute({ kind: "short_rest" })}
           onLongRest={() => setLongRestOpen(true)}
           onArcaneRecovery={() => setRecoveryOpen(true)}
-          onToggleMaterial={(spellId) => void execute({ kind: "toggle_material", spellId })}
         />
       </div>
 

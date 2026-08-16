@@ -17,6 +17,16 @@ import { signed } from "@/shared/language";
 
 import { currencyAbbr, statFamilyLabel, statLabel } from "./labels";
 
+/**
+ * Чем вещь требуется, одной фразой; нет вовсе — не требует никто.
+ *
+ * Отдельно от второй строки, потому что то же требование называет и раздел нехватки: вещи там ещё
+ * может не быть вовсе, а слово о ней — одно на оба места.
+ */
+export function neededForLine(spellNamesRu: readonly string[]): string | undefined {
+  return spellNamesRu.length === 0 ? undefined : `Требуется для: ${spellNamesRu.join(" · ")}`;
+}
+
 export function itemMeta(
   item: ItemView,
   stats: ChoicesView["stats"],
@@ -43,10 +53,7 @@ export function itemMeta(
             },
           ]),
     ],
-    neededFor:
-      item.neededForRu.length === 0
-        ? undefined
-        : `Требуется для: ${item.neededForRu.join(" · ")}`,
+    neededFor: neededForLine(item.neededForRu),
     note: item.note,
   };
 }

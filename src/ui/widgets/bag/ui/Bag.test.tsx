@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
+import { materialOf } from "@/core/application/casting/material";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 import { toBagView } from "@/core/presentation/views/bagView";
@@ -14,6 +15,13 @@ import { Bag } from "./Bag";
 /** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
 const spells = loadThorneSpells();
 
+/** Карточка по имени: подделка рядом отвечала бы за себя, а не за содержимое игры. */
+function spellOf(id: string) {
+  const found = spells.find((spell) => spell.id === id);
+  if (found === undefined) throw new Error(`нет карточки ${id}`);
+  return found;
+}
+
 afterEach(cleanup);
 
 /** Перечни строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
@@ -21,6 +29,7 @@ const { stats } = toChoicesView();
 
 const NOOP = {
   stats,
+  onBuyMaterial: () => {},
   onEditMoney: () => {},
   onOpenItem: () => {},
   onAddItem: () => {},
@@ -68,6 +77,27 @@ describe("экран «Сумка»", () => {
     // Прибавки без вещи — свойство персонажа: их карточка живёт на «Листе», не в сумке.
     expect(screen.queryByRole("heading", { name: "Прибавки без вещи" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Прочие прибавки" })).toBeNull();
+  });
+
+  it("«Сумка» держит раздел нехватки последним (FR-296)", () => {
+    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
+
+    // Сначала то, что в сумке есть, потом то, чего в ней не заводили.
+    const titles = screen.getAllByRole("heading").map((heading) => heading.textContent);
+    expect(titles).toEqual(["Деньги", "Расходники", "Ингредиенты", "Другое", "Чего не хватает"]);
+  });
+
+  it("заведённая вещь в нехватке не повторяется: её ноль стоит своей строкой (FR-296)", () => {
+    const pearl = materialOf(spellOf("identify").components);
+    if (pearl === undefined) throw new Error("«Опознание» материала не требует");
+
+    render(<Bag bag={toBagView(withStock([{ definition: pearl, bag: 0 }]), spells)} {...NOOP} />);
+
+    // Ноль виден там же, где его пополняют, — своей строкой в своей категории.
+    const row = within(screen.getByRole("list", { name: "Другое" })).getByText(pearl.nameRu);
+    expect(row).toBeDefined();
+    // И второй раз — в нехватке — та же вещь не стоит: это было бы то же самое, сказанное дважды.
+    expect(within(screen.getByRole("list", { name: "Купить" })).queryByText(pearl.nameRu)).toBeNull();
   });
 
   it("кошелёк показывает все три монеты стола, включая нули (FR-242)", () => {

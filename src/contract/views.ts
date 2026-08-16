@@ -191,6 +191,25 @@ const itemViewSchema = z.object({
 });
 
 /**
+ * Нужное, чего в сумке не заводили: чем оно называется, во что обойдётся и кто его требует.
+ *
+ * Вещью оно ещё не стало — потому и приезжает отдельно от вещей, без запаса и без прибавок:
+ * запас бывает у заведённого, а у названного карточкой нет и записи, которую этим запасом считать.
+ */
+const missingMaterialViewSchema = z.object({
+  /** Карточка, которой вещь заводят: цену и судьбу она называет сама. */
+  spellId: word,
+  nameRu: word,
+  price: z.object({ amount: whole, currency: word }).optional(),
+  /** Сгорает ли применением: такое покупают впрок. */
+  consumed: z.boolean(),
+  /** Заклинания, называющие этот компонент. */
+  neededForRu: z.array(word),
+  /** Закрывает ли надетая фокусировка: без такого творят, и покупка не срочна. */
+  coveredByFocus: z.boolean(),
+});
+
+/**
  * Сумка: деньги, вещи и защита.
  *
  * Класс Доспеха стоит здесь потому, что здесь его и меняют — надевая и снимая. Число то же, что на
@@ -200,6 +219,13 @@ export const bagViewSchema = z.object({
   /** Все монеты стола в порядке достоинства: исчезнувший ноль заставляет гадать, где он. */
   money: z.array(z.object({ currency: word, amount: whole })),
   items: z.array(itemViewSchema),
+  /**
+   * Чего не хватает: нужное, которого среди вещей нет вовсе, срочное впереди несрочного.
+   *
+   * Заведённая вещь сюда не попадает даже с пустым запасом: она уже стоит своей строкой со своим
+   * нулём, и вторая её строка была бы тем же самым, сказанным дважды.
+   */
+  missingMaterials: z.array(missingMaterialViewSchema),
   armorClass: z.object({
     value: whole,
     /** Доспех, по которому считается защита; нет вовсе — доспеха на персонаже нет. */
@@ -644,6 +670,7 @@ export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;
 export type BloodMagicView = z.infer<typeof bloodMagicViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
+export type MissingMaterialView = z.infer<typeof missingMaterialViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
 export type StatChoiceView = z.infer<typeof statChoiceSchema>;
 export type ChoicesView = z.infer<typeof choicesViewSchema>;

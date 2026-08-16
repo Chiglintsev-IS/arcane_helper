@@ -117,21 +117,23 @@ describe("защита", () => {
   });
 });
 
+/** Компонент, заведённый вещью: её заводит та же операция, что и всякую покупку. */
+function withComponentOf(spellId: string): CharacterState {
+  const spell = spells.find((candidate) => candidate.id === spellId);
+  if (spell === undefined) throw new Error(`нет карточки ${spellId}`);
+  const material = materialOf(spell.components);
+  if (material === undefined) throw new Error(`«${spell.nameRu}» материала не требует`);
+
+  const root = Character.of(createThorne());
+  return root
+    .withItems(root.items.addDefinition(material))
+    .withEquipment(root.equipment.adjustBagCount(material.id, 1))
+    .toState();
+}
+
+const pearlId = "жемчужина-стоимостью-не-менее-100-зм";
+
 describe("чем вещь требуется", () => {
-  /** Компонент, заведённый вещью: её заводит та же операция, что и всякую покупку. */
-  function withComponentOf(spellId: string): CharacterState {
-    const spell = spells.find((candidate) => candidate.id === spellId);
-    if (spell === undefined) throw new Error(`нет карточки ${spellId}`);
-    const material = materialOf(spell.components);
-    if (material === undefined) throw new Error(`«${spell.nameRu}» материала не требует`);
-
-    const root = Character.of(createThorne());
-    return root
-      .withItems(root.items.addDefinition(material))
-      .withEquipment(root.equipment.adjustBagCount(material.id, 1))
-      .toState();
-  }
-
   it("вещь называет тех, кто её требует, а сама о них не знает (FR-295)", () => {
     const bought = withComponentOf("identify");
     const pearl = toBagView(bought, spells).items.find(
@@ -145,5 +147,39 @@ describe("чем вещь требуется", () => {
 
   it("вещь, которой никто не требует, о требованиях молчит", () => {
     expect(itemOf(withStock(rope), "rope").neededForRu).toEqual([]);
+  });
+});
+
+describe("чего не хватает", () => {
+  it("не хватает того, чего среди вещей нет вовсе, и срочное идёт первым (FR-296)", () => {
+    const missing = toBagView(createThorne(), spells).missingMaterials;
+
+    // Срочное впереди: без него сотворить нельзя, а закрытое фокусировкой лишь ждёт её снятия.
+    expect(missing.filter((need) => !need.coveredByFocus).map((need) => need.spellId)).toEqual([
+      "find-familiar",
+      "identify",
+    ]);
+    expect(missing.slice(0, 2).every((need) => !need.coveredByFocus)).toBe(true);
+    expect(missing.slice(2).every((need) => need.coveredByFocus)).toBe(true);
+
+    // Цену и судьбу называет карточка: приложение их не выдумывает.
+    expect(missing[0]).toMatchObject({
+      consumed: true,
+      price: { amount: 10, currency: "gold" },
+      neededForRu: ["Поиск фамильяра"],
+    });
+  });
+
+  it("заведённая вещь в нехватку не попадает даже с пустым запасом", () => {
+    const bought = withComponentOf("identify");
+    const carried = toBagView(bought, spells);
+    expect(carried.missingMaterials.some((need) => need.spellId === "identify")).toBe(false);
+
+    // Запас истрачен, но вещь заведена — её ноль стоит своей строкой, а не второй записью нехватки.
+    const root = Character.of(bought);
+    const emptied = root.withEquipment(root.equipment.adjustBagCount(pearlId, -1)).toState();
+    const view = toBagView(emptied, spells);
+    expect(view.items.find((item) => item.id === pearlId)?.bagCount).toBe(0);
+    expect(view.missingMaterials.some((need) => need.spellId === "identify")).toBe(false);
   });
 });
