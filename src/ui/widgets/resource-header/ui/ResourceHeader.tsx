@@ -17,7 +17,7 @@ import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
 import { DERIVED_LABELS, skillLabel } from "@/ui/entities/character/lib/labels";
 import { RESOURCES_EDIT_LABEL } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { TONE_CLASS, type Tone } from "@/ui/shared/ui/tone";
+import { type Tone } from "@/ui/shared/ui/tone";
 import { hitDicePool } from "@/ui/widgets/resource-header/lib/hitDicePool";
 import { signed } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
@@ -46,6 +46,22 @@ function SpendableResource({
       {children}
     </Badge>
   );
+}
+
+/**
+ * Шкура плитки ряда оплаты: ступень отвечает, метит ли в плитку палец, приглушённость — кончился ли
+ * пул. Ячейка уровня и пул носят её одну: за ними стоит одна и та же дверь, и разные шкуры на ней
+ * обещали бы разные дела.
+ */
+function payingSkin({
+  pressable,
+  available,
+}: {
+  pressable: boolean;
+  available: boolean;
+}): string {
+  if (!available) return `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`;
+  return pressable ? SURFACE_CONTROL : SURFACE_GROUP;
 }
 
 /** Подпись плитки: мелкая строка над числом. */
@@ -154,6 +170,9 @@ function ConstantStat({
  *
  * Знак стоит при числе, а не при подписи: подпись называет ресурс и от остатка не зависит, поэтому
  * ширина плитки не меняется от того, кончился пул или нет, — ряд не перестраивается на исходе.
+ *
+ * Ступень отвечает на другой вопрос — нажимается ли плитка: правка у пула бывает, а бывает и нет, и
+ * одна ступень на оба случая обещала бы дверь там, где её не открыть.
  */
 function PoolCounter({
   captionRu,
@@ -176,7 +195,10 @@ function PoolCounter({
       </span>
     </>
   );
-  const skin = `flex-1 rounded-md text-center ${TONE_CLASS.muted}`;
+  const skin = `flex-1 rounded-md text-center ${payingSkin({
+    pressable: action !== undefined,
+    available,
+  })}`;
 
   if (action === undefined) {
     return <li className={`${skin} px-1 py-1`}>{shown}</li>;
@@ -227,11 +249,10 @@ function SlotCounters({ slots, onEdit }: { slots: ResourcesView["slots"]; onEdit
         {slots.map((slot) => (
           <span
             key={slot.level}
-            className={`flex-1 rounded-md px-1 py-1 text-center ${
-              slot.remaining <= 0
-                ? `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
-                : SURFACE_CONTROL
-            }`}
+            className={`flex-1 rounded-md px-1 py-1 text-center ${payingSkin({
+              pressable: true,
+              available: slot.remaining > 0,
+            })}`}
           >
             <TileCaption>{slot.level} ур.</TileCaption>
             <span className="block text-sm font-semibold leading-tight tabular-nums">

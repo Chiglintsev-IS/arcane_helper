@@ -19,6 +19,7 @@ import {
   withoutRunes,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 import { ResourceBadges, ResourceHeader } from "./ResourceHeader";
 
 afterEach(cleanup);
@@ -89,6 +90,29 @@ describe("ряд оплаты на самом узком экране", () => {
   });
 });
 
+describe("ступень плитки отвечает, метит ли в неё палец", () => {
+  it("нажимаемая плитка ряда оплаты лежит на ступени нажимаемого", () => {
+    const full = tiles(withSpellPoints(createThorne(), 5));
+
+    // Руны ведут в ту же шторку, что и ячейки: одна дверь — одна шкура, а не две.
+    expect(pool(full, "Руны").classes).toContain(SURFACE_CONTROL);
+
+    // Кости и очки не нажимаются: их двигают отдых и обмен кровью, и ступень у них — группы.
+    for (const name of ["Кости", "Очки"]) {
+      expect(pool(full, name).classes).toContain(SURFACE_GROUP);
+      expect(pool(full, name).classes).not.toContain(SURFACE_CONTROL);
+    }
+
+    cleanup();
+    const drained = tiles(withoutRunes(createThorne()));
+
+    // Истраченный пул опускается ступенью, как истраченная ячейка: пустая рука не нажимается так
+    // же охотно, как полная.
+    expect(pool(drained, "Руны").classes).toContain(SURFACE_GROUP);
+    expect(pool(drained, "Руны").classes).not.toContain(SURFACE_CONTROL);
+  });
+});
+
 describe("пустой пул подан пустым", () => {
   it("нулевой пул подан как ноль", () => {
     const full = tiles(withSpellPoints(createThorne(), 5));
@@ -123,7 +147,7 @@ describe("пустой пул подан пустым", () => {
     cleanup();
     const drained = tiles(withoutRunes(createThorne()));
 
-    // Совпадают они подложкой и расходятся тем, что цвета не требует: знаком и самим числом.
+    // Расходятся они тем, что смыслового цвета не требует: знаком, самим числом и ступенью.
     expect(pool(drained, "Руны").text).not.toBe(pool(full, "Руны").text);
     expect(pool(drained, "Очки").text).not.toBe(pool(full, "Очки").text);
   });
