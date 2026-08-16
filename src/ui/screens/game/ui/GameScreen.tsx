@@ -30,6 +30,7 @@ import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { signed } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { TONE_CLASS } from "@/ui/shared/ui/tone";
 
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
@@ -263,6 +264,16 @@ export function GameScreen() {
           onChange={setFilters}
           onSearchToggle={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
         />
+
+        {/*
+         Общая причина названа один раз и над списком: под каждой строкой она стояла одной и той же
+         фразой у двенадцати строк из пятнадцати и вытесняла ту причину, которая у строки своя.
+         */}
+        {snapshot.spellsRefusalRu === undefined ? null : (
+          <p className={`rounded-lg px-2 py-1 text-xs font-medium ${TONE_CLASS.reaction}`}>
+            Недоступно: {snapshot.spellsRefusalRu}
+          </p>
+        )}
 
         {rows.length > 0 ? (
           <ul aria-label={listLabel} className="flex flex-col gap-2">

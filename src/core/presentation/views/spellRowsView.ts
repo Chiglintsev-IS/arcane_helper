@@ -28,6 +28,7 @@ import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import {
   checkAvailability,
+  closesWholeTurn,
   componentRequirements,
 } from "@/core/application/casting/availability";
 import { materialCoveredByFocus, materialOf } from "@/core/application/casting/material";
@@ -86,6 +87,13 @@ function plansFor(spell: Spell, character: CharacterState, turn: TurnEconomy): C
  */
 function unavailableReason(suggested: CastPlan): string | undefined {
   return suggested.availability.warnings[0]?.reasonRu;
+}
+
+/** Своя причина строки: общую называет список, и повторять её под каждой строкой нечем. */
+function ownUnavailableReason(suggested: CastPlan): string | undefined {
+  const warning = suggested.availability.warnings[0];
+  if (warning === undefined || closesWholeTurn(warning)) return undefined;
+  return warning.reasonRu;
 }
 
 /** Уровень, на котором сотворяется заклинание этим способом: выбранная ячейка или свой уровень. */
@@ -220,6 +228,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
   const plans = plansFor(spell, character, turn);
   const [first, ...rest] = plans.all;
   const reason = unavailableReason(plans.suggested);
+  const ownReason = ownUnavailableReason(plans.suggested);
   const announcementContext = { character, ...plans.suggested.option };
   const announcement = renderAnnouncement(spell, announcementContext);
   const armorClass = armorClassIfCast(spell, character);
@@ -268,7 +277,8 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     ritualAvailable: ritualAvailable(spell, turn.inFight),
     prepared: isSpellReady(spell, character),
     castableNow: castableInSituation(spell, character, turn.inFight),
-    ...(reason === undefined ? {} : { unavailableReason: reason }),
+    unavailable: reason !== undefined,
+    ...(ownReason === undefined ? {} : { unavailableReason: ownReason }),
     active: character.activeEffects.some((effect) => effect.spellId === spell.id),
     ...(spell.damage === undefined
       ? {}
@@ -327,4 +337,22 @@ export function toSpellRowViews(live: LiveSession): SpellRowView[] {
   const { character } = live.session;
   const turn = deriveTurnEconomy(live.session);
   return live.spellCatalog.map((spell) => spellRowView(spell, character, turn));
+}
+
+/**
+ * Причина, закрывшая список разом; ничего — общей причины нет.
+ *
+ * Берётся у первой же строки, которую закрыла экономия хода: причина эта не про заклинание, и у
+ * всех закрытых ею строк она одна и та же. Строк, у которых своя причина, она не касается — те
+ * называют себя сами.
+ */
+export function toSpellsRefusal(live: LiveSession): string | undefined {
+  const { character } = live.session;
+  const turn = deriveTurnEconomy(live.session);
+
+  for (const spell of live.spellCatalog) {
+    const warning = plansFor(spell, character, turn).suggested.availability.warnings[0];
+    if (warning !== undefined && closesWholeTurn(warning)) return warning.reasonRu;
+  }
+  return undefined;
 }

@@ -147,6 +147,17 @@ const SPENT_CODES: Record<TurnResource, AvailabilityCode> = {
   reaction: "reaction_spent",
 };
 
+/**
+ * Закрывает ли причина не одно заклинание, а весь ход разом.
+ *
+ * Истраченное действие не спрашивает, какое заклинание выбрано: оно закрывает всё, что им платит.
+ * Такая причина одна на весь список, и владелец кодов — единственный, кто вправе её так назвать:
+ * перечень кодов, собранный на стороне, разойдётся с этим объявлением при первом же новом коде.
+ */
+export function closesWholeTurn(warning: { code: string }): boolean {
+  return Object.values<string>(SPENT_CODES).includes(warning.code);
+}
+
 function isAvailable(turn: TurnResources, resource: TurnResource): boolean {
   if (resource === "reaction") return turn.reactionAvailable;
   if (resource === "bonus_action") return turn.bonusActionAvailable;

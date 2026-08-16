@@ -118,7 +118,7 @@ function matches(spell: SpellRowView, filters: SpellFilters): boolean {
   if (filters.ritual && !spell.ritualAvailable) return false;
   // «Подготовлено» не скрывает заговоры: они не готовятся, но доступны всегда.
   if (filters.prepared && !spell.prepared) return false;
-  if (filters.availableNow && spell.unavailableReason !== undefined) return false;
+  if (filters.availableNow && spell.unavailable) return false;
   return true;
 }
 

@@ -20,10 +20,16 @@ import { toEffectViews } from "./views/effectsView";
 import { toRecoveryView } from "./views/recoveryView";
 import { toResourcesView } from "./views/resourcesView";
 import { toSheetView } from "./views/sheetView";
-import { toCastingView, toSpellRowViews, toTurnView } from "./views/spellRowsView";
+import {
+  toCastingView,
+  toSpellRowViews,
+  toSpellsRefusal,
+  toTurnView,
+} from "./views/spellRowsView";
 
 export function toSnapshot(live: LiveSession, version: number): Snapshot {
   const concentration = toConcentrationView(live);
+  const spellsRefusalRu = toSpellsRefusal(live);
 
   return {
     version,
@@ -37,6 +43,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     casting: toCastingView(live.session.character),
     bloodMagic: toBloodMagicView(live.session),
     spells: toSpellRowViews(live),
+    ...(spellsRefusalRu === undefined ? {} : { spellsRefusalRu }),
     choices: toChoicesView(),
     catalogSource: live.spellCatalogSource,
     journal: live.session.journal.map((entry) => ({

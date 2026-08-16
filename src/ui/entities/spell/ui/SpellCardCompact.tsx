@@ -123,7 +123,7 @@ export function SpellCardCompact({
   // Карточка одна на все режимы: роль красит рамку и стоит в углу везде, цена называется везде.
   // Эффект уже висит — строка перестаёт претендовать на внимание, но из списка не уходит: повторное
   // применение бывает нужно.
-  const { active, unavailableReason } = spell;
+  const { active, unavailable, unavailableReason } = spell;
   const castingTime = castingTimeBadge(spell.castingTime.type);
   const ritualOnly = ritualOnlyBadge(spell);
   const resolution = resolutionBadge(spell.resolution, casting);
@@ -136,7 +136,7 @@ export function SpellCardCompact({
    * занято, и подпись достаётся списку бесплатно.
    */
   const role = combatRole(spell.role);
-  const dimmed = unavailableReason !== undefined || active;
+  const dimmed = unavailable || active;
   const frame = `${roleClass(ROLE_BORDER, spell.role)} ${dimmed ? DIMMED_SURFACE : SURFACE_GROUP}`;
 
   /**

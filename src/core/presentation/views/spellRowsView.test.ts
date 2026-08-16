@@ -22,7 +22,12 @@ import type { Spell } from "@/core/domain/catalog/spell";
 import { createSession, type LiveSession } from "@/core/application/session";
 import { applyCommand } from "@/core/presentation/controller";
 
-import { toCastingView, toSpellRowViews, toTurnView } from "./spellRowsView";
+import {
+  toCastingView,
+  toSpellRowViews,
+  toSpellsRefusal,
+  toTurnView,
+} from "./spellRowsView";
 
 const CLOCK = { now: () => "2026-07-31T18:00:00.000Z", nextId: () => "id-1" };
 
@@ -320,5 +325,46 @@ describe("экономия хода", () => {
     ]);
 
     expect(toTurnView(spent)).toMatchObject({ inFight: true, actionAvailable: false });
+  });
+});
+
+describe("общая причина названа один раз (FR-305)", () => {
+  /** Ход, в котором действие уже истрачено: им закрыто всё, что действием платит. */
+  function afterSpendingTheAction(): LiveSession {
+    return played(createThorne(), [
+      ...START,
+      { kind: "cast_spell", spellId: "ray-of-frost", mode: "cantrip", payment: { kind: "none" } },
+    ]);
+  }
+
+  it("пока ход цел, общей причины нет вовсе", () => {
+    expect(toSpellsRefusal(played(createThorne(), START))).toBeUndefined();
+  });
+
+  it("истраченное действие названо причиной списка, а не причиной каждой строки", () => {
+    const live = afterSpendingTheAction();
+    const rows = toSpellRowViews(live);
+    const closed = rows.filter((candidate) => candidate.unavailable);
+
+    // Строк, закрытых ходом, много — фраза о нём одна.
+    expect(closed.length).toBeGreaterThan(1);
+    expect(toSpellsRefusal(live)).toBe("Действие уже израсходовано");
+    expect(closed.map((candidate) => candidate.unavailableReason)).not.toContain(
+      "Действие уже израсходовано",
+    );
+  });
+
+  it("недоступность строки видна и без её собственной фразы", () => {
+    const closed = toSpellRowViews(afterSpendingTheAction()).filter(
+      (candidate) => candidate.unavailable && candidate.unavailableReason === undefined,
+    );
+
+    expect(closed.length).toBeGreaterThan(0);
+  });
+
+  it("своя причина строки остаётся при ней: её общей фразой не объяснить", () => {
+    const reason = row("mage-armor", withoutSlots(createThorne())).unavailableReason;
+
+    expect(reason).toBeDefined();
   });
 });
