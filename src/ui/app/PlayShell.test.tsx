@@ -118,9 +118,9 @@ describe("режим экрана переживает перезапуск (FR-
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />);
 
-    await user.click(screen.getByRole("radio", { name: /^Сумка/ }));
+    await user.click(screen.getByRole("radio", { name: /^Вещи/ }));
 
-    expect(localStorage.getItem(STORAGE_KEY)).toBe("bag");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("things");
   });
 
   it("битое значение читается как отсутствующее и открывает «Игру»", async () => {

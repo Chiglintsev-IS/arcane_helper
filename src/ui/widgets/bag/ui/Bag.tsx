@@ -3,14 +3,13 @@
 import type { BagView, ChoicesView } from "@/contract/views";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
 import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
-import { MissingMaterials } from "@/ui/features/materials/ui/MissingMaterials";
 import { ItemSection } from "@/ui/shared/ui/ItemSection";
 
 /**
  * Разделы сумки — по категории счётной вещи. Порядок постоянен, пустой раздел остаётся на месте со
  * своей строкой ввода: раздел, появляющийся с первой вещью, заставлял бы искать, куда её ввести.
  *
- * Экипировки среди них нет: её надевают, и живёт она своим режимом вместе с числом, которое от неё
+ * Экипировки среди них нет: её надевают, и показывают её отдельно вместе с числом, которое от неё
  * зависит.
  */
 const SECTIONS: { kind: string; titleRu: string; addLabelRu: string }[] = [
@@ -20,7 +19,7 @@ const SECTIONS: { kind: string; titleRu: string; addLabelRu: string }[] = [
 ];
 
 /**
- * Сумка: чего не хватает, деньги и счётные вещи по категориям.
+ * Сумка: деньги и счётные вещи по категориям.
  *
  * Компонент презентационный: состояние приходит параметрами, операции выбирает экран. Быстрый ввод
  * заводит вещь сразу в свою категорию — раздел и есть выбор категории, отдельного поля не нужно.
@@ -32,7 +31,6 @@ export function Bag({
   onOpenItem,
   onAddItem,
   onAdjustBagCount,
-  onBuyMaterial,
 }: {
   bag: BagView;
   /** Величины с разбором: ими подписаны прибавки вещи. */
@@ -41,7 +39,6 @@ export function Bag({
   onOpenItem: (id: string) => void;
   onAddItem: (kind: string, nameRu: string) => void;
   onAdjustBagCount: (id: string, delta: number) => void;
-  onBuyMaterial: (spellId: string) => void;
 }) {
   const { money, items, missingMaterials } = bag;
   // Уехавшее в список покупок из своей категории ушло: переезд, а не копия — один и тот же ноль,
@@ -128,14 +125,6 @@ export function Bag({
           </ItemSection>
         );
       })}
-
-      {/* Последним: сумка отвечает, что в ней есть, а нехватка — что придётся купить. */}
-      <MissingMaterials
-        missing={missingMaterials}
-        onBuy={onBuyMaterial}
-        onOpenItem={onOpenItem}
-        onRefill={(itemId) => onAdjustBagCount(itemId, 1)}
-      />
     </div>
   );
 }

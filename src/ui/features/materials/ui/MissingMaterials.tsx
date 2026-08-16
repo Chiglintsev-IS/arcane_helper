@@ -1,10 +1,11 @@
 /**
- * Раздел «Чего не хватает»: что придётся купить перед вылазкой.
+ * Покупки: что придётся купить перед вылазкой.
  *
- * Стоит здесь всё нужное, чего в сумке нет: и то, чего не заводили ни разу, и заведённое, чей запас
+ * Собственного заголовка у них нет — их называет переключатель, которым их и открывают. Стоит здесь
+ * всё нужное, чего в сумке нет: и то, чего не заводили ни разу, и заведённое, чей запас
  * опустел. Второе приезжает со своей записью и из своей категории на это время уходит: ноль перед
  * вылазкой ищут в списке покупок, а не по категориям. Числа запаса нет ни у одной строки — каждая
- * стоит здесь именно потому, что запаса нет, и ноль при каждом имени повторял бы заголовок раздела.
+ * стоит здесь именно потому, что запаса нет, и ноль при каждом имени повторял бы имя самих покупок.
  *
  * Строки устроены одинаково, заведена вещь или ещё нет: то же имя, те же подробности, то же
  * прибавление в сумку одним нажатием. Заведённая сверх того открывается своей шторкой; незаведённой
@@ -20,7 +21,6 @@
 import type { MissingMaterialView } from "@/contract/views";
 import { neededForLine } from "@/ui/entities/character/lib/itemMeta";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
-import { ItemSection } from "@/ui/shared/ui/ItemSection";
 
 /** Тело строки: одно и то же у заведённой вещи и у той, которой ещё нет. */
 const ROW = "block min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1.5 text-left";
@@ -69,7 +69,7 @@ export function MissingMaterials({
     need.itemId === undefined ? onBuy(need.spellId) : onRefill(need.itemId);
 
   return (
-    <ItemSection titleRu="Чего не хватает">
+    <div className="flex flex-col gap-1">
       {missing.length === 0 ? (
         <p className="text-xs text-slate-500 dark:text-slate-400">Всё нужное лежит в сумке.</p>
       ) : null}
@@ -115,6 +115,6 @@ export function MissingMaterials({
           {covered.map((need) => need.nameRu).join(" · ")}
         </p>
       )}
-    </ItemSection>
+    </div>
   );
 }

@@ -3,42 +3,18 @@
 import { useState, useEffect } from "react";
 
 import { DEFAULT_SCREEN_MODE, SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
+import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
 import { UnreadableSave } from "@/ui/app/UnreadableSave";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
-import { GearScreen } from "@/ui/screens/gear/ui/GearScreen";
-import { BagScreen } from "@/ui/screens/bag/ui/BagScreen";
+import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
 
 const STORAGE_KEY = "playScreenMode";
-
-function storedMode(): string | null {
-  // Приватный режим Safari бросает на самом обращении к хранилищу: выбор режима не стоит того,
-  // чтобы приложение из-за него не открылось.
-  try {
-    return localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function readMode(): ScreenMode {
-  if (typeof window === "undefined") return DEFAULT_SCREEN_MODE;
-  const stored = storedMode();
-  return SCREEN_MODES.find((mode) => mode === stored) ?? DEFAULT_SCREEN_MODE;
-}
-
-function writeMode(mode: ScreenMode): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, mode);
-  } catch {
-    return;
-  }
-}
 
 function ScreenContent({ mode }: { mode: ScreenMode }) {
   switch (mode) {
@@ -48,10 +24,8 @@ function ScreenContent({ mode }: { mode: ScreenMode }) {
       return <BookScreen />;
     case "sheet":
       return <SheetScreen />;
-    case "gear":
-      return <GearScreen />;
-    case "bag":
-      return <BagScreen />;
+    case "things":
+      return <ThingsScreen />;
     case "rest":
       return <RestScreen />;
     case "journal":
@@ -71,7 +45,7 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
   // с отданным сервером.
   useEffect(() => {
     if (initialMode === undefined) {
-      setMode(readMode());
+      setMode(readRemembered(STORAGE_KEY, SCREEN_MODES, DEFAULT_SCREEN_MODE));
     }
   }, [initialMode]);
 
@@ -88,7 +62,7 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
 
   const changeMode = (next: ScreenMode): void => {
     setMode(next);
-    writeMode(next);
+    writeRemembered(STORAGE_KEY, next);
   };
 
   return (

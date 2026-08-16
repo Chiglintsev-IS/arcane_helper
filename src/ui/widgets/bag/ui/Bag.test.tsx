@@ -29,7 +29,6 @@ const { stats } = toChoicesView();
 
 const NOOP = {
   stats,
-  onBuyMaterial: () => {},
   onEditMoney: () => {},
   onOpenItem: () => {},
   onAddItem: () => {},
@@ -61,7 +60,7 @@ const potion: ItemDefinition = {
   price: { amount: 50, currency: "gold" },
 };
 
-describe("экран «Сумка»", () => {
+describe("«Сумка» в «Вещах»", () => {
   it("держит кошелёк и три счётных раздела (FR-242)", () => {
     render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
 
@@ -70,7 +69,7 @@ describe("экран «Сумка»", () => {
     expect(screen.getByRole("heading", { name: "Ингредиенты" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Другое" })).toBeDefined();
 
-    // Надеваемое живёт своим режимом вместе с числом, которое от него зависит.
+    // Надеваемое показывается отдельно вместе с числом, которое от него зависит.
     expect(screen.queryByRole("heading", { name: "Экипировка" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Защита" })).toBeNull();
     expect(screen.queryByText(/без доспехов/)).toBeNull();
@@ -79,65 +78,35 @@ describe("экран «Сумка»", () => {
     expect(screen.queryByRole("heading", { name: "Прочие прибавки" })).toBeNull();
   });
 
-  it("«Сумка» держит раздел нехватки последним (FR-296)", () => {
+  it("покупок в сумке нет: их показывают отдельно (FR-304)", () => {
     render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
 
-    // Сначала то, что в сумке есть, потом то, чего в ней не заводили.
+    // Сумка отвечает, что в ней есть; чего в ней нет — вопрос лавки, и у него своё место.
     const titles = screen.getAllByRole("heading").map((heading) => heading.textContent);
-    expect(titles).toEqual(["Деньги", "Расходники", "Ингредиенты", "Другое", "Чего не хватает"]);
+    expect(titles).toEqual(["Деньги", "Расходники", "Ингредиенты", "Другое"]);
+    expect(screen.queryByRole("list", { name: "Купить" })).toBeNull();
   });
 
-  it("истраченная до нуля вещь ушла из своей категории в список покупок (FR-302)", () => {
+  it("истраченная до нуля вещь ушла из своей категории (FR-302)", () => {
     const pearl = materialOf(spellOf("identify").components);
     if (pearl === undefined) throw new Error("«Опознание» материала не требует");
 
     render(<Bag bag={toBagView(withStock([{ definition: pearl, bag: 0 }]), spells)} {...NOOP} />);
 
-    // Перед вылазкой ноль ищут в списке покупок, а не по категориям.
-    expect(
-      within(screen.getByRole("list", { name: "Купить" })).getByText(pearl.nameRu),
-    ).toBeDefined();
-    // Переезд, а не копия: в своей категории вещи на это время нет вовсе.
+    // Переезд, а не копия: перед вылазкой ноль ищут в покупках, и в своей категории вещи на это
+    // время нет вовсе.
     expect(screen.queryByRole("list", { name: "Другое" })?.textContent ?? "").not.toContain(
       pearl.nameRu,
     );
   });
 
-  it("пополненная вещь вернулась в свою категорию из списка покупок (FR-302)", () => {
+  it("пополненная вещь вернулась в свою категорию (FR-302)", () => {
     const pearl = materialOf(spellOf("identify").components);
     if (pearl === undefined) throw new Error("«Опознание» материала не требует");
 
     render(<Bag bag={toBagView(withStock([{ definition: pearl, bag: 1 }]), spells)} {...NOOP} />);
 
     expect(within(screen.getByRole("list", { name: "Другое" })).getByText(pearl.nameRu)).toBeDefined();
-    expect(
-      within(screen.getByRole("list", { name: "Купить" })).queryByText(pearl.nameRu),
-    ).toBeNull();
-  });
-
-  it("список покупок пополняет заведённое той же кнопкой, что заводит незаведённое (FR-302)", async () => {
-    const user = userEvent.setup();
-    const onAdjustBagCount = vi.fn();
-    const onBuyMaterial = vi.fn();
-    const pearl = materialOf(spellOf("identify").components);
-    if (pearl === undefined) throw new Error("«Опознание» материала не требует");
-
-    render(
-      <Bag
-        bag={toBagView(withStock([{ definition: pearl, bag: 0 }]), spells)}
-        {...NOOP}
-        onAdjustBagCount={onAdjustBagCount}
-        onBuyMaterial={onBuyMaterial}
-      />,
-    );
-
-    // У заведённой вещи плюс тот же, каким её пополняли в категории.
-    await user.click(screen.getByRole("button", { name: `Добавить один в сумку: ${pearl.nameRu}` }));
-    expect(onAdjustBagCount).toHaveBeenCalledWith(pearl.id, 1);
-
-    // Незаведённую тот же плюс заводит по словам карточки.
-    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: уголь/ }));
-    expect(onBuyMaterial).toHaveBeenCalledWith("find-familiar");
   });
 
   it("кошелёк показывает все три монеты стола, включая нули (FR-242)", () => {

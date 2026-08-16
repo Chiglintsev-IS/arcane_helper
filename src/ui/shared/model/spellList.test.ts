@@ -167,7 +167,7 @@ describe("состав по режимам (FR-203, FR-220, FR-230)", () => {
   });
 
   it("в «Журнале» и «Листе» списка нет", () => {
-    for (const mode of ["journal", "sheet", "bag", "rest"] as const) {
+    for (const mode of ["journal", "sheet", "things", "rest"] as const) {
       expect(spellsForScreen(testSpellRows(), mode), mode).toEqual([]);
     }
   });

@@ -42,7 +42,7 @@ function withEmptiedPearl(): CharacterState {
   return bought.withEquipment(bought.equipment.adjustBagCount(pearl.id, -1)).toState();
 }
 
-describe("раздел «Чего не хватает»", () => {
+describe("«Покупки» в «Вещах»", () => {
   it("строкой стоит то, без чего не сотворить, а закрытое фокусировкой — перечнем имён (FR-296)", () => {
     render(<MissingMaterials missing={missingOf()} {...NOOP} />);
 
@@ -116,10 +116,33 @@ describe("раздел «Чего не хватает»", () => {
     expect(screen.queryByRole("button", { name: /Открыть: уголь/ })).toBeNull();
   });
 
-  it("пустой раздел отвечает словами, а не молчанием", () => {
+  it("список покупок пополняет заведённое той же кнопкой, что заводит незаведённое (FR-302)", async () => {
+    const user = userEvent.setup();
+    const onBuy = vi.fn();
+    const onRefill = vi.fn();
+    render(
+      <MissingMaterials
+        missing={missingOf(withEmptiedPearl())}
+        {...NOOP}
+        onBuy={onBuy}
+        onRefill={onRefill}
+      />,
+    );
+
+    // У заведённой вещи плюс тот же, каким её пополняли в категории.
+    await user.click(screen.getByRole("button", { name: `Добавить один в сумку: ${pearl.nameRu}` }));
+    expect(onRefill).toHaveBeenCalledWith(pearl.id);
+
+    // Незаведённую тот же плюс заводит по словам карточки.
+    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: уголь/ }));
+    expect(onBuy).toHaveBeenCalledWith("find-familiar");
+  });
+
+  it("пустые покупки отвечают словами, а не молчанием", () => {
     render(<MissingMaterials missing={[]} {...NOOP} />);
 
-    expect(screen.getByRole("heading", { name: "Чего не хватает" })).toBeDefined();
+    // Заголовка у покупок своего нет — их называет переключатель, которым их открыли.
+    expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.getByText("Всё нужное лежит в сумке.")).toBeDefined();
   });
 });
