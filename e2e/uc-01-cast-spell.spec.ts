@@ -653,3 +653,23 @@ test("blood exchange goes through the wizard, not one tap", async ({ page }) => 
   await expect(page.getByLabel("Чем платить")).toContainText("Очки4");
   await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 12");
 });
+
+test("search reaches a row without scrolling", async ({ page }) => {
+  const list = page.getByLabel("Заклинания");
+  const lightning = page.getByRole("button", { name: /Молния/ });
+
+  // До «Молнии» полтора экрана прокрутки: без поиска её на экране нет вовсе.
+  await expect(lightning).not.toBeInViewport();
+
+  await page.getByRole("button", { name: "Поиск по названию" }).click();
+  await page.getByRole("searchbox", { name: "Поиск по названию" }).fill("молн");
+
+  await expect(list.getByRole("listitem")).toHaveCount(1);
+  await expect(lightning).toBeInViewport();
+
+  // Выбранная строка закрывает поиск и отпускает список: слово не прячет книгу молча.
+  await lightning.click();
+  await page.getByRole("button", { name: "Закрыть" }).click();
+  await expect(page.getByRole("searchbox", { name: "Поиск по названию" })).toBeHidden();
+  await expect(list.getByRole("listitem")).toHaveCount(20);
+});

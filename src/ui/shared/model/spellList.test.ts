@@ -105,8 +105,8 @@ describe("порядок: сначала бесплатное, потом по �
 
 
   it("ключ: цена, затем роль", () => {
-    const reaction = { castingTime: "reaction", level: 4, concentration: false, role: "other" } as const;
-    const action = { castingTime: "action", level: 0, concentration: false, role: "offense" } as const;
+    const reaction = { nameRu: "Дорогая реакция", castingTime: "reaction", level: 4, concentration: false, role: "other" } as const;
+    const action = { nameRu: "Бесплатное действие", castingTime: "action", level: 0, concentration: false, role: "offense" } as const;
 
     expect(compareTraits(reaction, action)).toBeGreaterThan(0);
     expect(orderKey(action)).toEqual([0, 0]);
@@ -184,6 +184,7 @@ describe("состав по режимам (FR-203, FR-220, FR-230)", () => {
 describe("состав строки: цена считается тем же правилом, что и порядок", () => {
   it("признаки заклинания собираются той же функцией, что и признаки действия", () => {
     expect(traitsOf(testSpellRow("detect-magic"))).toEqual({
+      nameRu: "Обнаружение магии",
       castingTime: "action",
       level: 0,
       concentration: true,

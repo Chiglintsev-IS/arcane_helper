@@ -37,6 +37,7 @@ export function GameScreen() {
   const draft = useDraft((state) => state.draft);
 
   const [filters, setFilters] = useState(NO_FILTERS);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
   const [activeOpen, setActiveOpen] = useState(false);
@@ -56,6 +57,21 @@ export function GameScreen() {
     setRefusal(reason);
     if (reason === null) close();
   };
+  /**
+   * Поиск — способ дойти до строки, а не отбор: закрываясь, он отпускает список целиком. Иначе
+   * набранное слово продолжало бы прятать четырнадцать строк из пятнадцати, а поля, которое это
+   * объясняет, на экране уже нет.
+   */
+  const closeSearch = (): void => {
+    setSearchOpen(false);
+    setFilters((current) => ({ ...current, query: "" }));
+  };
+
+  const openSpell = (spellId: string): void => {
+    closeSearch();
+    setOpenSpellId(spellId);
+  };
+
   const turn = snapshot.turn;
   const { inFight } = turn;
   // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
@@ -83,7 +99,7 @@ export function GameScreen() {
       key={spell.id}
       spell={spell}
       casting={casting}
-      onOpen={() => setOpenSpellId(spell.id)}
+      onOpen={() => openSpell(spell.id)}
     />
   ));
   if (bloodShown) {
@@ -93,7 +109,10 @@ export function GameScreen() {
         bloodMagic={snapshot.bloodMagic}
         casting={casting}
         resources={snapshot.resources}
-        onOpen={() => setBloodOpen(true)}
+        onOpen={() => {
+          closeSearch();
+          setBloodOpen(true);
+        }}
       />
     ));
   }
@@ -107,12 +126,15 @@ export function GameScreen() {
   };
 
   const startFight = async (): Promise<void> => {
-    if ((await execute({ kind: "start_combat" })) === null) setFilters(NO_FILTERS);
+    if ((await execute({ kind: "start_combat" })) !== null) return;
+    setFilters(NO_FILTERS);
+    setSearchOpen(false);
   };
 
   const finishFight = async (): Promise<void> => {
     if ((await execute({ kind: "end_combat" })) !== null) return;
     setFilters(NO_FILTERS);
+    setSearchOpen(false);
     setFightOverOpen(false);
   };
 
@@ -236,7 +258,9 @@ export function GameScreen() {
           filters={filters}
           dividing={dividing}
           mode="play"
+          searchOpen={searchOpen}
           onChange={setFilters}
+          onSearchToggle={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
         />
 
         {rows.length > 0 ? (

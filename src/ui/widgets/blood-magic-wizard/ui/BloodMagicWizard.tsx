@@ -14,7 +14,7 @@ import {
   WIZARD_STEP_TITLES,
   WizardShell,
 } from "@/ui/shared/ui/WizardShell";
-import { BLOOD_MAGIC_LABEL } from "@/ui/features/blood-magic/ui/BloodMagicRow";
+import { BLOOD_MAGIC_LABEL } from "@/ui/shared/model/actionTraits";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import type { PreviewOf } from "@/contract/questions";
 import type { BloodMagicView, SheetView } from "@/contract/views";

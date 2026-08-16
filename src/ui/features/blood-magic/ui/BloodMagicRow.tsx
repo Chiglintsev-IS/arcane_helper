@@ -14,13 +14,10 @@
  */
 
 import type { BloodMagicView, CastingView, ResourcesView } from "@/contract/views";
-import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
+import { BLOOD_MAGIC_LABEL, BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
 import { Fragment } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
-
-/** Имя дела: им зовётся и строка списка, и мастер, который она открывает. */
-export const BLOOD_MAGIC_LABEL = "Магия крови";
 import { combatRole } from "@/ui/entities/spell/lib/format";
 import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { withPlural } from "@/shared/language";

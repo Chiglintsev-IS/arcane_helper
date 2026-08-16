@@ -12,6 +12,8 @@
 import type { SpellRowView } from "@/contract/views";
 
 export type ActionTraits = {
+  /** Как строка зовётся: по названию её и ищут, а ищут в списке целиком, а не среди заклинаний. */
+  nameRu: string;
   castingTime: string;
   /** Цена в ячейках: 0 — не расходует ячейку. По ней строится и порядок списка, и отбор по цене. */
   level: number;
@@ -19,8 +21,12 @@ export type ActionTraits = {
   role: string;
 };
 
+/** Имя строки обмена: её зовут так и в списке, и в мастере, и в поиске. */
+export const BLOOD_MAGIC_LABEL = "Магия крови";
+
 /** Строка «Магия крови»: обмен хитов на очки — действие в свой ход, ячейки не тратит. */
 export const BLOOD_MAGIC_TRAITS: ActionTraits = {
+  nameRu: BLOOD_MAGIC_LABEL,
   castingTime: "action",
   level: 0,
   concentration: false,
@@ -29,6 +35,7 @@ export const BLOOD_MAGIC_TRAITS: ActionTraits = {
 
 export function traitsOf(spell: SpellRowView): ActionTraits {
   return {
+    nameRu: spell.nameRu,
     castingTime: spell.castingTime.type,
     level: spell.slotPrice,
     concentration: spell.concentration,

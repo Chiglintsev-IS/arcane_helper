@@ -26,9 +26,24 @@ export function BookScreen() {
   const draft = useDraft((state) => state.draft);
 
   const [filters, setFilters] = useState(NO_FILTERS);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
   const [preparationRefusal, setPreparationRefusal] = useState<string | null>(null);
+
+  /**
+   * Поиск — способ дойти до строки, а не отбор: закрываясь, он отпускает список целиком. Иначе
+   * набранное слово продолжало бы прятать книгу, а поля, которое это объясняет, на экране уже нет.
+   */
+  const closeSearch = (): void => {
+    setSearchOpen(false);
+    setFilters((current) => ({ ...current, query: "" }));
+  };
+
+  const openSpell = (spellId: string): void => {
+    closeSearch();
+    setOpenSpellId(spellId);
+  };
 
   const execute = sessionStore.getState().execute;
   const turn = snapshot.turn;
@@ -58,7 +73,7 @@ export function BookScreen() {
       key={spell.id}
       spell={spell}
       casting={casting}
-      onOpen={() => setOpenSpellId(spell.id)}
+      onOpen={() => openSpell(spell.id)}
       onTogglePrepared={!inFight ? () => void togglePreparation(spell.id) : undefined}
     />
   ));
@@ -69,7 +84,10 @@ export function BookScreen() {
         bloodMagic={snapshot.bloodMagic}
         casting={casting}
         resources={snapshot.resources}
-        onOpen={() => setBloodOpen(true)}
+        onOpen={() => {
+          closeSearch();
+          setBloodOpen(true);
+        }}
       />
     ));
   }
@@ -109,7 +127,9 @@ export function BookScreen() {
           filters={filters}
           dividing={dividing}
           mode="book"
+          searchOpen={searchOpen}
           onChange={setFilters}
+          onSearchToggle={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
         />
       </div>
 

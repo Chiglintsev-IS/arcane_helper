@@ -320,3 +320,37 @@ describe("toggleValue", () => {
     expect(toggleValue([1, 2, 3], 2)).toEqual([1, 3]);
   });
 });
+
+describe("поиск по названию (FR-303)", () => {
+  it("часть названия оставляет одну строку из пятнадцати", () => {
+    expect(ids(filterSpells(book(), filters({ query: "молн" })))).toEqual(["lightning-bolt"]);
+  });
+
+  it("пустой запрос не ограничивает", () => {
+    expect(filterSpells(book(), filters({ query: "" }))).toHaveLength(book().length);
+  });
+
+  it("регистр не важен: имя произносят, а не набирают по буквам", () => {
+    expect(ids(filterSpells(book(), filters({ query: "МОЛНИЯ" })))).toEqual(["lightning-bolt"]);
+  });
+
+  it("«е» находит «ё»: на телефоне «ё» лежит под удержанием", () => {
+    expect(ids(filterSpells(outOfFight(), filters({ query: "полет" })))).toEqual(["fly"]);
+    expect(ids(filterSpells(outOfFight(), filters({ query: "перышком" })))).toEqual([
+      "feather-fall",
+    ]);
+  });
+
+  it("совпадение ищется в любом месте названия, не только в начале", () => {
+    expect(ids(filterSpells(book(), filters({ query: "холода" })))).toEqual(["ray-of-frost"]);
+  });
+
+  it("ненайденное даёт пустой список, а не весь", () => {
+    expect(filterSpells(book(), filters({ query: "жаба" }))).toHaveLength(0);
+  });
+
+  it("строка-действие отвечает на запрос своим названием (FR-207)", () => {
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ query: "кров" }))).toBe(true);
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ query: "молн" }))).toBe(false);
+  });
+});

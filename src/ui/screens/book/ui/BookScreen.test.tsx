@@ -302,13 +302,19 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
   });
 
-  it("нет ни поиска, ни «Реакций», ни отмены", async () => {
+  it("нет ни «Реакций», ни отмены", async () => {
     await inBookMode();
 
-    expect(screen.queryByRole("button", { name: "Поиск" })).toBeNull();
-    expect(screen.queryByLabelText("Поиск по названию")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Реакции/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Вернуть/ })).toBeNull();
+  });
+
+  it("поиск здесь есть, и поля он не держит (FR-303, ADR-0058)", async () => {
+    await inBookMode();
+
+    // Убран был не поиск, а его постоянный ряд: кнопка стоит в полосе, поля до нажатия нет.
+    expect(screen.getByRole("button", { name: "Поиск по названию" })).toBeDefined();
+    expect(screen.queryByRole("searchbox")).toBeNull();
   });
 
   it("счётчик подготовки остаётся: он отвечает на вопрос «сколько ещё можно» (FR-214)", async () => {

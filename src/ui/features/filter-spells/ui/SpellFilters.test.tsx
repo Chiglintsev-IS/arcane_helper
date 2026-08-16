@@ -27,7 +27,10 @@ type Dividing = {
   ritual: boolean;
 };
 
-function renderFilters(dividing: Dividing, options: { mode?: ScreenMode; filters?: Filters } = {}) {
+function renderFilters(
+  dividing: Dividing,
+  options: { mode?: ScreenMode; filters?: Filters; searchOpen?: boolean } = {},
+) {
   render(
     <SpellFilters
       filters={options.filters ?? NO_FILTERS}
@@ -37,7 +40,9 @@ function renderFilters(dividing: Dividing, options: { mode?: ScreenMode; filters
         roles: new Set(dividing.roles),
       }}
       mode={options.mode ?? "play"}
+      searchOpen={options.searchOpen ?? false}
       onChange={() => {}}
+      onSearchToggle={() => {}}
     />,
   );
 }
@@ -149,5 +154,46 @@ describe("цена — отдельная прокручиваемая стро�
   it("без делящих цен контейнера нет: показывать нечего (FR-002)", () => {
     renderFilters({ ...EVERYTHING, prices: [] }, { mode: "book" });
     expect(screen.queryByRole("group", { name: "Цена" })).toBeNull();
+  });
+});
+
+describe("поиск стоит в полосе всегда (FR-303)", () => {
+  it("кнопка есть и там, где делить список нечем", () => {
+    renderFilters({
+      castingTimes: [],
+      prices: [],
+      roles: [],
+      concentration: false,
+      ritual: false,
+    });
+
+    expect(screen.getByRole("button", { name: "Поиск по названию" })).toBeDefined();
+  });
+
+  it("закрытый поиск поля не показывает: постоянной высоты у него нет", () => {
+    renderFilters(EVERYTHING);
+
+    expect(screen.queryByRole("searchbox", { name: "Поиск по названию" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Поиск по названию" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("раскрытый показывает поле с набранным", () => {
+    renderFilters(EVERYTHING, { searchOpen: true, filters: { ...NO_FILTERS, query: "молн" } });
+
+    const field = screen.getByRole<HTMLInputElement>("searchbox", { name: "Поиск по названию" });
+    expect(field.value).toBe("молн");
+    expect(screen.getByRole("button", { name: "Поиск по названию" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("поле встаёт на место переключателей, а не рядом с ними", () => {
+    // Полный набор в «Книге» — два ряда переключателей и шкала цены. Ряда поиск не добавляет:
+    // пока набирают название, полоса состоит из лупы и поля, и больше ни из чего.
+    renderFilters(EVERYTHING, { mode: "book", searchOpen: true });
+
+    for (const name of ["Действие", "Реакция", "Боевое", "Концентрация", "Ритуал", "Подготовлено"]) {
+      expect(screen.queryByRole("button", { name }), name).toBeNull();
+    }
+    expect(screen.queryByRole("group", { name: "Цена" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Поиск по названию" })).toBeDefined();
   });
 });
