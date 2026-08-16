@@ -4,10 +4,13 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { testSpellRow } from "@/ui/app/testing/stores";
 
 import {
+  castingTimeBadge,
   castingTimeLabel,
   castingTimePhrase,
+  combatRole,
   durationPhrase,
   ritualOnlyBadge,
+  targetingLabel,
 } from "./format";
 
 describe("castingTimeLabel (FR-033)", () => {
@@ -43,6 +46,29 @@ describe("castingTimePhrase (FR-014)", () => {
 
   it("без числа остаётся категория: врать о времени хуже, чем назвать приблизительно", () => {
     expect(castingTimePhrase({ type: "minute" })).toBe("Минуты");
+  });
+});
+
+describe("слово вне словаря значков", () => {
+  // Договор ручается за непустую строку, а не за перечень, и тем же разбором читает снимок от
+  // бэкенда, который вправе знать слов больше.
+  it("время накладывания, которого словарь ещё не знает, показывается своим словом", () => {
+    expect(castingTimeBadge("day")).toEqual({ label: "day", icon: "◷", tone: "muted" });
+  });
+
+  it("роль, которой словарь ещё не знает, читается как «ни то, ни другое»", () => {
+    expect(combatRole("control")).toEqual(combatRole("other"));
+  });
+});
+
+describe("targetingLabel", () => {
+  it("предел числа целей назван числом: «Дверь в измерение» берёт двоих", () => {
+    expect(targetingLabel(testSpellRow("dimension-door").card.targeting)).toBe("До 2 существ");
+  });
+
+  it("без предела цели названы несколькими: выдуманное число обещало бы правило", () => {
+    // Предел необязателен у самих правил, и заклинание без него доезжает до карточки как есть.
+    expect(targetingLabel({ type: "creatures" })).toBe("Несколько существ");
   });
 });
 

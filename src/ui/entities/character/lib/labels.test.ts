@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DERIVED_LABELS, skillLabel } from "./labels";
+import { currencyAbbr, DERIVED_LABELS, skillLabel } from "./labels";
 
 describe("подписи навыков", () => {
   it("навык зовётся именем бумажного листа", () => {
@@ -16,5 +16,14 @@ describe("подписи навыков", () => {
     expect(DERIVED_LABELS.passivePerception.toLowerCase()).toContain(
       skillLabel("perception").toLowerCase(),
     );
+  });
+});
+
+describe("слово вне словаря подписей", () => {
+  it("монета, которой словарь ещё не знает, доезжает до экрана своим словом", () => {
+    // Договор ручается за непустую строку, а не за перечень монет, и тем же разбором читает снимок
+    // от бэкенда, который вправе знать монет больше. Пропасть монете нельзя: число осталось бы на
+    // экране без монеты, которую считает.
+    expect(currencyAbbr("platinum")).toBe("platinum");
   });
 });
