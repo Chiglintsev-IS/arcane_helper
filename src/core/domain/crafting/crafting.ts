@@ -15,6 +15,47 @@ import type { IngredientKnowledge, RevealedProperty } from "./schema";
 
 type CraftingState = { ingredientKnowledge: readonly IngredientKnowledge[] };
 
+/** Видов в составе — от двух до четырёх: меньше не даёт совпадения, больше справочник не берёт. */
+const FEWEST_KINDS = 2;
+const MOST_KINDS = 4;
+
+/** С какого числа источников совпадение поднимается ступенью выше. */
+const AMPLIFIED_FROM_SOURCES = 3;
+const CONCENTRATED_FROM_SOURCES = 4;
+
+type MatchTier = "plain" | "amplified" | "concentrated";
+
+/**
+ * Совпавшее свойство: чем оно названо, какой оно редкости, у каких видов раскрыто и какой ступенью
+ * проявится. Насколько ступень усиливает сам эффект, здесь не считается: справочник называет это
+ * приблизительно и чисел эффекта не печатает.
+ */
+type PropertyMatch = {
+  nameRu: string;
+  rarity: RevealedProperty["rarity"];
+  sources: readonly string[];
+  tier: MatchTier;
+};
+
+function tierOf(sources: number): MatchTier {
+  if (sources >= CONCENTRATED_FROM_SOURCES) return "concentrated";
+  if (sources >= AMPLIFIED_FROM_SOURCES) return "amplified";
+  return "plain";
+}
+
+function tooFewKindsRefusal(): string {
+  return "Состав собирается не меньше чем из двух разных видов ингредиентов";
+}
+
+function tooManyKindsRefusal(): string {
+  return "Состав собирается не больше чем из четырёх разных видов ингредиентов";
+}
+
+/** Отказ выбрать за игрока, какая из двух записанных редкостей одного свойства настоящая. */
+function unevenRarityRefusal(name: string, sources: readonly string[]): string {
+  return `Свойство «${name}» записано с разной редкостью у видов: ${sources.join(", ")}`;
+}
+
 export class Crafting {
   private static readonly KEYS = [
     "ingredientKnowledge",
@@ -82,6 +123,45 @@ export class Crafting {
   forgetIngredient(nameRu: string): Crafting {
     this.located(nameRu);
     return this.with(this.data.filter((ingredient) => ingredient.nameRu !== nameRu));
+  }
+
+  /**
+   * Свойства, совпавшие у выбранных видов, — все до одного.
+   *
+   * Все, а не то, ради которого состав задуман: пока состав не очищен, потребитель подвергается
+   * каждому совпавшему свойству, и умолчать о непрошенном значит соврать о том, что он выпьет.
+   *
+   * Источником считается вид, а не порция: две порции одного корня остаются одним источником и
+   * совпадения с самим собой не дают.
+   */
+  matches(kinds: readonly string[]): readonly PropertyMatch[] {
+    const distinct = [...new Set(kinds)];
+    if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
+    if (distinct.length > MOST_KINDS) throw new DomainError(tooManyKindsRefusal());
+
+    const gathered = new Map<string, { rarity: RevealedProperty["rarity"]; sources: string[] }>();
+    for (const ingredient of distinct.map((kind) => this.located(kind))) {
+      for (const property of ingredient.properties) {
+        const found = gathered.get(property.nameRu);
+        if (found === undefined) {
+          gathered.set(property.nameRu, { rarity: property.rarity, sources: [ingredient.nameRu] });
+          continue;
+        }
+        found.sources.push(ingredient.nameRu);
+        if (found.rarity !== property.rarity) {
+          throw new DomainError(unevenRarityRefusal(property.nameRu, found.sources));
+        }
+      }
+    }
+
+    return [...gathered]
+      .filter(([, found]) => found.sources.length >= FEWEST_KINDS)
+      .map(([nameRu, found]) => ({
+        nameRu,
+        rarity: found.rarity,
+        sources: found.sources,
+        tier: tierOf(found.sources.length),
+      }));
   }
 
   /**
