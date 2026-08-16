@@ -4,11 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { Bag } from "./Bag";
+
+/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
+const spells = loadThorneSpells();
 
 afterEach(cleanup);
 
@@ -50,7 +54,7 @@ const potion: ItemDefinition = {
 
 describe("экран «Сумка»", () => {
   it("держит кошелёк и три счётных раздела (FR-242)", () => {
-    render(<Bag bag={toBagView(createThorne())} {...NOOP} />);
+    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
 
     expect(screen.getByRole("heading", { name: "Деньги" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Расходники" })).toBeDefined();
@@ -67,7 +71,7 @@ describe("экран «Сумка»", () => {
   });
 
   it("кошелёк показывает все три монеты стола, включая нули (FR-242)", () => {
-    render(<Bag bag={toBagView(createThorne())} {...NOOP} />);
+    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
     const purse = screen.getByRole("list", { name: "Кошелёк" });
     expect(within(purse).getAllByRole("listitem")).toHaveLength(3);
     expect(purse.textContent).toContain("зм");
@@ -76,7 +80,7 @@ describe("экран «Сумка»", () => {
   });
 
   it("вещь стоит в разделе своей категории, а не общим списком (FR-238)", () => {
-    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 3 }]))} {...NOOP} />);
+    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 3 }]), spells)} {...NOOP} />);
 
     const consumables = screen.getByRole("list", { name: "Расходники" });
     expect(within(consumables).getByText("Зелье лечения")).toBeDefined();
@@ -90,7 +94,7 @@ describe("экран «Сумка»", () => {
     const onAdjustBagCount = vi.fn();
     render(
       <Bag
-        bag={toBagView(withStock([{ definition: potion, bag: 3 }]))}
+        bag={toBagView(withStock([{ definition: potion, bag: 3 }]), spells)}
         {...NOOP}
         onAdjustBagCount={onAdjustBagCount}
       />,
@@ -108,7 +112,7 @@ describe("экран «Сумка»", () => {
   });
 
   it("ноль — состояние: кончившийся расходник виден нулём, а минус выключен (FR-239)", () => {
-    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 0 }]))} {...NOOP} />);
+    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 0 }]), spells)} {...NOOP} />);
 
     const row = within(screen.getByRole("list", { name: "Расходники" })).getByRole("listitem");
     expect(row.textContent).toContain("Зелье лечения");
@@ -121,7 +125,7 @@ describe("экран «Сумка»", () => {
   it("быстрый ввод заводит вещь сразу в категорию раздела (FR-241)", async () => {
     const user = userEvent.setup();
     const onAddItem = vi.fn();
-    render(<Bag bag={toBagView(createThorne())} {...NOOP} onAddItem={onAddItem} />);
+    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} onAddItem={onAddItem} />);
 
     await user.type(screen.getByLabelText("Новый расходник"), "Свиток огненного шара{Enter}");
     expect(onAddItem).toHaveBeenCalledWith("consumable", "Свиток огненного шара");
@@ -136,7 +140,7 @@ describe("экран «Сумка»", () => {
     const onOpenItem = vi.fn();
     render(
       <Bag
-        bag={toBagView(withStock([{ definition: potion, bag: 3 }]))}
+        bag={toBagView(withStock([{ definition: potion, bag: 3 }]), spells)}
         {...NOOP}
         onOpenItem={onOpenItem}
       />,
@@ -149,7 +153,7 @@ describe("экран «Сумка»", () => {
   it("деньги правятся своей шторкой, и открывает её строка кошелька", async () => {
     const user = userEvent.setup();
     const onEditMoney = vi.fn();
-    render(<Bag bag={toBagView(createThorne())} {...NOOP} onEditMoney={onEditMoney} />);
+    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} onEditMoney={onEditMoney} />);
 
     await user.click(screen.getByRole("button", { name: "Править: Деньги" }));
     expect(onEditMoney).toHaveBeenCalled();

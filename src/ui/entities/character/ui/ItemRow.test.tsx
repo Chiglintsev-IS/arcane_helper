@@ -4,11 +4,16 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { ItemView } from "@/contract/views";
 import type { ItemDefinition } from "@/core/domain/items/schema";
+import { materialOf } from "@/core/application/casting/material";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 
 import { ItemRow } from "./ItemRow";
+
+/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
+const spells = loadThorneSpells();
 
 afterEach(cleanup);
 
@@ -21,14 +26,14 @@ function viewOf(definition: ItemDefinition): ItemView {
   const found = toBagView({
     ...state,
     itemDefinitions: [...state.itemDefinitions, definition],
-  }).items.find((item) => item.id === definition.id);
+  }, spells).items.find((item) => item.id === definition.id);
   if (found === undefined) throw new Error(`нет вещи ${definition.id}`);
   return found;
 }
 
 /** Надетая вещь Торна: она и есть предмет разговора, а её копия рядом отвечала бы за себя. */
 function wornOf(id: string): ItemView {
-  const found = toBagView(createThorne()).items.find((item) => item.id === id);
+  const found = toBagView(createThorne(), spells).items.find((item) => item.id === id);
   if (found === undefined) throw new Error(`нет вещи ${id}`);
   return found;
 }
@@ -117,6 +122,18 @@ describe("строка вещи", () => {
     // Плащ двигает семь чисел, и все семь на строке названы: КД — своим именем, спасброски — целым.
     expect(factAt("+1")).toBe("+1 Класс Доспеха, Все спасброски");
     expect(screen.queryByText(/Спасбросок:/)).toBeNull();
+  });
+
+  it("строка вещи называет, чем вещь требуется (FR-295)", () => {
+    const identify = spells.find((spell) => spell.id === "identify");
+    const material = identify === undefined ? undefined : materialOf(identify.components);
+    if (material === undefined) throw new Error("«Опознание» материала не требует");
+
+    renderRow(viewOf(material));
+
+    // Требование стоит тем же перечнем подробностей, что и цена: отдельной строки под него нет.
+    expect(screen.getByText("Требуется для: Опознание")).toBeDefined();
+    expect(factAt("100")).toBe("100 зм");
   });
 
   it("у вещи без подробностей второй строки нет вовсе (FR-250)", () => {

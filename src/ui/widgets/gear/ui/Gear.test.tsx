@@ -4,11 +4,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { Gear } from "./Gear";
+
+/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
+const spells = loadThorneSpells();
 
 afterEach(cleanup);
 
@@ -50,7 +54,7 @@ const ring: ItemDefinition = {
 
 describe("экран «Экипировка»", () => {
   it("держит защиту, надетое и запас порознь (FR-249)", () => {
-    render(<Gear bag={toBagView(createThorne())} {...NOOP} />);
+    render(<Gear bag={toBagView(createThorne(), spells)} {...NOOP} />);
 
     expect(screen.getByRole("heading", { name: "Защита" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "На мне" })).toBeDefined();
@@ -75,7 +79,7 @@ describe("экран «Экипировка»", () => {
     const user = userEvent.setup();
     const onAdjustWornCount = vi.fn();
     render(
-      <Gear bag={toBagView(withStock(ring, { bag: 1 }))} {...NOOP} onAdjustWornCount={onAdjustWornCount} />,
+      <Gear bag={toBagView(withStock(ring, { bag: 1 }), spells)} {...NOOP} onAdjustWornCount={onAdjustWornCount} />,
     );
 
     await user.click(screen.getByRole("button", { name: "Надеть один: Кольцо защиты" }));
@@ -86,7 +90,7 @@ describe("экран «Экипировка»", () => {
   });
 
   it("надеть нечего — глагола нет вовсе, а не погашенным (FR-249)", () => {
-    render(<Gear bag={toBagView(createThorne())} {...NOOP} />);
+    render(<Gear bag={toBagView(createThorne(), spells)} {...NOOP} />);
 
     // Плащ надет, и запаса у него нет: надевать нечего, и кнопки нет — причину погашенной на
     // строке назвать нечем.
@@ -95,7 +99,7 @@ describe("экран «Экипировка»", () => {
   });
 
   it("часть надета, часть про запас — вещь стоит в обоих разделах со своим числом (FR-249)", () => {
-    render(<Gear bag={toBagView(withStock(ring, { bag: 7, worn: 3 }))} {...NOOP} />);
+    render(<Gear bag={toBagView(withStock(ring, { bag: 7, worn: 3 }), spells)} {...NOOP} />);
 
     const worn = within(screen.getByRole("list", { name: "На мне" }));
     const spare = within(screen.getByRole("list", { name: "Про запас" }));
@@ -110,7 +114,7 @@ describe("экран «Экипировка»", () => {
   it("быстрый ввод заводит экипировку в запас (FR-249)", async () => {
     const user = userEvent.setup();
     const onAddItem = vi.fn();
-    render(<Gear bag={toBagView(createThorne())} {...NOOP} onAddItem={onAddItem} />);
+    render(<Gear bag={toBagView(createThorne(), spells)} {...NOOP} onAddItem={onAddItem} />);
 
     await user.type(screen.getByLabelText("Новая экипировка"), "Кольцо защиты{Enter}");
     expect(onAddItem).toHaveBeenCalledWith("gear", "Кольцо защиты");
@@ -119,7 +123,7 @@ describe("экран «Экипировка»", () => {
   it("кончившаяся вещь остаётся строкой с нулём: убирают её из шторки, а не с экрана", async () => {
     const user = userEvent.setup();
     const onOpenItem = vi.fn();
-    render(<Gear bag={toBagView(withStock(ring, {}))} {...NOOP} onOpenItem={onOpenItem} />);
+    render(<Gear bag={toBagView(withStock(ring, {}), spells)} {...NOOP} onOpenItem={onOpenItem} />);
 
     const spare = within(screen.getByRole("list", { name: "Про запас" }));
     expect(spare.getByText("в сумке 0")).toBeDefined();

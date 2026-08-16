@@ -8,10 +8,17 @@
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 
+import { Character } from "@/core/domain/assembly/character";
+import { materialOf } from "@/core/application/casting/material";
+
 import { toBagView } from "./bagView";
+
+/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
+const spells = loadThorneSpells();
 
 /** Персонаж с заведённой вещью и её запасом — поверх обычного снаряжения Торна. */
 function withStock(definition: ItemDefinition, stock: { bag?: number; worn?: number } = {}): CharacterState {
@@ -30,19 +37,19 @@ function withStock(definition: ItemDefinition, stock: { bag?: number; worn?: num
 const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kind: "other" };
 
 function itemOf(character: CharacterState, id: string) {
-  const found = toBagView(character).items.find((item) => item.id === id);
+  const found = toBagView(character, spells).items.find((item) => item.id === id);
   if (found === undefined) throw new Error(`нет вещи ${id}`);
   return found;
 }
 
 describe("деньги", () => {
   it("все монеты стола едут в порядке достоинства, включая нули", () => {
-    expect(toBagView(createThorne()).money.map((coin) => coin.currency)).toEqual([
+    expect(toBagView(createThorne(), spells).money.map((coin) => coin.currency)).toEqual([
       "gold",
       "silver",
       "copper",
     ]);
-    expect(toBagView(createThorne()).money.every((coin) => coin.amount >= 0)).toBe(true);
+    expect(toBagView(createThorne(), spells).money.every((coin) => coin.amount >= 0)).toBe(true);
   });
 });
 
@@ -97,7 +104,7 @@ describe("вещи", () => {
 
 describe("защита", () => {
   it("без доспеха защита своего доспеха не называет", () => {
-    expect(toBagView(createThorne()).armorClass).toEqual({ value: 14 });
+    expect(toBagView(createThorne(), spells).armorClass).toEqual({ value: 14 });
   });
 
   it("надетый доспех назван тем именем, под которым он и считает", () => {
@@ -106,6 +113,37 @@ describe("защита", () => {
       { worn: 1 },
     );
 
-    expect(toBagView(armored).armorClass).toEqual({ value: 18, wornArmorNameRu: "Чешуйчатый доспех" });
+    expect(toBagView(armored, spells).armorClass).toEqual({ value: 18, wornArmorNameRu: "Чешуйчатый доспех" });
+  });
+});
+
+describe("чем вещь требуется", () => {
+  /** Компонент, заведённый вещью: её заводит та же операция, что и всякую покупку. */
+  function withComponentOf(spellId: string): CharacterState {
+    const spell = spells.find((candidate) => candidate.id === spellId);
+    if (spell === undefined) throw new Error(`нет карточки ${spellId}`);
+    const material = materialOf(spell.components);
+    if (material === undefined) throw new Error(`«${spell.nameRu}» материала не требует`);
+
+    const root = Character.of(createThorne());
+    return root
+      .withItems(root.items.addDefinition(material))
+      .withEquipment(root.equipment.adjustBagCount(material.id, 1))
+      .toState();
+  }
+
+  it("вещь называет тех, кто её требует, а сама о них не знает (FR-295)", () => {
+    const bought = withComponentOf("identify");
+    const pearl = toBagView(bought, spells).items.find(
+      (item) => item.nameRu === "жемчужина стоимостью не менее 100 зм",
+    );
+
+    expect(pearl?.neededForRu).toEqual(["Опознание"]);
+    // Записи о потребителях у самой вещи нет: без карточек требование не собирается вовсе.
+    expect(toBagView(bought, []).items.every((item) => item.neededForRu.length === 0)).toBe(true);
+  });
+
+  it("вещь, которой никто не требует, о требованиях молчит", () => {
+    expect(itemOf(withStock(rope), "rope").neededForRu).toEqual([]);
   });
 });

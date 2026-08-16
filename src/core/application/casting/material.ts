@@ -56,3 +56,51 @@ export function materialCoveredByFocus(
   const root = Character.of(character);
   return root.equipment.replacesFreeComponents(root.items);
 }
+
+/** Кому нужна вещь: кто её требует, чем её заводят и срочно ли это. */
+export type MaterialNeed = {
+  /** Карточка, которой вещь заводят: цену и судьбу она называет сама. */
+  spellId: string;
+  material: NonNullable<ReturnType<typeof materialOf>>;
+  /** Заклинания, называющие этот компонент, в порядке карточек. */
+  spellNamesRu: string[];
+  /** Закрыт ли компонент у этого персонажа: закрытый нужен, но не срочно. */
+  coveredByFocus: boolean;
+};
+
+/**
+ * Обход карточек: кому какая вещь нужна.
+ *
+ * Собирается здесь, а не хранится при вещи: вещь про своих потребителей не знает, и записанный при
+ * ней перечень разошёлся бы с содержимым при первом же пополнении. Компонент одних и тех же слов у
+ * двух карточек — одна вещь, и требуют её обе; срочным требование остаётся, пока его не закрыла
+ * фокусировка хотя бы у одной из них.
+ */
+export function materialNeeds(
+  spells: readonly Spell[],
+  character: CharacterState,
+): MaterialNeed[] {
+  const needs = new Map<string, MaterialNeed>();
+
+  for (const spell of spells) {
+    const material = materialOf(spell.components);
+    if (material === undefined) continue;
+
+    const covered = materialCoveredByFocus(spell.components, character);
+    const known = needs.get(material.id);
+    if (known === undefined) {
+      needs.set(material.id, {
+        spellId: spell.id,
+        material,
+        spellNamesRu: [spell.nameRu],
+        coveredByFocus: covered,
+      });
+      continue;
+    }
+
+    known.spellNamesRu.push(spell.nameRu);
+    known.coveredByFocus = known.coveredByFocus && covered;
+  }
+
+  return [...needs.values()];
+}
