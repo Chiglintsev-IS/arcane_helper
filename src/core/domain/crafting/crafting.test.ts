@@ -96,6 +96,34 @@ describe("ремесло", () => {
     expect(() => Crafting.of(EMPTY).directionsOf("Лунная трава")).toThrow(/Лунная трава/);
   });
 
+  it("отметка «свойств больше нет» ставится и снимается", () => {
+    const revealed = withMoonHerb().revealProperty("Лунная трава", {
+      number: 1,
+      nameRu: "Лечение здоровья",
+      rarity: "common",
+    });
+
+    // Без отметки знание неполно всегда: потолок справочника про этот корень ничего не говорит.
+    expect(revealed.find("Лунная трава")?.propertiesExhausted).toBe(false);
+
+    const exhausted = revealed.markPropertiesExhausted("Лунная трава", true);
+    expect(exhausted.find("Лунная трава")?.propertiesExhausted).toBe(true);
+    // Раскрытое отметка не трогает: она про то, чего у вида нет, а не про то, что уже узнано.
+    expect(exhausted.find("Лунная трава")?.properties).toHaveLength(1);
+
+    // Узнанное за столом бывает и ошибкой: снимается отметка тем же путём, каким ставится.
+    expect(
+      exhausted.markPropertiesExhausted("Лунная трава", false).find("Лунная трава")
+        ?.propertiesExhausted,
+    ).toBe(false);
+  });
+
+  it("отметка о незаписанном виде не ставится", () => {
+    expect(() => Crafting.of(EMPTY).markPropertiesExhausted("Лунная трава", true)).toThrow(
+      /Лунная трава/,
+    );
+  });
+
   it("записанное по ошибке забывается", () => {
     expect(withMoonHerb().forgetIngredient("Лунная трава").all).toEqual([]);
     expect(() => Crafting.of(EMPTY).forgetIngredient("Лунная трава")).toThrow(/Лунная трава/);

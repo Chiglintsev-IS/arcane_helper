@@ -132,6 +132,13 @@ export const commandSchema = z.discriminatedUnion("kind", [
 
   command("note_ingredient", { nameRu: word }),
   command("forget_ingredient", { nameRu: word }),
+  /**
+   * Установил ли стол, что свойств у вида больше нет.
+   *
+   * Едет желаемым состоянием, а не переключением: отметка ставится и снимается одним делом, и
+   * повтор той же команды оставляет знание тем же.
+   */
+  command("mark_properties_exhausted", { nameRu: word, exhausted: z.boolean() }),
   /** Название и редкость раскрытого называет стол: справочник редкости не печатает. */
   command("reveal_property", {
     nameRu: word,

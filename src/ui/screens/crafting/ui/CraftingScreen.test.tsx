@@ -75,6 +75,27 @@ describe("«Ремесло»", () => {
     expect(screen.queryByText(/из \d/)).toBeNull();
   });
 
+  it("с отметкой счёт раскрытого называет знаменатель", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(
+      <CraftingScreen />,
+      withIngredientKnowledge(createThorne(), MOON_HERB, [
+        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+        { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
+      ]),
+    );
+
+    await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
+    await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
+
+    // Знаменатель приходит только от стола: с его словом «два» становится «два из двух».
+    expect(await knownList().findByText("раскрыто 2 из 2")).toBeDefined();
+
+    // Сказанное за столом бывает и ошибкой: снятая отметка возвращает счёт без знаменателя.
+    await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
+    expect(await knownList().findByText("раскрыто 2 · следующее не исследовано")).toBeDefined();
+  });
+
   it("«Ремесло»: записанный вид без раскрытого остаётся строкой", async () => {
     await renderWithStores(
       <CraftingScreen />,

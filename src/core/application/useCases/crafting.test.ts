@@ -7,7 +7,7 @@ import { undoLast, type Occasion, type Session } from "@/core/application/sessio
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { withIngredientKnowledge } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { addItem, adjustBagCount } from "./equipment";
-import { craftBatch } from "./crafting";
+import { craftBatch, markPropertiesExhausted } from "./crafting";
 
 function testOccasion(commandId = "command-1"): Occasion {
   let tick = 0;
@@ -40,6 +40,11 @@ const STANDARD: RecipeFormula = {
 
 function bagCount(session: Session, nameRu: string): number {
   return Character.of(session.character).equipment.bagCount(Items.idFromName(nameRu));
+}
+
+/** Установил ли стол, что свойств у вида больше нет. */
+function exhaustedOf(session: Session, nameRu: string): boolean | undefined {
+  return Character.of(session.character).crafting.find(nameRu)?.propertiesExhausted;
 }
 
 /** Торн, у которого оба вида записаны знанием и лежат в сумке названным числом порций. */
@@ -206,5 +211,23 @@ describe("проверка разработки", () => {
     const crafted = craftBatch(stocked(6), { formula: STANDARD, portions: 1, rolled: 20 }, occasion);
 
     expect(crafted.journal.at(-1)?.summaryRu).toContain("Натуральная двадцать");
+  });
+});
+
+describe("полнота знания о виде", () => {
+  it("отметка о полноте знания возвращается журналом", () => {
+    // Запас тут ни при чём: отметка — про знание о виде, и сумку она не спрашивает.
+    const before: Session = {
+      character: withIngredientKnowledge(createThorne(), MOON_HERB, [HEALING]),
+      journal: [],
+    };
+
+    const marked = markPropertiesExhausted(before, { nameRu: MOON_HERB, exhausted: true }, occasion);
+
+    expect(exhaustedOf(marked, MOON_HERB)).toBe(true);
+    expect(marked.journal.at(-1)?.summaryRu).toBe(`У вида больше нет свойств: ${MOON_HERB}`);
+
+    // Ошибочно сказанное за столом возвращается так же, как всё прочее записанное.
+    expect(exhaustedOf(undoLast(marked), MOON_HERB)).toBe(false);
   });
 });

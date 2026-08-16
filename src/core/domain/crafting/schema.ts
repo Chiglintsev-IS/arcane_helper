@@ -64,6 +64,7 @@ const revealedPropertyFields = z.object({
 type IngredientFields = {
   nameRu: string;
   properties: readonly z.infer<typeof revealedPropertyFields>[];
+  propertiesExhausted: boolean;
 };
 
 /** Хранится по возрастанию номера: порядок записи не должен решать, как знание читается. */
@@ -85,6 +86,14 @@ const ingredientKnowledgeSchema = z
   .object({
     nameRu: nonEmpty,
     properties: z.array(revealedPropertyFields).default([]),
+    /**
+     * Установил ли стол, что свойств у вида больше нет.
+     *
+     * Отдельным полем, потому что вывести это не из чего: потолок справочника стоит на четырёх и
+     * молчит о том, сколько свойств у корня на самом деле. Без отметки знание неполно всегда — и
+     * у вида с одним раскрытым свойством, и у вида с четырьмя.
+     */
+    propertiesExhausted: z.boolean().default(false),
   })
   .transform(inNumberOrder)
   .superRefine((ingredient, context) => {

@@ -5,7 +5,8 @@
  * и соединять их незачем — вопросы разные, и задают их в разные минуты игры.
  *
  * Сколько у вида свойств всего, не едет тоже: приложение этого не знает. Потолок правил фактом вида
- * не является, и знаменатель, поехавший отсюда, стал бы обещанием, которого никто не давал.
+ * не является, и знаменатель, поехавший отсюда, стал бы обещанием, которого никто не давал. Едет
+ * лишь отметка стола о том, что свойств больше нет: она — записанный факт, а не вывод из потолка.
  */
 
 import type { CraftingView } from "@/contract/views";
@@ -26,6 +27,7 @@ export function toCraftingView(character: CharacterState): CraftingView {
     },
     ingredients: crafting.all.map((ingredient) => ({
       nameRu: ingredient.nameRu,
+      propertiesExhausted: ingredient.propertiesExhausted,
       properties: ingredient.properties.map((property) => ({
         number: property.number,
         nameRu: property.nameRu,

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { CommandOf } from "@/contract/commands";
-import type { ChoicesView } from "@/contract/views";
+import type { ChoicesView, IngredientKnowledgeView } from "@/contract/views";
 
 import {
   DIRECTION_LABELS,
@@ -33,23 +33,30 @@ export function revealPropertyName(nameRu: string): string {
  *
  * Заголовок называет вид, а произносимое имя добавляет к нему слово дела: заголовку тут стоять
  * предметом — за дверью набирают про этот самый корень, и повторять слово дела глазами незачем.
+ *
+ * Здесь же стол говорит, что свойств у вида больше нет: сказать это можно только про тот вид, чьё
+ * знание перед глазами, а строке списка эта отметка стоила бы места у каждого вида разом.
  */
 export function RevealPropertySheet({
-  nameRu,
+  ingredient,
   choices,
   refusalRu,
   onConfirm,
+  onExhausted,
   onForget,
   onCancel,
 }: {
-  nameRu: string;
+  ingredient: IngredientKnowledgeView;
   choices: ChoicesView;
   /** Почему записать не вышло; нет вовсе — отказа не было. */
   refusalRu: string | null;
   onConfirm: (command: CommandOf<"reveal_property">) => void;
+  /** Установил ли стол, что свойств больше нет: отметка ставится и снимается одинаково. */
+  onExhausted: (exhausted: boolean) => void;
   onForget: () => void;
   onCancel: () => void;
 }) {
+  const nameRu = ingredient.nameRu;
   const [propertyRu, setPropertyRu] = useState("");
   const [number, setNumber] = useState(choices.propertyNumbers[0] ?? 1);
   const [rarity, setRarity] = useState(choices.alchemicalRarities[0] ?? "");
@@ -115,6 +122,20 @@ export function RevealPropertySheet({
           </select>
         </label>
       </div>
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={ingredient.propertiesExhausted}
+        onClick={() => onExhausted(!ingredient.propertiesExhausted)}
+        className={`min-h-11 rounded-lg px-3 text-sm ${
+          ingredient.propertiesExhausted
+            ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
+            : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+        }`}
+      >
+        Свойств у вида больше нет
+      </button>
 
       {refusalRu === null ? null : (
         <p className="text-xs text-slate-700 dark:text-slate-300">{refusalRu}</p>
