@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 
 import type { CommandOf } from "@/contract/commands";
 import type { ChoicesView } from "@/contract/views";
@@ -15,11 +15,24 @@ import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
+ * Имя двери раскрытия и имя её шторки: слово дела и вид, которого оно касается.
+ *
+ * Слово принадлежит шторке, а вид приходит одним значением: дверь пишет экран, шторку — этот файл,
+ * а читает их за столом один человек, и два имени одного дела он читает как два разных дела.
+ */
+export function revealPropertyName(nameRu: string): string {
+  return `Раскрыть свойство: ${nameRu}`;
+}
+
+/**
  * Раскрытие свойства у записанного вида.
  *
  * Название приходит из закрытого перечня, а не из свободного поля: совпадение считается тождеством
  * названий, и «лечит», набранное руками, не совпало бы с «Лечением здоровья» никогда. Редкость
  * называет игрок: справочник её не печатает, и вывести приложению не из чего.
+ *
+ * Заголовок называет вид, а произносимое имя добавляет к нему слово дела: заголовку тут стоять
+ * предметом — за дверью набирают про этот самый корень, и повторять слово дела глазами незачем.
  */
 export function RevealPropertySheet({
   nameRu,
@@ -37,7 +50,6 @@ export function RevealPropertySheet({
   onForget: () => void;
   onCancel: () => void;
 }) {
-  const titleId = useId();
   const [propertyRu, setPropertyRu] = useState("");
   const [number, setNumber] = useState(choices.propertyNumbers[0] ?? 1);
   const [rarity, setRarity] = useState(choices.alchemicalRarities[0] ?? "");
@@ -46,12 +58,10 @@ export function RevealPropertySheet({
     <section
       role="dialog"
       aria-modal="true"
-      aria-labelledby={titleId}
+      aria-label={revealPropertyName(nameRu)}
       className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
-      <h2 id={titleId} className="text-base font-semibold leading-tight">
-        {nameRu}
-      </h2>
+      <h2 className="text-base font-semibold leading-tight">{nameRu}</h2>
 
       <label className="flex flex-col gap-1">
         <span className="text-xs text-slate-600 dark:text-slate-400">Свойство</span>

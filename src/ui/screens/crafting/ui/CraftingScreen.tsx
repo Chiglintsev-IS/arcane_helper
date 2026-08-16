@@ -14,7 +14,10 @@ import {
   propertyNumberRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { WorkshopSheet } from "@/ui/features/edit-workshop/ui/WorkshopSheet";
-import { RevealPropertySheet } from "@/ui/features/reveal-property/ui/RevealPropertySheet";
+import {
+  RevealPropertySheet,
+  revealPropertyName,
+} from "@/ui/features/reveal-property/ui/RevealPropertySheet";
 import { RecipeBench, type RecipeDraft } from "@/ui/widgets/recipe-bench/ui/RecipeBench";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
@@ -97,7 +100,7 @@ function KnownIngredient({
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`Раскрыть свойство: ${ingredient.nameRu}`}
+        aria-label={revealPropertyName(ingredient.nameRu)}
         className={`min-h-11 min-w-11 shrink-0 rounded-xl text-lg ${SURFACE_GROUP}`}
       >
         <span aria-hidden="true">+</span>

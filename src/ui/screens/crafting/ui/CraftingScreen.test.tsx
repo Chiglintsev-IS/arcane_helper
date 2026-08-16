@@ -193,6 +193,19 @@ describe("«Ремесло»: запись знания", () => {
     ]);
   });
 
+  it("шторка раскрытия названа тем же делом, что и дверь", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CraftingScreen />, withIngredientKnowledge(createThorne(), MOON_HERB));
+
+    const door = `Раскрыть свойство: ${MOON_HERB}`;
+    await user.click(screen.getByRole("button", { name: door }));
+
+    // Дверь названа делом и видом; за ней стоит то же имя — два имени одного дела читались бы
+    // как два разных дела. Заголовок при этом называет вид: слово дела уже прочитано на двери.
+    const sheet = within(screen.getByRole("dialog", { name: door }));
+    expect(sheet.getByRole("heading", { name: MOON_HERB })).toBeDefined();
+  });
+
   it("«Ремесло»: отказ владельца стоит в той шторке, где набирали", async () => {
     const user = userEvent.setup();
     await renderWithStores(<CraftingScreen />, twoKinds());
