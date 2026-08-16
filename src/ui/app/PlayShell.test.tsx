@@ -157,7 +157,7 @@ describe("режим экрана переживает перезапуск (FR-
       "Ещё",
     ]);
     // Ярлык «Ещё» называет, что под ним лежит: иначе за ним пришлось бы лезть, чтобы узнать.
-    expect(panel.getByRole("button", { name: "Ещё: Лист" })).toBeDefined();
+    expect(panel.getByRole("button", { name: "Ещё: Лист, Ремесло" })).toBeDefined();
 
     // Панель прокрутки не держит: все шесть помещаются, и прокручивать нечего.
     await user.click(screen.getByRole("button", { name: /^Привал/ }));

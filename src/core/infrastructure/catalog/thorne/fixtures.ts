@@ -12,6 +12,7 @@
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { hitPointsForPoints, slotsInOrder } from "@/core/domain/arcana/slots";
+import type { RevealedProperty } from "@/core/domain/crafting/schema";
 
 /** Столько-то ячеек уровня истрачено — как если бы их истратили сотворением. */
 export function withSpentSlots(
@@ -59,6 +60,28 @@ export function withBloodExchange(character: CharacterState, points: number): Ch
     points,
   );
   return root.withVitality(vitality).withArcana(root.arcana.gainSpellPoints(points)).toState();
+}
+
+/**
+ * Про вид ингредиента узнано столько-то: вид записан, названные свойства раскрыты.
+ *
+ * Тем же путём, что за столом: сначала запись о виде, потом раскрытие по одному свойству — знание не
+ * появляется целиком, и фикстура, положенная списком в поле, говорила бы обратное.
+ */
+export function withIngredientKnowledge(
+  character: CharacterState,
+  nameRu: string,
+  properties: readonly RevealedProperty[] = [],
+): CharacterState {
+  const root = Character.of(character);
+  return root
+    .withCrafting(
+      properties.reduce(
+        (crafting, property) => crafting.revealProperty(nameRu, property),
+        root.crafting.noteIngredient(nameRu),
+      ),
+    )
+    .toState();
 }
 
 /**
