@@ -20,6 +20,7 @@ import { Badge } from "@/ui/shared/ui/Badge";
 import { TONE_CLASS, type Tone } from "@/ui/shared/ui/tone";
 import { hitDicePool } from "@/ui/widgets/resource-header/lib/hitDicePool";
 import { signed } from "@/shared/language";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
  * Ярлык того, чем платят: ресурса хода и пула с остатком.
@@ -70,7 +71,7 @@ function ArmorClassStat({
 }) {
   // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
   return (
-    <div className="flex-auto rounded-md border border-slate-200 dark:border-slate-800">
+    <div className={`flex-auto rounded-md ${SURFACE_CONTROL}`}>
       <dt className="sr-only">КД</dt>
       <dd>
         <button
@@ -102,7 +103,7 @@ function HitPointsStat({
 }) {
   // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
   return (
-    <div className="flex-auto rounded-md border border-slate-200 dark:border-slate-800">
+    <div className={`flex-auto rounded-md ${SURFACE_CONTROL}`}>
       <dt className="sr-only">Хиты</dt>
       <dd>
         <button
@@ -120,8 +121,8 @@ function HitPointsStat({
 }
 
 /**
- * Плитка числа, которое за бой не меняется: за ней нет правки, и рамки у неё нет — рамку в этом
- * ряду носит то, что нажимается.
+ * Плитка числа, которое за бой не меняется: за ней нет правки, и лежит она ступенью ниже — верхнюю
+ * ступень в этом ряду занимает то, что нажимается.
  */
 function ConstantStat({
   captionRu,
@@ -134,7 +135,7 @@ function ConstantStat({
   accessibleName: string;
 }) {
   return (
-    <div className="flex-auto rounded-md bg-slate-400/10 px-2 py-1">
+    <div className={`flex-auto rounded-md px-2 py-1 ${SURFACE_GROUP}`}>
       <dt className="sr-only">{accessibleName}</dt>
       <dd>
         <TileCaption>{captionRu}</TileCaption>
@@ -218,10 +219,8 @@ function SlotCounter({
         type="button"
         onClick={onEdit}
         aria-label={`Ячейки ${level} уровня: ${remaining} из ${maximum}. ${RESOURCES_EDIT_LABEL}`}
-        className={`w-full rounded-md border px-1 py-1 text-center ${
-          exhausted
-            ? "border-slate-200 text-slate-500 dark:border-slate-800"
-            : "border-action/40 bg-action/5"
+        className={`w-full rounded-md px-1 py-1 text-center ${
+          exhausted ? `text-slate-400 ${SURFACE_CONTROL}` : "bg-action/20"
         }`}
       >
         <TileCaption>{level} ур.</TileCaption>

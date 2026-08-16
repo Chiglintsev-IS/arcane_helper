@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { QuickAddField } from "./QuickAddField";
+import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
  * Раздел списка вещей: заголовок, строки и строка быстрого ввода.
@@ -31,7 +32,7 @@ export function ItemSection({
 
   if (children === null) {
     return (
-      <section className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800">
+      <section className={`flex items-center gap-3 rounded-xl px-3 py-2 ${SURFACE_GROUP}`}>
         <h2 className="shrink-0 text-sm font-semibold">{titleRu}</h2>
         <div className="min-w-0 flex-1">{add}</div>
       </section>
@@ -39,7 +40,7 @@ export function ItemSection({
   }
 
   return (
-    <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+    <section className={`flex flex-col gap-1 rounded-xl p-3 ${SURFACE_GROUP}`}>
       <h2 className="text-sm font-semibold">{titleRu}</h2>
       {children}
       {add}

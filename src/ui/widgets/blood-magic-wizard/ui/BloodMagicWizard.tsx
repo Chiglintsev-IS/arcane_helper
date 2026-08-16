@@ -20,6 +20,7 @@ import type { PreviewOf } from "@/contract/questions";
 import type { BloodMagicView, SheetView } from "@/contract/views";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { withPlural } from "@/shared/language";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 type ExchangePreview = PreviewOf<"blood_exchange_preview">;
 
@@ -66,7 +67,7 @@ function AmountStep({
           aria-label="Меньше очков"
           disabled={points <= bounds.minimum}
           onClick={() => onChange(points - 1)}
-          className="min-h-11 w-14 rounded-xl border border-slate-200 text-xl disabled:opacity-40 dark:border-slate-800"
+          className={`min-h-11 w-14 rounded-xl text-xl disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           −
         </button>
@@ -83,7 +84,7 @@ function AmountStep({
           aria-label="Больше очков"
           disabled={points >= bounds.maximum}
           onClick={() => onChange(points + 1)}
-          className="min-h-11 w-14 rounded-xl border border-slate-200 text-xl disabled:opacity-40 dark:border-slate-800"
+          className={`min-h-11 w-14 rounded-xl text-xl disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           +
         </button>
@@ -109,7 +110,7 @@ function SummaryStep({ preview }: { preview: ExchangePreview | null }) {
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
         <ol className="flex flex-col gap-1 text-sm">
           {(preview?.instructions ?? []).map((step) => (
-            <li key={step} className="rounded-lg border border-slate-200 px-2 py-1 dark:border-slate-800">
+            <li key={step} className={`rounded-lg px-2 py-1 ${SURFACE_GROUP}`}>
               {step}
             </li>
           ))}
@@ -120,7 +121,7 @@ function SummaryStep({ preview }: { preview: ExchangePreview | null }) {
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
           Сказать мастеру
         </h3>
-        <p className="rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-800">
+        <p className={`rounded-lg p-2 text-sm ${SURFACE_GROUP}`}>
           {preview?.announcement ?? ""}
         </p>
       </section>
@@ -196,7 +197,7 @@ export function BloodMagicWizard({
             {warnings.map((warning) => (
               <li
                 key={warning}
-                className="rounded-lg border border-reaction/50 bg-reaction/10 p-2 text-sm"
+                className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}
               >
                 {warning}
               </li>
@@ -210,7 +211,7 @@ export function BloodMagicWizard({
             <button
               type="button"
               onClick={() => setAllowAnyway(true)}
-              className="min-h-11 rounded-lg border border-reaction/60 px-3 text-sm font-medium text-reaction-strong dark:text-reaction"
+              className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction ${SURFACE_CONTROL}`}
             >
               Применить всё равно
             </button>
@@ -231,7 +232,7 @@ export function BloodMagicWizard({
       {current === "summary" ? <SummaryStep preview={preview} /> : null}
 
       {error === null ? null : (
-        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
           {error}
         </p>
       )}

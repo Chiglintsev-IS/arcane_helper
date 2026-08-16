@@ -4,6 +4,7 @@ import type { BagView, ChoicesView } from "@/contract/views";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
 import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
 import { ItemSection } from "@/ui/shared/ui/ItemSection";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
  * Разделы сумки — по категории счётной вещи. Порядок постоянен, пустой раздел остаётся на месте со
@@ -49,7 +50,7 @@ export function Bag({
 
   return (
     <div className="flex flex-col gap-2">
-      <section className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800">
+      <section className={`flex items-center gap-3 rounded-xl px-3 py-2 ${SURFACE_GROUP}`}>
         <h2 className="shrink-0 text-sm font-semibold">Деньги</h2>
         {/* Все монеты стола всегда: исчезнувший ноль заставляет гадать, кончился или забыт. */}
         <ul
@@ -67,7 +68,7 @@ export function Bag({
           type="button"
           onClick={onEditMoney}
           aria-label="Править: Деньги"
-          className="min-h-11 shrink-0 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 shrink-0 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Править
         </button>
@@ -103,7 +104,7 @@ export function Bag({
                       aria-label={`Потратить один из сумки: ${item.nameRu}`}
                       disabled={item.bagCount === 0}
                       onClick={() => onAdjustBagCount(item.id, -1)}
-                      className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+                      className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
                     >
                       −
                     </button>
@@ -114,7 +115,7 @@ export function Bag({
                       type="button"
                       aria-label={`Добавить один в сумку: ${item.nameRu}`}
                       onClick={() => onAdjustBagCount(item.id, 1)}
-                      className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base dark:border-slate-800"
+                      className={`min-h-11 min-w-11 rounded-lg text-base ${SURFACE_CONTROL}`}
                     >
                       +
                     </button>

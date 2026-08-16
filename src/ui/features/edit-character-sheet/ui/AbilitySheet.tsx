@@ -6,6 +6,7 @@ import type { AbilityView, ChoicesView } from "@/contract/views";
 import { abilityLabel, skillLabel, trainingLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Набранные владения: навык и степень словами правил — их же ждёт команда. */
 type Skills = Record<string, string>;
@@ -90,10 +91,10 @@ export function AbilitySheet({
         aria-checked={saveProficient}
         aria-label="Владение спасброском"
         onClick={() => setSaveProficient(!saveProficient)}
-        className={`min-h-11 rounded-lg border px-3 text-sm ${
+        className={`min-h-11 rounded-lg px-3 text-sm ${
           saveProficient
-            ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-            : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+            ? "bg-action/20 font-medium text-action-strong dark:text-action"
+            : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
         }`}
       >
         Владение спасброском
@@ -111,10 +112,10 @@ export function AbilitySheet({
                 aria-checked={skills[id] === choice.training}
                 aria-label={choice.labelRu}
                 onClick={() => setTraining(id, choice.training)}
-                className={`min-h-11 rounded-lg border px-2 text-xs ${
+                className={`min-h-11 rounded-lg px-2 text-xs ${
                   skills[id] === choice.training
-                    ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-                    : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                    ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                    : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
                 }`}
               >
                 {choice.labelRu}

@@ -17,6 +17,7 @@ import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export function UnreadableSave() {
   const { session: sessionStore } = useStores();
@@ -30,7 +31,7 @@ export function UnreadableSave() {
       <h1 className="text-base font-semibold">Сохранение не прочиталось</h1>
       <p
         role="alert"
-        className="rounded-lg border border-reaction bg-reaction/10 p-2 text-xs text-reaction-strong dark:text-reaction"
+        className={`rounded-lg bg-reaction/10 p-2 text-xs text-reaction-strong dark:text-reaction ${SURFACE_GROUP}`}
       >
         {reason ?? "Состояние не прочитано"}
       </p>
@@ -51,7 +52,7 @@ export function UnreadableSave() {
             role="region"
             aria-label="Содержимое хранилища"
             tabIndex={0}
-            className="max-h-40 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-2 font-mono text-[11px] leading-snug dark:border-slate-800 dark:bg-slate-900"
+            className={`max-h-40 overflow-auto rounded-lg p-2 font-mono text-[11px] leading-snug ${SURFACE_GROUP}`}
           >
             {rawSave.text}
           </pre>
@@ -59,7 +60,7 @@ export function UnreadableSave() {
         </>
       )}
 
-      <hr className="mt-2 border-slate-200 dark:border-slate-800" />
+      <hr className={`mt-2 ${SURFACE_GROUP}`} />
       <h2 className="text-sm font-semibold">Чистое состояние</h2>
       <p className="text-xs text-slate-600 dark:text-slate-400">
         Приложение начнёт с чистого Торна. Сохранение при этом заменяется — копию берут до, а не
@@ -68,7 +69,7 @@ export function UnreadableSave() {
       <button
         type="button"
         onClick={() => setStartingOver(true)}
-        className="min-h-11 rounded-xl border border-reaction px-3 text-sm text-reaction-strong dark:text-reaction"
+        className={`min-h-11 rounded-xl px-3 text-sm text-reaction-strong dark:text-reaction ${SURFACE_CONTROL}`}
       >
         Начать заново
       </button>

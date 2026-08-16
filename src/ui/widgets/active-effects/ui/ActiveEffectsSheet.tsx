@@ -15,6 +15,7 @@ import { useState, type FormEvent } from "react";
 import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
+import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Имя шторки: кнопка, которая её открывает, обещает ровно это слово. */
 export const ACTIVE_SHEET_LABEL = "Действует";
@@ -46,7 +47,7 @@ function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
 
   return (
     <form onSubmit={submit}>
-      <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-2 text-xs dark:border-slate-800">
+      <label className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs ${SURFACE_CONTROL}`}>
         <span className="shrink-0 text-slate-500 dark:text-slate-400">Новый статус</span>
         <input
           type="text"
@@ -86,7 +87,7 @@ function ConcentrationSection({
         <button
           type="button"
           onClick={onOpenSpell}
-          className="min-h-11 self-start rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 self-start rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Полные правила <span aria-hidden="true">›</span>
         </button>
@@ -111,14 +112,14 @@ function ConcentrationSection({
         <button
           type="button"
           onClick={onTakeDamage}
-          className="min-h-11 flex-1 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
+          className={`min-h-11 flex-1 rounded-xl px-3 text-sm font-semibold text-reaction-strong dark:text-reaction ${SURFACE_CONTROL}`}
         >
           Получил урон
         </button>
         <button
           type="button"
           onClick={onDrop}
-          className="min-h-11 flex-1 rounded-xl border border-slate-300 px-3 text-sm dark:border-slate-700"
+          className={`min-h-11 flex-1 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Снять концентрацию
         </button>
@@ -159,9 +160,9 @@ export function ActiveEffectsSheet({
       role="dialog"
       aria-modal="true"
       aria-label={ACTIVE_SHEET_LABEL}
-      className="fixed inset-0 z-10 flex flex-col bg-slate-50 dark:bg-slate-950"
+      className={`fixed inset-0 z-10 flex flex-col ${SURFACE_PAGE}`}
     >
-      <header className="flex items-start justify-between gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
+      <header className={`flex items-start justify-between gap-2 p-3 ${SURFACE_GROUP}`}>
         <h2 className="text-lg font-semibold leading-tight">{ACTIVE_SHEET_LABEL}</h2>
         <button
           type="button"
@@ -203,7 +204,7 @@ export function ActiveEffectsSheet({
                   type="button"
                   onClick={() => onEndEffect(effect.id)}
                   aria-label={`Завершить: ${effect.nameRu}`}
-                  className="min-h-11 shrink-0 rounded-lg border border-slate-200 px-3 text-xs dark:border-slate-800"
+                  className={`min-h-11 shrink-0 rounded-lg px-3 text-xs ${SURFACE_CONTROL}`}
                 >
                   Завершить
                 </button>

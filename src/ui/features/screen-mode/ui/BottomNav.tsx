@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 
 import { type ScreenMode } from "@/ui/shared/model/screenMode";
+import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
  * Подсказки не содержат слова «заклинания»: список на экране назван им же, и доступное имя кнопки
@@ -27,15 +28,11 @@ const UNDER_MORE: ScreenMode[] = ["sheet"];
 
 const MORE = "Ещё";
 
-/**
- * Подложка выбранного уходит от подложки панели в другую сторону, чем в светлой теме: приподнятая
- * подложка в тёмной высветляет фон под акцентной подписью и роняет её контраст до 3.97 при
- * требуемых 4.5.
- */
+/** Выбранная ячейка помечена подложкой своего значения — тем же способом, что и всё выбранное. */
 function cellClass(selected: boolean): string {
   return `flex min-h-11 min-w-0 items-center justify-center rounded-lg px-0.5 text-xs font-medium ${
     selected
-      ? "bg-white text-action-strong shadow-sm dark:bg-slate-950 dark:text-action"
+      ? "bg-action/20 text-action-strong dark:text-action"
       : "text-slate-600 dark:text-slate-400"
   }`;
 }
@@ -60,7 +57,7 @@ export function BottomNav({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+          className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
         >
           <h2 id={titleId} className="text-base font-semibold">
             {MORE}
@@ -74,7 +71,7 @@ export function BottomNav({
                 onChange(value);
                 setListOpen(false);
               }}
-              className="flex min-h-11 flex-col items-start rounded-xl border border-slate-200 px-3 py-2 text-left dark:border-slate-800"
+              className={`flex min-h-11 flex-col items-start rounded-xl px-3 py-2 text-left ${SURFACE_CONTROL}`}
             >
               <span className="text-sm font-semibold">{LABELS[value].title}</span>
               <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -86,7 +83,7 @@ export function BottomNav({
           <button
             type="button"
             onClick={() => setListOpen(false)}
-            className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+            className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
           >
             Закрыть
           </button>
@@ -99,7 +96,7 @@ export function BottomNav({
        */}
       <nav
         aria-label="Режим экрана"
-        className="shrink-0 border-t border-slate-200 bg-slate-100 pb-[env(safe-area-inset-bottom)] dark:border-slate-800 dark:bg-slate-900"
+        className={`shrink-0 pb-[env(safe-area-inset-bottom)] ${SURFACE_CONTROL}`}
       >
         <div className="grid grid-cols-6 p-1">
           {OWN_CELL.map((value) => (

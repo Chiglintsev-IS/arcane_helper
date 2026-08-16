@@ -28,13 +28,14 @@ import {
 import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
+import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Второстепенное в этой карточке: тот же тон, каким названы ярлыки, и он проходит контраст. */
 const MUTED = "text-slate-600 dark:text-slate-400";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex justify-between gap-2 border-b border-slate-100 py-1 last:border-0 dark:border-slate-800/60">
+    <div className={`flex justify-between gap-2 py-1 ${SURFACE_GROUP}`}>
       <dt className={`shrink-0 ${MUTED}`}>{label}</dt>
       <dd className="text-right">{children}</dd>
     </div>
@@ -100,9 +101,9 @@ export function SpellCardDetails({
       role="dialog"
       aria-modal="true"
       aria-label={`Заклинание «${row.nameRu}»`}
-      className="fixed inset-0 z-10 flex flex-col bg-slate-50 dark:bg-slate-950"
+      className={`fixed inset-0 z-10 flex flex-col ${SURFACE_PAGE}`}
     >
-      <header className="flex items-start justify-between gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
+      <header className={`flex items-start justify-between gap-2 p-3 ${SURFACE_GROUP}`}>
         <div>
           <h2 className="text-lg font-semibold leading-tight">{row.nameRu}</h2>
           <p className="text-xs text-slate-500">
@@ -136,7 +137,7 @@ export function SpellCardDetails({
           <button
             type="button"
             onClick={() => setDiagramOpen(true)}
-            className="min-h-11 rounded-lg border border-ritual/60 px-3 text-sm font-medium text-ritual"
+            className={`min-h-11 rounded-lg px-3 text-sm font-medium text-ritual ${SURFACE_CONTROL}`}
           >
             Схема ритуала
           </button>
@@ -148,7 +149,7 @@ export function SpellCardDetails({
           <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Что сделать</h3>
           <ul className="flex flex-col gap-1 text-sm">
             {row.instructions.map((step) => (
-              <li key={step} className="rounded-md border border-slate-200 px-2 py-1 dark:border-slate-800">
+              <li key={step} className={`rounded-md px-2 py-1 ${SURFACE_GROUP}`}>
                 {step}
               </li>
             ))}
@@ -188,7 +189,7 @@ export function SpellCardDetails({
           )}
         </dl>
 
-        <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+        <details className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
           <summary className="cursor-pointer text-sm font-medium">Как объявить</summary>
           <p className="mt-2 text-sm">{row.announcement.text}</p>
           {shownGaps.length === 0 ? null : (
@@ -201,13 +202,13 @@ export function SpellCardDetails({
         </details>
 
         {card.tacticalAdviceRu === undefined ? null : (
-          <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+          <details className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
             <summary className="cursor-pointer text-sm font-medium">Тактический совет</summary>
             <p className="mt-2 text-sm">{card.tacticalAdviceRu}</p>
           </details>
         )}
 
-        <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+        <details className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
           <summary className="cursor-pointer text-sm font-medium">Полные правила</summary>
           <p className="mt-2 text-sm">{card.fullRulesRu}</p>
         </details>
@@ -221,12 +222,12 @@ export function SpellCardDetails({
             onChange={(event) => onNoteChange(event.target.value)}
             rows={2}
             placeholder="Домашнее правило или напоминание"
-            className="rounded-lg border border-slate-200 p-2 text-sm dark:border-slate-800 dark:bg-slate-900"
+            className={`rounded-lg p-2 text-sm ${SURFACE_CONTROL}`}
           />
         </label>
       </div>
 
-      <footer className="border-t border-slate-200 p-3 dark:border-slate-800">
+      <footer className={` p-3 ${SURFACE_GROUP}`}>
         <button
           type="button"
           onClick={onCast}

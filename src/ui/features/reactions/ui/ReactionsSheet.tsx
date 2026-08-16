@@ -16,6 +16,7 @@ import { useId, useState } from "react";
 import type { SpellRowView } from "@/contract/views";
 
 import { Badge } from "@/ui/shared/ui/Badge";
+import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /** Имя дела: им зовётся и сама шторка, и кнопка, которая её открывает. */
 export const REACTIONS_LABEL = "Реакции";
@@ -81,7 +82,7 @@ export function ReactionsSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={titleId} className="text-base font-semibold leading-tight">
@@ -100,10 +101,10 @@ export function ReactionsSheet({
             role="radio"
             aria-checked={trigger === kind}
             onClick={() => setTrigger(kind)}
-            className={`min-h-11 grow rounded-lg border px-2 text-xs font-medium ${
+            className={`min-h-11 grow rounded-lg px-2 text-xs font-medium ${
               trigger === kind
-                ? "border-reaction bg-reaction/10 text-reaction-strong dark:text-reaction"
-                : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                ? "bg-reaction/20 text-reaction-strong dark:text-reaction"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
             }`}
           >
             {label}
@@ -145,7 +146,7 @@ export function ReactionsSheet({
               <button
                 type="button"
                 onClick={() => onCast(row)}
-                className="flex w-full flex-col items-start gap-1 rounded-lg border border-slate-200 p-2 text-left dark:border-slate-800"
+                className={`flex w-full flex-col items-start gap-1 rounded-lg p-2 text-left ${SURFACE_CONTROL}`}
               >
                 <span className="font-medium leading-tight">{row.nameRu}</span>
                 <span className="text-xs text-slate-700 dark:text-slate-300">
@@ -173,7 +174,7 @@ export function ReactionsSheet({
       <button
         type="button"
         onClick={onClose}
-        className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+        className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
       >
         Закрыть
       </button>

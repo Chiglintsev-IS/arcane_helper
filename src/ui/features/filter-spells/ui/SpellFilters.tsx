@@ -21,6 +21,7 @@ import { castingTimeBadge, combatRole, levelChipLabel } from "@/ui/entities/spel
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
 import { type SpellFilters as Filters, type DividingCategories } from "@/ui/features/filter-spells/model/filters";
 import { toggleValue } from "@/ui/features/filter-spells/model/filters";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /** Порядок переключателей времени накладывания. Показываются не все — только делящие список. */
 const CASTING_TIME_FILTERS = ["action", "bonus_action", "reaction"];
@@ -69,8 +70,8 @@ function Toggle({
       aria-pressed={pressed}
       {...(label === undefined ? {} : { "aria-label": label })}
       onClick={onClick}
-      className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border px-2 text-[0.6875rem] font-medium ${
-        pressed ? TONE_CLASS[tone] : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+      className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-[0.6875rem] font-medium ${
+        pressed ? TONE_CLASS[tone] : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
       }`}
     >
       {icon === undefined ? null : <span aria-hidden="true">{icon}</span>}
@@ -148,7 +149,7 @@ export function SpellFilters({
             onKeyDown={(event) => {
               if (event.key === "Escape") onSearchToggle();
             }}
-            className="min-h-11 min-w-0 grow rounded-lg border border-slate-300 bg-transparent px-3 text-sm outline-none dark:border-slate-700"
+            className={`min-h-11 min-w-0 grow rounded-lg bg-transparent px-3 text-sm outline-none ${SURFACE_CONTROL}`}
           />
         )}
         {searchOpen ? null : (

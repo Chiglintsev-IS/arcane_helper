@@ -16,6 +16,7 @@ import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 import { ACTIVE_SHEET_LABEL, armorClassNote } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /** Что держится: имя, вклад в защиту и ежеходная работа, если она есть. */
 function heldNames(
@@ -64,7 +65,7 @@ export function ActiveEffects({
         type="button"
         onClick={onOpen}
         aria-label={`${ACTIVE_SHEET_LABEL}: ${spoken}`}
-        className="flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-slate-200 px-2 py-1 text-left dark:border-slate-800"
+        className={`flex min-h-11 max-w-full items-center gap-2 rounded-lg px-2 py-1 text-left ${SURFACE_CONTROL}`}
       >
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {held.length === 0 ? (

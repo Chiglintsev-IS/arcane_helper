@@ -3,6 +3,7 @@
 import { useId, type ReactNode } from "react";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
  * Рамка шторки правки: заголовок, содержимое, сохранение, уход и причина отказа.
@@ -38,12 +39,12 @@ export function EditSheetFrame({
       role="dialog"
       aria-modal="true"
       aria-label={`Правка: ${titleRu}`}
-      className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <h2 className="text-sm font-semibold">{titleRu}</h2>
       <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">{children}</div>
       {error === null ? null : (
-        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
           {error}
         </p>
       )}
@@ -58,7 +59,7 @@ export function EditSheetFrame({
         <button
           type="button"
           onClick={onCancel}
-          className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>
@@ -104,8 +105,8 @@ export function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
-          className={`min-h-11 w-20 rounded-lg border px-3 text-base tabular-nums dark:bg-slate-900 ${
-            reasonRu === null ? "border-slate-200 dark:border-slate-800" : "border-reaction"
+          className={`min-h-11 w-20 rounded-lg px-3 text-base tabular-nums ${
+            reasonRu === null ? SURFACE_GROUP : "bg-reaction/20"
           }`}
         />
       </label>
@@ -139,7 +140,7 @@ export function TextField({
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 w-40 rounded-lg border border-slate-200 px-3 text-base dark:border-slate-800 dark:bg-slate-900"
+        className={`min-h-11 w-40 rounded-lg px-3 text-base ${SURFACE_CONTROL}`}
       />
     </label>
   );

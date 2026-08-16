@@ -13,6 +13,7 @@
 import { useId } from "react";
 
 import type { ResourcesView } from "@/contract/views";
+import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /** Имя дела: им зовётся и сама шторка, и плитка, которая её открывает. */
 export const RESOURCES_EDIT_LABEL = "Правка ресурсов";
@@ -41,7 +42,7 @@ function Stepper({
           disabled={minusDisabled}
           onClick={onMinus}
           aria-label={`Потратить: ${label}`}
-          className="min-h-11 min-w-11 rounded-lg border border-slate-200 disabled:opacity-40 dark:border-slate-800"
+          className={`min-h-11 min-w-11 rounded-lg disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           <span aria-hidden="true">−</span>
         </button>
@@ -51,7 +52,7 @@ function Stepper({
           disabled={plusDisabled}
           onClick={onPlus}
           aria-label={`Вернуть: ${label}`}
-          className="min-h-11 min-w-11 rounded-lg border border-slate-200 disabled:opacity-40 dark:border-slate-800"
+          className={`min-h-11 min-w-11 rounded-lg disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           <span aria-hidden="true">+</span>
         </button>
@@ -84,7 +85,7 @@ export function ResourcesSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <h2 id={titleId} className="text-base font-semibold leading-tight">
         {RESOURCES_EDIT_LABEL}
@@ -131,10 +132,10 @@ export function ResourcesSheet({
           type="button"
           aria-pressed={suppression.underDirectSunlight}
           onClick={() => onSunlight(!suppression.underDirectSunlight)}
-          className={`min-h-11 rounded-xl border px-3 text-sm ${
+          className={`min-h-11 rounded-xl px-3 text-sm ${
             suppression.underDirectSunlight
-              ? "border-reaction bg-reaction/10 font-medium text-reaction-strong dark:text-reaction"
-              : "border-slate-200 dark:border-slate-800"
+              ? "bg-reaction/20 font-medium text-reaction-strong dark:text-reaction"
+              : SURFACE_CONTROL
           }`}
         >
           Под прямым солнечным светом
@@ -147,7 +148,7 @@ export function ResourcesSheet({
       <button
         type="button"
         onClick={onClose}
-        className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+        className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
       >
         Закрыть
       </button>

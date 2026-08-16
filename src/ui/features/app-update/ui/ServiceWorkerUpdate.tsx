@@ -11,6 +11,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 export function ServiceWorkerUpdate() {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
@@ -43,7 +44,7 @@ export function ServiceWorkerUpdate() {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 p-3 text-sm ${SURFACE_PANEL}`}
     >
       <span>Готово обновление приложения.</span>
       <button

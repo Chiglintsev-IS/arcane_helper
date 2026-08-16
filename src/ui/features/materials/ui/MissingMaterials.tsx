@@ -21,6 +21,7 @@
 import type { MissingMaterialView } from "@/contract/views";
 import { neededForLine } from "@/ui/entities/character/lib/itemMeta";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /** Тело строки: одно и то же у заведённой вещи и у той, которой ещё нет. */
 const ROW = "block min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1.5 text-left";
@@ -99,7 +100,7 @@ export function MissingMaterials({
                   type="button"
                   aria-label={`Добавить один в сумку: ${need.nameRu}`}
                   onClick={() => add(need)}
-                  className="min-h-11 min-w-11 shrink-0 rounded-lg border border-slate-200 text-base dark:border-slate-800"
+                  className={`min-h-11 min-w-11 shrink-0 rounded-lg text-base ${SURFACE_CONTROL}`}
                 >
                   +
                 </button>

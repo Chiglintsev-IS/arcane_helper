@@ -15,6 +15,7 @@ import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
+import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Почему в бою нет ни одной кнопки подготовки: счёт без этой строки обещает то, чего на экране нет. */
 const PREPARATION_OUT_OF_FIGHT = "Подготовку меняют вне боя";
@@ -122,7 +123,7 @@ export function BookScreen() {
         </p>
       </div>
 
-      <div className="flex shrink-0 flex-col gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+      <div className={`flex shrink-0 flex-col gap-2 px-3 py-2 ${SURFACE_GROUP}`}>
         <SpellFilters
           filters={filters}
           dividing={dividing}

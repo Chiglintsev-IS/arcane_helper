@@ -29,6 +29,7 @@ import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext"
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { signed } from "@/shared/language";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
@@ -212,7 +213,7 @@ export function GameScreen() {
             <button
               type="button"
               onClick={() => void execute({ kind: "begin_turn" })}
-              className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold leading-tight text-action-strong dark:text-action"
+              className={`min-h-11 grow whitespace-nowrap rounded-xl px-1 text-sm font-semibold leading-tight text-action-strong dark:text-action ${SURFACE_CONTROL}`}
             >
               Новый ход
               <span className="block text-[0.625rem] font-normal leading-tight">
@@ -232,10 +233,10 @@ export function GameScreen() {
                 ? `${REACTIONS_LABEL}. Реакция ${turn.reactionAvailable ? "доступна" : "израсходована"}`
                 : REACTIONS_LABEL
             }
-            className={`min-h-11 grow whitespace-nowrap rounded-xl border px-1 text-sm font-semibold leading-tight ${
+            className={`min-h-11 grow whitespace-nowrap rounded-xl px-1 text-sm font-semibold leading-tight ${
               turn.reactionAvailable || !inFight
-                ? "border-reaction text-reaction-strong dark:text-reaction"
-                : "border-slate-300 text-slate-500 dark:border-slate-700"
+                ? "bg-reaction/20 text-reaction-strong dark:text-reaction"
+                : `text-slate-500 ${SURFACE_GROUP}`
             }`}
           >
             {REACTIONS_LABEL}

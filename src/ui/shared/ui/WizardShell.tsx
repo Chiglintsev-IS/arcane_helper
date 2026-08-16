@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
  * Заголовки шагов, общих у обоих мастеров.
@@ -63,9 +64,9 @@ export function WizardShell({
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
-      className="fixed inset-0 z-20 flex flex-col bg-slate-50 dark:bg-slate-950"
+      className={`fixed inset-0 z-20 flex flex-col ${SURFACE_PAGE}`}
     >
-      <header className="flex flex-col gap-1 border-b border-slate-200 p-3 dark:border-slate-800">
+      <header className={`flex flex-col gap-1 p-3 ${SURFACE_GROUP}`}>
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold leading-tight">{title}</h2>
@@ -91,12 +92,12 @@ export function WizardShell({
         {children}
       </div>
 
-      <footer className="flex gap-2 border-t border-slate-200 p-3 dark:border-slate-800">
+      <footer className={`flex gap-2 p-3 ${SURFACE_GROUP}`}>
         {footer.onBack === undefined ? null : (
           <button
             type="button"
             onClick={footer.onBack}
-            className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm dark:border-slate-800"
+            className={`min-h-11 rounded-xl px-4 text-sm ${SURFACE_CONTROL}`}
           >
             Назад
           </button>

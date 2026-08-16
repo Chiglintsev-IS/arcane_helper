@@ -23,6 +23,7 @@ import { useState } from "react";
 
 import type { Snapshot } from "@/contract/snapshot";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
  * Время записи как «ЧЧ:ММ». Дата не показывается: журнал глубиной 100 живёт одну игру за столом, а
@@ -56,7 +57,7 @@ export function Journal({
       <button
         type="button"
         onClick={onData}
-        className="min-h-11 self-start rounded-xl border border-slate-200 px-3 text-sm font-medium dark:border-slate-800"
+        className={`min-h-11 self-start rounded-xl px-3 text-sm font-medium ${SURFACE_CONTROL}`}
       >
         Данные
       </button>
@@ -64,7 +65,7 @@ export function Journal({
       {returned === null ? null : (
         <div
           role="status"
-          className="flex flex-col gap-1 rounded-lg border border-dashed border-slate-400 p-2 dark:border-slate-600"
+          className={`flex flex-col gap-1 rounded-lg p-2 ${SURFACE_GROUP}`}
         >
           <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
             Вернулось
@@ -80,7 +81,7 @@ export function Journal({
           {newestFirst.map((entry, index) => (
             <li
               key={entry.id}
-              className="flex flex-col gap-1 rounded-lg border border-slate-200 p-2 dark:border-slate-800"
+              className={`flex flex-col gap-1 rounded-lg p-2 ${SURFACE_GROUP}`}
             >
               <span className="text-sm leading-tight">{entry.summaryRu}</span>
               <span className="text-xs tabular-nums text-slate-600 dark:text-slate-400">
@@ -94,7 +95,7 @@ export function Journal({
                     onUndo();
                   }}
                   aria-label={`${BUTTON_LABELS.undo}: ${entry.summaryRu}`}
-                  className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+                  className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
                 >
                   {BUTTON_LABELS.undo}
                 </button>

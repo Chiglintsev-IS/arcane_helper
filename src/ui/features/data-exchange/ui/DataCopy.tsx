@@ -1,3 +1,4 @@
+"use client";
 /**
  * Копия данных: файлом и через буфер.
  *
@@ -9,7 +10,7 @@
  * молча.
  */
 
-"use client";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 export function DataCopy({ text, fileName }: { text: string; fileName: string }) {
   const download = (): void => {
@@ -33,7 +34,7 @@ export function DataCopy({ text, fileName }: { text: string; fileName: string })
       <button
         type="button"
         onClick={() => void navigator.clipboard?.writeText(text)}
-        className="min-h-11 grow rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+        className={`min-h-11 grow rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
       >
         Скопировать
       </button>

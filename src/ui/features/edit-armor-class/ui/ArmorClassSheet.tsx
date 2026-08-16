@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
  * Поправка к КД: одно число со знаком, как «Хиты» правят временные хиты. Новое значение заменяет
@@ -34,7 +35,7 @@ export function ArmorClassSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <h2 id={titleId} className="text-base font-semibold leading-tight">
         КД
@@ -47,7 +48,7 @@ export function ArmorClassSheet({
           inputMode="numeric"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className="min-h-11 rounded-lg border border-slate-200 px-3 text-base tabular-nums dark:border-slate-800 dark:bg-slate-900"
+          className={`min-h-11 rounded-lg px-3 text-base tabular-nums ${SURFACE_CONTROL}`}
         />
       </label>
 
@@ -56,7 +57,7 @@ export function ArmorClassSheet({
       </p>
 
       {error === null ? null : (
-        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
           {error}
         </p>
       )}
@@ -72,7 +73,7 @@ export function ArmorClassSheet({
         <button
           type="button"
           onClick={onCancel}
-          className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

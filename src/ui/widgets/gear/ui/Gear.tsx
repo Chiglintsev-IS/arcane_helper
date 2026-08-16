@@ -3,6 +3,7 @@
 import type { BagView, ChoicesView } from "@/contract/views";
 import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
 import { ItemSection } from "@/ui/shared/ui/ItemSection";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Категория надеваемого: остальные вещи считают, а не надевают, и живут они в сумке. */
 const GEAR = "gear";
@@ -42,7 +43,7 @@ export function Gear({
 
   return (
     <div className="flex flex-col gap-2">
-      <section className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-800">
+      <section className={`flex items-center gap-3 rounded-xl px-3 py-2 ${SURFACE_GROUP}`}>
         <h2 className="shrink-0 text-sm font-semibold">Защита</h2>
         <p className="text-sm tabular-nums">
           КД {armorClass.value}
@@ -68,7 +69,7 @@ export function Gear({
                   type="button"
                   aria-label={`Снять один: ${item.nameRu}`}
                   onClick={() => onAdjustWornCount(item.id, -1)}
-                  className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs dark:border-slate-800"
+                  className={`min-h-11 rounded-lg px-3 text-xs ${SURFACE_CONTROL}`}
                 >
                   снять
                 </button>
@@ -102,7 +103,7 @@ export function Gear({
                     type="button"
                     aria-label={`Надеть один: ${item.nameRu}`}
                     onClick={() => onAdjustWornCount(item.id, 1)}
-                    className="min-h-11 rounded-lg border border-action bg-action/10 px-3 text-xs font-medium text-action-strong dark:text-action"
+                    className={`min-h-11 rounded-lg bg-action/10 px-3 text-xs font-medium text-action-strong dark:text-action ${SURFACE_CONTROL}`}
                   >
                     надеть
                   </button>

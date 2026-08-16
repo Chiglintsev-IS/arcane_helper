@@ -13,6 +13,7 @@
 import { useId, useState } from "react";
 
 import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 export function DataSheet({
   exportText,
@@ -47,7 +48,7 @@ export function DataSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <h2 id={titleId} className="text-base font-semibold">
         Данные
@@ -70,7 +71,7 @@ export function DataSheet({
         <button
           type="button"
           onClick={onRestoreBuiltInCatalog}
-          className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Вернуть встроенные карточки
         </button>
@@ -95,13 +96,13 @@ export function DataSheet({
           onChange={(event) => setRaw(event.target.value)}
           rows={4}
           aria-label="Данные для загрузки"
-          className="rounded-lg border border-slate-200 p-2 font-mono text-xs dark:border-slate-800 dark:bg-slate-900"
+          className={`rounded-lg p-2 font-mono text-xs ${SURFACE_CONTROL}`}
         />
       </label>
 
       {/* Причина отказа называет поле: «ошибка импорта» без деталей заставляет править JSON вслепую. */}
       {error === null ? null : (
-        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-xs">
+        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-xs ${SURFACE_GROUP}`}>
           {error}
         </p>
       )}
@@ -118,7 +119,7 @@ export function DataSheet({
         <button
           type="button"
           onClick={onClose}
-          className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Закрыть
         </button>

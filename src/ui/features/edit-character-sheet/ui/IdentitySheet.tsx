@@ -6,6 +6,7 @@ import type { ChoicesView, SheetView } from "@/contract/views";
 import { sizeLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
+import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Справочная часть листа: что шторка набирает и отдаёт владельцу. Что из этого он примет — его дело. */
 type IdentityPatch = {
@@ -86,10 +87,10 @@ export function IdentitySheet({
             aria-checked={size === option}
             aria-label={sizeLabel(option)}
             onClick={() => setSize(option)}
-            className={`min-h-11 rounded-lg border px-2 text-sm ${
+            className={`min-h-11 rounded-lg px-2 text-sm ${
               size === option
-                ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-                : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
             }`}
           >
             {sizeLabel(option)}

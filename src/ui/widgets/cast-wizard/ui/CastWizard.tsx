@@ -31,6 +31,7 @@ import {
 } from "@/ui/features/cast-spell/model/castDraftStore";
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
 import { usePreview } from "@/ui/shared/model/usePreview";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 type CastPreview = PreviewOf<"cast_preview">;
 
@@ -102,10 +103,10 @@ function RuneStep({
                 type="button"
                 aria-pressed={chosen}
                 onClick={() => onChoose(effect.rune, effect.choosesTarget)}
-                className={`flex min-h-11 w-full flex-col items-start rounded-lg border px-3 py-1 text-left ${
+                className={`flex min-h-11 w-full flex-col items-start rounded-lg px-3 py-1 text-left ${
                   chosen
-                    ? "border-ritual bg-ritual/10 text-ritual-strong dark:text-ritual"
-                    : "border-slate-200 dark:border-slate-800"
+                    ? "bg-ritual/20 text-ritual-strong dark:text-ritual"
+                    : SURFACE_CONTROL
                 }`}
               >
                 <span className="text-sm font-medium leading-tight">{effect.nameRu}</span>
@@ -125,10 +126,10 @@ function RuneStep({
               type="button"
               aria-pressed={draft.runeTarget === target}
               onClick={() => onChooseTarget(target)}
-              className={`min-h-11 grow rounded-lg border px-3 text-sm ${
+              className={`min-h-11 grow rounded-lg px-3 text-sm ${
                 draft.runeTarget === target
-                  ? "border-ritual bg-ritual/10 text-ritual-strong dark:text-ritual"
-                  : "border-slate-200 dark:border-slate-800"
+                  ? "bg-ritual/20 text-ritual-strong dark:text-ritual"
+                  : SURFACE_CONTROL
               }`}
             >
               {RUNE_TARGET_LABELS[target] ?? target}
@@ -181,7 +182,7 @@ function AvailabilityStep({
           .map((warning) => (
             <li
               key={warning.code}
-              className="rounded-lg border border-reaction/50 bg-reaction/10 p-2 text-sm"
+              className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}
             >
               {warning.reasonRu}
             </li>
@@ -195,7 +196,7 @@ function AvailabilityStep({
         <button
           type="button"
           onClick={onAllowAnyway}
-          className="min-h-11 rounded-lg border border-reaction/60 px-3 text-sm font-medium text-reaction-strong dark:text-reaction"
+          className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction ${SURFACE_CONTROL}`}
         >
           Применить всё равно
         </button>
@@ -234,10 +235,10 @@ function SlotStep({
               type="button"
               aria-pressed={chosen(option)}
               onClick={() => onChoose(option)}
-              className={`flex min-h-11 w-full flex-col items-start rounded-lg border px-3 py-1 text-left text-sm ${
+              className={`flex min-h-11 w-full flex-col items-start rounded-lg px-3 py-1 text-left text-sm ${
                 chosen(option)
-                  ? "border-action bg-action/10 text-action-strong dark:text-action"
-                  : "border-slate-200 dark:border-slate-800"
+                  ? "bg-action/20 text-action-strong dark:text-action"
+                  : SURFACE_CONTROL
               }`}
             >
               <span>{optionLabel(option, resources)}</span>
@@ -301,10 +302,10 @@ function HitDiceStep({
                 type="button"
                 aria-pressed={count === option}
                 onClick={() => onCount(option)}
-                className={`min-h-11 min-w-11 rounded-lg border px-3 text-sm ${
+                className={`min-h-11 min-w-11 rounded-lg px-3 text-sm ${
                   count === option
-                    ? "border-action bg-action/10 text-action-strong dark:text-action"
-                    : "border-slate-200 dark:border-slate-800"
+                    ? "bg-action/20 text-action-strong dark:text-action"
+                    : SURFACE_CONTROL
                 }`}
               >
                 {option}d{size}
@@ -335,7 +336,7 @@ function HitDiceStep({
             onChange={(event) =>
               onRolled(event.target.value === "" ? null : Number(event.target.value))
             }
-            className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+            className={`min-h-11 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
           />
           {hitDice.rollPossible === false ? (
             <span id="hit-dice-rolled-hint" className="text-xs text-danger">
@@ -366,14 +367,14 @@ function ComponentsStep({ row, warnings }: { row: SpellRowView; warnings: CastOp
   return (
     <ul className="flex flex-col gap-1 text-sm">
       {row.componentReminders.map((reminder) => (
-        <li key={reminder} className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+        <li key={reminder} className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
           {reminder}
         </li>
       ))}
       {missing.map((warning) => (
         <li
           key={warning.code}
-          className="rounded-lg border border-reaction bg-reaction/10 p-2 font-medium"
+          className={`rounded-lg bg-reaction/10 p-2 font-medium ${SURFACE_GROUP}`}
         >
           {warning.reasonRu}
         </li>
@@ -414,7 +415,7 @@ function ConcentrationStep({
 
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <p className="rounded-lg border border-concentration/50 bg-concentration/10 p-2">
+      <p className={`rounded-lg bg-concentration/10 p-2 ${SURFACE_GROUP}`}>
         {busy.reasonRu}
       </p>
       {replaceConfirmed ? (
@@ -424,14 +425,14 @@ function ConcentrationStep({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 dark:border-slate-800"
+            className={`min-h-11 flex-1 rounded-lg px-3 ${SURFACE_CONTROL}`}
           >
             {BUTTON_LABELS.dismiss}
           </button>
           <button
             type="button"
             onClick={onReplace}
-            className="min-h-11 flex-1 rounded-lg border border-concentration bg-concentration/10 px-3 font-medium text-concentration-strong dark:text-concentration"
+            className={`min-h-11 flex-1 rounded-lg bg-concentration/10 px-3 font-medium text-concentration-strong dark:text-concentration ${SURFACE_CONTROL}`}
           >
             Заменить концентрацию
           </button>
@@ -472,7 +473,7 @@ function SummaryStep({
         <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
           Сказать мастеру
         </h3>
-        <p className="rounded-lg border border-slate-200 p-2 text-base leading-snug dark:border-slate-800">
+        <p className={`rounded-lg p-2 text-base leading-snug ${SURFACE_GROUP}`}>
           {preview?.announcement.text ?? ""}
         </p>
         {shownGaps.length === 0 ? null : (
@@ -504,7 +505,7 @@ function SummaryStep({
         <button
           type="button"
           onClick={() => setDiagramOpen(true)}
-          className="min-h-11 rounded-lg border border-ritual/60 px-3 text-sm font-medium text-ritual"
+          className={`min-h-11 rounded-lg px-3 text-sm font-medium text-ritual ${SURFACE_CONTROL}`}
         >
           Схема ритуала
         </button>
@@ -674,7 +675,7 @@ export function CastWizard({
       ) : null}
 
       {error === null ? null : (
-        <p role="alert" className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm">
+        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
           {error}
         </p>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /**
  * Строка быстрого ввода: одно поле, отправка по «Ввод», без кнопки и без листа.
@@ -27,7 +28,7 @@ export function QuickAddField({
 
   return (
     <form onSubmit={submit}>
-      <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-2 text-xs dark:border-slate-800">
+      <label className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs ${SURFACE_CONTROL}`}>
         <span className="shrink-0 text-slate-500 dark:text-slate-400">{labelRu}</span>
         <input
           type="text"

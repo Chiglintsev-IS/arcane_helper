@@ -51,9 +51,9 @@ export function BloodMagicRow({
       <button
         type="button"
         onClick={onOpen}
-        className={`flex w-full flex-col items-start gap-1 rounded-lg border border-slate-200 p-2 text-left dark:border-slate-800 ${
+        className={`flex w-full flex-col items-start gap-1 rounded-lg p-2 text-left ${
           reason === null ? "" : "opacity-60"
-        }`}
+          }`}
       >
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">{BLOOD_MAGIC_LABEL}</span>

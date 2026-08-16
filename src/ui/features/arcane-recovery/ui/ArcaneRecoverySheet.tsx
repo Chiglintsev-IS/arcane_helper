@@ -21,6 +21,7 @@ import type { RecoveryView } from "@/contract/views";
 import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
+import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 type SlotRecoveryPlan = CommandOf<"use_arcane_recovery">["plan"];
 
@@ -51,7 +52,7 @@ export function ArcaneRecoverySheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <header className="flex flex-col gap-0.5">
         <div className="flex items-baseline justify-between gap-3">
@@ -86,7 +87,7 @@ export function ArcaneRecoverySheet({
                   type="button"
                   onClick={() => change(slot.level, -1)}
                   aria-label={`Убрать ячейку ${slot.level} уровня`}
-                  className="min-h-11 min-w-11 rounded-lg border border-slate-200 dark:border-slate-800"
+                  className={`min-h-11 min-w-11 rounded-lg ${SURFACE_CONTROL}`}
                 >
                   <span aria-hidden="true">−</span>
                 </button>
@@ -97,7 +98,7 @@ export function ArcaneRecoverySheet({
                   type="button"
                   onClick={() => change(slot.level, 1)}
                   aria-label={`Вернуть ячейку ${slot.level} уровня`}
-                  className="min-h-11 min-w-11 rounded-lg border border-slate-200 dark:border-slate-800"
+                  className={`min-h-11 min-w-11 rounded-lg ${SURFACE_CONTROL}`}
                 >
                   <span aria-hidden="true">+</span>
                 </button>
@@ -124,7 +125,7 @@ export function ArcaneRecoverySheet({
         <button
           type="button"
           onClick={onCancel}
-          className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

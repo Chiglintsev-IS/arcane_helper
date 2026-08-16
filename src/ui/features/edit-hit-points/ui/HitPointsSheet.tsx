@@ -6,6 +6,7 @@ import type { SheetView } from "@/contract/views";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
  * Хиты правятся там, где их получают и теряют, — в «Игре» и в «Привале».
@@ -37,8 +38,8 @@ const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
   temporary: "Временные хиты",
 };
 
-const fieldClass = "min-h-11 rounded-lg border px-3 text-base tabular-nums dark:bg-slate-900";
-const quietBorder = "border-slate-200 dark:border-slate-800";
+const fieldClass = `min-h-11 rounded-lg px-3 text-base tabular-nums ${SURFACE_CONTROL}`;
+const quietBorder = SURFACE_GROUP;
 
 function NumberField({
   labelRu,
@@ -68,7 +69,7 @@ function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
-          className={`${fieldClass} ${reasonRu === null ? quietBorder : "border-reaction"}`}
+          className={`${fieldClass} ${reasonRu === null ? quietBorder : "bg-reaction/20"}`}
         />
       </label>
       {reasonRu === null ? null : (
@@ -139,7 +140,7 @@ export function HitPointsSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={titleId} className="text-base font-semibold leading-tight">
@@ -158,10 +159,10 @@ export function HitPointsSheet({
             role="radio"
             aria-checked={kind === tab.kind}
             onClick={required.touching(() => setKind(tab.kind))}
-            className={`min-h-11 flex-1 rounded-lg border px-2 text-sm ${
+            className={`min-h-11 flex-1 rounded-lg px-2 text-sm ${
               kind === tab.kind
-                ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-                : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
             }`}
           >
             {tab.label}
@@ -199,7 +200,7 @@ export function HitPointsSheet({
       {error === null ? null : (
         <p
           role="alert"
-          className="rounded-lg border border-reaction bg-reaction/10 p-2 text-sm text-reaction-strong dark:text-reaction"
+          className={`rounded-lg bg-reaction/10 p-2 text-sm text-reaction-strong dark:text-reaction ${SURFACE_GROUP}`}
         >
           {error}
         </p>
@@ -239,7 +240,7 @@ export function HitPointsSheet({
         <button
           type="button"
           onClick={onCancel}
-          className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

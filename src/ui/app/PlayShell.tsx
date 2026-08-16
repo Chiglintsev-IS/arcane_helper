@@ -13,6 +13,7 @@ import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
 import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
+import { SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 const STORAGE_KEY = "playScreenMode";
 
@@ -79,7 +80,7 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
         {error === null ? null : (
           <p
             role="alert"
-            className="absolute inset-x-3 bottom-full z-20 mb-2 rounded-lg border border-reaction bg-slate-50 p-2 text-xs font-medium text-reaction-strong shadow-lg dark:bg-slate-900 dark:text-reaction"
+            className={`absolute inset-x-3 bottom-full z-20 mb-2 rounded-lg p-2 text-xs font-medium text-reaction-strong dark:text-reaction ${SURFACE_PANEL}`}
           >
             {error}{" "}
             <button

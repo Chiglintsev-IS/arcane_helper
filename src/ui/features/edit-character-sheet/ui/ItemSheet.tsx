@@ -11,6 +11,7 @@ import {
 } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
  * Одна вещь целиком: категория, заметка, цена — и прибавки, если это экипировка.
@@ -136,7 +137,7 @@ export function ItemSheet({
             aria-label={`Потратить один из сумки: ${item.nameRu}`}
             disabled={bagCount === 0}
             onClick={() => onAdjustBagCount(-1)}
-            className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+            className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
           >
             −
           </button>
@@ -145,7 +146,7 @@ export function ItemSheet({
             type="button"
             aria-label={`Добавить один в сумку: ${item.nameRu}`}
             onClick={() => onAdjustBagCount(1)}
-            className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base dark:border-slate-800"
+            className={`min-h-11 min-w-11 rounded-lg text-base ${SURFACE_CONTROL}`}
           >
             +
           </button>
@@ -161,7 +162,7 @@ export function ItemSheet({
               aria-label={`Снять один: ${item.nameRu}`}
               disabled={wornCount === 0}
               onClick={() => onAdjustWornCount(-1)}
-              className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+              className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
             >
               −
             </button>
@@ -171,7 +172,7 @@ export function ItemSheet({
               aria-label={`Надеть один: ${item.nameRu}`}
               disabled={bagCount === 0}
               onClick={() => onAdjustWornCount(1)}
-              className="min-h-11 min-w-11 rounded-lg border border-slate-200 text-base disabled:opacity-40 dark:border-slate-800"
+              className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
             >
               +
             </button>
@@ -187,10 +188,10 @@ export function ItemSheet({
             role="radio"
             aria-checked={kind === choice}
             onClick={() => setKind(choice)}
-            className={`min-h-11 rounded-lg border px-2 text-xs ${
+            className={`min-h-11 rounded-lg px-2 text-xs ${
               kind === choice
-                ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-                : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
             }`}
           >
             {itemKindLabel(choice)}
@@ -210,10 +211,10 @@ export function ItemSheet({
             aria-checked={currency === choice}
             aria-label={`Монета: ${currencyAbbr(choice)}`}
             onClick={() => setCurrency(choice)}
-            className={`min-h-11 min-w-11 rounded-lg border px-2 text-xs ${
+            className={`min-h-11 min-w-11 rounded-lg px-2 text-xs ${
               currency === choice
-                ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-                : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
             }`}
           >
             {currencyAbbr(choice)}
@@ -228,10 +229,10 @@ export function ItemSheet({
             type="button"
             aria-pressed={focus}
             onClick={() => setFocus(!focus)}
-            className={`min-h-11 rounded-lg border px-2 text-xs ${
+            className={`min-h-11 rounded-lg px-2 text-xs ${
               focus
-                ? "border-action bg-action/10 font-medium text-action-strong dark:text-action"
-                : "border-slate-200 text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                ? "bg-action/20 font-medium text-action-strong dark:text-action"
+                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
             }`}
           >
             Магическая фокусировка
@@ -259,7 +260,7 @@ export function ItemSheet({
               <select
                 value={added}
                 onChange={(event) => setAdded(event.target.value)}
-                className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-800"
+                className={`min-h-11 flex-1 rounded-xl bg-transparent px-3 ${SURFACE_CONTROL}`}
               >
                 {choices.stats.map((stat) => (
                   <option key={stat.id} value={stat.id}>
@@ -274,7 +275,7 @@ export function ItemSheet({
                     bonuses.some((row) => row[0] === added) ? bonuses : [...bonuses, [added, "0"]],
                   )
                 }
-                className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
+                className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
               >
                 Добавить
               </button>
@@ -287,7 +288,7 @@ export function ItemSheet({
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className="min-h-11 rounded-xl border border-slate-200 bg-transparent px-3 dark:border-slate-800"
+              className={`min-h-11 rounded-xl bg-transparent px-3 ${SURFACE_CONTROL}`}
             >
               <option value="">не названа</option>
               {choices.armorCategories.map((option) => (
@@ -310,7 +311,7 @@ export function ItemSheet({
         aria-label={`Убрать: ${item.nameRu}`}
         disabled={bagCount > 0 || wornCount > 0}
         onClick={onRemove}
-        className="min-h-11 rounded-lg border border-reaction bg-reaction/10 px-2 text-xs font-medium text-reaction-strong disabled:opacity-40 dark:text-reaction"
+        className={`min-h-11 rounded-lg bg-reaction/10 px-2 text-xs font-medium text-reaction-strong disabled:opacity-40 dark:text-reaction ${SURFACE_CONTROL}`}
       >
         Убрать вещь
       </button>

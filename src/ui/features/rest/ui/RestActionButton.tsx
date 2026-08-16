@@ -1,3 +1,4 @@
+"use client";
 /**
  * Кнопка операции привала: название, а под ним — причина, если операция сейчас не идёт.
  *
@@ -9,7 +10,7 @@
  * вслух совпадает с увиденным.
  */
 
-"use client";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 export function RestActionButton({
   onClick,
@@ -26,7 +27,7 @@ export function RestActionButton({
       type="button"
       onClick={onClick}
       disabled={disabledReason !== undefined}
-      className="min-h-11 grow rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium disabled:text-slate-600 dark:border-slate-800 dark:disabled:text-slate-400"
+      className={`min-h-11 grow rounded-xl px-3 py-1.5 text-sm font-medium disabled:text-slate-600 dark:disabled:text-slate-400 ${SURFACE_CONTROL}`}
     >
       <span className="block whitespace-nowrap">{name}</span>{" "}
       {disabledReason === undefined ? null : (

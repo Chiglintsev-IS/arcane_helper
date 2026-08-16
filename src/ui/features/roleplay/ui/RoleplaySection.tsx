@@ -17,6 +17,7 @@ import type { RoleplayVariantView, SpellRowView } from "@/contract/views";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 const CATEGORY_LABELS: Record<string, string> = {
   short: "Коротко",
@@ -29,7 +30,7 @@ const CATEGORY_LABELS: Record<string, string> = {
  * пикселях «Скопировать» в трети ширины не помещается, а перенос ничего не ломает.
  */
 const ACTION_CLASS =
-  "min-h-11 grow rounded-lg border border-slate-200 px-2 text-xs text-slate-600 dark:border-slate-800 dark:text-slate-300";
+  `min-h-11 grow rounded-lg px-2 text-xs text-slate-600 dark:text-slate-300 ${SURFACE_CONTROL}`;
 
 function Variants({
   row,
@@ -85,10 +86,10 @@ function Variants({
             type="button"
             aria-pressed={shown?.id === value.id}
             onClick={() => onCategory(value.id)}
-            className={`min-h-11 rounded-lg border px-2 text-xs ${
+            className={`min-h-11 rounded-lg px-2 text-xs ${
               shown?.id === value.id
-                ? "border-concentration text-concentration-strong dark:text-concentration"
-                : "border-slate-200 text-slate-500 dark:border-slate-800"
+                ? "bg-concentration/20 text-concentration-strong dark:text-concentration"
+                : `text-slate-500 ${SURFACE_CONTROL}`
             }`}
           >
             {CATEGORY_LABELS[value.id] ?? value.id}
@@ -103,10 +104,8 @@ function Variants({
               type="button"
               aria-pressed={selected?.id === variant.id}
               onClick={() => choose(variant)}
-              className={`min-h-11 w-full rounded-lg border px-2 py-1 text-left text-sm italic ${
-                selected?.id === variant.id
-                  ? "border-concentration bg-concentration/10"
-                  : "border-transparent"
+              className={`min-h-11 w-full rounded-lg px-2 py-1 text-left text-sm italic ${
+                selected?.id === variant.id ? "bg-concentration/20" : SURFACE_CONTROL
               }`}
             >
               {variant.text}
@@ -164,7 +163,7 @@ function Variants({
             value={ownText}
             rows={2}
             onChange={(event) => setOwnText(event.target.value)}
-            className="rounded-lg border border-slate-200 px-2 py-1 text-sm dark:border-slate-800 dark:bg-slate-900"
+            className={`rounded-lg px-2 py-1 text-sm ${SURFACE_CONTROL}`}
           />
           <div className="flex flex-wrap gap-1">
             <button type="button" onClick={() => addOwn(ownText)} className={ACTION_CLASS}>
@@ -252,7 +251,7 @@ export function RoleplaySection({
 
   if (collapsible) {
     return (
-      <details className="rounded-lg border border-dashed border-concentration/50 bg-concentration/5 p-2">
+      <details className={`rounded-lg bg-concentration/5 p-2 ${SURFACE_GROUP}`}>
         <summary className="cursor-pointer text-sm font-medium text-concentration-strong dark:text-concentration">Отыгрыш</summary>
         <div className="mt-2">
           <Variants row={row} category={shown} onCategory={change} />
@@ -264,7 +263,7 @@ export function RoleplaySection({
   return (
     <section
       aria-label="Отыгрыш"
-      className="flex flex-col gap-2 rounded-lg border border-dashed border-concentration/50 bg-concentration/5 p-2"
+      className={`flex flex-col gap-2 rounded-lg bg-concentration/5 p-2 ${SURFACE_GROUP}`}
     >
       <h3 className="text-xs font-medium uppercase tracking-wide text-concentration-strong dark:text-concentration">Отыгрыш</h3>
       <Variants row={row} category={shown} onCategory={change} />

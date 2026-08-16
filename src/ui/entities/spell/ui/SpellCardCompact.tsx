@@ -31,32 +31,31 @@ import {
 } from "@/ui/entities/spell/lib/format";
 import { rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Заговор кнопки подготовки не получает: он вне лимита. Цена, а не вид заклинания. */
 const CANTRIP_LEVEL = 0;
 
-/** Цвет рамки по роли. «Другое» цвета не получает: серое и означает «ни то, ни другое». */
+/**
+ * Цвет рамки по роли — единственная обводка приложения.
+ *
+ * «Другое» рамки не получает вовсе: пустая и означает «ни то, ни другое». Место она при этом
+ * занимает, иначе строка без роли стояла бы на два пикселя уже соседней.
+ */
 const ROLE_BORDER: Record<string, string> = {
   offense: "border-offense/60",
   defense: "border-defense/60",
-  other: "border-slate-200 dark:border-slate-800",
-};
-
-/** Подложка по роли — отдельно от рамки: приглушённая строка меняет её, не трогая рамку. */
-const ROLE_BACKGROUND: Record<string, string> = {
-  offense: "bg-offense/5",
-  defense: "bg-defense/5",
-  other: "",
+  other: "border-transparent",
 };
 
 /**
- * Подложка приглушённой строки.
+ * Ступень приглушённой строки: она остаётся лежать на странице, пока доступная приподнята.
  *
  * Прозрачностью строку гасить нельзя: она гасит и текст, и значки вместе с ним — контраст падает до
- * 2.8 при требуемых 4.5, и это ловит прогон axe. Приглушение живёт в подложке, а причина, по которой
+ * 2.8 при требуемых 4.5, и это ловит прогон axe. Приглушение живёт в ступени, а причина, по которой
  * строка приглушена, написана на ней словами.
  */
-const DIMMED_BACKGROUND = "bg-slate-100 dark:bg-slate-900";
+const DIMMED_SURFACE = "";
 
 /**
  * Цвет подписи роли. Тёмные варианты — не украшение: на подкрашенной подложке серый слишком светлый
@@ -138,7 +137,7 @@ export function SpellCardCompact({
    */
   const role = combatRole(spell.role);
   const dimmed = unavailableReason !== undefined || active;
-  const frame = `${roleClass(ROLE_BORDER, spell.role)} ${dimmed ? DIMMED_BACKGROUND : roleClass(ROLE_BACKGROUND, spell.role)}`;
+  const frame = `${roleClass(ROLE_BORDER, spell.role)} ${dimmed ? DIMMED_SURFACE : SURFACE_GROUP}`;
 
   /**
    * Нейтральные сведения строки. Длительность выделена контрастом: рядом с ней в значке стоит время
@@ -250,10 +249,10 @@ export function SpellCardCompact({
           aria-pressed={isPrepared}
           onClick={onTogglePrepared}
           aria-label={`${isPrepared ? "Снять подготовку" : "Подготовить"}: ${spell.nameRu}`}
-          className={`w-11 shrink-0 rounded-lg border text-lg ${
+          className={`w-11 shrink-0 rounded-lg text-lg ${
             isPrepared
-              ? "border-ritual bg-ritual/10 text-ritual-strong dark:text-ritual"
-              : "border-slate-200 text-slate-400 dark:border-slate-800"
+              ? "bg-ritual/20 text-ritual-strong dark:text-ritual"
+              : `text-slate-500 dark:text-slate-400 ${SURFACE_CONTROL}`
           }`}
         >
           <span aria-hidden="true">{isPrepared ? "✓" : "+"}</span>

@@ -18,7 +18,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-md border px-1 text-[0.6875rem] font-medium leading-5 ${TONE_CLASS[tone]}`}
+      className={`inline-flex items-center gap-1 rounded-md px-1 text-[0.6875rem] font-medium leading-5 ${TONE_CLASS[tone]}`}
     >
       {icon === undefined ? null : <span aria-hidden="true">{icon}</span>}
       {children}

@@ -14,6 +14,7 @@ import { useId, useState } from "react";
 import type { ConcentrationCheckView } from "@/contract/views";
 import { checkGuidanceRu } from "@/ui/features/concentration-check/lib/checkGuidance";
 import { signed } from "@/shared/language";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 export function ConcentrationCheckCard({
   check,
@@ -38,7 +39,7 @@ export function ConcentrationCheckCard({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl border-t border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <div>
         <h2 id={titleId} className="text-sm font-semibold">
@@ -52,7 +53,7 @@ export function ConcentrationCheckCard({
 
       {runeOffered ? (
         <>
-          <p className="rounded-lg border border-ritual/50 bg-ritual/10 p-2 text-sm">
+          <p className={`rounded-lg bg-ritual/10 p-2 text-sm ${SURFACE_GROUP}`}>
             <span aria-hidden="true">❖</span> Знаки ограждения: реакция и руна превратят провал в
             успех
           </p>
@@ -60,14 +61,14 @@ export function ConcentrationCheckCard({
             <button
               type="button"
               onClick={onSpendRune}
-              className="min-h-11 flex-1 rounded-xl border border-ritual px-3 text-sm font-semibold"
+              className={`min-h-11 flex-1 rounded-xl px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
             >
               Потратить руну
             </button>
             <button
               type="button"
               onClick={onFail}
-              className="min-h-11 flex-1 rounded-xl border border-slate-300 px-3 text-sm dark:border-slate-700"
+              className={`min-h-11 flex-1 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
             >
               Всё равно провал
             </button>
@@ -78,14 +79,14 @@ export function ConcentrationCheckCard({
           <button
             type="button"
             onClick={onSuccess}
-            className="min-h-11 flex-1 rounded-xl border border-action px-3 text-sm font-semibold"
+            className={`min-h-11 flex-1 rounded-xl px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
           >
             Успех
           </button>
           <button
             type="button"
             onClick={() => (runeAvailable ? setRuneOffered(true) : onFail())}
-            className="min-h-11 flex-1 rounded-xl border border-reaction px-3 text-sm font-semibold"
+            className={`min-h-11 flex-1 rounded-xl px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
           >
             Провал
           </button>

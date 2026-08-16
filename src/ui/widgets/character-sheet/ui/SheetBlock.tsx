@@ -3,6 +3,7 @@
 import { DASH } from "@/ui/entities/character/lib/labels";
 
 import type { SheetBlockData, SheetEdit } from "../model/rows";
+import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export function SheetBlock({
   block,
@@ -14,7 +15,7 @@ export function SheetBlock({
   const { edit, secondary, features } = block;
 
   return (
-    <section className="flex flex-col gap-1 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+    <section className={`flex flex-col gap-1 rounded-xl p-3 ${SURFACE_GROUP}`}>
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold">{block.titleRu}</h2>
         <div className="flex gap-1">
@@ -23,7 +24,7 @@ export function SheetBlock({
               type="button"
               onClick={() => onEdit(secondary.edit)}
               aria-label={`Править: ${secondary.labelRu}`}
-              className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+              className={`min-h-11 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
             >
               {secondary.labelRu}
             </button>
@@ -33,7 +34,7 @@ export function SheetBlock({
               type="button"
               onClick={() => onEdit(edit)}
               aria-label={`Править: ${block.titleRu}`}
-              className="min-h-11 min-w-11 rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+              className={`min-h-11 min-w-11 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
             >
               Править
             </button>

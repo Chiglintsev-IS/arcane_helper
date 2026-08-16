@@ -14,6 +14,7 @@
 import type { SpellRowView } from "@/contract/views";
 
 import { RitualDiagram } from "@/ui/entities/ritual-diagram/ui/RitualDiagram";
+import { SURFACE_GROUP, SURFACE_PAGE } from "@/ui/shared/ui/surface";
 
 export function RitualDiagramView({ row, onClose }: { row: SpellRowView; onClose: () => void }) {
   const diagram = row.card.ritualDiagram;
@@ -24,9 +25,9 @@ export function RitualDiagramView({ row, onClose }: { row: SpellRowView; onClose
       role="dialog"
       aria-modal="true"
       aria-label={`Схема ритуала «${row.nameRu}»`}
-      className="fixed inset-0 z-30 flex flex-col bg-slate-50 dark:bg-slate-950"
+      className={`fixed inset-0 z-30 flex flex-col ${SURFACE_PAGE}`}
     >
-      <header className="flex items-start justify-between gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
+      <header className={`flex items-start justify-between gap-2 p-3 ${SURFACE_GROUP}`}>
         <div>
           <h2 className="text-base font-semibold leading-tight">{row.nameRu}</h2>
           <p className="text-xs text-slate-500">Перерисуйте на лист — это и есть ритуал</p>

@@ -3,6 +3,7 @@
 import { Fragment, type ReactNode } from "react";
 
 import type { ChoicesView, ItemView } from "@/contract/views";
+import { TONE_CLASS } from "@/ui/shared/ui/tone";
 
 import { itemMeta } from "../lib/itemMeta";
 
@@ -58,7 +59,7 @@ export function ItemRow({
             {facts.map((fact) => (
               <span
                 key={`${fact.valueRu} ${fact.labelsRu.join(" ")}`}
-                className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs leading-tight text-slate-600 dark:bg-slate-800/60 dark:text-slate-400"
+                className={`rounded-md px-1.5 py-0.5 text-xs leading-tight ${TONE_CLASS.muted}`}
               >
                 <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
                   {fact.valueRu}
