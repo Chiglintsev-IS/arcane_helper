@@ -144,6 +144,7 @@ describe("форма состояния", () => {
       "ingredientKnowledge",
       "inspiration",
       "itemDefinitions",
+      "lastHint",
       "level",
       "name",
       "preparedSpellIds",
@@ -202,6 +203,15 @@ describe("characterStateSchema принимает корректное сост�
       draft.activeEffects = [];
     });
     expect(characterStateSchema.safeParse(idle).success).toBe(true);
+  });
+
+  it("сохранение без последней подсказки открывается с целой подсказкой", () => {
+    const older = mutate((draft) => {
+      delete draft.lastHint;
+    });
+    const result = characterStateSchema.safeParse(older);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.lastHint).toEqual({ maximum: 1, remaining: 1 });
   });
 
   it("время создания очков заклинаний из старого сохранения читается и отбрасывается", () => {

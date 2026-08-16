@@ -25,3 +25,12 @@ describe("отметка короткого отдыха у ресурсов (FR
     expect(Arcana.of(marked).spendSlot(1).arcaneRecoveryUnavailability()).toBeNull();
   });
 });
+
+describe("последняя подсказка (FR-309)", () => {
+  it("истраченная остаётся нулём и второй раз не тратится", () => {
+    const spent = arcana().shiftLastHint(-1);
+
+    expect(spent.lastHint.remaining).toBe(0);
+    expect(() => spent.shiftLastHint(-1)).toThrow(/от 0 до 1/);
+  });
+});

@@ -19,7 +19,7 @@ import {
 } from "@/core/application/useCases/effects";
 import { exchangeBlood, grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
-import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
+import { adjustLastHint, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, useRoleplayVariant } from "@/core/application/useCases/roleplay";
 import { castSpell } from "@/core/application/useCases/casting";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -1966,6 +1966,27 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
     const returned = adjustRunes(spent, 1, occasion);
     expect(returned.character.runes.remaining).toBe(3);
     expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена руна: 3");
+  });
+
+  it("подсказка тратится один раз и возвращается долгим отдыхом", () => {
+    const spent = adjustLastHint(session, -1, occasion);
+    expect(spent.character.lastHint.remaining).toBe(0);
+    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачена подсказка");
+
+    // Второго применения до отдыха нет: пустой пул отвечает причиной, а не уходит в минус.
+    expect(() => adjustLastHint(spent, -1, occasion)).toThrow(/от 0 до 1/);
+
+    expect(longRest(spent, occasion).character.lastHint.remaining).toBe(1);
+  });
+
+  it("потраченная по ошибке подсказка возвращается и руками, и отменой (FR-111)", () => {
+    const spent = adjustLastHint(session, -1, occasion);
+
+    const returned = adjustLastHint(spent, 1, occasion);
+    expect(returned.character.lastHint.remaining).toBe(1);
+    expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена подсказка");
+
+    expect(undoLast(spent).character.lastHint.remaining).toBe(1);
   });
 
   it("за границы пула не выпускает", () => {

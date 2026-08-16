@@ -66,6 +66,7 @@ export function ResourcesSheet({
   onSpendSlot,
   onRefundSlot,
   onAdjustRunes,
+  onAdjustLastHint,
   onSunlight,
   onClose,
 }: {
@@ -73,11 +74,13 @@ export function ResourcesSheet({
   onSpendSlot: (level: number) => void;
   onRefundSlot: (level: number) => void;
   onAdjustRunes: (delta: number) => void;
+  /** Последняя подсказка: тратит и возвращает её игрок — повод и бросок ведёт стол. */
+  onAdjustLastHint: (delta: number) => void;
   /** Признак «под прямым солнечным светом»: приложение его не знает, говорит игрок. */
   onSunlight: (under: boolean) => void;
   onClose: () => void;
 }) {
-  const { runes, suppression } = resources;
+  const { runes, lastHint, suppression } = resources;
   const titleId = useId();
 
   return (
@@ -118,6 +121,21 @@ export function ResourcesSheet({
           onPlus={() => onAdjustRunes(1)}
           minusDisabled={runes.remaining <= 0}
           plusDisabled={runes.remaining >= runes.maximum}
+        />
+      </ul>
+
+      {/*
+       Подсказка правится здесь же, где руны: другого способа её потратить у приложения нет — повод
+       и бросок ведёт стол, а запас ведёт эта строка.
+       */}
+      <ul aria-label="Подсказка" className="flex flex-col gap-1">
+        <Stepper
+          label="Подсказка"
+          value={`${lastHint.remaining}/${lastHint.maximum}`}
+          onMinus={() => onAdjustLastHint(-1)}
+          onPlus={() => onAdjustLastHint(1)}
+          minusDisabled={lastHint.remaining <= 0}
+          plusDisabled={lastHint.remaining >= lastHint.maximum}
         />
       </ul>
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 /**
- * Ряд «чем платить» на настоящем снимке: проекции строит тот же презентер, что и в приложении, а
+ * Ряды шапки на настоящем снимке: проекции строит тот же презентер, что и в приложении, а
  * пулы обнуляются теми же операциями, какими их тратят за столом.
  *
  * Смысловой тон читается по классу плитки: стилей в тестовом DOM нет, и цвет здесь виден только так.
@@ -15,10 +15,11 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import {
   withSpellPoints,
   withoutHitDice,
+  withoutLastHint,
   withoutRunes,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
-import { ResourceHeader } from "./ResourceHeader";
+import { ResourceBadges, ResourceHeader } from "./ResourceHeader";
 
 afterEach(cleanup);
 
@@ -38,6 +39,22 @@ function tiles(character: CharacterState): Tile[] {
   return within(screen.getByLabelText("Чем платить"))
     .getAllByRole("listitem")
     .map((item) => ({ text: item.textContent ?? "", classes: item.className }));
+}
+
+/** Значки ряда «прочие ресурсы»: тот же снимок, другой ряд. */
+function badges(character: CharacterState): string[] {
+  const snapshot = testSnapshot(character);
+  render(
+    <ResourceBadges
+      sheet={snapshot.sheet}
+      resources={snapshot.resources}
+      turn={snapshot.turn}
+      bookCastingTimes={new Set()}
+    />,
+  );
+  return within(screen.getByLabelText("Прочие ресурсы"))
+    .getAllByRole("listitem")
+    .map((item) => item.textContent ?? "");
 }
 
 /** Плитка пула по её подписи: прогон называет ресурс словом, а не местом в ряду. */
@@ -82,5 +99,16 @@ describe("пустой пул подан пустым", () => {
     // Совпадают они подложкой и расходятся тем, что цвета не требует: знаком и самим числом.
     expect(pool(drained, "Руны").text).not.toBe(pool(full, "Руны").text);
     expect(pool(drained, "Очки").text).not.toBe(pool(full, "Очки").text);
+  });
+});
+
+describe("последняя подсказка (FR-309)", () => {
+  it("истраченная подсказка остаётся в ряду нулём", () => {
+    expect(badges(createThorne())).toContain("✚Подсказка 1/1");
+
+    cleanup();
+
+    // Пропавшая строка читалась бы как «такой особенности нет», а не как «она уже потрачена».
+    expect(badges(withoutLastHint(createThorne()))).toContain("✗Подсказка 0/1");
   });
 });

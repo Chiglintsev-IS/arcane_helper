@@ -279,6 +279,8 @@ export const resourcesViewSchema = z.object({
   /** Ячейки по возрастанию уровня: порядок принадлежит правилам, а не порядку ключей состояния. */
   slots: z.array(z.object({ level: whole, remaining: whole, maximum: whole })),
   runes: z.object({ remaining: whole, maximum: whole }),
+  /** Последняя подсказка: одно применение до долгого отдыха. Истраченная едет нулём, а не пропажей. */
+  lastHint: z.object({ remaining: whole, maximum: whole }),
   spellPoints: whole,
   /** Ручная поправка Класса Доспеха: правится там же, где видна. */
   armorClassAdjustment: whole,

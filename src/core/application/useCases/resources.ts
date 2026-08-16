@@ -24,6 +24,25 @@ export function adjustRunes(session: Session, delta: number, occasion: Occasion)
   );
 }
 
+/**
+ * Последняя подсказка: одно применение до долгого отдыха.
+ *
+ * Приложение не знает ни повода, ни броска — оно ведёт запас, и потому единственный способ его
+ * тронуть тот же, что у руны: рукой игрока и записью в журнале.
+ */
+export function adjustLastHint(session: Session, delta: number, occasion: Occasion): Session {
+  const root = Character.of(session.character);
+  return commit(
+    session,
+    root.withArcana(root.arcana.shiftLastHint(delta)),
+    {
+      kind: "manual_adjustment",
+      summaryRu: delta > 0 ? "Возвращена подсказка" : "Потрачена подсказка",
+    },
+    occasion,
+  );
+}
+
 /** Ручное списание ячейки: эффект предмета или чужое заклинание вне модели приложения. */
 export function spendSpellSlot(session: Session, slotLevel: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
