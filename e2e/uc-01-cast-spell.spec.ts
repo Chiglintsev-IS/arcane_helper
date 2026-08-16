@@ -32,7 +32,13 @@ test.beforeEach(async ({ page }) => {
 
 /** Смена режима: она ничего не спрашивает — бой начинают и заканчивают кнопками в самом бою. */
 async function switchMode(page: Page, name: RegExp): Promise<void> {
-  await page.getByRole("radio", { name }).click();
+  await page.getByRole("button", { name }).click();
+}
+
+/** Своей ячейки у «Листа» нет: его открывает список «Ещё». */
+async function switchToSheet(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /^Ещё/ }).click();
+  await page.getByRole("dialog", { name: "Ещё" }).getByRole("button", { name: /^Лист/ }).click();
 }
 
 test("play-screen renders all resource blocks", async ({ page }) => {
@@ -122,22 +128,16 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   }));
   expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
 
-  // Шесть ярлыков режима в 320 пикселей не укладываются: полоса прокручивается и подводит к
-  // текущему. Проверяется не «влезли все», а «текущий виден целиком» — иначе игрок не знает, где он.
-  const currentMode = await page
-    .getByRole("radiogroup", { name: "Режим экрана" })
-    .evaluate((node) => {
-      const selected = node.querySelector('[aria-checked="true"]');
-      if (selected === null) throw new Error("режим не выбран");
-      const strip = node.getBoundingClientRect();
-      const box = selected.getBoundingClientRect();
-      return {
-        fromLeft: Math.round(box.left - strip.left),
-        fromRight: Math.round(strip.right - box.right),
-      };
-    });
-  expect(currentMode.fromLeft, "текущий режим не уехал за левый край").toBeGreaterThanOrEqual(0);
-  expect(currentMode.fromRight, "текущий режим не уехал за правый край").toBeGreaterThanOrEqual(0);
+  // Шесть ячеек панели помещаются в 320 целиком: подпись, ушедшая в многоточие, — подпись, которой
+  // нет, а прокрутки у панели не предусмотрено вовсе.
+  const panel = await page.getByRole("navigation", { name: "Режим экрана" }).evaluate((node) => ({
+    over: node.scrollWidth - node.clientWidth,
+    clipped: [...node.querySelectorAll("span")].filter(
+      (label) => label.scrollWidth > label.clientWidth + 1,
+    ).length,
+  }));
+  expect(panel.over, "панель не уехала за край").toBeLessThanOrEqual(0);
+  expect(panel.clipped, "ни одна подпись не обрезана").toBe(0);
 
   // В «Книге» бюджет другой: счётчик подготовки, фильтры и начало первой строки, а не строка
   // целиком: там читают и готовятся, и прокрутка нормальна.
@@ -158,7 +158,7 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
 
   // «Лист» просматривают сверху вниз, поэтому прокрутка внутри области нормальна — но первый блок
   // обязан быть виден целиком, иначе экран открывается на середине первой же строки.
-  await switchMode(page, /^Лист/);
+  await switchToSheet(page);
 
   const sheetLayout = await page.evaluate(() => ({
     documentHeight: document.documentElement.scrollHeight,
@@ -330,14 +330,14 @@ test("state survives a reload", async ({ page }) => {
   // После перезапуска экран снова «Книга»: ни заголовка с именем, ни шапки ресурсов там нет,
   // поэтому признак загрузки — сам список.
   await expect(page.getByRole("list", { name: /^Заклинания/ })).toBeVisible();
-  await expect(page.getByRole("radio", { name: /^Книга/ })).toHaveAttribute(
-    "aria-checked",
-    "true",
+  await expect(page.getByRole("button", { name: /^Книга/ })).toHaveAttribute(
+    "aria-current",
+    "page",
   );
 });
 
 test("the sheet mode survives a reload and feeds the header", async ({ page }) => {
-  await switchMode(page, /^Лист/);
+  await switchToSheet(page);
   // Лист — база персонажа одной колонкой, без вкладок.
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
 
@@ -469,7 +469,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("экран журнала");
 
   // Лист — восьмой экран сверки: блоки персонажа, шторка правки и переключатели внутри неё.
-  await switchMode(page, /^Лист/);
+  await switchToSheet(page);
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
   await scan("лист персонажа");
 
@@ -502,7 +502,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("list", { name: "Купить" })).toBeVisible();
   await scan("покупки");
 
-  await switchMode(page, /^Лист/);
+  await switchToSheet(page);
 
   await page.getByRole("button", { name: "Править: Интеллект" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
@@ -519,15 +519,15 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 });
 
 /**
- * Прогон выше идёт в светлой теме — той, что браузер отдаёт по умолчанию. Полоса переключения
- * сверяется и в тёмной: с неё начинается любой путь по экранам, и подпись выбранного режима лежит
- * там на подложке, которой в светлой теме нет.
+ * Прогон выше идёт в светлой теме — той, что браузер отдаёт по умолчанию. Панель режимов сверяется и
+ * в тёмной: с неё начинается любой путь по экранам, и подпись выбранного режима лежит там на
+ * подложке, которой в светлой теме нет.
  */
 test("the mode switcher passes axe-core in the dark theme", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
 
   const results = await new AxeBuilder({ page })
-    .include('[role="radiogroup"]')
+    .include("nav")
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
 

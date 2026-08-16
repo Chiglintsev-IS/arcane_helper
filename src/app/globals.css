@@ -42,8 +42,7 @@ body {
 }
 
 body {
-  /* Основное действие внизу экрана: учитываем системные отступы iPhone. */
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Системный отступ iPhone держит панель режимов: она и стоит у нижнего края. */
   -webkit-tap-highlight-color: transparent;
 }
 

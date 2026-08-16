@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { DEFAULT_SCREEN_MODE, SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
-import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
+import { BottomNav } from "@/ui/features/screen-mode/ui/BottomNav";
 import { UnreadableSave } from "@/ui/app/UnreadableSave";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
@@ -65,19 +65,21 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
     writeRemembered(STORAGE_KEY, next);
   };
 
+  // Верхний системный отступ держит оболочка: приложение с домашнего экрана открывается под
+  // полупрозрачной строкой состояния, и содержимое уходило бы под неё.
   return (
-    <main className="flex h-dvh flex-col">
-      <div className="relative flex shrink-0 flex-col gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
-        <ModeSwitcher mode={mode} onChange={changeMode} />
+    <main className="flex h-dvh flex-col pt-[env(safe-area-inset-top)]">
+      <ScreenContent mode={mode} />
 
+      <div className="relative shrink-0">
         {/*
- Полоса висит под шапкой поверх содержимого: в потоке она сдвигала список ровно в тот момент,
+ Полоса висит над панелью поверх содержимого: в потоке она сдвигала список ровно в тот момент,
  когда игрок метил в его строку.
  */}
         {error === null ? null : (
           <p
             role="alert"
-            className="absolute inset-x-3 top-full z-20 mt-2 rounded-lg border border-reaction bg-slate-50 p-2 text-xs font-medium text-reaction-strong shadow-lg dark:bg-slate-900 dark:text-reaction"
+            className="absolute inset-x-3 bottom-full z-20 mb-2 rounded-lg border border-reaction bg-slate-50 p-2 text-xs font-medium text-reaction-strong shadow-lg dark:bg-slate-900 dark:text-reaction"
           >
             {error}{" "}
             <button
@@ -89,9 +91,9 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
             </button>
           </p>
         )}
-      </div>
 
-      <ScreenContent mode={mode} />
+        <BottomNav mode={mode} onChange={changeMode} />
+      </div>
     </main>
   );
 }
