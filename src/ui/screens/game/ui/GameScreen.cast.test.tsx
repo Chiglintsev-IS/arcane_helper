@@ -79,7 +79,7 @@ async function openWizard(
 ) {
   const user = options.user ?? userEvent.setup();
   if (options.startCombat !== false) {
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
   }
   // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием.
   await user.click(within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name }));
@@ -117,7 +117,7 @@ describe("инвариант FR-022: до подтверждения ресур�
     // Бой начат заранее: снимок «до» должен отражать состояние прямо перед открытием мастера,
     // а не более раннее — иначе он не сойдётся с тем, что тест сравнивает после отмены.
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     const before = shown(stores);
 
     await openWizard(/Доспехи мага/, { user, startCombat: false });
@@ -299,7 +299,7 @@ describe("замена концентрации (FR-081, AC-13)", () => {
     const { stores } = await renderWithStores(<GameScreen />, concentrating());
     // Бой начат заранее — по той же причине, что и в тесте выше.
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     const before = shown(stores);
     await openWizard(/^Обнаружение магии/, { user, startCombat: false });
 

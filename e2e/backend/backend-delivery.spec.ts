@@ -32,7 +32,7 @@ test("a party goes through the backend and the browser keeps no state", async ({
 
   // Ход играется тот же, что и без сети: команда уезжает на бэкенд, снимок приезжает обратно.
   const applied = page.waitForResponse((response) => response.url().includes("/api/arcane/command"));
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await applied;
 
   await page.getByRole("button", { name: /Доспехи мага/ }).click();

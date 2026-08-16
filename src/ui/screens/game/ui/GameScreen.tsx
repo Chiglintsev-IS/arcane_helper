@@ -28,6 +28,7 @@ import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
+import { signed } from "@/shared/language";
 
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
@@ -144,20 +145,32 @@ export function GameScreen() {
           />
         </div>
 
-        <ResourceBadges
-          sheet={snapshot.sheet}
-          resources={snapshot.resources}
-          turn={snapshot.turn}
-          bookCastingTimes={dividing.castingTimes}
-        />
+        {/*
+         * Что сейчас верно — одной строкой: что держится и что уже потрачено в этом ходу. Оба
+         * ответа об одном мгновении, и разведённые по двум строкам они стоили бы той строки
+         * списка, ради которой экран и разгружают.
+         */}
+        <div className="flex flex-wrap items-center gap-2">
+          <ActiveEffects
+            effects={snapshot.effects}
+            armorClass={snapshot.sheet.armorClass}
+            concentration={concentrationSummary}
+            onOpen={() => setActiveOpen(true)}
+          />
 
-        <ActiveEffects
-          effects={snapshot.effects}
-          armorClass={snapshot.sheet.armorClass}
-          concentration={concentrationSummary}
-          onOpen={() => setActiveOpen(true)}
-        />
+          <ResourceBadges
+            sheet={snapshot.sheet}
+            resources={snapshot.resources}
+            turn={snapshot.turn}
+            bookCastingTimes={dividing.castingTimes}
+          />
+        </div>
 
+        {/*
+         * Число, которое произносят, стоит на кнопке, которой в этот миг и пользуются: инициативу
+         * называют, начиная бой, номер раунда — ведя ход, остаток реакции — открывая реакции.
+         * Отдельными значками они стояли бы целой строкой ради того, что и так под пальцем.
+         */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -167,22 +180,49 @@ export function GameScreen() {
             className="min-h-11 grow whitespace-nowrap rounded-xl bg-action-strong px-1 text-sm font-semibold leading-tight text-white"
           >
             {inFight ? "Окончить бой" : "Начать бой"}
+            {inFight ? null : (
+              <span className="block text-[0.625rem] font-normal leading-tight">
+                инициатива {signed(snapshot.resources.initiative)}
+              </span>
+            )}
           </button>
           {inFight ? (
             <button
               type="button"
               onClick={() => void execute({ kind: "begin_turn" })}
-              className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold text-action-strong dark:text-action"
+              className="min-h-11 grow whitespace-nowrap rounded-xl border border-action px-1 text-sm font-semibold leading-tight text-action-strong dark:text-action"
             >
               Новый ход
+              <span className="block text-[0.625rem] font-normal leading-tight">
+                раунд {turn.round}
+              </span>
             </button>
           ) : null}
+          {/*
+           * Подпись короткая, произносимое имя полное: слово «реакция» звучит для читающей вслух
+           * программы и не занимает места там, где его нет.
+           */}
           <button
             type="button"
             onClick={() => setReactionsOpen(true)}
-            className="min-h-11 grow whitespace-nowrap rounded-xl border border-reaction px-1 text-sm font-semibold text-reaction-strong dark:text-reaction"
+            aria-label={
+              inFight
+                ? `${REACTIONS_LABEL}. Реакция ${turn.reactionAvailable ? "доступна" : "израсходована"}`
+                : REACTIONS_LABEL
+            }
+            className={`min-h-11 grow whitespace-nowrap rounded-xl border px-1 text-sm font-semibold leading-tight ${
+              turn.reactionAvailable || !inFight
+                ? "border-reaction text-reaction-strong dark:text-reaction"
+                : "border-slate-300 text-slate-500 dark:border-slate-700"
+            }`}
           >
             {REACTIONS_LABEL}
+            {inFight ? (
+              <span className="block text-[0.625rem] font-normal leading-tight">
+                <span aria-hidden="true">{turn.reactionAvailable ? "✓" : "✗"}</span>{" "}
+                {turn.reactionAvailable ? "доступна" : "израсходована"}
+              </span>
+            ) : null}
           </button>
           <HourMark
             nextHour={snapshot.recovery.nextHour}

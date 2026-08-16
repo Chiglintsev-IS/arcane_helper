@@ -350,24 +350,6 @@ export function ResourceBadges({
 
   return (
     <ul aria-label="Прочие ресурсы" className="flex flex-wrap items-center gap-1 text-xs">
-        {/*
-         * Приходящее с боем встаёт первым: инициатива, затем номер раунда. Вне боя раунда нет
-         * вовсе — число застыло бы на последнем.
-         */}
-        {inFight ? (
-          <>
-            <li>
-              <Badge tone="muted" icon="◔">
-                Инициатива {signed(resources.initiative)}
-              </Badge>
-            </li>
-            <li>
-              <Badge tone="action" icon="◷">
-                Раунд {turn.round}
-              </Badge>
-            </li>
-          </>
-        ) : null}
         {hitPoints.maximumReduction > 0 ? (
           <li>
             <Badge tone="reaction" icon="✖">
@@ -435,11 +417,6 @@ export function ResourceBadges({
                 </SpendableResource>
               </li>
             ) : null}
-            <li aria-label={turn.reactionAvailable ? "Реакция доступна" : "Реакция израсходована"}>
-              <SpendableResource available={turn.reactionAvailable} tone="reaction" icon="✓">
-                Реакция
-              </SpendableResource>
-            </li>
           </>
         ) : null}
     </ul>

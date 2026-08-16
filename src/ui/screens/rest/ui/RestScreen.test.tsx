@@ -142,7 +142,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     // и на «Игре», ведь долгий отдых её снимает.
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Реакции/ })).toBeNull();
     expect(screen.queryByLabelText(/^Подготовлено/)).toBeNull();
     expect(screen.queryByRole("button", { name: /^(Начать бой|Окончить бой|Новый ход)/ })).toBeNull();
   });

@@ -57,7 +57,7 @@ test("play-screen renders all resource blocks", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Действует: ничего" })).toBeVisible();
   await expect(page.getByLabel("Реакция доступна")).toBeHidden();
 
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
   await expect(page.getByLabel("Бонусное действие доступно")).toBeVisible();
   await expect(page.getByRole("button", { name: "Учёт хода", exact: true })).toBeHidden();
@@ -79,7 +79,7 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
 test("combat keeps the first card whole, the book keeps the first row", async ({ page }) => {
   // Бой начат: причина добавляет строке ещё одну строку текста, а бюджет здесь меряет
   // обычную игру — после «Начать бой», а не до него.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
 
   const viewport = page.viewportSize()?.height ?? 0;
   expect(viewport).toBeGreaterThan(0);
@@ -186,14 +186,14 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
 
 /** Самая тяжёлая обстановка боя: схватка идёт, концентрация держится, ход начат. */
 async function holdConcentrationInCombat(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /^Паутина/ }).first().click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: /Ячейка 2 уровня/ }).first().click();
   await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByRole("button", { name: "Подтвердить" })).toBeHidden();
-  await page.getByRole("button", { name: "Новый ход", exact: true }).click();
+  await page.getByRole("button", { name: /^Новый ход/ }).click();
 }
 
 test("the first spell row is whole on screen at 320, 375 and 390", async ({ page }) => {
@@ -270,7 +270,7 @@ test("technical instruction is two taps away", async ({ page }) => {
 
 test("wizard steps order and cast spends the slot", async ({ page }) => {
   // Бой начат: в бою и меряется путь применения — ход считается, ячейка тратится.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
 
@@ -295,7 +295,7 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
 test("undo returns the slot through the journal screen", async ({ page }) => {
   const slots = page.getByLabel("Чем платить");
 
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Далее" }).click();
@@ -317,7 +317,7 @@ test("undo returns the slot through the journal screen", async ({ page }) => {
 
 test("state survives a reload", async ({ page }) => {
   // Бой начат: путь применения меряется в бою.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Луч холода/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
@@ -360,7 +360,7 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
 test("reaction shows when it returns", async ({ page }) => {
   // Вне боя ход не считается и реакция не тратится, поэтому прогон идёт в бою: «Щит» её
   // расходует, а «Новый ход» возвращает.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
 
   await page.getByRole("button", { name: /Щит/ }).click();
@@ -369,7 +369,7 @@ test("reaction shows when it returns", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByLabel("Реакция израсходована")).toBeVisible();
 
-  await page.getByRole("button", { name: "Новый ход", exact: true }).click();
+  await page.getByRole("button", { name: /^Новый ход/ }).click();
   await expect(page.getByLabel("Реакция доступна")).toBeVisible();
 });
 
@@ -429,7 +429,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   };
 
   // Бой начат: сверяется тот экран, за которым сидят в бою.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await scan("экран боя");
 
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
@@ -591,7 +591,7 @@ test("serves the app from cache when the network is gone", async ({ page, contex
 
 test("camp mode reaches rest and recovery", async ({ page }) => {
   // Бой начат: тратим ячейку в бою, чтобы после него было что восстанавливать.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   // Тратим ячейку в бою, чтобы на привале было что восстанавливать.
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
@@ -618,7 +618,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
 test("combat keeps camp mode reachable, but rest refuses with a reason", async ({ page }) => {
   // Мода не является правилом: переключатель режима работает в бою так же, как вне его — а
   // отдых внутри самого режима обязан отказать, а не притвориться, что кнопки не было.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await switchMode(page, /^Привал/);
 
   const shortRest = page.getByRole("button", { name: /Короткий отдых.*Пока идёт бой, короткий отдых недоступен/ });
@@ -632,7 +632,7 @@ test("combat keeps camp mode reachable, but rest refuses with a reason", async (
 
 test("blood exchange goes through the wizard, not one tap", async ({ page }) => {
   // Бой начат: обмен тратит действие, и проверяется он там, где действие считается.
-  await page.getByRole("button", { name: "Начать бой", exact: true }).click();
+  await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Магия крови/ }).click();
 
   // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется.

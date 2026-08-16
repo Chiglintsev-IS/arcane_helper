@@ -72,7 +72,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await renderWithStores(<GameScreen />);
 
     expect(screen.queryByLabelText("Действие доступно")).toBeNull();
-    expect(screen.queryByLabelText("Реакция доступна")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Реакция доступна/ })).toBeNull();
   });
 
   it("показывает все три вида экономии, когда все три есть в списке (FR-001)", async () => {
@@ -81,7 +81,8 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
 
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
-    expect(screen.getByLabelText("Реакция доступна")).toBeDefined();
+    // Остаток реакции стоит на кнопке, которой её и тратят.
+    expect(screen.getByRole("button", { name: /^Реакции\. Реакция доступна/ })).toBeDefined();
     expect(screen.getByLabelText("Бонусное действие доступно")).toBeDefined();
   });
 
@@ -110,7 +111,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
 
     // Применение проверяется в начатом бою: до «Начать бой» причина добавила бы лишний
     // шаг мастера, а этот тест — про КД, а не про сам факт начала боя.
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -132,8 +133,8 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(shown(stores).turn.reactionAvailable).toBe(false);
-    const spent = screen.getByLabelText("Реакция израсходована");
-    expect(within(spent).getByText("Реакция")).toBeDefined();
+    const spent = screen.getByRole("button", { name: /^Реакции\. Реакция израсходована/ });
+    expect(within(spent).getByText("израсходована")).toBeDefined();
   });
 
 });
@@ -143,7 +144,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
     const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Луч холода")).toBeDefined();
@@ -172,7 +173,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     expect(paying().getByText("Кости d6")).toBeDefined();
 
     // Закреплённая часть с началом боя не меняется: плитке незачем прыгать.
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     expect(paying().getByText("Кости d6")).toBeDefined();
   });
 
@@ -196,9 +197,10 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const badges = within(screen.getByLabelText("Прочие ресурсы"))
       .getAllByRole("listitem")
       .map((item) => item.textContent ?? "");
-    expect(badges.slice(0, 2)).toEqual(["◔Инициатива +1", "◷Раунд 1"]);
+    // Начавшийся бой ни одной плитки не сдвинул, а его числа встали на кнопки, которыми ходят.
     expect(badges.join(" ")).not.toContain("Кости");
     expect(badges.join(" ")).not.toContain("Внимательность");
+    expect(screen.getByRole("button", { name: /^Новый ход.*раунд 1/ })).toBeDefined();
   });
 
   it("истощение видно значком со ступенью (FR-232)", async () => {
@@ -234,7 +236,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
 
     expect(screen.getByLabelText("Фильтры")).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     expect(screen.getByLabelText("Фильтры")).toBeDefined();
   });
 
@@ -306,7 +308,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     const reduced = withBloodSpent(createThorne(), 3);
     await renderWithStores(<GameScreen />, reduced);
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
     const button = screen.getByRole("button", {
       name: "Прошёл час · максимум +3 Пока идёт бой, час пройти не может",
@@ -318,9 +320,9 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await renderWithStores(<GameScreen />);
 
     // «Начать бой» на месте: с неё бой и начинается. Хода вне боя нет, и раунда тоже.
-    expect(screen.getByRole("button", { name: "Начать бой" })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Начать бой/ })).toBeDefined();
     expect(screen.queryByRole("button", { name: /Окончить бой|Новый ход/ })).toBeNull();
-    expect(screen.getByLabelText("Ресурсы").textContent).not.toContain("Раунд");
+    expect(screen.queryByText(/^раунд \d+$/)).toBeNull();
   });
 
 });
@@ -330,7 +332,7 @@ describe("повторяемое действие эффекта (FR-092)", () =
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /^Отражения/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -345,7 +347,7 @@ describe("повторяемое действие эффекта (FR-092)", () =
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /^Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -385,9 +387,9 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
 
-    const sheet = within(screen.getByRole("dialog", { name: "Реакции" }));
+    const sheet = within(screen.getByRole("dialog", { name: /^Реакции/ }));
     expect(sheet.getByText("Что произошло?")).toBeDefined();
     // Список заклинаний до выбора события не показывается: игрок думает о событии, а не о названии.
     expect(screen.queryByLabelText("Подходящие реакции")).toBeNull();
@@ -397,7 +399,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
     await user.click(screen.getByRole("radio", { name: "По мне попали" }));
 
     const matching = within(screen.getByLabelText("Подходящие реакции"));
@@ -410,7 +412,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
     // «Искусная острота» в книгу не вошла — отвечать на успешный бросок врага нечем.
     expect(screen.queryByRole("radio", { name: "Враг преуспел в броске" })).toBeNull();
     expect(screen.getByRole("radio", { name: "Я провалил спасбросок" })).toBeDefined();
@@ -420,7 +422,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
     await user.click(screen.getByRole("radio", { name: "Враг творит заклинание" }));
     await user.click(
       within(screen.getByLabelText("Подходящие реакции")).getByRole("button", {
@@ -438,13 +440,13 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     await renderWithStores(<GameScreen />);
 
     // Тратим реакцию «Щитом», затем открываем экран реакций снова.
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /^Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
     await user.click(screen.getByRole("radio", { name: "По мне попали" }));
 
     const suitable = within(screen.getByLabelText("Подходящие реакции"));
@@ -460,7 +462,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
 
-    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
     await user.click(screen.getByRole("radio", { name: "Я провалил спасбросок" }));
     await user.click(screen.getByRole("button", { name: /Потратить руну/ }));
 
@@ -479,7 +481,7 @@ describe("конец боя (FR-216, FR-221)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />, wounded());
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: "Окончить бой" }));
     await user.click(screen.getByRole("button", { name: "Да, бой закончен" }));
     expect(shown(stores).sheet.hitPoints.current).toBe(30);
@@ -489,7 +491,7 @@ describe("конец боя (FR-216, FR-221)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />, wounded());
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: "Окончить бой" }));
     await user.click(screen.getByRole("button", { name: "Нет, продолжается" }));
 
@@ -502,7 +504,7 @@ describe("конец боя (FR-216, FR-221)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: "Окончить бой" }));
 
     // Конец боя — факт, а не лечение: он сбрасывает счёт раундов, и здоровому это нужно так же.
@@ -520,28 +522,28 @@ describe("конец боя (FR-216, FR-221)", () => {
 
     // Пока бой не начат, заканчивать нечего, и ходов не бывает: «Нового хода» на экране нет.
     expect(screen.queryByRole("button", { name: "Окончить бой" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Новый ход" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Новый ход/ })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
-    expect(screen.queryByRole("button", { name: "Начать бой" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Начать бой/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Окончить бой" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Новый ход" })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Новый ход/ })).toBeDefined();
   });
 
   it("следующий бой начинается с первого раунда", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
-    await user.click(screen.getByRole("button", { name: "Новый ход" }));
-    expect(screen.getByText("Раунд 2")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
+    await user.click(screen.getByRole("button", { name: /^Новый ход/ }));
+    expect(screen.getByText("раунд 2")).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Окончить бой" }));
     await user.click(screen.getByRole("button", { name: "Да, бой закончен" }));
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
-    expect(screen.getByText("Раунд 1")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
+    expect(screen.getByText("раунд 1")).toBeDefined();
   });
 
 });
@@ -622,7 +624,7 @@ describe("краткая карточка (FR-010)", () => {
     await renderWithStores(<GameScreen />, character);
     // Бой начат: тест проверяет причину нехватки ячеек, а не причину — иначе она заслонила
     // бы собой то, ради чего написан этот тест.
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
     const row = screen.getByRole("button", { name: /Доспехи мага/ });
     expect(within(row).getByText(/Нет свободной ячейки 1 уровня/)).toBeDefined();
@@ -641,7 +643,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: "Новый ход" }));
+    await user.click(screen.getByRole("button", { name: /^Новый ход/ }));
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
     expect(shown(stores).turn.actionAvailable).toBe(true);
   });
@@ -657,7 +659,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 
     expect(screen.getByRole("button", { name: /^КД 19/ })).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: "Новый ход" }));
+    await user.click(screen.getByRole("button", { name: /^Новый ход/ }));
 
     // Пока строка эффекта висит, шапка показывает КД 19 — число, которое игрок называет мастеру.
     expect(screen.queryByText(/Щит · КД 19/)).toBeNull();
@@ -781,7 +783,7 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     expect(outOfFight.textContent).toContain("3/3");
     expect(outOfFight.textContent).toContain("Очки");
 
-    await user.click(screen.getByRole("button", { name: "Начать бой" }));
+    await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
     const inFight = screen.getByLabelText("Чем платить");
     expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
@@ -797,9 +799,9 @@ describe("«Знаки ограждения» вне боя (FR-153)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Реакции" }));
+    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
 
-    const sheet = screen.getByRole("dialog", { name: "Реакции" });
+    const sheet = screen.getByRole("dialog", { name: /^Реакции/ });
     await user.click(within(sheet).getByRole("radio", { name: /провалил спасбросок/i }));
 
     await user.click(within(sheet).getByRole("button", { name: /Потратить руну/ }));

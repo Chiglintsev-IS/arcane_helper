@@ -65,19 +65,22 @@ export function RestScreen() {
           onEditResources={() => setResourcesOpen(true)}
         />
 
-        <ResourceBadges
-          sheet={snapshot.sheet}
-          resources={snapshot.resources}
-          turn={snapshot.turn}
-          bookCastingTimes={dividing.castingTimes}
-        />
+        {/* Тот же ряд, что и в «Игре»: что держится и что уже потрачено — об одном мгновении. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <ActiveEffects
+            effects={snapshot.effects}
+            armorClass={snapshot.sheet.armorClass}
+            concentration={concentrationSummary}
+            onOpen={() => setActiveOpen(true)}
+          />
 
-        <ActiveEffects
-          effects={snapshot.effects}
-          armorClass={snapshot.sheet.armorClass}
-          concentration={concentrationSummary}
-          onOpen={() => setActiveOpen(true)}
-        />
+          <ResourceBadges
+            sheet={snapshot.sheet}
+            resources={snapshot.resources}
+            turn={snapshot.turn}
+            bookCastingTimes={dividing.castingTimes}
+          />
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <HourMark
