@@ -239,6 +239,36 @@ export const bagViewSchema = z.object({
 });
 
 /**
+ * Раскрытое свойство: под каким номером стоит, как называется и какой оно редкости.
+ *
+ * Номер едет числом, а не порядком в списке: он говорит, насколько глубоко свойство было скрыто, и
+ * второе, раскрытое через нераскрытое первое, остаётся вторым.
+ */
+const revealedPropertyViewSchema = z.object({
+  number: whole,
+  nameRu: word,
+  rarity: word,
+});
+
+/**
+ * Знание об ингредиенте: вид и то, что у него раскрыто.
+ *
+ * Сколько порций лежит в сумке, здесь не едет и не поедет: на этот вопрос отвечает сумка, а два
+ * места для одного числа расходятся молча. Общего числа свойств вида тоже нет — потолок правил не
+ * факт вида, и знаменателя, которого стол не установил, договор не обещает.
+ */
+const ingredientKnowledgeViewSchema = z.object({
+  nameRu: word,
+  /** По возрастанию номера; пусто — вид записан, а узнать про него ещё ничего не успели. */
+  properties: z.array(revealedPropertyViewSchema),
+});
+
+/** Что игрок узнал об ингредиентах: записанные виды в порядке записи. */
+export const craftingViewSchema = z.object({
+  ingredients: z.array(ingredientKnowledgeViewSchema),
+});
+
+/**
  * Действующие числа боя: чем платить и что мешает прямо сейчас.
  *
  * Отдельно от листа, потому что двигаются они каждый ход, а лист за сессию почти не меняется.
@@ -684,6 +714,8 @@ export type BloodMagicView = z.infer<typeof bloodMagicViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
 export type MissingMaterialView = z.infer<typeof missingMaterialViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
+export type CraftingView = z.infer<typeof craftingViewSchema>;
+export type IngredientKnowledgeView = z.infer<typeof ingredientKnowledgeViewSchema>;
 export type StatChoiceView = z.infer<typeof statChoiceSchema>;
 export type ChoicesView = z.infer<typeof choicesViewSchema>;
 export type AbilityView = z.infer<typeof abilityViewSchema>;

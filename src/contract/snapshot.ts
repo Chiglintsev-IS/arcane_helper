@@ -19,6 +19,7 @@ import {
   castingViewSchema,
   choicesViewSchema,
   concentrationViewSchema,
+  craftingViewSchema,
   recoveryViewSchema,
   resourcesViewSchema,
   sheetViewSchema,
@@ -45,6 +46,8 @@ export const snapshotSchema = z.object({
   version: z.number().int().nonnegative(),
   sheet: sheetViewSchema,
   bag: bagViewSchema,
+  /** Что узнано об ингредиентах: знание про виды, а не запас — запас едет сумкой. */
+  crafting: craftingViewSchema,
   resources: resourcesViewSchema,
   recovery: recoveryViewSchema,
   turn: turnViewSchema,

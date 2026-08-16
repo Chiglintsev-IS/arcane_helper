@@ -35,10 +35,14 @@ async function switchMode(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).click();
 }
 
-/** Своей ячейки у «Листа» нет: его открывает список «Ещё». */
-async function switchToSheet(page: Page): Promise<void> {
+/** Режим из-под «Ещё»: своей ячейки в панели у него нет, и открывает его список. */
+async function switchUnderMore(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name: /^Ещё/ }).click();
-  await page.getByRole("dialog", { name: "Ещё" }).getByRole("button", { name: /^Лист/ }).click();
+  await page.getByRole("dialog", { name: "Ещё" }).getByRole("button", { name }).click();
+}
+
+async function switchToSheet(page: Page): Promise<void> {
+  await switchUnderMore(page, /^Лист/);
 }
 
 test("play-screen renders all resource blocks", async ({ page }) => {
@@ -544,6 +548,9 @@ test("every mode passes axe-core in the dark theme", async ({ page }) => {
 
   await switchToSheet(page);
   await scan("лист");
+
+  await switchUnderMore(page, /^Ремесло/);
+  await scan("ремесло");
 });
 
 test("reactions in one tap", async ({ page }) => {

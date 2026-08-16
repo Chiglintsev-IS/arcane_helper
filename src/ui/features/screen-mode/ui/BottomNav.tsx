@@ -18,13 +18,14 @@ const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   rest: { title: "Привал", hint: "отдых и восстановление" },
   journal: { title: "Журнал", hint: "что случилось, что можно отменить и где взять копию" },
   sheet: { title: "Лист", hint: "кто он: уровень, характеристики, навыки, владения" },
+  crafting: { title: "Ремесло", hint: "что узнано о видах ингредиентов" },
 };
 
 /** Своей ячейкой стоит то, что за столом спрашивают чаще всего. */
 const OWN_CELL: ScreenMode[] = ["play", "book", "things", "rest", "journal"];
 
 /** Остальное приходит списком: место в панели конечно, а режимов будет больше. */
-const UNDER_MORE: ScreenMode[] = ["sheet"];
+const UNDER_MORE: ScreenMode[] = ["sheet", "crafting"];
 
 const MORE = "Ещё";
 

@@ -16,6 +16,7 @@ import { toBagView } from "./views/bagView";
 import { toBloodMagicView } from "./views/bloodMagicView";
 import { toChoicesView } from "./views/choicesView";
 import { toConcentrationView } from "./views/concentrationView";
+import { toCraftingView } from "./views/craftingView";
 import { toEffectViews } from "./views/effectsView";
 import { toRecoveryView } from "./views/recoveryView";
 import { toResourcesView } from "./views/resourcesView";
@@ -35,6 +36,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     version,
     sheet: toSheetView(live.session.character),
     bag: toBagView(live.session.character, live.spellCatalog),
+    crafting: toCraftingView(live.session.character),
     resources: toResourcesView(live.session),
     recovery: toRecoveryView(live.session),
     turn: toTurnView(live),
