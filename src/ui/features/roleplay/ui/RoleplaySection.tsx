@@ -1,10 +1,8 @@
 /**
- * Блок отыгрыша с маркером обязательного и управлением вариантами.
+ * Блок отыгрыша: реплика, жест и управление вариантами — художественное целиком.
  *
  * Оформление у блока заведомо другое — пунктир, курсив, свой цвет: художественный текст нельзя
- * перепутать с механикой. Единственная механическая строка здесь — что из отыгрыша
- * обязательно по правилам: вербальный компонент
- * значит, что заклинание нужно произнести вслух, и забывают об этом чаще всего.
+ * перепутать с механикой.
  *
  * Строку заклинания компонент берёт сам, а не принимает пропсами: он рендерится и из карточки, и из
  * мастера применения, и прокидывание через обоих завело бы два источника одной правды. Пометки на
@@ -15,7 +13,7 @@
 
 import { useState } from "react";
 
-import type { RoleplayVariantView, SpellCardView, SpellRowView } from "@/contract/views";
+import type { RoleplayVariantView, SpellRowView } from "@/contract/views";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
@@ -25,16 +23,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   atmospheric: "Атмосферно",
   sarcastic: "Саркастично",
 };
-
-/** Что из отыгрыша требуют правила, а что остаётся украшением. */
-function requirementNote(components: SpellCardView["components"]): string {
-  if (components.verbal && components.somatic) {
-    return "Обязательно: произнести вслух и сделать жест свободной рукой";
-  }
-  if (components.verbal) return "Обязательно: произнести вслух";
-  if (components.somatic) return "Обязательно: жест свободной рукой";
-  return "Ни голоса, ни жеста правила не требуют — отыгрыш по желанию";
-}
 
 /**
  * Кнопка действия над вариантом. Ряд из них переносится, а не делится на равные доли: на 320
@@ -90,11 +78,6 @@ function Variants({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Механическая строка внутри художественного блока — единственная и помечена как требование. */}
-      <p className="rounded-md border border-concentration/40 bg-concentration/10 px-2 py-1 text-xs font-medium not-italic text-concentration-strong dark:text-concentration">
-        {requirementNote(row.card.components)}
-      </p>
-
       <div className="flex flex-wrap gap-1">
         {categories.map((value) => (
           <button
