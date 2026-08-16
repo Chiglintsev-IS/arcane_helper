@@ -191,6 +191,7 @@ describe("ручной статус (FR-236)", () => {
   it("пустая отправка ничего не заводит", async () => {
     await renderWithStores(<GameScreen />);
 
+    await userEvent.click(screen.getByRole("button", { name: "Действует: ничего" }));
     const field = screen.getByLabelText("Новый статус");
     await userEvent.type(field, "   {Enter}");
 

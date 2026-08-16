@@ -12,10 +12,6 @@
  * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
 
-"use client";
-
-import { useState, type FormEvent } from "react";
-
 import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
@@ -44,59 +40,26 @@ function heldNames(
   ];
 }
 
-/**
- * Строка ввода статуса: без кнопки и без листа, тем же нажатием Enter, что и любая форма из
- * одного поля. Заводит статус без вклада в КД — числовую поправку вводит плитка КД в шапке.
- */
-function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
-  const [value, setValue] = useState("");
-
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    const nameRu = value.trim();
-    if (nameRu === "") return;
-    onAdd(nameRu);
-    setValue("");
-  };
-
-  return (
-    <form onSubmit={submit}>
-      <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-2 text-xs dark:border-slate-800">
-        <span className="shrink-0 text-slate-500 dark:text-slate-400">Новый статус</span>
-        <input
-          type="text"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
-        />
-      </label>
-    </form>
-  );
-}
-
 export function ActiveEffects({
   effects,
   armorClass,
   concentration,
   onOpen,
-  onAddStatus,
 }: {
   /** Что висит на персонаже: посчитано ядром. */
   effects: readonly ActiveEffectView[];
   /** Действующая защита: то же число, что в шапке и на «Листе», — его считает лист. */
   armorClass: number;
   concentration: ConcentrationSummary | null;
-  /** Раскрытие: подробности и снятие живут в шторке. */
+  /** Раскрытие: подробности, снятие и новый статус живут в шторке. */
   onOpen: () => void;
-  /** Заводит статус без вклада в КД. */
-  onAddStatus: (nameRu: string) => void;
 }) {
   const held = heldNames(effects, armorClass, concentration);
   const spoken =
     held.length === 0 ? "ничего" : held.map((item) => item.textRu).join(", ");
 
   return (
-    <section aria-label={ACTIVE_SHEET_LABEL} className="flex flex-col gap-2 text-xs">
+    <section aria-label={ACTIVE_SHEET_LABEL} className="text-xs">
       <button
         type="button"
         onClick={onOpen}
@@ -125,8 +88,6 @@ export function ActiveEffects({
           ›
         </span>
       </button>
-
-      <NewStatusField onAdd={onAddStatus} />
     </section>
   );
 }

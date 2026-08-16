@@ -543,8 +543,10 @@ describe("ручной статус (FR-236)", () => {
   it("заводит статус без вклада в КД и его можно снять", async () => {
     await renderWithStores(<PlayShell />);
 
+    await userEvent.click(screen.getByRole("button", { name: "Действует: ничего" }));
     const field = screen.getByLabelText<HTMLInputElement>("Новый статус");
     await userEvent.type(field, "Опутанный{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "Закрыть" }));
 
     const line = screen.getByLabelText("Действует");
     expect(within(line).getByText(/Опутанный/)).toBeDefined();

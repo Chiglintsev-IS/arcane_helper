@@ -77,7 +77,6 @@ export function RestScreen() {
           armorClass={snapshot.sheet.armorClass}
           concentration={concentrationSummary}
           onOpen={() => setActiveOpen(true)}
-          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
         />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -184,6 +183,7 @@ export function RestScreen() {
             }
           }}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
+          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
           onClose={() => setActiveOpen(false)}
         />
       ) : null}

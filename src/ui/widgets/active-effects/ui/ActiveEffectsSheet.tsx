@@ -8,6 +8,10 @@
  * Компонент презентационный: текст приходит готовым, состояние меняет экран.
  */
 
+"use client";
+
+import { useState, type FormEvent } from "react";
+
 import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
@@ -23,6 +27,36 @@ export const ACTIVE_SHEET_LABEL = "Действует";
  */
 export function armorClassNote(effect: ActiveEffectView, armorClass: number): string {
   return effect.changesArmorClass ? ` · КД ${armorClass}` : "";
+}
+
+/**
+ * Строка ввода статуса: без кнопки и без листа, тем же нажатием Enter, что и любая форма из
+ * одного поля. Заводит статус без вклада в КД — числовую поправку вводит плитка КД в шапке.
+ */
+function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
+  const [value, setValue] = useState("");
+
+  const submit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const nameRu = value.trim();
+    if (nameRu === "") return;
+    onAdd(nameRu);
+    setValue("");
+  };
+
+  return (
+    <form onSubmit={submit}>
+      <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-2 text-xs dark:border-slate-800">
+        <span className="shrink-0 text-slate-500 dark:text-slate-400">Новый статус</span>
+        <input
+          type="text"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
+        />
+      </label>
+    </form>
+  );
 }
 
 function ConcentrationSection({
@@ -101,6 +135,7 @@ export function ActiveEffectsSheet({
   onTakeDamage,
   onDropConcentration,
   onEndEffect,
+  onAddStatus,
   onClose,
 }: {
   /** Что висит на персонаже: посчитано ядром, включая то, двигает ли эффект защиту. */
@@ -113,6 +148,8 @@ export function ActiveEffectsSheet({
   onTakeDamage: () => void;
   onDropConcentration: () => void;
   onEndEffect: (effectId: string) => void;
+  /** Заводит статус без вклада в КД: поле стоит здесь же, под списком того, что уже действует. */
+  onAddStatus: (nameRu: string) => void;
   onClose: () => void;
 }) {
   const otherEffects = effects.filter((effect) => !effect.isConcentration);
@@ -178,6 +215,8 @@ export function ActiveEffectsSheet({
         {concentration === null && otherEffects.length === 0 ? (
           <p className="text-slate-500">Сейчас ничего не действует.</p>
         ) : null}
+
+        <NewStatusField onAdd={onAddStatus} />
       </div>
     </section>
   );
