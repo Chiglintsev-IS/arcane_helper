@@ -13,6 +13,19 @@ afterEach(cleanup);
 const SNAPSHOT = testSnapshot();
 const BASE_ROW = SNAPSHOT.spells[0]!;
 
+/** Строка одного заклинания: прогон называет заклинания, а не места в списке. */
+function rowOf(id: string) {
+  const found = SNAPSHOT.spells.find((row) => row.id === id);
+  if (found === undefined) throw new Error(`нет строки ${id}`);
+  return found;
+}
+
+function renderRow(id: string) {
+  return render(
+    <SpellCardCompact spell={rowOf(id)} casting={SNAPSHOT.casting} onOpen={() => {}} />,
+  );
+}
+
 describe("SpellCardCompact — дальность в ряду фактов без ярлыка", () => {
   it("особая дальность называет себя сама, а не показывает голое «Особая»", () => {
     render(
@@ -25,5 +38,50 @@ describe("SpellCardCompact — дальность в ряду фактов бе�
 
     expect(screen.getByText("Особая дальность")).toBeDefined();
     expect(screen.queryByText("Особая", { exact: true })).toBeNull();
+  });
+});
+
+describe("компоненты на строке списка (FR-010)", () => {
+  it("требуемое названо буквой, а не требуемое не названо вовсе", () => {
+    // «Сообщение» творится молча: голоса оно не требует, и буквы за него не получает.
+    renderRow("message");
+
+    const components = screen.getByRole("img", { name: /^Компоненты/ });
+    expect(components.textContent).toBe("СМ");
+    expect(components.getAttribute("aria-label")).toBe("Компоненты: жест, материал");
+  });
+
+  it("материал, которого фокусировка не заменяет, выделен среди букв", () => {
+    renderRow("identify");
+
+    const components = screen.getByRole("img", { name: /^Компоненты/ });
+    const [verbal, somatic, material] = [...components.children];
+    expect(components.getAttribute("aria-label")).toBe("Компоненты: голос, жест, свой предмет");
+    expect(verbal?.className).toBe("");
+    expect(somatic?.className).toBe("");
+    expect(material?.className).not.toBe("");
+  });
+
+  it("буквы встают в угол имени, а не заводят своей строки", () => {
+    renderRow("lightning-bolt");
+
+    const components = screen.getByRole("img", { name: /^Компоненты/ });
+    // Тот же угол, что и подпись роли: своей строки буквы не заводят, и список не растёт.
+    expect(components.parentElement?.textContent).toBe("ВСМБоевое");
+  });
+
+  it("строка того, что не требует ничего, компонентов и не называет", () => {
+    render(
+      <SpellCardCompact
+        spell={{
+          ...BASE_ROW,
+          card: { ...BASE_ROW.card, components: { verbal: false, somatic: false } },
+        }}
+        casting={SNAPSHOT.casting}
+        onOpen={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole("img", { name: /^Компоненты/ })).toBeNull();
   });
 });
