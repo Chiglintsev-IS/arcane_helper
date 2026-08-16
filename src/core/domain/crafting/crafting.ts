@@ -18,7 +18,10 @@ import type { PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { ingredientKnowledgeOf } from "./schema";
 import type { IngredientKnowledge, RevealedProperty } from "./schema";
 
-type CraftingState = { ingredientKnowledge: readonly IngredientKnowledge[] };
+type CraftingState = {
+  ingredientKnowledge: readonly IngredientKnowledge[];
+  alchemyApparatus: Apparatus;
+};
 
 /** Видов в составе — от двух до четырёх: меньше не даёт совпадения, больше справочник не берёт. */
 const FEWEST_KINDS = 2;
@@ -40,6 +43,7 @@ function unevenRarityRefusal(name: string, sources: readonly string[]): string {
 export class Crafting {
   private static readonly KEYS = [
     "ingredientKnowledge",
+    "alchemyApparatus",
   ] as const satisfies readonly (keyof CraftingState)[];
 
   private constructor(private readonly state: CraftingState) {}
@@ -53,11 +57,16 @@ export class Crafting {
   }
 
   private with(ingredientKnowledge: readonly IngredientKnowledge[]): Crafting {
-    return new Crafting({ ingredientKnowledge });
+    return new Crafting({ ...this.state, ingredientKnowledge });
   }
 
   get all(): readonly IngredientKnowledge[] {
     return this.data;
+  }
+
+  /** Чем алхимик работает: качество набора по каждому направлению, где он есть. */
+  get apparatus(): Apparatus {
+    return this.state.alchemyApparatus;
   }
 
   /** Вид опознаётся своим названием: двух записей об одном виде не бывает. */

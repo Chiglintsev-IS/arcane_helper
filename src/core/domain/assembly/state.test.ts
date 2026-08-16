@@ -133,6 +133,7 @@ describe("форма состояния", () => {
       "abilities",
       "activeEffects",
       "age",
+      "alchemyApparatus",
       "arcaneRecovery",
       "cantripIds",
       "className",

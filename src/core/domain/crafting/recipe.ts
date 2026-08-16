@@ -8,9 +8,12 @@
  * направление. Приложение считает цену формы, а действие остаётся столу.
  */
 
+import { z } from "zod";
+
 import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
+import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { apparatusLimits, IMPROVISED_DIFFICULTY } from "./apparatus";
 import type { Apparatus } from "./apparatus";
 import type { RevealedProperty } from "./schema";
@@ -176,6 +179,37 @@ export type RecipeFormula = {
   readonly suppressed: readonly string[];
   readonly limitations: readonly (keyof typeof LIMITATION_DIFFICULTY)[];
 };
+
+/**
+ * Слово из таблицы справочника: принимается то, что в ней есть, и отвергается всякое другое.
+ *
+ * Сужает пришедшую строку сам владелец таблицы: перечень, повторённый на границе, разошёлся бы с
+ * этим при первой же правке справочника — и молча принял бы форму, которой уже нет.
+ */
+function fromTable<TTable extends object>(table: TTable, what: string) {
+  return z.string().refine((value): value is Extract<keyof TTable, string> => value in table, {
+    error: (issue) => `справочник не знает: ${what} «${String(issue.input)}»`,
+  });
+}
+
+const recipeFormulaSchema = z.object({
+  kinds: z.array(nonEmpty),
+  mainProperty: nonEmpty,
+  duration: fromTable(DURATION_DIFFICULTY, "длительность").nullable(),
+  onset: fromTable(ONSET_DIFFICULTY, "начало действия"),
+  fullRepeats: z.number(),
+  reach: fromTable(REACH_DIFFICULTY, "цели и область"),
+  application: fromTable(APPLICATION_DIFFICULTY, "способ применения"),
+  resistance: fromTable(RESISTANCE_DIFFICULTY, "сопротивление"),
+  purification: fromTable(OPPOSITE_POLARITY, "очистка").nullable(),
+  suppressed: z.array(nonEmpty),
+  limitations: z.array(fromTable(LIMITATION_DIFFICULTY, "ограничение")),
+});
+
+/** Замысел, годный к счёту: проверенный объявлением и отвергнутый с причиной. */
+export function recipeFormulaOf(value: unknown): RecipeFormula {
+  return parsedOrRefused(recipeFormulaSchema, value, "замысел состава");
+}
 
 type DifficultyPart = { readonly nameRu: string; readonly modifier: number };
 

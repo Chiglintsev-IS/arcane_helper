@@ -19,6 +19,7 @@ import { RUNE_TARGETS } from "@/core/domain/arcana/runes";
 import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
 import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
+import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
 import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ABILITIES, SKILL_IDS, type SkillId } from "@/core/domain/shared/stats";
@@ -36,6 +37,7 @@ import {
   type Session,
 } from "@/core/application/session";
 import { castSpell } from "@/core/application/useCases/casting";
+import { craftBatch } from "@/core/application/useCases/crafting";
 import {
   endConcentration,
   endEffect,
@@ -308,6 +310,15 @@ export function applyCommand(
       return changed(adjustWornCount(session, command.itemId, command.delta, occasion));
     case "edit_money":
       return changed(editMoney(session, moneyOf(command.money), occasion));
+
+    case "craft_batch":
+      return changed(
+        craftBatch(
+          session,
+          { formula: recipeFormulaOf(command.formula), portions: command.portions },
+          occasion,
+        ),
+      );
 
     case "edit_identity":
       return changed(

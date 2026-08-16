@@ -8,8 +8,10 @@
 import { z } from "zod";
 
 import { ALCHEMICAL_RARITIES, isAlchemicalPropertyName } from "@/core/domain/catalog/alchemy";
+import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
+import { APPARATUS_GRADES } from "./apparatus";
 
 /**
  * Глубже четвёртого свойства у ингредиента не бывает — предел справочника.
@@ -110,7 +112,20 @@ export function ingredientKnowledgeOf(value: unknown): IngredientKnowledge {
   return parsedOrRefused(ingredientKnowledgeSchema, value, "знание об ингредиенте");
 }
 
+/**
+ * Чем алхимик оснащён по каждому направлению.
+ *
+ * Отсутствие записи и есть «набора нет»: пустой отметки о ненайденном не заводится, и работа по
+ * такому направлению идёт импровизацией — так её и считает предел оснащения.
+ */
+const apparatusFields = {
+  potions: z.enum(APPARATUS_GRADES).optional(),
+  poisons: z.enum(APPARATUS_GRADES).optional(),
+  transmutation: z.enum(APPARATUS_GRADES).optional(),
+} satisfies Record<AlchemyDirection, z.ZodType>;
+
 /** Поля контекста для сборки полной схемы состояния. */
 export const CRAFTING_FIELDS = {
   ingredientKnowledge: z.array(ingredientKnowledgeSchema).default([]),
+  alchemyApparatus: z.object(apparatusFields).default({}),
 };

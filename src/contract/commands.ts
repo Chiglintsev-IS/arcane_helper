@@ -115,6 +115,13 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("adjust_worn_count", { itemId: word, delta: numeric }),
   command("edit_money", { money: z.record(word, numeric) }),
 
+  // Ремесло
+  /**
+   * Замысел состава едет целиком объектом: перечни справочника — правило, и сужает пришедшее слово
+   * их владелец. Договор ручается лишь за то, что это объект и что порций названо число.
+   */
+  command("craft_batch", { formula: z.looseObject({}), portions: numeric }),
+
   // Лист персонажа
   command("edit_identity", { patch: z.looseObject({}) }),
   command("edit_ability", {

@@ -9,6 +9,7 @@ import { type CharacterState, characterStateSchema } from "@/core/domain/assembl
 import { arcaneRecoveryBudget, spellSlotsForLevel } from "@/core/domain/arcana/slots";
 import { runesMaximum } from "@/core/domain/arcana/runes";
 import { proficiencyBonus } from "@/core/domain/character/abilities";
+import { RELIABLE_FIELD_KIT } from "@/core/domain/crafting/apparatus";
 
 /** Ячейки берём из движка, чтобы таблица уровней жила в одном месте. */
 const SLOTS = spellSlotsForLevel(7);
@@ -194,6 +195,12 @@ const RAW: unknown = {
   runes: { maximum: RUNES_MAXIMUM, remaining: RUNES_MAXIMUM },
   spellPoints: { remaining: 0 },
   suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
+
+  /**
+   * Оснащение: надёжные походные комплекты по двум направлениям. Набора токсиколога Торн не держит,
+   * и работа с ядовитым свойством потому идёт импровизацией.
+   */
+  alchemyApparatus: { potions: RELIABLE_FIELD_KIT, transmutation: RELIABLE_FIELD_KIT },
 
   spellNotes: {},
   roleplayPreferences: {},

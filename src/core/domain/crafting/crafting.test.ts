@@ -5,7 +5,7 @@ import { Crafting } from "./crafting";
 import type { RecipeFormula } from "./recipe";
 import type { RevealedProperty } from "./schema";
 
-const EMPTY = { ingredientKnowledge: [] };
+const EMPTY = { ingredientKnowledge: [], alchemyApparatus: {} };
 
 function withMoonHerb(): Crafting {
   return Crafting.of(EMPTY).noteIngredient("Лунная трава");
@@ -97,7 +97,7 @@ describe("ремесло", () => {
   });
 
   it("ремесло владеет только своим полем состояния", () => {
-    expect(Crafting.of(EMPTY).toState()).toEqual({ ingredientKnowledge: [] });
+    expect(Crafting.of(EMPTY).toState()).toEqual(EMPTY);
   });
 });
 
@@ -350,6 +350,13 @@ describe("сложность рецепта", () => {
 });
 
 describe("партия и предел оснащения", () => {
+  it("оснащение записано у алхимика и достаётся работе", () => {
+    const equipped = Crafting.of({ ...EMPTY, alchemyApparatus: TORN_KITS });
+
+    expect(equipped.apparatus).toEqual(TORN_KITS);
+    expect(Crafting.of(EMPTY).apparatus).toEqual({});
+  });
+
   it("предел оснащения Торна даёт из шести порций семь единиц", () => {
     const batch = sharingHealing(TWO_KINDS).batchOf(STANDARD, TORN_KITS, 6);
 
