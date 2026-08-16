@@ -229,10 +229,13 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
   await page.getByRole("button", { name: /Ячейка 2 уровня/ }).click();
   await page.getByRole("button", { name: "Далее" }).click();
 
+  await expect(page.getByLabel("Что сделать")).toContainText("Произнести вслух");
   await expect(page.getByLabel("Что сделать")).toContainText("Спишется ячейка 2 уровня");
   await expect(page.getByLabel("Объявление мастеру")).toContainText("ячейкой 2 уровня");
-  // Именно раздел, а не список внутри него: «Варианты отыгрыша» содержит ту же подстроку.
-  await expect(page.getByRole("region", { name: "Отыгрыш" })).toContainText("Обязательно");
+  // Раздел целиком, вместе с вложенным списком вариантов: механической строки нет нигде в нём.
+  await expect(page.getByRole("region", { name: "Отыгрыш" })).not.toContainText(
+    /произнести вслух/i,
+  );
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
 

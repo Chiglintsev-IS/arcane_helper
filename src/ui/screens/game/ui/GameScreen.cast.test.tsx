@@ -314,17 +314,21 @@ describe("замена концентрации (FR-081, AC-13)", () => {
   });
 });
 
-describe("обязательность в блоке отыгрыша (ADR-0011)", () => {
-  it("подсвечивает, что вербальное заклинание нужно произнести вслух", async () => {
+describe("требование компонента названо перечнем, а не отыгрышем (FR-290)", () => {
+  it("обязательное стоит шагом в «Что сделать», а блок отыгрыша молчит о нём", async () => {
     await renderWithStores(<GameScreen />);
     await openWizard(/Луч холода/);
 
-    const roleplay = screen.getByLabelText("Отыгрыш");
-    expect(
-      within(roleplay).getByText("Обязательно: произнести вслух и сделать жест свободной рукой"),
-    ).toBeDefined();
-  });
+    const instructions = screen.getByLabelText("Что сделать");
+    expect(within(instructions).getByText("Произнести вслух")).toBeDefined();
+    expect(within(instructions).getByText("Жест свободной рукой")).toBeDefined();
 
+    const roleplay = screen.getByLabelText("Отыгрыш");
+    expect(roleplay.textContent?.toLowerCase()).not.toContain("произнести вслух");
+  });
+});
+
+describe("цель мастером не спрашивается (OQ-10)", () => {
   it("не просит цель и не показывает её отсутствие как пробел (OQ-10)", async () => {
     await renderWithStores(<GameScreen />);
     await openWizard(/Луч холода/);

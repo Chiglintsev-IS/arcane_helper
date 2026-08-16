@@ -52,6 +52,17 @@ function variantsOf(stores: AppStores, category = "short"): RoleplayVariantView[
   return row?.roleplayCategories.find((shown) => shown.id === category)?.variants ?? [];
 }
 
+/**
+ * Требования компонентов так, как их называет владелец: копии строки в прогоне нет — иначе он
+ * сторожил бы своё представление о правиле, а не то, что показано рядом.
+ */
+function componentRemindersOf(stores: AppStores, spellId: string): readonly string[] {
+  const row = stores.session
+    .getState()
+    .snapshot?.spells.find((candidate) => candidate.id === spellId);
+  return row?.componentReminders ?? [];
+}
+
 /** Тексты вариантов в порядке показа: только они, без кнопок действий. */
 function shownVariants(): string[] {
   return within(screen.getByRole("list", { name: "Варианты отыгрыша" }))
@@ -75,6 +86,36 @@ describe("реплика и жест", () => {
   it("показывает жест как отдельную строку", async () => {
     await renderWithStores(<RoleplaySection spellId="shield" />);
     expect(screen.getByText(spell("shield").roleplay.gesture)).toBeDefined();
+  });
+});
+
+describe("в блоке отыгрыша нет механических строк (AC-20)", () => {
+  /**
+   * Сверка идёт по опущенному регистру: механической строку делает её содержание, а не то, с
+   * заглавной буквы она набрана или со строчной.
+   */
+  async function requirementsAbsentFrom(spellId: string): Promise<void> {
+    const { stores, container } = await renderWithStores(<RoleplaySection spellId={spellId} />);
+    const reminders = componentRemindersOf(stores, spellId);
+    const shown = (container.textContent ?? "").toLowerCase();
+
+    expect(reminders.length).toBeGreaterThan(0);
+    for (const reminder of reminders) {
+      expect(shown).not.toContain(reminder.toLowerCase());
+    }
+  }
+
+  it("не повторяет того, что правила требуют от голоса и рук", async () => {
+    await requirementsAbsentFrom("ray-of-frost");
+  });
+
+  it("не называет и материального компонента", async () => {
+    await requirementsAbsentFrom("identify");
+  });
+
+  it("художественное при этом на месте", async () => {
+    await renderWithStores(<RoleplaySection spellId="ray-of-frost" />);
+    expect(screen.getByText(spell("ray-of-frost").roleplay.gesture)).toBeDefined();
   });
 });
 
