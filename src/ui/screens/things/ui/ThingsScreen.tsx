@@ -13,8 +13,8 @@ import { applyEdit } from "@/ui/shared/model/editing";
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 
 /**
- * Показанное в «Вещах»: с вещью делают одно из трёх — надевают, тратят счётом или покупают. Смешать
- * их нельзя, а трёх ярлыков в панели они не стоят.
+ * Части «Вещей»: с вещью делают одно из трёх — надевают, тратят счётом или покупают. Смешать их
+ * нельзя, а трёх ярлыков в панели они не стоят.
  */
 const THINGS_PARTS = ["gear", "bag", "shopping"] as const;
 

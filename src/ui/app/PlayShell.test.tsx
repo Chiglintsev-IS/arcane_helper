@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 /**
- * Оболочка: переключатель режима, полоса ошибки и выбор режима, переживающий перезапуск.
+ * Оболочка: панель режимов, полоса ошибки и выбор режима, переживающий перезапуск.
  *
  * Хранилище режима — настоящее `localStorage` тестового DOM: подмена его моком проверяла бы мок, а
  * ломается здесь именно чтение чужого значения.
@@ -623,7 +623,7 @@ describe("отдых и бой: отказ приходит с причиной 
     await renderWithStores(<PlayShell />);
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
-    // Мода не спрашивает про бой: переключатель режима работает в бою так же, как вне его.
+    // Мода не спрашивает про бой: панель режимов работает в бою так же, как вне его.
     await user.click(screen.getByRole("button", { name: /^Привал/ }));
 
     const shortRest = screen.getByRole("button", {
@@ -724,7 +724,7 @@ describe("нечитаемое сохранение вместо режимов 
   it("оболочка отдаёт выход, а не текст без кнопок", async () => {
     renderOn(await createStoresOverUnreadableSave(), <PlayShell />);
 
-    // Играть не на чем: переключателя режимов нет, а нажать есть что.
+    // Играть не на чем: панели режимов нет, а нажать есть что.
     expect(screen.queryByRole("button", { name: /^Игра/ })).toBeNull();
     expect(screen.getByRole("alert").textContent).toMatch(/повреждено/);
     expect(screen.getByRole("button", { name: "Скачать файл" })).toBeDefined();
