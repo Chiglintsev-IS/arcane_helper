@@ -81,6 +81,14 @@ describe("parseImport (FR-121)", () => {
     if (!outcome.ok) expect(outcome.reasonRu).toContain("hitPoints.maximumBase");
   });
 
+  it("испорченный файл называет причину по-русски, а не словами библиотеки", () => {
+    const raw = { ...JSON.parse(snapshotText()), character: null };
+
+    const outcome = parseImport(JSON.stringify(raw));
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.reasonRu).toContain("ожидалось объект, получено пустое значение");
+  });
+
   it("битая карточка называет свой номер", () => {
     const raw = JSON.parse(snapshotText());
     raw.spells[2].level = 99;

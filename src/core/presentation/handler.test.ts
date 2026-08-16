@@ -61,6 +61,17 @@ describe("разбор сообщения", () => {
     expect(answer).toHaveProperty("reasonRu", expect.stringMatching(/Команда не разобрана/));
   });
 
+  it("причина, по которой команда не разобрана, названа по-русски", async () => {
+    const handler = handlerThat(async () => OPENED);
+
+    const answer = await handler.handle(null);
+
+    expect(answer).toHaveProperty(
+      "reasonRu",
+      expect.stringContaining("ожидалось объект, получено пустое значение"),
+    );
+  });
+
   it("до сценария неразобранное не доходит", async () => {
     let reached = false;
     const handler = handlerThat(async () => {

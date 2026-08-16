@@ -14,6 +14,7 @@ import { type CharacterState, EXPORT_SCHEMA_VERSION, characterStateSchema, expor
 import { migrateCharacterState } from "@/core/domain/assembly/migration";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { fieldsOf } from "@/core/domain/shared/fields";
+import { parsedBySchema } from "@/core/domain/shared/schema";
 
 export type ExportFile = {
   schemaVersion: number;
@@ -96,14 +97,14 @@ export function parseImport(raw: string): ImportOutcome {
           character: migrateCharacterState(fields.character),
         };
 
-  const file = exportFileSchema.safeParse(migrated);
+  const file = parsedBySchema(exportFileSchema, migrated);
   if (!file.success) {
     return { ok: false, reasonRu: `Файл не прошёл проверку — ${describeIssues(file.error)}` };
   }
 
   const spells: Spell[] = [];
   for (const [index, raw] of file.data.spells.entries()) {
-    const spell = spellSchema.safeParse(raw);
+    const spell = parsedBySchema(spellSchema, raw);
     if (!spell.success) {
       return {
         ok: false,
