@@ -48,7 +48,7 @@ test("a party goes through the backend and the browser keeps no state", async ({
   // Партия живёт на бэкенде: перезагрузка приносит её обратно, хотя браузеру хранить нечего.
   await page.reload();
   await expect(spent).toBeVisible();
-  await expect(page.getByLabel("Активные эффекты")).toContainText("Доспехи мага");
+  await expect(page.getByRole("button", { name: /^Действует: Доспехи мага/ })).toBeVisible();
 
   // Ни одной базы: ядро в этой сборке в браузер не приезжает, и хранить состояние тут нечему.
   expect(await page.evaluate(() => indexedDB.databases().then((bases) => bases.length))).toBe(0);

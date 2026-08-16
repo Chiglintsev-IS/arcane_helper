@@ -81,10 +81,10 @@ function gutterOfHeader(): string {
   return "";
 }
 
-/** Лист концентрации открывается с карточки в шапке «Игры». */
+/** Шторка «Действует» открывается со строки действующего в «Игре». */
 async function openPanel(): Promise<void> {
   await renderWithStores(<PlayShell />, concentrating());
-  await userEvent.click(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ }));
+  await userEvent.click(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ }));
 }
 
 /** Ввод урона: он же вход в проверку концентрации, когда она идёт. */
@@ -460,7 +460,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Успех" }));
 
-    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.queryByRole("dialog", { name: /^Проверка концентрации/ })).toBeNull();
 
     await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
@@ -476,7 +476,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Потратить руну" }));
 
-    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
     // Значок траты реакции есть только в бою — он проверяется до ухода в журнал.
     expect(screen.getByLabelText(/Реакция израсходована/)).toBeDefined();
@@ -525,9 +525,11 @@ describe("завершение активного эффекта (FR-091)", () =
     };
     await renderWithStores(<PlayShell />, character);
 
+    await userEvent.click(screen.getByRole("button", { name: /^Действует: Доспехи мага/ }));
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Доспехи мага" }));
+    await userEvent.click(screen.getByRole("button", { name: "Закрыть" }));
 
-    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+    expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
 
     await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     expect(
@@ -544,14 +546,16 @@ describe("ручной статус (FR-236)", () => {
     const field = screen.getByLabelText<HTMLInputElement>("Новый статус");
     await userEvent.type(field, "Опутанный{Enter}");
 
-    const list = screen.getByLabelText("Активные эффекты");
-    expect(within(list).getByText(/Опутанный/)).toBeDefined();
-    expect(within(list).queryByText(/КД/)).toBeNull();
+    const line = screen.getByLabelText("Действует");
+    expect(within(line).getByText(/Опутанный/)).toBeDefined();
+    expect(within(line).queryByText(/КД/)).toBeNull();
     // Поле готово к следующему статусу без лишнего нажатия.
     expect(field.value).toBe("");
 
+    await userEvent.click(screen.getByRole("button", { name: /^Действует: Опутанный/ }));
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Опутанный" }));
-    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Закрыть" }));
+    expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
 
     await userEvent.click(screen.getByRole("radio", { name: /^Журнал/ }));
     // Отменить можно только последнюю запись — снятие эффекта; начало осталось строкой без кнопки.
@@ -639,12 +643,12 @@ describe("экран показывает только своё (FR-217, FR-220)
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />, concentrating());
 
-    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
 
     await openJournal(user);
 
     expect(screen.queryByRole("button", { name: /Концентрация/ })).toBeNull();
-    expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+    expect(screen.queryByLabelText("Действует")).toBeNull();
   });
 });
 

@@ -9,13 +9,13 @@ import type { Command } from "@/contract/commands";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
+import { ActiveEffectsSheet } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
-import { ConcentrationPanel } from "@/ui/entities/concentration/ui/ConcentrationPanel";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
 import { REACTIONS_LABEL, ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
@@ -38,7 +38,7 @@ export function GameScreen() {
   const [filters, setFilters] = useState(NO_FILTERS);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [activeOpen, setActiveOpen] = useState(false);
   const [damageOpen, setDamageOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [reactionsOpen, setReactionsOpen] = useState(false);
@@ -101,7 +101,7 @@ export function GameScreen() {
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
     setDamageOpen(false);
-    setPanelOpen(false);
+    setActiveOpen(false);
     setCheckOpen(true);
   };
 
@@ -155,8 +155,7 @@ export function GameScreen() {
           effects={snapshot.effects}
           armorClass={snapshot.sheet.armorClass}
           concentration={concentrationSummary}
-          onOpenConcentration={() => setPanelOpen(true)}
-          onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
+          onOpen={() => setActiveOpen(true)}
           onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
         />
 
@@ -238,20 +237,27 @@ export function GameScreen() {
         />
       ) : null}
 
-      {panelOpen && concentrationSummary !== null ? (
-        <ConcentrationPanel
-          summary={concentrationSummary}
-          onOpenSpell={() => {
-            setPanelOpen(false);
-            setOpenSpellId(concentrationSummary.spellId);
-          }}
+      {activeOpen ? (
+        <ActiveEffectsSheet
+          effects={snapshot.effects}
+          armorClass={snapshot.sheet.armorClass}
+          concentration={concentrationSummary}
+          onOpenSpell={
+            concentrationSummary === null
+              ? undefined
+              : () => {
+                  setActiveOpen(false);
+                  setOpenSpellId(concentrationSummary.spellId);
+                }
+          }
           onTakeDamage={() => setDamageOpen(true)}
-          onDrop={async () => {
+          onDropConcentration={async () => {
             if ((await execute({ kind: "end_concentration", reason: "manual" })) === null) {
-              setPanelOpen(false);
+              setActiveOpen(false);
             }
           }}
-          onClose={() => setPanelOpen(false)}
+          onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
+          onClose={() => setActiveOpen(false)}
         />
       ) : null}
 

@@ -55,11 +55,10 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(screen.queryByRole("heading", { name: "Торн" })).toBeNull();
     expect(screen.queryByText(/Волшебник, 7 уровень/)).toBeNull();
 
-    const numbers = screen.getByLabelText("Ресурсы");
     // КД: 10 базы + 2 Ловкости + 2 предметов. Чисел заклинателя в шапке нет — их называет строка
     // действия, а шапка о том, что тратится и чем защищаются.
     expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
-    expect(within(numbers).queryByText("Атака")).toBeNull();
+    expect(within(screen.getByLabelText("Ресурсы")).queryByText("Атака")).toBeNull();
 
     const paying = screen.getByLabelText("Чем платить");
     // Четыре уровня ячеек и три пула: вопрос у них один, и ряд поэтому один.
@@ -100,14 +99,13 @@ describe("состав экрана (FR-001, AC-14)", () => {
   it("показывает активную концентрацию карточкой с механикой (FR-084)", async () => {
     // Состав карточки проверяется в Concentration.test.tsx; здесь — что шапка её вообще показывает.
     await renderWithStores(<GameScreen />, concentrating());
-    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
   });
 
   it("КД меняется после применения «Доспехов мага»: 14 → 17 (FR-093)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    const numbers = screen.getByLabelText("Ресурсы");
     expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
 
     // Применение проверяется в начатом бою: до «Начать бой» причина добавила бы лишний
@@ -338,8 +336,9 @@ describe("повторяемое действие эффекта (FR-092)", () =
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const effects = within(screen.getByLabelText("Активные эффекты"));
-    expect(effects.getByText(/Считать отражения/)).toBeDefined();
+    // Ежеходная работа названа на самой строке: за раскрытием её забудут на втором раунде.
+    const line = within(screen.getByLabelText("Действует"));
+    expect(line.getByText(/Считать отражения/)).toBeDefined();
   });
 
   it("у эффекта без ежеходной работы напоминания нет", async () => {
@@ -352,9 +351,9 @@ describe("повторяемое действие эффекта (FR-092)", () =
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const effects = within(screen.getByLabelText("Активные эффекты"));
-    expect(effects.getByText(/Доспехи мага/)).toBeDefined();
-    expect(effects.queryByText(/↻/)).toBeNull();
+    const line = within(screen.getByLabelText("Действует"));
+    expect(line.getByText(/Доспехи мага/)).toBeDefined();
+    expect(line.queryByText(/↻/)).toBeNull();
   });
 
 });
@@ -656,7 +655,6 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    const numbers = screen.getByLabelText("Ресурсы");
     expect(screen.getByRole("button", { name: /^КД 19/ })).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Новый ход" }));

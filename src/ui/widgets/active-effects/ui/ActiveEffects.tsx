@@ -1,12 +1,15 @@
 /**
- * Что действует прямо сейчас: концентрация и активные эффекты.
+ * Что действует прямо сейчас — одной строкой.
  *
- * Блок стоит во всех четырёх режимах, в отличие от шапки ресурсов. Концентрация не может уйти с
- * экрана незаметно, а эффект со сроком в раундах истекает сам — оба видны там же, где игрок
- * находится, а не только там, где он тратит.
+ * Строка стоит во всех режимах, где идёт игра, в отличие от шапки ресурсов: концентрация не может
+ * уйти с экрана незаметно, а эффект со сроком в раундах истекает сам.
  *
- * Компонент презентационный: состояние приходит параметрами, действия — из экрана. Поле нового
- * статуса — исключение: черновик набранного текста ему не передать снаружи без потери фокуса.
+ * Названо на строке то, чего нет больше нигде: имя того, что держится, и ежеходная работа, о
+ * которой иначе забудут на втором раунде. Всё остальное — уровень ячейки, начало, механика и способы
+ * прерывания — стоит за раскрытием: способ прерывания один и тот же у любой концентрации, и
+ * приложение само называет его числом в тот момент, когда по персонажу попали.
+ *
+ * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
  */
 
 "use client";
@@ -15,17 +18,30 @@ import { useState, type FormEvent } from "react";
 
 import type { ActiveEffectView } from "@/contract/views";
 
-import { ConcentrationCard } from "@/ui/entities/concentration/ui/ConcentrationCard";
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
+import { ACTIVE_SHEET_LABEL, armorClassNote } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
 
-/**
- * Подпись вклада эффекта в КД: отвечает на вопрос «почему КД 17, а не 14».
- *
- * Приложение не хранит цель эффекта, поэтому «Доспехи мага» на союзника поднимут КД Торна. Подпись
- * делает это видимым: неверный эффект снимается вручную.
- */
-function armorClassNote(effect: ActiveEffectView, armorClass: number): string {
-  return effect.changesArmorClass ? ` · КД ${armorClass}` : "";
+/** Что держится: имя, вклад в защиту и ежеходная работа, если она есть. */
+function heldNames(
+  effects: readonly ActiveEffectView[],
+  armorClass: number,
+  concentration: ConcentrationSummary | null,
+): { key: string; markRu: string; textRu: string; concentrating: boolean }[] {
+  const held = effects
+    .filter((effect) => !effect.isConcentration)
+    .map((effect) => ({
+      key: effect.id,
+      markRu: "◈",
+      textRu: `${effect.nameRu}${armorClassNote(effect, armorClass)}${
+        effect.repeatableAction === undefined ? "" : ` ↻ ${effect.repeatableAction.label}`
+      }`,
+      concentrating: false,
+    }));
+  if (concentration === null) return held;
+  return [
+    { key: "concentration", markRu: "✦", textRu: concentration.nameRu, concentrating: true },
+    ...held,
+  ];
 }
 
 /**
@@ -62,71 +78,55 @@ export function ActiveEffects({
   effects,
   armorClass,
   concentration,
-  onOpenConcentration,
-  onEndEffect,
+  onOpen,
   onAddStatus,
 }: {
-  /** Что висит на персонаже: посчитано ядром, включая то, двигает ли эффект защиту. */
+  /** Что висит на персонаже: посчитано ядром. */
   effects: readonly ActiveEffectView[];
   /** Действующая защита: то же число, что в шапке и на «Листе», — его считает лист. */
   armorClass: number;
   concentration: ConcentrationSummary | null;
-  onOpenConcentration: () => void;
-  onEndEffect: (effectId: string) => void;
-  /** Заводит статус без вклада в КД: поле стоит прямо в блоке, рядом со списком. */
+  /** Раскрытие: подробности и снятие живут в шторке. */
+  onOpen: () => void;
+  /** Заводит статус без вклада в КД. */
   onAddStatus: (nameRu: string) => void;
 }) {
-  const concentrationEffect = effects.find((effect) => effect.isConcentration);
-  const otherEffects = effects.filter((effect) => !effect.isConcentration);
+  const held = heldNames(effects, armorClass, concentration);
+  const spoken =
+    held.length === 0 ? "ничего" : held.map((item) => item.textRu).join(", ");
 
   return (
-    <div className="flex flex-col gap-2">
-      <ConcentrationCard
-        summary={concentration}
-        armorClassNote={
-          concentrationEffect === undefined ? "" : armorClassNote(concentrationEffect, armorClass)
-        }
-        onOpen={onOpenConcentration}
-      />
-
-      {otherEffects.length > 0 ? (
-        <ul aria-label="Активные эффекты" className="flex flex-col gap-0.5 text-xs">
-          {otherEffects.map((effect) => (
-            <li
-              key={effect.id}
-              className="flex items-center justify-between gap-2 text-slate-700 dark:text-slate-300"
-            >
-              <span>
-                <span aria-hidden="true">◈</span> {effect.nameRu}
-                {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
-                {/*
-                 * Что придётся делать каждый ход, пока эффект держится. Приложение бросок не делает
-                 * и таймера не ведёт — оно напоминает, что бросок нужен: «Мерцание» без напоминания
-                 * забывают на втором раунде.
-                 */}
-                {effect.repeatableAction === undefined ? null : (
-                  <span
-                    className="block text-[0.6875rem] text-action-strong dark:text-action"
-                    title={effect.repeatableAction.description}
-                  >
-                    ↻ {effect.repeatableAction.label}
-                  </span>
-                )}
-              </span>
-              <button
-                type="button"
-                onClick={() => onEndEffect(effect.id)}
-                aria-label={`Завершить: ${effect.nameRu}`}
-                className="min-h-11 shrink-0 px-2 text-slate-500"
+    <section aria-label={ACTIVE_SHEET_LABEL} className="flex flex-col gap-2 text-xs">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`${ACTIVE_SHEET_LABEL}: ${spoken}`}
+        className="flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-slate-200 px-2 py-1 text-left dark:border-slate-800"
+      >
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {held.length === 0 ? (
+            <span className="text-slate-500 dark:text-slate-400">Ничего не действует</span>
+          ) : (
+            held.map((item) => (
+              <span
+                key={item.key}
+                className={
+                  item.concentrating
+                    ? "font-semibold text-concentration-strong dark:text-concentration"
+                    : "text-slate-700 dark:text-slate-300"
+                }
               >
-                <span aria-hidden="true">✕</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+                <span aria-hidden="true">{item.markRu}</span> {item.textRu}
+              </span>
+            ))
+          )}
+        </span>
+        <span aria-hidden="true" className="shrink-0 text-slate-500">
+          ›
+        </span>
+      </button>
 
       <NewStatusField onAdd={onAddStatus} />
-    </div>
+    </section>
   );
 }

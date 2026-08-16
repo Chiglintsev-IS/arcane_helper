@@ -54,7 +54,7 @@ test("play-screen renders all resource blocks", async ({ page }) => {
 
   // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет. Экономия хода
   // приходит с боем, а бонусное действие появилось вместе с «Туманным шагом».
-  await expect(page.getByLabel("Концентрация")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Действует: ничего" })).toBeVisible();
   await expect(page.getByLabel("Реакция доступна")).toBeHidden();
 
   await page.getByRole("button", { name: "Начать бой", exact: true }).click();
@@ -289,7 +289,7 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
   const slots = page.getByLabel("Чем платить");
   await expect(slots.getByText("2/3")).toBeVisible();
   await expect(slots.getByText("4/4")).toBeVisible();
-  await expect(page.getByLabel("Активные эффекты")).toContainText("Доспехи мага");
+  await expect(page.getByRole("button", { name: /^Действует: Доспехи мага/ })).toBeVisible();
 });
 
 test("undo returns the slot through the journal screen", async ({ page }) => {
@@ -391,14 +391,12 @@ test("concentration block explains the effect", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   // В «Книге» блока действующего нет: она отвечает, что персонаж знает, а не что сейчас держится.
-  await expect(page.getByRole("button", { name: /Концентрация: / })).toBeHidden();
+  await expect(page.getByRole("button", { name: /^Действует: / })).toBeHidden();
 
-  // Блок стоит там, где идёт игра, и виден без открытия карточки заклинания.
+  // Строка стоит там, где идёт игра, и называет удерживаемое без открытия карточки заклинания.
   await switchMode(page, /^Игра/);
-  const card = page.getByRole("button", { name: /Концентрация: Обнаружение магии/ });
+  const card = page.getByRole("button", { name: /^Действует: Обнаружение магии/ });
   await expect(card).toBeVisible();
-  await expect(card).toContainText("Сфера 30 футов от себя");
-  await expect(card).toContainText("спасбросок Телосложения");
 
   // Ключевая механика по-прежнему без прокрутки страницы.
   const layout = await page.evaluate(() => ({
@@ -407,8 +405,10 @@ test("concentration block explains the effect", async ({ page }) => {
   }));
   expect(layout.documentHeight).toBeLessThanOrEqual(layout.viewportHeight);
 
+  // Раскрытие отвечает целиком: как работает и чем прервётся.
   await card.click();
-  const panel = page.getByRole("dialog", { name: /Концентрация/ });
+  const panel = page.getByRole("dialog", { name: "Действует" });
+  await expect(panel).toContainText("Сфера 30 футов от себя");
   await expect(panel.getByLabel("Чем прерывается")).toContainText("Недееспособность или смерть");
 
   // КС считается по введённому урону.

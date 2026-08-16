@@ -81,12 +81,12 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     expect(slotsLeft(stores, 1)).toBe(3);
   });
 
-  it("карточка концентрации открывает лист и снимает концентрацию", async () => {
+  it("строка действующего открывает шторку и снимает концентрацию", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<RestScreen />, concentrating());
 
-    await user.click(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ }));
-    const panel = screen.getByRole("dialog", { name: "Концентрация: Обнаружение магии" });
+    await user.click(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ }));
+    const panel = screen.getByRole("dialog", { name: "Действует" });
     await user.click(within(panel).getByRole("button", { name: "Снять концентрацию" }));
 
     expect(shown(stores).concentration).toBeUndefined();
@@ -96,7 +96,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     const user = userEvent.setup();
     await renderWithStores(<RestScreen />, concentrating());
 
-    await user.click(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ }));
+    await user.click(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ }));
 
     expect(screen.queryByRole("button", { name: /Полные правила/ })).toBeNull();
   });
@@ -140,7 +140,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     expect(screen.getByLabelText("Ресурсы")).toBeDefined();
     // Концентрация — часть блока действующего: она обязана быть видна на «Привале» так же, как
     // и на «Игре», ведь долгий отдых её снимает.
-    expect(screen.getByRole("button", { name: /Концентрация: Обнаружение магии/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Реакции" })).toBeNull();
     expect(screen.queryByLabelText(/^Подготовлено/)).toBeNull();

@@ -1,0 +1,184 @@
+/**
+ * Шторка «Действует»: всё, что висит на персонаже, целиком.
+ *
+ * Отвечает на два вопроса, за которыми игрок иначе полез бы в книгу: как работает то, что он
+ * держит, и чем оно прервётся. Полные правила заклинания здесь не дублируются — к ним ведёт переход
+ * в его карточку там, где карточка есть.
+ *
+ * Компонент презентационный: текст приходит готовым, состояние меняет экран.
+ */
+
+import type { ActiveEffectView } from "@/contract/views";
+
+import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
+
+/** Имя шторки: кнопка, которая её открывает, обещает ровно это слово. */
+export const ACTIVE_SHEET_LABEL = "Действует";
+
+/**
+ * Подпись вклада эффекта в КД: отвечает на вопрос «почему КД 17, а не 14».
+ *
+ * Приложение не хранит цель эффекта, поэтому «Доспехи мага» на союзника поднимут КД Торна. Подпись
+ * делает это видимым: неверный эффект снимается вручную.
+ */
+export function armorClassNote(effect: ActiveEffectView, armorClass: number): string {
+  return effect.changesArmorClass ? ` · КД ${armorClass}` : "";
+}
+
+function ConcentrationSection({
+  summary,
+  onOpenSpell,
+  onTakeDamage,
+  onDrop,
+}: {
+  summary: ConcentrationSummary;
+  onOpenSpell?: (() => void) | undefined;
+  onTakeDamage: () => void;
+  onDrop: () => void;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="text-lg font-semibold leading-tight text-concentration-strong dark:text-concentration">
+        <span aria-hidden="true">✦</span> {summary.nameRu}
+      </h3>
+      <p className="text-xs text-slate-500">
+        {summary.slotLabel} · начата в {summary.startLabel} · {summary.durationLabel}
+      </p>
+      <p className="text-xs text-slate-500">Отсчёта нет — за длительностью следит игрок</p>
+
+      <p>{summary.shortRulesRu}</p>
+      <p className="text-xs text-slate-600 dark:text-slate-400">{summary.mechanicsLabel}</p>
+      {summary.rulesAvailable && onOpenSpell !== undefined ? (
+        <button
+          type="button"
+          onClick={onOpenSpell}
+          className="min-h-11 self-start rounded-lg border border-slate-200 px-3 text-sm dark:border-slate-800"
+        >
+          Полные правила <span aria-hidden="true">›</span>
+        </button>
+      ) : null}
+
+      <h4 className="text-xs font-semibold uppercase text-slate-500">Прерывается</h4>
+      <ul aria-label="Чем прерывается" className="flex flex-col gap-1">
+        {summary.breakers.map((breaker) => (
+          <li key={breaker.textRu} className="flex gap-2">
+            <span aria-hidden="true">•</span>
+            <span>
+              {breaker.atDiscretion ? (
+                <span className="text-slate-500">На усмотрение мастера: </span>
+              ) : null}
+              {breaker.textRu}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onTakeDamage}
+          className="min-h-11 flex-1 rounded-xl border border-reaction px-3 text-sm font-semibold text-reaction-strong dark:text-reaction"
+        >
+          Получил урон
+        </button>
+        <button
+          type="button"
+          onClick={onDrop}
+          className="min-h-11 flex-1 rounded-xl border border-slate-300 px-3 text-sm dark:border-slate-700"
+        >
+          Снять концентрацию
+        </button>
+      </div>
+    </section>
+  );
+}
+
+export function ActiveEffectsSheet({
+  effects,
+  armorClass,
+  concentration,
+  onOpenSpell,
+  onTakeDamage,
+  onDropConcentration,
+  onEndEffect,
+  onClose,
+}: {
+  /** Что висит на персонаже: посчитано ядром, включая то, двигает ли эффект защиту. */
+  effects: readonly ActiveEffectView[];
+  /** Действующая защита: то же число, что в шапке и на «Листе», — его считает лист. */
+  armorClass: number;
+  concentration: ConcentrationSummary | null;
+  /** Переход к полным правилам. Нет перехода — нет и кнопки. */
+  onOpenSpell?: (() => void) | undefined;
+  onTakeDamage: () => void;
+  onDropConcentration: () => void;
+  onEndEffect: (effectId: string) => void;
+  onClose: () => void;
+}) {
+  const otherEffects = effects.filter((effect) => !effect.isConcentration);
+
+  return (
+    <section
+      role="dialog"
+      aria-modal="true"
+      aria-label={ACTIVE_SHEET_LABEL}
+      className="fixed inset-0 z-10 flex flex-col bg-slate-50 dark:bg-slate-950"
+    >
+      <header className="flex items-start justify-between gap-2 border-b border-slate-200 p-3 dark:border-slate-800">
+        <h2 className="text-lg font-semibold leading-tight">{ACTIVE_SHEET_LABEL}</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="min-h-11 px-2 text-sm text-slate-500 underline"
+        >
+          Закрыть
+        </button>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3 text-sm">
+        {concentration === null ? null : (
+          <ConcentrationSection
+            summary={concentration}
+            onOpenSpell={onOpenSpell}
+            onTakeDamage={onTakeDamage}
+            onDrop={onDropConcentration}
+          />
+        )}
+
+        {otherEffects.length > 0 ? (
+          <ul aria-label="Активные эффекты" className="flex flex-col gap-2">
+            {otherEffects.map((effect) => (
+              <li key={effect.id} className="flex items-start justify-between gap-2">
+                <span>
+                  <span aria-hidden="true">◈</span> {effect.nameRu}
+                  {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
+                  {/*
+                   * Что придётся делать каждый ход, пока эффект держится. Приложение бросок не
+                   * делает и таймера не ведёт — оно напоминает, что бросок нужен.
+                   */}
+                  {effect.repeatableAction === undefined ? null : (
+                    <span className="block text-xs text-action-strong dark:text-action">
+                      ↻ {effect.repeatableAction.label}: {effect.repeatableAction.description}
+                    </span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onEndEffect(effect.id)}
+                  aria-label={`Завершить: ${effect.nameRu}`}
+                  className="min-h-11 shrink-0 rounded-lg border border-slate-200 px-3 text-xs dark:border-slate-800"
+                >
+                  Завершить
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {concentration === null && otherEffects.length === 0 ? (
+          <p className="text-slate-500">Сейчас ничего не действует.</p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
