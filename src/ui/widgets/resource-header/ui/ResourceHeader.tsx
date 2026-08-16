@@ -150,34 +150,33 @@ function ConstantStat({
  *
  * Смыслового цвета плитка не берёт. Восемь оттенков заняты видом действия, ролью, концентрацией и
  * ритуалом, и зелёная плитка рун читалась бы как ритуал, которым руна не является. На вопрос «есть
- * ли ещё» отвечают знак и само число: знак ресурса сменяется знаком отказа, а остаток равен нулю.
+ * ли ещё» отвечают само число и знак отказа: полный пул назван остатком, кончившийся — знаком.
+ *
+ * Знак стоит при числе, а не при подписи: подпись называет ресурс и от остатка не зависит, поэтому
+ * ширина плитки не меняется от того, кончился пул или нет, — ряд не перестраивается на исходе.
  */
 function PoolCounter({
   captionRu,
   value,
   available,
-  tone,
-  icon,
   action,
 }: {
   captionRu: string;
   value: string;
   available: boolean;
-  tone: Tone;
-  /** Знак ресурса, пока им есть чем платить: кончившийся носит знак отказа. */
-  icon: string;
   /** Правка пула, если она есть; без неё плитка — факт, а не кнопка. */
   action?: { accessibleName: string; onOpen: () => void };
 }) {
   const shown = (
     <>
-      <TileCaption>
-        <span aria-hidden="true">{available ? icon : "✗"}</span> {captionRu}
-      </TileCaption>
-      <span className="block text-sm font-semibold leading-tight tabular-nums">{value}</span>
+      <TileCaption>{captionRu}</TileCaption>
+      <span className="block text-sm font-semibold leading-tight tabular-nums">
+        {available ? null : <span aria-hidden="true">✗ </span>}
+        {value}
+      </span>
     </>
   );
-  const skin = `flex-1 rounded-md text-center ${available ? TONE_CLASS[tone] : TONE_CLASS.muted}`;
+  const skin = `flex-1 rounded-md text-center ${TONE_CLASS.muted}`;
 
   if (action === undefined) {
     return <li className={`${skin} px-1 py-1`}>{shown}</li>;
@@ -196,40 +195,50 @@ function PoolCounter({
   );
 }
 
+/** Ячейка уровня словами: тем же именем её зовёт и шапка, и доступное имя ряда. */
+function slotName(slot: ResourcesView["slots"][number]): string {
+  return `Ячейки ${slot.level} уровня: ${slot.remaining} из ${slot.maximum}`;
+}
+
 /**
- * Ячейка уровня: остаток и максимум. Минус — долг, разрешённый «Применить всё равно».
+ * Ячейки всех уровней: остаток и максимум на каждом. Минус — долг, разрешённый «Применить всё равно».
  *
- * Плитка — кнопка правки, как и плитка хитов: место, где число видно, и место, где его меняют, —
- * одно и то же. Синего у неё нет по той же причине, по какой у рун нет зелёного: синий занят видом
- * действия, а ячейка — не действие. Истраченная опускается на ступень: пустая рука не нажимается
- * так же охотно, как полная.
+ * Уровней четыре, а правка у них одна: любой из них открывает ту же шторку — место, где число
+ * видно, и место, где его меняют, одно и то же. Нажимаемое место поэтому тоже одно: уже наименьшего
+ * размера нажатия оно не бывает, и заведённое на каждый уровень заняло бы почти весь ряд, уводя
+ * последние плитки за край узкого экрана.
+ *
+ * Уровни стоят теснее, чем соседи по ряду: зазор внутри группы меньше зазора между ресурсами, и
+ * взгляд читает четыре уровня как один ресурс, а не как четыре соседних.
+ *
+ * Синего у ячеек нет по той же причине, по какой у рун нет зелёного: синий занят видом действия, а
+ * ячейка — не действие. Истраченная опускается на ступень: пустая рука не нажимается так же охотно,
+ * как полная.
  */
-function SlotCounter({
-  level,
-  remaining,
-  maximum,
-  onEdit,
-}: {
-  level: number;
-  remaining: number;
-  maximum: number;
-  onEdit: () => void;
-}) {
-  const exhausted = remaining <= 0;
+function SlotCounters({ slots, onEdit }: { slots: ResourcesView["slots"]; onEdit: () => void }) {
   return (
-    <li className="flex-1">
+    <li className="flex-[4]">
       <button
         type="button"
         onClick={onEdit}
-        aria-label={`Ячейки ${level} уровня: ${remaining} из ${maximum}. ${RESOURCES_EDIT_LABEL}`}
-        className={`w-full rounded-md px-1 py-1 text-center ${
-          exhausted ? `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}` : SURFACE_CONTROL
-        }`}
+        aria-label={`${slots.map((slot) => slotName(slot)).join(", ")}. ${RESOURCES_EDIT_LABEL}`}
+        className="flex w-full gap-0.5"
       >
-        <TileCaption>{level} ур.</TileCaption>
-        <span className="text-sm font-semibold tabular-nums">
-          {remaining}/{maximum}
-        </span>
+        {slots.map((slot) => (
+          <span
+            key={slot.level}
+            className={`flex-1 rounded-md px-1 py-1 text-center ${
+              slot.remaining <= 0
+                ? `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
+                : SURFACE_CONTROL
+            }`}
+          >
+            <TileCaption>{slot.level} ур.</TileCaption>
+            <span className="block text-sm font-semibold leading-tight tabular-nums">
+              {slot.remaining}/{slot.maximum}
+            </span>
+          </span>
+        ))}
       </button>
     </li>
   );
@@ -285,15 +294,7 @@ export function ResourceHeader({
       </dl>
 
       <ul aria-label="Чем платить" className="flex gap-1">
-        {resources.slots.map((slot) => (
-          <SlotCounter
-            key={slot.level}
-            level={slot.level}
-            remaining={slot.remaining}
-            maximum={slot.maximum}
-            onEdit={onEditResources}
-          />
-        ))}
+        <SlotCounters slots={resources.slots} onEdit={onEditResources} />
         {/*
          * Руны правятся той же шторкой, что и ячейки: место, где число видно, и место, где его
          * меняют, — одно и то же. Кости и очки правки не имеют — их двигают отдых и обмен кровью.
@@ -302,26 +303,16 @@ export function ResourceHeader({
           captionRu="Руны"
           value={`${resources.runes.remaining}/${resources.runes.maximum}`}
           available={resources.runes.remaining > 0}
-          tone="muted"
-          icon="❖"
           action={{
             accessibleName: `Руны: ${resources.runes.remaining} из ${resources.runes.maximum}. ${RESOURCES_EDIT_LABEL}`,
             onOpen: onEditResources,
           }}
         />
-        <PoolCounter
-          captionRu={dice.nameRu}
-          value={dice.remaining}
-          available={dice.available}
-          tone="muted"
-          icon="✚"
-        />
+        <PoolCounter captionRu={dice.nameRu} value={dice.remaining} available={dice.available} />
         <PoolCounter
           captionRu="Очки"
           value={`${resources.spellPoints}`}
           available={resources.spellPoints > 0}
-          tone="muted"
-          icon="✚"
         />
       </ul>
     </section>

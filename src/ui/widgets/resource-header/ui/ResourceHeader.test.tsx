@@ -25,7 +25,8 @@ afterEach(cleanup);
 
 type Tile = { text: string; classes: string };
 
-function tiles(character: CharacterState): Tile[] {
+/** Ряд оплаты на настоящем снимке: тот же презентер, что и в приложении. */
+function payingRow(character: CharacterState): HTMLElement {
   const snapshot = testSnapshot(character);
   render(
     <ResourceHeader
@@ -36,7 +37,11 @@ function tiles(character: CharacterState): Tile[] {
       onEditResources={() => undefined}
     />,
   );
-  return within(screen.getByLabelText("Чем платить"))
+  return screen.getByLabelText("Чем платить");
+}
+
+function tiles(character: CharacterState): Tile[] {
+  return within(payingRow(character))
     .getAllByRole("listitem")
     .map((item) => ({ text: item.textContent ?? "", classes: item.className }));
 }
@@ -64,21 +69,43 @@ function pool(rows: Tile[], name: string): Tile {
   return found;
 }
 
+describe("ряд оплаты на самом узком экране", () => {
+  /**
+   * Ширины в jsdom нет, и пиксели меряет прогон браузера на 320 × 568. Здесь стоит то, из чего эта
+   * ширина складывается: сколько в ряду названо и сколько в нём нажимаемых мест. Нажимаемое место
+   * уже наименьшего размера нажатия не бывает, и заведённое на каждый уровень ячейки оно занимало
+   * бы ряд целиком — последней плитке места не осталось бы.
+   */
+  it("ряд «Чем платить» умещает все плитки на 320", () => {
+    const row = payingRow(createThorne());
+
+    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур.", "Руны", "Кости", "Очки"]) {
+      expect(row.textContent).toContain(named);
+    }
+
+    // Дверь правки одна на ресурс: у ячеек всех уровней она общая, у рун своя, а кости и очки
+    // правки не имеют вовсе — их двигают отдых и обмен кровью.
+    expect(within(row).getAllByRole("button")).toHaveLength(2);
+  });
+});
+
 describe("пустой пул подан пустым", () => {
   it("нулевой пул подан как ноль", () => {
     const full = tiles(withSpellPoints(createThorne(), 5));
 
-    expect(pool(full, "Кости").text).toBe("✚ Кости d67/7");
-    expect(pool(full, "Руны").text).toBe("❖ Руны3/3");
-    expect(pool(full, "Очки").text).toBe("✚ Очки5");
+    // Полный пул называет ресурс и остаток: знак при нём повторял бы то, что уже сказано числом.
+    expect(pool(full, "Кости").text).toBe("Кости d67/7");
+    expect(pool(full, "Руны").text).toBe("Руны3/3");
+    expect(pool(full, "Очки").text).toBe("Очки5");
 
     cleanup();
     const drained = tiles(withoutRunes(withoutHitDice(createThorne())));
 
-    // Платить нечем ни одним из трёх — и это видно знаком, а не только цифрой.
-    expect(pool(drained, "Кости").text).toBe("✗ Кости d60/7");
-    expect(pool(drained, "Руны").text).toBe("✗ Руны0/3");
-    expect(pool(drained, "Очки").text).toBe("✗ Очки0");
+    // Платить нечем ни одним из трёх — и это видно знаком, а не только цифрой. Знак встаёт при
+    // числе: подпись называет ресурс, и ширина плитки на исходе пула не меняется.
+    expect(pool(drained, "Кости").text).toBe("Кости d6✗ 0/7");
+    expect(pool(drained, "Руны").text).toBe("Руны✗ 0/3");
+    expect(pool(drained, "Очки").text).toBe("Очки✗ 0");
   });
 
   it("пул не занимает смыслового цвета: зелёная руна читалась бы как ритуал", () => {
