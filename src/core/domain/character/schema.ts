@@ -13,7 +13,7 @@ import {
   MAXIMUM_EXHAUSTION,
   MINIMUM_ABILITY_SCORE,
 } from "@/core/domain/character/abilities";
-import { nonEmpty, russianSchemaErrors } from "@/core/domain/shared/schema";
+import { nonEmpty, parsedBySchema } from "@/core/domain/shared/schema";
 import { ABILITIES, SKILL_IDS } from "@/core/domain/shared/stats";
 
 import { characterFeaturesSchema } from "./features";
@@ -84,10 +84,7 @@ export function parsedCharacterFields(
   fields: CharacterFields,
   patch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>>,
 ): CharacterFields {
-  const parsed = characterSchema.safeParse(
-    { ...fields, ...patch },
-    { error: russianSchemaErrors },
-  );
+  const parsed = parsedBySchema(characterSchema, { ...fields, ...patch });
   if (!parsed.success) throw new DomainError(refusalOf(parsed.error));
   return parsed.data;
 }

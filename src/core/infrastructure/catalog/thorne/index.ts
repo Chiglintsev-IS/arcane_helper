@@ -10,6 +10,7 @@
  */
 
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
+import { parsedBySchema } from "@/core/domain/shared/schema";
 import type { BannedSpell } from "@/core/domain/spellbook/restrictions";
 
 import absorbElements from "./spells/absorb-elements.json";
@@ -98,7 +99,7 @@ export function parseSpells(rawSpells: readonly unknown[]): Spell[] {
   const seen = new Set<string>();
 
   for (const [index, raw] of rawSpells.entries()) {
-    const result = spellSchema.safeParse(raw);
+    const result = parsedBySchema(spellSchema, raw);
     if (!result.success) {
       const where = result.error.issues
         .map((issue) => `${issue.path.join(".") || "—"}: ${issue.message}`)

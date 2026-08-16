@@ -66,7 +66,7 @@ function sizeRefusal(verdict: string, adj: string, origin: string, bound: number
  * не разом всем zod: смена языка библиотеки на глобальную не должна задевать чужой код, который её
  * зовёт.
  */
-export const russianSchemaErrors: typeof russianLocaleError = (issue) => {
+const russianSchemaErrors: typeof russianLocaleError = (issue) => {
   if (issue.code === "invalid_type") {
     const expected = TYPE_LABELS_RU[issue.expected] ?? issue.expected;
     const receivedType = z.core.util.parsedType(issue.input);
@@ -81,6 +81,23 @@ export const russianSchemaErrors: typeof russianLocaleError = (issue) => {
   }
   return russianLocaleError(issue);
 };
+
+/**
+ * Разбор значения, причину отказа которого читает игрок.
+ *
+ * Слова причины несёт сам разбор, а не тот, кто его зовёт: словаря причин у вызывающего взять
+ * неоткуда, а забыть его на новом месте разбора — нечем. Забытый, он выводит игроку причину словами
+ * библиотеки: так и вышло на каждом месте, где файл, сообщение и карточка встречают своё объявление.
+ *
+ * Строгий разбор мимо этого входа остаётся строгим намеренно: его падение — не причина, которую
+ * игроку показывают, а поломка звавшей стороны, и отвечает за неё исключение.
+ */
+export function parsedBySchema<TValue>(
+  schema: z.ZodType<TValue>,
+  value: unknown,
+): z.ZodSafeParseResult<TValue> {
+  return schema.safeParse(value, { error: russianSchemaErrors });
+}
 
 /** Строка, в которой есть хоть что-то: пробелы содержимым не считаются. */
 export const nonEmpty = z.string().trim().min(1);
@@ -105,7 +122,7 @@ export const CURRENCIES = ["gold", "silver", "copper"] as const;
  * и дублировать его в каждом контексте значило бы разойтись в формулировке при первой же правке.
  */
 export function parsedOrRefused<TValue>(schema: z.ZodType<TValue>, value: unknown, subject: string): TValue {
-  const result = schema.safeParse(value, { error: russianSchemaErrors });
+  const result = parsedBySchema(schema, value);
   if (result.success) return result.data;
   const reasons = result.error.issues
     .map((issue) => `поле «${issue.path.join(".")}»: ${issue.message}`)

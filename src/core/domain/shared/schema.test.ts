@@ -2,19 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import { z } from "zod";
 
-import { russianSchemaErrors } from "./schema";
+import { parsedBySchema } from "./schema";
 
 /**
- * Причина отказа синтетической схемы, собранная в одну строку — так же, как её собирают
- * `parsedCharacterFields` и `parsedOrRefused`, которые и передают `russianSchemaErrors` разбору.
+ * Причина отказа синтетической схемы, собранная в одну строку — так же, как её собирают разбор
+ * файла, разбор сообщения и объявления контекстов: все они входят через `parsedBySchema`.
  */
 function refusalOf(schema: z.ZodType, value: unknown): string {
-  const result = schema.safeParse(value, { error: russianSchemaErrors });
+  const result = parsedBySchema(schema, value);
   if (result.success) throw new Error("схема приняла значение, а тест ждал отказа");
   return result.error.issues.map((issue) => issue.message).join("; ");
 }
 
-describe("причина отказа схемы — по-русски целиком (russianSchemaErrors)", () => {
+describe("причина отказа схемы — по-русски целиком (parsedBySchema)", () => {
   it("дробное число под .int() называет ожидаемый и полученный тип по-русски", () => {
     expect(refusalOf(z.number().int(), 1.5)).toBe(
       "Неверный ввод: ожидалось целое число, получено число",

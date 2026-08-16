@@ -14,6 +14,7 @@ import { envelopeSchema, type Envelope } from "@/contract/commands";
 import { questionSchema } from "@/contract/questions";
 
 import { DomainError } from "@/core/domain/shared/errors";
+import { parsedBySchema } from "@/core/domain/shared/schema";
 import type { LiveSession } from "@/core/application/session";
 
 import { toSnapshot } from "./presenter";
@@ -42,7 +43,7 @@ export function createHandler(application: Application): Backend {
     },
 
     async handle(raw: unknown): Promise<unknown> {
-      const parsed = envelopeSchema.safeParse(raw);
+      const parsed = parsedBySchema(envelopeSchema, raw);
       if (!parsed.success) {
         const reasons = parsed.error.issues
           .slice(0, 3)
