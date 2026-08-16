@@ -87,6 +87,12 @@ export function withoutRunes(character: CharacterState): CharacterState {
   return root.withArcana(arcana).toState();
 }
 
+/** Последняя подсказка истрачена: до долгого отдыха её больше нет. */
+export function withoutLastHint(character: CharacterState): CharacterState {
+  const root = Character.of(character);
+  return root.withArcana(root.arcana.shiftLastHint(-character.lastHint.remaining)).toState();
+}
+
 /** Максимум понижен решением мастера: ту же правку делает лист персонажа. */
 export function withMasterReduction(character: CharacterState, amount: number): CharacterState {
   const root = Character.of(character);

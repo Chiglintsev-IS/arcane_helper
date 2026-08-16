@@ -421,6 +421,17 @@ export function ResourceBadges({
             ) : null}
           </>
         ) : null}
+        {/*
+         * Единственный значок, который не уходит: подсказку спрашивают ровно тогда, когда её уже
+         * нет. Стоит последней — перенос на вторую строку достаётся ей, а не числам хода.
+         */}
+        <li
+          aria-label={`Последняя подсказка: ${resources.lastHint.remaining} из ${resources.lastHint.maximum}`}
+        >
+          <SpendableResource available={resources.lastHint.remaining > 0} tone="muted" icon="✚">
+            Подсказка {resources.lastHint.remaining}/{resources.lastHint.maximum}
+          </SpendableResource>
+        </li>
     </ul>
   );
 }

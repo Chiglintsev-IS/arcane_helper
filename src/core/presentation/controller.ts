@@ -60,7 +60,7 @@ import {
   takeDamage,
 } from "@/core/application/useCases/health";
 import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
-import { adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
+import { adjustLastHint, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
 import {
   addRoleplayVariant,
@@ -210,6 +210,8 @@ export function applyCommand(
 
     case "adjust_runes":
       return changed(adjustRunes(session, command.delta, occasion));
+    case "adjust_last_hint":
+      return changed(adjustLastHint(session, command.delta, occasion));
     case "spend_spell_slot":
       return changed(spendSpellSlot(session, command.slotLevel, occasion));
     case "refund_spell_slot":

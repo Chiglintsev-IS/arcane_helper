@@ -22,7 +22,7 @@ import { wardingSigilAvailable } from "@/core/application/useCases/effects";
 export function toResourcesView(session: Session): ResourcesView {
   const { character } = session;
   const root = Character.of(character);
-  const { runes } = root.arcana;
+  const { runes, lastHint } = root.arcana;
 
   return {
     slots: slotsInOrder(character.spellSlots).map(({ level, remaining, maximum }) => ({
@@ -31,6 +31,7 @@ export function toResourcesView(session: Session): ResourcesView {
       maximum,
     })),
     runes: { remaining: runes.remaining, maximum: runes.maximum },
+    lastHint: { remaining: lastHint.remaining, maximum: lastHint.maximum },
     spellPoints: root.arcana.spellPoints,
     armorClassAdjustment: root.effects.manualAdjustment("armorAdjustment"),
     passivePerception: root.sheet.value("passivePerception"),

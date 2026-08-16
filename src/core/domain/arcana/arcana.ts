@@ -27,10 +27,16 @@ import type { ArcanaStateData } from "./schema";
 /** Состояние, которым владеет объект-значение. */
 type ArcanaState = Pick<
   ArcanaStateData,
-  "spellSlots" | "runes" | "spellPoints" | "arcaneRecovery" | "shortRestSinceLongRest"
+  | "spellSlots"
+  | "runes"
+  | "lastHint"
+  | "spellPoints"
+  | "arcaneRecovery"
+  | "shortRestSinceLongRest"
 >;
 
 const RUNES_RU = "Рун";
+const LAST_HINT_RU = "Последняя подсказка";
 const ARCANE_RECOVERY_RU = "Бюджет магического восстановления";
 
 export class Arcana {
@@ -40,6 +46,7 @@ export class Arcana {
   private static readonly KEYS = [
     "spellSlots",
     "runes",
+    "lastHint",
     "spellPoints",
     "arcaneRecovery",
     "shortRestSinceLongRest",
@@ -79,6 +86,15 @@ export class Arcana {
 
   shiftRunes(delta: number): Arcana {
     return this.with({ runes: this.runes.shift(delta, RUNES_RU).toState() });
+  }
+
+  get lastHint(): ResourcePool {
+    return ResourcePool.from(this.state.lastHint, LAST_HINT_RU);
+  }
+
+  /** Подсказку тратит и возвращает игрок: повод и бросок ведёт стол, здесь считается запас. */
+  shiftLastHint(delta: number): Arcana {
+    return this.with({ lastHint: this.lastHint.shift(delta, LAST_HINT_RU).toState() });
   }
 
   spendSpellPoints(spellLevel: number, options: { allowAnyway?: boolean } = {}): Arcana {
@@ -150,6 +166,7 @@ export class Arcana {
     return this.with({
       spellSlots: restoreAllSlots(this.state.spellSlots),
       runes: this.runes.restored().toState(),
+      lastHint: this.lastHint.restored().toState(),
       arcaneRecovery: ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU).restored().toState(),
       spellPoints: { remaining: 0 },
       shortRestSinceLongRest: false,

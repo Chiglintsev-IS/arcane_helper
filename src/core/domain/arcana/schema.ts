@@ -59,6 +59,26 @@ const runesSchema = z
     path: ["remaining"],
   });
 
+/** Одно применение последней подсказки до долгого отдыха. */
+const LAST_HINT_MAXIMUM = 1;
+
+/**
+ * Последняя подсказка: пул того же устройства, что и руны.
+ *
+ * Умолчание обязательно: сохранение прежней версии поля не знает, а обновление не имеет права
+ * терять данные — прочитанное без него открывает подсказку целой, и это честнее отказа читать.
+ */
+const lastHintSchema = z
+  .object({
+    maximum: z.number().int().nonnegative(),
+    remaining: z.number().int().nonnegative(),
+  })
+  .refine((value) => value.remaining <= value.maximum, {
+    message: "Подсказок не может остаться больше максимума",
+    path: ["remaining"],
+  })
+  .default({ maximum: LAST_HINT_MAXIMUM, remaining: LAST_HINT_MAXIMUM });
+
 /**
  * Очки заклинаний: только остаток. Время создания схема не хранит — гасит их не срок, а любой
  * отмеченный час, независимо от того, когда они появились.
@@ -85,6 +105,7 @@ export const ARCANA_FIELDS = {
   arcaneRecovery: arcaneRecoverySchema,
   shortRestSinceLongRest: shortRestSinceLongRestSchema,
   runes: runesSchema,
+  lastHint: lastHintSchema,
   spellPoints: spellPointsSchema,
 };
 

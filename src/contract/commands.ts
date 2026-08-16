@@ -74,6 +74,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
 
   // Ресурсы
   command("adjust_runes", { delta: numeric }),
+  command("adjust_last_hint", { delta: numeric }),
   command("spend_spell_slot", { slotLevel: numeric }),
   command("refund_spell_slot", { slotLevel: numeric }),
 

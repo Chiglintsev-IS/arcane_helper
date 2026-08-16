@@ -89,6 +89,12 @@ describe("ресурсы", () => {
 
     expect(live.session.character.runes.remaining).toBe(2);
   });
+
+  it("последняя подсказка тратится тем же числом со знаком", () => {
+    const live = run([{ kind: "adjust_last_hint", delta: -1 }]);
+
+    expect(live.session.character.lastHint.remaining).toBe(0);
+  });
 });
 
 describe("жизнеспособность", () => {
