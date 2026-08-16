@@ -6,6 +6,7 @@ import { DEFAULT_SCREEN_MODE, SCREEN_MODES, type ScreenMode } from "@/ui/shared/
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { BottomNav } from "@/ui/features/screen-mode/ui/BottomNav";
+import { ServiceWorkerUpdate } from "@/ui/features/app-update/ui/ServiceWorkerUpdate";
 import { UnreadableSave } from "@/ui/app/UnreadableSave";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
@@ -80,24 +81,29 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
 
       <div className="relative shrink-0">
         {/*
- Полоса висит над панелью поверх содержимого: в потоке она сдвигала список ровно в тот момент,
- когда игрок метил в его строку.
+ Полосы висят над панелью поверх содержимого: в потоке они сдвигали список ровно в тот момент,
+ когда игрок метил в его строку, а поверх панели — отнимали единственную навигацию. Нижний край
+ стопки — верхний край панели, поэтому её высоту не приходится знать числом.
  */}
-        {error === null ? null : (
-          <p
-            role="alert"
-            className={`absolute inset-x-3 bottom-full z-20 mb-2 rounded-lg p-2 text-xs font-medium text-reaction-strong dark:text-reaction-bright ${SURFACE_PANEL}`}
-          >
-            {error}{" "}
-            <button
-              type="button"
-              onClick={() => sessionStore.getState().dismissError()}
-              className="underline"
+        <div className="absolute inset-x-3 bottom-full z-20 mb-2 flex flex-col gap-2">
+          {error === null ? null : (
+            <p
+              role="alert"
+              className={`rounded-lg p-2 text-xs font-medium text-reaction-strong dark:text-reaction-bright ${SURFACE_PANEL}`}
             >
-              Понятно
-            </button>
-          </p>
-        )}
+              {error}{" "}
+              <button
+                type="button"
+                onClick={() => sessionStore.getState().dismissError()}
+                className="underline"
+              >
+                Понятно
+              </button>
+            </p>
+          )}
+
+          <ServiceWorkerUpdate />
+        </div>
 
         <BottomNav mode={mode} onChange={changeMode} />
       </div>
