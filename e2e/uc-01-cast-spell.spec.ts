@@ -691,8 +691,9 @@ test("blood exchange goes through the wizard, not one tap", async ({ page }) => 
   await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Магия крови/ }).click();
 
-  // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется.
-  await expect(page.getByLabel("Чем платить")).toContainText("Очки0");
+  // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется. Пустой пул
+  // называет себя знаком отказа при остатке, а не при подписи.
+  await expect(page.getByLabel("Чем платить")).toContainText("Очки✗ 0");
   await expect(page.getByLabel("Сколько очков создать")).toContainText("6 хитов");
 
   // Счётчик создаёт запас на два заклинания первого уровня одним действием.
