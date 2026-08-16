@@ -16,6 +16,7 @@ import type { Batch } from "@/core/domain/crafting/batch";
 import { ALCHEMY_ABILITY, developmentOutcome } from "@/core/domain/crafting/development";
 import type { DevelopmentOutcome } from "@/core/domain/crafting/development";
 import type { RecipeFormula } from "@/core/domain/crafting/recipe";
+import type { RevealedProperty } from "@/core/domain/crafting/schema";
 import { DomainError } from "@/core/domain/shared/errors";
 import { withPlural } from "@/shared/language";
 import { commit, type Occasion, type Session } from "@/core/application/session";
@@ -65,7 +66,7 @@ function craftedSummary(
   outcome: DevelopmentOutcome | null,
 ): string {
   const spent = spentRu(order, kinds);
-  const named = order.formula.mainProperty;
+  const named = batch.difficulty.mainRu;
   if (outcome === null) return `Изготовлено: ${named}, ${unitsRu(batch)}. ${spent}`;
 
   const check = `Проверка ${outcome.total} против ${batch.difficulty.total}`;
@@ -117,6 +118,62 @@ export function craftBatch(session: Session, order: CraftOrder, occasion: Occasi
       ? worked.withCrafting(crafting.recordRecipe(order.formula, order.risky === true))
       : worked,
     { kind: "batch_crafted", summaryRu: craftedSummary(order, batch, kinds, outcome) },
+    occasion,
+  );
+}
+
+/**
+ * Записывает мастерскую: чем алхимик оснащён и каким направлениям обучен.
+ *
+ * Через журнал, как всякая правка листа: купленный модуль и выученное направление двигают пределы
+ * работы, а сдвинутый предел обязан возвращаться так же, как возвращается истраченная порция.
+ */
+export function setWorkshop(session: Session, workshop: unknown, occasion: Occasion): Session {
+  const root = Character.of(session.character);
+  return commit(
+    session,
+    root.withCrafting(root.crafting.withWorkshop(workshop)),
+    { kind: "sheet_edited", summaryRu: "Правка мастерской алхимика" },
+    occasion,
+  );
+}
+
+/** Записывает вид ингредиента: с этого и начинается всякое знание о нём. */
+export function noteIngredient(session: Session, nameRu: string, occasion: Occasion): Session {
+  const root = Character.of(session.character);
+  return commit(
+    session,
+    root.withCrafting(root.crafting.noteIngredient(nameRu)),
+    { kind: "sheet_edited", summaryRu: `Записан ингредиент: ${nameRu}` },
+    occasion,
+  );
+}
+
+/** Раскрывает свойство вида под его номером: название и редкость называет стол. */
+export function revealProperty(
+  session: Session,
+  reveal: { nameRu: string; property: RevealedProperty },
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  return commit(
+    session,
+    root.withCrafting(root.crafting.revealProperty(reveal.nameRu, reveal.property)),
+    {
+      kind: "sheet_edited",
+      summaryRu: `Раскрыто: ${reveal.nameRu} — ${reveal.property.nameRu}`,
+    },
+    occasion,
+  );
+}
+
+/** Забывает вид целиком: записанное по ошибке иначе осталось бы навсегда. */
+export function forgetIngredient(session: Session, nameRu: string, occasion: Occasion): Session {
+  const root = Character.of(session.character);
+  return commit(
+    session,
+    root.withCrafting(root.crafting.forgetIngredient(nameRu)),
+    { kind: "sheet_edited", summaryRu: `Забыт ингредиент: ${nameRu}` },
     occasion,
   );
 }

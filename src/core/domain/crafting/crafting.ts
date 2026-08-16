@@ -19,7 +19,7 @@ import { recipeDifficulty, recipeSignature, tierOf } from "./recipe";
 import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { researchPlan } from "./research";
 import type { ResearchPlan } from "./research";
-import { ingredientKnowledgeOf } from "./schema";
+import { alchemyWorkshopOf, ingredientKnowledgeOf } from "./schema";
 import type { IngredientKnowledge, RevealedProperty } from "./schema";
 
 type CraftingState = {
@@ -86,6 +86,16 @@ export class Crafting {
   /** Чем алхимик работает: качество набора по каждому направлению, где он есть. */
   get apparatus(): Apparatus {
     return this.state.alchemyApparatus;
+  }
+
+  /** Обучен ли алхимик направлению: от этого зависит бонус мастерства в его проверке. */
+  studies(direction: AlchemyDirection): boolean {
+    return this.state.studiedDirections.includes(direction);
+  }
+
+  /** Записывает мастерскую целиком: оснащение и обучение — один и тот же факт об алхимике. */
+  withWorkshop(workshop: unknown): Crafting {
+    return new Crafting({ ...this.state, ...alchemyWorkshopOf(workshop) });
   }
 
   /**

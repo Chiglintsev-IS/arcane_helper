@@ -20,6 +20,7 @@ import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
 import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
+import { revealedPropertyOf } from "@/core/domain/crafting/schema";
 import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ABILITIES, SKILL_IDS, type SkillId } from "@/core/domain/shared/stats";
@@ -37,7 +38,13 @@ import {
   type Session,
 } from "@/core/application/session";
 import { castSpell } from "@/core/application/useCases/casting";
-import { craftBatch } from "@/core/application/useCases/crafting";
+import {
+  craftBatch,
+  forgetIngredient,
+  noteIngredient,
+  revealProperty,
+  setWorkshop,
+} from "@/core/application/useCases/crafting";
 import {
   endConcentration,
   endEffect,
@@ -321,6 +328,38 @@ export function applyCommand(
             rolled: command.rolled,
             mishapRolled: command.mishapRolled,
             risky: command.risky,
+          },
+          occasion,
+        ),
+      );
+
+    case "note_ingredient":
+      return changed(noteIngredient(session, command.nameRu, occasion));
+    case "forget_ingredient":
+      return changed(forgetIngredient(session, command.nameRu, occasion));
+    case "reveal_property":
+      return changed(
+        revealProperty(
+          session,
+          {
+            nameRu: command.nameRu,
+            property: revealedPropertyOf({
+              number: command.number,
+              nameRu: command.propertyRu,
+              rarity: command.rarity,
+            }),
+          },
+          occasion,
+        ),
+      );
+
+    case "set_alchemy_workshop":
+      return changed(
+        setWorkshop(
+          session,
+          {
+            alchemyApparatus: command.apparatus,
+            studiedDirections: command.studiedDirections,
           },
           occasion,
         ),

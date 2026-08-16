@@ -10,3 +10,14 @@ export class DomainError extends Error {
     this.name = "DomainError";
   }
 }
+
+/**
+ * Причина отказа словами; дефект остаётся исключением.
+ *
+ * Разница не косметическая: по отказу игроку есть что сделать, по дефекту — нечего, и выдавать
+ * второе за первое значит врать ему словами правил.
+ */
+export function refusalOf(error: unknown): string {
+  if (error instanceof DomainError) return error.message;
+  throw error;
+}

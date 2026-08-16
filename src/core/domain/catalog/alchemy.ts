@@ -258,6 +258,10 @@ const DIRECTION_BY_PROPERTY = {
 
 type AlchemicalPropertyName = keyof typeof DIRECTION_BY_PROPERTY;
 
+/** Перечень целиком: название и направление каждого свойства, в порядке справочника. */
+export const ALCHEMICAL_PROPERTIES: readonly { nameRu: string; direction: AlchemyDirection }[] =
+  Object.entries(DIRECTION_BY_PROPERTY).map(([nameRu, direction]) => ({ nameRu, direction }));
+
 /** Есть ли такое свойство в справочнике. Названия вне перечня не бывает. */
 export function isAlchemicalPropertyName(value: string): value is AlchemicalPropertyName {
   return value in DIRECTION_BY_PROPERTY;

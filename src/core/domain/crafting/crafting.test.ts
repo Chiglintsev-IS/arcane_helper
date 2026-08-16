@@ -347,6 +347,29 @@ describe("сложность рецепта", () => {
     ).toThrow(/Взрыв/);
   });
 
+  it("неназванным основным становится самый редкий из оставшихся", () => {
+    const rarest = grand(healingAndPoison(), { mainProperty: null });
+
+    // «Ядовитый урон» редкий, «Лечение здоровья» обычное: правила берут редкое основным.
+    expect(rarest.mainRu).toBe("Ядовитый урон");
+    expect(rarest.total).toBe(17);
+  });
+
+  it("подавление, снявшее всё, оставляет состав без единого свойства", () => {
+    expect(() =>
+      grand(sharingHealing(TWO_KINDS), {
+        mainProperty: null,
+        suppressed: ["Лечение здоровья"],
+      }),
+    ).toThrow(/не осталось ни одного свойства/);
+  });
+
+  it("названное основным, но снятое очисткой, отвергается своим именем", () => {
+    expect(() =>
+      grand(healingAndPoison(), { mainProperty: "Ядовитый урон", purification: "beneficial" }),
+    ).toThrow(/«Ядовитый урон» в нём нет/);
+  });
+
   it("основным бывает только оставшееся в составе свойство", () => {
     expect(() =>
       grand(healingAndPoison(), { purification: "harmful" }),

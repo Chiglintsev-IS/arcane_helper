@@ -130,6 +130,22 @@ export const commandSchema = z.discriminatedUnion("kind", [
     risky: z.boolean().optional(),
   }),
 
+  command("note_ingredient", { nameRu: word }),
+  command("forget_ingredient", { nameRu: word }),
+  /** Название и редкость раскрытого называет стол: справочник редкости не печатает. */
+  command("reveal_property", {
+    nameRu: word,
+    number: numeric,
+    propertyRu: word,
+    rarity: word,
+  }),
+
+  /** Мастерская: чем алхимик оснащён по каждому направлению и каким из них обучен. */
+  command("set_alchemy_workshop", {
+    apparatus: z.record(word, word),
+    studiedDirections: z.array(word),
+  }),
+
   // Лист персонажа
   command("edit_identity", { patch: z.looseObject({}) }),
   command("edit_ability", {

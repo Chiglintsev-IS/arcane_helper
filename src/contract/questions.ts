@@ -52,6 +52,18 @@ export const questionSchema = z.discriminatedUnion("kind", [
   /** Во что обойдётся обмен набранного числа очков заклинаний. */
   z.object({ kind: z.literal("blood_exchange_preview"), points: numeric }),
   /**
+   * Чем обернётся замысел состава так, как его собрали на верстаке.
+   *
+   * Замысел едет целиком объектом, как и в команде: перечни справочника — правило, и сужает
+   * пришедшее слово их владелец. Собранное наполовину — обычное состояние верстака, и ответом на
+   * него служит причина, по которой счёт пока не идёт.
+   */
+  z.object({
+    kind: z.literal("recipe_preview"),
+    formula: z.looseObject({}),
+    portions: numeric,
+  }),
+  /**
    * Чем выгрузить состояние прямо сейчас.
    *
    * Вопросом, а не проекцией: в выгрузке стоит время, которого в состоянии нет, — и снимок,
@@ -152,6 +164,40 @@ export const previewSchema = z.discriminatedUnion("kind", [
     levelsSpent: whole,
     /** Что мешает вернуть набранное; нет вовсе — план годится. */
     unavailabilityRu: word.optional(),
+  }),
+  z.object({
+    kind: z.literal("recipe_preview"),
+    /**
+     * Совпавшее в составе — всё, а не только желаемое: пока состав не очищен, цель подвергается
+     * каждому совпавшему свойству.
+     */
+    matches: z.array(
+      z.object({ nameRu: word, rarity: word, sources: z.array(word), tier: word }),
+    ),
+    /** Сложность и её разбор; нет вовсе — состав ещё не сложился настолько, чтобы считать. */
+    difficulty: z
+      .object({
+        total: whole,
+        parts: z.array(z.object({ nameRu: word, modifier: whole })),
+        /** Что сочтено основным эффектом: названное игроком либо выбранное правилами по редкости. */
+        mainRu: word,
+      })
+      .nullable(),
+    /** Что выйдет из заложенного; нет вовсе — работа не идёт, и причина названа отказом. */
+    batch: z
+      .object({ minutes: whole, consumablesRu: word, consumablesGold: whole, units: whole })
+      .nullable(),
+    /**
+     * Чем прибавится бросок разработки и какие направления роняют бонус.
+     *
+     * Направления названы отдельно от числа: «на три меньше» не отвечает на вопрос, почему, а
+     * узнавать это после провала поздно.
+     */
+    check: z.object({ bonus: whole, unstudied: z.array(word) }).nullable(),
+    /** Записан ли рецепт: записанный повторяют без броска. */
+    known: z.boolean(),
+    /** Почему счёт не идёт или работа невозможна; нет вовсе — идёт. */
+    refusalRu: word.optional(),
   }),
 ]);
 

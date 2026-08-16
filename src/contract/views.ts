@@ -61,6 +61,34 @@ export const choicesViewSchema = z.object({
   exhaustionSteps: z.array(whole),
   characterLevel: z.object({ minimum: whole, maximum: whole }),
   abilityScore: z.object({ minimum: whole, maximum: whole }),
+  /** Направления алхимии и качества оснащения: из них собирают мастерскую. */
+  alchemyDirections: z.array(word),
+  apparatusGrades: z.array(word),
+  /** Закрытый перечень свойств с их направлениями и ступени редкости: из них раскрывают. */
+  alchemicalProperties: z.array(z.object({ nameRu: word, direction: word })),
+  alchemicalRarities: z.array(word),
+  /** Номера, под которыми свойство бывает раскрыто. */
+  propertyNumbers: z.array(whole),
+  /** Формы проявления состава: те же таблицы, которыми рецепт и оценивается. */
+  recipeForm: z.object({
+    /** Стандартная форма: с неё начинают, и отличия от неё и стоят сложности. */
+    standard: z.object({
+      duration: word.nullable(),
+      onset: word,
+      fullRepeats: whole,
+      reach: word,
+      application: word,
+      resistance: word,
+      purification: word.nullable(),
+    }),
+    durations: z.array(word),
+    onsets: z.array(word),
+    reaches: z.array(word),
+    applications: z.array(word),
+    resistances: z.array(word),
+    limitations: z.array(word),
+    purifications: z.array(word),
+  }),
 });
 
 const skillViewSchema = z.object({
@@ -263,9 +291,19 @@ const ingredientKnowledgeViewSchema = z.object({
   properties: z.array(revealedPropertyViewSchema),
 });
 
-/** Что игрок узнал об ингредиентах: записанные виды в порядке записи. */
+/**
+ * Что игрок узнал об ингредиентах и чем он работает.
+ *
+ * Мастерская едет рядом со знанием, а не отдельной проекцией: оба ответа читает один экран, и
+ * пределы работы объясняются ровно тем набором, который тут же и правят.
+ */
 export const craftingViewSchema = z.object({
   ingredients: z.array(ingredientKnowledgeViewSchema),
+  workshop: z.object({
+    /** Только направления с записанным набором: отсутствие записи и есть «набора нет». */
+    apparatus: z.array(z.object({ direction: word, gradeRu: word })),
+    studiedDirections: z.array(word),
+  }),
 });
 
 /**

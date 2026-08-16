@@ -13,13 +13,13 @@
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { Ability } from "@/core/domain/shared/stats";
+import { CHECK_DIE_RU, MISHAP_DIE_RU } from "@/shared/language";
 
 /** Характеристика алхимических проверок: справочник называет Интеллект. */
 export const ALCHEMY_ABILITY: Ability = "intelligence";
 
-/** Кость проверки и кость последствий: справочник называет обе. */
+/** Кость проверки: справочник называет её двадцатигранной. */
 const CHECK_DIE_FACES = 20;
-const MISHAP_DIE_FACES = 6;
 const NATURAL_ONE = 1;
 
 /** Последствия критического провала по d6. */
@@ -64,24 +64,24 @@ export function developmentCheck(
   };
 }
 
-function impossibleRollRefusal(faces: number, rolled: number): string {
-  return `На d${faces} столько не выпадает: ${rolled}`;
+function impossibleRollRefusal(dieRu: string, rolled: number): string {
+  return `На ${dieRu} столько не выпадает: ${rolled}`;
 }
 
 function missingMishapRefusal(): string {
-  return `Натуральная единица: назовите выпавшее на d${MISHAP_DIE_FACES} — последствие называет справочник`;
+  return `Натуральная единица: назовите выпавшее на ${MISHAP_DIE_RU} — последствие называет справочник`;
 }
 
 function assertCheckRoll(rolled: number): void {
   if (!Number.isInteger(rolled) || rolled < NATURAL_ONE || rolled > CHECK_DIE_FACES) {
-    throw new DomainError(impossibleRollRefusal(CHECK_DIE_FACES, rolled));
+    throw new DomainError(impossibleRollRefusal(CHECK_DIE_RU, rolled));
   }
 }
 
 /** Последствие аварии по выпавшему; выпасть такого не могло — отказ с причиной. */
 function mishapOf(rolled: number): string {
   const found = MISHAPS[rolled - NATURAL_ONE];
-  if (found === undefined) throw new DomainError(impossibleRollRefusal(MISHAP_DIE_FACES, rolled));
+  if (found === undefined) throw new DomainError(impossibleRollRefusal(MISHAP_DIE_RU, rolled));
   return found;
 }
 

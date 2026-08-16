@@ -534,6 +534,38 @@ describe("ремесло", () => {
     expect(live.session.journal.at(-1)?.kind).toBe("batch_crafted");
   });
 
+  it("вид записывается, свойство раскрывается, вид забывается", () => {
+    const noted = run([
+      { kind: "note_ingredient", nameRu: MOON_HERB },
+      {
+        kind: "reveal_property",
+        nameRu: MOON_HERB,
+        number: 1,
+        propertyRu: "Лечение здоровья",
+        rarity: "common",
+      },
+    ]);
+
+    expect(noted.session.character.ingredientKnowledge[0]?.properties).toHaveLength(1);
+    expect(run([{ kind: "forget_ingredient", nameRu: MOON_HERB }], noted).session.character
+      .ingredientKnowledge).toEqual([]);
+  });
+
+  it("мастерская записывается командой и правит пределы работы", () => {
+    const equipped = run([
+      {
+        kind: "set_alchemy_workshop",
+        apparatus: { poisons: "Базовый лабораторный модуль" },
+        studiedDirections: ["poisons"],
+      },
+    ]);
+
+    expect(equipped.session.character.alchemyApparatus).toEqual({
+      poisons: "Базовый лабораторный модуль",
+    });
+    expect(equipped.session.character.studiedDirections).toEqual(["poisons"]);
+  });
+
   it("слово, которого нет в таблице справочника, отвергается с причиной", () => {
     expect(
       refusal([
