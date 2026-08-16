@@ -92,13 +92,21 @@ export function RestScreen() {
         </div>
       </div>
 
+      {/*
+       Операции прижаты к нижнему краю, а не к верхнему: содержимое привала занимает четверть
+       экрана, и пустота под кнопками отодвигала главное действие из-под большого пальца. Пустота
+       остаётся, но уходит наверх, где ничего не стоит. Отступом сверху её не заменить: он замер бы
+       на одном размере экрана, а прижатие держится на всех.
+       */}
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-        <Camp
-          recovery={snapshot.recovery}
-          onShortRest={() => void execute({ kind: "short_rest" })}
-          onLongRest={() => setLongRestOpen(true)}
-          onArcaneRecovery={() => setRecoveryOpen(true)}
-        />
+        <div className="flex min-h-full flex-col justify-end">
+          <Camp
+            recovery={snapshot.recovery}
+            onShortRest={() => void execute({ kind: "short_rest" })}
+            onLongRest={() => setLongRestOpen(true)}
+            onArcaneRecovery={() => setRecoveryOpen(true)}
+          />
+        </div>
       </div>
 
       {longRestOpen ? (
