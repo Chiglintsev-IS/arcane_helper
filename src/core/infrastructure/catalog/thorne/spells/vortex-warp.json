@@ -3,7 +3,7 @@
   "nameRu": "Вихрь искривления",
   "nameEn": "Vortex Warp",
   "level": 2,
-  "school": "Призыв",
+  "school": "Вызов",
   "source": "Strixhaven: A Curriculum of Chaos",
   "combatRole": "other",
   "castingTime": { "type": "action" },
