@@ -96,6 +96,13 @@ function gutterOfHeader(): string {
   return "";
 }
 
+/** Значки шапки словами: что случилось и что мешает — тем же составом, в каком их читают. */
+function badgeRow(): string[] {
+  return within(screen.getByLabelText("Прочие ресурсы"))
+    .getAllByRole("listitem")
+    .map((item) => item.textContent ?? "");
+}
+
 /** Шторка «Действует» открывается со строки действующего в «Игре». */
 async function openPanel(): Promise<void> {
   await renderWithStores(<PlayShell />, concentrating());
@@ -279,6 +286,19 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(gutterOfHeader()).toBe(inGame);
   });
 
+  it("ряд значков одинаков во всех режимах, где он есть", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
+
+    const inGame = badgeRow();
+
+    await user.click(screen.getByRole("button", { name: /^Привал/ }));
+
+    // Повторённый блок повторяется целиком: ресурс, пропавший при смене режима, читается как
+    // потраченный, хотя за ту же минуту с ним ничего не случилось.
+    expect(inGame.join(" ")).toContain("Бонусное");
+    expect(badgeRow()).toEqual(inGame);
+  });
 });
 
 describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", () => {

@@ -349,18 +349,18 @@ export function ResourceHeader({
  *
  * Постоянного здесь нет: остаток, который за бой не меняется, стоит плиткой в закреплённой части.
  * Значком остаётся то, чего на экране либо нет вовсе, либо оно только что изменилось.
+ *
+ * Списка заклинаний ряд не знает: ресурс хода принадлежит ходу, а не книге, и привязанный к тому,
+ * что стоит в списке, он пропадал бы при смене режима — молча и в ту минуту, когда его считают.
  */
 export function ResourceBadges({
   sheet,
   resources,
   turn,
-  bookCastingTimes,
 }: {
   sheet: SheetView;
   resources: ResourcesView;
   turn: TurnView;
-  /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
-  bookCastingTimes: ReadonlySet<string>;
 }) {
   const { hitPoints } = sheet;
   const { inFight } = turn;
@@ -420,20 +420,17 @@ export function ResourceBadges({
                 Действие
               </SpendableResource>
             </li>
-            {/* Бонусного действия нет ни у одной карточки — тратить его не на что. */}
-            {bookCastingTimes.has("bonus_action") ? (
-              <li
-                aria-label={
-                  turn.bonusActionAvailable
-                    ? "Бонусное действие доступно"
-                    : "Бонусное действие израсходовано"
-                }
-              >
-                <SpendableResource available={turn.bonusActionAvailable} tone="bonus" icon="✓">
-                  Бонусное
-                </SpendableResource>
-              </li>
-            ) : null}
+            <li
+              aria-label={
+                turn.bonusActionAvailable
+                  ? "Бонусное действие доступно"
+                  : "Бонусное действие израсходовано"
+              }
+            >
+              <SpendableResource available={turn.bonusActionAvailable} tone="bonus" icon="✓">
+                Бонусное
+              </SpendableResource>
+            </li>
           </>
         ) : null}
         {/*

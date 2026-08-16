@@ -55,7 +55,6 @@ function badges(character: CharacterState): string[] {
       sheet={snapshot.sheet}
       resources={snapshot.resources}
       turn={snapshot.turn}
-      bookCastingTimes={new Set()}
     />,
   );
   return within(screen.getByLabelText("Прочие ресурсы"))
