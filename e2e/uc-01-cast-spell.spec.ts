@@ -245,19 +245,20 @@ test("book mode shows only the book", async ({ page }) => {
 });
 
 test("filter by casting time", async ({ page }) => {
+  // Время накладывания спрашивают в «Книге»: в «Игре» его место в полосе занимает роль.
+  await switchMode(page, /^Книга/);
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
 
   const list = page.getByLabel("Заклинания");
-  // Три подготовленные реакции: «Щит», «Поглощение стихий», «Контрзаклинание».
-  await expect(list.getByRole("listitem")).toHaveCount(3);
+  // Четыре реакции книги: «Щит», «Поглощение стихий», «Падение пёрышком», «Контрзаклинание».
+  await expect(list.getByRole("listitem")).toHaveCount(4);
   // Точное совпадение: подстрока «щит» есть и в подписи роли «Защита».
   await expect(list.getByText("Щит", { exact: true })).toBeVisible();
 
   // Снимаем тот же переключатель: кнопки сброса нет — выбранное снимают там, где поставили.
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
-  // Двадцать: четыре заговора, одиннадцать подготовленных, четыре ритуала из книги и строка
-  // «Магия крови» в том же списке. Бой не начат — накладываемое минутами и часами на месте.
-  await expect(list.getByRole("listitem")).toHaveCount(20);
+  // Тридцать: вся книга Торна с заговорами и строка «Магия крови» в ней же.
+  await expect(list.getByRole("listitem")).toHaveCount(30);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {
