@@ -17,6 +17,8 @@ import { developmentCheck } from "./development";
 import type { CheckNumbers, DevelopmentCheck } from "./development";
 import { recipeDifficulty, recipeSignature, tierOf } from "./recipe";
 import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
+import { researchPlan } from "./research";
+import type { ResearchPlan } from "./research";
 import { ingredientKnowledgeOf } from "./schema";
 import type { IngredientKnowledge, RevealedProperty } from "./schema";
 
@@ -42,6 +44,17 @@ function tooManyKindsRefusal(): string {
 /** Отказ выбрать за игрока, какая из двух записанных редкостей одного свойства настоящая. */
 function unevenRarityRefusal(name: string, sources: readonly string[]): string {
   return `Свойство «${name}» записано с разной редкостью у видов: ${sources.join(", ")}`;
+}
+
+/** Номера, по которым идёт целенаправленное исследование, — в порядке справочника. */
+const RESEARCH_NUMBERS = [1, 2, 3, 4];
+
+function nothingLeftRefusal(nameRu: string): string {
+  return `Про «${nameRu}» раскрыты все свойства, какие справочник допускает`;
+}
+
+function outOfOrderRefusal(next: number): string {
+  return `Целенаправленно исследуют следующее по порядку: сейчас это свойство под номером ${next}`;
 }
 
 export class Crafting {
@@ -145,6 +158,37 @@ export class Crafting {
     return this.with(
       this.data.map((ingredient) => (ingredient.nameRu === nameRu ? revealed : ingredient)),
     );
+  }
+
+  /**
+   * Какое свойство вида исследуют следующим: наименьший нераскрытый номер.
+   *
+   * Целенаправленно исследуют по порядку, и через нераскрытое не перепрыгивают. Раскрытое глубже
+   * порядка этому не мешает: экспериментальное смешивание открывает и то, что лежит ниже, а
+   * пропуск в середине остаётся тем самым следующим номером.
+   */
+  private nextResearchable(nameRu: string): number {
+    const revealed = new Set(this.located(nameRu).properties.map((property) => property.number));
+    const next = RESEARCH_NUMBERS.find((number) => !revealed.has(number));
+    if (next === undefined) throw new DomainError(nothingLeftRefusal(nameRu));
+    return next;
+  }
+
+  /**
+   * Во что обойдётся раскрытие названного свойства вида.
+   *
+   * Оснащение берётся записанное, порядок стережёт сам вид: цену свойства, до которого ещё не
+   * добрались, называть незачем — за неё не возьмутся.
+   */
+  researchPlanFor(
+    nameRu: string,
+    number: number,
+    rarity: RevealedProperty["rarity"],
+    direction: AlchemyDirection,
+  ): ResearchPlan {
+    const next = this.nextResearchable(nameRu);
+    if (number !== next) throw new DomainError(outOfOrderRefusal(next));
+    return researchPlan({ number, rarity, direction, apparatus: this.apparatus });
   }
 
   /** Забывает вид целиком: записанное по ошибке иначе осталось бы навсегда. */
