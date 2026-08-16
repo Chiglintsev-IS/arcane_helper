@@ -59,22 +59,14 @@ SPEC_REQUIREMENTS = {f"FR-{n:03d}" for n in (
     120, 121, 122,
 )} | {"NFR-001", "NFR-002", "NFR-003"}
 
-STATUSES = {"План", "В работе", "Готово", "Проверено", "Отложено", "Отменено", "Принято"}
-QUESTION_STATUSES = {"Открыт", "Закрыт", "Частично закрыт"}
+# Словарь статусов закрыт нарочно: «отменено», «отложено» и «заменено» в нём нет, потому что
+# отменённое, отложенное и заменённое из документа удаляется, а не доживает надгробием.
+STATUSES = {"План", "В работе", "Готово", "Проверено", "Принято"}
+QUESTION_STATUSES = {"Открыт", "Частично закрыт"}
 QUESTION_STATUS_PREFIX = "Решено"
-DECISION_STATUS_PREFIX = "Заменено ADR-"
-
-# Реестр вопросов и статус вопроса, у которого ответ уже есть.
-QUESTIONS = "open-questions.md"
-ANSWERED_QUESTION = "Закрыт"
-# Отвеченный вопрос нужен двум документам: самому реестру и записи решения, которое его закрыло.
-# Остальным ответ достаётся фактом в тексте — ссылка на запись звала бы за нерешённым.
-QUESTION_CITERS = ("docs/open-questions.md", "docs/decisions.md", "docs/agreements.md")
 
 FENCE = re.compile(r"^```.*?^```", re.M | re.S)
 REQUIREMENT = re.compile(r"\b((?:N?FR)-\d{3})\b")
-QUESTION_RECORD = re.compile(r"^##\s+(OQ-\d{2})\s*$", re.M)
-QUESTION_LINK = re.compile(r"\[[^\]]*\]\([^)]*#oq-(\d{2})\)")
 DEFINITION = re.compile(r"^#{2,4} ((?:N?FR)-\d{3}) — (.+)$", re.M)
 HEADING = re.compile(r"^#{1,6}\s+(.*)$", re.M)
 HTML_ANCHOR = re.compile(r'<a\s+id="([^"]+)"')
@@ -298,47 +290,12 @@ def check_glossary(root: pathlib.Path, sources: str) -> None:
                 errors.append(f"{glossary}: имени `{name}` нет в коде — {cells[0]}")
 
 
-def question_statuses(register: pathlib.Path) -> dict[str, str]:
-    """Статус каждого вопроса из его записи: другого места у статуса нет."""
-    if not register.exists():
-        return {}
-    parts = QUESTION_RECORD.split(register.read_text(encoding="utf-8"))
-    statuses: dict[str, str] = {}
-    for question, body in zip(parts[1::2], parts[2::2]):
-        status = STATUS_LINE.search(body)
-        statuses[question] = status.group(1).strip().rstrip(".") if status else ""
-    return statuses
-
-
-def check_answered_questions(files: list[pathlib.Path], statuses: dict[str, str]) -> None:
-    """Отвеченный вопрос не цитируется как живой: иначе спека спорит сама с собой.
-
-    Ссылка переживает ответ: вопрос закрывают, а требование, куда ответ лёг, продолжает звать за
-    решением в реестр — и пришедший по ссылке находит решение непринятым.
-    """
-    for path in files:
-        if str(path).startswith(QUESTION_CITERS):
-            continue
-        text = blanked_fences(path.read_text(encoding="utf-8"))
-        for number, line in enumerate(text.splitlines(), start=1):
-            for digits in QUESTION_LINK.findall(line):
-                question = f"OQ-{digits}"
-                if statuses.get(question) == ANSWERED_QUESTION:
-                    errors.append(
-                        f"{path}:{number}: вопрос {question} отвечен — ответ стоит фактом в тексте, "
-                        "а ссылка на запись зовёт за нерешённым"
-                    )
-
-
 def check_statuses(files: list[pathlib.Path]) -> None:
     for path in files:
         for status in STATUS_LINE.findall(path.read_text(encoding="utf-8")):
             status = status.strip().rstrip(".")
             if path.name == "open-questions.md":
                 if status in QUESTION_STATUSES or status.startswith(QUESTION_STATUS_PREFIX):
-                    continue
-            elif path.name == "decisions.md":
-                if status in STATUSES or status.startswith(DECISION_STATUS_PREFIX):
                     continue
             elif status in STATUSES:
                 continue
@@ -384,7 +341,6 @@ def main() -> int:
     check_requirements(files)
     check_glossary(pathlib.Path(DOCS), code_text(("src",)))
     check_statuses(files)
-    check_answered_questions(files, question_statuses(pathlib.Path(DOCS) / QUESTIONS))
     check_link_remnants(files)
     named = check_named_runs(files, code_text(CODE_ROOTS))
     e2e_runs = check_e2e_ownership(files)
