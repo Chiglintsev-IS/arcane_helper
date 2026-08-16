@@ -7,6 +7,7 @@
  */
 
 import { Arcana } from "@/core/domain/arcana/arcana";
+import { Crafting } from "@/core/domain/crafting/crafting";
 import { EffectBoard } from "@/core/domain/effects/effectBoard";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
@@ -74,6 +75,10 @@ export class Character {
     return Items.of(this.state);
   }
 
+  get crafting(): Crafting {
+    return Crafting.of(this.state);
+  }
+
   /**
    * Лист персонажа: основание — его собственные поля, вклады — от надетого и от действующего.
    *
@@ -119,6 +124,10 @@ export class Character {
 
   withItems(items: Items): Character {
     return new Character({ ...this.state, ...items.toState() });
+  }
+
+  withCrafting(crafting: Crafting): Character {
+    return new Character({ ...this.state, ...crafting.toState() });
   }
 
   /**
