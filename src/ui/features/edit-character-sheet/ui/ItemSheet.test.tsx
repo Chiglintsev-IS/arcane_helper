@@ -20,6 +20,7 @@ describe("шторка вещи", () => {
           bagCount: 1,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -72,6 +73,7 @@ describe("шторка вещи", () => {
           bagCount: 0,
           wornCount: 1,
           spellcastingFocus: false,
+          neededForRu: [],
         }}
         onSave={onSave}
         onAdjustBagCount={() => {}}
@@ -109,6 +111,7 @@ describe("шторка вещи", () => {
           bagCount: 2,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -138,6 +141,7 @@ describe("шторка вещи", () => {
           bagCount: 1,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -171,6 +175,7 @@ describe("шторка вещи", () => {
           bagCount: 1,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -200,6 +205,7 @@ describe("шторка вещи", () => {
           bagCount: 1,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -241,6 +247,7 @@ describe("шторка вещи", () => {
           bagCount: 1,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
         }}
         onSave={onSave}
         onAdjustBagCount={() => {}}
@@ -278,6 +285,7 @@ describe("шторка вещи", () => {
           bagCount: 0,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -303,6 +311,7 @@ describe("шторка вещи", () => {
           bagCount: 2,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -331,6 +340,7 @@ describe("шторка вещи", () => {
           bagCount: 2,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -358,6 +368,7 @@ describe("шторка вещи", () => {
           bagCount: 0,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -385,6 +396,7 @@ describe("шторка вещи", () => {
           bagCount: 1,
           wornCount: 1,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -412,6 +424,7 @@ describe("шторка вещи", () => {
           bagCount: 1,
           wornCount: 0,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}
@@ -436,6 +449,7 @@ describe("шторка вещи", () => {
           bagCount: 0,
           wornCount: 1,
           spellcastingFocus: false,
+          neededForRu: [],
           bonuses: [],
           bonusFacts: [],
         }}

@@ -171,8 +171,7 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
     .evaluate((node) => Math.round(node.closest("section")?.getBoundingClientRect().bottom ?? 0));
   expect(firstBlockBottom, "первый блок «Листа» целиком").toBeLessThanOrEqual(viewport);
 
-  // «Привал»: шапка ресурсов и кнопки отдыха видны без прокрутки, список покупок может уйти
-  // за край — это не ключевая механика, а сверка того, что уже лежит в сумке.
+  // «Привал»: шапка ресурсов и кнопки отдыха видны без прокрутки — больше в режиме ничего и нет.
   await switchMode(page, /^Привал/);
 
   const restBottom = await page
@@ -393,8 +392,8 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: /Применение/ })).toBeVisible();
   await scan("мастер применения");
 
-  // Привал — отдельный режим, а не шторка поверх экрана: отдых и покупки не помещаются на экран
-  // вместе со списком заклинаний.
+  // Привал — отдельный режим, а не шторка поверх экрана: отдых и восстановление не помещаются на
+  // экран вместе со списком заклинаний.
   await page.getByRole("button", { name: "Отмена" }).click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await page.getByRole("button", { name: "Окончить бой" }).click();

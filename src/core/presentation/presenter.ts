@@ -26,7 +26,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
   return {
     version,
     sheet: toSheetView(live.session.character),
-    bag: toBagView(live.session.character),
+    bag: toBagView(live.session.character, live.spellCatalog),
     resources: toResourcesView(live.session),
     recovery: toRecoveryView(live.session),
     turn: toTurnView(live),

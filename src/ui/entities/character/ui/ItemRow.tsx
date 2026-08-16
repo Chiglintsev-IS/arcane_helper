@@ -35,7 +35,7 @@ export function ItemRow({
   onOpen: () => void;
   children?: ReactNode;
 }) {
-  const { facts, note } = itemMeta(item, stats);
+  const { facts, neededFor, note } = itemMeta(item, stats);
 
   return (
     <li className="flex items-center gap-2">
@@ -53,7 +53,7 @@ export function ItemRow({
             </span>
           )}
         </span>
-        {facts.length === 0 && note === undefined ? null : (
+        {facts.length === 0 && neededFor === undefined && note === undefined ? null : (
           <span className="mt-1 flex flex-wrap items-center gap-1">
             {facts.map((fact) => (
               <span
@@ -73,6 +73,11 @@ export function ItemRow({
                 ))}
               </span>
             ))}
+            {neededFor === undefined ? null : (
+              <span className="min-w-0 text-xs leading-snug text-slate-500 dark:text-slate-400">
+                {neededFor}
+              </span>
+            )}
             {note === undefined ? null : (
               <span className="min-w-0 text-xs leading-snug text-slate-500 dark:text-slate-400">
                 {note}

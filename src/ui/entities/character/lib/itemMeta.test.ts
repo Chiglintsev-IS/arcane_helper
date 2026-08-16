@@ -5,8 +5,12 @@ import type { ItemDefinition } from "@/core/domain/items/schema";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 
 import { itemMeta } from "./itemMeta";
+
+/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
+const spells = loadThorneSpells();
 
 /** Перечни строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
 const { stats } = toChoicesView();
@@ -17,14 +21,14 @@ function viewOf(definition: ItemDefinition): ItemView {
   const found = toBagView({
     ...state,
     itemDefinitions: [...state.itemDefinitions, definition],
-  }).items.find((item) => item.id === definition.id);
+  }, spells).items.find((item) => item.id === definition.id);
   if (found === undefined) throw new Error(`нет вещи ${definition.id}`);
   return found;
 }
 
 /** Надетая вещь Торна: она и есть предмет разговора, а её копия рядом отвечала бы за себя. */
 function wornOf(id: string): ItemView {
-  const found = toBagView(createThorne()).items.find((item) => item.id === id);
+  const found = toBagView(createThorne(), spells).items.find((item) => item.id === id);
   if (found === undefined) throw new Error(`нет вещи ${id}`);
   return found;
 }

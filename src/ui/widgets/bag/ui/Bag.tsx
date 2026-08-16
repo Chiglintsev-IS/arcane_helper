@@ -3,6 +3,7 @@
 import type { BagView, ChoicesView } from "@/contract/views";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
 import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
+import { MissingMaterials } from "@/ui/features/materials/ui/MissingMaterials";
 import { ItemSection } from "@/ui/shared/ui/ItemSection";
 
 /**
@@ -19,7 +20,7 @@ const SECTIONS: { kind: string; titleRu: string; addLabelRu: string }[] = [
 ];
 
 /**
- * Сумка: деньги и счётные вещи по категориям.
+ * Сумка: чего не хватает, деньги и счётные вещи по категориям.
  *
  * Компонент презентационный: состояние приходит параметрами, операции выбирает экран. Быстрый ввод
  * заводит вещь сразу в свою категорию — раздел и есть выбор категории, отдельного поля не нужно.
@@ -31,6 +32,7 @@ export function Bag({
   onOpenItem,
   onAddItem,
   onAdjustBagCount,
+  onBuyMaterial,
 }: {
   bag: BagView;
   /** Величины с разбором: ими подписаны прибавки вещи. */
@@ -39,8 +41,9 @@ export function Bag({
   onOpenItem: (id: string) => void;
   onAddItem: (kind: string, nameRu: string) => void;
   onAdjustBagCount: (id: string, delta: number) => void;
+  onBuyMaterial: (spellId: string) => void;
 }) {
-  const { money, items } = bag;
+  const { money, items, missingMaterials } = bag;
 
   return (
     <div className="flex flex-col gap-2">
@@ -118,6 +121,9 @@ export function Bag({
           </ItemSection>
         );
       })}
+
+      {/* Последним: сумка отвечает, что в ней есть, а нехватка — чего в ней не заводили. */}
+      <MissingMaterials missing={missingMaterials} onBuy={onBuyMaterial} />
     </div>
   );
 }

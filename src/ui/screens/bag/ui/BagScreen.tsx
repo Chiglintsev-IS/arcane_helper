@@ -53,6 +53,7 @@ export function BagScreen() {
         onOpenItem={(id) => openSheet({ of: "item", id })}
         onAddItem={(kind, nameRu) => void execute({ kind: "add_item", nameRu, itemKind: kind })}
         onAdjustBagCount={(id, delta) => void execute({ kind: "adjust_bag_count", itemId: id, delta })}
+        onBuyMaterial={(spellId) => void execute({ kind: "toggle_material", spellId })}
       />
 
       {open?.of === "money" ? (
