@@ -205,7 +205,6 @@ export function GameScreen() {
             sheet={snapshot.sheet}
             resources={snapshot.resources}
             turn={snapshot.turn}
-            bookCastingTimes={dividing.castingTimes}
           />
         </div>
 

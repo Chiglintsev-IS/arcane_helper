@@ -3,13 +3,15 @@
 import { Fragment, type ReactNode } from "react";
 
 import type { ChoicesView, ItemView } from "@/contract/views";
+import { editName } from "@/ui/shared/ui/buttonLabels";
 import { TONE_CLASS } from "@/ui/shared/ui/tone";
 
 import { itemMeta } from "../lib/itemMeta";
 
 /**
- * Строка вещи: имя со своим числом и подробностями — кнопка, открывающая вещь целиком; справа — то,
- * что с вещью делают в этом списке.
+ * Строка вещи: имя со своим числом и подробностями — дверь в правку вещи целиком; справа — то,
+ * что с вещью делают в этом списке. Дверь зовётся тем же словом, что и шторка за ней: «открыть»
+ * обещало бы чтение, а за строкой правят запись.
  *
  * Своё число стоит при имени, а не у края строки: подробностям под ними остаётся вся ширина, и к
  * глаголу число не примеряется. Что именно с вещью делают, строка не решает: у счётной вещи это
@@ -43,7 +45,7 @@ export function ItemRow({
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`Открыть: ${item.nameRu}`}
+        aria-label={editName(item.nameRu)}
         className="min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-900"
       >
         <span className="flex items-baseline justify-between gap-2">

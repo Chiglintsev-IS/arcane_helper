@@ -17,8 +17,6 @@ import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet"
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
 import { ResourceBadges, ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
-import { dividingCategories } from "@/ui/features/filter-spells/model/filters";
-import { spellsForScreen } from "@/ui/shared/model/spellList";
 
 export function RestScreen() {
   const { session: sessionStore } = useStores();
@@ -43,9 +41,6 @@ export function RestScreen() {
       casting: snapshot.casting,
     });
   }, [concentration, snapshot.spells, snapshot.casting]);
-  const inMode = spellsForScreen(snapshot.spells, "rest");
-  const dividing = dividingCategories(inMode);
-
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
     setDamageOpen(false);
@@ -78,7 +73,6 @@ export function RestScreen() {
             sheet={snapshot.sheet}
             resources={snapshot.resources}
             turn={snapshot.turn}
-            bookCastingTimes={dividing.castingTimes}
           />
         </div>
 

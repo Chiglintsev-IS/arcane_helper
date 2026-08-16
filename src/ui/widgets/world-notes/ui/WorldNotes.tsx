@@ -26,6 +26,7 @@ import type { Snapshot } from "@/contract/snapshot";
 import { matchesQuery } from "@/ui/shared/lib/searchable";
 import { timeRu } from "@/ui/shared/lib/timeRu";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
+import { editName } from "@/ui/shared/ui/buttonLabels";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
@@ -33,7 +34,6 @@ type WorldNote = Snapshot["notes"][number];
 
 const SEARCH_LABEL = "Поиск по слову";
 const NOTE_LABEL = "Заметка";
-const EDIT_LABEL = "Править";
 const REMOVE_LABEL = "Убрать";
 
 const MUTED = "text-slate-600 dark:text-slate-400";
@@ -64,7 +64,7 @@ function NoteRow({
   onRemove: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
-  const named = `${EDIT_LABEL}: ${note.text}`;
+  const named = editName(note.text);
 
   if (draft === null) {
     return (

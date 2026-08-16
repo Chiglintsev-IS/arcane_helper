@@ -96,6 +96,13 @@ function gutterOfHeader(): string {
   return "";
 }
 
+/** Значки шапки словами: что случилось и что мешает — тем же составом, в каком их читают. */
+function badgeRow(): string[] {
+  return within(screen.getByLabelText("Прочие ресурсы"))
+    .getAllByRole("listitem")
+    .map((item) => item.textContent ?? "");
+}
+
 /** Шторка «Действует» открывается со строки действующего в «Игре». */
 async function openPanel(): Promise<void> {
   await renderWithStores(<PlayShell />, concentrating());
@@ -279,6 +286,19 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(gutterOfHeader()).toBe(inGame);
   });
 
+  it("ряд значков одинаков во всех режимах, где он есть", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
+
+    const inGame = badgeRow();
+
+    await user.click(screen.getByRole("button", { name: /^Привал/ }));
+
+    // Повторённый блок повторяется целиком: ресурс, пропавший при смене режима, читается как
+    // потраченный, хотя за ту же минуту с ним ничего не случилось.
+    expect(inGame.join(" ")).toContain("Бонусное");
+    expect(badgeRow()).toEqual(inGame);
+  });
 });
 
 describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", () => {
@@ -466,10 +486,40 @@ describe("одно дело — одно слово (FR-264)", () => {
 
     // Характеристика — запись листа: повтор сохранения оставит её той же.
     await openSheet(user);
-    await user.click(screen.getByRole("button", { name: "Править: Интеллект" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
     const record = within(screen.getByRole("dialog", { name: "Правка: Интеллект" }));
     expect(record.getByRole("button", { name: "Сохранить" })).toBeDefined();
     expect(record.queryByRole("button", { name: "Подтвердить" })).toBeNull();
+  });
+
+  it("дверь названа одним словом снаружи и внутри", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<PlayShell />);
+
+    // Плитка обещает вопрос, которым шторка и встречает: правкой зовётся запись, которую
+    // сохраняют, а урон и лечение за столом подтверждают.
+    await user.click(
+      screen.getByRole("button", {
+        name: "Хиты 60/60. Что случилось: урон, лечение, временные, максимум",
+      }),
+    );
+    expect(screen.getByRole("dialog", { name: "Хиты" })).toBeDefined();
+    expect(screen.getByText("Что случилось?")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+    // Поправку кладёт мастер: снаружи названо то же, что набирают внутри.
+    await user.click(screen.getByRole("button", { name: "КД 14. Поправка" }));
+    expect(screen.getByRole("dialog", { name: "КД" })).toBeDefined();
+    expect(screen.getByLabelText("Поправка")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+    // Запись правят, и слово правки одно: то, что читают на двери, и то, что произносят за неё.
+    await user.click(screen.getByRole("button", { name: /^Вещи/ }));
+    await user.click(screen.getByRole("radio", { name: "Сумка" }));
+    const money = screen.getByRole("button", { name: "Правка: Деньги" });
+    expect(money.textContent).toBe("Правка");
+    await user.click(money);
+    expect(screen.getByRole("dialog", { name: "Правка: Деньги" })).toBeDefined();
   });
 
   it("уход со шторки и возврат сделанного зовутся по-разному", async () => {

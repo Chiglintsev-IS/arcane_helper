@@ -25,6 +25,18 @@ const TABS: { kind: Kind; label: string }[] = [
   { kind: "maximum", label: "Максимум" },
 ];
 
+/** Вопрос, на который отвечает шторка: правкой случившееся за столом не зовётся. */
+const QUESTION = "Что случилось";
+
+/**
+ * Чем плитка зовёт эту шторку: тем же вопросом и тем же выбором, что стоят внутри. Собирается из
+ * самих вкладок — приписанный руками перечень отстаёт от них молча, и обещание двери расходится с
+ * тем, что за нею.
+ */
+export const HIT_POINTS_EVENTS = `${QUESTION}: ${TABS.map((tab) =>
+  tab.label.toLowerCase(),
+).join(", ")}`;
+
 const HINTS: Record<Kind, string> = {
   damage: "Списывается сначала с временных хитов, потом с текущих.",
   heal: "Выше максимума не поднимет; максимум учитывает снижение от магии крови и от мастера.",
@@ -147,7 +159,7 @@ export function HitPointsSheet({
           Хиты
         </h2>
         <span id={questionId} className="shrink-0 text-sm text-slate-600 dark:text-slate-400">
-          Что случилось?
+          {QUESTION}?
         </span>
       </div>
 

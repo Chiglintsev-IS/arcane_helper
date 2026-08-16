@@ -70,7 +70,7 @@ describe("строка вещи", () => {
     renderRow(viewOf(staff), "надето 1");
 
     // Число живёт в той же кнопке, что имя: подробностям под ними остаётся вся ширина строки.
-    const open = screen.getByRole("button", { name: "Открыть: Посох силы" });
+    const open = screen.getByRole("button", { name: "Правка: Посох силы" });
     expect(within(open).getByText("надето 1")).toBeDefined();
   });
 
@@ -139,7 +139,7 @@ describe("строка вещи", () => {
   it("у вещи без подробностей второй строки нет вовсе (FR-250)", () => {
     renderRow(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }));
 
-    const open = screen.getByRole("button", { name: "Открыть: Верёвка" });
+    const open = screen.getByRole("button", { name: "Правка: Верёвка" });
     expect(open.textContent).toBe("Верёвка");
   });
 });

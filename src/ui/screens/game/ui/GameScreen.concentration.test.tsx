@@ -214,7 +214,7 @@ describe("поправка к КД (FR-236)", () => {
 
     expect(screen.queryByRole("dialog", { name: "КД" })).toBeNull();
     expect(within(numbers).getByText("16")).toBeDefined();
-    expect(within(numbers).getByRole("button", { name: /^КД 16\. Правка: поправка/ })).toBeDefined();
+    expect(within(numbers).getByRole("button", { name: /^КД 16\. Поправка/ })).toBeDefined();
     expect(within(numbers).getByText("КД +2")).toBeDefined();
   });
 

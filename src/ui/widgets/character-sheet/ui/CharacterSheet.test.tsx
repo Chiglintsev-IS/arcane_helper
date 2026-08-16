@@ -47,7 +47,7 @@ describe("режим «Лист»", () => {
     expect(screen.queryByRole("heading", { name: "Здоровье" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Класс Доспеха" })).toBeNull();
     expect(screen.queryByText("24 из 34")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Править: Здоровье" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Правка: Здоровье" })).toBeNull();
   });
 
   it("правимый блок называет свою кнопку внятным именем", async () => {
@@ -60,10 +60,10 @@ describe("режим «Лист»", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Править: Интеллект" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Править: Уровень" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Правка: Интеллект" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Правка: Уровень" })).toBeDefined();
 
-    await user.click(screen.getByRole("button", { name: "Править: Языки" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Языки" }));
     expect(onEdit).toHaveBeenCalledWith({ block: "languages" });
   });
 
@@ -74,7 +74,7 @@ describe("режим «Лист»", () => {
     expect(screen.getByText("Рунный почерк")).toBeDefined();
     expect(screen.getByText(/Минута изучения записи/)).toBeDefined();
     // Кнопки нет вовсе: погашенная обещала бы правку того, чего за столом не правят.
-    expect(screen.queryByRole("button", { name: "Править: Особенности" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Правка: Особенности" })).toBeNull();
   });
 
   it("особенностей нет ни одной — карточка называет пустоту прочерком", () => {

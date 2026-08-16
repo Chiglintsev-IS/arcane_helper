@@ -13,6 +13,9 @@ import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/su
  * случившееся: слово на кнопке то же, каким подтверждают урон и сотворение. Тем же признаком выбран
  * и заголовок — он называет число, которого поправка касается, а самоё поправку называет поле.
  */
+
+/** Что здесь набирают. Тем же словом зовёт эту шторку плитка, которая её открывает. */
+export const ARMOR_CLASS_ADJUSTMENT = "Поправка";
 export function ArmorClassSheet({
   value,
   onSave,
@@ -42,7 +45,7 @@ export function ArmorClassSheet({
       </h2>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">Поправка</span>
+        <span className="font-medium">{ARMOR_CLASS_ADJUSTMENT}</span>
         <input
           type="number"
           inputMode="numeric"

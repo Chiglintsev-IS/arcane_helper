@@ -3,6 +3,7 @@
 import { DASH } from "@/ui/entities/character/lib/labels";
 
 import type { SheetBlockData, SheetEdit } from "../model/rows";
+import { EDIT_LABEL, editName } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export function SheetBlock({
@@ -23,7 +24,7 @@ export function SheetBlock({
             <button
               type="button"
               onClick={() => onEdit(secondary.edit)}
-              aria-label={`Править: ${secondary.labelRu}`}
+              aria-label={editName(secondary.labelRu)}
               className={`min-h-11 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
             >
               {secondary.labelRu}
@@ -33,10 +34,10 @@ export function SheetBlock({
             <button
               type="button"
               onClick={() => onEdit(edit)}
-              aria-label={`Править: ${block.titleRu}`}
+              aria-label={editName(block.titleRu)}
               className={`min-h-11 min-w-11 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
             >
-              Править
+              {EDIT_LABEL}
             </button>
           )}
         </div>

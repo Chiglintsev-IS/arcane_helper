@@ -46,13 +46,13 @@ describe("режим «Заметки» (FR-321)", () => {
     const before = renderOn(await storesOver(storage), <NotesScreen />);
     await write(user, BARON);
 
-    expect(screen.getByRole("button", { name: `Править: ${BARON}` })).toBeDefined();
+    expect(screen.getByRole("button", { name: `Правка: ${BARON}` })).toBeDefined();
 
     // Ядро собирается заново над тем же хранилищем: так открывается приложение на следующий день.
     before.unmount();
     renderOn(await storesOver(storage), <NotesScreen />);
 
-    expect(screen.getByRole("button", { name: `Править: ${BARON}` })).toBeDefined();
+    expect(screen.getByRole("button", { name: `Правка: ${BARON}` })).toBeDefined();
   });
 
   it("пустое поле ничего не заводит (FR-321)", async () => {
@@ -69,12 +69,12 @@ describe("режим «Заметки» (FR-321)", () => {
     await renderWithStores(<NotesScreen />);
     await write(user, BARON);
 
-    await user.click(screen.getByRole("button", { name: `Править: ${BARON}` }));
-    const field = screen.getByRole("textbox", { name: `Править: ${BARON}` });
+    await user.click(screen.getByRole("button", { name: `Правка: ${BARON}` }));
+    const field = screen.getByRole("textbox", { name: `Правка: ${BARON}` });
     await user.clear(field);
     await user.type(field, "Барон обещал мост к весне{Enter}");
 
-    const edited = "Править: Барон обещал мост к весне";
+    const edited = "Правка: Барон обещал мост к весне";
     expect(screen.getByRole("button", { name: edited })).toBeDefined();
 
     // Убрать можно только раскрытую запись: возврата у удаления нет.
@@ -89,7 +89,7 @@ describe("режим «Заметки» (FR-321)", () => {
     await renderWithStores(<NotesScreen />);
     await write(user, LONG);
 
-    await user.click(screen.getByRole("button", { name: `Править: ${LONG}` }));
+    await user.click(screen.getByRole("button", { name: `Правка: ${LONG}` }));
 
     // Раскрытая строка показывает запись целиком: уместившееся в одну строку — не вся запись, а её
     // хвост, и опечатку в середине пришлось бы искать прокруткой вслепую.

@@ -14,10 +14,12 @@
 
 import type { ResourcesView, SheetView, TurnView } from "@/contract/views";
 
+import { ARMOR_CLASS_ADJUSTMENT } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { DERIVED_LABELS, skillLabel } from "@/ui/entities/character/lib/labels";
+import { HIT_POINTS_EVENTS } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { RESOURCES_EDIT_LABEL } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { TONE_CLASS, type Tone } from "@/ui/shared/ui/tone";
+import { type Tone } from "@/ui/shared/ui/tone";
 import { hitDicePool } from "@/ui/widgets/resource-header/lib/hitDicePool";
 import { signed } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
@@ -48,6 +50,22 @@ function SpendableResource({
   );
 }
 
+/**
+ * Шкура плитки ряда оплаты: ступень отвечает, метит ли в плитку палец, приглушённость — кончился ли
+ * пул. Ячейка уровня и пул носят её одну: за ними стоит одна и та же дверь, и разные шкуры на ней
+ * обещали бы разные дела.
+ */
+function payingSkin({
+  pressable,
+  available,
+}: {
+  pressable: boolean;
+  available: boolean;
+}): string {
+  if (!available) return `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`;
+  return pressable ? SURFACE_CONTROL : SURFACE_GROUP;
+}
+
 /** Подпись плитки: мелкая строка над числом. */
 function TileCaption({ children }: { children: React.ReactNode }) {
   return (
@@ -58,7 +76,8 @@ function TileCaption({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Плитка КД — кнопка, как и плитка хитов: временная поправка правится там же, где она видна.
+ * Плитка КД — кнопка, как и плитка хитов: поправку мастера кладут там же, где видно само число.
+ * Правкой дверь не зовётся — за ней подтверждают случившееся за столом, а не сохраняют запись.
  */
 function ArmorClassStat({
   value,
@@ -77,7 +96,7 @@ function ArmorClassStat({
         <button
           type="button"
           onClick={onOpen}
-          aria-label={`КД ${value}. Правка: поправка`}
+          aria-label={`КД ${value}. ${ARMOR_CLASS_ADJUSTMENT}`}
           className="w-full px-2 py-1 text-left"
         >
           <TileCaption>КД{adjustment !== 0 ? ` ${signed(adjustment)}` : ""}</TileCaption>
@@ -89,8 +108,8 @@ function ArmorClassStat({
 }
 
 /**
- * Плитка хитов — кнопка: урон, лечение и временные хиты правятся отсюда. Число, которое
- * чаще всего меняется, и место, где его меняют, — одно и то же.
+ * Плитка хитов — кнопка: случившееся за столом подтверждают отсюда. Число, которое чаще всего
+ * меняется, и место, где его меняют, — одно и то же, и зовутся они одним словом.
  */
 function HitPointsStat({
   value,
@@ -109,7 +128,7 @@ function HitPointsStat({
         <button
           type="button"
           onClick={onOpen}
-          aria-label={`Хиты ${value}. Правка: урон, лечение, временные`}
+          aria-label={`Хиты ${value}. ${HIT_POINTS_EVENTS}`}
           className="w-full px-2 py-1 text-left"
         >
           <TileCaption>Хиты{temporary > 0 ? ` +${temporary}` : ""}</TileCaption>
@@ -154,6 +173,9 @@ function ConstantStat({
  *
  * Знак стоит при числе, а не при подписи: подпись называет ресурс и от остатка не зависит, поэтому
  * ширина плитки не меняется от того, кончился пул или нет, — ряд не перестраивается на исходе.
+ *
+ * Ступень отвечает на другой вопрос — нажимается ли плитка: правка у пула бывает, а бывает и нет, и
+ * одна ступень на оба случая обещала бы дверь там, где её не открыть.
  */
 function PoolCounter({
   captionRu,
@@ -176,7 +198,10 @@ function PoolCounter({
       </span>
     </>
   );
-  const skin = `flex-1 rounded-md text-center ${TONE_CLASS.muted}`;
+  const skin = `flex-1 rounded-md text-center ${payingSkin({
+    pressable: action !== undefined,
+    available,
+  })}`;
 
   if (action === undefined) {
     return <li className={`${skin} px-1 py-1`}>{shown}</li>;
@@ -227,11 +252,10 @@ function SlotCounters({ slots, onEdit }: { slots: ResourcesView["slots"]; onEdit
         {slots.map((slot) => (
           <span
             key={slot.level}
-            className={`flex-1 rounded-md px-1 py-1 text-center ${
-              slot.remaining <= 0
-                ? `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
-                : SURFACE_CONTROL
-            }`}
+            className={`flex-1 rounded-md px-1 py-1 text-center ${payingSkin({
+              pressable: true,
+              available: slot.remaining > 0,
+            })}`}
           >
             <TileCaption>{slot.level} ур.</TileCaption>
             <span className="block text-sm font-semibold leading-tight tabular-nums">
@@ -325,18 +349,18 @@ export function ResourceHeader({
  *
  * Постоянного здесь нет: остаток, который за бой не меняется, стоит плиткой в закреплённой части.
  * Значком остаётся то, чего на экране либо нет вовсе, либо оно только что изменилось.
+ *
+ * Списка заклинаний ряд не знает: ресурс хода принадлежит ходу, а не книге, и привязанный к тому,
+ * что стоит в списке, он пропадал бы при смене режима — молча и в ту минуту, когда его считают.
  */
 export function ResourceBadges({
   sheet,
   resources,
   turn,
-  bookCastingTimes,
 }: {
   sheet: SheetView;
   resources: ResourcesView;
   turn: TurnView;
-  /** Виды действий, встречающиеся в книге: чем нечего потратить, того и не показываем. */
-  bookCastingTimes: ReadonlySet<string>;
 }) {
   const { hitPoints } = sheet;
   const { inFight } = turn;
@@ -396,20 +420,17 @@ export function ResourceBadges({
                 Действие
               </SpendableResource>
             </li>
-            {/* Бонусного действия нет ни у одной карточки — тратить его не на что. */}
-            {bookCastingTimes.has("bonus_action") ? (
-              <li
-                aria-label={
-                  turn.bonusActionAvailable
-                    ? "Бонусное действие доступно"
-                    : "Бонусное действие израсходовано"
-                }
-              >
-                <SpendableResource available={turn.bonusActionAvailable} tone="bonus" icon="✓">
-                  Бонусное
-                </SpendableResource>
-              </li>
-            ) : null}
+            <li
+              aria-label={
+                turn.bonusActionAvailable
+                  ? "Бонусное действие доступно"
+                  : "Бонусное действие израсходовано"
+              }
+            >
+              <SpendableResource available={turn.bonusActionAvailable} tone="bonus" icon="✓">
+                Бонусное
+              </SpendableResource>
+            </li>
           </>
         ) : null}
         {/*

@@ -30,12 +30,18 @@ const UNDER_MORE: ScreenMode[] = ["sheet", "crafting", "notes"];
 
 const MORE = "Ещё";
 
+/**
+ * Отметка показанного: подложка своего значения, а не одна краска подписи. Она одна на панель и на
+ * список под «Ещё» — режим показан один, и двумя отметками он читался бы как два разных.
+ */
+const SELECTED = "bg-action/20 text-action-strong dark:text-action-bright";
+
+const QUIET = "text-slate-600 dark:text-slate-400";
+
 /** Выбранная ячейка помечена подложкой своего значения — тем же способом, что и всё выбранное. */
 function cellClass(selected: boolean): string {
   return `flex min-h-11 min-w-0 items-center justify-center rounded-lg px-0.5 text-xs font-medium ${
-    selected
-      ? "bg-action/20 text-action-strong dark:text-action-bright"
-      : "text-slate-600 dark:text-slate-400"
+    selected ? SELECTED : QUIET
   }`;
 }
 
@@ -69,16 +75,17 @@ export function BottomNav({
             <button
               key={value}
               type="button"
+              aria-current={value === mode ? "page" : undefined}
               onClick={() => {
                 onChange(value);
                 setListOpen(false);
               }}
-              className={`flex min-h-11 flex-col items-start rounded-xl px-3 py-2 text-left ${SURFACE_CONTROL}`}
+              className={`flex min-h-11 flex-col items-start rounded-xl px-3 py-2 text-left ${
+                value === mode ? SELECTED : SURFACE_CONTROL
+              }`}
             >
               <span className="text-sm font-semibold">{LABELS[value].title}</span>
-              <span className="text-xs text-slate-600 dark:text-slate-400">
-                {LABELS[value].hint}
-              </span>
+              <span className={`text-xs ${value === mode ? "" : QUIET}`}>{LABELS[value].hint}</span>
             </button>
           ))}
 

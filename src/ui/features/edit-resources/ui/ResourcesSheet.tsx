@@ -13,10 +13,11 @@
 import { useId } from "react";
 
 import type { ResourcesView } from "@/contract/views";
+import { EDIT_LABEL } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /** Имя дела: им зовётся и сама шторка, и плитка, которая её открывает. */
-export const RESOURCES_EDIT_LABEL = "Правка ресурсов";
+export const RESOURCES_EDIT_LABEL = `${EDIT_LABEL} ресурсов`;
 
 function Stepper({
   label,
