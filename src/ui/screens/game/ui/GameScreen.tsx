@@ -295,26 +295,39 @@ export function GameScreen() {
         )}
 
         {/*
-         * Раздел уже творённого: заголовок и отступ пошире — единственное, чем он отделён от
-         * остального списка. Рамка тут была бы второй рамкой приложения, а линия края отмечает
-         * уход под закреплённое, а не границу раздела.
+         * Уже творённое стоит именами, а не карточками: карточка отвечает «что это и чем платить»,
+         * а повторяющий спросил это в тот ход, когда творил впервые, и сейчас ищет имя. Столбцом
+         * карточек раздел уносил весь экран и отодвигал упорядоченный список за нижний край.
+         *
+         * Слово «Часто» стоит первым в самом ряду, а не строкой над ним: строка над списком стоит
+         * карточки списка, а ряд имён без слова читался бы второй полосой фильтров.
+         *
+         * Имена переносятся, а не прокручиваются, — по тому же правилу, что и переключатели:
+         * имя за краем экрана — имя, которого для игрока нет.
          */}
         {frequent.length === 0 ? null : (
-          <>
-            <h2 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
+          <div className="flex flex-wrap items-start gap-x-2">
+            <h2 className="flex min-h-11 items-center text-[0.6875rem] font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
               {FREQUENT_LABEL}
             </h2>
-            <ul aria-label={FREQUENT_LABEL} className="flex flex-col gap-2">
-              {frequent.map(card)}
+            <ul aria-label={FREQUENT_LABEL} className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+              {frequent.map((spell) => (
+                <li key={spell.id}>
+                  <button
+                    type="button"
+                    onClick={() => openSpell(spell.id)}
+                    className={`inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium ${SURFACE_CONTROL}`}
+                  >
+                    {spell.nameRu}
+                  </button>
+                </li>
+              ))}
             </ul>
-          </>
+          </div>
         )}
 
         {rows.length > 0 ? (
-          <ul
-            aria-label={listLabel}
-            className={`flex flex-col gap-2 ${frequent.length === 0 ? "" : "mt-2"}`}
-          >
+          <ul aria-label={listLabel} className="flex flex-col gap-2">
             {rows}
           </ul>
         ) : null}

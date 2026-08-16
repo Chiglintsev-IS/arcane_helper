@@ -33,8 +33,8 @@ test.beforeEach(async ({ page }) => {
 /**
  * Первая строка списка — та, что стоит первой на экране.
  *
- * Уже творённое уезжает своим разделом выше упорядоченного ценой списка, поэтому бюджет меряется
- * по разделу, когда он есть: строка под ним первой не является.
+ * Уже творённое стоит именами выше упорядоченного ценой списка, поэтому бюджет меряется по ряду
+ * имён, когда он есть: карточка под ним первой не является.
  */
 const FIRST_ROW = '[aria-label="Часто"] li, [aria-label^="Заклинания"] li';
 
@@ -211,9 +211,28 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   expect(restBottom, "кнопки отдыха «Привала» целиком").toBeLessThanOrEqual(viewport);
 });
 
-/** Самая тяжёлая обстановка боя: схватка идёт, концентрация держится, ход начат. */
-async function holdConcentrationInCombat(page: Page): Promise<void> {
+/** Заговор творится в один шаг: платить нечем, и мастер спрашивает только подтверждение. */
+async function castCantrip(page: Page, name: RegExp): Promise<void> {
+  await page.getByRole("button", { name }).first().click();
+  await page.getByRole("button", { name: "Сотворить" }).click();
+  await page.getByRole("button", { name: "Подтвердить" }).click();
+  await expect(page.getByRole("button", { name: "Подтвердить" })).toBeHidden();
+  await page.getByRole("button", { name: /^Новый ход/ }).click();
+}
+
+/**
+ * Самая тяжёлая обстановка боя: схватка идёт, концентрация держится, ход начат, и творили уже не
+ * раз.
+ *
+ * Сотворений несколько, а не одно: наверху списка стоит собранное из случившегося, и на чистом
+ * журнале этого веса нет вовсе — бюджет, снятый до первого сотворения, меряет тот экран, которого
+ * в бою не бывает.
+ */
+async function holdConcentrationAfterSeveralCasts(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^Начать бой/ }).click();
+  await castCantrip(page, /^Луч холода/);
+  await castCantrip(page, /^Электрошок/);
+  await castCantrip(page, /^Сообщение/);
   await page.getByRole("button", { name: /^Паутина/ }).first().click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: /Ячейка 2 уровня/ }).first().click();
@@ -223,8 +242,49 @@ async function holdConcentrationInCombat(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^Новый ход/ }).click();
 }
 
+/**
+ * Нижний край видимого: область прокрутки обрезает содержимое своим краем, а панель режимов
+ * закрывает остаток экрана. Мерить бюджет высотой окна значит считать видимым то, что лежит под
+ * панелью.
+ */
+async function visibleBottomOfList(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const list = document.querySelector('[aria-label^="Заклинания"]');
+    if (list === null) throw new Error("список пуст");
+    let area = list.parentElement;
+    while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
+    if (area === null) throw new Error("нет области прокрутки");
+    return Math.round(area.getBoundingClientRect().bottom);
+  });
+}
+
+test("the frequent row and the list both start on screen at 320", async ({ page }) => {
+  await holdConcentrationAfterSeveralCasts(page);
+
+  const visibleBottom = await visibleBottomOfList(page);
+  const measured = await page.evaluate(() => {
+    const frequent = document.querySelector('[aria-label="Часто"]');
+    const ordered = document.querySelector('[aria-label^="Заклинания"]');
+    if (frequent === null || ordered === null) throw new Error("нет раздела или списка");
+    let area = ordered.parentElement;
+    while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
+    if (area !== null) area.scrollTop = 0;
+    return {
+      frequentBottom: Math.round(frequent.getBoundingClientRect().bottom),
+      orderedTop: Math.round(ordered.getBoundingClientRect().top),
+    };
+  });
+
+  expect(measured.frequentBottom, "уже творённое целиком на экране").toBeLessThanOrEqual(
+    visibleBottom,
+  );
+  expect(measured.orderedTop, "упорядоченный список начинается на экране").toBeLessThan(
+    visibleBottom,
+  );
+});
+
 test("the first spell row is whole on screen at 320, 375 and 390", async ({ page }) => {
-  await holdConcentrationInCombat(page);
+  await holdConcentrationAfterSeveralCasts(page);
 
   // Три ширины, а не одна: ряды над списком переносятся по мере сужения, и ряд, стоящий одной
   // строкой на 390, занимает три на 320 — столько же, сколько сама строка списка.
@@ -241,17 +301,18 @@ test("the first spell row is whole on screen at 320, 375 and 390", async ({ page
       // Меряется непрокрученный экран: строка, до которой надо доскроллить, за столом не найдена.
       let area = first.parentElement;
       while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
-      if (area !== null) area.scrollTop = 0;
+      if (area === null) throw new Error("нет области прокрутки");
+      area.scrollTop = 0;
       return {
         bottom: Math.round(first.getBoundingClientRect().bottom),
-        viewport: window.innerHeight,
+        visibleBottom: Math.round(area.getBoundingClientRect().bottom),
         pageOverflow: document.documentElement.scrollHeight - window.innerHeight,
         sideways: document.documentElement.scrollWidth - window.innerWidth,
       };
     }, FIRST_ROW);
 
     expect(shown.bottom, `первая строка целиком на ${size.width}`).toBeLessThanOrEqual(
-      shown.viewport,
+      shown.visibleBottom,
     );
     expect(shown.pageOverflow, `страница не прокручивается на ${size.width}`).toBeLessThanOrEqual(0);
     expect(shown.sideways, `нет бокового выезда на ${size.width}`).toBeLessThanOrEqual(0);
