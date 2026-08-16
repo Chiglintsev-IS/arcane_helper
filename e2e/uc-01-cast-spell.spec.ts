@@ -548,13 +548,13 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 });
 
 /**
- * Прогон выше идёт в светлой теме — той, что браузер отдаёт по умолчанию. Тёмная сверяется целиком и
- * по всем режимам: играют вечером, и подпись на подкрашенной подложке ведёт себя там иначе — цвет
- * значения и подложка того же значения не могут быть одной светлоты.
+ * Прогон выше сверяет шторки и мастера, и делает это в той теме, что браузер отдаёт по умолчанию.
+ * Этот идёт по всем режимам и по обеим темам: играют и вечером, и днём, а тона названы парой — свой
+ * у тёмной, свой у светлой, — и половина пары, которую не сверяют, расходится молча. Одной темы
+ * здесь не хватало: цвет значения и подложка того же значения не могут быть одной светлоты, и в
+ * какой из двух они сойдутся, заранее не известно.
  */
-test("every mode passes axe-core in the dark theme", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "dark" });
-
+test("every mode passes axe-core in both themes", async ({ page }) => {
   const scan = async (label: string): Promise<void> => {
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -564,21 +564,28 @@ test("every mode passes axe-core in the dark theme", async ({ page }) => {
     );
   };
 
-  await scan("игра");
+  for (const scheme of ["dark", "light"] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
 
-  for (const mode of ["Книга", "Журнал", "Вещи", "Привал"]) {
-    await switchMode(page, new RegExp(`^${mode}`));
-    await scan(mode.toLowerCase());
+    // Обход начинается с «Игры» и во второй раз: тему меняют, а режим остаётся тем, на котором
+    // кончился прошлый круг.
+    await switchMode(page, /^Игра/);
+    await scan(`${scheme}: игра`);
+
+    for (const mode of ["Книга", "Журнал", "Вещи", "Привал"]) {
+      await switchMode(page, new RegExp(`^${mode}`));
+      await scan(`${scheme}: ${mode.toLowerCase()}`);
+    }
+
+    await switchToSheet(page);
+    await scan(`${scheme}: лист`);
+
+    await switchUnderMore(page, /^Ремесло/);
+    await scan(`${scheme}: ремесло`);
+
+    await switchUnderMore(page, /^Заметки/);
+    await scan(`${scheme}: заметки`);
   }
-
-  await switchToSheet(page);
-  await scan("лист");
-
-  await switchUnderMore(page, /^Ремесло/);
-  await scan("ремесло");
-
-  await switchUnderMore(page, /^Заметки/);
-  await scan("заметки");
 });
 
 test("reactions in one tap", async ({ page }) => {

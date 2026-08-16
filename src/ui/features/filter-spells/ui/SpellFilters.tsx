@@ -180,7 +180,6 @@ export function SpellFilters({
             key={value}
             pressed={filters.roles.includes(value)}
             tone={combatRole(value).tone}
-            {...(combatRole(value).icon === undefined ? {} : { icon: combatRole(value).icon })}
             onClick={() => onChange({ ...filters, roles: toggleValue(filters.roles, value) })}
           >
             {combatRole(value).label}

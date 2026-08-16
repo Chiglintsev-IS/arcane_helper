@@ -129,6 +129,18 @@ describe("роль отбирает и в «Игре» (FR-212)", () => {
     expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
   });
+
+  it("роль в полосе названа подписью, а не значком", () => {
+    renderFilters(EVERYTHING);
+
+    expect(screen.getByRole("button", { name: "Боевое" }).textContent).toBe("Боевое");
+    expect(screen.getByRole("button", { name: "Защита" }).textContent).toBe("Защита");
+
+    // Прочие значки полосы остаются: они стоят и на строках списка, и плашка показывает ровно тот,
+    // который отбирает.
+    expect(screen.getByRole("button", { name: "Концентрация" }).textContent).toBe("✦Концентрация");
+    expect(screen.getByRole("button", { name: "Ритуал" }).textContent).toBe("❖Ритуал");
+  });
 });
 
 describe("подготовка и цена отбирают только в «Книге» (FR-212)", () => {
