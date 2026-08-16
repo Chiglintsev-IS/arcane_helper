@@ -19,6 +19,7 @@
  * любом составе, а вопрос «где та строка» задают тем чаще, чем список длиннее.
  */
 
+import { Magnifier } from "@/ui/shared/ui/Magnifier";
 import { TONE_CLASS } from "@/ui/shared/ui/tone";
 import { castingTimeBadge, combatRole, levelChipLabel } from "@/ui/entities/spell/lib/format";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
@@ -37,19 +38,6 @@ const ROLE_FILTERS = ["offense", "defense"];
 
 /** Имя дела: им зовётся и кнопка, и поле, которое она раскрывает. */
 const SEARCH_LABEL = "Поиск по названию";
-
-/**
- * Лупа рисунком, а не знаком шрифта: `⌕` есть не во всяком шрифте, а `🔍` приходит цветной
- * картинкой и тона кнопки не берёт. Прочие значки полосы — знаки, которые есть везде.
- */
-function Magnifier() {
-  return (
-    <svg viewBox="0 0 16 16" aria-hidden="true" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.75">
-      <circle cx="7" cy="7" r="4.5" />
-      <path d="M10.5 10.5 L14 14" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 function Toggle({
   pressed,
