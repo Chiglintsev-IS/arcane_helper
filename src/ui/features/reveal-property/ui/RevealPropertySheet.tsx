@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { CommandOf } from "@/contract/commands";
+import type { PreviewOf, Question } from "@/contract/questions";
 import type { ChoicesView, IngredientKnowledgeView } from "@/contract/views";
 
 import {
@@ -10,7 +11,9 @@ import {
   RARITY_LABELS,
   labelled,
   propertyNumberRu,
+  researchCostRu,
 } from "@/ui/entities/crafting/lib/labels";
+import { usePreview } from "@/ui/shared/model/usePreview";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
@@ -25,11 +28,37 @@ export function revealPropertyName(nameRu: string): string {
 }
 
 /**
- * Раскрытие свойства у записанного вида.
+ * Цена работы: сложность крупно, а под ней — время, порции и расходники одной строкой.
  *
- * Название приходит из закрытого перечня, а не из свободного поля: совпадение считается тождеством
- * названий, и «лечит», набранное руками, не совпало бы с «Лечением здоровья» никогда. Редкость
- * называет игрок: справочник её не печатает, и вывести приложению не из чего.
+ * Число стоит там же и так же, как стоит сложность рецепта: одно и то же дело — «против чего
+ * бросать» — читается за столом одним взглядом, если выглядит одинаково.
+ */
+function ResearchCost({ plan }: { plan: NonNullable<PreviewOf<"research_preview">["plan"]> }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-xs text-slate-600 dark:text-slate-400">Сложность</span>
+        <span className="text-2xl font-semibold tabular-nums leading-none">{plan.difficulty}</span>
+      </div>
+      <p className="text-xs text-slate-600 dark:text-slate-400">{researchCostRu(plan)}</p>
+      {plan.rawSampleRu === null ? null : (
+        <p className="text-xs text-slate-600 dark:text-slate-400">{plan.rawSampleRu}</p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Раскрытие свойства у записанного вида: сперва цена работы, под ней — запись находки.
+ *
+ * В этом порядке, потому что в этом порядке за столом и происходит: сначала решают, браться ли, и
+ * лишь потом узнают, что вышло. Номер и редкость спрошены один раз на оба дела — второе поле под то
+ * же самое отняло бы место и разошлось бы само с собой. Направление работы спрашивается здесь же:
+ * в записанном знании его нет, и вывести приложению не из чего.
+ *
+ * Название находки приходит из закрытого перечня, а не из свободного поля: совпадение считается
+ * тождеством названий, и «лечит», набранное руками, не совпало бы с «Лечением здоровья» никогда.
+ * Редкость называет игрок: справочник её не печатает.
  *
  * Заголовок называет вид, а произносимое имя добавляет к нему слово дела: заголовку тут стоять
  * предметом — за дверью набирают про этот самый корень, и повторять слово дела глазами незачем.
@@ -60,6 +89,12 @@ export function RevealPropertySheet({
   const [propertyRu, setPropertyRu] = useState("");
   const [number, setNumber] = useState(choices.propertyNumbers[0] ?? 1);
   const [rarity, setRarity] = useState(choices.alchemicalRarities[0] ?? "");
+  const [direction, setDirection] = useState(choices.alchemyDirections[0] ?? "");
+
+  const question: Question = { kind: "research_preview", nameRu, number, rarity, direction };
+  const answer = usePreview(question);
+  const research: PreviewOf<"research_preview"> | null =
+    answer?.kind === "research_preview" ? answer : null;
 
   return (
     <section
@@ -69,28 +104,6 @@ export function RevealPropertySheet({
       className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
     >
       <h2 className="text-base font-semibold leading-tight">{nameRu}</h2>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-600 dark:text-slate-400">Свойство</span>
-        <select
-          value={propertyRu}
-          onChange={(event) => setPropertyRu(event.target.value)}
-          className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
-        >
-          <option value="">Не выбрано</option>
-          {choices.alchemyDirections.map((direction) => (
-            <optgroup key={direction} label={labelled(DIRECTION_LABELS, direction)}>
-              {choices.alchemicalProperties
-                .filter((property) => property.direction === direction)
-                .map((property) => (
-                  <option key={property.nameRu} value={property.nameRu}>
-                    {property.nameRu}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
 
       <div className="grid grid-cols-2 gap-2">
         <label className="flex min-w-0 flex-col gap-1">
@@ -122,6 +135,49 @@ export function RevealPropertySheet({
           </select>
         </label>
       </div>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-slate-600 dark:text-slate-400">Направление работы</span>
+        <select
+          value={direction}
+          onChange={(event) => setDirection(event.target.value)}
+          className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+        >
+          {choices.alchemyDirections.map((option) => (
+            <option key={option} value={option}>
+              {labelled(DIRECTION_LABELS, option)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {research?.plan == null ? null : <ResearchCost plan={research.plan} />}
+
+      {research?.refusalRu === undefined ? null : (
+        <p className="text-xs text-slate-700 dark:text-slate-300">{research.refusalRu}</p>
+      )}
+
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-slate-600 dark:text-slate-400">Свойство</span>
+        <select
+          value={propertyRu}
+          onChange={(event) => setPropertyRu(event.target.value)}
+          className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+        >
+          <option value="">Не выбрано</option>
+          {choices.alchemyDirections.map((option) => (
+            <optgroup key={option} label={labelled(DIRECTION_LABELS, option)}>
+              {choices.alchemicalProperties
+                .filter((property) => property.direction === option)
+                .map((property) => (
+                  <option key={property.nameRu} value={property.nameRu}>
+                    {property.nameRu}
+                  </option>
+                ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
 
       <button
         type="button"

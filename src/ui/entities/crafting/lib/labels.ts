@@ -5,6 +5,10 @@
  * же «редкое» читают и строка знания, и совпавшее свойство на верстаке.
  */
 
+import type { PreviewOf } from "@/contract/questions";
+
+import { CURRENCY_ABBREVIATIONS, withPlural } from "@/shared/language";
+
 /** Ступени редкости словами. */
 export const RARITY_LABELS: Readonly<Record<string, string>> = {
   common: "обычное",
@@ -36,4 +40,34 @@ export function propertyNumberRu(number: number): string {
 /** Слово по коду, а незнакомый код — сам собой: выдумывать перевод отображению не из чего. */
 export function labelled(labels: Readonly<Record<string, string>>, code: string): string {
   return labels[code] ?? code;
+}
+
+const MINUTES_PER_HOUR = 60;
+
+/** Время работы коротко: до часа — минутами, дальше — часами. Так его меряет и партия, и глубина. */
+export function minutesRu(minutes: number): string {
+  return minutes < MINUTES_PER_HOUR ? `${minutes} мин` : `${minutes / MINUTES_PER_HOUR} ч`;
+}
+
+const PORTION_FORMS: [string, string, string] = ["порция", "порции", "порций"];
+
+/**
+ * Цена исследования одной строкой: время, расход порций и расходники.
+ *
+ * Порции приходят двумя числами, и сводит их в одну фразу отображение: первое свойство теряет
+ * порцию только при провале, и «одна порция» без этой оговорки обещало бы расход, которого при
+ * удаче не бывает.
+ */
+export function researchCostRu(plan: NonNullable<PreviewOf<"research_preview">["plan"]>): string {
+  const portions =
+    plan.portionsOnSuccess === plan.portionsOnFailure
+      ? `${withPlural(plan.portionsOnFailure, PORTION_FORMS)} при любом исходе`
+      : `${withPlural(plan.portionsOnFailure, PORTION_FORMS)} только при провале`;
+  const consumables =
+    plan.consumablesRu === null
+      ? "без расходников"
+      : `расходники ${plan.consumablesRu.toLowerCase()}, ` +
+        `${plan.consumablesGold} ${CURRENCY_ABBREVIATIONS.gold}`;
+
+  return `${minutesRu(plan.minutes)} · ${portions} · ${consumables}`;
 }

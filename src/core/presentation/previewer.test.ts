@@ -10,7 +10,11 @@ import { describe, expect, it } from "vitest";
 import { createSession, type LiveSession } from "@/core/application/session";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { withSpentSlots, withoutHitDice } from "@/core/infrastructure/catalog/thorne/fixtures";
+import {
+  withIngredientKnowledge,
+  withSpentSlots,
+  withoutHitDice,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { CharacterState } from "@/core/domain/assembly/state";
 
 import { answerQuestion } from "./previewer";
@@ -306,5 +310,75 @@ describe("магическое восстановление", () => {
     const spent = withSpentSlots(createThorne(), 1, 1);
 
     expect(plan({ 1: 1 }, spent)?.unavailabilityRu).toBeUndefined();
+  });
+});
+
+describe("цена исследования", () => {
+  const MOON_HERB = "Лунная трава";
+
+  function cost(
+    number: number,
+    rarity: string,
+    direction: string,
+    character: CharacterState = withIngredientKnowledge(createThorne(), MOON_HERB),
+  ) {
+    const preview = answerQuestion(alive(character), {
+      kind: "research_preview",
+      nameRu: MOON_HERB,
+      number,
+      rarity,
+      direction,
+    }, NOW);
+    return preview.kind === "research_preview" ? preview : null;
+  }
+
+  it("цена исследования приходит вопросом и состояния не трогает", () => {
+    const character = withIngredientKnowledge(createThorne(), MOON_HERB);
+    const live = alive(character);
+    const before = JSON.stringify(live.session.character);
+
+    const answer = cost(1, "common", "potions", character);
+
+    // Десять минут против пятёрки: первое свойство надёжным походным комплектом.
+    expect(answer?.plan?.minutes).toBe(10);
+    expect(answer?.plan?.difficulty).toBe(5);
+    // Порция теряется только при провале, и материалов эта глубина ещё не жжёт.
+    expect(answer?.plan?.portionsOnSuccess).toBe(0);
+    expect(answer?.plan?.portionsOnFailure).toBe(1);
+    expect(answer?.plan?.consumablesRu).toBeNull();
+    expect(answer?.plan?.rawSampleRu).toContain("Сырая проба");
+    expect(answer?.refusalRu).toBeUndefined();
+    expect(JSON.stringify(live.session.character)).toBe(before);
+  });
+
+  it("цена исследования отказывает словами владельца", () => {
+    // Набора по синтезу ядов у Торна нет: работать нечем, и отказ называет чем именно.
+    expect(cost(1, "common", "poisons")?.plan).toBeNull();
+    expect(cost(1, "common", "poisons")?.refusalRu).toContain("без профильного оснащения");
+
+    // Порядок стережёт сам вид: цену свойства, до которого не добрались, называть незачем.
+    expect(cost(2, "common", "potions")?.refusalRu).toContain("номером 1");
+
+    // Слово не из тех, что бывают, — тот же отказ с причиной, а не падение.
+    expect(cost(1, "невиданная", "potions")?.refusalRu).toContain("не из тех");
+    expect(cost(1, "common", "алхимия")?.refusalRu).toContain("не из тех");
+  });
+
+  it("глубина и редкость поднимают цену, а лаборатория ставит предел", () => {
+    const twice = withIngredientKnowledge(createThorne(), MOON_HERB, [
+      { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+    ]);
+
+    // Второе свойство: час работы, базовая двенадцать плюс два за редкость, комплект за час.
+    const second = cost(2, "rare", "potions", twice);
+    expect(second?.plan?.difficulty).toBe(14);
+    expect(second?.plan?.consumablesRu).toBe("Обычные");
+    expect(second?.plan?.consumablesGold).toBe(1);
+
+    const deep = withIngredientKnowledge(createThorne(), MOON_HERB, [
+      { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+      { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
+    ]);
+    expect(cost(3, "common", "potions", deep)?.refusalRu).toContain("стационарной лаборатории");
   });
 });

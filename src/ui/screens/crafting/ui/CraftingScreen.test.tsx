@@ -227,6 +227,70 @@ describe("«Ремесло»: запись знания", () => {
     expect(sheet.getByRole("heading", { name: MOON_HERB })).toBeDefined();
   });
 
+  it("«Ремесло»: цена исследования названа прежде, чем за него взялись", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CraftingScreen />, withIngredientKnowledge(createThorne(), MOON_HERB));
+
+    await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
+
+    // Первое свойство обычной редкости надёжным походным комплектом: десять минут против пятёрки,
+    // порция теряется только при провале, а материалы этой глубины ещё не жгут.
+    expect(await screen.findByText("5")).toBeDefined();
+    expect(screen.getByText(/10 мин · 1 порция только при провале · без расходников/)).toBeDefined();
+    expect(screen.getByText(/Сырая проба/)).toBeDefined();
+  });
+
+  it("«Ремесло»: цена исследования растёт с редкостью и глубиной", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(
+      <CraftingScreen />,
+      withIngredientKnowledge(createThorne(), MOON_HERB, [
+        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+      ]),
+    );
+
+    await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
+    await user.selectOptions(screen.getByLabelText("Номер"), "2");
+    await user.selectOptions(screen.getByLabelText("Редкость"), "rare");
+
+    // Второе свойство: час работы против двенадцати, редкость поднимает сложность на два, и со
+    // второй глубины горят материалы — комплект за каждый начатый час.
+    expect(await screen.findByText("14")).toBeDefined();
+    expect(
+      screen.getByText(/1 ч · 1 порция при любом исходе · расходники обычные, 1 зм/),
+    ).toBeDefined();
+  });
+
+  it("«Ремесло»: отказ по оснащению называет причину словами владельца", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<CraftingScreen />, withIngredientKnowledge(createThorne(), MOON_HERB));
+
+    await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
+    // Синтезу ядов Торн не обучен и набора по нему не держит: работать нечем, и это сказано словами.
+    await user.selectOptions(screen.getByLabelText("Направление работы"), "poisons");
+
+    expect(await screen.findByText(/без профильного оснащения не бывает/)).toBeDefined();
+    expect(screen.queryByText("5")).toBeNull();
+  });
+
+  it("«Ремесло»: до третьего свойства походным комплектом не добраться", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(
+      <CraftingScreen />,
+      withIngredientKnowledge(createThorne(), MOON_HERB, [
+        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+        { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
+      ]),
+    );
+
+    await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
+    // Порядок называет сам владелец: под первым номером уже раскрыто, и следующее — третье.
+    expect(await screen.findByText(/свойство под номером 3/)).toBeDefined();
+
+    await user.selectOptions(screen.getByLabelText("Номер"), "3");
+    expect(await screen.findByText(/стационарной лаборатории/)).toBeDefined();
+  });
+
   it("«Ремесло»: отказ владельца стоит в той шторке, где набирали", async () => {
     const user = userEvent.setup();
     await renderWithStores(<CraftingScreen />, twoKinds());

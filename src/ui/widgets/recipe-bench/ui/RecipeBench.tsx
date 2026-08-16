@@ -11,6 +11,7 @@ import {
   RARITY_LABELS,
   TIER_LABELS,
   labelled,
+  minutesRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { withPlural } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
@@ -45,10 +46,6 @@ const PURIFICATION_LABELS: Readonly<Record<string, string>> = {
   beneficial: "оставить полезные",
   harmful: "оставить вредные",
 };
-
-function minutesRu(minutes: number): string {
-  return minutes < 60 ? `${minutes} мин` : `${minutes / 60} ч`;
-}
 
 function Field({
   label,

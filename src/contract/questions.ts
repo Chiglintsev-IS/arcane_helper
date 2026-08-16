@@ -64,6 +64,19 @@ export const questionSchema = z.discriminatedUnion("kind", [
     portions: numeric,
   }),
   /**
+   * Во что обойдётся раскрытие очередного свойства у названного вида.
+   *
+   * Снимком это не едет и ехать не может: цена зависит от того, чего в состоянии нет, —
+   * направления работы и предполагаемой редкости, которые называет игрок прежде, чем возьмётся.
+   */
+  z.object({
+    kind: z.literal("research_preview"),
+    nameRu: word,
+    number: numeric,
+    rarity: word,
+    direction: word,
+  }),
+  /**
    * Чем выгрузить состояние прямо сейчас.
    *
    * Вопросом, а не проекцией: в выгрузке стоит время, которого в состоянии нет, — и снимок,
@@ -164,6 +177,30 @@ export const previewSchema = z.discriminatedUnion("kind", [
     levelsSpent: whole,
     /** Что мешает вернуть набранное; нет вовсе — план годится. */
     unavailabilityRu: word.optional(),
+  }),
+  z.object({
+    kind: z.literal("research_preview"),
+    /**
+     * Цена работы; нет вовсе — за неё не возьмутся, и причина названа отказом.
+     *
+     * Порции названы двумя числами, а не одним: первое свойство теряет порцию только при провале, и
+     * «одна порция» без этой оговорки обещало бы расход, которого при удаче не бывает.
+     */
+    plan: z
+      .object({
+        minutes: whole,
+        difficulty: whole,
+        portionsOnSuccess: whole,
+        portionsOnFailure: whole,
+        /** Класс расходников и цена за всю работу; `null` — материалов эта глубина не жжёт. */
+        consumablesRu: word.nullable(),
+        consumablesGold: whole,
+        /** Быстрый путь без броска; `null` — этой глубины он не касается. */
+        rawSampleRu: word.nullable(),
+      })
+      .nullable(),
+    /** Почему цену назвать нечему; нет вовсе — работа возможна. */
+    refusalRu: word.optional(),
   }),
   z.object({
     kind: z.literal("recipe_preview"),

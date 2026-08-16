@@ -49,7 +49,7 @@ import { exportFileName, exportSnapshot } from "@/core/application/dataExchange"
 import type { LiveSession } from "@/core/application/session";
 import { previewLevelChange } from "@/core/application/useCases/sheet";
 
-import { castModeOf, runeOf, spellOf } from "./words";
+import { castModeOf, directionOf, rarityOf, runeOf, spellOf } from "./words";
 
 type CastQuestion = Extract<Question, { kind: "cast_preview" }>;
 
@@ -221,6 +221,42 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
   };
 }
 
+type ResearchQuestion = Extract<Question, { kind: "research_preview" }>;
+
+/**
+ * Во что обойдётся раскрытие названного свойства.
+ *
+ * Порядок, оснащение и предел сложности стережёт сам вид: спрошенная цена свойства, до которого ещё
+ * не добрались, приходит отказом с причиной, и причина эта — слово в слово та, которой откажет сама
+ * работа. Пересказанная здесь, она разошлась бы с ней при первой же правке справочника.
+ */
+function researchPreview(live: LiveSession, question: ResearchQuestion): Preview {
+  const crafting = Character.of(live.session.character).crafting;
+
+  try {
+    const plan = crafting.researchPlanFor(
+      question.nameRu,
+      question.number,
+      rarityOf(question.rarity),
+      directionOf(question.direction),
+    );
+    return {
+      kind: "research_preview",
+      plan: {
+        minutes: plan.minutes,
+        difficulty: plan.difficulty,
+        portionsOnSuccess: plan.portionsOnSuccess,
+        portionsOnFailure: plan.portionsOnFailure,
+        consumablesRu: plan.consumablesRu,
+        consumablesGold: plan.consumablesGold,
+        rawSampleRu: plan.rawSampleRu,
+      },
+    };
+  } catch (error: unknown) {
+    return { kind: "research_preview", plan: null, refusalRu: refusalOf(error) };
+  }
+}
+
 export function answerQuestion(live: LiveSession, question: Question, now: string): Preview {
   const { character } = live.session;
 
@@ -245,6 +281,8 @@ export function answerQuestion(live: LiveSession, question: Question, now: strin
   if (question.kind === "cast_preview") return castPreview(live, question);
 
   if (question.kind === "recipe_preview") return recipePreview(live, question);
+
+  if (question.kind === "research_preview") return researchPreview(live, question);
 
   if (question.kind === "arcane_recovery_preview") {
     const validation = validateArcaneRecovery(
