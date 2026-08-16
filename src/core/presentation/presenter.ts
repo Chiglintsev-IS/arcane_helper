@@ -50,6 +50,11 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     ...(spellsRefusalRu === undefined ? {} : { spellsRefusalRu }),
     choices: toChoicesView(),
     catalogSource: live.spellCatalogSource,
+    notes: live.session.character.worldNotes.map((note) => ({
+      id: note.id,
+      at: note.at,
+      text: note.text,
+    })),
     journal: live.session.journal.map((entry) => ({
       id: entry.id,
       at: entry.at,

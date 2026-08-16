@@ -16,6 +16,7 @@ export const SCREEN_MODES = [
   "things",
   "crafting",
   "rest",
+  "notes",
 ] as const;
 
 export type ScreenMode = (typeof SCREEN_MODES)[number];

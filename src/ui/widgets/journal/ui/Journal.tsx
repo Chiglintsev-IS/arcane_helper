@@ -22,19 +22,9 @@
 import { useState } from "react";
 
 import type { Snapshot } from "@/contract/snapshot";
+import { timeRu } from "@/ui/shared/lib/timeRu";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
-
-/**
- * Время записи как «ЧЧ:ММ». Дата не показывается: журнал глубиной 100 живёт одну игру за столом, а
- * второй строкой на iPhone SE платят ничем не оправданной подробностью.
- */
-function timeRu(at: string): string {
-  const at_ = new Date(at);
-  const hours = `${at_.getHours()}`.padStart(2, "0");
-  const minutes = `${at_.getMinutes()}`.padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
 
 export function Journal({
   entries,

@@ -96,6 +96,11 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("toggle_material", { spellId: word }),
   command("set_spell_note", { spellId: word, note: z.string() }),
 
+  // Заметки про мир
+  command("add_world_note", { text: word }),
+  command("edit_world_note", { noteId: word, text: word }),
+  command("remove_world_note", { noteId: word }),
+
   // Отыгрыш
   command("toggle_roleplay_favorite", { spellId: word, variantId: word }),
   command("toggle_roleplay_disabled", { spellId: word, variantId: word }),

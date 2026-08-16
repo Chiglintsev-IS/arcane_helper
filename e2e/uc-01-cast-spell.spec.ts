@@ -560,6 +560,9 @@ test("every mode passes axe-core in the dark theme", async ({ page }) => {
 
   await switchUnderMore(page, /^Ремесло/);
   await scan("ремесло");
+
+  await switchUnderMore(page, /^Заметки/);
+  await scan("заметки");
 });
 
 test("reactions in one tap", async ({ page }) => {

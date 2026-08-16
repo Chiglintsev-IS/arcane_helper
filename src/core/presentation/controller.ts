@@ -60,7 +60,13 @@ import {
   takeDamage,
 } from "@/core/application/useCases/health";
 import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
-import { adjustLastHint, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
+import { addWorldNote, editWorldNote, removeWorldNote } from "@/core/application/useCases/notes";
+import {
+  adjustLastHint,
+  adjustRunes,
+  refundSpellSlot,
+  spendSpellSlot,
+} from "@/core/application/useCases/resources";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
 import {
   addRoleplayVariant,
@@ -257,6 +263,13 @@ export function applyCommand(
       return changed(toggleMaterial(session, spellOf(spellCatalog, command.spellId), occasion));
     case "set_spell_note":
       return changed(setSpellNote(session, command.spellId, command.note));
+
+    case "add_world_note":
+      return changed(addWorldNote(session, command.text, occasion));
+    case "edit_world_note":
+      return changed(editWorldNote(session, command.noteId, command.text));
+    case "remove_world_note":
+      return changed(removeWorldNote(session, command.noteId));
 
     case "toggle_roleplay_favorite":
       return changed(toggleRoleplayFavorite(session, command.spellId, command.variantId));
