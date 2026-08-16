@@ -43,6 +43,11 @@ export function createDexieRepository(name: string = DATABASE_NAME): SessionRepo
       return parsePersisted(row.payload);
     },
 
+    async loadRaw(): Promise<unknown> {
+      const row = await database.sessions.get(SESSION_KEY);
+      return row === undefined ? null : row.payload;
+    },
+
     async save(session: PersistedSession): Promise<void> {
       await database.sessions.put({ key: SESSION_KEY, payload: session });
     },

@@ -17,6 +17,7 @@ import { createStore, type StoreApi } from "zustand/vanilla";
 import type { Command } from "@/contract/commands";
 import type { ArcaneApi } from "@/contract/port";
 import type { Preview, Question } from "@/contract/questions";
+import type { RawSave } from "@/contract/rawSave";
 import type { Snapshot } from "@/contract/snapshot";
 
 export type SessionStatus = "loading" | "ready" | "error";
@@ -26,6 +27,11 @@ export type SessionStoreState = {
   status: SessionStatus;
   /** Причина последнего отказа: показывается игроку, состояние при этом не испорчено. */
   error: string | null;
+  /**
+   * Копия сохранения, которое не прочиталось, — содержимое хранилища как есть. `null` — копировать
+   * нечего. Её забирают до того, как начать заново: после очистки её больше нет нигде.
+   */
+  rawSave: RawSave;
 
   /** Открыть сессию: ядро прочитает сохранённое либо начнёт заново. Повтор безвреден. */
   hydrate: () => Promise<void>;
@@ -74,20 +80,24 @@ export function createSessionStore(
   const { api, nextCommandId } = dependencies;
 
   return createStore<SessionStoreState>((set) => {
+    /** Хранилище, не отдавшее и сырого содержимого, копией не притворяется: копировать нечего. */
+    const copyOfStored = (): Promise<RawSave> => api.readRaw().catch(() => null);
+
     return {
       snapshot: null,
       status: "loading",
       error: null,
+      rawSave: null,
 
       async hydrate() {
         set({ status: "loading", error: null });
         try {
           set({ snapshot: await api.open() });
-          set({ status: "ready" });
+          set({ status: "ready", rawSave: null });
         } catch (error: unknown) {
-          // Данные остаются в хранилище: их можно выгрузить руками, а начать с чистого листа
-          // молча — потерять игру.
-          set({ status: "error", error: describe(error) });
+          // Данные остаются в хранилище, а копия — под рукой у игрока: начать с чистого листа
+          // молча значит потерять игру, а без копии — потерять её одним нажатием.
+          set({ status: "error", error: describe(error), rawSave: await copyOfStored() });
         }
       },
 
@@ -98,9 +108,13 @@ export function createSessionStore(
             set({ error: result.reasonRu });
             return result.reasonRu;
           }
+          // Ядро ответило состоянием — значит читать его больше не мешает ничто, и копии
+          // непрочитанного взяться неоткуда.
           set((shown) => ({
             snapshot: outdated(shown.snapshot, result.snapshot) ? shown.snapshot : result.snapshot,
+            status: "ready",
             error: null,
+            rawSave: null,
           }));
           return null;
         } catch (error: unknown) {

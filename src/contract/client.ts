@@ -11,6 +11,7 @@
 
 import { envelopeSchema, type Envelope } from "./commands";
 import { previewSchema, questionSchema, type Preview, type Question } from "./questions";
+import { rawSaveSchema, type RawSave } from "./rawSave";
 import { resultSchema, type Result } from "./result";
 import { snapshotSchema, type Snapshot } from "./snapshot";
 import type { ArcaneApi } from "./port";
@@ -20,6 +21,10 @@ export function createClient(transport: Transport): ArcaneApi {
   return {
     async open(): Promise<Snapshot> {
       return snapshotSchema.parse(await transport.read());
+    },
+
+    async readRaw(): Promise<RawSave> {
+      return rawSaveSchema.parse(await transport.readRaw());
     },
 
     async execute(envelope: Envelope): Promise<Result> {

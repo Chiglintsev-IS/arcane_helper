@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { DEFAULT_SCREEN_MODE, SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { ModeSwitcher } from "@/ui/features/screen-mode/ui/ModeSwitcher";
+import { UnreadableSave } from "@/ui/app/UnreadableSave";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
@@ -74,10 +75,13 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
     }
   }, [initialMode]);
 
+  // Играть не на чем, а данные целы: вместо режимов — причина и выход из неё.
+  if (status === "error" && snapshot === null) return <UnreadableSave />;
+
   if (status === "loading" || snapshot === null) {
     return (
       <main className="flex min-h-dvh items-center justify-center p-4 text-sm text-slate-500">
-        {status === "error" ? (error ?? "Состояние не прочитано") : "Загрузка состояния…"}
+        Загрузка состояния…
       </main>
     );
   }

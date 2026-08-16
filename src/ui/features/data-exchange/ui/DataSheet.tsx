@@ -2,9 +2,8 @@
  * Импорт и экспорт данных.
  *
  * Приложение живёт в браузере телефона, а браузер вправе очистить хранилище: выгрузка — единственный
- * способ не потерять персонажа. Работа с файлами в Safari на iOS ограничена, поэтому рядом со
- * скачиванием и выбором файла стоит обмен через буфер: скопировать текст и вставить его — то, что
- * работает всегда.
+ * способ не потерять персонажа. Загрузка принимает и выбранный файл, и вставленный текст — по той же
+ * причине, по которой копия отдаётся двумя способами.
  *
  * Компонент презентационный: разбор и проверка живут в движке правил, здесь только ввод и вывод.
  */
@@ -12,6 +11,8 @@
 "use client";
 
 import { useId, useState } from "react";
+
+import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
 
 export function DataSheet({
   exportText,
@@ -36,15 +37,6 @@ export function DataSheet({
   const [raw, setRaw] = useState("");
   const titleId = useId();
 
-  const download = (): void => {
-    const url = URL.createObjectURL(new Blob([exportText], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const readFile = (file: File | undefined): void => {
     if (file === undefined) return;
     void file.text().then((text) => setRaw(text));
@@ -62,22 +54,7 @@ export function DataSheet({
       </h2>
 
       <h3 className="text-sm font-semibold">Выгрузка</h3>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={download}
-          className="min-h-11 grow rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
-        >
-          Скачать файл
-        </button>
-        <button
-          type="button"
-          onClick={() => void navigator.clipboard?.writeText(exportText)}
-          className="min-h-11 grow rounded-xl border border-slate-200 px-3 text-sm dark:border-slate-800"
-        >
-          Скопировать
-        </button>
-      </div>
+      <DataCopy text={exportText} fileName={fileName} />
 
       {/*
  Чем играют сейчас — раньше кнопки загрузки: игрок должен видеть, что именно он собирается

@@ -6,8 +6,10 @@
  * знать, что запись есть и как она называется.
  */
 
+import type { RawSave } from "@/contract/rawSave";
 import type { Snapshot } from "@/contract/snapshot";
 
+import { rawSaveFileName } from "@/core/application/dataExchange";
 import type { LiveSession } from "@/core/application/session";
 
 import { toBagView } from "./views/bagView";
@@ -46,4 +48,15 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
       ...(entry.slotLevel === undefined ? {} : { slotLevel: entry.slotLevel }),
     })),
   };
+}
+
+/**
+ * Содержимое хранилища — в копию, которую забирают файлом.
+ *
+ * Схемой оно не разбирается ни здесь, ни дальше: сюда попадает то, что разбор уже отверг. Текст
+ * собирается на этой стороне, потому что имя файла несёт дату, а часы есть только у ядра.
+ */
+export function toRawSave(stored: unknown, now: string): RawSave {
+  if (stored === null || stored === undefined) return null;
+  return { fileName: rawSaveFileName(now), text: JSON.stringify(stored, null, 2) };
 }

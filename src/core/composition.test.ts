@@ -257,6 +257,7 @@ describe("применение команд", () => {
   it("сбой записи не проглатывается", async () => {
     const repository: SessionRepository = {
       load: async () => null,
+      loadRaw: async () => null,
       save: async () => {
         throw new Error("нет места");
       },
@@ -270,6 +271,7 @@ describe("применение команд", () => {
   it("сбой записи не-ошибкой тоже называется словами", async () => {
     const repository: SessionRepository = {
       load: async () => null,
+      loadRaw: async () => null,
       save: async () => {
         throw "хранилище недоступно";
       },
@@ -480,6 +482,20 @@ describe("сброс", () => {
     expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT);
     expect((await shown(api)).catalogSource).toBe("built_in");
     expect((await repository.load())?.spellCatalog).toBeUndefined();
+  });
+
+  it("начать заново можно и поверх непрочитанного сохранения", async () => {
+    // Так выглядит сохранение, которое разбор отвергает: снимок на месте, состояния в нём нет.
+    const repository = createMemoryRepository({ schemaVersion: 1, savedAt: "", character: {} });
+    const { api } = connect(repository);
+    await expect(api.open()).rejects.toThrow(/повреждено/);
+
+    const result = await api.execute(envelope({ kind: "reset" }));
+
+    // Чистое состояние прежнего не читает, поэтому и не зависит от того, разобралось ли оно.
+    expect(result.ok).toBe(true);
+    expect((await shown(api)).sheet.name).toBe("Торн");
+    expect((await repository.load())?.character.spellSlots[1]?.remaining).toBe(4);
   });
 });
 
