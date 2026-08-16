@@ -18,6 +18,7 @@ import { CRAFTING_FIELDS } from "@/core/domain/crafting/schema";
 import { EFFECTS_FIELDS, refineEffects } from "@/core/domain/effects/schema";
 import { EQUIPMENT_FIELDS } from "@/core/domain/equipment/schema";
 import { ITEMS_FIELDS } from "@/core/domain/items/schema";
+import { NOTES_FIELDS } from "@/core/domain/notes/schema";
 import { refineSpellbook, SPELLBOOK_FIELDS } from "@/core/domain/spellbook/schema";
 import { VITALITY_FIELDS } from "@/core/domain/vitality/schema";
 import { isoDateTime } from "@/core/domain/shared/schema";
@@ -34,6 +35,7 @@ const STATE_FIELDS = {
   ...EFFECTS_FIELDS,
   ...EQUIPMENT_FIELDS,
   ...ITEMS_FIELDS,
+  ...NOTES_FIELDS,
   ...SPELLBOOK_FIELDS,
   ...VITALITY_FIELDS,
 };

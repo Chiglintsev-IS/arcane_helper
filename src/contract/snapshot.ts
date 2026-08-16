@@ -41,6 +41,18 @@ export const journalEntryViewSchema = z.object({
   slotLevel: z.number().int().optional(),
 });
 
+/**
+ * Заметка про мир так, как её показывают: время, текст и то, по чему её правят и убирают.
+ *
+ * Рядом с записью журнала, а не среди проекций: у обеих наружу едет сама запись, а не посчитанное
+ * по ней число, и считать в них нечего.
+ */
+export const worldNoteViewSchema = z.object({
+  id: z.string().min(1),
+  at: z.string().min(1),
+  text: z.string().min(1),
+});
+
 export const snapshotSchema = z.object({
   version: z.number().int().nonnegative(),
   sheet: sheetViewSchema,
@@ -68,6 +80,8 @@ export const snapshotSchema = z.object({
   /** Чем играют: карточками сборки или загруженными игроком. Слово правил, подпись — за экраном. */
   catalogSource: z.string().min(1),
   journal: z.array(journalEntryViewSchema),
+  /** Записанное о мире, в порядке появления: свежее сверху — дело показывающего. */
+  notes: z.array(worldNoteViewSchema),
 });
 
 export type Snapshot = z.infer<typeof snapshotSchema>;

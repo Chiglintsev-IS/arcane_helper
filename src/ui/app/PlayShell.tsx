@@ -13,6 +13,7 @@ import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
 import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
+import { NotesScreen } from "@/ui/screens/notes/ui/NotesScreen";
 import { SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 const STORAGE_KEY = "playScreenMode";
@@ -31,6 +32,8 @@ function ScreenContent({ mode }: { mode: ScreenMode }) {
       return <RestScreen />;
     case "journal":
       return <JournalScreen />;
+    case "notes":
+      return <NotesScreen />;
   }
 }
 

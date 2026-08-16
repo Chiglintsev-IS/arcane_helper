@@ -8,7 +8,7 @@
  * Боя среди значений нет: идущий бой — состояние игры, отмечаемое в журнале, а не вкладка.
  */
 
-export const SCREEN_MODES = ["play", "book", "journal", "sheet", "things", "rest"] as const;
+export const SCREEN_MODES = ["play", "book", "journal", "sheet", "things", "rest", "notes"] as const;
 
 export type ScreenMode = (typeof SCREEN_MODES)[number];
 

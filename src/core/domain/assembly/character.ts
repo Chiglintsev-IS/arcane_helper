@@ -11,6 +11,7 @@ import { Crafting } from "@/core/domain/crafting/crafting";
 import { EffectBoard } from "@/core/domain/effects/effectBoard";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
+import { Notes } from "@/core/domain/notes/notes";
 import { Sheet } from "@/core/domain/sheet/sheet";
 import { Spellbook } from "@/core/domain/spellbook/spellbook";
 import { Vitality } from "@/core/domain/vitality/vitality";
@@ -79,6 +80,10 @@ export class Character {
     return Crafting.of(this.state);
   }
 
+  get notes(): Notes {
+    return Notes.of(this.state);
+  }
+
   /**
    * Лист персонажа: основание — его собственные поля, вклады — от надетого и от действующего.
    *
@@ -128,6 +133,10 @@ export class Character {
 
   withCrafting(crafting: Crafting): Character {
     return new Character({ ...this.state, ...crafting.toState() });
+  }
+
+  withNotes(notes: Notes): Character {
+    return new Character({ ...this.state, ...notes.toState() });
   }
 
   /**

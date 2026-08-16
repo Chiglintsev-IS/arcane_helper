@@ -155,12 +155,15 @@ export function slotsLeft(stores: AppStores, level: number): number {
 }
 
 /**
- * Сторы над хранилищем, из которого сессия не открылась.
+ * Сторы над готовым хранилищем.
  *
  * Ядро и провод настоящие: испорчено ровно то, что портится в жизни, — содержимое хранилища или
  * доступ к нему. Подделка статуса стора проверяла бы подделку.
+ *
+ * Тем же входом проверяется перезапуск: одно хранилище, две сборки ядра — так видно, дошло ли
+ * записанное до хранилища или осталось в памяти открытой сессии.
  */
-async function storesOver(repository: SessionRepository): Promise<AppStores> {
+export async function storesOver(repository: SessionRepository): Promise<AppStores> {
   const clock = testClock();
   const core = createCore({
     repository,
