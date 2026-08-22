@@ -40,17 +40,12 @@ const FIRST_ROW = '[aria-label="Часто"] li, [aria-label^="Заклинан�
 
 /** Смена режима: она ничего не спрашивает — бой начинают и заканчивают кнопками в самом бою. */
 async function switchMode(page: Page, name: RegExp): Promise<void> {
-  await page.getByRole("button", { name }).click();
-}
-
-/** Режим из-под «Ещё»: своей ячейки в панели у него нет, и открывает его список. */
-async function switchUnderMore(page: Page, name: RegExp): Promise<void> {
-  await page.getByRole("button", { name: /^Ещё/ }).click();
-  await page.getByRole("dialog", { name: "Ещё" }).getByRole("button", { name }).click();
+  await page.getByRole("button", { name: /Режимы$/ }).click();
+  await page.getByRole("dialog", { name: "Режимы" }).getByRole("button", { name }).click();
 }
 
 async function switchToSheet(page: Page): Promise<void> {
-  await switchUnderMore(page, /^Лист/);
+  await switchMode(page, /^Лист/);
 }
 
 test("play-screen renders all resource blocks", async ({ page }) => {
@@ -420,10 +415,7 @@ test("state survives a reload", async ({ page }) => {
   // После перезапуска экран снова «Книга»: ни заголовка с именем, ни шапки ресурсов там нет,
   // поэтому признак загрузки — сам список.
   await expect(page.getByRole("list", { name: /^Заклинания/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Книга/ })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  await expect(page.getByRole("button", { name: /Режимы$/ })).toContainText("Книга");
 });
 
 test("the sheet mode survives a reload and feeds the header", async ({ page }) => {
@@ -633,19 +625,10 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
     await switchMode(page, /^Игра/);
     await scan(`${scheme}: игра`);
 
-    for (const mode of ["Книга", "Журнал", "Вещи", "Привал"]) {
+    for (const mode of ["Книга", "Журнал", "Вещи", "Привал", "Лист", "Ремесло", "Заметки"]) {
       await switchMode(page, new RegExp(`^${mode}`));
       await scan(`${scheme}: ${mode.toLowerCase()}`);
     }
-
-    await switchToSheet(page);
-    await scan(`${scheme}: лист`);
-
-    await switchUnderMore(page, /^Ремесло/);
-    await scan(`${scheme}: ремесло`);
-
-    await switchUnderMore(page, /^Заметки/);
-    await scan(`${scheme}: заметки`);
   }
 });
 

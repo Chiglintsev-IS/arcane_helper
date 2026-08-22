@@ -2,12 +2,13 @@
 
 import { useId, useState } from "react";
 
-import { type ScreenMode } from "@/ui/shared/model/screenMode";
-import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
+import { RULE_BLOCK, RULE_ROW, RULE_SECTION } from "@/ui/shared/ui/rule";
+import { SURFACE_GROUP_BARE, SURFACE_PAGE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
  * Подсказки не содержат слова «заклинания»: список на экране назван им же, и доступное имя кнопки
- * совпадало бы с ним по подстроке — поиск по метке находил бы вместе со списком и каждую ячейку.
+ * совпадало бы с ним по подстроке — поиск по метке находил бы вместе со списком и каждую строку.
  *
  * Боя среди режимов нет: он состояние игры, и отмечают его кнопкой внутри «Игры».
  */
@@ -22,28 +23,14 @@ const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   notes: { title: "Заметки", hint: "записанное о мире: места, имена, обещания" },
 };
 
-/** Своей ячейкой стоит то, что за столом спрашивают чаще всего. */
-const OWN_CELL: ScreenMode[] = ["play", "book", "things", "rest", "journal"];
+/** Имя дела панели: им зовётся и кнопка, и заголовок раскрытого списка. */
+const MODES = "Режимы";
 
-/** Остальное приходит списком: место в панели конечно, а режимов будет больше. */
-const UNDER_MORE: ScreenMode[] = ["sheet", "crafting", "notes"];
+/** Отметка показанного: слово, а не одна линейка. Цвет и линия читаются, но не произносятся. */
+const NOW = "сейчас";
 
-const MORE = "Ещё";
-
-/**
- * Отметка показанного: подложка своего значения, а не одна краска подписи. Она одна на панель и на
- * список под «Ещё» — режим показан один, и двумя отметками он читался бы как два разных.
- */
-const SELECTED = SURFACE_CHOSEN;
-
-const QUIET = "text-ink-quiet";
-
-/** Выбранная ячейка помечена подложкой своего значения — тем же способом, что и всё выбранное. */
-function cellClass(selected: boolean): string {
-  return `flex min-h-11 min-w-0 items-center justify-center px-0.5 text-xs font-medium ${
-    selected ? SELECTED : QUIET
-  }`;
-}
+/** Уход из списка без смены режима: то же нажатие, что и раскрыло его. */
+const CLOSE = "Закрыть";
 
 export function BottomNav({
   mode,
@@ -54,9 +41,7 @@ export function BottomNav({
 }) {
   const [listOpen, setListOpen] = useState(false);
   const titleId = useId();
-
-  // «Ещё» отмечен, пока показан режим из-под него: иначе панель отвечала бы, что не показано ничего.
-  const moreSelected = UNDER_MORE.includes(mode);
+  const current = LABELS[mode];
 
   return (
     <>
@@ -65,74 +50,80 @@ export function BottomNav({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 p-3 ${SURFACE_PANEL}`}
+          className={`fixed inset-0 z-20 flex flex-col ${SURFACE_PAGE}`}
         >
-          <h2 id={titleId} className="text-base font-semibold">
-            {MORE}
+          <h2
+            id={titleId}
+            className={`shrink-0 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-accent ${RULE_SECTION}`}
+          >
+            {MODES}
           </h2>
 
-          {UNDER_MORE.map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-current={value === mode ? "page" : undefined}
-              onClick={() => {
-                onChange(value);
-                setListOpen(false);
-              }}
-              className={`flex min-h-11 flex-col items-start px-3 py-2 text-left ${
-                value === mode ? SELECTED : SURFACE_CONTROL
-              }`}
-            >
-              <span className="text-sm font-semibold">{LABELS[value].title}</span>
-              <span className={`text-xs ${value === mode ? "" : QUIET}`}>{LABELS[value].hint}</span>
-            </button>
-          ))}
+          {/*
+           Свободная высота делится между восемью строками поровну: строка во весь экран промаха не
+           знает, и на 320 × 568 восемь строк по 56 пикселей умещаются без прокрутки.
+           */}
+          <div className="flex min-h-0 flex-1 flex-col">
+            {SCREEN_MODES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-current={value === mode ? "page" : undefined}
+                onClick={() => {
+                  onChange(value);
+                  setListOpen(false);
+                }}
+                className={`flex flex-1 items-center gap-3 px-3 text-left ${RULE_ROW} ${
+                  value === mode ? `${SURFACE_GROUP_BARE} ${RULE_BLOCK}` : ""
+                }`}
+              >
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span
+                    className={`text-sm font-semibold ${value === mode ? "text-accent" : ""}`}
+                  >
+                    {LABELS[value].title}
+                  </span>
+                  <span className="text-xs text-ink-quiet">{LABELS[value].hint}</span>
+                </span>
+                {value === mode ? (
+                  <span className="shrink-0 text-xs text-accent">{NOW}</span>
+                ) : null}
+              </button>
+            ))}
+          </div>
 
           <button
             type="button"
             onClick={() => setListOpen(false)}
-            className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
+            className={`h-[54px] shrink-0 px-3 text-sm text-ink-quiet ${SURFACE_PANEL}`}
           >
-            Закрыть
+            {CLOSE}
           </button>
         </section>
       )}
 
       {/*
        Панель держит системный отступ снизу сама: домашняя полоса iPhone лежит внутри `dvh`, и без
-       него нижний ряд ячеек уходил бы под неё.
+       него кнопка уходила бы под неё.
        */}
       <nav
         aria-label="Режим экрана"
-        className={`shrink-0 pb-[env(safe-area-inset-bottom)] ${SURFACE_CONTROL}`}
+        className={`shrink-0 pb-[env(safe-area-inset-bottom)] ${SURFACE_PANEL}`}
       >
-        <div className="grid grid-cols-6 p-1">
-          {OWN_CELL.map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-current={value === mode ? "page" : undefined}
-              aria-label={`${LABELS[value].title}: ${LABELS[value].hint}`}
-              onClick={() => onChange(value)}
-              className={cellClass(value === mode)}
-            >
-              <span className="truncate">{LABELS[value].title}</span>
-            </button>
-          ))}
-
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            aria-expanded={listOpen}
-            aria-current={moreSelected ? "page" : undefined}
-            aria-label={`${MORE}: ${UNDER_MORE.map((value) => LABELS[value].title).join(", ")}`}
-            onClick={() => setListOpen(true)}
-            className={cellClass(moreSelected)}
-          >
-            <span className="truncate">{MORE}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={listOpen}
+          aria-label={`${current.title}: ${current.hint}. ${MODES}`}
+          onClick={() => setListOpen(true)}
+          className="flex h-[54px] w-full items-center gap-2 px-3 text-left"
+        >
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="truncate text-sm font-semibold">{current.title}</span>
+            <span className="truncate text-[0.625rem] text-ink-quiet">{current.hint}</span>
+          </span>
+          <span className="ml-auto shrink-0 text-xs text-accent">{MODES}</span>
+        </button>
       </nav>
     </>
   );
