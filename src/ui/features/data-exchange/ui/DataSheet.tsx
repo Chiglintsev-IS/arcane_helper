@@ -14,6 +14,7 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, useState } from "react";
 
 import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
+import { StartOver } from "@/ui/features/data-exchange/ui/StartOver";
 import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function DataSheet({
@@ -22,6 +23,7 @@ export function DataSheet({
   error,
   catalogSource,
   onImport,
+  onStartOver,
   onRestoreBuiltInCatalog,
   onClose,
 }: {
@@ -32,6 +34,8 @@ export function DataSheet({
   /** Чем играют прямо сейчас: слово правил, а подпись к нему — дело экрана. */
   catalogSource: string;
   onImport: (raw: string) => void;
+  /** Заменить сохранённое чистым Торном сборки: другого способа очистить хранилище на телефоне нет. */
+  onStartOver: () => void;
   /** Вернуть карточки из сборки. Без обработчика кнопки нет: возвращать нечем. */
   onRestoreBuiltInCatalog?: () => void;
   onClose: () => void;
@@ -107,6 +111,8 @@ export function DataSheet({
           {error}
         </p>
       )}
+
+      <StartOver onConfirm={onStartOver} />
 
       <div className="flex gap-2">
         <button

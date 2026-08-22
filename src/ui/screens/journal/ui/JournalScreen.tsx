@@ -43,6 +43,10 @@ export function JournalScreen() {
             setImportError(failure);
             if (failure === null) setDataOpen(false);
           }}
+          onStartOver={() => {
+            setDataOpen(false);
+            void execute({ kind: "reset" });
+          }}
           onRestoreBuiltInCatalog={async () => {
             setImportError(await execute({ kind: "restore_built_in_catalog" }));
           }}

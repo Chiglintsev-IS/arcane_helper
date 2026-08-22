@@ -12,20 +12,15 @@
 "use client";
 
 import { RULE_MARK, RULE_ROW } from "@/ui/shared/ui/rule";
-import { useState } from "react";
-
 import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
-import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
+import { StartOver } from "@/ui/features/data-exchange/ui/StartOver";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
+import { SURFACE_GROUP, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 export function UnreadableSave() {
   const { session: sessionStore } = useStores();
   const reason = useSession((state) => state.error);
   const rawSave = useSession((state) => state.rawSave);
-
-  const [startingOver, setStartingOver] = useState(false);
 
   return (
     <main className="flex min-h-dvh flex-col gap-3 overflow-y-auto p-4">
@@ -62,32 +57,7 @@ export function UnreadableSave() {
       )}
 
       <hr className={`mt-2 ${RULE_ROW}`} />
-      <h2 className="text-sm font-semibold">Чистое состояние</h2>
-      <p className="text-xs text-ink-quiet">
-        Приложение начнёт с чистого Торна. Сохранение при этом заменяется — копию берут до, а не
-        после.
-      </p>
-      <button
-        type="button"
-        onClick={() => setStartingOver(true)}
-        className={`min-h-11 px-3 text-sm text-reaction ${SURFACE_CONTROL}`}
-      >
-        Начать заново
-      </button>
-
-      {startingOver ? (
-        <ConfirmSheet
-          title="Начать заново?"
-          body="Персонаж, журнал и загруженные карточки будут заменены чистыми. Вернуть их получится только из копии, забранной до очистки."
-          confirmLabel="Удалить и начать"
-          cancelLabel={BUTTON_LABELS.dismiss}
-          onConfirm={() => {
-            setStartingOver(false);
-            void sessionStore.getState().execute({ kind: "reset" });
-          }}
-          onCancel={() => setStartingOver(false)}
-        />
-      ) : null}
+      <StartOver onConfirm={() => void sessionStore.getState().execute({ kind: "reset" })} />
     </main>
   );
 }
