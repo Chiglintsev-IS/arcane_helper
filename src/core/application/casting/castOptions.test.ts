@@ -49,20 +49,27 @@ describe("castPlans: какие способы вообще есть", () => {
       { mode: "normal", payment: { kind: "slot", slotLevel: 2 } },
       { mode: "normal", payment: { kind: "slot", slotLevel: 3 } },
       { mode: "normal", payment: { kind: "slot", slotLevel: 4 } },
+      // Кровью — только первый: «Доспехи мага» от старшей ячейки ничего не получают.
       { mode: "normal", payment: { kind: "blood", castLevel: 1 } },
-      { mode: "normal", payment: { kind: "blood", castLevel: 2 } },
-      { mode: "normal", payment: { kind: "blood", castLevel: 3 } },
-      { mode: "normal", payment: { kind: "blood", castLevel: 4 } },
     ]);
   });
 
-  it("оплата кровью повышает уровень сотворения", () => {
-    const mageArmor = allSpells.find((spell) => spell.id === "mage-armor")!;
-    const bloodLevels = optionsOf(mageArmor, createThorne(), IN_COMBAT_TURN)
+  /** Уровни, которыми кровь платит за это заклинание. */
+  function bloodLevelsOf(id: string): number[] {
+    const spell = allSpells.find((candidate) => candidate.id === id)!;
+    return optionsOf(spell, createThorne(), IN_COMBAT_TURN)
       .filter((option) => option.payment.kind === "blood")
       .map((option) => (option.payment.kind === "blood" ? option.payment.castLevel : 0));
-    // Те же уровни, что и у ячеек пула: выше своей таблицы кровь не поднимает.
-    expect(bloodLevels).toEqual([1, 2, 3, 4]);
+  }
+
+  it("оплата кровью повышает уровень сотворения", () => {
+    // «Молния» растёт с уровнем, и кровь предлагает все уровни пула от собственного и выше.
+    expect(bloodLevelsOf("lightning-bolt")).toEqual([3, 4]);
+  });
+
+  it("дороже кровью платят только там, где повышение что-то даёт", () => {
+    // «Доспехам мага» старшая ячейка не даёт ничего, и предлагать за неё лишние хиты незачем.
+    expect(bloodLevelsOf("mage-armor")).toEqual([1]);
   });
 
   it("не предлагает оплату кровью там, где её цена неизвестна", () => {

@@ -702,16 +702,16 @@ test("blood pays for a slot inside the cast wizard", async ({ page }) => {
   await page.getByRole("button", { name: "Сотворить" }).click();
 
   // Ячейки пула целы, а кровь стоит рядом с ними своим уровнем и своей ценой в хитах.
-  await page.getByRole("button", { name: /^Кровью · ячейка 3 уровня/ }).click();
+  await page.getByRole("button", { name: /^Кровью · ячейка 1 уровня/ }).click();
   await page.getByRole("button", { name: "Далее" }).click();
-  await expect(page.getByText("Ячейку создаю кровью: 15 хитов.")).toBeVisible();
+  await expect(page.getByText("Ячейку создаю кровью: 6 хитов.")).toBeVisible();
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   // Пул ячеек не тронут: заплачено здоровьем и максимумом, и оба числа названы.
-  await expect(page.getByLabel("Чем платить")).toContainText("3 ур.3/3");
-  await expect(page.getByRole("region", { name: "Ресурсы" })).toContainText("45/45");
-  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 15");
+  await expect(page.getByLabel("Чем платить")).toContainText("1 ур.4/4");
+  await expect(page.getByRole("region", { name: "Ресурсы" })).toContainText("54/54");
+  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 6");
 });
 
 test("search reaches a row without scrolling", async ({ page }) => {

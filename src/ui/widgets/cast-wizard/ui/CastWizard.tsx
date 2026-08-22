@@ -217,19 +217,17 @@ function SlotStep({
   resources: ResourcesView;
   onChoose: (option: CastOptionView) => void;
 }) {
+  // Уровень сотворения приезжает посчитанным: разобранный здесь, он однажды сравнил бы две
+  // соседние строки как одну — так и вышло, когда уровень читался только у ячейки.
   const chosen = (option: CastOptionView): boolean =>
     option.mode === draft.option.mode &&
     option.payment.kind === draft.option.payment.kind &&
-    (option.payment.kind !== "slot" ||
-      draft.option.payment.kind !== "slot" ||
-      option.payment.slotLevel === draft.option.payment.slotLevel);
+    option.castLevel === draft.option.castLevel;
 
   return (
     <ul className="flex flex-col gap-1">
       {row.castOptions.map((option) => {
-        const key = `${option.mode}-${option.payment.kind}-${
-          option.payment.kind === "slot" ? option.payment.slotLevel : 0
-        }`;
+        const key = `${option.mode}-${option.payment.kind}-${option.castLevel ?? 0}`;
         return (
           <li key={key}>
             <button

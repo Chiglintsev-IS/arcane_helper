@@ -420,6 +420,8 @@ export const castOptionViewSchema = z.object({
   /** Режим словом правил: обычное сотворение, ритуал, заговор. */
   mode: word,
   payment: paymentSchema,
+  /** Уровень сотворения этим способом; нет вовсе — у заговора и ритуала его не бывает. */
+  castLevel: whole.optional(),
   /** Способ, которому мешает меньше всего: с него мастер и начинает. Ровно один в списке. */
   suggested: z.boolean(),
   available: z.boolean(),

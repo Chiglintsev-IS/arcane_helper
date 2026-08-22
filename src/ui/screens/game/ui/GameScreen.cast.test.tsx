@@ -346,17 +346,32 @@ describe("цель мастером не спрашивается (OQ-10)", () =
 })
 
 describe("недоступность руны названа причиной (FR-151)", () => {
+  it("выбранным отмечается ровно один способ", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<GameScreen />, withTurnTracking());
+    await openWizard(/^Молния/);
+
+    const pressed = () =>
+      screen.getAllByRole("button", { pressed: true }).map((button) => button.textContent);
+
+    await user.click(screen.getByRole("button", { name: /^Кровью · ячейка 3 уровня/ }));
+    expect(pressed()).toEqual([expect.stringContaining("Кровью · ячейка 3 уровня")]);
+
+    await user.click(screen.getByRole("button", { name: /^Кровью · ячейка 4 уровня/ }));
+    expect(pressed()).toEqual([expect.stringContaining("Кровью · ячейка 4 уровня")]);
+  });
+
   it("руна при оплате кровью считается от уровня сотворения", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />, withTurnTracking());
-    await openWizard(/^Паутина/);
+    await openWizard(/^Молния/);
 
-    await user.click(screen.getByRole("button", { name: /^Кровью · ячейка 3 уровня/ }));
+    await user.click(screen.getByRole("button", { name: /^Кровью · ячейка 4 уровня/ }));
 
-    // Кровь создала ячейку третьего уровня, и «Руна жизни» даёт за неё столько же, сколько за
+    // Кровь создала ячейку четвёртого уровня, и «Руна жизни» даёт за неё столько же, сколько за
     // ячейку из пула.
     const rune = screen.getByLabelText("Руна");
-    expect(within(rune).getByText(/15 временных хитов/)).toBeDefined();
+    expect(within(rune).getByText(/20 временных хитов/)).toBeDefined();
   });
 
   it("без рун объясняет, когда они вернутся", async () => {

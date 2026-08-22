@@ -115,9 +115,12 @@ function castOptionView(
   const price =
     option.payment.kind === "blood" ? bloodPrice(option.payment.castLevel, character) : null;
 
+  const level = castLevelOf(option.payment);
+
   return {
     mode: option.mode,
     payment: option.payment,
+    ...(level === undefined ? {} : { castLevel: level }),
     suggested: plan === plans.suggested,
     available: plan.availability.available,
     warnings: plan.availability.warnings.map((warning) => ({

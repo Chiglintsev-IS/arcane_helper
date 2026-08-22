@@ -263,14 +263,15 @@ describe("способы сотворения", () => {
   });
 
   it("способ кровью называет уровень и цену в хитах", () => {
-    const byLevel = (castLevel: number) =>
-      row("mage-armor").castOptions.find(
-        (option) => option.payment.kind === "blood" && option.payment.castLevel === castLevel,
+    const byLevel = (id: string, castLevel: number) =>
+      row(id).castOptions.find(
+        (option) => option.payment.kind === "blood" && option.castLevel === castLevel,
       );
 
-    // Цена уровня — 2 и 6 единиц, курс Торна — три хита за единицу.
-    expect(byLevel(1)).toMatchObject({ hitPointCost: 6 });
-    expect(byLevel(4)).toMatchObject({ hitPointCost: 18 });
+    // Цена уровня — 2, 5 и 6 единиц, курс Торна — три хита за единицу.
+    expect(byLevel("mage-armor", 1)).toMatchObject({ hitPointCost: 6 });
+    expect(byLevel("lightning-bolt", 3)).toMatchObject({ hitPointCost: 15 });
+    expect(byLevel("lightning-bolt", 4)).toMatchObject({ hitPointCost: 18 });
   });
 
   it("ритуальный способ называет, на сколько он длиннее обычного", () => {

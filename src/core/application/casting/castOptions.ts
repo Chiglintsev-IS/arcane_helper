@@ -16,6 +16,7 @@ import {
   type TurnResources,
 } from "@/core/application/casting/availability";
 import { bloodSlotLevels } from "@/core/domain/arcana/slots";
+import { benefitsFromHigherSlot } from "@/core/domain/catalog/scaling";
 import { castableSlotLevels, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
@@ -69,6 +70,19 @@ export function slotPriceOf(spell: Spell, inFight: boolean): number {
   return ritualAvailable(spell, inFight) ? 0 : spell.level;
 }
 
+/**
+ * Уровни, которыми кровь платит за это заклинание.
+ *
+ * Уровни те же, что у пула, но дорогие предлагаются только там, где повышение что-то даёт: запаса,
+ * который может кончиться, у крови нет, и отдать за ячейку больше здоровья, ничего не получив, —
+ * не выбор, а ошибка. Ячейка пула этим не связана: её предлагают всякую, потому что младшая
+ * кончается.
+ */
+function bloodLevels(spell: Spell, character: CharacterState): number[] {
+  const levels = bloodSlotLevels(character.spellSlots, spell.level);
+  return benefitsFromHigherSlot(spell) ? levels : levels.slice(0, 1);
+}
+
 /** Способ сотворения: режим плюс оплата. */
 export type CastOption = {
   mode: CastMode;
@@ -96,9 +110,7 @@ function castOptions(
     (slotLevel) => ({ mode: "normal", payment: { kind: "slot", slotLevel } }),
   );
 
-  // Кровь создаёт ту же ячейку, какой платят из пула: перечень уровней у них общий, и своего
-  // уровня у крови нет.
-  for (const castLevel of bloodSlotLevels(character.spellSlots, spell.level)) {
+  for (const castLevel of bloodLevels(spell, character)) {
     plans.push({ mode: "normal", payment: { kind: "blood", castLevel } });
   }
   if (ritualAvailable(spell, options.inCombat)) {
