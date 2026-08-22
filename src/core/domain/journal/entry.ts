@@ -24,6 +24,7 @@ export const JOURNAL_KINDS = [
   "arcane_recovery",
   "turn_started",
   "manual_adjustment",
+  /** Прежний вид записи: обмен хитов на очки. Живёт ради сохранений, сделанных до отмены очков. */
   "blood_exchange",
   "rune_spent",
   "hit_points_changed",

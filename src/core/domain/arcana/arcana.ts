@@ -1,7 +1,7 @@
 /**
  * Магические ресурсы: чем платят за сотворение.
  *
- * Объект-значение владеет ячейками, рунами, очками заклинаний, дневным бюджетом магического
+ * Объект-значение владеет ячейками, рунами, последней подсказкой, дневным бюджетом магического
  * восстановления и отметкой короткого отдыха, которая его открывает. Снаружи их не правят напрямую —
  * иначе проверка границ пришлось бы повторять у каждого вызывающего, и однажды её бы забыли.
  */
@@ -19,7 +19,6 @@ import {
   spendSlot,
   type SlotRecoveryPlan,
 } from "./slots";
-import { spellPointCost } from "./slots";
 import { runesMaximum } from "./runes";
 
 import type { ArcanaStateData } from "./schema";
@@ -30,7 +29,6 @@ type ArcanaState = Pick<
   | "spellSlots"
   | "runes"
   | "lastHint"
-  | "spellPoints"
   | "arcaneRecovery"
   | "shortRestSinceLongRest"
 >;
@@ -48,7 +46,6 @@ export class Arcana {
     "spellSlots",
     "runes",
     "lastHint",
-    "spellPoints",
     "arcaneRecovery",
     "shortRestSinceLongRest",
   ] as const satisfies readonly (keyof ArcanaState)[];
@@ -63,10 +60,6 @@ export class Arcana {
 
   get runes(): ResourcePool {
     return ResourcePool.from(this.state.runes, RUNES_RU);
-  }
-
-  get spellPoints(): number {
-    return this.state.spellPoints.remaining;
   }
 
   /** Перерасход разрешает только мастер: тогда остаток уходит в минус и виден как долг. */
@@ -96,25 +89,6 @@ export class Arcana {
   /** Подсказку тратит и возвращает игрок: повод и бросок ведёт стол, здесь считается запас. */
   shiftLastHint(delta: number): Arcana {
     return this.with({ lastHint: this.lastHint.shift(delta, LAST_HINT_RU).toState() });
-  }
-
-  spendSpellPoints(spellLevel: number, options: { allowAnyway?: boolean } = {}): Arcana {
-    const cost = spellPointCost(spellLevel);
-    if (this.spellPoints < cost && options.allowAnyway !== true) {
-      throw new DomainError(`Очков заклинаний ${this.spellPoints}, нужно ${cost}`);
-    }
-    return this.with({
-      spellPoints: { ...this.state.spellPoints, remaining: this.spellPoints - cost },
-    });
-  }
-
-  gainSpellPoints(count: number): Arcana {
-    return this.with({ spellPoints: { remaining: this.spellPoints + count } });
-  }
-
-  /** Час стирает то, что накопилось до него, независимо от того, сколько его успело набежать. */
-  expireSpellPoints(): Arcana {
-    return this.with({ spellPoints: { remaining: 0 } });
   }
 
   /** Короткий отдых был: отметка держится до долгого отдыха, который её и снимает. */
@@ -160,8 +134,8 @@ export class Arcana {
   }
 
   /**
-   * Долгий отдых возвращает всё разом; очки при этом гаснут — тот же итог, что и у любого часа.
-   * Отметка короткого отдыха снимается: восстановление снова ждёт короткого.
+   * Долгий отдых возвращает всё разом. Отметка короткого отдыха снимается: восстановление снова
+   * ждёт короткого.
    */
   restoredByLongRest(): Arcana {
     return this.with({
@@ -169,7 +143,6 @@ export class Arcana {
       runes: this.runes.restored().toState(),
       lastHint: this.lastHint.restored().toState(),
       arcaneRecovery: ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU).restored().toState(),
-      spellPoints: { remaining: 0 },
       shortRestSinceLongRest: false,
     });
   }

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withBloodExchange, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withBloodPaid, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot, type RenderWithStores } from "@/ui/app/testing/stores";
 import { HitPointsSheet } from "./HitPointsSheet";
 
@@ -84,7 +84,7 @@ describe("шторка хитов", () => {
 
   it("хиты: снижение кровью названо, но не правится (FR-240)", async () => {
     // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
-    const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
+    const hurt = withDamage(withBloodPaid(createThorne(), 1), 14);
     await openHitPoints(hurt);
     await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
 
@@ -95,7 +95,7 @@ describe("шторка хитов", () => {
   it("хиты: набранный максимум уходит владельцу, а действующий считает ядро (FR-240)", async () => {
     // Два очка кровью — 6 хитов и столько же максимума, потом 14 хитов урона.
     const onMaximum = vi.fn();
-    const hurt = withDamage(withBloodExchange(createThorne(), 2), 14);
+    const hurt = withDamage(withBloodPaid(createThorne(), 1), 14);
     await openHitPoints(hurt, { onMaximum });
     await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
 

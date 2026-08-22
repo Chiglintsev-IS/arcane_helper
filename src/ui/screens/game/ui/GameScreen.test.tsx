@@ -17,8 +17,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft, spell } from "@/ui/app/testing/stores";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import {
-  withBloodExchange,
-  withBloodSpent,
+  withBloodPaid,
   withDamage,
   withSpentSlots,
   withoutSlots,
@@ -61,9 +60,9 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(within(screen.getByLabelText("Ресурсы")).queryByText("Атака")).toBeNull();
 
     const paying = screen.getByLabelText("Чем платить");
-    // Четыре уровня ячеек и три пула: вопрос у них один, и ряд поэтому один. Ячейки всех уровней
+    // Четыре уровня ячеек и два пула: вопрос у них один, и ряд поэтому один. Ячейки всех уровней
     // ведут в одну правку и стоят в ряду одним нажимаемым местом.
-    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур.", "Руны", "Кости", "Очки"]) {
+    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур.", "Руны", "Кости"]) {
       expect(paying.textContent).toContain(named);
     }
     expect(within(paying).getAllByText("4/4").length).toBeGreaterThan(0);
@@ -190,8 +189,6 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const paying = within(screen.getByLabelText("Чем платить"));
     expect(paying.getByText("Кости d6")).toBeDefined();
     expect(paying.getByText("Руны")).toBeDefined();
-    // Очков у Торна нет, пока он не разменял кровь: пустой пул носит знак отказа при остатке.
-    expect(paying.getByText(/Очки/).closest("li")?.textContent).toContain("✗");
     expect(screen.queryByText(/Инициатива/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
@@ -294,21 +291,20 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
   it("«Прошёл час» доступен в «Игре» и в «Привале» одной и той же кнопкой (FR-173, FR-175)", async () => {
     const user = userEvent.setup();
-    // Три очка кровью: 9 хитов и столько же максимума ушли, очки на месте.
-    const reduced = withBloodExchange(createThorne(), 3);
+    // Заплачено кровью за ячейку второго уровня: 9 хитов и столько же максимума ушли.
+    const reduced = withBloodPaid(createThorne(), 2);
     await renderWithStores(<GameScreen />, reduced);
 
     // Кнопка стоит прямо в «Игре»: входа в отдельный блок ей больше не нужно.
     await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
     // На 7 уровне возвращается 3 за час: максимум 51 → 54, текущие не растут.
     expect(screen.getByLabelText("Ресурсы").textContent).toContain("51/54");
-    expect(screen.getByLabelText("Чем платить").textContent).toContain("Очки");
   });
 
   it("бой запрещает час: кнопка остаётся видимой, но недоступной с причиной (FR-215)", async () => {
     const user = userEvent.setup();
-    // Очки уже израсходованы: час вернёт только максимум, и подпись кнопки говорит ровно это.
-    const reduced = withBloodSpent(createThorne(), 3);
+    // Здоровье целое, снижен только максимум: час вернёт ступень, и подпись говорит ровно это.
+    const reduced = withBloodPaid(createThorne(), 2);
     await renderWithStores(<GameScreen />, reduced);
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
@@ -559,25 +555,6 @@ describe("конец боя (FR-216, FR-221)", () => {
 
 });
 
-describe("магия крови в списке действий (FR-207)", () => {
-  it("стоит в бою среди заклинаний и подчиняется тем же фильтрам", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<GameScreen />);
-
-    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
-
-    // Вниманием её не держат, значит фильтр концентрации её убирает: строка, остающаяся при любом
-    // фильтре, делает список лживым…
-    await user.click(screen.getByRole("button", { name: "Концентрация" }));
-    expect(screen.queryByRole("button", { name: /Магия крови/ })).toBeNull();
-
-    // …а снятый фильтр возвращает её на место.
-    await user.click(screen.getByRole("button", { name: "Концентрация" }));
-    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
-  });
-
-});
-
 describe("последняя подсказка в списке действий (FR-329)", () => {
   it("стоит строкой среди того, что ячейки не стоит, и открывается в чтение", async () => {
     const user = userEvent.setup();
@@ -810,7 +787,6 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
     expect(outOfFight.textContent).toContain("Руны");
     expect(outOfFight.textContent).toContain("3/3");
-    expect(outOfFight.textContent).toContain("Очки");
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
@@ -818,7 +794,6 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
     expect(inFight.textContent).toContain("Руны");
     expect(inFight.textContent).toContain("3/3");
-    expect(inFight.textContent).toContain("Очки");
   });
 
 });

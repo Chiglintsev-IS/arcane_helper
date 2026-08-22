@@ -11,11 +11,7 @@
 import type { Preview, PreviewOf, Question } from "@/contract/questions";
 
 import { Character } from "@/core/domain/assembly/character";
-import {
-  affordableSpellLevels,
-  arcaneRecoveryPlanCost,
-  validateArcaneRecovery,
-} from "@/core/domain/arcana/slots";
+import { arcaneRecoveryPlanCost, validateArcaneRecovery } from "@/core/domain/arcana/slots";
 import {
   RUNES,
   RUNE_LABEL,
@@ -38,13 +34,7 @@ import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
 import type { PropertyMatch, RecipeDifficulty } from "@/core/domain/crafting/recipe";
 import { refusalOf } from "@/core/domain/shared/errors";
 import { castLevelOf, type PaymentChoice } from "@/core/application/casting/availability";
-import {
-  bloodExchangeAnnouncement,
-  bloodExchangeInstructions,
-  bloodExchangePreview,
-  castInstructions,
-  renderAnnouncement,
-} from "@/core/application/casting/announcement";
+import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { exportFileName, exportSnapshot } from "@/core/application/dataExchange";
 import type { LiveSession } from "@/core/application/session";
 import { previewLevelChange } from "@/core/application/useCases/sheet";
@@ -298,17 +288,6 @@ export function answerQuestion(live: LiveSession, question: Question, now: strin
     };
   }
 
-  if (question.kind === "blood_exchange_preview") {
-    const { points } = question;
-    const exchange = bloodExchangePreview(points, character);
-    return {
-      kind: "blood_exchange_preview",
-      ...exchange,
-      affordableSpellLevel: affordableSpellLevels(exchange.pointsAfter).at(-1) ?? null,
-      instructions: bloodExchangeInstructions(points, character),
-      announcement: bloodExchangeAnnouncement(points, character),
-    };
-  }
 
   const { changes, hitPoints } = previewLevelChange(character, question.level);
   return {

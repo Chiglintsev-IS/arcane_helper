@@ -11,7 +11,7 @@
 
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { hitPointsForPoints, slotsInOrder } from "@/core/domain/arcana/slots";
+import { bloodSlotCost, slotsInOrder } from "@/core/domain/arcana/slots";
 import type { RevealedProperty } from "@/core/domain/crafting/schema";
 
 /** Столько-то ячеек уровня истрачено — как если бы их истратили сотворением. */
@@ -52,14 +52,12 @@ export function withDamage(character: CharacterState, damage: number): Character
   return root.withVitality(root.vitality.takeDamage(damage).vitality).toState();
 }
 
-/** Обмен кровью: хиты и максимум падают, очки заклинаний появляются. Курс называет владелец. */
-export function withBloodExchange(character: CharacterState, points: number): CharacterState {
+/** Заплачено кровью за ячейку такого-то уровня: хиты и максимум упали. Цену называет владелец. */
+export function withBloodPaid(character: CharacterState, castLevel: number): CharacterState {
   const root = Character.of(character);
-  const { vitality } = root.vitality.exchangeBlood(
-    hitPointsForPoints(points, root.base.level),
-    points,
-  );
-  return root.withVitality(vitality).withArcana(root.arcana.gainSpellPoints(points)).toState();
+  return root
+    .withVitality(root.vitality.payWithBlood(bloodSlotCost(castLevel, root.base.level)))
+    .toState();
 }
 
 /**
@@ -82,22 +80,6 @@ export function withIngredientKnowledge(
       ),
     )
     .toState();
-}
-
-/**
- * Максимум снижен кровью, а созданные очки уже израсходованы.
- *
- * Очки гаснут любым отмеченным часом, поэтому «были и кончились» — то же гашение, что за столом.
- */
-export function withBloodSpent(character: CharacterState, points: number): CharacterState {
-  const exchanged = Character.of(withBloodExchange(character, points));
-  return exchanged.withArcana(exchanged.arcana.expireSpellPoints()).toState();
-}
-
-/** Очки заклинаний в запасе: их создаёт обмен кровью, других источников у них нет. */
-export function withSpellPoints(character: CharacterState, points: number): CharacterState {
-  const root = Character.of(character);
-  return root.withArcana(root.arcana.gainSpellPoints(points)).toState();
 }
 
 /** Руны израсходованы «Знаками ограждения». */
@@ -133,15 +115,6 @@ export function withoutHitDice(character: CharacterState): CharacterState {
   const pool = character.hitDice;
   if (pool === undefined) return character;
   return withSpentHitDice(character, pool.remaining);
-}
-
-/** Очки заклинаний истрачены сотворением: цену уровня называют ресурсы. */
-export function withSpellPointsSpent(
-  character: CharacterState,
-  spellLevel: number,
-): CharacterState {
-  const root = Character.of(character);
-  return root.withArcana(root.arcana.spendSpellPoints(spellLevel)).toState();
 }
 
 /**

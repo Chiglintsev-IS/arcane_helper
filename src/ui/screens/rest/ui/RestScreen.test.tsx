@@ -15,11 +15,9 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
-import { withBloodExchange, withSpellPointsSpent } from "@/core/infrastructure/catalog/thorne/fixtures";
 import {
-  withBloodSpent,
+  withBloodPaid,
   withDamage,
-  withSpellPoints,
   withSpentSlots,
   withoutArcaneRecovery,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
@@ -271,18 +269,11 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
     it("только снижение максимума — называет только его", async () => {
-      // Три очка кровью уже израсходованы: час вернёт только максимум.
-      const reduced = withBloodSpent(createThorne(), 3);
+      // Здоровье целое, снижен только максимум: час вернёт ступень и больше ничего.
+      const reduced = withBloodPaid(createThorne(), 2);
       await renderWithStores(<RestScreen />, reduced);
 
       expect(screen.getByRole("button", { name: "Прошёл час · максимум +3" })).toBeDefined();
-    });
-
-    it("только непогашенные очки — называет их числом, а не намёком", async () => {
-      const withPoints = withSpellPoints(createThorne(), 5);
-      await renderWithStores(<RestScreen />, withPoints);
-
-      expect(screen.getByRole("button", { name: "Прошёл час · сгорит 5 очков" })).toBeDefined();
     });
 
     it("одна регенерация тоже называется: кнопка обещает всё, что случится", async () => {
@@ -294,14 +285,14 @@ describe("режим «Привал» и операции отдыха (FR-215, 
       expect(screen.getByRole("button", { name: "Прошёл час · регенерация +10" })).toBeDefined();
     });
 
-    it("снижение и очки вместе — называет оба факта", async () => {
-      // Три очка созданы кровью, два из них ушли на заклинание первого уровня.
-      const both = {
-        ...withSpellPointsSpent(withBloodExchange(createThorne(), 3), 1),
-      };
+    it("снижение и регенерация вместе — называет оба факта", async () => {
+      // Заплачено кровью за ячейку второго уровня, сверху получен урон: час вернёт и то, и другое.
+      const both = withDamage(withBloodPaid(createThorne(), 2), 31);
       await renderWithStores(<RestScreen />, both);
 
-      expect(screen.getByRole("button", { name: "Прошёл час · максимум +3, сгорит 1 очко" })).toBeDefined();
+      expect(
+        screen.getByRole("button", { name: "Прошёл час · максимум +3, регенерация +7" }),
+      ).toBeDefined();
     });
 
 

@@ -13,7 +13,7 @@ import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCa
 import { startCombat } from "@/core/application/useCases/turn";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
-  withBloodExchange,
+  withBloodPaid,
   withDamage,
   withoutArcaneRecovery,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
@@ -45,25 +45,24 @@ function refusalOf(run: () => Session): string {
 }
 
 describe("следующий час", () => {
-  it("называет возврат максимума, регенерацию и очки, которые сгорят", () => {
-    const session = fresh(withDamage(withBloodExchange(createThorne(), 2), 40));
+  it("называет возврат максимума и регенерацию", () => {
+    const session = fresh(withDamage(withBloodPaid(createThorne(), 1), 40));
 
     const { nextHour } = toRecoveryView(session);
 
     expect(nextHour.maximumReturned).toBeGreaterThan(0);
     expect(nextHour.healed).toBeGreaterThan(0);
-    expect(nextHour.spellPointsLost).toBe(2);
   });
 
-  it("целому персонажу обещает три нуля, а не отсутствие часа", () => {
+  it("целому персонажу обещает нули, а не отсутствие часа", () => {
     const { nextHour } = toRecoveryView(fresh());
 
-    expect(nextHour).toMatchObject({ maximumReturned: 0, healed: 0, spellPointsLost: 0 });
+    expect(nextHour).toMatchObject({ maximumReturned: 0, healed: 0 });
     expect(nextHour.unavailabilityRu).toBeUndefined();
   });
 
   it("в бою называет ту же причину, которой откажет сам час", () => {
-    const session = inFight(withBloodExchange(createThorne(), 2));
+    const session = inFight(withBloodPaid(createThorne(), 1));
 
     expect(toRecoveryView(session).nextHour.unavailabilityRu).toBe(
       refusalOf(() => recoverHitPointMaximum(session, OCCASION)),

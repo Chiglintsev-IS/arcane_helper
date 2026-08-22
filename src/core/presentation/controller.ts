@@ -62,7 +62,6 @@ import {
   removeItem,
 } from "@/core/application/useCases/equipment";
 import {
-  exchangeBlood,
   grantTemporaryHitPoints,
   heal,
   recoverHitPointMaximum,
@@ -246,15 +245,6 @@ export function applyCommand(
       return changed(heal(session, command.amount, occasion));
     case "grant_temporary_hit_points":
       return changed(grantTemporaryHitPoints(session, command.amount, occasion));
-    case "exchange_blood":
-      return changed(
-        exchangeBlood(
-          session,
-          command.spellPoints,
-          occasion,
-          command.allowAnyway === undefined ? {} : { allowAnyway: command.allowAnyway },
-        ),
-      );
     case "recover_hit_point_maximum":
       return changed(recoverHitPointMaximum(session, occasion));
     case "set_sunlight":

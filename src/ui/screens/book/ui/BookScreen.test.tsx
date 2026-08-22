@@ -140,55 +140,6 @@ describe("последняя подсказка в списке действий
   });
 });
 
-describe("магия крови в списке действий (FR-207)", () => {
-  it("её роль — «другое», и фильтр «Боевое» её тоже убирает", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<BookScreen />);
-
-    await user.click(screen.getByRole("button", { name: "Боевое" }));
-    expect(screen.queryByRole("button", { name: /Магия крови/ })).toBeNull();
-  });
-
-});
-
-describe("«Магия крови» в «Книге» (FR-207)", () => {
-  it("стоит в списке книги сразу за заговорами: очки покупают вне боя", async () => {
-    await inBookMode();
-
-    const list = screen.getByRole("list", { name: "Заклинания и действия" });
-    const names = within(list)
-      .getAllByRole("listitem")
-      .map((row) => row.textContent ?? "");
-
-    const blood = names.findIndex((text) => text.startsWith("Магия крови"));
-    const firstLevelled = names.findIndex((text) => text.startsWith("Щит"));
-    expect(blood).toBeGreaterThan(-1);
-    expect(blood).toBeLessThan(firstLevelled);
-  });
-
-  it("«Без ячейки» её оставляет, уровень ячейки — прячет (FR-212)", async () => {
-    const user = userEvent.setup();
-    await inBookMode();
-
-    await user.click(screen.getByRole("button", { name: "Без ячейки" }));
-    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
-
-    await user.click(screen.getByRole("button", { name: "Без ячейки" }));
-    await user.click(screen.getByRole("button", { name: "1 ур." }));
-    expect(screen.queryByText("Магия крови")).toBeNull();
-  });
-
-  it("«Подготовлено» её не прячет: подготовка к обмену не относится", async () => {
-    const user = userEvent.setup();
-    await inBookMode();
-
-    await user.click(screen.getByRole("button", { name: "Подготовлено" }));
-
-    expect(screen.getByRole("button", { name: /Магия крови/ })).toBeDefined();
-  });
-
-});
-
 describe("краткая карточка (FR-010)", () => {
   it("накладывание дольше хода называет точное время, а не категорию (FR-033)", async () => {
     await inBookMode();

@@ -2,20 +2,17 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { describe, expect, it } from "vitest";
 
 import {
-  affordableSpellLevels,
   applyArcaneRecovery,
   arcaneRecoveryBudget,
   arcaneRecoveryPlanCost,
-  ascensionTierRate,
   castableSlotLevels,
   consumesSlot,
-  hitPointsForPoints,
-  payableCastLevels,
-  maximumExchangePoints,
+  bloodSlotCost,
+  bloodSlotLevels,
   recoverableSlots,
   refundSlot,
   restoreAllSlots,
-  spellPointCost,
+  slotLevelPrice,
   spellSlotsForLevel,
   spendSlot,
   validateArcaneRecovery,
@@ -283,100 +280,77 @@ describe("applyArcaneRecovery", () => {
   });
 });
 
-describe("ascensionTierRate", () => {
+describe("курс ступени возвышения", () => {
   it.each([
     [1, 2],
     [4, 2],
     [5, 3],
-    [7, 3],
     [8, 3],
-    [9, 4],
     [12, 4],
-    [13, 5],
     [16, 5],
-    [17, 6],
     [20, 6],
-  ])("уровень %i даёт курс %i хитов за очко", (level, expected) => {
-    expect(ascensionTierRate(level)).toBe(expected);
+  ])("на %i уровне единица цены стоит %i хитов", (level, expected) => {
+    // Курс виден ценой ячейки первого уровня: она стоит две единицы.
+    expect(bloodSlotCost(1, level)).toBe(expected * 2);
   });
 
-  it.each([0, 21, 7.5])("отклоняет уровень %s", (level) => {
-    expect(() => ascensionTierRate(level)).toThrow(DomainError);
+  it.each([0, 21, 2.5])("отклоняет уровень персонажа %s", (level) => {
+    expect(() => bloodSlotCost(1, level)).toThrow(DomainError);
   });
 });
 
-describe("spellPointCost", () => {
+describe("slotLevelPrice", () => {
   it.each([
     [1, 2],
     [2, 3],
     [3, 5],
     [4, 6],
     [5, 7],
-  ])("заклинание %i уровня стоит %i очков", (spellLevel, expected) => {
-    expect(spellPointCost(spellLevel)).toBe(expected);
+  ])("ячейка %i уровня стоит %i единиц цены", (castLevel, expected) => {
+    expect(slotLevelPrice(castLevel)).toBe(expected);
   });
 
-  it.each([0, 6, 9])("отклоняет уровень заклинания %i", (spellLevel) => {
-    expect(() => spellPointCost(spellLevel)).toThrow(DomainError);
+  it.each([0, 6, 9])("отклоняет уровень %i: цены у него нет", (castLevel) => {
+    expect(() => slotLevelPrice(castLevel)).toThrow(DomainError);
   });
 });
 
-describe("payableCastLevels", () => {
+describe("bloodSlotCost", () => {
   it.each([
-    [1, [1, 2, 3, 4, 5]],
-    [3, [3, 4, 5]],
-    [5, [5]],
-    [6, []],
-  ])("заклинание %i уровня оплачивается кровью за уровни %j", (spellLevel, expected) => {
-    expect(payableCastLevels(spellLevel)).toEqual(expected);
+    [1, 6],
+    [2, 9],
+    [3, 15],
+    [4, 18],
+    [5, 21],
+  ])("ячейка %i уровня стоит %i хитов на ступени Торна", (castLevel, expected) => {
+    expect(bloodSlotCost(castLevel, 7)).toBe(expected);
   });
 
-  it("заговор кровью не оплачивается: уровня сотворения у него нет", () => {
-    expect(payableCastLevels(0)).toEqual([]);
-  });
-});
-
-describe("hitPointsForPoints", () => {
-  it("умножает очки на курс ступени", () => {
-    expect(hitPointsForPoints(2, 7)).toBe(6);
-    expect(hitPointsForPoints(2, 3)).toBe(4);
-  });
-
-  it("нулю очков соответствует ноль хитов", () => {
-    expect(hitPointsForPoints(0, 7)).toBe(0);
-  });
-
-  it.each([-1, 1.5])("отклоняет число очков %s", (points) => {
-    expect(() => hitPointsForPoints(points, 7)).toThrow(DomainError);
+  it("на первой ступени та же ячейка дешевле, на последней дороже", () => {
+    expect(bloodSlotCost(1, 3)).toBe(4);
+    expect(bloodSlotCost(4, 20)).toBe(36);
   });
 });
 
-describe("maximumExchangePoints", () => {
-  it("считает целые очки по курсу ступени", () => {
-    expect(maximumExchangePoints(20, 7)).toBe(6);
+describe("bloodSlotLevels", () => {
+  const thorne = spellSlotsForLevel(7);
+
+  it.each([
+    [1, [1, 2, 3, 4]],
+    [3, [3, 4]],
+    [4, [4]],
+    [5, []],
+  ])("кровь повторяет уровни пула, а не превосходит их: %i → %j", (spellLevel, expected) => {
+    expect(bloodSlotLevels(thorne, spellLevel)).toEqual(expected);
   });
 
-  it("остаток хитов очка не даёт", () => {
-    expect(maximumExchangePoints(8, 7)).toBe(2);
+  it("заговору ячейка не нужна, и кровь её не создаёт", () => {
+    expect(bloodSlotLevels(thorne, 0)).toEqual([]);
   });
 
-  it("не опускается ниже одного очка: обмен до нуля разрешён", () => {
-    expect(maximumExchangePoints(1, 7)).toBe(1);
-    expect(maximumExchangePoints(0, 7)).toBe(1);
-  });
-});
-
-describe("affordableSpellLevels", () => {
-  it("называет уровни, которые оплачиваются очками", () => {
-    expect(affordableSpellLevels(5)).toEqual([1, 2, 3]);
-  });
-
-  it("одного очка не хватает ни на что", () => {
-    expect(affordableSpellLevels(1)).toEqual([]);
-  });
-
-  it("выше пятого уровня очками не платят, сколько бы их ни было", () => {
-    expect(affordableSpellLevels(100)).toEqual([1, 2, 3, 4, 5]);
+  it("выше пятого уровня цены нет, сколько бы ячеек ни было у персонажа", () => {
+    // Волшебник 17 уровня платит ячейками до девятого, но кровью — только до пятого.
+    expect(bloodSlotLevels(spellSlotsForLevel(17), 4)).toEqual([4, 5]);
   });
 });
 

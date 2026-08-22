@@ -9,8 +9,8 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { withPlural } from "@/shared/language";
 
-/** Раны за обмен, опустивший здоровье до нуля: одна за сам факт и по одной за каждые три очка. */
-const WOUNDS_PER_POINTS = 3;
+/** За сколько единиц цены прибавляется ещё одна рана. */
+const WOUNDS_PER_PRICE_UNIT = 3;
 
 function assertLevel(level: number): void {
   if (
@@ -22,30 +22,24 @@ function assertLevel(level: number): void {
   }
 }
 
-/** Состоявшийся обмен: очки выбирает игрок, хиты считаются по курсу до подтверждения. */
-export type Exchange = {
-  hitPointsSpent: number;
-  pointsCreated: number;
-};
-
-/** Раны за обмен, опустивший здоровье до нуля. */
-function woundsFromExchange(pointsCreated: number): number {
-  if (!Number.isInteger(pointsCreated) || pointsCreated < 0) {
-    throw new DomainError(`Число очков должно быть целым неотрицательным, получено: ${pointsCreated}`);
+/** Раны за плату, опустившую здоровье до нуля: одна за факт и по одной за каждые три единицы цены. */
+function woundsFromPrice(levelPrice: number): number {
+  if (!Number.isInteger(levelPrice) || levelPrice < 0) {
+    throw new DomainError(`Цена уровня должна быть целой неотрицательной, получено: ${levelPrice}`);
   }
-  return 1 + Math.floor(pointsCreated / WOUNDS_PER_POINTS);
+  return 1 + Math.floor(levelPrice / WOUNDS_PER_PRICE_UNIT);
 }
 
 /**
- * Чем грозит обмен, опускающий здоровье до нуля.
+ * Чем грозит плата кровью, опускающая здоровье до нуля.
  *
- * Фраза одна на всех, кто предупреждает: обмен ради запаса и оплата кровью прямо в сотворении
- * называют одно и то же одними словами.
+ * Фраза одна на всех, кто предупреждает: строка списка и мастер применения называют одно и то же
+ * одними словами.
  */
-export function woundsWarningRu(pointsCreated: number): string {
+export function woundsWarningRu(levelPrice: number): string {
   return (
-    "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка —" +
-    ` итого ${withPlural(woundsFromExchange(pointsCreated), ["рана", "раны", "ран"])}`
+    "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три единицы цены —" +
+    ` итого ${withPlural(woundsFromPrice(levelPrice), ["рана", "раны", "ран"])}`
   );
 }
 

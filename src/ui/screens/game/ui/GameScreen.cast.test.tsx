@@ -16,7 +16,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft, spell } from "@/ui/app/testing/stores";
 import {
   withDamage,
-  withSpellPoints,
   withoutHitDice,
   withoutRunes,
   withoutSlots,
@@ -349,13 +348,13 @@ describe("цель мастером не спрашивается (OQ-10)", () =
 describe("недоступность руны названа причиной (FR-151)", () => {
   it("руна при оплате кровью считается от уровня сотворения", async () => {
     const user = userEvent.setup();
-    const rich = withSpellPoints(withTurnTracking(), 6);
-    await renderWithStores(<GameScreen />, rich);
+    await renderWithStores(<GameScreen />, withTurnTracking());
     await openWizard(/^Паутина/);
 
-    await user.click(screen.getByRole("button", { name: /^Кровью, 3 уровень/ }));
+    await user.click(screen.getByRole("button", { name: /^Кровью · ячейка 3 уровня/ }));
 
-    // Кровь оплатила третий уровень, и «Руна жизни» даёт за него столько же, сколько за ячейку.
+    // Кровь создала ячейку третьего уровня, и «Руна жизни» даёт за неё столько же, сколько за
+    // ячейку из пула.
     const rune = screen.getByLabelText("Руна");
     expect(within(rune).getByText(/15 временных хитов/)).toBeDefined();
   });

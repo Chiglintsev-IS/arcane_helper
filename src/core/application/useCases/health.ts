@@ -1,12 +1,11 @@
 /**
- * Здоровье: урон, лечение, временные хиты, обмен крови на очки заклинаний, подавление.
+ * Здоровье: урон, лечение, временные хиты, час, подавление.
  *
  * Проверку концентрации приложение здесь не запускает: сложность оно называет, а бросает игрок.
  */
 
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
-import { hitPointsForPoints } from "@/core/domain/arcana/slots";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 import { inFight } from "./turn";
 
@@ -57,35 +56,6 @@ export function grantTemporaryHitPoints(session: Session, amount: number, occasi
 }
 
 /**
- * Обмен хитов на очки заклинаний. Принимает количество очков; количество хитов вычисляется
- * внутри по курсу ступени возвышения персонажа.
- * Потеря хитов уроном не считается и проверку концентрации не порождает.
- */
-export function exchangeBlood(
-  session: Session,
-  spellPoints: number,
-  occasion: Occasion,
-  options: { allowAnyway?: boolean } = {},
-): Session {
-  const root = Character.of(session.character);
-  const hitPoints = hitPointsForPoints(spellPoints, root.base.level);
-  const { vitality, exchange } = root.vitality.exchangeBlood(hitPoints, spellPoints, options);
-  const withPoints = root
-    .withVitality(vitality)
-    .withArcana(root.arcana.gainSpellPoints(exchange.pointsCreated));
-
-  return commit(
-    session,
-    withPoints,
-    {
-      kind: "blood_exchange",
-      summaryRu: `Кровавое колдовство: ${exchange.hitPointsSpent} хитов → ${exchange.pointsCreated} очков`,
-    },
-    occasion,
-  );
-}
-
-/**
  * Что долечила регенерация. Строка одна на все отрезки времени, за которые она идёт: назвать её
  * дважды значило бы получить два разных слова об одном и том же росте хитов.
  */
@@ -93,16 +63,9 @@ export function regenerationNote(healed: number): string[] {
   return healed > 0 ? [`регенерация +${healed}`] : [];
 }
 
-/**
- * Строки журнала одного часа: что вернулось максимуму, что долечила регенерация, что погашено
- * очками заклинаний. Последние два — следствия именно часа, и короче часа за ними не идут.
- */
-function hourNotes(returned: number, healed: number, hadSpellPoints: boolean): string[] {
-  return [
-    ...(returned > 0 ? [`максимум +${returned}`] : []),
-    ...regenerationNote(healed),
-    ...(hadSpellPoints ? ["очки заклинаний погашены"] : []),
-  ];
+/** Строки журнала одного часа: что вернулось максимуму и что долечила регенерация. */
+function hourNotes(returned: number, healed: number): string[] {
+  return [...(returned > 0 ? [`максимум +${returned}`] : []), ...regenerationNote(healed)];
 }
 
 /**
@@ -118,11 +81,8 @@ export function hourUnavailability(session: Session): string | null {
 const IN_FIGHT_HOUR_REASON = "Пока идёт бой, час пройти не может";
 
 /**
- * Почасовое восстановление максимума хитов и погашение очков заклинаний. Час отмечает игрок:
- * таймеров в приложении нет, а внутри боевого раунда часа не бывает.
- *
- * Очки заклинаний гаснут любым отмеченным часом независимо от подавления: оно решает только за
- * восстановление максимума и регенерацию, а очки истекают сами по себе.
+ * Почасовое восстановление максимума хитов. Час отмечает игрок: таймеров в приложении нет, а внутри
+ * боевого раунда часа не бывает.
  */
 export function recoverHitPointMaximum(session: Session, occasion: Occasion): Session {
   const unavailability = hourUnavailability(session);
@@ -130,10 +90,9 @@ export function recoverHitPointMaximum(session: Session, occasion: Occasion): Se
     throw new DomainError(unavailability);
   }
   const root = Character.of(session.character);
-  const hadSpellPoints = root.arcana.spellPoints > 0;
   const { vitality, returned, healed } = root.vitality.afterAnHour(root.base.level);
 
-  if (returned <= 0 && healed <= 0 && !hadSpellPoints) {
+  if (returned <= 0 && healed <= 0) {
     if (root.vitality.suppressed && root.vitality.bloodReduction > 0) {
       throw new DomainError(
         root.vitality.firedUpon
@@ -141,16 +100,15 @@ export function recoverHitPointMaximum(session: Session, occasion: Occasion): Se
           : "Под прямым солнечным светом особенности не действуют",
       );
     }
-    throw new DomainError("Восстанавливать максимум и гасить очки заклинаний нечего");
+    throw new DomainError("Восстанавливать максимум нечего");
   }
 
-  const after = root.withVitality(vitality).withArcana(root.arcana.expireSpellPoints());
   return commit(
     session,
-    after,
+    root.withVitality(vitality),
     {
       kind: "hit_points_changed",
-      summaryRu: `Прошёл час: ${hourNotes(returned, healed, hadSpellPoints).join(", ")}`,
+      summaryRu: `Прошёл час: ${hourNotes(returned, healed).join(", ")}`,
     },
     occasion,
   );

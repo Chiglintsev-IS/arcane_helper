@@ -61,7 +61,6 @@ const CASTING_TIME: Record<string, CastingTimeBadge> = {
   reaction: { label: "Реакция", icon: TONE_GLYPH.reaction, tone: "reaction" },
   minute: { label: "Минуты", icon: "◷", tone: "muted" },
   hour: { label: "Часы", icon: "◷", tone: "muted" },
-  free: { label: "Не тратит ход", icon: "◷", tone: "muted" },
 };
 
 /** Значок времени накладывания: незнакомое время показывается серым, а не пропадает со строки. */

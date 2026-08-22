@@ -304,42 +304,44 @@ export function applyArcaneRecovery(
   return recovered;
 }
 
-// ── Тариф кровавого колдовства ──────────────────────────────────────────────
-// Знание о стоимости очков принадлежит arcana: ячейки, очки и тариф — одно пространство.
+// ── Цена ячейки, созданной кровью ───────────────────────────────────────────
+// Цена уровня принадлежит arcana: ячейки и их цена — одно пространство. Во что она обходится в
+// хитах, решает курс ступени возвышения, и произведение считается здесь же: результатом называют
+// ячейку, а ячейки — этот ресурс.
 
-/** Максимальный уровень заклинания, который вообще оплачивается очками. */
-const MAXIMUM_PAYABLE_SPELL_LEVEL = 5;
+/** Максимальный уровень ячейки, которую вообще создаёт кровь. */
+const MAXIMUM_BLOOD_SLOT_LEVEL = 5;
 
-/** Стоимость заклинания в очках заклинаний по уровню. */
-const SPELL_POINT_COSTS: Readonly<Record<number, number>> = { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7 };
+/** Цена ячейки каждого уровня в единицах цены. */
+const SLOT_LEVEL_PRICES: Readonly<Record<number, number>> = { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7 };
 
-/** Ступени возвышения: сколько хитов отдаётся за одно очко заклинаний. */
-const ASCENSION_TIERS: readonly { readonly upToLevel: number; readonly hitPointsPerPoint: number }[] = [
-  { upToLevel: 4, hitPointsPerPoint: 2 },
-  { upToLevel: 8, hitPointsPerPoint: 3 },
-  { upToLevel: 12, hitPointsPerPoint: 4 },
-  { upToLevel: 16, hitPointsPerPoint: 5 },
-  { upToLevel: 20, hitPointsPerPoint: 6 },
+/** Ступени возвышения: сколько хитов отдаётся за одну единицу цены. */
+const ASCENSION_TIERS: readonly { readonly upToLevel: number; readonly hitPointsPerUnit: number }[] = [
+  { upToLevel: 4, hitPointsPerUnit: 2 },
+  { upToLevel: 8, hitPointsPerUnit: 3 },
+  { upToLevel: 12, hitPointsPerUnit: 4 },
+  { upToLevel: 16, hitPointsPerUnit: 5 },
+  { upToLevel: 20, hitPointsPerUnit: 6 },
 ];
 
-/** Стоимость заклинания в очках заклинаний. */
-export function spellPointCost(spellLevel: number): number {
-  const cost = SPELL_POINT_COSTS[spellLevel];
-  if (cost === undefined) {
+/** Цена ячейки указанного уровня в единицах цены. */
+export function slotLevelPrice(castLevel: number): number {
+  const price = SLOT_LEVEL_PRICES[castLevel];
+  if (price === undefined) {
     throw new DomainError(
-      `Очками заклинаний оплачиваются только уровни 1…${MAXIMUM_PAYABLE_SPELL_LEVEL}, получено: ${spellLevel}`,
+      `Кровь создаёт только ячейки уровней 1…${MAXIMUM_BLOOD_SLOT_LEVEL}, получено: ${castLevel}`,
     );
   }
-  return cost;
+  return price;
 }
 
 /**
- * Курс обмена на данном уровне. Для Торна (7 уровень) — 3 хита за очко.
+ * Курс на данном уровне. Для Торна (7 уровень) — 3 хита за единицу цены.
  *
  * Поиск ступени служит и проверкой уровня: нецелый, нулевой и запредельный уровень
  * не попадают ни в одну ступень.
  */
-export function ascensionTierRate(level: number): number {
+function ascensionTierRate(level: number): number {
   const tier =
     Number.isInteger(level) && level >= MINIMUM_CHARACTER_LEVEL
       ? ASCENSION_TIERS.find((candidate) => level <= candidate.upToLevel)
@@ -347,53 +349,33 @@ export function ascensionTierRate(level: number): number {
   if (tier === undefined) {
     throw new DomainError(`Уровень персонажа вне допустимого диапазона: ${level}`);
   }
-  return tier.hitPointsPerPoint;
+  return tier.hitPointsPerUnit;
 }
 
-/** Цена очков в хитах: очки, умноженные на курс ступени. */
-export function hitPointsForPoints(points: number, level: number): number {
-  if (!Number.isInteger(points) || points < 0) {
-    throw new DomainError(`Число очков должно быть целым неотрицательным, получено: ${points}`);
-  }
-  return points * ascensionTierRate(level);
+/** Цена ячейки в хитах: цена уровня, умноженная на курс ступени. */
+export function bloodSlotCost(castLevel: number, characterLevel: number): number {
+  return slotLevelPrice(castLevel) * ascensionTierRate(characterLevel);
 }
-
-/** Меньше одного очка обмен не создаёт: половины очка в правилах нет. */
-export const MINIMUM_EXCHANGE_POINTS = 1;
 
 /**
- * Потолок одного обмена: сколько очков покупается на текущие хиты.
+ * Уровни ячеек, которые кровь создаёт для этого заклинания.
  *
- * Не меньше одного даже при нехватке хитов: обмен до нуля разрешён и даёт раны, а запрещать его —
- * решение за игрока. Нехватку называет отдельная проверка доступности.
+ * Кровь повторяет ячейку, а не превосходит её: создаётся только тот уровень, до которого персонаж
+ * дорос, — те же уровни, какими он платит из пула. Сверх этого перечень ограничен ценой: выше
+ * пятого уровня её нет вовсе.
  */
-export function maximumExchangePoints(currentHitPoints: number, level: number): number {
-  return Math.max(
-    MINIMUM_EXCHANGE_POINTS,
-    Math.floor(currentHitPoints / ascensionTierRate(level)),
+export function bloodSlotLevels(slots: SpellSlots, spellLevel: number): number[] {
+  return castableSlotLevels(slots, spellLevel).filter(
+    (level) => level <= MAXIMUM_BLOOD_SLOT_LEVEL,
   );
 }
 
-/**
- * Уровни, за которые платят очками при сотворении заклинания: от собственного уровня до пятого.
- *
- * Кровь повышает сотворение так же, как ячейка старшего уровня, и перечень уровней у неё свой:
- * выше пятого очками не платят вовсе, поэтому заклинание шестого и старше остаётся без способа.
- */
-export function payableCastLevels(spellLevel: number): number[] {
-  if (spellLevel === CANTRIP_LEVEL) return [];
-  const levels: number[] = [];
-  for (let level = spellLevel; level <= MAXIMUM_PAYABLE_SPELL_LEVEL; level += 1) {
-    levels.push(level);
-  }
-  return levels;
+/** Есть ли у персонажа ячейки такого уровня вообще. Кровь их не заводит, а повторяет. */
+export function hasSlotLevel(slots: SpellSlots, slotLevel: number): boolean {
+  return slots[slotLevel] !== undefined;
 }
 
-/** Уровни заклинаний, которые оплачиваются указанным числом очков. */
-export function affordableSpellLevels(points: number): number[] {
-  const levels: number[] = [];
-  for (let level = MINIMUM_SPELL_LEVEL; level <= MAXIMUM_PAYABLE_SPELL_LEVEL; level += 1) {
-    if (spellPointCost(level) <= points) levels.push(level);
-  }
-  return levels;
+/** Фраза об уровне, которого у персонажа нет: её произносят и ячейка, и кровь. */
+export function noSlotLevelRu(slotLevel: number): string {
+  return `Ячеек ${slotLevel} уровня у персонажа нет`;
 }

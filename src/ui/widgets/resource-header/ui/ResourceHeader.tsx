@@ -333,11 +333,6 @@ export function ResourceHeader({
           }}
         />
         <PoolCounter captionRu={dice.nameRu} value={dice.remaining} available={dice.available} />
-        <PoolCounter
-          captionRu="Очки"
-          value={`${resources.spellPoints}`}
-          available={resources.spellPoints > 0}
-        />
       </ul>
     </section>
   );

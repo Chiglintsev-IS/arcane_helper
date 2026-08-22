@@ -193,7 +193,6 @@ const RAW: unknown = {
   // на счёт костей не влияют: это надбавка к максимуму, а не замена кости.
   hitDice: { total: 7, size: 6, remaining: 7 },
   runes: { maximum: RUNES_MAXIMUM, remaining: RUNES_MAXIMUM },
-  spellPoints: { remaining: 0 },
   suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
 
   /**

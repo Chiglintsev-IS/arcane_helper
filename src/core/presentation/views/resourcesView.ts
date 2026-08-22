@@ -33,7 +33,6 @@ export function toResourcesView(session: Session): ResourcesView {
     })),
     runes: { remaining: runes.remaining, maximum: runes.maximum },
     lastHint: { nameRu: LAST_HINT_RU, remaining: lastHint.remaining, maximum: lastHint.maximum },
-    spellPoints: root.arcana.spellPoints,
     armorClassAdjustment: root.effects.manualAdjustment("armorAdjustment"),
     passivePerception: root.sheet.value("passivePerception"),
     initiative: root.sheet.value("initiative"),

@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 
-import { BLOOD_MAGIC_TRAITS, lastHintTraits } from "@/ui/shared/model/actionTraits";
+import { lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 
-import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 import { LastHintRow } from "@/ui/features/last-hint/ui/LastHintRow";
 import { LastHintSheet } from "@/ui/features/last-hint/ui/LastHintSheet";
-import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
@@ -31,7 +29,6 @@ export function BookScreen() {
   const [filters, setFilters] = useState(NO_FILTERS);
   const [searchOpen, setSearchOpen] = useState(false);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
-  const [bloodOpen, setBloodOpen] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [preparationRefusal, setPreparationRefusal] = useState<string | null>(null);
 
@@ -69,7 +66,6 @@ export function BookScreen() {
   const inMode = spellsForScreen(snapshot.spells, "book");
   const shown = filterSpells(inMode, filters);
   const dividing = dividingCategories(inMode);
-  const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
   const hintTraits = lastHintTraits(snapshot.resources.lastHint.nameRu);
   const hintShown = matchesActionRow(hintTraits, filters);
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
@@ -83,20 +79,6 @@ export function BookScreen() {
       onTogglePrepared={!inFight ? () => void togglePreparation(spell.id) : undefined}
     />
   ));
-  if (bloodShown) {
-    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "book"), 0, (
-      <BloodMagicRow
-        key="blood-magic"
-        bloodMagic={snapshot.bloodMagic}
-        casting={casting}
-        resources={snapshot.resources}
-        onOpen={() => {
-          closeSearch();
-          setBloodOpen(true);
-        }}
-      />
-    ));
-  }
   if (hintShown) {
     rows.splice(positionInList(shown, hintTraits, "book"), 0, (
       <LastHintRow
@@ -109,7 +91,7 @@ export function BookScreen() {
       />
     ));
   }
-  const listLabel = spellListLabel(bloodShown || hintShown);
+  const listLabel = spellListLabel(hintShown);
   const counted = `${casting.preparedCount} из ${casting.preparedLimit}`;
   const refused = !inFight && preparationRefusal !== null;
   const reason = inFight ? PREPARATION_OUT_OF_FIGHT : preparationRefusal;
@@ -180,22 +162,6 @@ export function BookScreen() {
         />
       )}
 
-      {bloodOpen ? (
-        <BloodMagicWizard
-          bloodMagic={snapshot.bloodMagic}
-          hitPoints={snapshot.sheet.hitPoints}
-          error={error}
-          onCancel={() => setBloodOpen(false)}
-          onConfirm={async (points, allowAnyway) => {
-            const failure = await execute({
-              kind: "exchange_blood",
-              spellPoints: points,
-              allowAnyway,
-            });
-            if (failure === null) setBloodOpen(false);
-          }}
-        />
-      ) : null}
 
       <CastWizard
         row={castRow}

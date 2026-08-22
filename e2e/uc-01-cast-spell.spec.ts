@@ -65,7 +65,6 @@ test("play-screen renders all resource blocks", async ({ page }) => {
   await expect(paying).toContainText("4 ур.");
   await expect(paying).toContainText("Руны");
   await expect(paying).toContainText("Кости d6");
-  await expect(paying).toContainText("Очки");
 
   // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет. Экономия хода
   // приходит с боем, а бонусное действие появилось вместе с «Туманным шагом».
@@ -278,10 +277,9 @@ test("book mode shows only the book", async ({ page }) => {
   await expect(page.getByLabel("Чем платить")).toHaveCount(0);
   await expect(page.getByLabel("Прочие ресурсы")).toHaveCount(0);
 
-  // Остаётся то, ради чего книгу открывают: состав, подготовка со счётчиком и фильтры. «Магия
-  // крови» в составе: она подчиняется тем же фильтрам, что и заклинания.
+  // Остаётся то, ради чего книгу открывают: состав, подготовка со счётчиком и фильтры.
   await expect(page.getByLabel(/^Подготовлено \d+ из \d+/)).toBeVisible();
-  await expect(page.getByRole("button", { name: /Магия крови/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Последняя подсказка/ })).toBeVisible();
 });
 
 test("filter by casting time", async ({ page }) => {
@@ -297,8 +295,8 @@ test("filter by casting time", async ({ page }) => {
 
   // Снимаем тот же переключатель: кнопки сброса нет — выбранное снимают там, где поставили.
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
-  // Вся книга Торна с заговорами и две строки-не-заклинания: «Магия крови» и последняя подсказка.
-  await expect(list.getByRole("listitem")).toHaveCount(31);
+  // Вся книга Торна с заговорами и одна строка-не-заклинание: последняя подсказка.
+  await expect(list.getByRole("listitem")).toHaveCount(30);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {
@@ -697,27 +695,23 @@ test("combat keeps camp mode reachable, but rest refuses with a reason", async (
   await expect(page.getByLabel("Чем платить")).toContainText("4/4");
 });
 
-test("blood exchange goes through the wizard, not one tap", async ({ page }) => {
-  // Бой начат: обмен хода не занимает, и видно это там, где ход считается.
+test("blood pays for a slot inside the cast wizard", async ({ page }) => {
+  // Бой начат: кровь хода не занимает, и видно это там, где ход считается.
   await page.getByRole("button", { name: /^Начать бой/ }).click();
-  await page.getByRole("button", { name: /Магия крови/ }).click();
+  await page.getByRole("button", { name: /Доспехи мага/ }).click();
+  await page.getByRole("button", { name: "Сотворить" }).click();
 
-  // Строка списка ничего не списала: до подтверждения состояние персонажа не меняется. Пустой пул
-  // называет себя знаком отказа при остатке, а не при подписи.
-  await expect(page.getByLabel("Чем платить")).toContainText("Очки✗ 0");
-  await expect(page.getByLabel("Сколько очков создать")).toContainText("6 хитов");
-
-  // Счётчик создаёт запас на два заклинания первого уровня одним обменом.
-  await page.getByRole("button", { name: "Больше очков" }).click();
-  await page.getByRole("button", { name: "Больше очков" }).click();
-  await expect(page.getByLabel("Сколько очков создать")).toContainText("12 хитов");
-
+  // Ячейки пула целы, а кровь стоит рядом с ними своим уровнем и своей ценой в хитах.
+  await page.getByRole("button", { name: /^Кровью · ячейка 3 уровня/ }).click();
   await page.getByRole("button", { name: "Далее" }).click();
-  await expect(page.getByText("Обмениваю 12 хитов на 4 очка заклинаний.")).toBeVisible();
+  await expect(page.getByText("Ячейку создаю кровью: 15 хитов.")).toBeVisible();
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  await expect(page.getByLabel("Чем платить")).toContainText("Очки4");
-  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 12");
+
+  // Пул ячеек не тронут: заплачено здоровьем и максимумом, и оба числа названы.
+  await expect(page.getByLabel("Чем платить")).toContainText("3 ур.3/3");
+  await expect(page.getByRole("region", { name: "Ресурсы" })).toContainText("45/45");
+  await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 15");
 });
 
 test("search reaches a row without scrolling", async ({ page }) => {
@@ -737,5 +731,5 @@ test("search reaches a row without scrolling", async ({ page }) => {
   await lightning.click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await expect(page.getByRole("searchbox", { name: "Поиск по названию" })).toBeHidden();
-  await expect(list.getByRole("listitem")).toHaveCount(21);
+  await expect(list.getByRole("listitem")).toHaveCount(20);
 });

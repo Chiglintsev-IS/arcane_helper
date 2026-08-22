@@ -15,7 +15,6 @@ import {
   suppressedByFire,
   suppressionReason,
   traitsSuppressed,
-  type Exchange,
 } from "./blood";
 import {
   effectiveMaximum,
@@ -183,33 +182,25 @@ export class Vitality {
     });
   }
 
-  /** Обмен хитов на очки заклинаний: платит и максимум, и текущее здоровье. */
-  exchangeBlood(
-    hitPoints: number,
-    spellPoints: number,
-    options: { allowAnyway?: boolean } = {},
-  ): { vitality: Vitality; exchange: Exchange } {
+  /** Плата кровью за ячейку: отданные хиты снижают и текущее здоровье, и максимум. */
+  payWithBlood(hitPoints: number, options: { allowAnyway?: boolean } = {}): Vitality {
     const suppression = suppressionReason(this.state.suppression);
     if (suppression !== null && options.allowAnyway !== true) {
       throw new DomainError(suppression);
     }
-    if (spellPoints <= 0) {
-      throw new DomainError("Нужно хотя бы одно очко заклинаний");
+    if (!Number.isInteger(hitPoints) || hitPoints <= 0) {
+      throw new DomainError(`Цена ячейки в хитах должна быть целой положительной, получено: ${hitPoints}`);
     }
-    const exchange: Exchange = { hitPointsSpent: hitPoints, pointsCreated: spellPoints };
-    if (exchange.hitPointsSpent > this.current && options.allowAnyway !== true) {
-      throw new DomainError(`Нужно ${exchange.hitPointsSpent} хитов, в наличии ${this.current}`);
+    if (hitPoints > this.current && options.allowAnyway !== true) {
+      throw new DomainError(`Нужно ${hitPoints} хитов, в наличии ${this.current}`);
     }
-    return {
-      vitality: this.with({
-        hitPoints: {
-          ...this.state.hitPoints,
-          current: this.current - exchange.hitPointsSpent,
-          bloodReduction: this.bloodReduction + exchange.hitPointsSpent,
-        },
-      }),
-      exchange,
-    };
+    return this.with({
+      hitPoints: {
+        ...this.state.hitPoints,
+        current: this.current - hitPoints,
+        bloodReduction: this.bloodReduction + hitPoints,
+      },
+    });
   }
 
   /**

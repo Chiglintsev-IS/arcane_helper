@@ -154,6 +154,17 @@ describe("проверка после урона", () => {
     expect(answered.checkAfterDamage).toBeUndefined();
   });
 
+  it("при активной концентрации плата кровью проверки не предлагает", () => {
+    // Потеря хитов от собственного колдовства уроном не считается: запись сотворения урона не
+    // несёт, и спрашивать проверку не о чем.
+    const view = viewOf([
+      castWeb(2),
+      { kind: "cast_spell", spellId: "shield", mode: "normal", payment: { kind: "blood", castLevel: 1 } },
+    ]);
+
+    expect(view.checkAfterDamage).toBeUndefined();
+  });
+
   it("урон, полученный до начала концентрации, её не срывает", () => {
     const view = viewOf([{ kind: "take_damage", damage: 24 }, castWeb(2)]);
 

@@ -67,11 +67,11 @@ function actionUsedBy(spell: Spell): TurnResource | undefined {
 }
 
 /**
- * Оплата и то, что она стоила крови.
+ * Оплата и то, чем она названа в журнале.
  *
- * Кровь входит в само сотворение, а не предшествует ему: недостающие очки покупаются хитами тем же
- * подтверждением, одной записью журнала и одной отменой. Отдельного захода в обмен для этого не
- * нужно — обмен хода не занимает.
+ * Созданная кровью ячейка пула не касается: она появляется и тратится тем же мгновением, и в
+ * состоянии от неё остаются только отданные хиты. Прибавить её к пулу, чтобы тут же вычесть,
+ * значило бы завести ресурс, которого правило не даёт.
  */
 function applyPayment(root: Character, request: CastRequest): { root: Character; note: string } {
   const { spell, mode, payment, allowAnyway = false } = request;
@@ -87,21 +87,11 @@ function applyPayment(root: Character, request: CastRequest): { root: Character;
     };
   }
 
-  if (payment.kind === "spell_points") {
-    const price = bloodPrice(payment.castLevel, root.toState());
-    let paid = root;
-    if (price.pointsBought > 0) {
-      const { vitality, exchange } = paid.vitality.exchangeBlood(
-        price.hitPoints,
-        price.pointsBought,
-        { allowAnyway },
-      );
-      paid = paid.withVitality(vitality).withArcana(paid.arcana.gainSpellPoints(exchange.pointsCreated));
-    }
-    const source = price.pointsBought === 0 ? "из запаса" : `${price.hitPoints} хитов`;
+  if (payment.kind === "blood") {
+    const { hitPoints } = bloodPrice(payment.castLevel, root.toState());
     return {
-      root: paid.withArcana(paid.arcana.spendSpellPoints(payment.castLevel, { allowAnyway })),
-      note: `кровью, ${price.spellPoints} очков (${source})`,
+      root: root.withVitality(root.vitality.payWithBlood(hitPoints, { allowAnyway })),
+      note: `ячейкой ${payment.castLevel} уровня из крови (${hitPoints} хитов)`,
     };
   }
 

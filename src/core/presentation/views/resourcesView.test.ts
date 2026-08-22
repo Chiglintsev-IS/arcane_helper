@@ -15,7 +15,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import {
-  withSpellPoints,
   withSpentSlots,
   withoutRunes,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
@@ -63,10 +62,6 @@ describe("ячейки", () => {
 describe("запасы", () => {
   it("руны едут остатком и пределом", () => {
     expect(toResourcesView(fresh(withoutRunes(createThorne()))).runes.remaining).toBe(0);
-  });
-
-  it("очки заклинаний едут остатком", () => {
-    expect(toResourcesView(fresh(withSpellPoints(createThorne(), 3))).spellPoints).toBe(3);
   });
 });
 

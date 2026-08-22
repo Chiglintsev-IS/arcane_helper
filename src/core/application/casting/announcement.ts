@@ -22,13 +22,11 @@ import {
 } from "@/core/application/casting/availability";
 import { materialCoveredByFocus } from "@/core/application/casting/material";
 import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/shared/language";
-import { hitPointsForPoints, spellPointCost, RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
-import { maximumRecoveryPerHour, woundsWarningRu } from "@/core/domain/vitality/blood";
+import { RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
 import { MINIMUM_CONCENTRATION_DC } from "@/core/domain/effects/concentration";
 import { RUNE_LABEL, runeEffect, type Rune } from "@/core/domain/arcana/runes";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
 import type { CastMode } from "@/core/domain/arcana/slots";
-import { Vitality } from "@/core/domain/vitality/vitality";
 
 type AnnouncementPlaceholder = (typeof ANNOUNCEMENT_PLACEHOLDERS)[number];
 
@@ -134,10 +132,16 @@ function modeGap(spell: Spell, mode: CastMode): AnnouncementGap[] {
   ];
 }
 
-/** Оплата кровью в шаблонах не предусмотрена: она добавляется фразой, а не подстановкой. */
-function paymentSentence(payment: PaymentChoice): string {
-  if (payment.kind !== "spell_points") return "";
-  return ` Ячейка не расходуется: сотворяю за очки заклинаний (${spellPointCost(payment.castLevel)}).`;
+/**
+ * Откуда взялась ячейка, в шаблонах не предусмотрено: это добавляется фразой, а не подстановкой.
+ *
+ * Шаблон уже назвал уровень — назвать его вторично значило бы повторить число; сказано поэтому
+ * только то, чего в шаблоне нет: ячейка не из пула, и за неё заплачено кровью.
+ */
+function paymentSentence(payment: PaymentChoice, character: CharacterState): string {
+  if (payment.kind !== "blood") return "";
+  const { hitPoints } = bloodPrice(payment.castLevel, character);
+  return ` Ячейку создаю кровью: ${withPlural(hitPoints, ["хит", "хита", "хитов"])}.`;
 }
 
 /**
@@ -173,7 +177,7 @@ export function renderAnnouncement(spell: Spell, context: AnnouncementContext): 
   // Пустая подстановка цели оставляет двойной пробел — он виден на экране и слышен в паузе.
   text =
     `${text.replace(/ {2,}/g, " ").trim()}` +
-    `${paymentSentence(context.payment)}${runeSentence(context)}`;
+    `${paymentSentence(context.payment, context.character)}${runeSentence(context)}`;
 
   return { text, gaps: [...gaps, ...modeGap(spell, context.mode)] };
 }
@@ -202,19 +206,14 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
 
   if (context.payment.kind === "slot") {
     steps.push(`Спишется ячейка ${level} уровня`);
-  } else if (context.payment.kind === "spell_points") {
-    // Хитами платится только недостающее: накопленный запас расходуется первым, и полная цена
-    // уровня в хитах соврала бы тому, у кого очки уже есть.
-    const price = bloodPrice(context.payment.castLevel, character);
-    const spent = `Спишется ${withPlural(price.spellPoints, ["очко", "очка", "очков"])} заклинаний`;
+  } else if (context.payment.kind === "blood") {
     // Снижение максимума хитов названо отдельным следствием: «столько же максимума» игрок читает как
     // повтор цены, а это вторая, невосстановимая её половина.
+    const { hitPoints } = bloodPrice(context.payment.castLevel, character);
     steps.push(
-      price.pointsBought === 0
-        ? `${spent} — хитов сейчас не отдаётся, запаса хватает`
-        : `${spent}, из них ${price.pointsBought} кровью —` +
-          ` заплатите ${withPlural(price.hitPoints, ["хит", "хита", "хитов"])},` +
-          " максимум хитов упадёт на столько же",
+      `Кровь создаст ячейку ${level} уровня —` +
+        ` заплатите ${withPlural(hitPoints, ["хит", "хита", "хитов"])},` +
+        " максимум хитов упадёт на столько же",
     );
   } else if (context.mode === "ritual") {
     steps.push(
@@ -288,77 +287,6 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
         ` Нужно ${MINIMUM_CONCENTRATION_DC} и больше` +
         ` (при уроне от ${DAMAGE_ABOVE_MINIMUM_CONCENTRATION_DC} — половину урона и больше),` +
         " иначе заклинание спадает",
-    );
-  }
-
-  return steps;
-}
-
-/**
- * Объявление обмена хитов на очки.
- *
- * Шаблона у расовой особенности нет и быть не может: она не заклинание, карточки у неё не заведено
- * Текст собирается из чисел состояния — значит остаётся
- * верным и после смены ступени возвышения.
- */
-export function bloodExchangeAnnouncement(points: number, character: CharacterState): string {
-  const spent = hitPointsForPoints(points, character.level);
-  return (
-    `Обмениваю ${withPlural(spent, ["хит", "хита", "хитов"])}` +
-    ` на ${withPlural(points, ["очко", "очка", "очков"])} заклинаний.`
-  );
-}
-
-/**
- * Что игрок должен сделать при обмене — числами этого персонажа ( для расовой особенности).
- *
- * Снижение максимума названо отдельной строкой: это вторая, невосстановимая половина цены, и без неё
- * игрок не понимает, почему лечение не поднимает до полного.
- *
- * Напоминание о концентрации — самое ценное здесь: потеря хитов от кровавого колдовства уроном не
- * считается, и за столом ошибаются в обе
- * стороны. Без активной концентрации оно молчит: напоминать было бы не о чем.
- */
-/**
- * Числа обмена до подтверждения: во что он обойдётся и что останется.
- *
- * Мастер обмена показывает те же числа, что потом называет инструкция, и считать их дважды нельзя:
- * второй вычислитель того же факта расходится с первым на первой же правке тарифа.
- */
-export function bloodExchangePreview(
-  points: number,
-  character: CharacterState,
-): { hitPointsSpent: number; hitPointsAfter: number; maximumAfter: number; pointsAfter: number } {
-  const hitPointsSpent = hitPointsForPoints(points, character.level);
-  return {
-    hitPointsSpent,
-    hitPointsAfter: character.hitPoints.current - hitPointsSpent,
-    maximumAfter: Vitality.of(character).maximum - hitPointsSpent,
-    pointsAfter: character.spellPoints.remaining + points,
-  };
-}
-
-export function bloodExchangeInstructions(points: number, character: CharacterState): string[] {
-  const { hitPointsSpent: spent, hitPointsAfter: after, maximumAfter } = bloodExchangePreview(
-    points,
-    character,
-  );
-
-  const steps = [
-    `Отметьте ${withPlural(spent, ["хит", "хита", "хитов"])}:` +
-      ` было ${character.hitPoints.current}, станет ${after}`,
-    `Максимум тоже ${maximumAfter} — лечение выше не поднимет,` +
-      ` вернуть можно только по ${maximumRecoveryPerHour(character.level)} за полный час`,
-  ];
-
-  // Предупреждение, а не запрет: решение рискнуть принадлежит игроку.
-  if (after <= 0) {
-    steps.push(woundsWarningRu(points));
-  }
-
-  if (character.concentration !== undefined) {
-    steps.push(
-      "Проверка концентрации не нужна: потеря хитов от кровавого колдовства уроном не считается",
     );
   }
 

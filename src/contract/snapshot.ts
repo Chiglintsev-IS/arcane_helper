@@ -15,7 +15,6 @@ import { z } from "zod";
 import {
   activeEffectViewSchema,
   bagViewSchema,
-  bloodMagicViewSchema,
   castingViewSchema,
   choicesViewSchema,
   concentrationViewSchema,
@@ -68,7 +67,6 @@ export const snapshotSchema = z.object({
   /** Что действует прямо сейчас, в порядке появления. */
   effects: z.array(activeEffectViewSchema),
   casting: castingViewSchema,
-  bloodMagic: bloodMagicViewSchema,
   spells: z.array(spellRowViewSchema),
   /**
    * Что творили чаще прочего, чаще творённое первым; пусто — не творили ничего.

@@ -50,7 +50,6 @@ export const questionSchema = z.discriminatedUnion("kind", [
     hitDiceRolled: numeric.optional(),
   }),
   /** Во что обойдётся обмен набранного числа очков заклинаний. */
-  z.object({ kind: z.literal("blood_exchange_preview"), points: numeric }),
   /**
    * Чем обернётся замысел состава так, как его собрали на верстаке.
    *
@@ -151,18 +150,6 @@ export const previewSchema = z.discriminatedUnion("kind", [
         restored: whole.optional(),
       })
       .optional(),
-  }),
-  z.object({
-    kind: z.literal("blood_exchange_preview"),
-    hitPointsSpent: whole,
-    hitPointsAfter: whole,
-    /** Максимум хитов после обмена: вторая, невосстановимая половина цены. */
-    maximumAfter: whole,
-    pointsAfter: whole,
-    /** Наибольший уровень, который оплатят накопленные очки; `null` — не хватает ни на что. */
-    affordableSpellLevel: whole.nullable(),
-    instructions: z.array(word),
-    announcement: word,
   }),
   z.object({
     kind: z.literal("export_preview"),

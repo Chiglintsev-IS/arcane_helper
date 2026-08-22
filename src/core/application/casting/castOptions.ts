@@ -15,7 +15,7 @@ import {
   type PaymentChoice,
   type TurnResources,
 } from "@/core/application/casting/availability";
-import { payableCastLevels } from "@/core/domain/arcana/slots";
+import { bloodSlotLevels } from "@/core/domain/arcana/slots";
 import { castableSlotLevels, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
@@ -96,10 +96,10 @@ function castOptions(
     (slotLevel) => ({ mode: "normal", payment: { kind: "slot", slotLevel } }),
   );
 
-  // Кровью платят за каждый уровень, до которого дотягивается тариф: она повышает сотворение так
-  // же, как ячейка старшего уровня, и Торну открывает пятый — тот, до чьих ячеек он не дорос.
-  for (const castLevel of payableCastLevels(spell.level)) {
-    plans.push({ mode: "normal", payment: { kind: "spell_points", castLevel } });
+  // Кровь создаёт ту же ячейку, какой платят из пула: перечень уровней у них общий, и своего
+  // уровня у крови нет.
+  for (const castLevel of bloodSlotLevels(character.spellSlots, spell.level)) {
+    plans.push({ mode: "normal", payment: { kind: "blood", castLevel } });
   }
   if (ritualAvailable(spell, options.inCombat)) {
     plans.push({ mode: "ritual", payment: { kind: "none" } });

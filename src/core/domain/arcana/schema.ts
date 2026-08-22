@@ -1,5 +1,5 @@
 /**
- * Подсхема магических ресурсов: ячейки, магическое восстановление, руны и очки заклинаний.
+ * Подсхема магических ресурсов: ячейки, магическое восстановление, руны и последняя подсказка.
  *
  * Пределы и инварианты контекста объявляются в нём самом. Уровни заклинаний приходят из каталога:
  * какие они бывают вообще — вопрос правил, а не ячеек.
@@ -80,14 +80,6 @@ const lastHintSchema = z
   .default({ maximum: LAST_HINT_MAXIMUM, remaining: LAST_HINT_MAXIMUM });
 
 /**
- * Очки заклинаний: только остаток. Время создания схема не хранит — гасит их не срок, а любой
- * отмеченный час, независимо от того, когда они появились.
- */
-const spellPointsSchema = z.object({
-  remaining: z.number().int().nonnegative(),
-});
-
-/**
  * Был ли короткий отдых с последнего долгого.
  *
  * Признак принадлежит ресурсам: он существует только как предусловие магического восстановления и
@@ -106,7 +98,6 @@ export const ARCANA_FIELDS = {
   shortRestSinceLongRest: shortRestSinceLongRestSchema,
   runes: runesSchema,
   lastHint: lastHintSchema,
-  spellPoints: spellPointsSchema,
 };
 
 const arcanaStateSchema = z.object(ARCANA_FIELDS);

@@ -2,13 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
-  withBloodExchange,
-  withBloodSpent,
+  withBloodPaid,
   withDamage,
   withForeignSlots,
   withMasterReduction,
-  withSpellPoints,
-  withSpellPointsSpent,
   withSpentHitDice,
   withSpentSlots,
   withoutArcaneRecovery,
@@ -38,27 +35,14 @@ describe("состояния Торна операциями", () => {
     expect(wounded.hitPoints.maximumBase).toBe(60);
   });
 
-  it("обмен кровью платит и текущими, и максимумом, и даёт очки", () => {
-    const exchanged = withBloodExchange(createThorne(), 3);
-    expect(exchanged.hitPoints).toEqual({
+  it("плата кровью снимает и текущие хиты, и максимум", () => {
+    const paid = withBloodPaid(createThorne(), 2);
+    expect(paid.hitPoints).toEqual({
       current: 51,
       maximumBase: 60,
       bloodReduction: 9,
       masterReduction: 0,
     });
-    expect(exchanged.spellPoints.remaining).toBe(3);
-  });
-
-  it("израсходованные очки не оставляют запаса, снижение остаётся", () => {
-    const spent = withBloodSpent(createThorne(), 3);
-    expect(spent.spellPoints.remaining).toBe(0);
-    expect(spent.hitPoints.bloodReduction).toBe(9);
-  });
-
-  it("очки появляются запасом и тратятся по цене уровня", () => {
-    const rich = withSpellPoints(createThorne(), 6);
-    expect(rich.spellPoints.remaining).toBe(6);
-    expect(withSpellPointsSpent(rich, 1).spellPoints.remaining).toBe(4);
   });
 
   it("снижение мастера опускает действующий максимум вместе с текущими", () => {

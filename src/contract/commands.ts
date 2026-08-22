@@ -40,7 +40,7 @@ function command<K extends string, S extends z.ZodRawShape>(kind: K, shape: S) {
  */
 export const paymentSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("slot"), slotLevel: numeric }),
-  z.object({ kind: z.literal("spell_points"), castLevel: numeric }),
+  z.object({ kind: z.literal("blood"), castLevel: numeric }),
   z.object({ kind: z.literal("none") }),
 ]);
 
@@ -82,7 +82,6 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("take_damage", { damage: numeric, fire: z.boolean().optional() }),
   command("heal", { amount: numeric }),
   command("grant_temporary_hit_points", { amount: numeric }),
-  command("exchange_blood", { spellPoints: numeric, allowAnyway: z.boolean().optional() }),
   command("recover_hit_point_maximum", {}),
   command("set_sunlight", { underSunlight: z.boolean() }),
 

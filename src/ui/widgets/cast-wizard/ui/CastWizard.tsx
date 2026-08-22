@@ -153,14 +153,10 @@ function optionLabel(option: CastOptionView, resources: ResourcesView): string {
   if (option.mode === "ritual") {
     return `Ритуалом · +${option.extraMinutes} минут, ячейка не расходуется`;
   }
-  if (option.payment.kind === "spell_points") {
-    const points = withPlural(option.spellPointCost ?? 0, ["очко", "очка", "очков"]);
-    // Хиты названы только там, где их придётся отдать: за покрытое запасом крови не платят.
-    const price =
-      option.hitPointCost === 0
-        ? `${points} из запаса, есть ${resources.spellPoints}`
-        : `${points}, ${withPlural(option.hitPointCost ?? 0, ["хит", "хита", "хитов"])}`;
-    return `Кровью, ${option.payment.castLevel} уровень · ${price}`;
+  if (option.payment.kind === "blood") {
+    // Начинается с крови, а не с ячейки: две подписи, начатые одинаково, за столом читают как одну.
+    const cost = withPlural(option.hitPointCost ?? 0, ["хит", "хита", "хитов"]);
+    return `Кровью · ячейка ${option.payment.castLevel} уровня, ${cost}`;
   }
   if (option.payment.kind === "slot") {
     const { slotLevel } = option.payment;

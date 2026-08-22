@@ -11,7 +11,6 @@ import { describe, expect, it } from "vitest";
 import type { Command } from "@/contract/commands";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
-  withSpellPoints,
   withSpentSlots,
   withoutComponentRecord,
   withoutSlots,
@@ -112,10 +111,8 @@ describe("почему нельзя", () => {
     expect(reason).not.toBe("");
   });
 
-  it("оплата кровью снимает причину: запаса очков для неё не требуется", () => {
-    const empty = withSpellPoints(withoutSlots(createThorne()), 0);
-
-    expect(row("mage-armor", empty).unavailableReason).toBeUndefined();
+  it("оплата кровью снимает причину: ячейку она создаёт сама", () => {
+    expect(row("mage-armor", withoutSlots(createThorne())).unavailableReason).toBeUndefined();
   });
 
   it("заклинание, до уровня которого он не дорос, называет недостающую ячейку", () => {
@@ -265,31 +262,15 @@ describe("способы сотворения", () => {
     expect(damage).toContain("9d6");
   });
 
-  it("оплата кровью называет цену в очках и в хитах", () => {
-    const blood = row("mage-armor").castOptions.find(
-      (option) => option.payment.kind === "spell_points",
-    );
-
-    // Первый уровень — два очка, курс Торна — три хита за очко.
-    expect(blood).toMatchObject({ spellPointCost: 2, hitPointCost: 6 });
-  });
-
-  it("цена способа в хитах — только недостающие очки", () => {
-    const byLevel = (character: CharacterState, castLevel: number) =>
-      row("mage-armor", character).castOptions.find(
-        (option) => option.payment.kind === "spell_points" && option.payment.castLevel === castLevel,
+  it("способ кровью называет уровень и цену в хитах", () => {
+    const byLevel = (castLevel: number) =>
+      row("mage-armor").castOptions.find(
+        (option) => option.payment.kind === "blood" && option.payment.castLevel === castLevel,
       );
 
-    // Запаса хватает целиком — хитов не отдаётся вовсе.
-    expect(byLevel(withSpellPoints(createThorne(), 2), 1)).toMatchObject({
-      spellPointCost: 2,
-      hitPointCost: 0,
-    });
-    // Одно очко из запаса, одно куплено кровью: три хита, а не шесть.
-    expect(byLevel(withSpellPoints(createThorne(), 1), 1)).toMatchObject({
-      spellPointCost: 2,
-      hitPointCost: 3,
-    });
+    // Цена уровня — 2 и 6 единиц, курс Торна — три хита за единицу.
+    expect(byLevel(1)).toMatchObject({ hitPointCost: 6 });
+    expect(byLevel(4)).toMatchObject({ hitPointCost: 18 });
   });
 
   it("ритуальный способ называет, на сколько он длиннее обычного", () => {

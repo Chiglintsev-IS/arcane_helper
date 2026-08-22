@@ -13,7 +13,6 @@ import { rawSaveFileName } from "@/core/application/dataExchange";
 import type { LiveSession } from "@/core/application/session";
 
 import { toBagView } from "./views/bagView";
-import { toBloodMagicView } from "./views/bloodMagicView";
 import { toChoicesView } from "./views/choicesView";
 import { toConcentrationView } from "./views/concentrationView";
 import { toCraftingView } from "./views/craftingView";
@@ -43,7 +42,6 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     ...(concentration === undefined ? {} : { concentration }),
     effects: toEffectViews(live.session.character),
     casting: toCastingView(live.session.character),
-    bloodMagic: toBloodMagicView(live.session),
     spells: toSpellRowViews(live),
     ...(spellsRefusalRu === undefined ? {} : { spellsRefusalRu }),
     choices: toChoicesView(),

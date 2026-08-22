@@ -79,7 +79,6 @@ function thorne(): unknown {
     arcaneRecovery: { maximum: 4, remaining: 4 },
     hitPoints: { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 },
     runes: { maximum: 3, remaining: 2 },
-    spellPoints: { remaining: 3 },
     suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
     spellNotes: { web: "Мастер считает, что паутина не горит." },
     roleplayPreferences: {
@@ -163,7 +162,6 @@ describe("форма состояния", () => {
       "species",
       "speed",
       "spellNotes",
-      "spellPoints",
       "spellSlots",
       "spellbookSpellIds",
       "studiedDirections",
@@ -220,13 +218,14 @@ describe("characterStateSchema принимает корректное сост�
     if (result.success) expect(result.data.lastHint).toEqual({ maximum: 1, remaining: 1 });
   });
 
-  it("время создания очков заклинаний из старого сохранения читается и отбрасывается", () => {
+  it("очки заклинаний из старого сохранения читаются и отбрасываются", () => {
     const legacy = mutate((draft) => {
       draft.spellPoints = { remaining: 3, createdAt: "2026-07-31T18:00:00.000Z" };
     });
     const result = characterStateSchema.safeParse(legacy);
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.spellPoints).toEqual({ remaining: 3 });
+    // Ресурса больше нет, и состояние им не обзаводится: поле снимается чтением.
+    if (result.success) expect("spellPoints" in result.data).toBe(false);
   });
 });
 

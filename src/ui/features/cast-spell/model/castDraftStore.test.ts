@@ -357,7 +357,7 @@ describe("навигация по шагам", () => {
     store.getState().back(["summary"]);
     store.getState().setTarget("гоблин");
     store.getState().allowAnyway();
-    store.getState().chooseCastOption(optionBy(row, (option) => option.payment.kind === "spell_points"));
+    store.getState().chooseCastOption(optionBy(row, (option) => option.payment.kind === "blood"));
     store.getState().setRoleplayCategory("sarcastic");
     store.getState().setHitDiceCount(1);
     store.getState().setHitDiceRolled(3);
@@ -407,7 +407,7 @@ describe("запоминание выбора", () => {
     const row = rowOf(mageArmor, spent);
 
     store.getState().start(row);
-    expect(draftOf().option.payment).toEqual({ kind: "spell_points", castLevel: 1 });
+    expect(draftOf().option.payment).toEqual({ kind: "blood", castLevel: 1 });
   });
 
   it("заклинание уровня, до которого персонаж не дорос, называет недостающую ячейку", () => {
@@ -433,11 +433,11 @@ describe("запоминание выбора", () => {
     store.getState().start(row);
     store
       .getState()
-      .chooseCastOption(optionBy(row, (option) => option.payment.kind === "spell_points"));
+      .chooseCastOption(optionBy(row, (option) => option.payment.kind === "blood"));
     store.getState().cancel();
 
     store.getState().start(row);
-    expect(draftOf().option.payment).toEqual({ kind: "spell_points", castLevel: 1 });
+    expect(draftOf().option.payment).toEqual({ kind: "blood", castLevel: 1 });
   });
 });
 

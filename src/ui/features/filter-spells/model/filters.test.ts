@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { withSpellPoints, withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import {
   NO_FILTERS,
@@ -22,7 +22,7 @@ import type { Command } from "@/contract/commands";
 import type { SpellRowView } from "@/contract/views";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
+import { lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { spellsForScreen } from "@/ui/shared/model/spellList";
 import { IN_FIGHT, testSpellRows } from "@/ui/app/testing/stores";
 
@@ -208,7 +208,8 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
   });
 
   it("оплата кровью делает заклинание доступным без ячеек", () => {
-    const character = withSpellPoints(spentThorne(), 2);
+    // Запаса не требуется вовсе: кровь создаёт ячейку в момент сотворения.
+    const character = spentThorne();
 
     expect(ids(filterSpells(book({ character }), filters({ availableNow: true })))).toContain(
       "mage-armor",
@@ -276,44 +277,46 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
   });
 });
 
-describe("matchesTraits: строка, не являющаяся заклинанием (FR-207)", () => {
-  it("«Магия крови» хода не занимает и отсеивается любым фильтром времени", () => {
-    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(false);
-    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["reaction"] }))).toBe(false);
+const LAST_HINT_TRAITS = lastHintTraits("Последняя подсказка");
+
+describe("matchesTraits: строка, не являющаяся заклинанием (FR-329)", () => {
+  it("строка-действие хода не занимает и отсеивается любым фильтром времени", () => {
+    expect(matchesTraits(LAST_HINT_TRAITS, filters({ castingTimes: ["action"] }))).toBe(false);
+    expect(matchesTraits(LAST_HINT_TRAITS, filters({ castingTimes: ["reaction"] }))).toBe(false);
   });
 
   it("её роль — «другое»: под «Боевое» и «Защиту» она не подходит", () => {
-    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
-    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ roles: ["other"] }))).toBe(true);
+    expect(matchesTraits(LAST_HINT_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
+    expect(matchesTraits(LAST_HINT_TRAITS, filters({ roles: ["other"] }))).toBe(true);
   });
 
   it("концентрации она не держит", () => {
-    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ concentration: true }))).toBe(false);
+    expect(matchesTraits(LAST_HINT_TRAITS, filters({ concentration: true }))).toBe(false);
   });
 
   it("без фильтров проходит", () => {
-    expect(matchesTraits(BLOOD_MAGIC_TRAITS, NO_FILTERS)).toBe(true);
+    expect(matchesTraits(LAST_HINT_TRAITS, NO_FILTERS)).toBe(true);
   });
 });
 
-describe("matchesActionRow: книжные фильтры для строки-действия (FR-207, FR-212)", () => {
-  it("«Подготовлено» её не прячет: подготовка к обмену не относится", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ prepared: true }))).toBe(true);
+describe("matchesActionRow: книжные фильтры для строки-действия (FR-329, FR-212)", () => {
+  it("«Подготовлено» её не прячет: подготовка к ней не относится", () => {
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ prepared: true }))).toBe(true);
   });
 
-  it("«Ритуал» прячет: обмен ритуалом не творится", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ ritual: true }))).toBe(false);
+  it("«Ритуал» прячет: ритуалом она не творится", () => {
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ ritual: true }))).toBe(false);
   });
 
   it("«Без ячейки» её оставляет, уровень ячейки — прячет: отбирают по цене", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ prices: [0] }))).toBe(true);
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ prices: [1] }))).toBe(false);
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ prices: [0] }))).toBe(true);
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ prices: [1] }))).toBe(false);
   });
 
   it("общие фильтры работают так же, как раньше", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(false);
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, NO_FILTERS)).toBe(true);
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ castingTimes: ["action"] }))).toBe(false);
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
+    expect(matchesActionRow(LAST_HINT_TRAITS, NO_FILTERS)).toBe(true);
   });
 });
 
@@ -353,7 +356,7 @@ describe("поиск по названию (FR-303)", () => {
   });
 
   it("строка-действие отвечает на запрос своим названием (FR-207)", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ query: "кров" }))).toBe(true);
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ query: "молн" }))).toBe(false);
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ query: "подсказ" }))).toBe(true);
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ query: "молн" }))).toBe(false);
   });
 });

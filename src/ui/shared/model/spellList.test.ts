@@ -1,4 +1,4 @@
-import { BLOOD_MAGIC_TRAITS, traitsOf } from "@/ui/shared/model/actionTraits";
+import { lastHintTraits, traitsOf } from "@/ui/shared/model/actionTraits";
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -120,37 +120,39 @@ describe("порядок: сначала бесплатное, потом по �
   });
 });
 
-describe("«Магия крови» встаёт среди того, что ячейки не стоит (FR-207, FR-210)", () => {
+const LAST_HINT_TRAITS = lastHintTraits("Последняя подсказка");
+
+describe("строка-действие встаёт среди того, что ячейки не стоит (FR-329, FR-210)", () => {
   it("в бою — сразу за заговорами", () => {
     const shown = spellsForScreen(testSpellRows(undefined, IN_FIGHT), "play");
     const rows = shown.map((spell) => spell.id);
-    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play"), 0, "магия-крови");
+    rows.splice(positionInList(shown, LAST_HINT_TRAITS, "play"), 0, "последняя-подсказка");
 
-    // Последним бесплатным идёт «Сообщение» — та же цена и та же роль «другое», что у обмена.
+    // Последним бесплатным идёт «Сообщение» — та же цена и та же роль «другое», что у строки.
     expect(rows.slice(0, 5)).toEqual([
       "shocking-grasp",
       "ray-of-frost",
       "message",
-      "магия-крови",
+      "последняя-подсказка",
       "shield",
     ]);
   });
 
   it("вне боя — за ритуалами: они тоже ничего не стоят", () => {
     const shown = spellsForScreen(testSpellRows(), "play");
-    const at = positionInList(shown, BLOOD_MAGIC_TRAITS, "play");
+    const at = positionInList(shown, LAST_HINT_TRAITS, "play");
     expect(shown[at - 1]?.id).toBe("unseen-servant");
     expect(shown[at]?.id).toBe("shield");
   });
 
   it("в «Книге» место ищется уровнем: там смотрят состав, а не цену момента", () => {
     const rows = testSpellRows();
-    const at = positionInList(rows, BLOOD_MAGIC_TRAITS, "book");
+    const at = positionInList(rows, LAST_HINT_TRAITS, "book");
     expect(rows[at]?.id).toBe("shield");
   });
 
   it("строка дороже всего списка встаёт в конец, а не теряется", () => {
-    const priciest = { ...BLOOD_MAGIC_TRAITS, level: 9 };
+    const priciest = { ...LAST_HINT_TRAITS, level: 9 };
 
     const rows = testSpellRows();
     expect(positionInList(rows, priciest, "book")).toBe(rows.length);

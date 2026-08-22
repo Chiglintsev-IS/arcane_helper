@@ -13,7 +13,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import {
-  withSpellPoints,
   withoutHitDice,
   withoutRunes,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
@@ -63,28 +62,26 @@ describe("ряд оплаты на самом узком экране", () => {
   it("ряд «Чем платить» умещает все плитки на 320", () => {
     const row = payingRow(createThorne());
 
-    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур.", "Руны", "Кости", "Очки"]) {
+    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур.", "Руны", "Кости"]) {
       expect(row.textContent).toContain(named);
     }
 
-    // Дверь правки одна на ресурс: у ячеек всех уровней она общая, у рун своя, а кости и очки
-    // правки не имеют вовсе — их двигают отдых и обмен кровью.
+    // Дверь правки одна на ресурс: у ячеек всех уровней она общая, у рун своя, а кости правки не
+    // имеют вовсе — их двигает отдых.
     expect(within(row).getAllByRole("button")).toHaveLength(2);
   });
 });
 
 describe("ступень плитки отвечает, метит ли в неё палец", () => {
   it("нажимаемая плитка ряда оплаты лежит на ступени нажимаемого", () => {
-    const full = tiles(withSpellPoints(createThorne(), 5));
+    const full = tiles(createThorne());
 
     // Руны ведут в ту же шторку, что и ячейки: одна дверь — одна шкура, а не две.
     expect(pool(full, "Руны").classes).toContain(SURFACE_CONTROL);
 
-    // Кости и очки не нажимаются: их двигают отдых и обмен кровью, и ступень у них — группы.
-    for (const name of ["Кости", "Очки"]) {
-      expect(pool(full, name).classes).toContain(SURFACE_GROUP);
-      expect(pool(full, name).classes).not.toContain(SURFACE_CONTROL);
-    }
+    // Кости не нажимаются: их двигает отдых, и ступень у них — группы.
+    expect(pool(full, "Кости").classes).toContain(SURFACE_GROUP);
+    expect(pool(full, "Кости").classes).not.toContain(SURFACE_CONTROL);
 
     cleanup();
     const drained = tiles(withoutRunes(createThorne()));
@@ -98,27 +95,25 @@ describe("ступень плитки отвечает, метит ли в не�
 
 describe("пустой пул подан пустым", () => {
   it("нулевой пул подан как ноль", () => {
-    const full = tiles(withSpellPoints(createThorne(), 5));
+    const full = tiles(createThorne());
 
     // Полный пул называет ресурс и остаток: знак при нём повторял бы то, что уже сказано числом.
     expect(pool(full, "Кости").text).toBe("Кости d67/7");
     expect(pool(full, "Руны").text).toBe("Руны3/3");
-    expect(pool(full, "Очки").text).toBe("Очки5");
 
     cleanup();
     const drained = tiles(withoutRunes(withoutHitDice(createThorne())));
 
-    // Платить нечем ни одним из трёх — и это видно знаком, а не только цифрой. Знак встаёт при
+    // Платить нечем ни одним из двух — и это видно знаком, а не только цифрой. Знак встаёт при
     // числе: подпись называет ресурс, и ширина плитки на исходе пула не меняется.
     expect(pool(drained, "Кости").text).toBe("Кости d6✗ 0/7");
     expect(pool(drained, "Руны").text).toBe("Руны✗ 0/3");
-    expect(pool(drained, "Очки").text).toBe("Очки✗ 0");
   });
 
   it("пул не занимает смыслового цвета: зелёная руна читалась бы как ритуал", () => {
-    const full = tiles(withSpellPoints(createThorne(), 5));
+    const full = tiles(createThorne());
 
-    for (const name of ["Кости", "Руны", "Очки"]) {
+    for (const name of ["Кости", "Руны"]) {
       for (const tone of ["ritual", "action", "reaction", "concentration", "bonus"]) {
         expect(pool(full, name).classes).not.toContain(tone);
       }
@@ -126,13 +121,12 @@ describe("пустой пул подан пустым", () => {
   });
 
   it("постоянный цвет обещал бы остаток: пустой пул и полный не совпадают ничем", () => {
-    const full = tiles(withSpellPoints(createThorne(), 5));
+    const full = tiles(createThorne());
     cleanup();
     const drained = tiles(withoutRunes(createThorne()));
 
     // Расходятся они тем, что смыслового цвета не требует: знаком, самим числом и ступенью.
     expect(pool(drained, "Руны").text).not.toBe(pool(full, "Руны").text);
-    expect(pool(drained, "Очки").text).not.toBe(pool(full, "Очки").text);
   });
 });
 

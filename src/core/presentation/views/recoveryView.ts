@@ -1,14 +1,12 @@
 /**
  * Проекция восстановления: что вернут час и конец боя и что мешает начать.
  *
- * Кнопка обещает числа заранее — час тратит очки заклинаний молча, и назвать потерю после нажатия
- * значит назвать её поздно. Числа те же, что применит сама операция: спрошены у владельца правил, а
- * не пересчитаны показывающим.
+ * Кнопка обещает числа заранее: назвать случившееся после нажатия значит назвать его поздно. Числа
+ * те же, что применит сама операция: спрошены у владельца правил, а не пересчитаны показывающим.
  */
 
 import type { RecoveryView } from "@/contract/views";
 
-import type { Arcana } from "@/core/domain/arcana/arcana";
 import { Character } from "@/core/domain/assembly/character";
 import type { Session } from "@/core/application/session";
 import { hourUnavailability } from "@/core/application/useCases/health";
@@ -20,11 +18,6 @@ import {
   shortRestUnavailability,
 } from "@/core/application/useCases/rest";
 import { combatEndRecovery } from "@/core/application/useCases/turn";
-
-/** Сколько очков заклинаний погасит час: сколько именно гаснет, знает запас, а не показывающий. */
-function spellPointsLostToAnHour(arcana: Arcana): number {
-  return arcana.spellPoints - arcana.expireSpellPoints().spellPoints;
-}
 
 export function toRecoveryView(session: Session): RecoveryView {
   const { character } = session;
@@ -40,7 +33,6 @@ export function toRecoveryView(session: Session): RecoveryView {
     nextHour: {
       maximumReturned: returned,
       healed,
-      spellPointsLost: spellPointsLostToAnHour(root.arcana),
       ...(hour === null ? {} : { unavailabilityRu: hour }),
     },
     combatEndRecovery: combatEndRecovery(character),

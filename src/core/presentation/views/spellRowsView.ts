@@ -110,10 +110,10 @@ function castOptionView(
   character: CharacterState,
 ): CastOptionView {
   const { option } = plan;
-  // Цена кровью считается владельцем тарифа: сколько очков спишется всего и сколько хитов уйдёт
-  // сейчас за недостающие — второй такой счёт разошёлся бы с тем, которым спишет подтверждение.
+  // Цена ячейки считается её владельцем: второй такой счёт разошёлся бы с тем, которым спишет
+  // подтверждение.
   const price =
-    option.payment.kind === "spell_points" ? bloodPrice(option.payment.castLevel, character) : null;
+    option.payment.kind === "blood" ? bloodPrice(option.payment.castLevel, character) : null;
 
   return {
     mode: option.mode,
@@ -124,9 +124,7 @@ function castOptionView(
       code: warning.code,
       reasonRu: warning.reasonRu,
     })),
-    ...(price === null
-      ? {}
-      : { spellPointCost: price.spellPoints, hitPointCost: price.hitPoints }),
+    ...(price === null ? {} : { hitPointCost: price.hitPoints }),
     ...(option.mode === "ritual" ? { extraMinutes: RITUAL_EXTRA_MINUTES } : {}),
     ...(spell.damage === undefined
       ? {}

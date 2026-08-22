@@ -321,7 +321,6 @@ export const resourcesViewSchema = z.object({
   runes: z.object({ remaining: whole, maximum: whole }),
   /** Последняя подсказка: одно применение до долгого отдыха. Истраченная едет нулём, а не пропажей. */
   lastHint: z.object({ nameRu: z.string(), remaining: whole, maximum: whole }),
-  spellPoints: whole,
   /** Ручная поправка Класса Доспеха: правится там же, где видна. */
   armorClassAdjustment: whole,
   passivePerception: whole,
@@ -344,13 +343,12 @@ export const resourcesViewSchema = z.object({
  */
 export const recoveryViewSchema = z.object({
   /**
-   * Что сделает следующий отмеченный час: вернёт ступень снижённого максимума, даст регенерации
-   * дойти до половины и погасит очки заклинаний. Три нуля — часу нечего менять.
+   * Что сделает следующий отмеченный час: вернёт ступень снижённого максимума и даст регенерации
+   * дойти до половины. Два нуля — часу нечего менять.
    */
   nextHour: z.object({
     maximumReturned: whole,
     healed: whole,
-    spellPointsLost: whole,
     unavailabilityRu: word.optional(),
   }),
   /** Сколько хитов вернёт окончание боя; ноль — лечить нечего. */
@@ -427,8 +425,7 @@ export const castOptionViewSchema = z.object({
   available: z.boolean(),
   /** Что мешает: код — чтобы отобрать по шагам мастера, фраза — чтобы показать. */
   warnings: z.array(z.object({ code: word, reasonRu: word })),
-  /** Сколько очков заклинаний спишется и во сколько хитов они обойдутся. */
-  spellPointCost: whole.optional(),
+  /** Во сколько хитов обойдётся ячейка, созданная кровью; нет вовсе — платят не кровью. */
   hitPointCost: whole.optional(),
   /** На сколько минут дольше обычного идёт накладывание. */
   extraMinutes: whole.optional(),
@@ -722,22 +719,6 @@ export const castingViewSchema = z.object({
   freeComponentsCovered: z.boolean().optional(),
 });
 
-/**
- * Кровавое колдовство: во что обходится очко и сколько их берут за раз.
- *
- * Стоит рядом со строками заклинаний, потому что за то же действие и конкурирует. Причина, по
- * которой обмен сейчас не идёт, приходит от той же проверки, которой откажет подтверждение: строка
- * списка и мастер обмена обязаны называть один запрет одними словами.
- */
-export const bloodMagicViewSchema = z.object({
-  /** Курс нынешней ступени возвышения: сколько хитов отдаётся за одно очко. */
-  hitPointsPerPoint: whole,
-  /** Сколько очков создаётся за раз: от, до и с чего начинать. */
-  points: z.object({ minimum: whole, maximum: whole, initial: whole }),
-  /** Что мешает обмену прямо сейчас, по фразе на помеху; пусто — ничего. */
-  warningsRu: z.array(word),
-});
-
 export type ActiveEffectView = z.infer<typeof activeEffectViewSchema>;
 export type ConcentrationCheckView = z.infer<typeof concentrationCheckViewSchema>;
 export type ConcentrationView = z.infer<typeof concentrationViewSchema>;
@@ -752,7 +733,6 @@ export type DiagramView = z.infer<typeof diagramViewSchema>;
 export type SpellCardView = z.infer<typeof spellCardViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;
-export type BloodMagicView = z.infer<typeof bloodMagicViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
 export type MissingMaterialView = z.infer<typeof missingMaterialViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;

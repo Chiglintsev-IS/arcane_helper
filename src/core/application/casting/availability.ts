@@ -2,12 +2,11 @@ import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { ascensionTierRate, spellPointCost, hitPointsForPoints } from "@/core/domain/arcana/slots";
+import { bloodSlotCost, hasSlotLevel, noSlotLevelRu, slotLevelPrice } from "@/core/domain/arcana/slots";
 import { suppressionReason, woundsWarningRu } from "@/core/domain/vitality/blood";
 import {
   CURRENCY_ABBREVIATIONS,
   longCastingTimeRu,
-  withPlural,
   type LongCastingUnit,
 } from "@/shared/language";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
@@ -42,7 +41,7 @@ export const ACTION_SPENT_MESSAGES: Record<TurnResource, string> = {
 
 export type PaymentChoice =
   | { kind: "slot"; slotLevel: number }
-  | { kind: "spell_points"; castLevel: number }
+  | { kind: "blood"; castLevel: number }
   | { kind: "none" };
 
 /**
@@ -54,24 +53,24 @@ export type PaymentChoice =
  */
 export function castLevelOf(payment: PaymentChoice): number | undefined {
   if (payment.kind === "slot") return payment.slotLevel;
-  if (payment.kind === "spell_points") return payment.castLevel;
+  if (payment.kind === "blood") return payment.castLevel;
   return undefined;
 }
 
 /**
- * Во что обойдётся оплата кровью прямо сейчас: сколько очков спишется и сколько хитов за них
- * придётся отдать.
+ * Во что обойдётся ячейка этого уровня: цена в хитах и цена в единицах, по которой считают раны.
  *
- * Хиты платятся только за недостающие очки: накопленное расходуется первым, и полная цена уровня в
- * хитах соврала бы тому, у кого запас уже есть.
+ * Считает не сам: цену называют магические ресурсы, а здесь она только собирается с уровнем
+ * персонажа, чей курс её и умножает.
  */
 export function bloodPrice(
   castLevel: number,
   character: CharacterState,
-): { spellPoints: number; hitPoints: number; pointsBought: number } {
-  const spellPoints = spellPointCost(castLevel);
-  const pointsBought = Math.max(0, spellPoints - character.spellPoints.remaining);
-  return { spellPoints, hitPoints: hitPointsForPoints(pointsBought, character.level), pointsBought };
+): { hitPoints: number; levelPrice: number } {
+  return {
+    hitPoints: bloodSlotCost(castLevel, character.level),
+    levelPrice: slotLevelPrice(castLevel),
+  };
 }
 
 type AvailabilityCode =
@@ -250,47 +249,48 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
     return [
       {
         code: "no_payment",
-        reasonRu: "Не выбран способ оплаты: ячейка или очки заклинаний",
+        reasonRu: "Не выбран способ оплаты: ячейка или кровь",
         enforcement: "advisory",
       },
     ];
   }
 
-  if (payment.kind === "spell_points") {
+  if (payment.kind === "blood") {
     const { castLevel } = payment;
     if (castLevel < spell.level) {
       return [
         {
           code: "cast_level_too_low",
-          reasonRu: `Кровью за ${castLevel} уровень заклинание ${spell.level} уровня не сотворить`,
+          reasonRu: `Ячейкой ${castLevel} уровня заклинание ${spell.level} уровня не сотворить`,
           enforcement: "gm_exception",
         },
       ];
     }
 
-    const price = bloodPrice(castLevel, character);
-    if (price.pointsBought === 0) return [];
+    // Кровь повторяет ячейку, а не заводит новую: уровня, до которого персонаж не дорос, у неё нет.
+    if (!hasSlotLevel(character.spellSlots, castLevel)) {
+      return [{ code: "no_slot", reasonRu: noSlotLevelRu(castLevel), enforcement: "advisory" }];
+    }
 
-    // Недостающее покупается кровью тем же подтверждением, и мешает ему ровно то, что мешает обмену.
     const suppression = suppressionReason(character.suppression);
     if (suppression !== null) {
       return [{ code: "blood_suppressed", reasonRu: suppression, enforcement: "gm_exception" }];
     }
 
+    const price = bloodPrice(castLevel, character);
     const { current } = character.hitPoints;
     if (price.hitPoints > current) {
       return [
         {
           code: "not_enough_hit_points",
-          reasonRu:
-            `Кровью не хватит: за недостающие очки нужно ${price.hitPoints} хитов, в наличии ${current}`,
+          reasonRu: `Кровью не хватит: ячейка стоит ${price.hitPoints} хитов, в наличии ${current}`,
           enforcement: "gm_exception",
         },
       ];
     }
     if (price.hitPoints === current) {
       return [
-        { code: "wounds_from_blood", reasonRu: woundsWarningRu(price.pointsBought), enforcement: "advisory" },
+        { code: "wounds_from_blood", reasonRu: woundsWarningRu(price.levelPrice), enforcement: "advisory" },
       ];
     }
     return [];
@@ -314,7 +314,7 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
     return [
       {
         code: "no_slot",
-        reasonRu: `Ячеек ${slotLevel} уровня у персонажа нет`,
+        reasonRu: noSlotLevelRu(slotLevel),
         enforcement: "advisory",
       },
     ];
@@ -428,28 +428,4 @@ export function checkAvailability(input: AvailabilityInput): Availability {
   ];
 
   return { available: warnings.length === 0, warnings };
-}
-
-/**
- * Причины, по которым обмен хитов на очки сейчас невозможен, — словами и с числами.
- *
- * `checkAvailability` сюда не подходит: она принимает заклинание, а обмен заклинанием не является.
- * Экономии хода среди причин нет вовсе: обмен хода не занимает, и признаки хода сюда не приходят.
- */
-export function exchangeWarnings(character: CharacterState): string[] {
-  const warnings: string[] = [];
-
-  const suppression = suppressionReason(character.suppression);
-  if (suppression !== null) {
-    warnings.push(suppression);
-  }
-
-  const rate = ascensionTierRate(character.level);
-  if (character.hitPoints.current < rate) {
-    warnings.push(
-      `${withPlural(rate, ["хит", "хита", "хитов"])} за очко, в наличии ${character.hitPoints.current}`,
-    );
-  }
-
-  return warnings;
 }

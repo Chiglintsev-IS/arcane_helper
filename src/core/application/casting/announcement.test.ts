@@ -5,12 +5,7 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { Spell } from "@/core/domain/catalog/spell";
-import {
-  bloodExchangeAnnouncement,
-  bloodExchangeInstructions,
-  castInstructions,
-  renderAnnouncement,
-} from "@/core/application/casting/announcement";
+import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 
 /** Обстановка объявления: форму называет сама подпись, отдельного имени ей не нужно. */
 type AnnouncementContext = Parameters<typeof renderAnnouncement>[1];
@@ -125,15 +120,13 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
 });
 
 describe("renderAnnouncement: режим применения (FR-041)", () => {
-  it("оплату кровью добавляет отдельной фразой: ячейка не расходуется", () => {
+  it("созданную кровью ячейку добавляет отдельной фразой с ценой", () => {
     const announcement = renderAnnouncement(
       spell("mage-armor"),
-      context({ payment: { kind: "spell_points", castLevel: 1 }, targetLabel: "на себя" }),
+      context({ payment: { kind: "blood", castLevel: 1 }, targetLabel: "на себя" }),
     );
 
-    expect(announcement.text).toContain(
-      "Ячейка не расходуется: сотворяю за очки заклинаний (2).",
-    );
+    expect(announcement.text).toContain("Ячейку создаю кровью: 6 хитов.");
   });
 
   it("ритуальное применение берёт шаблон как есть", () => {
@@ -350,14 +343,13 @@ describe("castInstructions: что сделать этому персонажу 
     );
     const byBlood = castInstructions(
       spell("mage-armor"),
-      context({ payment: { kind: "spell_points", castLevel: 1 } }),
+      context({ payment: { kind: "blood", castLevel: 1 } }),
     );
     const byRitual = castInstructions(spell("identify"), context({ mode: "ritual" }));
 
     expect(bySlot).toContain("Спишется ячейка 3 уровня");
     expect(byBlood).toContain(
-      "Спишется 2 очка заклинаний, из них 2 кровью — заплатите 6 хитов," +
-        " максимум хитов упадёт на столько же",
+      "Кровь создаст ячейку 1 уровня — заплатите 6 хитов, максимум хитов упадёт на столько же",
     );
     expect(byRitual).toContain("Ячейка не расходуется, но накладывание займёт на 10 минут дольше");
   });
@@ -415,54 +407,6 @@ describe("castInstructions: что сделать этому персонажу 
   });
 })
 
-describe("объявление обмена (FR-177)", () => {
-  it("называет и хиты, и очки", () => {
-    expect(bloodExchangeAnnouncement(5, thorne)).toBe(
-      "Обмениваю 15 хитов на 5 очков заклинаний.",
-    );
-  });
-
-  it("склоняет единственное число", () => {
-    expect(bloodExchangeAnnouncement(1, thorne)).toBe(
-      "Обмениваю 3 хита на 1 очко заклинаний.",
-    );
-  });
-});
-
-describe("инструкция обмена (FR-172, FR-174, FR-175)", () => {
-  it("называет остаток хитов и снижение максимума", () => {
-    const steps = bloodExchangeInstructions(5, thorne);
-    expect(steps[0]).toBe("Отметьте 15 хитов: было 60, станет 45");
-    expect(steps[1]).toBe(
-      "Максимум тоже 45 — лечение выше не поднимет, вернуть можно только по 3 за полный час",
-    );
-  });
-
-  it("напоминает о ненужной проверке концентрации только при активной концентрации", () => {
-    expect(bloodExchangeInstructions(2, thorne).join(" ")).not.toMatch(/концентрац/);
-
-    const busy = {
-      ...thorne,
-      concentration: { spellId: "web", startedAt: "2026-07-31T20:00:00.000Z" },
-    };
-    expect(bloodExchangeInstructions(2, busy).join(" ")).toMatch(
-      /Проверка концентрации не нужна: потеря хитов от кровавого колдовства уроном не считается/,
-    );
-  });
-
-  it("предупреждает о ранах, когда обмен опускает хиты в ноль", () => {
-    const dying = { ...thorne, hitPoints: { current: 6, maximumBase: 60, bloodReduction: 0, masterReduction: 0 } };
-    expect(bloodExchangeInstructions(2, dying).join(" ")).toMatch(
-      /Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка — итого 1 рана/,
-    );
-  });
-
-  it("считает раны от числа созданных очков", () => {
-    const dying = { ...thorne, hitPoints: { current: 18, maximumBase: 60, bloodReduction: 0, masterReduction: 0 } };
-    expect(bloodExchangeInstructions(6, dying).join(" ")).toMatch(/итого 3 раны/);
-  });
-});
-
 describe("руна в объявлении (FR-151, FR-152)", () => {
   it("называет руну и её эффект отдельной фразой", () => {
     const announcement = renderAnnouncement(
@@ -486,7 +430,7 @@ describe("руна в объявлении (FR-151, FR-152)", () => {
   it("руна при оплате кровью считается от уровня сотворения", () => {
     const announcement = renderAnnouncement(
       spell("web"),
-      context({ payment: { kind: "spell_points", castLevel: 4 }, rune: "life" }),
+      context({ payment: { kind: "blood", castLevel: 4 }, rune: "life" }),
     );
     expect(announcement.text).toContain("Применяю руну жизни: 20 временных хитов");
   });

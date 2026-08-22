@@ -115,11 +115,13 @@ describe("жизнеспособность", () => {
     expect(live.session.journal[0]?.summaryRu).toMatch(/огонь/);
   });
 
-  it("обмен крови и возврат максимума", () => {
-    const exchanged = run([{ kind: "exchange_blood", spellPoints: 2 }]);
-    expect(exchanged.session.character.hitPoints.bloodReduction).toBeGreaterThan(0);
+  it("плата кровью и возврат максимума", () => {
+    const paid = run([
+      { kind: "cast_spell", spellId: "shield", mode: "normal", payment: { kind: "blood", castLevel: 1 } },
+    ]);
+    expect(paid.session.character.hitPoints.bloodReduction).toBeGreaterThan(0);
 
-    const recovered = run([{ kind: "recover_hit_point_maximum" }], exchanged);
+    const recovered = run([{ kind: "recover_hit_point_maximum" }], paid);
     expect(recovered.session.journal.at(-1)?.kind).toBe("hit_points_changed");
   });
 

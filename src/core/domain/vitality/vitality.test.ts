@@ -77,7 +77,7 @@ describe("порог регенерации", () => {
     });
 
   it("непрерывная регенерация меряет тот же действующий максимум, что и ход", () => {
-    const bled = healthy().exchangeBlood(9, 3).vitality.withMasterReduction(9);
+    const bled = healthy().payWithBlood(9).withMasterReduction(9);
     const wounded = bled.takeDamage(20).vitality;
     expect(wounded.maximum).toBe(42);
 
@@ -112,8 +112,25 @@ describe("порог регенерации", () => {
     expect(risen.continuousRegenerationDue()).toBeGreaterThan(0);
   });
 
+  it("плата кровью проверяет свои пределы сама", () => {
+    const sunlit = Vitality.of({
+      hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
+      temporaryHitPoints: 0,
+      hitDice: { total: 7, size: 6, remaining: 7 },
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
+    });
+
+    expect(() => sunlit.payWithBlood(6)).toThrow(/солнечным светом/);
+    // Разрешение мастера снимает и подавление, и нехватку хитов: цена уходит в долг здоровья.
+    expect(sunlit.payWithBlood(6, { allowAnyway: true }).current).toBe(54);
+
+    expect(() => healthy().payWithBlood(0)).toThrow(DomainError);
+    expect(() => healthy().payWithBlood(2.5)).toThrow(DomainError);
+    expect(() => healthy().payWithBlood(61)).toThrow(/в наличии 60/);
+  });
+
   it("час поднимает ступень максимума и лечит уже от неё", () => {
-    const bled = healthy().exchangeBlood(9, 3).vitality;
+    const bled = healthy().payWithBlood(9);
     const { vitality, returned, healed } = bled.takeDamage(31).vitality.afterAnHour(7);
 
     expect(returned).toBe(3);

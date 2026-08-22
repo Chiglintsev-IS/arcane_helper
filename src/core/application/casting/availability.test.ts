@@ -4,16 +4,13 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
-import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
-import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { withDamage, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { Character } from "@/core/domain/assembly/character";
 import {
   ALL_TURN_RESOURCES,
   checkAvailability,
   componentRequirements,
-  exchangeWarnings,
   withoutConsent,
   type Availability,
 } from "@/core/application/casting/availability";
@@ -248,36 +245,36 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
     expect(reasonsOf(availability, "no_slot")).toEqual(["Ячеек 9 уровня у персонажа нет"]);
   });
 
-  it("пустой запас очков оплате кровью не мешает: недостающее покупается хитами", () => {
+  it("здоровому кровь создаёт ячейку без помех", () => {
     const availability = check({
       spell: mageArmor,
-      payment: { kind: "spell_points", castLevel: 1 },
+      payment: { kind: "blood", castLevel: 1 },
     });
     expect(availability).toEqual({ available: true, warnings: [] });
   });
 
-  it("оплата очками доступна, когда очков хватает", () => {
-    const character = withSpellPoints(createThorne(), 3);
-    const availability = check({
-      spell: mageArmor,
-      character,
-      payment: { kind: "spell_points", castLevel: 1 },
-    });
+  it("ячейка старшего уровня кровью тоже доступна", () => {
+    const availability = check({ spell: mageArmor, payment: { kind: "blood", castLevel: 4 } });
     expect(availability.available).toBe(true);
   });
 
-  it("кровью за уровень ниже уровня заклинания сотворить нельзя", () => {
+  it("уровня, до которого персонаж не дорос, кровь не создаёт", () => {
+    const availability = check({ spell: mageArmor, payment: { kind: "blood", castLevel: 5 } });
+    expect(reasonsOf(availability, "no_slot")).toEqual(["Ячеек 5 уровня у персонажа нет"]);
+  });
+
+  it("ячейкой ниже уровня заклинания кровь не поможет", () => {
     const secondLevel: Spell = { ...mageArmor, level: 2 };
     const availability = check({
       spell: secondLevel,
-      payment: { kind: "spell_points", castLevel: 1 },
+      payment: { kind: "blood", castLevel: 1 },
     });
     expect(reasonsOf(availability, "cast_level_too_low")).toEqual([
-      "Кровью за 1 уровень заклинание 2 уровня не сотворить",
+      "Ячейкой 1 уровня заклинание 2 уровня не сотворить",
     ]);
   });
 
-  it("подавленной крови не хватит на недостающие очки, и причина та же", () => {
+  it("подавленной кровью ячейку не создать, и причина та же", () => {
     const sunlit = {
       ...createThorne(),
       suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
@@ -285,32 +282,32 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
     const availability = check({
       spell: mageArmor,
       character: sunlit,
-      payment: { kind: "spell_points", castLevel: 1 },
+      payment: { kind: "blood", castLevel: 1 },
     });
     expect(reasonsOf(availability, "blood_suppressed")).toEqual([
       "Кровавое колдовство не действует под прямым солнечным светом",
     ]);
   });
 
-  it("хитов на недостающие очки не хватает — отказ до разрешения мастера", () => {
+  it("хитов на ячейку не хватает — отказ до разрешения мастера", () => {
     const bleeding = withDamage(createThorne(), 58);
     const { warnings } = check({
       spell: mageArmor,
       character: bleeding,
-      payment: { kind: "spell_points", castLevel: 1 },
+      payment: { kind: "blood", castLevel: 1 },
     });
     expect(withoutConsent(warnings, {})?.code).toBe("not_enough_hit_points");
   });
 
-  it("обмен до нуля предупреждает о ранах, но не запрещает", () => {
+  it("плата до нуля предупреждает о ранах, но не запрещает", () => {
     const bleeding = withDamage(createThorne(), 54);
     const availability = check({
       spell: mageArmor,
       character: bleeding,
-      payment: { kind: "spell_points", castLevel: 1 },
+      payment: { kind: "blood", castLevel: 1 },
     });
     expect(reasonsOf(availability, "wounds_from_blood")).toEqual([
-      "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка — итого 1 рана",
+      "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три единицы цены — итого 1 рана",
     ]);
     expect(withoutConsent(availability.warnings, {})).toBeUndefined();
   });
@@ -330,7 +327,7 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
   it("заклинание без способа оплаты предупреждает, а не молчит", () => {
     const availability = check({ spell: mageArmor, payment: { kind: "none" } });
     expect(reasonsOf(availability, "no_payment")).toEqual([
-      "Не выбран способ оплаты: ячейка или очки заклинаний",
+      "Не выбран способ оплаты: ячейка или кровь",
     ]);
   });
 });
@@ -556,38 +553,3 @@ describe("исполнение предупреждений по объявле�
   });
 });
 
-describe("доступность обмена хитов на очки (FR-176, FR-143)", () => {
-  it("здоровому и не подавленному ничто не мешает", () => {
-    expect(exchangeWarnings(createThorne())).toEqual([]);
-  });
-
-  it("подавление огнём и солнцем называется своими словами", () => {
-    const burned = {
-      ...createThorne(),
-      suppression: { firedUponTurnStarts: FIRE_SUPPRESSION_TURN_STARTS, underDirectSunlight: false },
-    };
-    expect(exchangeWarnings(burned)).toEqual([
-      "Кровавое колдовство подавлено уроном огнём до конца следующего хода",
-    ]);
-
-    const sunlit = {
-      ...createThorne(),
-      suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
-    };
-    expect(exchangeWarnings(sunlit)).toEqual([
-      "Кровавое колдовство не действует под прямым солнечным светом",
-    ]);
-  });
-
-  it("обмен хода не занимает", () => {
-    // Признаков хода обмен не спрашивает вовсе: израсходованному действию мешать нечему.
-    expect(exchangeWarnings(createThorne())).toEqual([]);
-  });
-
-  it("хитов меньше курса — причина называет курс и наличное", () => {
-    const bleeding = withDamage(createThorne(), 58);
-    expect(exchangeWarnings(bleeding)).toEqual([
-      "3 хита за очко, в наличии 2",
-    ]);
-  });
-});

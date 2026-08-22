@@ -146,7 +146,7 @@ describe("сотворение", () => {
   it("руна при оплате кровью считается от уровня сотворения", () => {
     const preview = castPreview({
       spellId: "mage-armor",
-      payment: { kind: "spell_points", castLevel: 3 },
+      payment: { kind: "blood", castLevel: 3 },
     });
 
     expect(preview?.runes.unavailabilityRu).toBeUndefined();
@@ -222,11 +222,11 @@ describe("сотворение", () => {
   it("оплата кровью считает кости по оплаченному уровню сотворения", () => {
     const own = castPreview({
       spellId: "arcane-vigor",
-      payment: { kind: "spell_points", castLevel: 2 },
+      payment: { kind: "blood", castLevel: 2 },
     });
     const raised = castPreview({
       spellId: "arcane-vigor",
-      payment: { kind: "spell_points", castLevel: 3 },
+      payment: { kind: "blood", castLevel: 3 },
     });
 
     // Кровь повышает сотворение так же, как ячейка старшего уровня, и кости растут вместе с ним.
@@ -285,35 +285,6 @@ describe("сотворение", () => {
 
     expect(live.session.character).toBe(before);
     expect(live.session.journal).toHaveLength(0);
-  });
-});
-
-describe("обмен крови на очки", () => {
-  function exchange(points: number) {
-    const preview = answerQuestion(alive(), { kind: "blood_exchange_preview", points }, NOW);
-    return preview.kind === "blood_exchange_preview" ? preview : null;
-  }
-
-  it("цена набранного считается по курсу ступени: у Торна три хита за очко", () => {
-    const preview = exchange(2);
-
-    expect(preview?.hitPointsSpent).toBe(6);
-    expect(preview?.maximumAfter).toBe(preview!.hitPointsAfter);
-  });
-
-  it("называет наибольший уровень, который оплатят накопленные очки", () => {
-    expect(exchange(2)?.affordableSpellLevel).toBe(1);
-  });
-
-  it("на одно очко не хватает ни на что", () => {
-    expect(exchange(1)?.affordableSpellLevel).toBeNull();
-  });
-
-  it("шаги и объявление приходят готовыми к столу", () => {
-    const preview = exchange(2);
-
-    expect(preview?.instructions.length).toBeGreaterThan(0);
-    expect(preview?.announcement).toContain("6");
   });
 });
 
