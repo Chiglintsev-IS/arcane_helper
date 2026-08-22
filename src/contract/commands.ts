@@ -40,7 +40,7 @@ function command<K extends string, S extends z.ZodRawShape>(kind: K, shape: S) {
  */
 export const paymentSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("slot"), slotLevel: numeric }),
-  z.object({ kind: z.literal("spell_points") }),
+  z.object({ kind: z.literal("spell_points"), castLevel: numeric }),
   z.object({ kind: z.literal("none") }),
 ]);
 

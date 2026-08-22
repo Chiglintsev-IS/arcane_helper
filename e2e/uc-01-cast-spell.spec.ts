@@ -698,7 +698,7 @@ test("combat keeps camp mode reachable, but rest refuses with a reason", async (
 });
 
 test("blood exchange goes through the wizard, not one tap", async ({ page }) => {
-  // Бой начат: обмен тратит действие, и проверяется он там, где действие считается.
+  // Бой начат: обмен хода не занимает, и видно это там, где ход считается.
   await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Магия крови/ }).click();
 
@@ -707,13 +707,13 @@ test("blood exchange goes through the wizard, not one tap", async ({ page }) => 
   await expect(page.getByLabel("Чем платить")).toContainText("Очки✗ 0");
   await expect(page.getByLabel("Сколько очков создать")).toContainText("6 хитов");
 
-  // Счётчик создаёт запас на два заклинания первого уровня одним действием.
+  // Счётчик создаёт запас на два заклинания первого уровня одним обменом.
   await page.getByRole("button", { name: "Больше очков" }).click();
   await page.getByRole("button", { name: "Больше очков" }).click();
   await expect(page.getByLabel("Сколько очков создать")).toContainText("12 хитов");
 
   await page.getByRole("button", { name: "Далее" }).click();
-  await expect(page.getByText("Действием обмениваю 12 хитов на 4 очка заклинаний.")).toBeVisible();
+  await expect(page.getByText("Обмениваю 12 хитов на 4 очка заклинаний.")).toBeVisible();
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByLabel("Чем платить")).toContainText("Очки4");

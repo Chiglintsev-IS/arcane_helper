@@ -18,10 +18,12 @@ import {
   type Rune,
   type RuneTarget,
 } from "@/core/domain/arcana/runes";
-import { spellPointCost } from "@/core/domain/arcana/slots";
+
 import { hitDiceHealing } from "@/core/domain/vitality/hitDice";
 import { durationWithRoundsRu } from "@/core/domain/effects/concentration";
 import {
+  bloodPrice,
+  castLevelOf,
   checkAvailability,
   turnResourceFor,
   withoutConsent,
@@ -41,7 +43,7 @@ type CastRequest = {
   mode: CastMode;
   payment: Payment;
   targetLabel?: string;
-  /** Руна применяется только к заклинанию, оплаченному ячейкой. */
+  /** Руна применяется только к сотворению, у которого есть уровень. */
   rune?: Rune;
   /** Кому досталась «Руна жизни»: остальные руны цели не выбирают. */
   runeTarget?: RuneTarget;
@@ -64,19 +66,43 @@ function actionUsedBy(spell: Spell): TurnResource | undefined {
   return turnResourceFor(spell.castingTime.type);
 }
 
-function applyPayment(root: Character, request: CastRequest): Character {
+/**
+ * Оплата и то, что она стоила крови.
+ *
+ * Кровь входит в само сотворение, а не предшествует ему: недостающие очки покупаются хитами тем же
+ * подтверждением, одной записью журнала и одной отменой. Отдельного захода в обмен для этого не
+ * нужно — обмен хода не занимает.
+ */
+function applyPayment(root: Character, request: CastRequest): { root: Character; note: string } {
   const { spell, mode, payment, allowAnyway = false } = request;
 
   if (!consumesSlot(spell.level, mode)) {
-    return root;
+    return { root, note: "" };
   }
 
   if (payment.kind === "slot") {
-    return root.withArcana(root.arcana.spendSlot(payment.slotLevel, { allowOverdraft: allowAnyway }));
+    return {
+      root: root.withArcana(root.arcana.spendSlot(payment.slotLevel, { allowOverdraft: allowAnyway })),
+      note: `ячейкой ${payment.slotLevel} уровня`,
+    };
   }
 
   if (payment.kind === "spell_points") {
-    return root.withArcana(root.arcana.spendSpellPoints(spell.level, { allowAnyway }));
+    const price = bloodPrice(payment.castLevel, root.toState());
+    let paid = root;
+    if (price.pointsBought > 0) {
+      const { vitality, exchange } = paid.vitality.exchangeBlood(
+        price.hitPoints,
+        price.pointsBought,
+        { allowAnyway },
+      );
+      paid = paid.withVitality(vitality).withArcana(paid.arcana.gainSpellPoints(exchange.pointsCreated));
+    }
+    const source = price.pointsBought === 0 ? "из запаса" : `${price.hitPoints} хитов`;
+    return {
+      root: paid.withArcana(paid.arcana.spendSpellPoints(payment.castLevel, { allowAnyway })),
+      note: `кровью, ${price.spellPoints} очков (${source})`,
+    };
   }
 
   throw new DomainError("Заклинание с ячейкой требует способа оплаты");
@@ -89,14 +115,13 @@ function grantsToCaster(request: CastRequest): boolean {
 
 function applyRune(root: Character, request: CastRequest): Character {
   if (request.rune === undefined) return root;
-  if (request.payment.kind !== "slot") {
-    throw new DomainError("Руна применяется только к заклинанию, оплаченному ячейкой");
+  const level = castLevelOf(request.payment);
+  if (level === undefined) {
+    throw new DomainError("Руна применяется только к сотворению, у которого есть уровень");
   }
   const spent = root.withArcana(root.arcana.spendRune());
   if (!grantsToCaster(request)) return spent;
-  return spent.withVitality(
-    spent.vitality.grantTemporary(lifeRuneTemporaryHitPoints(request.payment.slotLevel)),
-  );
+  return spent.withVitality(spent.vitality.grantTemporary(lifeRuneTemporaryHitPoints(level)));
 }
 
 /**
@@ -119,17 +144,18 @@ function burnMaterial(root: Character, spell: Spell): { root: Character; note: s
 
 /** Что руна добавит к строке журнала: применённая руна не должна менять хиты молча. */
 function runeNote(request: CastRequest): string {
-  if (request.rune === undefined || request.payment.kind !== "slot") return "";
+  const level = castLevelOf(request.payment);
+  if (request.rune === undefined || level === undefined) return "";
   const name = RUNE_LABEL[request.rune].replace("Руна ", "руна ");
-  const points = lifeRuneTemporaryHitPoints(request.payment.slotLevel);
+  const points = lifeRuneTemporaryHitPoints(level);
   if (request.rune !== "life") return ` · ${name}`;
   if (!grantsToCaster(request)) return ` · ${name}: ${points} временных хитов другому`;
   return ` · ${name}: ${points} временных хитов`;
 }
 
+/** Уровень сотворения, а без него — собственный уровень заклинания: заговор и ритуал не растут. */
 function slotLevelUsed(request: CastRequest): number {
-  if (request.payment.kind === "slot") return request.payment.slotLevel;
-  return request.spell.level;
+  return castLevelOf(request.payment) ?? request.spell.level;
 }
 
 /**
@@ -203,8 +229,8 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
   }
 
   let root = Character.of(session.character);
-  root = applyPayment(root, request);
-  root = applyRune(root, request);
+  const paid = applyPayment(root, request);
+  root = applyRune(paid.root, request);
 
   const burned = burnMaterial(root, spell);
   root = burned.root;
@@ -245,13 +271,7 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
   const level = slotLevelUsed(request);
   const used = actionUsedBy(spell);
   const how =
-    request.mode === "ritual"
-      ? "ритуалом"
-      : request.payment.kind === "spell_points"
-        ? `кровью, ${spellPointCost(spell.level)} очков`
-        : spell.level === CANTRIP_LEVEL
-          ? "заговором"
-          : `ячейкой ${level} уровня`;
+    request.mode === "ritual" ? "ритуалом" : spell.level === CANTRIP_LEVEL ? "заговором" : paid.note;
 
   return commit(
     session,

@@ -308,7 +308,7 @@ export function applyArcaneRecovery(
 // Знание о стоимости очков принадлежит arcana: ячейки, очки и тариф — одно пространство.
 
 /** Максимальный уровень заклинания, который вообще оплачивается очками. */
-export const MAXIMUM_PAYABLE_SPELL_LEVEL = 5;
+const MAXIMUM_PAYABLE_SPELL_LEVEL = 5;
 
 /** Стоимость заклинания в очках заклинаний по уровню. */
 const SPELL_POINT_COSTS: Readonly<Record<number, number>> = { 1: 2, 2: 3, 3: 5, 4: 6, 5: 7 };
@@ -358,11 +358,6 @@ export function hitPointsForPoints(points: number, level: number): number {
   return points * ascensionTierRate(level);
 }
 
-/** Стоимость заклинания в хитах. */
-export function hitPointCost(spellLevel: number, level: number): number {
-  return hitPointsForPoints(spellPointCost(spellLevel), level);
-}
-
 /** Меньше одного очка обмен не создаёт: половины очка в правилах нет. */
 export const MINIMUM_EXCHANGE_POINTS = 1;
 
@@ -377,6 +372,21 @@ export function maximumExchangePoints(currentHitPoints: number, level: number): 
     MINIMUM_EXCHANGE_POINTS,
     Math.floor(currentHitPoints / ascensionTierRate(level)),
   );
+}
+
+/**
+ * Уровни, за которые платят очками при сотворении заклинания: от собственного уровня до пятого.
+ *
+ * Кровь повышает сотворение так же, как ячейка старшего уровня, и перечень уровней у неё свой:
+ * выше пятого очками не платят вовсе, поэтому заклинание шестого и старше остаётся без способа.
+ */
+export function payableCastLevels(spellLevel: number): number[] {
+  if (spellLevel === CANTRIP_LEVEL) return [];
+  const levels: number[] = [];
+  for (let level = spellLevel; level <= MAXIMUM_PAYABLE_SPELL_LEVEL; level += 1) {
+    levels.push(level);
+  }
+  return levels;
 }
 
 /** Уровни заклинаний, которые оплачиваются указанным числом очков. */

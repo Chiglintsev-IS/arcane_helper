@@ -15,7 +15,8 @@ import {
   WIZARD_STEP_TITLES,
   WizardShell,
 } from "@/ui/shared/ui/WizardShell";
-import { BLOOD_MAGIC_LABEL } from "@/ui/shared/model/actionTraits";
+import { BLOOD_MAGIC_LABEL, BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
+import { castingTimeBadge } from "@/ui/entities/spell/lib/format";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import type { PreviewOf } from "@/contract/questions";
 import type { BloodMagicView, SheetView } from "@/contract/views";
@@ -174,7 +175,7 @@ export function BloodMagicWizard({
       ariaLabel={BLOOD_MAGIC_LABEL}
       title={BLOOD_MAGIC_LABEL}
       subtitle="Расовая особенность лунного тролля"
-      badge={{ tone: "action", icon: "●", label: "Действие" }}
+      badge={castingTimeBadge(BLOOD_MAGIC_TRAITS.castingTime)}
       stepLabel={`Шаг ${index + 1} из ${steps.length}: ${STEP_TITLES[current]}`}
       onCancel={onCancel}
       footer={

@@ -143,8 +143,24 @@ describe("сотворение", () => {
     expect(chooses[0]?.nameRu).toBe("Руна жизни");
   });
 
-  it("при оплате кровью руна не предлагается вовсе, и причина названа", () => {
-    const preview = castPreview({ spellId: "mage-armor", payment: { kind: "spell_points" } });
+  it("руна при оплате кровью считается от уровня сотворения", () => {
+    const preview = castPreview({
+      spellId: "mage-armor",
+      payment: { kind: "spell_points", castLevel: 3 },
+    });
+
+    expect(preview?.runes.unavailabilityRu).toBeUndefined();
+    expect(preview?.runes.effects.find((effect) => effect.rune === "life")?.effectRu).toContain(
+      "15 временных хитов",
+    );
+  });
+
+  it("у ритуала уровня сотворения нет, и руна не предлагается вовсе", () => {
+    const preview = castPreview({
+      spellId: "identify",
+      mode: "ritual",
+      payment: { kind: "none" },
+    });
 
     expect(preview?.runes.effects).toEqual([]);
     expect(preview?.runes.unavailabilityRu).toBeDefined();
@@ -188,15 +204,34 @@ describe("сотворение", () => {
     expect(possible?.hitDice?.restored).toBe(11);
   });
 
+  it("без уровня сотворения кости считаются по уровню заклинания", () => {
+    const ritual = castPreview({
+      spellId: "arcane-vigor",
+      mode: "ritual",
+      payment: { kind: "none" },
+    });
+
+    // Ритуал уровня сотворения не даёт, и повышения нет: столько же, сколько за свой уровень.
+    expect(ritual?.hitDice?.maximum).toBe(2);
+  });
+
   it("заклинанию без костей хитов отвечать про них нечем", () => {
     expect(castPreview({ spellId: "mage-armor", payment: slotOne })?.hitDice).toBeUndefined();
   });
 
-  it("оплата кровью считает кости по собственному уровню заклинания", () => {
-    const blood = castPreview({ spellId: "arcane-vigor", payment: { kind: "spell_points" } });
+  it("оплата кровью считает кости по оплаченному уровню сотворения", () => {
+    const own = castPreview({
+      spellId: "arcane-vigor",
+      payment: { kind: "spell_points", castLevel: 2 },
+    });
+    const raised = castPreview({
+      spellId: "arcane-vigor",
+      payment: { kind: "spell_points", castLevel: 3 },
+    });
 
-    // Ячейки нет, значит и повышения нет: тот же максимум, что у ячейки своего уровня.
-    expect(blood?.hitDice?.maximum).toBe(2);
+    // Кровь повышает сотворение так же, как ячейка старшего уровня, и кости растут вместе с ним.
+    expect(own?.hitDice?.maximum).toBe(2);
+    expect(raised?.hitDice?.maximum).toBe(4);
   });
 
   it("истраченные кости бросать нечем, но сотворить всё равно можно", () => {

@@ -92,22 +92,30 @@ describe("цена и обстановка", () => {
   });
 });
 
+/** Ни ячеек, ни крови: под прямым солнцем кровавое колдовство не действует. */
+function withoutAnyPayment(): CharacterState {
+  return {
+    ...withoutSlots(createThorne()),
+    suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
+  };
+}
+
 describe("почему нельзя", () => {
   it("доступное причины не несёт вовсе", () => {
     expect(row("ray-of-frost").unavailableReason).toBeUndefined();
   });
 
-  it("без свободных ячеек причина названа словами владельца", () => {
-    const reason = row("mage-armor", withoutSlots(createThorne())).unavailableReason;
+  it("без ячеек и без крови причина названа словами владельца", () => {
+    const reason = row("mage-armor", withoutAnyPayment()).unavailableReason;
 
     expect(reason).toBeDefined();
     expect(reason).not.toBe("");
   });
 
-  it("оплата кровью снимает причину: способ найден другой", () => {
-    const paid = withSpellPoints(withoutSlots(createThorne()), 2);
+  it("оплата кровью снимает причину: запаса очков для неё не требуется", () => {
+    const empty = withSpellPoints(withoutSlots(createThorne()), 0);
 
-    expect(row("mage-armor", paid).unavailableReason).toBeUndefined();
+    expect(row("mage-armor", empty).unavailableReason).toBeUndefined();
   });
 
   it("заклинание, до уровня которого он не дорос, называет недостающую ячейку", () => {
@@ -266,6 +274,24 @@ describe("способы сотворения", () => {
     expect(blood).toMatchObject({ spellPointCost: 2, hitPointCost: 6 });
   });
 
+  it("цена способа в хитах — только недостающие очки", () => {
+    const byLevel = (character: CharacterState, castLevel: number) =>
+      row("mage-armor", character).castOptions.find(
+        (option) => option.payment.kind === "spell_points" && option.payment.castLevel === castLevel,
+      );
+
+    // Запаса хватает целиком — хитов не отдаётся вовсе.
+    expect(byLevel(withSpellPoints(createThorne(), 2), 1)).toMatchObject({
+      spellPointCost: 2,
+      hitPointCost: 0,
+    });
+    // Одно очко из запаса, одно куплено кровью: три хита, а не шесть.
+    expect(byLevel(withSpellPoints(createThorne(), 1), 1)).toMatchObject({
+      spellPointCost: 2,
+      hitPointCost: 3,
+    });
+  });
+
   it("ритуальный способ называет, на сколько он длиннее обычного", () => {
     const ritual = row("detect-magic").castOptions.find((option) => option.mode === "ritual");
 
@@ -363,7 +389,7 @@ describe("общая причина названа один раз (FR-305)", ()
   });
 
   it("своя причина строки остаётся при ней: её общей фразой не объяснить", () => {
-    const reason = row("mage-armor", withoutSlots(createThorne())).unavailableReason;
+    const reason = row("mage-armor", withoutAnyPayment()).unavailableReason;
 
     expect(reason).toBeDefined();
   });

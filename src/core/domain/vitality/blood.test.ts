@@ -9,24 +9,27 @@ import {
   regenerationPerTurn,
   suppressedByFire,
   traitsSuppressed,
-  woundsFromExchange,
+  woundsWarningRu,
 } from "@/core/domain/vitality/blood";
 
 const THORNE_LEVEL = 7;
 
-describe("woundsFromExchange", () => {
+describe("предупреждение о ранах", () => {
   it.each([
-    [0, 1],
-    [2, 1],
-    [3, 2],
-    [5, 2],
-    [6, 3],
-  ])("%i созданных очков дают %i ран", (points, expected) => {
-    expect(woundsFromExchange(points)).toBe(expected);
+    [0, "1 рана"],
+    [2, "1 рана"],
+    [3, "2 раны"],
+    [5, "2 раны"],
+    [6, "3 раны"],
+  ])("%i созданных очков дают %s", (points, expected) => {
+    expect(woundsWarningRu(points)).toBe(
+      "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка —" +
+        ` итого ${expected}`,
+    );
   });
 
   it("отклоняет некорректное число очков", () => {
-    expect(() => woundsFromExchange(-1)).toThrow(DomainError);
+    expect(() => woundsWarningRu(-1)).toThrow(DomainError);
   });
 });
 

@@ -128,7 +128,7 @@ describe("renderAnnouncement: режим применения (FR-041)", () => {
   it("оплату кровью добавляет отдельной фразой: ячейка не расходуется", () => {
     const announcement = renderAnnouncement(
       spell("mage-armor"),
-      context({ payment: { kind: "spell_points" }, targetLabel: "на себя" }),
+      context({ payment: { kind: "spell_points", castLevel: 1 }, targetLabel: "на себя" }),
     );
 
     expect(announcement.text).toContain(
@@ -350,13 +350,14 @@ describe("castInstructions: что сделать этому персонажу 
     );
     const byBlood = castInstructions(
       spell("mage-armor"),
-      context({ payment: { kind: "spell_points" } }),
+      context({ payment: { kind: "spell_points", castLevel: 1 } }),
     );
     const byRitual = castInstructions(spell("identify"), context({ mode: "ritual" }));
 
     expect(bySlot).toContain("Спишется ячейка 3 уровня");
     expect(byBlood).toContain(
-      "Спишется 2 очка заклинаний — заплатите 6 хитов, максимум хитов упадёт на столько же",
+      "Спишется 2 очка заклинаний, из них 2 кровью — заплатите 6 хитов," +
+        " максимум хитов упадёт на столько же",
     );
     expect(byRitual).toContain("Ячейка не расходуется, но накладывание займёт на 10 минут дольше");
   });
@@ -417,13 +418,13 @@ describe("castInstructions: что сделать этому персонажу 
 describe("объявление обмена (FR-177)", () => {
   it("называет и хиты, и очки", () => {
     expect(bloodExchangeAnnouncement(5, thorne)).toBe(
-      "Действием обмениваю 15 хитов на 5 очков заклинаний.",
+      "Обмениваю 15 хитов на 5 очков заклинаний.",
     );
   });
 
   it("склоняет единственное число", () => {
     expect(bloodExchangeAnnouncement(1, thorne)).toBe(
-      "Действием обмениваю 3 хита на 1 очко заклинаний.",
+      "Обмениваю 3 хита на 1 очко заклинаний.",
     );
   });
 });
@@ -474,7 +475,7 @@ describe("руна в объявлении (FR-151, FR-152)", () => {
     );
   });
 
-  it("пересчитывает эффект по уровню ячейки", () => {
+  it("пересчитывает эффект по уровню сотворения", () => {
     const announcement = renderAnnouncement(
       spell("web"),
       context({ payment: { kind: "slot", slotLevel: 4 }, rune: "life" }),
@@ -482,10 +483,18 @@ describe("руна в объявлении (FR-151, FR-152)", () => {
     expect(announcement.text).toContain("Применяю руну жизни: 20 временных хитов");
   });
 
-  it("при оплате кровью руну не называет (OQ-17)", () => {
+  it("руна при оплате кровью считается от уровня сотворения", () => {
     const announcement = renderAnnouncement(
       spell("web"),
-      context({ payment: { kind: "spell_points" }, rune: "war" }),
+      context({ payment: { kind: "spell_points", castLevel: 4 }, rune: "life" }),
+    );
+    expect(announcement.text).toContain("Применяю руну жизни: 20 временных хитов");
+  });
+
+  it("без уровня сотворения руну не называет", () => {
+    const announcement = renderAnnouncement(
+      spell("identify"),
+      context({ mode: "ritual", rune: "war" }),
     );
     expect(announcement.text).not.toMatch(/руну/);
   });

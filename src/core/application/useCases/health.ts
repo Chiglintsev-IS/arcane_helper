@@ -80,7 +80,6 @@ export function exchangeBlood(
     {
       kind: "blood_exchange",
       summaryRu: `Кровавое колдовство: ${exchange.hitPointsSpent} хитов → ${exchange.pointsCreated} очков`,
-      actionUsed: "action",
     },
     occasion,
   );

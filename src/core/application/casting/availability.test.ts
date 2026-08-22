@@ -10,7 +10,6 @@ import { withDamage, withSpellPoints } from "@/core/infrastructure/catalog/thorn
 import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { Character } from "@/core/domain/assembly/character";
 import {
-  ACTION_SPENT_MESSAGES,
   ALL_TURN_RESOURCES,
   checkAvailability,
   componentRequirements,
@@ -249,11 +248,12 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
     expect(reasonsOf(availability, "no_slot")).toEqual(["Ячеек 9 уровня у персонажа нет"]);
   });
 
-  it("предупреждает о нехватке очков заклинаний", () => {
-    const availability = check({ spell: mageArmor, payment: { kind: "spell_points" } });
-    expect(reasonsOf(availability, "not_enough_spell_points")).toEqual([
-      "Очков заклинаний 0, нужно 2 — это 6 хитов кровью",
-    ]);
+  it("пустой запас очков оплате кровью не мешает: недостающее покупается хитами", () => {
+    const availability = check({
+      spell: mageArmor,
+      payment: { kind: "spell_points", castLevel: 1 },
+    });
+    expect(availability).toEqual({ available: true, warnings: [] });
   });
 
   it("оплата очками доступна, когда очков хватает", () => {
@@ -261,9 +261,58 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
     const availability = check({
       spell: mageArmor,
       character,
-      payment: { kind: "spell_points" },
+      payment: { kind: "spell_points", castLevel: 1 },
     });
     expect(availability.available).toBe(true);
+  });
+
+  it("кровью за уровень ниже уровня заклинания сотворить нельзя", () => {
+    const secondLevel: Spell = { ...mageArmor, level: 2 };
+    const availability = check({
+      spell: secondLevel,
+      payment: { kind: "spell_points", castLevel: 1 },
+    });
+    expect(reasonsOf(availability, "cast_level_too_low")).toEqual([
+      "Кровью за 1 уровень заклинание 2 уровня не сотворить",
+    ]);
+  });
+
+  it("подавленной крови не хватит на недостающие очки, и причина та же", () => {
+    const sunlit = {
+      ...createThorne(),
+      suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
+    };
+    const availability = check({
+      spell: mageArmor,
+      character: sunlit,
+      payment: { kind: "spell_points", castLevel: 1 },
+    });
+    expect(reasonsOf(availability, "blood_suppressed")).toEqual([
+      "Кровавое колдовство не действует под прямым солнечным светом",
+    ]);
+  });
+
+  it("хитов на недостающие очки не хватает — отказ до разрешения мастера", () => {
+    const bleeding = withDamage(createThorne(), 58);
+    const { warnings } = check({
+      spell: mageArmor,
+      character: bleeding,
+      payment: { kind: "spell_points", castLevel: 1 },
+    });
+    expect(withoutConsent(warnings, {})?.code).toBe("not_enough_hit_points");
+  });
+
+  it("обмен до нуля предупреждает о ранах, но не запрещает", () => {
+    const bleeding = withDamage(createThorne(), 54);
+    const availability = check({
+      spell: mageArmor,
+      character: bleeding,
+      payment: { kind: "spell_points", castLevel: 1 },
+    });
+    expect(reasonsOf(availability, "wounds_from_blood")).toEqual([
+      "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка — итого 1 рана",
+    ]);
+    expect(withoutConsent(availability.warnings, {})).toBeUndefined();
   });
 
   it("заговор с выбранной ячейкой — ошибка данных, а не предупреждение", () => {
@@ -508,9 +557,8 @@ describe("исполнение предупреждений по объявле�
 });
 
 describe("доступность обмена хитов на очки (FR-176, FR-143)", () => {
-  it("вне боя действие не тратится, и причины нет", () => {
-    // Экономия хода вне боя отвечает «всё доступно», и отдельной проверки на бой обмену не нужно.
-    expect(exchangeWarnings(createThorne(), ALL_TURN_RESOURCES)).toEqual([]);
+  it("здоровому и не подавленному ничто не мешает", () => {
+    expect(exchangeWarnings(createThorne())).toEqual([]);
   });
 
   it("подавление огнём и солнцем называется своими словами", () => {
@@ -518,7 +566,7 @@ describe("доступность обмена хитов на очки (FR-176, 
       ...createThorne(),
       suppression: { firedUponTurnStarts: FIRE_SUPPRESSION_TURN_STARTS, underDirectSunlight: false },
     };
-    expect(exchangeWarnings(burned, ALL_TURN_RESOURCES)).toEqual([
+    expect(exchangeWarnings(burned)).toEqual([
       "Кровавое колдовство подавлено уроном огнём до конца следующего хода",
     ]);
 
@@ -526,19 +574,19 @@ describe("доступность обмена хитов на очки (FR-176, 
       ...createThorne(),
       suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
-    expect(exchangeWarnings(sunlit, ALL_TURN_RESOURCES)).toEqual([
+    expect(exchangeWarnings(sunlit)).toEqual([
       "Кровавое колдовство не действует под прямым солнечным светом",
     ]);
   });
 
-  it("израсходованное действие названо теми же словами, что и у заклинания", () => {
-    const spent = { ...ALL_TURN_RESOURCES, inFight: true, actionAvailable: false };
-    expect(exchangeWarnings(createThorne(), spent)).toEqual([ACTION_SPENT_MESSAGES.action]);
+  it("обмен хода не занимает", () => {
+    // Признаков хода обмен не спрашивает вовсе: израсходованному действию мешать нечему.
+    expect(exchangeWarnings(createThorne())).toEqual([]);
   });
 
   it("хитов меньше курса — причина называет курс и наличное", () => {
     const bleeding = withDamage(createThorne(), 58);
-    expect(exchangeWarnings(bleeding, ALL_TURN_RESOURCES)).toEqual([
+    expect(exchangeWarnings(bleeding)).toEqual([
       "3 хита за очко, в наличии 2",
     ]);
   });

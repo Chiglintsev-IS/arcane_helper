@@ -10,7 +10,10 @@ import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
 
-/** Действие израсходовано настоящим заговором: помеха приходит из журнала, а не из подстановки. */
+/** Кровь подавлена солнцем: помеха приходит из состояния, а не из подстановки. */
+const SUPPRESSED: readonly Command[] = [...IN_FIGHT, { kind: "set_sunlight", underSunlight: true }];
+
+/** Действие израсходовано настоящим заговором: обмену оно не мешает — хода он не занимает. */
 const ACTION_SPENT: readonly Command[] = [
   ...IN_FIGHT,
   { kind: "cast_spell", spellId: "ray-of-frost", mode: "cantrip", payment: { kind: "none" } },
@@ -32,9 +35,17 @@ function renderRow(commands: readonly Command[] = IN_FIGHT): void {
 
 describe("BloodMagicRow (FR-207)", () => {
   it("причина недоступности — целая фраза, как у заклинания", () => {
+    renderRow(SUPPRESSED);
+
+    expect(
+      screen.getByText("Недоступно: Кровавое колдовство не действует под прямым солнечным светом"),
+    ).toBeDefined();
+  });
+
+  it("израсходованное действие обмену не мешает", () => {
     renderRow(ACTION_SPENT);
 
-    expect(screen.getByText("Недоступно: Действие уже израсходовано")).toBeDefined();
+    expect(screen.queryByText(/Недоступно/)).toBeNull();
   });
 
   it("доступная строка причины не называет", () => {

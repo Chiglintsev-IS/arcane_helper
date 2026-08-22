@@ -22,30 +22,30 @@ export function runesMaximum(proficiencyBonus: number): number {
   return proficiencyBonus;
 }
 
-function assertSlotLevel(slotLevel: number): void {
+function assertCastLevel(castLevel: number): void {
   if (
-    !Number.isInteger(slotLevel) ||
-    slotLevel < MINIMUM_SPELL_LEVEL ||
-    slotLevel > MAXIMUM_SPELL_LEVEL
+    !Number.isInteger(castLevel) ||
+    castLevel < MINIMUM_SPELL_LEVEL ||
+    castLevel > MAXIMUM_SPELL_LEVEL
   ) {
-    throw new DomainError(`Уровень ячейки для руны вне допустимого диапазона: ${slotLevel}`);
+    throw new DomainError(`Уровень сотворения для руны вне допустимого диапазона: ${castLevel}`);
   }
 }
 
 /** Одна формула на объявление и на состояние: иначе мастеру назовут одно, а персонажу начислят другое. */
-export function lifeRuneTemporaryHitPoints(slotLevel: number): number {
-  assertSlotLevel(slotLevel);
-  return 5 * slotLevel;
+export function lifeRuneTemporaryHitPoints(castLevel: number): number {
+  assertCastLevel(castLevel);
+  return 5 * castLevel;
 }
 
-function warRuneAttackBonus(slotLevel: number): number {
-  assertSlotLevel(slotLevel);
-  return Math.max(1, Math.ceil(slotLevel / 2));
+function warRuneAttackBonus(castLevel: number): number {
+  assertCastLevel(castLevel);
+  return Math.max(1, Math.ceil(castLevel / 2));
 }
 
-function windRuneExtraSpeedFeet(slotLevel: number): number {
-  assertSlotLevel(slotLevel);
-  return 5 * slotLevel;
+function windRuneExtraSpeedFeet(castLevel: number): number {
+  assertCastLevel(castLevel);
+  return 5 * castLevel;
 }
 
 /** Выбирает ли руна цель. Только жизнь: война всегда на чужого, ветер всегда на себя. */
@@ -53,26 +53,26 @@ export function runeChoosesTarget(rune: Rune): boolean {
   return rune === "life";
 }
 
-/** Результат руны готовым числом: половину уровня ячейки игрок иначе считает в уме перед мастером. */
-export function runeEffect(rune: Rune, slotLevel: number): string {
+/** Результат руны готовым числом: половину уровня сотворения игрок иначе считает в уме перед мастером. */
+export function runeEffect(rune: Rune, castLevel: number): string {
   switch (rune) {
     case "life":
-      return `${lifeRuneTemporaryHitPoints(slotLevel)} временных хитов одному существу в пределах 30 футов — можно себе`;
+      return `${lifeRuneTemporaryHitPoints(castLevel)} временных хитов одному существу в пределах 30 футов — можно себе`;
     case "war":
-      return `+${warRuneAttackBonus(slotLevel)} к броскам атаки по одному существу в пределах 30 футов до конца вашего следующего хода`;
+      return `+${warRuneAttackBonus(castLevel)} к броскам атаки по одному существу в пределах 30 футов до конца вашего следующего хода`;
     default:
-      return `+${windRuneExtraSpeedFeet(slotLevel)} футов скорости себе и никаких атак по возможности до начала вашего следующего хода`;
+      return `+${windRuneExtraSpeedFeet(castLevel)} футов скорости себе и никаких атак по возможности до начала вашего следующего хода`;
   }
 }
 
 /**
  * Причина, по которой руну сейчас не приложить; `null` — приложить можно.
  *
- * Руна прикладывается только к заклинанию, оплаченному ячейкой: очки заклинаний покупают само
- * сотворение, а руна — особенность подкласса поверх потраченной ячейки.
+ * Руна ложится на уровень сотворения, а не на ресурс, которым он оплачен: ячейка и кровь для неё
+ * одно и то же. Заговор и ритуал уровня сотворения не имеют — считать эффект руны там не от чего.
  */
-export function runeUnavailability(paidWithSlot: boolean, runesRemaining: number): string | null {
-  if (!paidWithSlot) return "При оплате кровью руна не применяется";
+export function runeUnavailability(castLevel: number | undefined, runesRemaining: number): string | null {
+  if (castLevel === undefined) return "У заговора и ритуала нет уровня сотворения — руну не приложить";
   if (runesRemaining <= 0) return "Рун не осталось, вернутся долгим отдыхом";
   return null;
 }

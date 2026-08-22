@@ -31,6 +31,7 @@ import {
   type WizardStep,
 } from "@/ui/features/cast-spell/model/castDraftStore";
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
+import { withPlural } from "@/shared/language";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
@@ -153,10 +154,13 @@ function optionLabel(option: CastOptionView, resources: ResourcesView): string {
     return `Ритуалом · +${option.extraMinutes} минут, ячейка не расходуется`;
   }
   if (option.payment.kind === "spell_points") {
-    return (
-      `Кровью · ${option.spellPointCost} очков (${option.hitPointCost} хитов),` +
-      ` осталось ${resources.spellPoints}`
-    );
+    const points = withPlural(option.spellPointCost ?? 0, ["очко", "очка", "очков"]);
+    // Хиты названы только там, где их придётся отдать: за покрытое запасом крови не платят.
+    const price =
+      option.hitPointCost === 0
+        ? `${points} из запаса, есть ${resources.spellPoints}`
+        : `${points}, ${withPlural(option.hitPointCost ?? 0, ["хит", "хита", "хитов"])}`;
+    return `Кровью, ${option.payment.castLevel} уровень · ${price}`;
   }
   if (option.payment.kind === "slot") {
     const { slotLevel } = option.payment;

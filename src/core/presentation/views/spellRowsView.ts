@@ -19,7 +19,7 @@ import type {
 
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Character } from "@/core/domain/assembly/character";
-import { hitPointCost, spellPointCost, RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
+import { RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
@@ -27,6 +27,8 @@ import { CANTRIP_LEVEL, needsOwnComponent, type Spell } from "@/core/domain/cata
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import {
+  bloodPrice,
+  castLevelOf,
   checkAvailability,
   closesWholeTurn,
   componentRequirements,
@@ -96,9 +98,9 @@ function ownUnavailableReason(suggested: CastPlan): string | undefined {
   return warning.reasonRu;
 }
 
-/** Уровень, на котором сотворяется заклинание этим способом: выбранная ячейка или свой уровень. */
+/** Уровень сотворения этим способом, а без него — собственный уровень заклинания. */
 function castLevel(spell: Spell, option: CastOption): number {
-  return option.payment.kind === "slot" ? option.payment.slotLevel : spell.level;
+  return castLevelOf(option.payment) ?? spell.level;
 }
 
 function castOptionView(
@@ -108,7 +110,10 @@ function castOptionView(
   character: CharacterState,
 ): CastOptionView {
   const { option } = plan;
-  const paidWithPoints = option.payment.kind === "spell_points";
+  // Цена кровью считается владельцем тарифа: сколько очков спишется всего и сколько хитов уйдёт
+  // сейчас за недостающие — второй такой счёт разошёлся бы с тем, которым спишет подтверждение.
+  const price =
+    option.payment.kind === "spell_points" ? bloodPrice(option.payment.castLevel, character) : null;
 
   return {
     mode: option.mode,
@@ -119,12 +124,9 @@ function castOptionView(
       code: warning.code,
       reasonRu: warning.reasonRu,
     })),
-    ...(paidWithPoints
-      ? {
-          spellPointCost: spellPointCost(spell.level),
-          hitPointCost: hitPointCost(spell.level, character.level),
-        }
-      : {}),
+    ...(price === null
+      ? {}
+      : { spellPointCost: price.spellPoints, hitPointCost: price.hitPoints }),
     ...(option.mode === "ritual" ? { extraMinutes: RITUAL_EXTRA_MINUTES } : {}),
     ...(spell.damage === undefined
       ? {}

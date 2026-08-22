@@ -64,7 +64,7 @@ describe("что мешает обмену", () => {
     expect(toBloodMagicView(suppressed).warningsRu[0]).toContain("солнечн");
   });
 
-  it("потраченное действие мешает обмену так же, как и заклинанию", () => {
+  it("израсходованное действие обмену не мешает", () => {
     const spell = spells.find((candidate) => candidate.id === "mage-armor")!;
     const spent = castSpell(
       startCombat(fresh(), OCCASION),
@@ -72,6 +72,6 @@ describe("что мешает обмену", () => {
       OCCASION,
     );
 
-    expect(toBloodMagicView(spent).warningsRu).toContain("Действие уже израсходовано");
+    expect(toBloodMagicView(spent).warningsRu).toEqual([]);
   });
 });

@@ -14,19 +14,16 @@ import { Character } from "@/core/domain/assembly/character";
 import { saveStatId } from "@/core/domain/shared/stats";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ANNOUNCEMENT_PLACEHOLDERS } from "@/core/domain/catalog/spell";
-import { componentRequirements, type PaymentChoice } from "@/core/application/casting/availability";
+import {
+  bloodPrice,
+  castLevelOf,
+  componentRequirements,
+  type PaymentChoice,
+} from "@/core/application/casting/availability";
 import { materialCoveredByFocus } from "@/core/application/casting/material";
 import { NO_ROLL_RU, SAVING_THROW_NAMES, signed, withPlural } from "@/shared/language";
-import {
-  hitPointCost,
-  hitPointsForPoints,
-  spellPointCost,
-  RITUAL_EXTRA_MINUTES,
-} from "@/core/domain/arcana/slots";
-import {
-  maximumRecoveryPerHour,
-  woundsFromExchange,
-} from "@/core/domain/vitality/blood";
+import { hitPointsForPoints, spellPointCost, RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
+import { maximumRecoveryPerHour, woundsWarningRu } from "@/core/domain/vitality/blood";
 import { MINIMUM_CONCENTRATION_DC } from "@/core/domain/effects/concentration";
 import { RUNE_LABEL, runeEffect, type Rune } from "@/core/domain/arcana/runes";
 import { effectiveDamage } from "@/core/domain/catalog/scaling";
@@ -53,13 +50,13 @@ type AnnouncementContext = {
   payment: PaymentChoice;
   /** Цель свободным текстом: модели противников в MVP нет. */
   targetLabel?: string;
-  /** Приложенная руна. К оплате кровью не применяется. */
+  /** Приложенная руна. Заговору и ритуалу её приложить не к чему. */
   rune?: Rune;
 };
 
-/** Уровень, на котором сотворяется заклинание: выбранная ячейка или собственный уровень. */
+/** Уровень сотворения, а без него — собственный уровень заклинания: заговор и ритуал не растут. */
 function castLevel(spell: Spell, payment: PaymentChoice): number {
-  return payment.kind === "slot" ? payment.slotLevel : spell.level;
+  return castLevelOf(payment) ?? spell.level;
 }
 
 type Resolved = { value: string; gap?: AnnouncementGap };
@@ -138,22 +135,22 @@ function modeGap(spell: Spell, mode: CastMode): AnnouncementGap[] {
 }
 
 /** Оплата кровью в шаблонах не предусмотрена: она добавляется фразой, а не подстановкой. */
-function paymentSentence(spell: Spell, payment: PaymentChoice): string {
+function paymentSentence(payment: PaymentChoice): string {
   if (payment.kind !== "spell_points") return "";
-  return ` Ячейка не расходуется: сотворяю за очки заклинаний (${spellPointCost(spell.level)}).`;
+  return ` Ячейка не расходуется: сотворяю за очки заклинаний (${spellPointCost(payment.castLevel)}).`;
 }
 
 /**
  * Руна в шаблонах карточек не предусмотрена: она добавляется фразой, как и оплата кровью.
  *
- * Молчит при любой оплате, кроме ячейки: руна прикладывается только к сотворению с расходом ячейки
- *, и названная вслух она обещала бы мастеру эффект,
- * которого не будет.
+ * Молчит там, где уровня сотворения нет: у заговора и ритуала эффект руны считать не от чего, и
+ * названная вслух она обещала бы мастеру то, чего не будет.
  */
 function runeSentence(context: AnnouncementContext): string {
-  if (context.rune === undefined || context.payment.kind !== "slot") return "";
+  const level = castLevelOf(context.payment);
+  if (context.rune === undefined || level === undefined) return "";
   const name = RUNE_LABEL[context.rune].replace("Руна ", "руну ");
-  return ` Применяю ${name}: ${runeEffect(context.rune, context.payment.slotLevel)}.`;
+  return ` Применяю ${name}: ${runeEffect(context.rune, level)}.`;
 }
 
 /**
@@ -176,7 +173,7 @@ export function renderAnnouncement(spell: Spell, context: AnnouncementContext): 
   // Пустая подстановка цели оставляет двойной пробел — он виден на экране и слышен в паузе.
   text =
     `${text.replace(/ {2,}/g, " ").trim()}` +
-    `${paymentSentence(spell, context.payment)}${runeSentence(context)}`;
+    `${paymentSentence(context.payment)}${runeSentence(context)}`;
 
   return { text, gaps: [...gaps, ...modeGap(spell, context.mode)] };
 }
@@ -206,12 +203,18 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
   if (context.payment.kind === "slot") {
     steps.push(`Спишется ячейка ${level} уровня`);
   } else if (context.payment.kind === "spell_points") {
+    // Хитами платится только недостающее: накопленный запас расходуется первым, и полная цена
+    // уровня в хитах соврала бы тому, у кого очки уже есть.
+    const price = bloodPrice(context.payment.castLevel, character);
+    const spent = `Спишется ${withPlural(price.spellPoints, ["очко", "очка", "очков"])} заклинаний`;
     // Снижение максимума хитов названо отдельным следствием: «столько же максимума» игрок читает как
     // повтор цены, а это вторая, невосстановимая её половина.
     steps.push(
-      `Спишется ${withPlural(spellPointCost(spell.level), ["очко", "очка", "очков"])}` +
-        ` заклинаний — заплатите ${withPlural(hitPointCost(spell.level, character.level), ["хит", "хита", "хитов"])},` +
-        " максимум хитов упадёт на столько же",
+      price.pointsBought === 0
+        ? `${spent} — хитов сейчас не отдаётся, запаса хватает`
+        : `${spent}, из них ${price.pointsBought} кровью —` +
+          ` заплатите ${withPlural(price.hitPoints, ["хит", "хита", "хитов"])},` +
+          " максимум хитов упадёт на столько же",
     );
   } else if (context.mode === "ritual") {
     steps.push(
@@ -219,11 +222,12 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
     );
   }
 
-  // Руна списывается той же транзакцией, что и ячейка, поэтому названа рядом с ценой.
-  if (context.rune !== undefined && context.payment.kind === "slot") {
+  // Руна списывается той же транзакцией, что и оплата, поэтому названа рядом с ценой.
+  const runeLevel = castLevelOf(context.payment);
+  if (context.rune !== undefined && runeLevel !== undefined) {
     steps.push(
       `Спишется ${RUNE_LABEL[context.rune].replace("Руна ", "руна ")}:` +
-        ` ${runeEffect(context.rune, context.payment.slotLevel)}`,
+        ` ${runeEffect(context.rune, runeLevel)}`,
     );
   }
 
@@ -300,7 +304,7 @@ export function castInstructions(spell: Spell, context: AnnouncementContext): st
 export function bloodExchangeAnnouncement(points: number, character: CharacterState): string {
   const spent = hitPointsForPoints(points, character.level);
   return (
-    `Действием обмениваю ${withPlural(spent, ["хит", "хита", "хитов"])}` +
+    `Обмениваю ${withPlural(spent, ["хит", "хита", "хитов"])}` +
     ` на ${withPlural(points, ["очко", "очка", "очков"])} заклинаний.`
   );
 }
@@ -349,10 +353,7 @@ export function bloodExchangeInstructions(points: number, character: CharacterSt
 
   // Предупреждение, а не запрет: решение рискнуть принадлежит игроку.
   if (after <= 0) {
-    steps.push(
-      "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка —" +
-        ` итого ${withPlural(woundsFromExchange(points), ["рана", "раны", "ран"])}`,
-    );
+    steps.push(woundsWarningRu(points));
   }
 
   if (character.concentration !== undefined) {

@@ -184,12 +184,15 @@ describe("filterSpells: концентрация и подготовка", () =>
 });
 
 describe("filterSpells: «доступно сейчас» (FR-002)", () => {
-  it("без свободных ячеек оставляет только заговоры", () => {
+  it("без свободных ячеек остаётся всё, за что платит кровь", () => {
     const shown = ids(
       filterSpells(book({ character: spentThorne() }), filters({ availableNow: true })),
     );
     // «Починки» здесь нет, хотя она заговор: минута не укладывается в ход, а режим — «Бой».
-    expect(shown).toEqual(["shocking-grasp", "ray-of-frost", "message"]);
+    // Прочее осталось: ячеек нет, но кровь заменяет их в любой момент и хода не занимает.
+    expect(shown).toContain("ray-of-frost");
+    expect(shown).toContain("lightning-bolt");
+    expect(shown).not.toContain("mending");
   });
 
   it("израсходованное действие скрывает заклинания действием, но не реакции", () => {
@@ -274,8 +277,8 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
 });
 
 describe("matchesTraits: строка, не являющаяся заклинанием (FR-207)", () => {
-  it("«Магия крови» проходит фильтр действия и отсеивается фильтром реакции", () => {
-    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(true);
+  it("«Магия крови» хода не занимает и отсеивается любым фильтром времени", () => {
+    expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(false);
     expect(matchesTraits(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["reaction"] }))).toBe(false);
   });
 
@@ -308,7 +311,7 @@ describe("matchesActionRow: книжные фильтры для строки-д
   });
 
   it("общие фильтры работают так же, как раньше", () => {
-    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(true);
+    expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ castingTimes: ["action"] }))).toBe(false);
     expect(matchesActionRow(BLOOD_MAGIC_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
     expect(matchesActionRow(BLOOD_MAGIC_TRAITS, NO_FILTERS)).toBe(true);
   });

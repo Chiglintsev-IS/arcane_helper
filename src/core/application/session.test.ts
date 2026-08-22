@@ -523,23 +523,40 @@ describe("руна при сотворении (FR-151)", () => {
     expect(after.character.runes.remaining).toBe(2);
   });
 
-  it("не применяется к оплате кровью", () => {
+  it("руна при оплате кровью", () => {
     const withPoints: Session = {
       ...session,
       character: withSpellPoints(session.character, 5),
     };
+    const cast = castSpell(
+      withPoints,
+      {
+        spell: spell("shield"),
+        mode: "normal",
+        payment: { kind: "spell_points", castLevel: 2 },
+        rune: "life",
+      },
+      occasion,
+    );
+
+    // Уровень сотворения оплачен кровью, и руна считается от него так же, как от ячейки.
+    expect(cast.character.runes.remaining).toBe(2);
+    expect(cast.character.temporaryHitPoints).toBe(10);
+  });
+
+  it("без уровня сотворения руну не приложить", () => {
     expect(() =>
       castSpell(
-        withPoints,
+        session,
         {
-          spell: spell("shield"),
-          mode: "normal",
-          payment: { kind: "spell_points" },
+          spell: spell("find-familiar"),
+          mode: "ritual",
+          payment: { kind: "none" },
           rune: "life",
         },
         occasion,
       ),
-    ).toThrow(/только к заклинанию, оплаченному ячейкой/);
+    ).toThrow(/только к сотворению, у которого есть уровень/);
   });
 
   it("отклоняется, когда рун не осталось", () => {
@@ -652,27 +669,58 @@ describe("кровавое колдовство (FR-170…FR-174)", () => {
     expect(() => exchangeBlood(weak, 3, occasion)).toThrow(/в наличии 5/);
   });
 
-  it("расходует действие при включённом учёте хода", () => {
+  it("обмен хода не занимает", () => {
     const after = exchangeBlood(withTurnTracking(session), 3, occasion);
-    expect(deriveTurnEconomy(after).actionAvailable).toBe(false);
+    expect(deriveTurnEconomy(after).actionAvailable).toBe(true);
   });
 
   it("оплачивает заклинание очками", () => {
     const withPoints = exchangeBlood(session, 2, occasion);
     const cast = castSpell(
       withPoints,
-      { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points", castLevel: 1 } },
       occasion,
     );
     expect(cast.character.spellPoints.remaining).toBe(0);
     expect(cast.character.spellSlots[1]?.remaining).toBe(4);
-    expect(cast.journal.at(-1)?.summaryRu).toContain("кровью, 2 очков");
+    expect(cast.journal.at(-1)?.summaryRu).toContain("кровью, 2 очков (из запаса)");
   });
 
-  it("отклоняет оплату, когда очков не хватает", () => {
+  it("кровь добирает недостающие очки одним подтверждением", () => {
+    const before = session.character.hitPoints.current;
+    const cast = castSpell(
+      session,
+      { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points", castLevel: 1 } },
+      occasion,
+    );
+
+    // Запаса не было вовсе: два очка куплены шестью хитами и тут же потрачены.
+    expect(cast.character.spellPoints.remaining).toBe(0);
+    expect(cast.character.hitPoints.current).toBe(before - 6);
+    expect(cast.character.hitPoints.bloodReduction).toBe(6);
+    expect(cast.journal.at(-1)?.summaryRu).toContain("кровью, 2 очков (6 хитов)");
+  });
+
+  it("оплата кровью обратима целиком: и очки, и хиты, и максимум", () => {
+    const before = session.character;
+    const cast = castSpell(
+      session,
+      { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points", castLevel: 1 } },
+      occasion,
+    );
+
+    expect(undoLast(cast).character).toEqual(before);
+  });
+
+  it("хитов на недостающие очки не хватает — отказ", () => {
+    const weak: Session = { ...session, character: withDamage(session.character, 58) };
     expect(() =>
-      castSpell(session, { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } }, occasion),
-    ).toThrow(/Очков заклинаний 0, нужно 2/);
+      castSpell(
+        weak,
+        { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points", castLevel: 1 } },
+        occasion,
+      ),
+    ).toThrow(/Кровью не хватит/);
   });
 
   it("подавлено уроном огнём и солнцем (FR-176)", () => {
@@ -1331,11 +1379,18 @@ describe("экономия хода выводится из журнала (ADR-
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(true);
   });
 
-  it("кровавое колдовство расходует действие в терминах журнала", () => {
+  it("израсходованное действие обмену не мешает", () => {
     let current = beginTurn(withTurnTracking(session), occasion);
-    current = exchangeBlood(current, 3, occasion);
-    expect(current.journal.at(-1)?.actionUsed).toBe("action");
+    current = castSpell(
+      current,
+      { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+      occasion,
+    );
     expect(deriveTurnEconomy(current).actionAvailable).toBe(false);
+
+    current = exchangeBlood(current, 3, occasion);
+    expect(current.journal.at(-1)?.actionUsed).toBeUndefined();
+    expect(current.character.spellPoints.remaining).toBe(3);
   });
 
   it("ритуал ничего не тратит внутри хода", () => {
@@ -2170,7 +2225,7 @@ describe("почасовое восстановление максимума х�
     // Очки уже потрачены на сотворение — остаётся только снижение, а его подавление и держит.
     const drained = castSpell(
       exchangeBlood(session, 2, occasion),
-      { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points" } },
+      { spell: spell("shield"), mode: "normal", payment: { kind: "spell_points", castLevel: 1 } },
       occasion,
     );
     expect(drained.character.spellPoints.remaining).toBe(0);

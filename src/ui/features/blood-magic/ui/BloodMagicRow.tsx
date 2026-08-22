@@ -1,9 +1,8 @@
 /**
  * «Магия крови» строкой списка «Игры».
  *
- * Обмен хитов на очки заклинаний расходует действие — то же самое действие, что и заклинание
- *. Значит и выбирается он там же, где
- * выбирают заклинание: конкуренция за действие видна глазами, а не выводится из памяти.
+ * Обмен хитов на очки заклинаний хода не занимает, но выбирается там же, где выбирают
+ * заклинание: кровь заменяет ячейку, и оба способа заплатить видны рядом, а не порознь.
  *
  * Строка устроена как строка заклинания и подчиняется тем же фильтрам — отбор делает `PlayScreen`
  * по `BLOOD_MAGIC_TRAITS`. Пока она стояла особняком, она оставалась на экране при любом фильтре, и
@@ -18,7 +17,7 @@ import { BLOOD_MAGIC_LABEL, BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionT
 import { Fragment } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
-import { combatRole } from "@/ui/entities/spell/lib/format";
+import { castingTimeBadge, combatRole } from "@/ui/entities/spell/lib/format";
 import { resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { withPlural } from "@/shared/language";
 
@@ -46,6 +45,10 @@ export function BloodMagicRow({
   // собственная подпись здесь однажды разошлась со словом заклинания.
   const resolution = resolutionBadge({ type: "automatic" }, casting);
 
+  // Время обмена называет владелец подписей: своё слово здесь разошлось бы с тем, что стоит у
+  // заклинаний, и «Действие» пережило бы правило, по которому обмен действия больше не стоит.
+  const time = castingTimeBadge(BLOOD_MAGIC_TRAITS.castingTime);
+
   return (
     <li>
       <button
@@ -63,8 +66,8 @@ export function BloodMagicRow({
         </span>
 
         <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
-          <Badge tone="action">
-            Действие
+          <Badge tone={time.tone} icon={time.icon}>
+            {time.label}
           </Badge>
           <Badge tone="muted" icon={resolution.icon}>
             {resolution.label}

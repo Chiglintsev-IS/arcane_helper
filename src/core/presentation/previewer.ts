@@ -37,7 +37,7 @@ import type { DevelopmentCheck } from "@/core/domain/crafting/development";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
 import type { PropertyMatch, RecipeDifficulty } from "@/core/domain/crafting/recipe";
 import { refusalOf } from "@/core/domain/shared/errors";
-import type { PaymentChoice } from "@/core/application/casting/availability";
+import { castLevelOf, type PaymentChoice } from "@/core/application/casting/availability";
 import {
   bloodExchangeAnnouncement,
   bloodExchangeInstructions,
@@ -53,9 +53,9 @@ import { castModeOf, directionOf, rarityOf, runeOf, spellOf } from "./words";
 
 type CastQuestion = Extract<Question, { kind: "cast_preview" }>;
 
-/** Уровень, на котором сотворяется заклинание: выбранная ячейка или собственный уровень. */
+/** Уровень сотворения, а без него — собственный уровень заклинания: заговор и ритуал не растут. */
 function castLevel(spell: Spell, payment: PaymentChoice): number {
-  return payment.kind === "slot" ? payment.slotLevel : spell.level;
+  return castLevelOf(payment) ?? spell.level;
 }
 
 /**
@@ -101,27 +101,28 @@ function hitDiceOf(
 }
 
 /**
- * Что даст каждая руна на выбранной ячейке и почему сейчас ни одной не приложить.
+ * Что даст каждая руна на выбранном уровне сотворения и почему сейчас ни одной не приложить.
  *
  * Эффекты приезжают все три, а не только выбранный: игрок выбирает руну, читая, что каждая даст,
- * и посчитать половину уровня ячейки на экране значило бы завести второе правило о том же. Вместе с
+ * и посчитать половину уровня на экране значило бы завести второе правило о том же. Вместе с
  * эффектом едет и то, выбирает ли руна цель: это правило, и спросить его дважды значит однажды
  * предложить выбор там, где выбора нет.
  */
 function runesOf(live: LiveSession, payment: PaymentChoice): PreviewOf<"cast_preview">["runes"] {
   const { runes } = live.session.character;
-  const unavailability = runeUnavailability(payment.kind === "slot", runes.remaining);
+  const level = castLevelOf(payment);
+  const unavailability = runeUnavailability(level, runes.remaining);
 
   return {
     effects:
-      payment.kind === "slot"
-        ? RUNES.map((rune) => ({
+      level === undefined
+        ? []
+        : RUNES.map((rune) => ({
             rune,
             nameRu: RUNE_LABEL[rune],
-            effectRu: runeEffect(rune, payment.slotLevel),
+            effectRu: runeEffect(rune, level),
             choosesTarget: runeChoosesTarget(rune),
-          }))
-        : [],
+          })),
     ...(unavailability === null ? {} : { unavailabilityRu: unavailability }),
   };
 }

@@ -44,6 +44,14 @@ function spentSlots(): CharacterState {
   return withoutSlots(withTurnTracking());
 }
 
+/** Ни ячеек, ни крови: под прямым солнцем кровавое колдовство не действует. */
+function withoutAnyPayment(): CharacterState {
+  return {
+    ...spentSlots(),
+    suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
+  };
+}
+
 function concentrating(): CharacterState {
   return {
     ...createThorne(),
@@ -240,8 +248,8 @@ describe("порядок итогового шага (FR-255)", () => {
 });
 
 describe("предупреждение вместо запрета (FR-031)", () => {
-  it("без свободных ячеек показывает причину и не пускает дальше без разрешения", async () => {
-    await renderWithStores(<GameScreen />, spentSlots());
+  it("без ячеек и без крови показывает причину и не пускает дальше без разрешения", async () => {
+    await renderWithStores(<GameScreen />, withoutAnyPayment());
     const user = await openWizard(/Доспехи мага/);
 
     expect(screen.getByText("Нет свободной ячейки 1 уровня")).toBeDefined();
@@ -252,7 +260,7 @@ describe("предупреждение вместо запрета (FR-031)", ()
   });
 
   it("«Применить всё равно» доводит применение до конца и показывает долг ячейки", async () => {
-    const { stores } = await renderWithStores(<GameScreen />, spentSlots());
+    const { stores } = await renderWithStores(<GameScreen />, withoutAnyPayment());
     const user = await openWizard(/Доспехи мага/);
 
     await user.click(screen.getByRole("button", { name: "Применить всё равно" }));
@@ -338,18 +346,18 @@ describe("цель мастером не спрашивается (OQ-10)", () =
   });
 })
 
-describe("недоступность руны названа причиной (FR-151, OQ-17)", () => {
-  it("при оплате кровью руна не применяется и говорит почему", async () => {
+describe("недоступность руны названа причиной (FR-151)", () => {
+  it("руна при оплате кровью считается от уровня сотворения", async () => {
     const user = userEvent.setup();
     const rich = withSpellPoints(withTurnTracking(), 6);
     await renderWithStores(<GameScreen />, rich);
     await openWizard(/^Паутина/);
 
-    await user.click(screen.getByRole("button", { name: /^Кровью/ }));
+    await user.click(screen.getByRole("button", { name: /^Кровью, 3 уровень/ }));
 
+    // Кровь оплатила третий уровень, и «Руна жизни» даёт за него столько же, сколько за ячейку.
     const rune = screen.getByLabelText("Руна");
-    expect(within(rune).getByText("При оплате кровью руна не применяется")).toBeDefined();
-    expect(within(rune).queryByRole("button")).toBeNull();
+    expect(within(rune).getByText(/15 временных хитов/)).toBeDefined();
   });
 
   it("без рун объясняет, когда они вернутся", async () => {

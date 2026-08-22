@@ -20,7 +20,6 @@ import {
 } from "@/core/domain/arcana/slots";
 import { exchangeWarnings } from "@/core/application/casting/availability";
 import type { Session } from "@/core/application/session";
-import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 
 /**
  * С какого числа очков открывается мастер: со стоимости самого дешёвого заклинания.
@@ -43,6 +42,6 @@ export function toBloodMagicView(session: Session): BloodMagicView {
       maximum,
       initial: initialPoints(maximum),
     },
-    warningsRu: exchangeWarnings(character, deriveTurnEconomy(session)),
+    warningsRu: exchangeWarnings(character),
   };
 }

@@ -15,7 +15,7 @@ import {
   type PaymentChoice,
   type TurnResources,
 } from "@/core/application/casting/availability";
-import { MAXIMUM_PAYABLE_SPELL_LEVEL } from "@/core/domain/arcana/slots";
+import { payableCastLevels } from "@/core/domain/arcana/slots";
 import { castableSlotLevels, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
@@ -76,8 +76,9 @@ export type CastOption = {
 };
 
 /**
- * Все способы сотворить заклинание: ячейки от собственного уровня и выше, оплата очками и
- * ритуальный режим. Наличие свободной ячейки здесь не проверяется — это дело проверки доступности.
+ * Все способы сотворить заклинание: ячейки от собственного уровня и выше, оплата кровью на каждом
+ * уровне тарифа и ритуальный режим. Наличие свободной ячейки и запас крови здесь не проверяются —
+ * это дело проверки доступности.
  *
  * В бою ритуального способа среди них нет: ритуал занимает на десять минут больше обычного, а раунд
  * длится шесть секунд. Предлагать его в бою значит предлагать выбор, который нельзя сделать.
@@ -95,10 +96,10 @@ function castOptions(
     (slotLevel) => ({ mode: "normal", payment: { kind: "slot", slotLevel } }),
   );
 
-  // Очки заклинаний предлагаются, только если цена известна: таблица кровавого колдовства
-  // заканчивается пятым уровнем.
-  if (spell.level <= MAXIMUM_PAYABLE_SPELL_LEVEL) {
-    plans.push({ mode: "normal", payment: { kind: "spell_points" } });
+  // Кровью платят за каждый уровень, до которого дотягивается тариф: она повышает сотворение так
+  // же, как ячейка старшего уровня, и Торну открывает пятый — тот, до чьих ячеек он не дорос.
+  for (const castLevel of payableCastLevels(spell.level)) {
+    plans.push({ mode: "normal", payment: { kind: "spell_points", castLevel } });
   }
   if (ritualAvailable(spell, options.inCombat)) {
     plans.push({ mode: "ritual", payment: { kind: "none" } });

@@ -9,8 +9,8 @@ import {
   ascensionTierRate,
   castableSlotLevels,
   consumesSlot,
-  hitPointCost,
   hitPointsForPoints,
+  payableCastLevels,
   maximumExchangePoints,
   recoverableSlots,
   refundSlot,
@@ -321,23 +321,18 @@ describe("spellPointCost", () => {
   });
 });
 
-describe("hitPointCost", () => {
+describe("payableCastLevels", () => {
   it.each([
-    [1, 6],
-    [2, 9],
-    [3, 15],
-    [4, 18],
-  ])("заклинание %i уровня стоит %i хитов на уровне Торна", (spellLevel, expected) => {
-    expect(hitPointCost(spellLevel, 7)).toBe(expected);
+    [1, [1, 2, 3, 4, 5]],
+    [3, [3, 4, 5]],
+    [5, [5]],
+    [6, []],
+  ])("заклинание %i уровня оплачивается кровью за уровни %j", (spellLevel, expected) => {
+    expect(payableCastLevels(spellLevel)).toEqual(expected);
   });
 
-  it("на первой ступени то же заклинание дешевле", () => {
-    expect(hitPointCost(1, 3)).toBe(4);
-    expect(hitPointCost(3, 3)).toBe(10);
-  });
-
-  it("на последней ступени дороже", () => {
-    expect(hitPointCost(4, 20)).toBe(36);
+  it("заговор кровью не оплачивается: уровня сотворения у него нет", () => {
+    expect(payableCastLevels(0)).toEqual([]);
   });
 });
 

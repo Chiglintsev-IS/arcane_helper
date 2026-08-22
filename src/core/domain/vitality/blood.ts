@@ -7,6 +7,7 @@
 
 import { DomainError } from "@/core/domain/shared/errors";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
+import { withPlural } from "@/shared/language";
 
 /** Раны за обмен, опустивший здоровье до нуля: одна за сам факт и по одной за каждые три очка. */
 const WOUNDS_PER_POINTS = 3;
@@ -28,11 +29,24 @@ export type Exchange = {
 };
 
 /** Раны за обмен, опустивший здоровье до нуля. */
-export function woundsFromExchange(pointsCreated: number): number {
+function woundsFromExchange(pointsCreated: number): number {
   if (!Number.isInteger(pointsCreated) || pointsCreated < 0) {
     throw new DomainError(`Число очков должно быть целым неотрицательным, получено: ${pointsCreated}`);
   }
   return 1 + Math.floor(pointsCreated / WOUNDS_PER_POINTS);
+}
+
+/**
+ * Чем грозит обмен, опускающий здоровье до нуля.
+ *
+ * Фраза одна на всех, кто предупреждает: обмен ради запаса и оплата кровью прямо в сотворении
+ * называют одно и то же одними словами.
+ */
+export function woundsWarningRu(pointsCreated: number): string {
+  return (
+    "Хиты уйдут в ноль: 1 рана за сам факт и ещё по 1 за каждые три очка —" +
+    ` итого ${withPlural(woundsFromExchange(pointsCreated), ["рана", "раны", "ран"])}`
+  );
 }
 
 /** Восстановление хитов регенерацией за один свой ход. Для 7 уровня — 3. */

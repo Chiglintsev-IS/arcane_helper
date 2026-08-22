@@ -82,7 +82,7 @@ describe("подтверждение обмена (FR-170, FR-172)", () => {
     expect(shown(stores).resources.spellPoints).toBe(2);
   });
 
-  it("в бою обмен тратит действие", async () => {
+  it("в бою обмен действия не тратит", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />, createThorne(), {
       inFight: true,
@@ -92,7 +92,7 @@ describe("подтверждение обмена (FR-170, FR-172)", () => {
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    expect(shown(stores).turn.actionAvailable).toBe(false);
+    expect(shown(stores).turn.actionAvailable).toBe(true);
   });
 
   it("закрывает мастер после подтверждения", async () => {
@@ -241,7 +241,7 @@ describe("итоговый экран (FR-032, FR-174)", () => {
       screen.getByText("Отметьте 6 хитов: было 60, станет 54"),
     ).toBeDefined();
     expect(
-      screen.getByText("Действием обмениваю 6 хитов на 2 очка заклинаний."),
+      screen.getByText("Обмениваю 6 хитов на 2 очка заклинаний."),
     ).toBeDefined();
   });
 

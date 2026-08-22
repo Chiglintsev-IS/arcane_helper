@@ -402,13 +402,12 @@ describe("запоминание выбора", () => {
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 1 });
   });
 
-  it("без свободных ячеек предлагает ячейку своего уровня, чтобы шаг доступности объяснил причину", () => {
+  it("без свободных ячеек предлагает кровь: она и есть доступный способ", () => {
     const spent = withoutSlots(createThorne());
     const row = rowOf(mageArmor, spent);
 
     store.getState().start(row);
-    expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 1 });
-    expect(visibleSteps(draftOf(), row)).toContain("availability");
+    expect(draftOf().option.payment).toEqual({ kind: "spell_points", castLevel: 1 });
   });
 
   it("заклинание уровня, до которого персонаж не дорос, называет недостающую ячейку", () => {
@@ -438,7 +437,7 @@ describe("запоминание выбора", () => {
     store.getState().cancel();
 
     store.getState().start(row);
-    expect(draftOf().option.payment).toEqual({ kind: "spell_points" });
+    expect(draftOf().option.payment).toEqual({ kind: "spell_points", castLevel: 1 });
   });
 });
 
