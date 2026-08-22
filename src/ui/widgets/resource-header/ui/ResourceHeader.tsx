@@ -433,21 +433,6 @@ export function ResourceBadges({
             </li>
           </>
         ) : null}
-        {/*
-         * Единственный значок, который не уходит: подсказку спрашивают ровно тогда, когда её уже
-         * нет. Стоит последней — перенос на вторую строку достаётся ей, а не числам хода.
-         *
-         * Имя полное, а не сокращённое до одного слова: «подсказка» сама по себе не называет ни
-         * особенности, ни того, откуда она взялась, — а сокращают здесь только то, что игрок
-         * прочитает целиком в другом месте.
-         */}
-        <li
-          aria-label={`${resources.lastHint.nameRu}: ${resources.lastHint.remaining} из ${resources.lastHint.maximum}`}
-        >
-          <SpendableResource available={resources.lastHint.remaining > 0} tone="muted" icon="✚">
-            {resources.lastHint.nameRu} {resources.lastHint.remaining}/{resources.lastHint.maximum}
-          </SpendableResource>
-        </li>
     </ul>
   );
 }

@@ -32,11 +32,8 @@ test.beforeEach(async ({ page }) => {
 
 /**
  * Первая строка списка — та, что стоит первой на экране.
- *
- * Уже творённое стоит именами выше упорядоченного ценой списка, поэтому бюджет меряется по ряду
- * имён, когда он есть: карточка под ним первой не является.
  */
-const FIRST_ROW = '[aria-label="Часто"] li, [aria-label^="Заклинания"] li';
+const FIRST_ROW = '[aria-label^="Заклинания"] li';
 
 /** Смена режима: она ничего не спрашивает — бой начинают и заканчивают кнопками в самом бою. */
 async function switchMode(page: Page, name: RegExp): Promise<void> {
@@ -236,47 +233,6 @@ async function holdConcentrationAfterSeveralCasts(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: "Подтвердить" })).toBeHidden();
   await page.getByRole("button", { name: /^Новый ход/ }).click();
 }
-
-/**
- * Нижний край видимого: область прокрутки обрезает содержимое своим краем, а панель режимов
- * закрывает остаток экрана. Мерить бюджет высотой окна значит считать видимым то, что лежит под
- * панелью.
- */
-async function visibleBottomOfList(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const list = document.querySelector('[aria-label^="Заклинания"]');
-    if (list === null) throw new Error("список пуст");
-    let area = list.parentElement;
-    while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
-    if (area === null) throw new Error("нет области прокрутки");
-    return Math.round(area.getBoundingClientRect().bottom);
-  });
-}
-
-test("the frequent row and the list both start on screen at 320", async ({ page }) => {
-  await holdConcentrationAfterSeveralCasts(page);
-
-  const visibleBottom = await visibleBottomOfList(page);
-  const measured = await page.evaluate(() => {
-    const frequent = document.querySelector('[aria-label="Часто"]');
-    const ordered = document.querySelector('[aria-label^="Заклинания"]');
-    if (frequent === null || ordered === null) throw new Error("нет раздела или списка");
-    let area = ordered.parentElement;
-    while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
-    if (area !== null) area.scrollTop = 0;
-    return {
-      frequentBottom: Math.round(frequent.getBoundingClientRect().bottom),
-      orderedTop: Math.round(ordered.getBoundingClientRect().top),
-    };
-  });
-
-  expect(measured.frequentBottom, "уже творённое целиком на экране").toBeLessThanOrEqual(
-    visibleBottom,
-  );
-  expect(measured.orderedTop, "упорядоченный список начинается на экране").toBeLessThan(
-    visibleBottom,
-  );
-});
 
 test("the first spell row is whole on screen at 320, 375 and 390", async ({ page }) => {
   await holdConcentrationAfterSeveralCasts(page);

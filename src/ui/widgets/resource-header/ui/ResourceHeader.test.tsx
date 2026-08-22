@@ -15,12 +15,11 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import {
   withSpellPoints,
   withoutHitDice,
-  withoutLastHint,
   withoutRunes,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
-import { ResourceBadges, ResourceHeader } from "./ResourceHeader";
+import { ResourceHeader } from "./ResourceHeader";
 
 afterEach(cleanup);
 
@@ -45,21 +44,6 @@ function tiles(character: CharacterState): Tile[] {
   return within(payingRow(character))
     .getAllByRole("listitem")
     .map((item) => ({ text: item.textContent ?? "", classes: item.className }));
-}
-
-/** Значки ряда «прочие ресурсы»: тот же снимок, другой ряд. */
-function badges(character: CharacterState): string[] {
-  const snapshot = testSnapshot(character);
-  render(
-    <ResourceBadges
-      sheet={snapshot.sheet}
-      resources={snapshot.resources}
-      turn={snapshot.turn}
-    />,
-  );
-  return within(screen.getByLabelText("Прочие ресурсы"))
-    .getAllByRole("listitem")
-    .map((item) => item.textContent ?? "");
 }
 
 /** Плитка пула по её подписи: прогон называет ресурс словом, а не местом в ряду. */
@@ -152,14 +136,3 @@ describe("пустой пул подан пустым", () => {
   });
 });
 
-describe("последняя подсказка (FR-309)", () => {
-  it("истраченная подсказка остаётся в ряду нулём и названа полным именем", () => {
-    // Одно слово «подсказка» не называет ни особенности, ни того, откуда она взялась.
-    expect(badges(createThorne())).toContain("✚Последняя подсказка 1/1");
-
-    cleanup();
-
-    // Пропавшая строка читалась бы как «такой особенности нет», а не как «она уже потрачена».
-    expect(badges(withoutLastHint(createThorne()))).toContain("✗Последняя подсказка 0/1");
-  });
-});

@@ -8,6 +8,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { withoutLastHint } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { LastHintSheet } from "./LastHintSheet";
@@ -15,6 +17,9 @@ import { LastHintSheet } from "./LastHintSheet";
 afterEach(cleanup);
 
 const RESOURCES = testSnapshot().resources;
+
+/** Подсказка истрачена: состояние собрано операцией владельца, а не набранным числом. */
+const SPENT = testSnapshot(withoutLastHint(createThorne())).resources;
 
 describe("расход последней подсказки (FR-309)", () => {
   it("счёт правится одним контролом, и он же возвращает списанное", async () => {
@@ -40,7 +45,7 @@ describe("расход последней подсказки (FR-309)", () => {
   it("истраченная подсказка называет, чем вернётся", () => {
     render(
       <LastHintSheet
-        resources={{ ...RESOURCES, lastHint: { ...RESOURCES.lastHint, remaining: 0 } }}
+        resources={SPENT}
         onAdjust={() => undefined}
         onClose={() => undefined}
       />,

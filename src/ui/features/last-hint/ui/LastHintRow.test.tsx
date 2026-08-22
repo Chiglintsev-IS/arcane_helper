@@ -11,6 +11,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { withoutLastHint } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { LastHintRow } from "./LastHintRow";
@@ -19,10 +21,8 @@ afterEach(cleanup);
 
 const RESOURCES = testSnapshot().resources;
 
-/** Подсказка истрачена: остаток нулевой, максимум прежний. */
-function spent(): typeof RESOURCES {
-  return { ...RESOURCES, lastHint: { ...RESOURCES.lastHint, remaining: 0 } };
-}
+/** Подсказка истрачена: состояние собрано операцией владельца, а не набранным числом. */
+const SPENT = testSnapshot(withoutLastHint(createThorne())).resources;
 
 describe("последняя подсказка в списке действий (FR-329)", () => {
   it("строка называет особенность полным именем и пересказывает повод", () => {
@@ -34,7 +34,7 @@ describe("последняя подсказка в списке действий
   });
 
   it("истраченная остаётся строкой и называет причину словами", () => {
-    render(<LastHintRow resources={spent()} onOpen={() => undefined} />);
+    render(<LastHintRow resources={SPENT} onOpen={() => undefined} />);
 
     // Пропавшая строка читалась бы как «такой особенности нет», а не как «она уже потрачена».
     expect(screen.getByRole("button").textContent).toContain("0/1");

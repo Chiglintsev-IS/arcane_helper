@@ -35,12 +35,6 @@ import { signed } from "@/shared/language";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 import { RULE_MARK } from "@/ui/shared/ui/rule";
 
-/**
- * Имя раздела уже творённого: одно слово и одна строка на заголовок и на произносимое имя списка.
- * Второе имя тому же разделу читалось бы как второй раздел.
- */
-const FREQUENT_LABEL = "Часто";
-
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
   const error = useSession((state) => state.error);
@@ -108,16 +102,6 @@ export function GameScreen() {
   const hintShown = matchesActionRow(hintTraits, filters);
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
-  /*
-   * Уже творённое уезжает наверх своим разделом и в упорядоченном ценой списке не остаётся: та же
-   * строка в двух местах отняла бы место и спросила бы дважды об одном. Что творили чаще прочего,
-   * знает ядро — здесь только место на экране.
-   */
-  const frequent = snapshot.frequentSpellIds.flatMap((id) =>
-    shown.filter((spell) => spell.id === id),
-  );
-  const others = shown.filter((spell) => !snapshot.frequentSpellIds.includes(spell.id));
-
   const card = (spell: SpellRowView) => (
     <SpellCardCompact
       key={spell.id}
@@ -127,9 +111,9 @@ export function GameScreen() {
     />
   );
 
-  const rows = others.map(card);
+  const rows = shown.map(card);
   if (bloodShown) {
-    rows.splice(positionInList(others, BLOOD_MAGIC_TRAITS, "play"), 0, (
+    rows.splice(positionInList(shown, BLOOD_MAGIC_TRAITS, "play"), 0, (
       <BloodMagicRow
         key="blood-magic"
         bloodMagic={snapshot.bloodMagic}
@@ -143,7 +127,7 @@ export function GameScreen() {
     ));
   }
   if (hintShown) {
-    rows.splice(positionInList(others, hintTraits, "play"), 0, (
+    rows.splice(positionInList(shown, hintTraits, "play"), 0, (
       <LastHintRow
         key="last-hint"
         resources={snapshot.resources}
@@ -310,44 +294,12 @@ export function GameScreen() {
           </p>
         )}
 
-        {/*
-         * Уже творённое стоит именами, а не карточками: карточка отвечает «что это и чем платить»,
-         * а повторяющий спросил это в тот ход, когда творил впервые, и сейчас ищет имя. Столбцом
-         * карточек раздел уносил весь экран и отодвигал упорядоченный список за нижний край.
-         *
-         * Слово «Часто» стоит первым в самом ряду, а не строкой над ним: строка над списком стоит
-         * карточки списка, а ряд имён без слова читался бы второй полосой фильтров.
-         *
-         * Имена переносятся, а не прокручиваются, — по тому же правилу, что и переключатели:
-         * имя за краем экрана — имя, которого для игрока нет.
-         */}
-        {frequent.length === 0 ? null : (
-          <div className="flex flex-wrap items-start gap-x-2">
-            <h2 className="flex min-h-11 items-center text-[0.6875rem] font-medium uppercase tracking-wide text-ink-quiet">
-              {FREQUENT_LABEL}
-            </h2>
-            <ul aria-label={FREQUENT_LABEL} className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-              {frequent.map((spell) => (
-                <li key={spell.id}>
-                  <button
-                    type="button"
-                    onClick={() => openSpell(spell.id)}
-                    className={`inline-flex min-h-11 items-center px-2 text-sm font-medium ${SURFACE_CONTROL}`}
-                  >
-                    {spell.nameRu}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {rows.length > 0 ? (
           <ul aria-label={listLabel} className="flex flex-col gap-2">
             {rows}
           </ul>
         ) : null}
-        {rows.length === 0 && frequent.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="text-sm">Под выбранные фильтры не подходит ни одно заклинание.</p>
         ) : null}
       </div>

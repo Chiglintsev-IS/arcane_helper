@@ -24,7 +24,6 @@ import { applyCommand } from "@/core/presentation/controller";
 
 import {
   toCastingView,
-  toFrequentSpellIds,
   toSpellRowViews,
   toSpellsRefusal,
   toTurnView,
@@ -326,64 +325,6 @@ describe("экономия хода", () => {
     ]);
 
     expect(toTurnView(spent)).toMatchObject({ inFight: true, actionAvailable: false });
-  });
-});
-
-describe("раздел уже творённого (FR-307)", () => {
-  /** Сотворение заговора: вне боя оно не стоит ни ячейки, ни действия, и потому повторяется. */
-  function cantrip(spellId: string): Command {
-    return { kind: "cast_spell", spellId, mode: "cantrip", payment: { kind: "none" } };
-  }
-
-  function withSlot(spellId: string, slotLevel: number): Command {
-    return { kind: "cast_spell", spellId, mode: "normal", payment: { kind: "slot", slotLevel } };
-  }
-
-  it("часто применённое собирается из журнала", () => {
-    const live = played(createThorne(), [
-      ...START,
-      cantrip("ray-of-frost"),
-      { kind: "begin_turn" },
-      withSlot("mage-armor", 1),
-      { kind: "begin_turn" },
-      cantrip("ray-of-frost"),
-    ]);
-
-    // Ни отметка боя, ни начало хода сотворением не являются: раздел собран из того, чем ходили,
-    // а не из всего случившегося.
-    expect(toFrequentSpellIds(live)).toEqual(["ray-of-frost", "mage-armor"]);
-  });
-
-  it("не творили ничего — повторять нечего", () => {
-    expect(toFrequentSpellIds(played(createThorne(), START))).toEqual([]);
-  });
-
-  it("при равном счёте раньше стоит творённое позже", () => {
-    const live = played(createThorne(), [cantrip("message"), cantrip("ray-of-frost")]);
-
-    expect(toFrequentSpellIds(live)).toEqual(["ray-of-frost", "message"]);
-  });
-
-  it("строк не больше пяти: шестое творённое в раздел не встаёт", () => {
-    const live = played(createThorne(), [
-      cantrip("shocking-grasp"),
-      cantrip("ray-of-frost"),
-      cantrip("message"),
-      cantrip("mending"),
-      withSlot("mage-armor", 1),
-      withSlot("mirror-image", 2),
-    ]);
-
-    expect(toFrequentSpellIds(live)).toHaveLength(5);
-    // Уехало из раздела то, чем ходили раньше всех: в разделе стоит творённое позже.
-    expect(toFrequentSpellIds(live)).not.toContain("shocking-grasp");
-  });
-
-  it("возвращённое сотворение уходит из раздела вместе с записью", () => {
-    const cast = [cantrip("ray-of-frost")];
-
-    expect(toFrequentSpellIds(played(createThorne(), cast))).toEqual(["ray-of-frost"]);
-    expect(toFrequentSpellIds(played(createThorne(), [...cast, { kind: "undo_last" }]))).toEqual([]);
   });
 });
 

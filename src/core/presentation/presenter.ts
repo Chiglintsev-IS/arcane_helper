@@ -23,7 +23,6 @@ import { toResourcesView } from "./views/resourcesView";
 import { toSheetView } from "./views/sheetView";
 import {
   toCastingView,
-  toFrequentSpellIds,
   toSpellRowViews,
   toSpellsRefusal,
   toTurnView,
@@ -46,7 +45,6 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
     casting: toCastingView(live.session.character),
     bloodMagic: toBloodMagicView(live.session),
     spells: toSpellRowViews(live),
-    frequentSpellIds: toFrequentSpellIds(live),
     ...(spellsRefusalRu === undefined ? {} : { spellsRefusalRu }),
     choices: toChoicesView(),
     catalogSource: live.spellCatalogSource,
