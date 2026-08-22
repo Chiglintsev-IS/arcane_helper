@@ -52,7 +52,7 @@ export function Bag({
 
   return (
     <div className="flex flex-col gap-2">
-      <section className={`flex items-center gap-3 rounded-xl px-3 py-2 ${SURFACE_GROUP}`}>
+      <section className={`flex items-center gap-3 px-3 py-2 ${SURFACE_GROUP}`}>
         <h2 className="shrink-0 text-sm font-semibold">{moneyRu}</h2>
         {/* Все монеты стола всегда: исчезнувший ноль заставляет гадать, кончился или забыт. */}
         <ul
@@ -61,7 +61,7 @@ export function Bag({
         >
           {money.map(({ currency, amount }) => (
             <li key={currency}>
-              <span className="text-slate-600 dark:text-slate-400">{currencyAbbr(currency)}</span>{" "}
+              <span className="text-ink-quiet">{currencyAbbr(currency)}</span>{" "}
               {amount}
             </li>
           ))}
@@ -70,7 +70,7 @@ export function Bag({
           type="button"
           onClick={onEditMoney}
           aria-label={editName(moneyRu)}
-          className={`min-h-11 shrink-0 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {EDIT_LABEL}
         </button>
@@ -106,7 +106,7 @@ export function Bag({
                       aria-label={`Потратить один из сумки: ${item.nameRu}`}
                       disabled={item.bagCount === 0}
                       onClick={() => onAdjustBagCount(item.id, -1)}
-                      className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
+                      className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
                     >
                       −
                     </button>
@@ -117,7 +117,7 @@ export function Bag({
                       type="button"
                       aria-label={`Добавить один в сумку: ${item.nameRu}`}
                       onClick={() => onAdjustBagCount(item.id, 1)}
-                      className={`min-h-11 min-w-11 rounded-lg text-base ${SURFACE_CONTROL}`}
+                      className={`min-h-11 min-w-11 text-base ${SURFACE_CONTROL}`}
                     >
                       +
                     </button>

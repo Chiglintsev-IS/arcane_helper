@@ -65,19 +65,19 @@ export function ActiveEffects({
         type="button"
         onClick={onOpen}
         aria-label={`${ACTIVE_SHEET_LABEL}: ${spoken}`}
-        className={`flex min-h-11 max-w-full items-center gap-2 rounded-lg px-2 py-1 text-left ${SURFACE_CONTROL}`}
+        className={`flex min-h-11 max-w-full items-center gap-2 px-2 py-1 text-left ${SURFACE_CONTROL}`}
       >
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           {held.length === 0 ? (
-            <span className="text-slate-600 dark:text-slate-400">Ничего не действует</span>
+            <span className="text-ink-quiet">Ничего не действует</span>
           ) : (
             held.map((item) => (
               <span
                 key={item.key}
                 className={
                   item.concentrating
-                    ? "font-semibold text-concentration-strong dark:text-concentration-bright"
-                    : "text-slate-700 dark:text-slate-300"
+                    ? "font-semibold text-concentration"
+                    : "text-ink-soft"
                 }
               >
                 <span aria-hidden="true">{item.markRu}</span> {item.textRu}
@@ -85,7 +85,7 @@ export function ActiveEffects({
             ))
           )}
         </span>
-        <span aria-hidden="true" className="shrink-0 text-slate-600 dark:text-slate-400">
+        <span aria-hidden="true" className="shrink-0 text-ink-quiet">
           ›
         </span>
       </button>

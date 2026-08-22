@@ -25,7 +25,7 @@ import { editName } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /** Тело строки: одно и то же у заведённой вещи и у той, которой ещё нет. */
-const ROW = "block min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1.5 text-left";
+const ROW = "block min-h-11 min-w-0 flex-1 px-1 py-1.5 text-left";
 
 /** Подробности требования: цена, судьба, те, кто его называет, и написанное рукой. */
 function detailsRu(need: MissingMaterialView): string {
@@ -43,7 +43,7 @@ function RowBody({ need }: { need: MissingMaterialView }) {
   return (
     <>
       <span className="block text-sm font-medium">{need.nameRu}</span>
-      <span className="mt-1 block text-xs leading-snug text-slate-600 dark:text-slate-400">
+      <span className="mt-1 block text-xs leading-snug text-ink-quiet">
         {detailsRu(need)}
       </span>
     </>
@@ -73,7 +73,7 @@ export function MissingMaterials({
   return (
     <div className="flex flex-col gap-1">
       {missing.length === 0 ? (
-        <p className="text-xs text-slate-600 dark:text-slate-400">Всё нужное лежит в сумке.</p>
+        <p className="text-xs text-ink-quiet">Всё нужное лежит в сумке.</p>
       ) : null}
 
       {rows.length === 0 ? null : (
@@ -91,7 +91,7 @@ export function MissingMaterials({
                     type="button"
                     aria-label={editName(need.nameRu)}
                     onClick={() => onOpenItem(itemId)}
-                    className={`${ROW} hover:bg-slate-100 dark:hover:bg-slate-900`}
+                    className={`${ROW} hover:bg-control`}
                   >
                     <RowBody need={need} />
                   </button>
@@ -101,7 +101,7 @@ export function MissingMaterials({
                   type="button"
                   aria-label={`Добавить один в сумку: ${need.nameRu}`}
                   onClick={() => add(need)}
-                  className={`min-h-11 min-w-11 shrink-0 rounded-lg text-base ${SURFACE_CONTROL}`}
+                  className={`min-h-11 min-w-11 shrink-0 text-base ${SURFACE_CONTROL}`}
                 >
                   +
                 </button>
@@ -112,7 +112,7 @@ export function MissingMaterials({
       )}
 
       {covered.length === 0 ? null : (
-        <p className="text-xs leading-snug text-slate-600 dark:text-slate-400">
+        <p className="text-xs leading-snug text-ink-quiet">
           Закрывает фокусировка, покупать не обязательно:{" "}
           {covered.map((need) => need.nameRu).join(" · ")}
         </p>

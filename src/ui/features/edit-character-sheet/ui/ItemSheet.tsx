@@ -11,7 +11,7 @@ import {
 } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 /**
  * Одна вещь целиком: категория, заметка, цена — и прибавки, если это экипировка.
@@ -130,14 +130,14 @@ export function ItemSheet({
        * сохранение возвращало бы потраченное.
        */}
       <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="text-slate-600 dark:text-slate-400">В сумке</span>
+        <span className="text-ink-quiet">В сумке</span>
         <span className="flex items-center gap-1">
           <button
             type="button"
             aria-label={`Потратить один из сумки: ${item.nameRu}`}
             disabled={bagCount === 0}
             onClick={() => onAdjustBagCount(-1)}
-            className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
+            className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
           >
             −
           </button>
@@ -146,7 +146,7 @@ export function ItemSheet({
             type="button"
             aria-label={`Добавить один в сумку: ${item.nameRu}`}
             onClick={() => onAdjustBagCount(1)}
-            className={`min-h-11 min-w-11 rounded-lg text-base ${SURFACE_CONTROL}`}
+            className={`min-h-11 min-w-11 text-base ${SURFACE_CONTROL}`}
           >
             +
           </button>
@@ -155,14 +155,14 @@ export function ItemSheet({
 
       {kind === "gear" ? (
         <div className="flex items-center justify-between gap-2 text-sm">
-          <span className="text-slate-600 dark:text-slate-400">Надето</span>
+          <span className="text-ink-quiet">Надето</span>
           <span className="flex items-center gap-1">
             <button
               type="button"
               aria-label={`Снять один: ${item.nameRu}`}
               disabled={wornCount === 0}
               onClick={() => onAdjustWornCount(-1)}
-              className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
+              className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
             >
               −
             </button>
@@ -172,7 +172,7 @@ export function ItemSheet({
               aria-label={`Надеть один: ${item.nameRu}`}
               disabled={bagCount === 0}
               onClick={() => onAdjustWornCount(1)}
-              className={`min-h-11 min-w-11 rounded-lg text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
+              className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
             >
               +
             </button>
@@ -188,10 +188,10 @@ export function ItemSheet({
             role="radio"
             aria-checked={kind === choice}
             onClick={() => setKind(choice)}
-            className={`min-h-11 rounded-lg px-2 text-xs ${
+            className={`min-h-11 px-2 text-xs ${
               kind === choice
-                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+              ? `${SURFACE_CHOSEN} font-medium`
+              : `text-ink-quiet ${SURFACE_CONTROL}`
             }`}
           >
             {itemKindLabel(choice)}
@@ -211,10 +211,10 @@ export function ItemSheet({
             aria-checked={currency === choice}
             aria-label={`Монета: ${currencyAbbr(choice)}`}
             onClick={() => setCurrency(choice)}
-            className={`min-h-11 min-w-11 rounded-lg px-2 text-xs ${
+            className={`min-h-11 min-w-11 px-2 text-xs ${
               currency === choice
-                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
+              ? `${SURFACE_CHOSEN} font-medium`
+              : `text-ink-quiet ${SURFACE_GROUP_BARE}`
             }`}
           >
             {currencyAbbr(choice)}
@@ -229,15 +229,15 @@ export function ItemSheet({
             type="button"
             aria-pressed={focus}
             onClick={() => setFocus(!focus)}
-            className={`min-h-11 rounded-lg px-2 text-xs ${
+            className={`min-h-11 px-2 text-xs ${
               focus
-                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+              ? `${SURFACE_CHOSEN} font-medium`
+              : `text-ink-quiet ${SURFACE_CONTROL}`
             }`}
           >
             Магическая фокусировка
           </button>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-ink-quiet">
             Надетая фокусировка закрывает материальные компоненты без указанной стоимости. Снимете —
             компоненты снова понадобятся.
           </p>
@@ -255,12 +255,12 @@ export function ItemSheet({
           ))}
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600 dark:text-slate-400">Добавить прибавку</span>
+            <span className="text-ink-quiet">Добавить прибавку</span>
             <span className="flex gap-2">
               <select
                 value={added}
                 onChange={(event) => setAdded(event.target.value)}
-                className={`min-h-11 flex-1 rounded-xl bg-transparent px-3 ${SURFACE_CONTROL}`}
+                className={`min-h-11 flex-1 bg-transparent px-3 ${SURFACE_CONTROL}`}
               >
                 {choices.stats.map((stat) => (
                   <option key={stat.id} value={stat.id}>
@@ -275,7 +275,7 @@ export function ItemSheet({
                     bonuses.some((row) => row[0] === added) ? bonuses : [...bonuses, [added, "0"]],
                   )
                 }
-                className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+                className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
               >
                 Добавить
               </button>
@@ -284,11 +284,11 @@ export function ItemSheet({
 
           <NumberField labelRu="База КД доспеха" value={armorBase} onChange={setArmorBase} min={1} />
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-slate-600 dark:text-slate-400">Категория доспеха</span>
+            <span className="text-ink-quiet">Категория доспеха</span>
             <select
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              className={`min-h-11 rounded-xl bg-transparent px-3 ${SURFACE_CONTROL}`}
+              className={`min-h-11 bg-transparent px-3 ${SURFACE_CONTROL}`}
             >
               <option value="">не названа</option>
               {choices.armorCategories.map((option) => (
@@ -298,7 +298,7 @@ export function ItemSheet({
               ))}
             </select>
           </label>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-ink-quiet">
             База — только у доспеха: у кольчуги 16, у кольца поля нет. Надетый доспех задаёт базу
             КД сам; Ловкость и прибавки считаются сверху, а во что категория обходится Ловкости —
             правило листа.
@@ -311,12 +311,12 @@ export function ItemSheet({
         aria-label={`Убрать: ${item.nameRu}`}
         disabled={bagCount > 0 || wornCount > 0}
         onClick={onRemove}
-        className={`min-h-11 rounded-lg bg-reaction/10 px-2 text-xs font-medium text-reaction-strong disabled:opacity-40 dark:text-reaction-bright ${SURFACE_CONTROL}`}
+        className={`min-h-11 px-2 text-xs font-medium text-reaction disabled:opacity-40 ${SURFACE_CONTROL}`}
       >
         Убрать вещь
       </button>
       {bagCount > 0 || wornCount > 0 ? (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-ink-quiet">
           Убрать можно, когда от вещи не остаётся ни следа: сперва потратьте запас в сумке и снимите
           надетое.
         </p>

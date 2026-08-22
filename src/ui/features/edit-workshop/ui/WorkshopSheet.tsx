@@ -7,7 +7,7 @@ import type { ChoicesView, CraftingView } from "@/contract/views";
 
 import { DIRECTION_LABELS, labelled } from "@/ui/entities/crafting/lib/labels";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /**
  * Мастерская: чем алхимик оснащён по каждому направлению и каким из них обучен.
@@ -49,7 +49,7 @@ export function WorkshopSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
     >
       <h2 id={titleId} className="text-base font-semibold leading-tight">
         Мастерская
@@ -59,13 +59,13 @@ export function WorkshopSheet({
         {choices.alchemyDirections.map((direction) => (
           <li key={direction} className="flex flex-col gap-1">
             <label className="flex flex-col gap-1">
-              <span className="text-xs text-slate-600 dark:text-slate-400">
+              <span className="text-xs text-ink-quiet">
                 {labelled(DIRECTION_LABELS, direction)}
               </span>
               <select
                 value={apparatus[direction] ?? ""}
                 onChange={(event) => withGrade(direction, event.target.value)}
-                className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+                className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
               >
                 <option value="">{NO_KIT_RU}</option>
                 {choices.apparatusGrades.map((grade) => (
@@ -85,7 +85,7 @@ export function WorkshopSheet({
                     : [...studied, direction],
                 )
               }
-              className={`min-h-11 rounded-lg px-2 text-xs ${SURFACE_CONTROL} ${
+              className={`min-h-11 px-2 text-xs ${SURFACE_CONTROL} ${
                 studied.includes(direction) ? "font-semibold" : ""
               }`}
             >
@@ -96,7 +96,7 @@ export function WorkshopSheet({
       </ul>
 
       {refusalRu === null ? null : (
-        <p className="text-xs text-slate-700 dark:text-slate-300">{refusalRu}</p>
+        <p className="text-xs text-ink-soft">{refusalRu}</p>
       )}
 
       <div className="flex gap-2">
@@ -105,14 +105,14 @@ export function WorkshopSheet({
           onClick={() =>
             onConfirm({ kind: "set_alchemy_workshop", apparatus, studiedDirections: [...studied] })
           }
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
         >
           {BUTTON_LABELS.save}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

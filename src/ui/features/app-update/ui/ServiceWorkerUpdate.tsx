@@ -14,7 +14,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function ServiceWorkerUpdate() {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
@@ -48,7 +48,7 @@ export function ServiceWorkerUpdate() {
   return (
     <div
       role="status"
-      className={`flex items-center justify-between gap-2 rounded-lg p-2 text-sm ${SURFACE_PANEL}`}
+      className={`flex items-center justify-between gap-2 p-2 text-sm ${SURFACE_PANEL}`}
     >
       <span>Готово обновление.</span>
       <span className="flex shrink-0 items-center gap-1">
@@ -69,7 +69,7 @@ export function ServiceWorkerUpdate() {
               window.location.reload();
             });
           }}
-          className="min-h-11 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+          className={`min-h-11 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
         >
           Обновить
         </button>

@@ -43,11 +43,11 @@ export function Gear({
 
   return (
     <div className="flex flex-col gap-2">
-      <section className={`flex items-center gap-3 rounded-xl px-3 py-2 ${SURFACE_GROUP}`}>
+      <section className={`flex items-center gap-3 px-3 py-2 ${SURFACE_GROUP}`}>
         <h2 className="shrink-0 text-sm font-semibold">Защита</h2>
         <p className="text-sm tabular-nums">
           КД {armorClass.value}
-          <span className="text-slate-600 dark:text-slate-400">
+          <span className="text-ink-quiet">
             {" · "}
             {armorClass.wornArmorNameRu ?? "без доспехов"}
           </span>
@@ -69,7 +69,7 @@ export function Gear({
                   type="button"
                   aria-label={`Снять один: ${item.nameRu}`}
                   onClick={() => onAdjustWornCount(item.id, -1)}
-                  className={`min-h-11 rounded-lg px-3 text-xs ${SURFACE_CONTROL}`}
+                  className={`min-h-11 px-3 text-xs ${SURFACE_CONTROL}`}
                 >
                   снять
                 </button>
@@ -103,7 +103,7 @@ export function Gear({
                     type="button"
                     aria-label={`Надеть один: ${item.nameRu}`}
                     onClick={() => onAdjustWornCount(item.id, 1)}
-                    className={`min-h-11 rounded-lg bg-action/10 px-3 text-xs font-medium text-action-strong dark:text-action-bright ${SURFACE_CONTROL}`}
+                    className={`min-h-11 px-3 text-xs font-medium text-action ${SURFACE_CONTROL}`}
                   >
                     надеть
                   </button>

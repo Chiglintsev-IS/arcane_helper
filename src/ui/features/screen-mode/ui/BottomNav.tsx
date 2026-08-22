@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 
 import { type ScreenMode } from "@/ui/shared/model/screenMode";
-import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /**
  * Подсказки не содержат слова «заклинания»: список на экране назван им же, и доступное имя кнопки
@@ -34,13 +34,13 @@ const MORE = "Ещё";
  * Отметка показанного: подложка своего значения, а не одна краска подписи. Она одна на панель и на
  * список под «Ещё» — режим показан один, и двумя отметками он читался бы как два разных.
  */
-const SELECTED = "bg-action/20 text-action-strong dark:text-action-bright";
+const SELECTED = SURFACE_CHOSEN;
 
-const QUIET = "text-slate-600 dark:text-slate-400";
+const QUIET = "text-ink-quiet";
 
 /** Выбранная ячейка помечена подложкой своего значения — тем же способом, что и всё выбранное. */
 function cellClass(selected: boolean): string {
-  return `flex min-h-11 min-w-0 items-center justify-center rounded-lg px-0.5 text-xs font-medium ${
+  return `flex min-h-11 min-w-0 items-center justify-center px-0.5 text-xs font-medium ${
     selected ? SELECTED : QUIET
   }`;
 }
@@ -65,7 +65,7 @@ export function BottomNav({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+          className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 p-3 ${SURFACE_PANEL}`}
         >
           <h2 id={titleId} className="text-base font-semibold">
             {MORE}
@@ -80,7 +80,7 @@ export function BottomNav({
                 onChange(value);
                 setListOpen(false);
               }}
-              className={`flex min-h-11 flex-col items-start rounded-xl px-3 py-2 text-left ${
+              className={`flex min-h-11 flex-col items-start px-3 py-2 text-left ${
                 value === mode ? SELECTED : SURFACE_CONTROL
               }`}
             >
@@ -92,7 +92,7 @@ export function BottomNav({
           <button
             type="button"
             onClick={() => setListOpen(false)}
-            className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+            className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
           >
             Закрыть
           </button>

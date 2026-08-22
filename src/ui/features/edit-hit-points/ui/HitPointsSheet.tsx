@@ -1,12 +1,13 @@
 "use client";
 
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, useState } from "react";
 
 import type { SheetView } from "@/contract/views";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /**
  * Хиты правятся там, где их получают и теряют, — в «Игре» и в «Привале».
@@ -50,7 +51,7 @@ const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
   temporary: "Временные хиты",
 };
 
-const fieldClass = `min-h-11 rounded-lg px-3 text-base tabular-nums ${SURFACE_CONTROL}`;
+const fieldClass = `min-h-11 px-3 text-base tabular-nums ${SURFACE_CONTROL}`;
 const quietBorder = SURFACE_GROUP;
 
 function NumberField({
@@ -81,14 +82,14 @@ function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
-          className={`${fieldClass} ${reasonRu === null ? quietBorder : "bg-reaction/20"}`}
+          className={`${fieldClass} ${reasonRu === null ? quietBorder : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`}`}
         />
       </label>
       {reasonRu === null ? null : (
         <p
           id={reasonId}
           role="alert"
-          className="text-xs font-medium text-reaction-strong dark:text-reaction-bright"
+          className="text-xs font-medium text-reaction"
         >
           {reasonRu}
         </p>
@@ -152,13 +153,13 @@ export function HitPointsSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
     >
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={titleId} className="text-base font-semibold leading-tight">
           Хиты
         </h2>
-        <span id={questionId} className="shrink-0 text-sm text-slate-600 dark:text-slate-400">
+        <span id={questionId} className="shrink-0 text-sm text-ink-quiet">
           {QUESTION}?
         </span>
       </div>
@@ -171,10 +172,10 @@ export function HitPointsSheet({
             role="radio"
             aria-checked={kind === tab.kind}
             onClick={required.touching(() => setKind(tab.kind))}
-            className={`min-h-11 flex-1 rounded-lg px-2 text-sm ${
+            className={`min-h-11 flex-1 px-2 text-sm ${
               kind === tab.kind
-                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
+              ? `${SURFACE_CHOSEN} font-medium`
+              : `text-ink-quiet ${SURFACE_GROUP_BARE}`
             }`}
           >
             {tab.label}
@@ -212,17 +213,17 @@ export function HitPointsSheet({
       {error === null ? null : (
         <p
           role="alert"
-          className={`rounded-lg bg-reaction/10 p-2 text-sm text-reaction-strong dark:text-reaction-bright ${SURFACE_GROUP}`}
+          className={`${RULE_MARK.reaction} p-2 text-sm text-reaction ${SURFACE_GROUP_BARE}`}
         >
           {error}
         </p>
       )}
 
-      <p className="text-xs text-slate-600 dark:text-slate-400">{HINTS[kind]}</p>
+      <p className="text-xs text-ink-quiet">{HINTS[kind]}</p>
 
       {kind === "maximum" ? (
         // Снижение кровью ведёт кровавое колдовство: правка руками разошлась бы с почасовым возвратом.
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-ink-quiet">
           Снижение кровью — {hitPoints.bloodReduction}, возвращается по часу и здесь не правится.
           Действующий максимум станет {effective ?? "—"}.
         </p>
@@ -245,14 +246,14 @@ export function HitPointsSheet({
         <button
           type="button"
           onClick={submit}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
         >
           {BUTTON_LABELS.confirm}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

@@ -10,10 +10,11 @@
 
 "use client";
 
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, useState } from "react";
 
 import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function DataSheet({
   exportText,
@@ -48,7 +49,7 @@ export function DataSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-3 ${SURFACE_PANEL}`}
     >
       <h2 id={titleId} className="text-base font-semibold">
         Данные
@@ -62,7 +63,7 @@ export function DataSheet({
  заменить, а не узнавать об этом после.
  */}
       <h3 className="text-sm font-semibold">Каталог заклинаний</h3>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+      <p className="text-xs text-ink-quiet">
         {catalogSource === "imported"
           ? "Сейчас действуют карточки из загруженного файла."
           : "Сейчас действуют встроенные карточки приложения."}
@@ -71,14 +72,14 @@ export function DataSheet({
         <button
           type="button"
           onClick={onRestoreBuiltInCatalog}
-          className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Вернуть встроенные карточки
         </button>
       ) : null}
 
       <h3 className="text-sm font-semibold">Загрузка</h3>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+      <p className="text-xs text-ink-quiet">
         Заменяет персонажа целиком: подготовку, остаток ресурсов, заметки. Карточки из файла тоже
         становятся действующими и остаются после перезапуска.
       </p>
@@ -96,13 +97,13 @@ export function DataSheet({
           onChange={(event) => setRaw(event.target.value)}
           rows={4}
           aria-label="Данные для загрузки"
-          className={`rounded-lg p-2 font-mono text-xs ${SURFACE_CONTROL}`}
+          className={`p-2 font-mono text-xs ${SURFACE_CONTROL}`}
         />
       </label>
 
       {/* Причина отказа называет поле: «ошибка импорта» без деталей заставляет править JSON вслепую. */}
       {error === null ? null : (
-        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-xs ${SURFACE_GROUP}`}>
+        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-xs ${SURFACE_GROUP_BARE}`}>
           {error}
         </p>
       )}
@@ -112,14 +113,14 @@ export function DataSheet({
           type="button"
           disabled={raw.trim() === ""}
           onClick={() => onImport(raw)}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
+          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold disabled:opacity-50`}
         >
           Загрузить
         </button>
         <button
           type="button"
           onClick={onClose}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Закрыть
         </button>

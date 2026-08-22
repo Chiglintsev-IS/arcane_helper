@@ -28,7 +28,7 @@ import { timeRu } from "@/ui/shared/lib/timeRu";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { editName } from "@/ui/shared/ui/buttonLabels";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 type WorldNote = Snapshot["notes"][number];
 
@@ -36,10 +36,10 @@ const SEARCH_LABEL = "Поиск по слову";
 const NOTE_LABEL = "Заметка";
 const REMOVE_LABEL = "Убрать";
 
-const MUTED = "text-slate-600 dark:text-slate-400";
+const MUTED = "text-ink-quiet";
 
 /** Нажатое отмечено подложкой своего значения — тем же способом, что и выбранная ячейка панели. */
-const SELECTED = "bg-action/20 text-action-strong dark:text-action-bright";
+const SELECTED = SURFACE_CHOSEN;
 
 /** Время строки: приглушённое и моноширинное — его сканируют взглядом, а не читают. */
 function Time({ at }: { at: string }) {
@@ -68,7 +68,7 @@ function NoteRow({
 
   if (draft === null) {
     return (
-      <li className={`flex items-start justify-between gap-2 rounded-xl p-2 ${SURFACE_GROUP}`}>
+      <li className={`flex items-start justify-between gap-2 p-2 ${SURFACE_GROUP}`}>
         <button
           type="button"
           aria-label={named}
@@ -83,7 +83,7 @@ function NoteRow({
   }
 
   return (
-    <li className={`flex flex-col gap-1 rounded-xl p-2 ${SURFACE_GROUP}`}>
+    <li className={`flex flex-col gap-1 p-2 ${SURFACE_GROUP}`}>
       <GrowingField
         value={draft}
         labelRu={named}
@@ -102,7 +102,7 @@ function NoteRow({
           type="button"
           aria-label={`${REMOVE_LABEL}: ${note.text}`}
           onClick={onRemove}
-          className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {REMOVE_LABEL}
         </button>
@@ -153,7 +153,7 @@ export function WorldNotes({
               onKeyDown={(event) => {
                 if (event.key === "Escape") setQuery(null);
               }}
-              className={`min-h-11 w-full rounded-lg px-3 text-sm outline-none ${SURFACE_CONTROL}`}
+              className={`min-h-11 w-full px-3 text-sm outline-none ${SURFACE_CONTROL}`}
             />
           )}
         </div>
@@ -163,7 +163,7 @@ export function WorldNotes({
           aria-pressed={query !== null}
           aria-label={SEARCH_LABEL}
           onClick={() => setQuery(query === null ? "" : null)}
-          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${
+          className={`flex size-11 shrink-0 items-center justify-center ${
             query === null ? SURFACE_CONTROL : SELECTED
           }`}
         >

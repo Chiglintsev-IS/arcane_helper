@@ -21,7 +21,7 @@ import type { RecoveryView } from "@/contract/views";
 import { ARCANE_RECOVERY_LABEL } from "@/ui/entities/character/lib/labels";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
-import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 type SlotRecoveryPlan = CommandOf<"use_arcane_recovery">["plan"];
 
@@ -52,7 +52,7 @@ export function ArcaneRecoverySheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
     >
       <header className="flex flex-col gap-0.5">
         <div className="flex items-baseline justify-between gap-3">
@@ -63,13 +63,13 @@ export function ArcaneRecoverySheet({
             {preview?.levelsSpent ?? 0} из {recovery.remaining}
           </span>
         </div>
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-ink-quiet">
           Суммарный уровень возвращаемых ячеек
         </p>
       </header>
 
       {recovery.recoverable.length === 0 ? (
-        <p className="text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-ink-quiet">
           Все ячейки на месте — возвращать нечего.
         </p>
       ) : (
@@ -78,7 +78,7 @@ export function ArcaneRecoverySheet({
             <li key={slot.level} className="flex items-center justify-between gap-2 text-sm">
               <span>
                 {slot.level} ур.{" "}
-                <span className="text-slate-600 dark:text-slate-400">
+                <span className="text-ink-quiet">
                   потрачено {slot.spent}
                 </span>
               </span>
@@ -87,7 +87,7 @@ export function ArcaneRecoverySheet({
                   type="button"
                   onClick={() => change(slot.level, -1)}
                   aria-label={`Убрать ячейку ${slot.level} уровня`}
-                  className={`min-h-11 min-w-11 rounded-lg ${SURFACE_CONTROL}`}
+                  className={`min-h-11 min-w-11 ${SURFACE_CONTROL}`}
                 >
                   <span aria-hidden="true">−</span>
                 </button>
@@ -98,7 +98,7 @@ export function ArcaneRecoverySheet({
                   type="button"
                   onClick={() => change(slot.level, 1)}
                   aria-label={`Вернуть ячейку ${slot.level} уровня`}
-                  className={`min-h-11 min-w-11 rounded-lg ${SURFACE_CONTROL}`}
+                  className={`min-h-11 min-w-11 ${SURFACE_CONTROL}`}
                 >
                   <span aria-hidden="true">+</span>
                 </button>
@@ -110,7 +110,7 @@ export function ArcaneRecoverySheet({
 
       {/* Набрать лишнее не запрещено — запрещено вернуть: причина стоит там же, где набирают. */}
       {preview?.unavailabilityRu === undefined ? null : (
-        <p className="text-xs text-slate-600 dark:text-slate-400">{preview.unavailabilityRu}</p>
+        <p className="text-xs text-ink-quiet">{preview.unavailabilityRu}</p>
       )}
 
       <div className="flex gap-2">
@@ -118,14 +118,14 @@ export function ArcaneRecoverySheet({
           type="button"
           disabled={preview === null || preview.unavailabilityRu !== undefined}
           onClick={() => onConfirm(plan)}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
+          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold disabled:opacity-50`}
         >
           {BUTTON_LABELS.confirm}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

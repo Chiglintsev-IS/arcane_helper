@@ -7,6 +7,7 @@
 
 "use client";
 
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useState } from "react";
 
 import {
@@ -20,7 +21,7 @@ import type { PreviewOf } from "@/contract/questions";
 import type { BloodMagicView, SheetView } from "@/contract/views";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { withPlural } from "@/shared/language";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 type ExchangePreview = PreviewOf<"blood_exchange_preview">;
 
@@ -67,13 +68,13 @@ function AmountStep({
           aria-label="Меньше очков"
           disabled={points <= bounds.minimum}
           onClick={() => onChange(points - 1)}
-          className={`min-h-11 w-14 rounded-xl text-xl disabled:opacity-40 ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-14 text-xl disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           −
         </button>
         <p className="flex flex-col items-center">
           <span className="text-2xl font-semibold tabular-nums leading-tight">{points}</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">
+          <span className="text-xs text-ink-quiet">
             {preview === null
               ? ""
               : withPlural(preview.hitPointsSpent, ["хит", "хита", "хитов"])}
@@ -84,7 +85,7 @@ function AmountStep({
           aria-label="Больше очков"
           disabled={points >= bounds.maximum}
           onClick={() => onChange(points + 1)}
-          className={`min-h-11 w-14 rounded-xl text-xl disabled:opacity-40 ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-14 text-xl disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           +
         </button>
@@ -94,7 +95,7 @@ function AmountStep({
         <>
           <p className="text-sm">{affordableHint(preview)}</p>
           {/* Максимум назван вместе с текущими: без него непонятно, почему лечение потом упрётся. */}
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-ink-quiet">
             Хиты {currentHitPoints} → {preview.hitPointsAfter}, максимум тоже {preview.maximumAfter}
           </p>
         </>
@@ -107,10 +108,10 @@ function SummaryStep({ preview }: { preview: ExchangePreview | null }) {
   return (
     <div className="flex flex-col gap-3">
       <section aria-label="Что сделать" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Что сделать</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">Что сделать</h3>
         <ol className="flex flex-col gap-1 text-sm">
           {(preview?.instructions ?? []).map((step) => (
-            <li key={step} className={`rounded-lg px-2 py-1 ${SURFACE_GROUP}`}>
+            <li key={step} className={`px-2 py-1 ${SURFACE_GROUP}`}>
               {step}
             </li>
           ))}
@@ -118,10 +119,10 @@ function SummaryStep({ preview }: { preview: ExchangePreview | null }) {
       </section>
 
       <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">
           Сказать мастеру
         </h3>
-        <p className={`rounded-lg p-2 text-sm ${SURFACE_GROUP}`}>
+        <p className={`p-2 text-sm ${SURFACE_GROUP}`}>
           {preview?.announcement ?? ""}
         </p>
       </section>
@@ -197,21 +198,21 @@ export function BloodMagicWizard({
             {warnings.map((warning) => (
               <li
                 key={warning}
-                className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}
+                className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}
               >
                 {warning}
               </li>
             ))}
           </ul>
           {allowAnyway ? (
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-ink-quiet">
               Мастер разрешил исключение: предупреждения не мешают.
             </p>
           ) : (
             <button
               type="button"
               onClick={() => setAllowAnyway(true)}
-              className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction-bright ${SURFACE_CONTROL}`}
+              className={`min-h-11 px-3 text-sm font-medium text-reaction ${SURFACE_CONTROL}`}
             >
               Применить всё равно
             </button>
@@ -232,7 +233,7 @@ export function BloodMagicWizard({
       {current === "summary" ? <SummaryStep preview={preview} /> : null}
 
       {error === null ? null : (
-        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
+        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}>
           {error}
         </p>
       )}

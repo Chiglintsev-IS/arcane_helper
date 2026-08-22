@@ -10,7 +10,7 @@ import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
 import { MissingMaterials } from "@/ui/features/materials/ui/MissingMaterials";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
 import { applyEdit } from "@/ui/shared/model/editing";
-import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 
 /**
@@ -46,7 +46,7 @@ function PartSwitcher({
     <div
       role="radiogroup"
       aria-label="Что показать"
-      className={`flex gap-0.5 rounded-xl p-0.5 ${SURFACE_GROUP}`}
+      className={`flex gap-0.5 p-0.5 ${SURFACE_GROUP}`}
     >
       {THINGS_PARTS.map((value) => {
         const selected = value === part;
@@ -57,10 +57,10 @@ function PartSwitcher({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(value)}
-            className={`min-h-11 flex-1 rounded-lg px-1 text-sm font-medium ${
+            className={`min-h-11 flex-1 px-1 text-sm font-medium ${
               selected
-                ? "bg-action/20 text-action-strong dark:text-action-bright"
-                : "text-slate-600 dark:text-slate-400"
+              ? SURFACE_CHOSEN
+              : "text-ink-quiet"
             }`}
           >
             {PART_TITLES[value]}

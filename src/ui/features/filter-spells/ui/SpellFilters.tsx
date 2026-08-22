@@ -15,17 +15,22 @@
  * ударить или защититься, а чем это платится, говорит сама строка. В «Книге» стоят оба — там
  * разбирают неспешно, и ряд не отнимает хода.
  *
+ * Знак у переключателя приходит от тона, как и на строке списка: полоса переносится, но от одного
+ * знака в строке она не переносится, а цвет без знака за столом при свече не носитель. Свой знак
+ * называет тот переключатель, чей тон взят взаймы, — лупа поиска и отметка подготовки.
+ *
  * Поиск по названию правилу деления не подчиняется и стоит в полосе всегда: имя делит список в
  * любом составе, а вопрос «где та строка» задают тем чаще, чем список длиннее.
  */
 
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
-import { TONE_CLASS } from "@/ui/shared/ui/tone";
+import { TONE_GLYPH, TONE_TEXT, type Tone } from "@/ui/shared/ui/tone";
 import { castingTimeBadge, combatRole, levelChipLabel } from "@/ui/entities/spell/lib/format";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
 import { type SpellFilters as Filters, type DividingCategories } from "@/ui/features/filter-spells/model/filters";
 import { toggleValue } from "@/ui/features/filter-spells/model/filters";
-import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 
 /** Порядок переключателей времени накладывания. Показываются не все — только делящие список. */
 const CASTING_TIME_FILTERS = ["action", "bonus_action", "reaction"];
@@ -49,7 +54,8 @@ function Toggle({
 }: {
   pressed: boolean;
   onClick: () => void;
-  tone: keyof typeof TONE_CLASS;
+  tone: Tone;
+  /** Свой знак вместо знака тона: только там, где тон взят взаймы, а не по своему значению. */
   icon?: React.ReactNode;
   /** Произносимое имя там, где подписи нет: у кнопки со значком вместо слова. */
   label?: string;
@@ -61,11 +67,13 @@ function Toggle({
       aria-pressed={pressed}
       {...(label === undefined ? {} : { "aria-label": label })}
       onClick={onClick}
-      className={`inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 text-[0.6875rem] font-medium ${
-        pressed ? TONE_CLASS[tone] : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+      className={`inline-flex min-h-11 shrink-0 items-center gap-1 px-2 text-[0.6875rem] font-medium ${
+      pressed ? `text-ink ${SURFACE_GROUP_BARE} ${RULE_MARK[tone]}` : `text-ink-quiet ${SURFACE_CONTROL}`
       }`}
     >
-      {icon === undefined ? null : <span aria-hidden="true">{icon}</span>}
+      <span aria-hidden="true" className={TONE_TEXT[tone]}>
+        {icon ?? TONE_GLYPH[tone]}
+      </span>
       {children}
     </button>
   );
@@ -145,7 +153,7 @@ export function SpellFilters({
             onKeyDown={(event) => {
               if (event.key === "Escape") onSearchToggle();
             }}
-            className={`min-h-11 min-w-0 grow rounded-lg bg-transparent px-3 text-sm outline-none ${SURFACE_CONTROL}`}
+            className={`min-h-11 min-w-0 grow bg-transparent px-3 text-sm outline-none ${SURFACE_CONTROL}`}
           />
         )}
         {searchOpen ? null : (
@@ -177,7 +185,6 @@ export function SpellFilters({
           <Toggle
             pressed={filters.concentration}
             tone="concentration"
-            icon="✦"
             onClick={() => onChange({ ...filters, concentration: !filters.concentration })}
           >
             Концентрация
@@ -192,7 +199,6 @@ export function SpellFilters({
           <Toggle
             pressed={filters.ritual}
             tone="ritual"
-            icon="❖"
             onClick={() => onChange({ ...filters, ritual: !filters.ritual })}
           >
             Ритуал

@@ -14,7 +14,7 @@ import {
   type LongCastingUnit,
   type TimeUnit,
 } from "@/shared/language";
-import { type Tone } from "@/ui/shared/ui/tone";
+import { TONE_GLYPH, type Tone } from "@/ui/shared/ui/tone";
 
 /** Заговор ячейки не стоит. Число — цена строки, а не вид заклинания. */
 const CANTRIP_LEVEL = 0;
@@ -22,16 +22,15 @@ const CANTRIP_LEVEL = 0;
 /**
  * Подпись и цвет роли в бою.
  *
- * Значка у роли нет нигде: подпись стоит рядом с цветом всюду, где роль называют, и значок был бы
- * тем же словом второй раз — а собственное место в полосе фильтров он занимает, и место это стоит
- * ряда (ux.md).
+ * Знак роли приходит от владельца тонов и стоит рядом с подписью всюду, где роль называют:
+ * цвет — последний из трёх носителей, и без первых двух он не носитель вовсе (ux.md).
  *
  * «Боевое», а не «Атака»: слово «Атака» на той же строке уже занято способом разрешения — броском
  * d20 против КД. Два смысла под одним словом в соседних значках сделали бы и значок, и фильтр
  * непредсказуемыми (глоссарий).
  *
- * У роли «другое» цвета нет: серый и означает «ни то, ни другое», а третий оттенок превратил бы
- * шкалу в радугу, в которой не выделяется ничего (ux.md).
+ * У роли «другое» цвета нет: приглушённый тон и означает «ни то, ни другое», а третий оттенок
+ * превратил бы шкалу в радугу, в которой не выделяется ничего (ux.md).
  */
 type RoleBadge = { label: string; tone: Tone };
 
@@ -50,12 +49,16 @@ export function combatRole(role: string): RoleBadge {
 
 type CastingTimeBadge = { label: string; icon: string; tone: Tone };
 
-/** Подпись, иконка и цвет времени накладывания. Иконка обязательна: цвет один не решает. */
+/**
+ * Подпись, знак и цвет времени накладывания. Знак обязателен: цвет один не решает.
+ *
+ * Знак приходит от владельца тонов там, где он и означает свой тон. Минуты и часы берут свой:
+ * приглушённый тон здесь говорит «вне экономии хода», а знак его владельца сказал бы «нельзя».
+ */
 const CASTING_TIME: Record<string, CastingTimeBadge> = {
-  action: { label: "Действие", icon: "●", tone: "action" },
-  bonus_action: { label: "Бонусное", icon: "◆", tone: "bonus" },
-  reaction: { label: "Реакция", icon: "▲", tone: "reaction" },
-  // Серые: минуты и часы вне экономии действий, цвет действия обещал бы ход, которого не хватит.
+  action: { label: "Действие", icon: TONE_GLYPH.action, tone: "action" },
+  bonus_action: { label: "Бонусное", icon: TONE_GLYPH.bonus, tone: "bonus" },
+  reaction: { label: "Реакция", icon: TONE_GLYPH.reaction, tone: "reaction" },
   minute: { label: "Минуты", icon: "◷", tone: "muted" },
   hour: { label: "Часы", icon: "◷", tone: "muted" },
 };
@@ -209,7 +212,7 @@ export function ritualOnlyBadge(
   spell: SpellRowView,
 ): { label: string; icon: string; tone: Tone } | null {
   if (spell.ritual && !spell.prepared) {
-    return { label: "Ритуал", icon: "❖", tone: "muted" };
+    return { label: "Ритуал", icon: TONE_GLYPH.ritual, tone: "ritual" };
   }
   return null;
 }

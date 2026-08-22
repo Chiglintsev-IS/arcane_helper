@@ -1,9 +1,10 @@
 "use client";
 
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, type ReactNode } from "react";
 
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /**
  * Рамка шторки правки: заголовок, содержимое, сохранение, уход и причина отказа.
@@ -39,12 +40,12 @@ export function EditSheetFrame({
       role="dialog"
       aria-modal="true"
       aria-label={editName(titleRu)}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 p-3 ${SURFACE_PANEL}`}
     >
       <h2 className="text-sm font-semibold">{titleRu}</h2>
       <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">{children}</div>
       {error === null ? null : (
-        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
+        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}>
           {error}
         </p>
       )}
@@ -52,14 +53,14 @@ export function EditSheetFrame({
         <button
           type="button"
           onClick={onSave}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
         >
           {BUTTON_LABELS.save}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>
@@ -105,8 +106,8 @@ export function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
-          className={`min-h-11 w-20 rounded-lg px-3 text-base tabular-nums ${
-            reasonRu === null ? SURFACE_GROUP : "bg-reaction/20"
+          className={`min-h-11 w-20 px-3 text-base tabular-nums ${
+          reasonRu === null ? SURFACE_GROUP : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`
           }`}
         />
       </label>
@@ -114,7 +115,7 @@ export function NumberField({
         <p
           id={reasonId}
           role="alert"
-          className="text-xs font-medium text-reaction-strong dark:text-reaction-bright"
+          className="text-xs font-medium text-reaction"
         >
           {reasonRu}
         </p>
@@ -140,7 +141,7 @@ export function TextField({
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`min-h-11 w-40 rounded-lg px-3 text-base ${SURFACE_CONTROL}`}
+        className={`min-h-11 w-40 px-3 text-base ${SURFACE_CONTROL}`}
       />
     </label>
   );

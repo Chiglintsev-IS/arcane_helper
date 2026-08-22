@@ -35,7 +35,7 @@ export function GrowingField({
   onCancel?: () => void;
 }) {
   return (
-    <label className={`grid min-h-11 content-center rounded-lg px-3 py-2 ${SURFACE_CONTROL}`}>
+    <label className={`grid min-h-11 content-center px-3 py-2 ${SURFACE_CONTROL}`}>
       <span aria-hidden="true" className={`invisible ${TEXT_SHAPE}`}>{`${value} `}</span>
       <textarea
         rows={1}

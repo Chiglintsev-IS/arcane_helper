@@ -11,13 +11,14 @@
 
 "use client";
 
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useState } from "react";
 
 import type { RoleplayVariantView, SpellRowView } from "@/contract/views";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 const CATEGORY_LABELS: Record<string, string> = {
   short: "Коротко",
@@ -30,7 +31,7 @@ const CATEGORY_LABELS: Record<string, string> = {
  * пикселях «Скопировать» в трети ширины не помещается, а перенос ничего не ломает.
  */
 const ACTION_CLASS =
-  `min-h-11 grow rounded-lg px-2 text-xs text-slate-600 dark:text-slate-300 ${SURFACE_CONTROL}`;
+  `min-h-11 grow px-2 text-xs text-ink-soft ${SURFACE_CONTROL}`;
 
 function Variants({
   row,
@@ -86,11 +87,11 @@ function Variants({
             type="button"
             aria-pressed={shown?.id === value.id}
             onClick={() => onCategory(value.id)}
-            className={`min-h-11 rounded-lg px-2 text-xs ${
+            className={`min-h-11 px-2 text-xs ${
               shown?.id === value.id
-                ? "bg-concentration/20 text-concentration-strong dark:text-concentration-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
-            }`}
+              ? SURFACE_CHOSEN
+              : `text-ink-quiet ${SURFACE_CONTROL}`
+              }`}
           >
             {CATEGORY_LABELS[value.id] ?? value.id}
           </button>
@@ -104,8 +105,8 @@ function Variants({
               type="button"
               aria-pressed={selected?.id === variant.id}
               onClick={() => choose(variant)}
-              className={`min-h-11 w-full rounded-lg px-2 py-1 text-left text-sm italic ${
-                selected?.id === variant.id ? "bg-concentration/20" : SURFACE_CONTROL
+              className={`min-h-11 w-full px-2 py-1 text-left text-sm italic ${
+              selected?.id === variant.id ? SURFACE_CHOSEN : SURFACE_CONTROL
               }`}
             >
               {variant.text}
@@ -163,7 +164,7 @@ function Variants({
             value={ownText}
             rows={2}
             onChange={(event) => setOwnText(event.target.value)}
-            className={`rounded-lg px-2 py-1 text-sm ${SURFACE_CONTROL}`}
+            className={`px-2 py-1 text-sm ${SURFACE_CONTROL}`}
           />
           <div className="flex flex-wrap gap-1">
             <button type="button" onClick={() => addOwn(ownText)} className={ACTION_CLASS}>
@@ -178,7 +179,7 @@ function Variants({
 
       {/* Отключённое не исчезает: предпочтения журналом не отменяются, и вернуть их больше нечем. */}
       {hidden.length === 0 ? null : (
-        <details className="text-xs not-italic text-slate-600 dark:text-slate-400">
+        <details className="text-xs not-italic text-ink-quiet">
           <summary className="min-h-11 cursor-pointer py-3">Отключено: {hidden.length}</summary>
           <ul className="flex flex-col gap-1">
             {hidden.map((variant) => (
@@ -204,7 +205,7 @@ function Variants({
         </details>
       )}
 
-      <dl className="flex flex-col gap-1 text-xs italic text-slate-600 dark:text-slate-400">
+      <dl className="flex flex-col gap-1 text-xs italic text-ink-quiet">
         <div>
           <dt className="not-italic">Реплика</dt>
           {/* Кавычки-ёлочки отличают прямую речь от описания жеста рядом. */}
@@ -251,8 +252,8 @@ export function RoleplaySection({
 
   if (collapsible) {
     return (
-      <details className={`rounded-lg bg-concentration/5 p-2 ${SURFACE_GROUP}`}>
-        <summary className="cursor-pointer text-sm font-medium text-concentration-strong dark:text-concentration-bright">Отыгрыш</summary>
+      <details className={`${RULE_MARK.concentration} p-2 ${SURFACE_GROUP_BARE}`}>
+        <summary className="cursor-pointer text-sm font-medium text-concentration">Отыгрыш</summary>
         <div className="mt-2">
           <Variants row={row} category={shown} onCategory={change} />
         </div>
@@ -263,9 +264,9 @@ export function RoleplaySection({
   return (
     <section
       aria-label="Отыгрыш"
-      className={`flex flex-col gap-2 rounded-lg bg-concentration/5 p-2 ${SURFACE_GROUP}`}
+      className={`flex flex-col gap-2 ${RULE_MARK.concentration} p-2 ${SURFACE_GROUP_BARE}`}
     >
-      <h3 className="text-xs font-medium uppercase tracking-wide text-concentration-strong dark:text-concentration-bright">Отыгрыш</h3>
+      <h3 className="text-xs font-medium uppercase tracking-wide text-concentration">Отыгрыш</h3>
       <Variants row={row} category={shown} onCategory={change} />
     </section>
   );

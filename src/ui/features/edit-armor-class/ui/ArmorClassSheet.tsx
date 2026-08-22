@@ -1,9 +1,10 @@
 "use client";
 
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, useState } from "react";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /**
  * Поправка к КД: одно число со знаком, как «Хиты» правят временные хиты. Новое значение заменяет
@@ -38,7 +39,7 @@ export function ArmorClassSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
     >
       <h2 id={titleId} className="text-base font-semibold leading-tight">
         КД
@@ -51,16 +52,16 @@ export function ArmorClassSheet({
           inputMode="numeric"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className={`min-h-11 rounded-lg px-3 text-base tabular-nums ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 text-base tabular-nums ${SURFACE_CONTROL}`}
         />
       </label>
 
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+      <p className="text-xs text-ink-quiet">
         Складывается с прочими вкладами в Класс Доспеха. Ноль снимает поправку.
       </p>
 
       {error === null ? null : (
-        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
+        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}>
           {error}
         </p>
       )}
@@ -69,14 +70,14 @@ export function ArmorClassSheet({
         <button
           type="button"
           onClick={() => onSave(parsed)}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
         >
           {BUTTON_LABELS.confirm}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

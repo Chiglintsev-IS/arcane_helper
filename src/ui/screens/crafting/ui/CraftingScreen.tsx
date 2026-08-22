@@ -78,13 +78,13 @@ function KnownIngredient({
         type="button"
         aria-pressed={chosen}
         onClick={onChoose}
-        className={`flex min-w-0 flex-1 flex-col gap-2 rounded-xl p-3 text-left ${
+        className={`flex min-w-0 flex-1 flex-col gap-2 p-3 text-left ${
           chosen ? SURFACE_CONTROL : SURFACE_GROUP
         }`}
       >
         <span className="flex flex-col gap-0.5">
           <span className="text-base font-semibold leading-tight">{ingredient.nameRu}</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">
+          <span className="text-xs text-ink-quiet">
             {chosenMarkRu(chosen, ingredient)}
           </span>
         </span>
@@ -93,11 +93,11 @@ function KnownIngredient({
           <span className="flex flex-col gap-1">
             {ingredient.properties.map((property) => (
               <span key={property.number} className="flex items-start gap-2">
-                <span className="shrink-0 text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-400">
+                <span className="shrink-0 text-xs font-semibold tabular-nums text-ink-quiet">
                   {propertyNumberRu(property.number)}
                 </span>
                 <span className="min-w-0 flex-1 text-sm leading-tight">{property.nameRu}</span>
-                <span className="shrink-0 text-xs text-slate-600 dark:text-slate-400">
+                <span className="shrink-0 text-xs text-ink-quiet">
                   {labelled(RARITY_LABELS, property.rarity)}
                 </span>
               </span>
@@ -109,7 +109,7 @@ function KnownIngredient({
         type="button"
         onClick={onOpen}
         aria-label={revealPropertyName(ingredient.nameRu)}
-        className={`min-h-11 min-w-11 shrink-0 rounded-xl text-lg ${SURFACE_GROUP}`}
+        className={`min-h-11 min-w-11 shrink-0 text-lg ${SURFACE_GROUP}`}
       >
         <span aria-hidden="true">+</span>
       </button>
@@ -184,10 +184,10 @@ export function CraftingScreen() {
             setRefusalRu(null);
             setWorkshopOpen(true);
           }}
-          className={`flex min-h-11 flex-col gap-0.5 rounded-xl p-3 text-left ${SURFACE_GROUP}`}
+          className={`flex min-h-11 flex-col gap-0.5 p-3 text-left ${SURFACE_GROUP}`}
         >
           <span className="text-sm font-semibold leading-tight">Мастерская</span>
-          <span className="text-xs text-slate-600 dark:text-slate-400">
+          <span className="text-xs text-ink-quiet">
             {kits === ""
               ? "Наборов не записано: работа идёт импровизированными сосудами"
               : kits}
@@ -200,7 +200,7 @@ export function CraftingScreen() {
         />
 
         {crafting.ingredients.length === 0 ? (
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-sm text-ink-quiet">
             Об ингредиентах пока ничего не записано. Здесь встанут виды и раскрытые у них свойства;
             сколько порций лежит в сумке, отвечают «Вещи».
           </p>

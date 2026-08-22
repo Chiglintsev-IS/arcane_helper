@@ -15,7 +15,7 @@ import {
 } from "@/ui/entities/crafting/lib/labels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /**
  * Имя двери раскрытия и имя её шторки: слово дела и вид, которого оно касается.
@@ -37,12 +37,12 @@ function ResearchCost({ plan }: { plan: NonNullable<PreviewOf<"research_preview"
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-xs text-slate-600 dark:text-slate-400">Сложность</span>
+        <span className="text-xs text-ink-quiet">Сложность</span>
         <span className="text-2xl font-semibold tabular-nums leading-none">{plan.difficulty}</span>
       </div>
-      <p className="text-xs text-slate-600 dark:text-slate-400">{researchCostRu(plan)}</p>
+      <p className="text-xs text-ink-quiet">{researchCostRu(plan)}</p>
       {plan.rawSampleRu === null ? null : (
-        <p className="text-xs text-slate-600 dark:text-slate-400">{plan.rawSampleRu}</p>
+        <p className="text-xs text-ink-quiet">{plan.rawSampleRu}</p>
       )}
     </div>
   );
@@ -101,17 +101,17 @@ export function RevealPropertySheet({
       role="dialog"
       aria-modal="true"
       aria-label={revealPropertyName(nameRu)}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
     >
       <h2 className="text-base font-semibold leading-tight">{nameRu}</h2>
 
       <div className="grid grid-cols-2 gap-2">
         <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-xs text-slate-600 dark:text-slate-400">Номер</span>
+          <span className="text-xs text-ink-quiet">Номер</span>
           <select
             value={String(number)}
             onChange={(event) => setNumber(Number(event.target.value))}
-            className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+            className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
           >
             {choices.propertyNumbers.map((option) => (
               <option key={option} value={String(option)}>
@@ -121,11 +121,11 @@ export function RevealPropertySheet({
           </select>
         </label>
         <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-xs text-slate-600 dark:text-slate-400">Редкость</span>
+          <span className="text-xs text-ink-quiet">Редкость</span>
           <select
             value={rarity}
             onChange={(event) => setRarity(event.target.value)}
-            className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+            className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
           >
             {choices.alchemicalRarities.map((option) => (
               <option key={option} value={option}>
@@ -137,11 +137,11 @@ export function RevealPropertySheet({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-600 dark:text-slate-400">Направление работы</span>
+        <span className="text-xs text-ink-quiet">Направление работы</span>
         <select
           value={direction}
           onChange={(event) => setDirection(event.target.value)}
-          className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
         >
           {choices.alchemyDirections.map((option) => (
             <option key={option} value={option}>
@@ -154,15 +154,15 @@ export function RevealPropertySheet({
       {research?.plan == null ? null : <ResearchCost plan={research.plan} />}
 
       {research?.refusalRu === undefined ? null : (
-        <p className="text-xs text-slate-700 dark:text-slate-300">{research.refusalRu}</p>
+        <p className="text-xs text-ink-soft">{research.refusalRu}</p>
       )}
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-slate-600 dark:text-slate-400">Свойство</span>
+        <span className="text-xs text-ink-quiet">Свойство</span>
         <select
           value={propertyRu}
           onChange={(event) => setPropertyRu(event.target.value)}
-          className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
         >
           <option value="">Не выбрано</option>
           {choices.alchemyDirections.map((option) => (
@@ -184,38 +184,38 @@ export function RevealPropertySheet({
         role="switch"
         aria-checked={ingredient.propertiesExhausted}
         onClick={() => onExhausted(!ingredient.propertiesExhausted)}
-        className={`min-h-11 rounded-lg px-3 text-sm ${
+        className={`min-h-11 px-3 text-sm ${
           ingredient.propertiesExhausted
-            ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
-            : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+          ? `${SURFACE_CHOSEN} font-medium`
+          : `text-ink-quiet ${SURFACE_CONTROL}`
         }`}
       >
         Свойств у вида больше нет
       </button>
 
       {refusalRu === null ? null : (
-        <p className="text-xs text-slate-700 dark:text-slate-300">{refusalRu}</p>
+        <p className="text-xs text-ink-soft">{refusalRu}</p>
       )}
 
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => onConfirm({ kind: "reveal_property", nameRu, number, propertyRu, rarity })}
-          className="min-h-11 flex-1 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
         >
           {BUTTON_LABELS.save}
         </button>
         <button
           type="button"
           onClick={onForget}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Забыть вид
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className={`min-h-11 shrink-0 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

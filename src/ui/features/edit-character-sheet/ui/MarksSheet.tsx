@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { ChoicesView } from "@/contract/views";
 import { EditSheetFrame } from "./EditSheetFrame";
-import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 
 export function MarksSheet({
@@ -42,10 +42,10 @@ export function MarksSheet({
             aria-checked={exhaustion === step}
             aria-label={step === 0 ? "Без истощения" : `Ступень ${step}`}
             onClick={() => setExhaustion(step)}
-            className={`min-h-11 min-w-11 rounded-lg px-2 text-sm ${
+            className={`min-h-11 min-w-11 px-2 text-sm ${
               exhaustion === step
-                ? "bg-action/20 font-medium text-action-strong dark:text-action-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
+              ? `${SURFACE_CHOSEN} font-medium`
+              : `text-ink-quiet ${SURFACE_GROUP}`
             }`}
           >
             {step}

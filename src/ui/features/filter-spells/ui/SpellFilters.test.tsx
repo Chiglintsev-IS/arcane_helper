@@ -130,16 +130,14 @@ describe("роль отбирает и в «Игре» (FR-212)", () => {
     expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
   });
 
-  it("роль в полосе названа подписью, а не значком", () => {
+  it("знак переключателя приходит от тона, а не набирается в полосе", () => {
     renderFilters(EVERYTHING);
 
-    expect(screen.getByRole("button", { name: "Боевое" }).textContent).toBe("Боевое");
-    expect(screen.getByRole("button", { name: "Защита" }).textContent).toBe("Защита");
-
-    // Прочие значки полосы остаются: они стоят и на строках списка, и плашка показывает ровно тот,
-    // который отбирает.
-    expect(screen.getByRole("button", { name: "Концентрация" }).textContent).toBe("✦Концентрация");
-    expect(screen.getByRole("button", { name: "Ритуал" }).textContent).toBe("❖Ритуал");
+    // Тот же знак, что и на строке списка: два знака у одного значения читались бы как два правила.
+    expect(screen.getByRole("button", { name: "Боевое" }).textContent).toBe("✚Боевое");
+    expect(screen.getByRole("button", { name: "Защита" }).textContent).toBe("◇Защита");
+    expect(screen.getByRole("button", { name: "Концентрация" }).textContent).toBe("◌Концентрация");
+    expect(screen.getByRole("button", { name: "Ритуал" }).textContent).toBe("✦Ритуал");
   });
 });
 

@@ -14,7 +14,7 @@ import { useId } from "react";
 
 import type { ResourcesView } from "@/contract/views";
 import { EDIT_LABEL } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 /** Имя дела: им зовётся и сама шторка, и плитка, которая её открывает. */
 export const RESOURCES_EDIT_LABEL = `${EDIT_LABEL} ресурсов`;
@@ -43,7 +43,7 @@ function Stepper({
           disabled={minusDisabled}
           onClick={onMinus}
           aria-label={`Потратить: ${label}`}
-          className={`min-h-11 min-w-11 rounded-lg disabled:opacity-40 ${SURFACE_CONTROL}`}
+          className={`min-h-11 min-w-11 disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           <span aria-hidden="true">−</span>
         </button>
@@ -53,7 +53,7 @@ function Stepper({
           disabled={plusDisabled}
           onClick={onPlus}
           aria-label={`Вернуть: ${label}`}
-          className={`min-h-11 min-w-11 rounded-lg disabled:opacity-40 ${SURFACE_CONTROL}`}
+          className={`min-h-11 min-w-11 disabled:opacity-40 ${SURFACE_CONTROL}`}
         >
           <span aria-hidden="true">+</span>
         </button>
@@ -89,13 +89,13 @@ export function ResourcesSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-3 ${SURFACE_PANEL}`}
     >
       <h2 id={titleId} className="text-base font-semibold leading-tight">
         {RESOURCES_EDIT_LABEL}
       </h2>
 
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+      <p className="text-xs text-ink-quiet">
         Для случаев вне модели приложения: эффект предмета, решение мастера, ошибка в списании.
         Каждая правка попадает в журнал и отменяется там же — в режиме «Журнал».
       </p>
@@ -146,20 +146,20 @@ export function ResourcesSheet({
  кнопку в 44 пикселя там нет, а ряд значков и так занимает пятую часть карточки.
  */}
       <section aria-label="Состояния" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Состояния</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">Состояния</h3>
         <button
           type="button"
           aria-pressed={suppression.underDirectSunlight}
           onClick={() => onSunlight(!suppression.underDirectSunlight)}
-          className={`min-h-11 rounded-xl px-3 text-sm ${
+          className={`min-h-11 px-3 text-sm ${
             suppression.underDirectSunlight
-              ? "bg-reaction/20 font-medium text-reaction-strong dark:text-reaction-bright"
+              ? `${SURFACE_CHOSEN} font-medium`
               : SURFACE_CONTROL
           }`}
         >
           Под прямым солнечным светом
         </button>
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-ink-quiet">
           Под солнцем не работают ни регенерация, ни магия крови, ни возврат максимума.
         </p>
       </section>
@@ -167,7 +167,7 @@ export function ResourcesSheet({
       <button
         type="button"
         onClick={onClose}
-        className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+        className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
       >
         Закрыть
       </button>

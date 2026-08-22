@@ -32,7 +32,7 @@ export function ItemSection({
 
   if (children === null) {
     return (
-      <section className={`flex items-center gap-3 rounded-xl px-3 py-2 ${SURFACE_GROUP}`}>
+      <section className={`flex items-center gap-3 px-3 py-2 ${SURFACE_GROUP}`}>
         <h2 className="shrink-0 text-sm font-semibold">{titleRu}</h2>
         <div className="min-w-0 flex-1">{add}</div>
       </section>
@@ -40,7 +40,7 @@ export function ItemSection({
   }
 
   return (
-    <section className={`flex flex-col gap-1 rounded-xl p-3 ${SURFACE_GROUP}`}>
+    <section className={`flex flex-col gap-1 p-3 ${SURFACE_GROUP}`}>
       <h2 className="text-sm font-semibold">{titleRu}</h2>
       {children}
       {add}

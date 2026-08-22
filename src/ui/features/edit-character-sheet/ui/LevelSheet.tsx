@@ -85,7 +85,7 @@ export function LevelSheet({
 
       {/* Кость бросает игрок: приложение называет среднее, но не подставляет его. */}
       {shown?.hitPoints == null ? null : (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-ink-quiet">
           За взятый уровень среднее за уровень: +{shown.hitPoints.total} (
           {shown.hitPoints.perDie} за d{shown.hitPoints.dieSize} и {shown.hitPoints.constitution} за
           Телосложение).
@@ -93,7 +93,7 @@ export function LevelSheet({
       )}
 
       {shown === null || shown.changes.length === 0 ? null : (
-        <ul className="flex flex-col gap-0.5 text-xs text-slate-600 dark:text-slate-400">
+        <ul className="flex flex-col gap-0.5 text-xs text-ink-quiet">
           {shown.changes.map((change) => (
             <li key={changeLine(change)}>{changeLine(change)}</li>
           ))}

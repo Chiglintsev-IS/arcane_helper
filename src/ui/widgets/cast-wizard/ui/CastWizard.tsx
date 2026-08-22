@@ -8,6 +8,7 @@
 
 "use client";
 
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import type { CastOptionView, ChoicesView, ResourcesView, SpellRowView } from "@/contract/views";
 import type { PreviewOf, Question } from "@/contract/questions";
 
@@ -31,7 +32,7 @@ import {
 } from "@/ui/features/cast-spell/model/castDraftStore";
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
 import { usePreview } from "@/ui/shared/model/usePreview";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 type CastPreview = PreviewOf<"cast_preview">;
 
@@ -82,15 +83,15 @@ function RuneStep({
   if (runes.unavailabilityRu !== undefined) {
     return (
       <section aria-label="Руна" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Руна</h3>
-        <p className="text-xs text-slate-600 dark:text-slate-400">{runes.unavailabilityRu}</p>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">Руна</h3>
+        <p className="text-xs text-ink-quiet">{runes.unavailabilityRu}</p>
       </section>
     );
   }
 
   return (
     <section aria-label="Руна" className="flex flex-col gap-2">
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+      <p className="text-xs text-ink-quiet">
         Руна не требует действия и не более одной на заклинание. Осталось рун: {pool.remaining} из{" "}
         {pool.maximum}.
       </p>
@@ -103,14 +104,14 @@ function RuneStep({
                 type="button"
                 aria-pressed={chosen}
                 onClick={() => onChoose(effect.rune, effect.choosesTarget)}
-                className={`flex min-h-11 w-full flex-col items-start rounded-lg px-3 py-1 text-left ${
+                className={`flex min-h-11 w-full flex-col items-start px-3 py-1 text-left ${
                   chosen
-                    ? "bg-ritual/20 text-ritual-strong dark:text-ritual-bright"
+                    ? SURFACE_CHOSEN
                     : SURFACE_CONTROL
                 }`}
               >
                 <span className="text-sm font-medium leading-tight">{effect.nameRu}</span>
-                <span className="text-xs leading-tight text-slate-600 dark:text-slate-400">
+                <span className="text-xs leading-tight text-ink-quiet">
                   {effect.effectRu}
                 </span>
               </button>
@@ -126,10 +127,10 @@ function RuneStep({
               type="button"
               aria-pressed={draft.runeTarget === target}
               onClick={() => onChooseTarget(target)}
-              className={`min-h-11 grow rounded-lg px-3 text-sm ${
+              className={`min-h-11 grow px-3 text-sm ${
                 draft.runeTarget === target
-                  ? "bg-ritual/20 text-ritual-strong dark:text-ritual-bright"
-                  : SURFACE_CONTROL
+                    ? SURFACE_CHOSEN
+                    : SURFACE_CONTROL
               }`}
             >
               {RUNE_TARGET_LABELS[target] ?? target}
@@ -138,7 +139,7 @@ function RuneStep({
         </div>
       ) : null}
       {draft.rune === null ? (
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-ink-quiet">
           Руна не выбрана — заклинание сотворится без неё.
         </p>
       ) : null}
@@ -182,21 +183,21 @@ function AvailabilityStep({
           .map((warning) => (
             <li
               key={warning.code}
-              className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}
+              className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}
             >
               {warning.reasonRu}
             </li>
           ))}
       </ul>
       {allowAnyway ? (
-        <p className="text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-ink-quiet">
           Мастер разрешил исключение: предупреждения не мешают.
         </p>
       ) : (
         <button
           type="button"
           onClick={onAllowAnyway}
-          className={`min-h-11 rounded-lg px-3 text-sm font-medium text-reaction-strong dark:text-reaction-bright ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 text-sm font-medium text-reaction ${SURFACE_CONTROL}`}
         >
           Применить всё равно
         </button>
@@ -235,10 +236,10 @@ function SlotStep({
               type="button"
               aria-pressed={chosen(option)}
               onClick={() => onChoose(option)}
-              className={`flex min-h-11 w-full flex-col items-start rounded-lg px-3 py-1 text-left text-sm ${
+              className={`flex min-h-11 w-full flex-col items-start px-3 py-1 text-left text-sm ${
                 chosen(option)
-                  ? "bg-action/20 text-action-strong dark:text-action-bright"
-                  : SURFACE_CONTROL
+                    ? SURFACE_CHOSEN
+                    : SURFACE_CONTROL
               }`}
             >
               <span>{optionLabel(option, resources)}</span>
@@ -302,9 +303,9 @@ function HitDiceStep({
                 type="button"
                 aria-pressed={count === option}
                 onClick={() => onCount(option)}
-                className={`min-h-11 min-w-11 rounded-lg px-3 text-sm ${
+                className={`min-h-11 min-w-11 px-3 text-sm ${
                   count === option
-                    ? "bg-action/20 text-action-strong dark:text-action-bright"
+                    ? SURFACE_CHOSEN
                     : SURFACE_CONTROL
                 }`}
               >
@@ -336,7 +337,7 @@ function HitDiceStep({
             onChange={(event) =>
               onRolled(event.target.value === "" ? null : Number(event.target.value))
             }
-            className={`min-h-11 rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
+            className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
           />
           {hitDice.rollPossible === false ? (
             <span id="hit-dice-rolled-hint" className="text-xs text-danger">
@@ -367,22 +368,22 @@ function ComponentsStep({ row, warnings }: { row: SpellRowView; warnings: CastOp
   return (
     <ul className="flex flex-col gap-1 text-sm">
       {row.componentReminders.map((reminder) => (
-        <li key={reminder} className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
+        <li key={reminder} className={`p-2 ${SURFACE_GROUP}`}>
           {reminder}
         </li>
       ))}
       {missing.map((warning) => (
         <li
           key={warning.code}
-          className={`rounded-lg bg-reaction/10 p-2 font-medium ${SURFACE_GROUP}`}
+          className={`${RULE_MARK.reaction} p-2 font-medium ${SURFACE_GROUP_BARE}`}
         >
           {warning.reasonRu}
         </li>
       ))}
       {missing.length === 0 ? (
-        <li className="text-xs text-slate-600 dark:text-slate-400">Всё нужное есть.</li>
+        <li className="text-xs text-ink-quiet">Всё нужное есть.</li>
       ) : (
-        <li className="text-xs text-slate-600 dark:text-slate-400">
+        <li className="text-xs text-ink-quiet">
           Купить и положить в сумку можно в режиме «Вне боя».
         </li>
       )}
@@ -415,24 +416,24 @@ function ConcentrationStep({
 
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <p className={`rounded-lg bg-concentration/10 p-2 ${SURFACE_GROUP}`}>
+      <p className={`${RULE_MARK.concentration} p-2 ${SURFACE_GROUP_BARE}`}>
         {busy.reasonRu}
       </p>
       {replaceConfirmed ? (
-        <p className="text-slate-600 dark:text-slate-400">Замена подтверждена.</p>
+        <p className="text-ink-quiet">Замена подтверждена.</p>
       ) : (
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className={`min-h-11 flex-1 rounded-lg px-3 ${SURFACE_CONTROL}`}
+            className={`min-h-11 flex-1 px-3 ${SURFACE_CONTROL}`}
           >
             {BUTTON_LABELS.dismiss}
           </button>
           <button
             type="button"
             onClick={onReplace}
-            className={`min-h-11 flex-1 rounded-lg bg-concentration/10 px-3 font-medium text-concentration-strong dark:text-concentration-bright ${SURFACE_CONTROL}`}
+            className={`min-h-11 flex-1 px-3 font-medium text-concentration ${SURFACE_CONTROL}`}
           >
             Заменить концентрацию
           </button>
@@ -470,14 +471,14 @@ function SummaryStep({
   return (
     <div className="flex flex-col gap-3">
       <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">
           Сказать мастеру
         </h3>
-        <p className={`rounded-lg p-2 text-base leading-snug ${SURFACE_GROUP}`}>
+        <p className={`p-2 text-base leading-snug ${SURFACE_GROUP}`}>
           {preview?.announcement.text ?? ""}
         </p>
         {shownGaps.length === 0 ? null : (
-          <ul className="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-400">
+          <ul className="flex flex-col gap-1 text-xs text-ink-quiet">
             {shownGaps.map((gap) => (
               <li key={gap.placeholder ?? gap.reasonRu}>{gap.reasonRu}</li>
             ))}
@@ -492,8 +493,8 @@ function SummaryStep({
       />
 
       <section aria-label="Что сделать" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Что сделать</h3>
-        <ol className="flex list-inside list-decimal flex-col gap-1 text-sm text-slate-600 dark:text-slate-400">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">Что сделать</h3>
+        <ol className="flex list-inside list-decimal flex-col gap-1 text-sm text-ink-quiet">
           {(preview?.instructions ?? []).map((step) => (
             <li key={step}>{step}</li>
           ))}
@@ -505,7 +506,7 @@ function SummaryStep({
         <button
           type="button"
           onClick={() => setDiagramOpen(true)}
-          className={`min-h-11 rounded-lg px-3 text-sm font-medium text-ritual ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 text-sm font-medium text-ritual ${SURFACE_CONTROL}`}
         >
           Схема ритуала
         </button>
@@ -675,7 +676,7 @@ export function CastWizard({
       ) : null}
 
       {error === null ? null : (
-        <p role="alert" className={`rounded-lg bg-reaction/10 p-2 text-sm ${SURFACE_GROUP}`}>
+        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}>
           {error}
         </p>
       )}

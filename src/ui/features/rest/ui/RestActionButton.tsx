@@ -27,7 +27,7 @@ export function RestActionButton({
       type="button"
       onClick={onClick}
       disabled={disabledReason !== undefined}
-      className={`min-h-11 grow rounded-xl px-3 py-1.5 text-sm font-medium disabled:text-slate-600 dark:disabled:text-slate-400 ${SURFACE_CONTROL}`}
+      className={`min-h-11 grow px-3 py-1.5 text-sm font-medium disabled:text-ink-quiet ${SURFACE_CONTROL}`}
     >
       <span className="block whitespace-nowrap">{name}</span>{" "}
       {disabledReason === undefined ? null : (

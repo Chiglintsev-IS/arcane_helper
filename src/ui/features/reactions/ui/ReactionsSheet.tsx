@@ -16,7 +16,7 @@ import { useId, useState } from "react";
 import type { SpellRowView } from "@/contract/views";
 
 import { Badge } from "@/ui/shared/ui/Badge";
-import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /** Имя дела: им зовётся и сама шторка, и кнопка, которая её открывает. */
 export const REACTIONS_LABEL = "Реакции";
@@ -81,13 +81,13 @@ export function ReactionsSheet({
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto rounded-t-2xl p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-3 ${SURFACE_PANEL}`}
     >
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={titleId} className="text-base font-semibold leading-tight">
           {REACTIONS_LABEL}
         </h2>
-        <span id={questionId} className="shrink-0 text-sm text-slate-600 dark:text-slate-400">
+        <span id={questionId} className="shrink-0 text-sm text-ink-quiet">
           Что произошло?
         </span>
       </div>
@@ -100,10 +100,10 @@ export function ReactionsSheet({
             role="radio"
             aria-checked={trigger === kind}
             onClick={() => setTrigger(kind)}
-            className={`min-h-11 grow rounded-lg px-2 text-xs font-medium ${
+            className={`min-h-11 grow px-2 text-xs font-medium ${
               trigger === kind
-                ? "bg-reaction/20 text-reaction-strong dark:text-reaction-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+              ? SURFACE_CHOSEN
+              : `text-ink-quiet ${SURFACE_CONTROL}`
             }`}
           >
             {label}
@@ -116,7 +116,7 @@ export function ReactionsSheet({
  может попросить исключение у мастера. Причина написана словами.
  */}
       {reactionAvailable ? null : (
-        <p className="text-xs font-medium text-reaction-strong dark:text-reaction-bright">
+        <p className="text-xs font-medium text-reaction">
           Реакция
         </p>
       )}
@@ -131,7 +131,7 @@ export function ReactionsSheet({
             type="button"
             disabled={!runeAvailable}
             onClick={onSpendRune}
-            className="min-h-11 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white disabled:opacity-50"
+            className={`min-h-11 ${SURFACE_PRIMARY} px-3 text-sm font-semibold disabled:opacity-50`}
           >
             Потратить руну · осталось {runesRemaining}
           </button>
@@ -145,15 +145,15 @@ export function ReactionsSheet({
               <button
                 type="button"
                 onClick={() => onCast(row)}
-                className={`flex w-full flex-col items-start gap-1 rounded-lg p-2 text-left ${SURFACE_CONTROL}`}
+                className={`flex w-full flex-col items-start gap-1 p-2 text-left ${SURFACE_CONTROL}`}
               >
                 <span className="font-medium leading-tight">{row.nameRu}</span>
-                <span className="text-xs text-slate-700 dark:text-slate-300">
+                <span className="text-xs text-ink-soft">
                   {row.card.reaction?.textRu}
                 </span>
                 <span className="flex flex-wrap items-center gap-1">
                   {row.armorClassIfCast === undefined ? null : (
-                    <Badge tone="reaction" icon="▲">
+                    <Badge tone="reaction">
                       КД {row.armorClassIfCast} вместо {armorClass}
                     </Badge>
                   )}
@@ -161,7 +161,7 @@ export function ReactionsSheet({
                     Ячейка {row.level} ур.
                   </Badge>
                 </span>
-                <span className="text-xs italic text-slate-600 dark:text-slate-400">
+                <span className="text-xs italic text-ink-quiet">
                   «{row.card.roleplay.incantation}»
                 </span>
               </button>
@@ -173,7 +173,7 @@ export function ReactionsSheet({
       <button
         type="button"
         onClick={onClose}
-        className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+        className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
       >
         Закрыть
       </button>

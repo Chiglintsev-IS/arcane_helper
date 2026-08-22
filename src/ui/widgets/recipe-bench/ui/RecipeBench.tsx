@@ -14,7 +14,7 @@ import {
   minutesRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { withPlural } from "@/shared/language";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /**
  * Верстак: что совпало, в какой форме это проявится и во что обойдётся.
@@ -63,11 +63,11 @@ function Field({
 }) {
   return (
     <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-xs text-slate-600 dark:text-slate-400">{label}</span>
+      <span className="text-xs text-ink-quiet">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+        className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
       >
         {empty === undefined ? null : <option value="">{empty}</option>}
         {options.map((option) => (
@@ -104,7 +104,7 @@ function Matches({
             <span className={`text-sm leading-tight ${main ? "font-semibold" : ""}`}>
               {match.nameRu}
             </span>
-            <span className="text-xs text-slate-600 dark:text-slate-400">
+            <span className="text-xs text-ink-quiet">
               {labelled(RARITY_LABELS, match.rarity)} · ступень{" "}
               {labelled(TIER_LABELS, match.tier)} · {match.sources.join(", ")}
             </span>
@@ -113,7 +113,7 @@ function Matches({
                 type="button"
                 aria-pressed={main}
                 onClick={() => onMain(match.nameRu)}
-                className={`min-h-11 flex-1 rounded-lg px-2 text-xs ${SURFACE_CONTROL} ${main ? "font-semibold" : ""}`}
+                className={`min-h-11 flex-1 px-2 text-xs ${SURFACE_CONTROL} ${main ? "font-semibold" : ""}`}
               >
                 Основной эффект
               </button>
@@ -121,7 +121,7 @@ function Matches({
                 type="button"
                 aria-pressed={off}
                 onClick={() => onSuppress(match.nameRu)}
-                className={`min-h-11 flex-1 rounded-lg px-2 text-xs ${SURFACE_CONTROL} ${off ? "font-semibold" : ""}`}
+                className={`min-h-11 flex-1 px-2 text-xs ${SURFACE_CONTROL} ${off ? "font-semibold" : ""}`}
               >
                 Подавить
               </button>
@@ -141,14 +141,14 @@ function Tally({ difficulty }: { difficulty: PreviewOf<"recipe_preview">["diffic
     .toSorted((one, other) => other.modifier - one.modifier);
 
   if (parts.length === 0) {
-    return <p className="text-xs text-slate-600 dark:text-slate-400">{NO_MODIFIERS_RU}</p>;
+    return <p className="text-xs text-ink-quiet">{NO_MODIFIERS_RU}</p>;
   }
 
   return (
     <ul className="flex flex-col gap-0.5 text-xs">
       {parts.map((part) => (
         <li key={part.nameRu} className="flex justify-between gap-2">
-          <span className="min-w-0 text-slate-600 dark:text-slate-400">{part.nameRu}</span>
+          <span className="min-w-0 text-ink-quiet">{part.nameRu}</span>
           <span className="shrink-0 tabular-nums">
             {part.modifier < 0 ? "−" : "+"}
             {Math.abs(part.modifier)}
@@ -198,14 +198,14 @@ export function RecipeBench({
   return (
     <section
       aria-labelledby={benchId}
-      className={`flex flex-col gap-3 rounded-xl p-3 ${SURFACE_GROUP}`}
+      className={`flex flex-col gap-3 p-3 ${SURFACE_GROUP}`}
     >
       <h2 id={benchId} className="text-base font-semibold leading-tight">
         Верстак
       </h2>
 
       {preview === null || preview.matches.length === 0 ? (
-        <p className="text-sm text-slate-600 dark:text-slate-400">
+        <p className="text-sm text-ink-quiet">
           Отметьте выше от двух до четырёх видов: состав держится на свойстве, раскрытом хотя бы у
           двоих из них.
         </p>
@@ -236,13 +236,13 @@ export function RecipeBench({
           onChange={(next) => change({ onset: next })}
         />
         <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-xs text-slate-600 dark:text-slate-400">Очистка</span>
+          <span className="text-xs text-ink-quiet">Очистка</span>
           <select
             value={draft.purification ?? ""}
             onChange={(event) =>
               change({ purification: event.target.value === "" ? null : event.target.value })
             }
-            className={`min-h-11 w-full rounded-lg px-2 text-sm ${SURFACE_CONTROL}`}
+            className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
           >
             <option value="">{NO_PURIFICATION_RU}</option>
             {choices.purifications.map((kept) => (
@@ -289,7 +289,7 @@ export function RecipeBench({
             type="button"
             onClick={() => change({ limitations: toggle(draft.limitations, limitation) })}
             aria-label={`Убрать ограничение: ${limitation}`}
-            className={`min-h-11 rounded-lg px-2 text-left text-xs ${SURFACE_CONTROL}`}
+            className={`min-h-11 px-2 text-left text-xs ${SURFACE_CONTROL}`}
           >
             {limitation}
           </button>
@@ -299,7 +299,7 @@ export function RecipeBench({
       {refused || preview?.difficulty == null ? null : (
         <div className="flex flex-col gap-1">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-xs text-slate-600 dark:text-slate-400">Сложность</span>
+            <span className="text-xs text-ink-quiet">Сложность</span>
             <span className="text-2xl font-semibold tabular-nums leading-none">
               {preview.difficulty.total}
             </span>
@@ -309,13 +309,13 @@ export function RecipeBench({
       )}
 
       <label className="flex items-center justify-between gap-2">
-        <span className="text-xs text-slate-600 dark:text-slate-400">Рецептурных порций</span>
+        <span className="text-xs text-ink-quiet">Рецептурных порций</span>
         <input
           type="text"
           inputMode="numeric"
           value={portions}
           onChange={(event) => onPortions(event.target.value)}
-          className={`min-h-11 w-20 rounded-lg px-2 text-right text-sm tabular-nums ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-20 px-2 text-right text-sm tabular-nums ${SURFACE_CONTROL}`}
         />
       </label>
 
@@ -330,7 +330,7 @@ export function RecipeBench({
       )}
 
       {preview?.refusalRu === undefined ? null : (
-        <p className="text-sm text-slate-700 dark:text-slate-300">{preview.refusalRu}</p>
+        <p className="text-sm text-ink-soft">{preview.refusalRu}</p>
       )}
 
       {refused || preview?.check == null ? null : (
@@ -343,7 +343,7 @@ export function RecipeBench({
             {preview.known ? " — рецепт записан, бросок не нужен" : ""}
           </p>
           {preview.check.unstudied.length === 0 ? null : (
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-xs text-ink-quiet">
               Бонус мастерства не достаётся:{" "}
               {preview.check.unstudied
                 .map((direction) => labelled(DIRECTION_LABELS, direction))
@@ -356,23 +356,23 @@ export function RecipeBench({
 
       <div className="flex gap-2">
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-xs text-slate-600 dark:text-slate-400">{`Выпало на ${rollLabels.check}`}</span>
+          <span className="text-xs text-ink-quiet">{`Выпало на ${rollLabels.check}`}</span>
           <input
             type="text"
             inputMode="numeric"
             value={rolledText}
             onChange={(event) => onRolled(event.target.value)}
-            className={`min-h-11 w-full rounded-lg px-2 text-sm tabular-nums ${SURFACE_CONTROL}`}
+            className={`min-h-11 w-full px-2 text-sm tabular-nums ${SURFACE_CONTROL}`}
           />
         </label>
         <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-xs text-slate-600 dark:text-slate-400">{`Выпало на ${rollLabels.mishap}`}</span>
+          <span className="text-xs text-ink-quiet">{`Выпало на ${rollLabels.mishap}`}</span>
           <input
             type="text"
             inputMode="numeric"
             value={mishapText}
             onChange={(event) => onMishap(event.target.value)}
-            className={`min-h-11 w-full rounded-lg px-2 text-sm tabular-nums ${SURFACE_CONTROL}`}
+            className={`min-h-11 w-full px-2 text-sm tabular-nums ${SURFACE_CONTROL}`}
           />
         </label>
       </div>
@@ -380,7 +380,7 @@ export function RecipeBench({
       <button
         type="button"
         onClick={onCraft}
-        className="min-h-11 rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+        className={`min-h-11 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
       >
         Изготовить партию
       </button>

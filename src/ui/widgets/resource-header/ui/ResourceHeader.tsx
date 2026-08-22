@@ -62,14 +62,14 @@ function payingSkin({
   pressable: boolean;
   available: boolean;
 }): string {
-  if (!available) return `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`;
+  if (!available) return `text-ink-quiet ${SURFACE_GROUP}`;
   return pressable ? SURFACE_CONTROL : SURFACE_GROUP;
 }
 
 /** Подпись плитки: мелкая строка над числом. */
 function TileCaption({ children }: { children: React.ReactNode }) {
   return (
-    <span className="block whitespace-nowrap text-[0.625rem] leading-tight text-slate-600 dark:text-slate-400">
+    <span className="block whitespace-nowrap text-[0.625rem] leading-tight text-ink-quiet">
       {children}
     </span>
   );
@@ -90,7 +90,7 @@ function ArmorClassStat({
 }) {
   // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
   return (
-    <div className={`flex-auto rounded-md ${SURFACE_CONTROL}`}>
+    <div className={`flex-auto ${SURFACE_CONTROL}`}>
       <dt className="sr-only">КД</dt>
       <dd>
         <button
@@ -122,7 +122,7 @@ function HitPointsStat({
 }) {
   // Обёртка `div` обязательна: `button` не может быть прямым потомком `dl` (axe: only-dlitems).
   return (
-    <div className={`flex-auto rounded-md ${SURFACE_CONTROL}`}>
+    <div className={`flex-auto ${SURFACE_CONTROL}`}>
       <dt className="sr-only">Хиты</dt>
       <dd>
         <button
@@ -154,7 +154,7 @@ function ConstantStat({
   accessibleName: string;
 }) {
   return (
-    <div className={`flex-auto rounded-md px-2 py-1 ${SURFACE_GROUP}`}>
+    <div className={`flex-auto px-2 py-1 ${SURFACE_GROUP}`}>
       <dt className="sr-only">{accessibleName}</dt>
       <dd>
         <TileCaption>{captionRu}</TileCaption>
@@ -198,7 +198,7 @@ function PoolCounter({
       </span>
     </>
   );
-  const skin = `flex-1 rounded-md text-center ${payingSkin({
+  const skin = `flex-1 text-center ${payingSkin({
     pressable: action !== undefined,
     available,
   })}`;
@@ -252,7 +252,7 @@ function SlotCounters({ slots, onEdit }: { slots: ResourcesView["slots"]; onEdit
         {slots.map((slot) => (
           <span
             key={slot.level}
-            className={`flex-1 rounded-md px-1 py-1 text-center ${payingSkin({
+            className={`flex-1 px-1 py-1 text-center ${payingSkin({
               pressable: true,
               available: slot.remaining > 0,
             })}`}

@@ -2,11 +2,14 @@
  * Смысловые тона интерфейса: цвет несёт значение, а не украшает.
  *
  * Живут в общем слое, потому что ими пользуются и примитивы, и карточки: держать их у карточки
- * значило бы заставить кнопку знать про заклинание. Цвет всегда идёт с иконкой и подписью:
- * один цвет не читается ни при ярком свете, ни при дальтонизме.
+ * значило бы заставить кнопку знать про заклинание.
+ *
+ * Носителей у значения три, и цвет среди них последний: сначала знак, затем слово, и только потом
+ * оттенок. Проверка простая — убрать цвет совсем: интерфейс обязан остаться понятным. Поэтому знак
+ * приходит отсюда же, а не подставляется на месте: тон без знака — половина носителя.
  */
 
-/** Смысловые роли цвета из. Цвет всегда с иконкой и подписью. */
+/** Смысловые роли цвета. Цвет всегда со знаком и подписью. */
 export type Tone =
   | "action"
   | "bonus"
@@ -17,13 +20,37 @@ export type Tone =
   | "defense"
   | "muted";
 
-export const TONE_CLASS: Record<Tone, string> = {
-  action: "bg-action/10 text-action-strong dark:text-action-bright",
-  bonus: "bg-bonus/10 text-bonus-strong dark:text-bonus-bright",
-  reaction: "bg-reaction/10 text-reaction-strong dark:text-reaction-bright",
-  concentration: "bg-concentration/10 text-concentration-strong dark:text-concentration-bright",
-  ritual: "bg-ritual/10 text-ritual-strong dark:text-ritual-bright",
-  offense: "bg-offense/10 text-offense-strong dark:text-offense-bright",
-  defense: "bg-defense/10 text-defense-strong dark:text-defense-bright",
-  muted: "bg-slate-400/10 text-slate-700 dark:text-slate-300",
+/**
+ * Знак тона: то, что читается раньше цвета и вместо него.
+ *
+ * Знаки типографские, а не картинки: они масштабируются вместе с системным шрифтом и не требуют
+ * ни загрузки, ни второго набора под тёмную тему.
+ */
+export const TONE_GLYPH: Record<Tone, string> = {
+  action: "●",
+  bonus: "◐",
+  reaction: "⟳",
+  concentration: "◌",
+  ritual: "✦",
+  offense: "✚",
+  defense: "◇",
+  muted: "✗",
+};
+
+/**
+ * Цвет знака и подписи тона.
+ *
+ * Светлоты под тёмную и светлую тему больше не различаются классом: одно имя роли, а значение
+ * меняет тема. Приглушённое берёт не свой оттенок, а общий тон кончившегося — «нельзя» выглядит
+ * одинаково независимо от того, чего именно нельзя.
+ */
+export const TONE_TEXT: Record<Tone, string> = {
+  action: "text-action",
+  bonus: "text-bonus",
+  reaction: "text-reaction",
+  concentration: "text-concentration",
+  ritual: "text-ritual",
+  offense: "text-offense",
+  defense: "text-defense",
+  muted: "text-off",
 };

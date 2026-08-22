@@ -1,53 +1,99 @@
 @import "tailwindcss";
 
 /*
- * Тёмная тема обязательна: играют вечером и при слабом свете (docs/ux.md#доступность).
- * Цветовые роли соответствуют цветовой системе спеки — цвет всегда дублируется иконкой и текстом.
+ * Значение токена меняет тема, а роль токена — нет.
+ *
+ * Пары «класс + вариант тёмной темы» у каждого места применения заменены одним именем роли:
+ * подпись остаётся подписью в обеих темах, и правка палитры идёт по одному объявлению, а не по
+ * сорока экранам. Проверка контраста при этом гоняется в обеих темах (docs/quality.md#доступность).
  */
 @theme {
-  --color-action: oklch(0.62 0.17 255);
-  --color-bonus: oklch(0.78 0.15 85);
-  --color-reaction: oklch(0.62 0.2 25);
-  --color-concentration: oklch(0.62 0.19 300);
-  --color-ritual: oklch(0.62 0.15 150);
+  --color-page: var(--theme-page);
+  --color-group: var(--theme-group);
+  --color-control: var(--theme-control);
+  --color-sheet: var(--theme-sheet);
 
-  /*
-   * Роль в бою (FR-213). Оттенки взяты в промежутках между занятыми: оранжевый между красной
-   * реакцией и жёлтым бонусным действием, бирюзовый между зелёным ритуалом и синим действием.
-   * Соседство тесное, поэтому иконка и подпись здесь обязательны (docs/ux.md#цветовая-система).
-   */
-  --color-offense: oklch(0.68 0.17 55);
-  --color-defense: oklch(0.65 0.13 200);
+  --color-rule: var(--theme-rule);
+  --color-rule-strong: var(--theme-rule-strong);
+  --color-accent-rule: var(--theme-accent-rule);
 
-  /*
-   * Тёмные варианты — для текста на светлом фоне: цвета выше рассчитаны на подложку и на светлой
-   * теме не дают контраста 4.5:1, которого требует WCAG 1.4.3 и проверка axe-core.
-   */
-  --color-action-strong: oklch(0.45 0.16 255);
-  --color-bonus-strong: oklch(0.45 0.12 85);
-  --color-reaction-strong: oklch(0.45 0.19 25);
-  --color-concentration-strong: oklch(0.45 0.19 300);
-  --color-ritual-strong: oklch(0.42 0.12 150);
-  --color-offense-strong: oklch(0.47 0.14 55);
-  --color-defense-strong: oklch(0.45 0.11 200);
+  --color-ink: var(--theme-ink);
+  --color-ink-soft: var(--theme-ink-soft);
+  --color-ink-quiet: var(--theme-ink-quiet);
+  --color-accent: var(--theme-accent);
+  --color-off: var(--theme-off);
 
-  /*
-   * Светлые варианты — для текста на тёмной подложке своего же цвета. Знак и подпись не могут быть
-   * одной светлоты: подпись цвета своей подложки даёт 3.05 при требуемых 4.5, и это ловит axe.
-   * Светлота 0.76 — наименьшая, при которой проходят все восемь на самой светлой ступени; при 0.72
-   * синий, красный и фиолетовый ещё не проходят.
-   */
-  --color-action-bright: oklch(0.76 0.16 255);
-  --color-bonus-bright: oklch(0.76 0.15 85);
-  --color-reaction-bright: oklch(0.76 0.17 25);
-  --color-concentration-bright: oklch(0.76 0.17 300);
-  --color-ritual-bright: oklch(0.76 0.15 150);
-  --color-offense-bright: oklch(0.76 0.16 55);
-  --color-defense-bright: oklch(0.76 0.13 200);
+  --color-action: var(--theme-action);
+  --color-bonus: var(--theme-bonus);
+  --color-reaction: var(--theme-reaction);
+  --color-concentration: var(--theme-concentration);
+  --color-ritual: var(--theme-ritual);
+  --color-offense: var(--theme-offense);
+  --color-defense: var(--theme-defense);
 }
 
+/*
+ * Светлая тема — бумага, а не белизна: экран за столом стоит рядом с бумажными листами, и белый
+ * между ними светится. Нажимаемое здесь темнее фона, а группа светлее: ступени меняются местами,
+ * роли — нет.
+ */
 :root {
   color-scheme: light dark;
+
+  --theme-page: #efe8da;
+  --theme-group: #fbf7ee;
+  --theme-control: #e6ddca;
+  --theme-sheet: #fdfaf3;
+
+  --theme-rule: rgb(40 32 20 / 0.14);
+  --theme-rule-strong: rgb(40 32 20 / 0.28);
+  --theme-accent-rule: rgb(122 87 26 / 0.5);
+
+  --theme-ink: #231d14;
+  --theme-ink-soft: #5a5040;
+  --theme-ink-quiet: #655c4d;
+  /* Золото по бумаге не читается: акцент светлой темы — бронза. */
+  --theme-accent: #7a571a;
+  --theme-off: #625948;
+
+  --theme-action: #1f5f96;
+  --theme-bonus: #6b3fa0;
+  --theme-reaction: #a24425;
+  --theme-concentration: #0c6558;
+  --theme-ritual: #39651e;
+  --theme-offense: #a32338;
+  --theme-defense: #125f70;
+}
+
+/*
+ * Тёмная тема обязательна: играют вечером и при слабом свете (docs/ux.md#доступность). Фон тёплый
+ * чернильный, а не чёрный: чистый чёрный рядом со свечой отдаёт синевой.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --theme-page: #15120e;
+    --theme-group: #1e1a15;
+    --theme-control: #2b251d;
+    --theme-sheet: #272219;
+
+    --theme-rule: rgb(233 214 176 / 0.11);
+    --theme-rule-strong: rgb(233 214 176 / 0.22);
+    --theme-accent-rule: rgb(211 171 95 / 0.45);
+
+    --theme-ink: #efe7d6;
+    --theme-ink-soft: #b4a78e;
+    --theme-ink-quiet: #9c9280;
+    --theme-accent: #d3ab5f;
+    --theme-off: #9d9384;
+
+    --theme-action: #6fa9e2;
+    --theme-bonus: #b98de8;
+    --theme-reaction: #e79079;
+    --theme-concentration: #4fbca8;
+    --theme-ritual: #8dc46e;
+    --theme-offense: #e4707f;
+    --theme-defense: #63bdd0;
+  }
 }
 
 html,

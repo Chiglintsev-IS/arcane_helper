@@ -6,7 +6,7 @@
  * взяты из книги: 2d8 у заговора — это его уровень, а не общий случай.
  *
  * Три уровня подачи вместо одной россыпи значков:
- * роль — цветом самой карточки: место, которое уже занято рамкой, ничего не стоит списку;
+ * роль — левой линейкой строки: полоса с краю не отнимает у списка ни одной строки;
  * срочное — цветными значками: чем тратится ход, какое число называть, держит ли концентрацию;
  * прочее — простым текстом через точку: цена, дальность, длительность, урон читают уже после
  * того, как строку нашли, и рамка вокруг каждого была бы шумом.
@@ -31,22 +31,12 @@ import {
 } from "@/ui/entities/spell/lib/format";
 import { rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { RULE_GROUP, RULE_ROLE } from "@/ui/shared/ui/rule";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PAGE } from "@/ui/shared/ui/surface";
+import { TONE_GLYPH, TONE_TEXT } from "@/ui/shared/ui/tone";
 
 /** Заговор кнопки подготовки не получает: он вне лимита. Цена, а не вид заклинания. */
 const CANTRIP_LEVEL = 0;
-
-/**
- * Цвет рамки по роли — единственная рамка приложения.
- *
- * «Другое» рамки не получает вовсе: пустая и означает «ни то, ни другое». Место она при этом
- * занимает, иначе строка без роли стояла бы на два пикселя уже соседней.
- */
-const ROLE_BORDER: Record<string, string> = {
-  offense: "border-offense/60",
-  defense: "border-defense/60",
-  other: "border-transparent",
-};
 
 /**
  * Ступень приглушённой строки: она остаётся лежать на странице, пока доступная приподнята.
@@ -55,25 +45,10 @@ const ROLE_BORDER: Record<string, string> = {
  * 2.8 при требуемых 4.5, и это ловит прогон axe. Приглушение живёт в ступени, а причина, по которой
  * строка приглушена, написана на ней словами.
  */
-const DIMMED_SURFACE = "";
-
-/**
- * Цвет подписи роли. Тёмные варианты — не украшение: на подкрашенной подложке серый слишком светлый
- * и даёт 4.31 вместо требуемых WCAG 4.5 — это ловит прогон axe-core.
- */
-const ROLE_WORD: Record<string, string> = {
-  offense: "text-offense-strong dark:text-offense-bright",
-  defense: "text-defense-strong dark:text-defense-bright",
-  other: "text-slate-600 dark:text-slate-400",
-};
-
-/** Оформление по слову правил: незнакомая роль выглядит как «ни то, ни другое». */
-function roleClass(classes: Record<string, string>, role: string): string {
-  return classes[role] ?? classes.other ?? "";
-}
+const DIMMED_SURFACE = `${SURFACE_PAGE} ${RULE_GROUP}`;
 
 /** Выделенное среди нейтрального: тем же весом на строке отмечена длительность. */
-const STRONG = "font-medium text-slate-800 dark:text-slate-200";
+const STRONG = "font-medium text-ink";
 
 type ComponentMark = { letter: string; wordRu: string; strong: boolean };
 
@@ -99,7 +74,7 @@ function componentMarks(spell: SpellRowView): ComponentMark[] {
         ? { letter: "М", wordRu: "свой предмет", strong: true }
         : { letter: "М", wordRu: "материал", strong: false },
     );
-  }
+}
 
   return marks;
 }
@@ -114,10 +89,10 @@ export function SpellCardCompact({
   /** Числа заклинателя: ими называется бросок. */
   casting: CastingView;
   onOpen: () => void;
-  /**
+/**
    * Переключение подготовки. Передаётся только там, где подготовка уместна, — в «Книге»:
    * в бою состав уже определён, и кнопка предлагала бы менять его под чужой ход.
-   */
+ */
   onTogglePrepared?: (() => void) | undefined;
 }) {
   // Карточка одна на все режимы: роль красит рамку и стоит в углу везде, цена называется везде.
@@ -130,23 +105,25 @@ export function SpellCardCompact({
   const damage = damageLabel(spell.damage);
   const slotCost = slotCostLabel(spell);
 
-  /**
-   * Роль красит рамку, а не занимает отдельный значок. Цвет один ничего не сообщает
-   *, поэтому слово стоит там, где вне боя стоит английское название: место уже
-   * занято, и подпись достаётся списку бесплатно.
-   */
+/**
+   * Роль стоит левой линейкой строки, знаком и словом в углу — тремя носителями сразу.
+ *
+   * Обводить строку целиком роль перестала: обводка занята структурой, и цветная рамка вокруг
+   * каждой строки списка читалась бы как ещё один уровень вложенности. Место при этом не выросло:
+   * линейка стоит с краю, а угол имени и раньше был занят подписью роли.
+ */
   const role = combatRole(spell.role);
   const dimmed = unavailable || active;
-  const frame = `${roleClass(ROLE_BORDER, spell.role)} ${dimmed ? DIMMED_SURFACE : SURFACE_GROUP}`;
+  const frame = `${dimmed ? DIMMED_SURFACE : SURFACE_GROUP} ${RULE_ROLE[role.tone]}`;
 
-  /**
+/**
    * Нейтральные сведения строки. Длительность выделена контрастом: рядом с ней в значке стоит время
    * накладывания, и два времени на одной строке обязаны отличаться не только словом.
-   *
+ *
    * Девятого смыслового цвета для неё не заводится: все восемь заняты, и девятый превратил бы шкалу
    * в радугу, в которой не выделяется ничего. Контраст внутри нейтрального
    * такого запрета не нарушает — он не обещает нового смысла.
-   */
+ */
   const facts: { text: string; strong: boolean }[] = [
     { text: slotCost, strong: false },
     { text: rangePhrase(spell.range), strong: false },
@@ -166,7 +143,7 @@ export function SpellCardCompact({
       <button
         type="button"
         onClick={onOpen}
-        className={`flex flex-1 flex-col items-start gap-1 rounded-lg border p-2 text-left ${frame}`}
+        className={`flex flex-1 flex-col items-start gap-1 p-2 text-left ${frame}`}
       >
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">{spell.nameRu}</span>
@@ -175,7 +152,7 @@ export function SpellCardCompact({
               <span
                 role="img"
                 aria-label={`Компоненты: ${marks.map((mark) => mark.wordRu).join(", ")}`}
-                className="text-slate-600 dark:text-slate-400"
+                className="text-ink-quiet"
               >
                 {marks.map((mark) => (
                   <span key={mark.letter} className={mark.strong ? STRONG : ""}>
@@ -188,7 +165,9 @@ export function SpellCardCompact({
  Английское название нужно, чтобы найти заклинание в чужой книге, — а в бою по книгам не
  ищут. В «Бою» тот же угол занимает роль, и строка не становится выше.
  */}
-            <span className={roleClass(ROLE_WORD, spell.role)}>{role.label}</span>
+            <span className={TONE_TEXT[role.tone]}>
+              <span aria-hidden="true">{TONE_GLYPH[role.tone]}</span> {role.label}
+            </span>
           </span>
         </span>
 
@@ -202,12 +181,12 @@ export function SpellCardCompact({
             </Badge>
           )}
           {active ? (
-            <Badge tone="ritual" icon="✦">
+            <Badge tone="ritual">
               Уже действует
             </Badge>
           ) : null}
           {spell.concentration ? (
-            <Badge tone="concentration" icon="✦">
+            <Badge tone="concentration">
               Концентрация
             </Badge>
           ) : null}
@@ -228,7 +207,7 @@ export function SpellCardCompact({
           <span className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold tabular-nums">
             {resolution.spoken ? (
               <span className="whitespace-nowrap">
-                <span aria-hidden="true" className="text-slate-600 dark:text-slate-400">
+                <span aria-hidden="true" className="text-ink-quiet">
                   {resolution.icon}
                 </span>{" "}
                 {resolution.label}
@@ -245,7 +224,7 @@ export function SpellCardCompact({
  свой у светлой, — а одиночный тон, светлый по тёмной подложке, на белой давал 2.63 при требуемых
  4.5.
  */}
-        <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-slate-600 dark:text-slate-400">
+        <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-ink-quiet">
           {facts.map((fact, index) => (
             <Fragment key={fact.text}>
               {index === 0 ? null : <span aria-hidden="true">·</span>}
@@ -255,12 +234,12 @@ export function SpellCardCompact({
         </span>
 
         {/* Две строки: список должен оставаться просматриваемым, полный пересказ — в карточке. */}
-        <span className="line-clamp-2 text-xs text-slate-700 dark:text-slate-300">
+        <span className="line-clamp-2 text-xs text-ink-soft">
           {spell.shortRulesRu}
         </span>
 
         {unavailableReason === undefined ? null : (
-          <span className="text-xs font-medium text-reaction-strong dark:text-reaction-bright">Недоступно: {unavailableReason}</span>
+          <span className="text-xs font-medium text-reaction">Недоступно: {unavailableReason}</span>
         )}
       </button>
 
@@ -275,10 +254,10 @@ export function SpellCardCompact({
           aria-pressed={isPrepared}
           onClick={onTogglePrepared}
           aria-label={`${isPrepared ? "Снять подготовку" : "Подготовить"}: ${spell.nameRu}`}
-          className={`w-11 shrink-0 rounded-lg text-lg ${
+          className={`w-11 shrink-0 text-lg ${
             isPrepared
-              ? "bg-ritual/20 text-ritual-strong dark:text-ritual-bright"
-              : `text-slate-600 dark:text-slate-400 ${SURFACE_CONTROL}`
+            ? SURFACE_CHOSEN
+            : `text-ink-quiet ${SURFACE_CONTROL}`
           }`}
         >
           <span aria-hidden="true">{isPrepared ? "✓" : "+"}</span>

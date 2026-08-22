@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@/ui/shared/ui/Badge";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_DISABLED, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
  * Заголовки шагов, общих у обоих мастеров.
@@ -70,12 +70,12 @@ export function WizardShell({
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-base font-semibold leading-tight">{title}</h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400">{subtitle}</p>
+            <p className="text-xs text-ink-quiet">{subtitle}</p>
           </div>
           <button
             type="button"
             onClick={onCancel}
-            className="px-2 text-sm text-slate-600 dark:text-slate-400 underline"
+            className="px-2 text-sm text-ink-quiet underline"
           >
             {BUTTON_LABELS.dismiss}
           </button>
@@ -84,7 +84,7 @@ export function WizardShell({
           <Badge tone={badge.tone} icon={badge.icon}>
             {badge.label}
           </Badge>
-          <p className="text-xs text-slate-600 dark:text-slate-400">{stepLabel}</p>
+          <p className="text-xs text-ink-quiet">{stepLabel}</p>
         </div>
       </header>
 
@@ -97,7 +97,7 @@ export function WizardShell({
           <button
             type="button"
             onClick={footer.onBack}
-            className={`min-h-11 rounded-xl px-4 text-sm ${SURFACE_CONTROL}`}
+            className={`min-h-11 px-4 text-sm ${SURFACE_CONTROL}`}
           >
             Назад
           </button>
@@ -106,7 +106,7 @@ export function WizardShell({
           type="button"
           disabled={footer.primaryDisabled === true}
           onClick={footer.onPrimary}
-          className="min-h-12 flex-1 rounded-xl bg-action-strong px-4 text-base font-semibold text-white disabled:bg-slate-300 disabled:text-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-300"
+          className={`min-h-12 flex-1 bg-accent px-4 text-base font-semibold text-page disabled:text-off ${SURFACE_DISABLED}`}
         >
           {footer.primaryLabel}
         </button>

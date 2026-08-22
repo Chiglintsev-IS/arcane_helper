@@ -30,8 +30,8 @@ import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext"
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { signed } from "@/shared/language";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
-import { TONE_CLASS } from "@/ui/shared/ui/tone";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 
 /**
  * Имя раздела уже творённого: одно слово и одна строка на заголовок и на произносимое имя списка.
@@ -219,7 +219,7 @@ export function GameScreen() {
             onClick={() =>
               inFight ? setFightOverOpen(true) : startFight()
             }
-            className="min-h-11 grow whitespace-nowrap rounded-xl bg-action-strong px-1 text-sm font-semibold leading-tight text-white"
+            className={`min-h-11 grow whitespace-nowrap ${SURFACE_PRIMARY} px-1 text-sm font-semibold leading-tight`}
           >
             {inFight ? "Окончить бой" : "Начать бой"}
             {inFight ? null : (
@@ -232,7 +232,7 @@ export function GameScreen() {
             <button
               type="button"
               onClick={() => void execute({ kind: "begin_turn" })}
-              className={`min-h-11 grow whitespace-nowrap rounded-xl px-1 text-sm font-semibold leading-tight text-action-strong dark:text-action-bright ${SURFACE_CONTROL}`}
+              className={`min-h-11 grow whitespace-nowrap px-1 text-sm font-semibold leading-tight text-action ${SURFACE_CONTROL}`}
             >
               Новый ход
               <span className="block text-[0.625rem] font-normal leading-tight">
@@ -252,10 +252,10 @@ export function GameScreen() {
                 ? `${REACTIONS_LABEL}. Реакция ${turn.reactionAvailable ? "доступна" : "израсходована"}`
                 : REACTIONS_LABEL
             }
-            className={`min-h-11 grow whitespace-nowrap rounded-xl px-1 text-sm font-semibold leading-tight ${
+            className={`min-h-11 grow whitespace-nowrap px-1 text-sm font-semibold leading-tight ${
               turn.reactionAvailable || !inFight
-                ? "bg-reaction/20 text-reaction-strong dark:text-reaction-bright"
-                : `text-slate-600 dark:text-slate-400 ${SURFACE_GROUP}`
+              ? SURFACE_CHOSEN
+              : `text-ink-quiet ${SURFACE_GROUP}`
             }`}
           >
             {REACTIONS_LABEL}
@@ -288,7 +288,7 @@ export function GameScreen() {
          фразой у двенадцати строк из пятнадцати и вытесняла ту причину, которая у строки своя.
          */}
         {snapshot.spellsRefusalRu === undefined ? null : (
-          <p className={`rounded-lg px-2 py-1 text-xs font-medium ${TONE_CLASS.reaction}`}>
+          <p className={`px-2 py-1 text-xs font-medium ${RULE_MARK.reaction}`}>
             Недоступно: {snapshot.spellsRefusalRu}
           </p>
         )}
@@ -306,7 +306,7 @@ export function GameScreen() {
          */}
         {frequent.length === 0 ? null : (
           <div className="flex flex-wrap items-start gap-x-2">
-            <h2 className="flex min-h-11 items-center text-[0.6875rem] font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
+            <h2 className="flex min-h-11 items-center text-[0.6875rem] font-medium uppercase tracking-wide text-ink-quiet">
               {FREQUENT_LABEL}
             </h2>
             <ul aria-label={FREQUENT_LABEL} className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
@@ -315,7 +315,7 @@ export function GameScreen() {
                   <button
                     type="button"
                     onClick={() => openSpell(spell.id)}
-                    className={`inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-medium ${SURFACE_CONTROL}`}
+                    className={`inline-flex min-h-11 items-center px-2 text-sm font-medium ${SURFACE_CONTROL}`}
                   >
                     {spell.nameRu}
                   </button>

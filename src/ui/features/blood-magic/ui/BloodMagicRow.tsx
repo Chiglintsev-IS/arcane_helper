@@ -51,19 +51,19 @@ export function BloodMagicRow({
       <button
         type="button"
         onClick={onOpen}
-        className={`flex w-full flex-col items-start gap-1 rounded-lg p-2 text-left ${
+        className={`flex w-full flex-col items-start gap-1 p-2 text-left ${
           reason === null ? "" : "opacity-60"
           }`}
       >
         <span className="flex w-full items-baseline justify-between gap-2">
           <span className="font-medium leading-tight">{BLOOD_MAGIC_LABEL}</span>
-          <span className="shrink-0 text-[0.625rem] text-slate-600 dark:text-slate-400">
+          <span className="shrink-0 text-[0.625rem] text-ink-quiet">
             {combatRole(BLOOD_MAGIC_TRAITS.role).label}
           </span>
         </span>
 
         <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
-          <Badge tone="action" icon="●">
+          <Badge tone="action">
             Действие
           </Badge>
           <Badge tone="muted" icon={resolution.icon}>
@@ -71,11 +71,11 @@ export function BloodMagicRow({
           </Badge>
         </span>
 
-        <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-slate-600 dark:text-slate-400">
+        <span className="flex flex-wrap items-center gap-x-1 text-[0.6875rem] leading-4 text-ink-quiet">
           {facts.map((fact, index) => (
             <Fragment key={fact}>
               {index === 0 ? null : (
-                <span aria-hidden="true" className="text-slate-400">
+                <span aria-hidden="true" className="text-ink-quiet">
                   ·
                 </span>
               )}
@@ -84,12 +84,12 @@ export function BloodMagicRow({
           ))}
         </span>
 
-        <span className="text-xs text-slate-700 dark:text-slate-300">
+        <span className="text-xs text-ink-soft">
           Здоровье в очки заклинаний. Потраченное снижает максимум до долгого отдыха.
         </span>
 
         {reason === null ? null : (
-          <span className="text-xs font-medium text-reaction-strong dark:text-reaction-bright">
+          <span className="text-xs font-medium text-reaction">
             Недоступно: {reason}
           </span>
         )}

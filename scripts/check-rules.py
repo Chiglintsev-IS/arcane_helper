@@ -24,9 +24,9 @@
      правил. Экран передаёт набранное владельцу и показывает его ответ — сущность приходит либо
      готовой, либо с причиной отказа. Показать предел он вправе: подпись и подсказка поля — это
      чтение, а не решение.
-  6. Рамка называет роль заклинания и приходит от её владельца; ступень подложки — от владельца
-     ступеней. Раздать рамку разделу, кнопке и полю значит не раздать её никому: единственная
-     осмысленная рамка читается как ещё одна декоративная.
+  6. Линейка держит структуру и приходит от своего владельца; ступень подложки — от владельца
+     ступеней. Линейка притягивает взгляд, и набранная на месте расходится с соседним экраном
+     толщиной, стилем и оттенком — молча и по одной правке за раз.
   7. Отображение не обрезает дробный ввод сам: ни `Number.parseInt`/`Number.parseFloat`, ни голые
      `parseInt`/`parseFloat` не встречаются в `src/ui/**`. Дробное доходит до владельца как есть —
      обрезать его до целого молча вправе только тот, кто отвечает за инвариант целости.
@@ -68,15 +68,14 @@ LANGUAGE_OWNER = "src/shared/language.ts"
 BUTTON_LABELS_OWNER = "src/ui/shared/ui/buttonLabels.ts"
 BUTTON_LABELS = ("Сохранить", "Подтвердить", "Отмена", "Вернуть")
 
-# Владелец рамки: роль заклинания. Рамка в приложении одна, и красит её он.
-FRAME_OWNER = "src/ui/entities/spell/ui/SpellCardCompact.tsx"
-# Линия края (`border-t`, `border-b`) рамкой не является: она отмечает край закреплённого.
-FRAME_CLASS = re.compile(r"(?:[a-z-]+:)*border(?:-(?!t\b|b\b|t-|b-)[\w./\[\]%-]+)?")
+# Владелец линеек: их толщину, стиль и цвет называет один модуль, остальные читают.
+RULE_OWNER = "src/ui/shared/ui/rule.ts"
+RULE_CLASS = re.compile(r"(?:[a-z-]+:)*border(?:-[\w./\[\]%-]+)*")
 
 # Владелец ступеней подложки: их называет один модуль, остальные читают.
 SURFACE_OWNER = "src/ui/shared/ui/surface.ts"
 # Ступень — нейтральная подложка без прозрачности: подкрашенная тоном принадлежит своему значению.
-SURFACE_CLASS = re.compile(r"(?:dark:)?bg-(?:white|slate-\d{2,3})")
+SURFACE_CLASS = re.compile(r"(?:[a-z-]+:)*bg-(?:page|group|control|sheet)")
 
 # Поля состояния, чьи числа следуют правилам своих контекстов: их меняет операция, а не литерал.
 RULED_STATE_FIELDS = (
@@ -280,22 +279,23 @@ def check_no_parse_to_integer_in_ui(paths: list[pathlib.Path]) -> None:
                 )
 
 
-def check_frame_owner(paths: list[pathlib.Path]) -> None:
-    """Рамка называет роль заклинания, и владелец у неё один.
+def check_rule_owner(paths: list[pathlib.Path]) -> None:
+    """Линейка держит структуру, и владелец у неё один.
 
-    Рамка притягивает взгляд сильнее любого другого приёма: раздать её разделу, кнопке, полю и
-    метке значит не раздать её никому — единственная осмысленная рамка читается как ещё одна
-    декоративная. Структуру держат ступень подложки и отступ, и они же приходят от владельца.
+    Линейкой отделено всё: раздел от раздела, строка от строки, закреплённое от прокрутки, роль
+    заклинания от соседней. Набранная на месте применения, она расходится с соседним экраном на
+    первой же правке — сначала толщиной, потом стилем, потом оттенком, и каждый раз молча.
 
-    Линия края рамкой не является и потому разрешена: она отмечает, что содержимое уходит под закреплённое.
+    Цветные линейки владелец раздаёт тоже: цвет здесь отвечает на вопрос «чей это край», а не «что
+    это значит», и потому приходит вместе с толщиной, а не отдельно от неё.
     """
     for path in paths:
-        if not str(path).startswith("src/ui/") or str(path) == FRAME_OWNER:
+        if not str(path).startswith("src/ui/") or str(path) == RULE_OWNER:
             continue
         for number, value in literals_of(path.read_text(encoding="utf-8"), ANY_LITERAL):
             for token in value.split():
-                if FRAME_CLASS.fullmatch(token):
-                    errors.append(f"{path}:{number}: рамка мимо владельца роли — «{token}»")
+                if RULE_CLASS.fullmatch(token):
+                    errors.append(f"{path}:{number}: линейка мимо владельца — «{token}»")
 
 
 def check_surface_owner(paths: list[pathlib.Path]) -> None:
@@ -331,7 +331,7 @@ def main() -> int:
     phrases = check_shared_phrases(paths)
     check_rules_in_ui(paths)
     check_owned_literals(paths)
-    check_frame_owner(paths)
+    check_rule_owner(paths)
     check_surface_owner(paths)
     check_invariants_not_in_ui(paths)
     check_no_parse_to_integer_in_ui(paths)

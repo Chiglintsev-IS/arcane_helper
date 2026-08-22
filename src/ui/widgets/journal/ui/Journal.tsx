@@ -47,7 +47,7 @@ export function Journal({
       <button
         type="button"
         onClick={onData}
-        className={`min-h-11 self-start rounded-xl px-3 text-sm font-medium ${SURFACE_CONTROL}`}
+        className={`min-h-11 self-start px-3 text-sm font-medium ${SURFACE_CONTROL}`}
       >
         Данные
       </button>
@@ -55,9 +55,9 @@ export function Journal({
       {returned === null ? null : (
         <div
           role="status"
-          className={`flex flex-col gap-1 rounded-lg p-2 ${SURFACE_GROUP}`}
+          className={`flex flex-col gap-1 p-2 ${SURFACE_GROUP}`}
         >
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
+          <span className="text-xs font-medium uppercase tracking-wide text-ink-quiet">
             Вернулось
           </span>
           <span className="text-sm leading-tight">{returned.summaryRu}</span>
@@ -65,16 +65,16 @@ export function Journal({
       )}
 
       {newestFirst.length === 0 ? (
-        <p className="text-sm text-slate-600 dark:text-slate-400">Пока ничего не произошло.</p>
+        <p className="text-sm text-ink-quiet">Пока ничего не произошло.</p>
       ) : (
         <ul aria-label="Журнал событий" className="flex flex-col gap-2">
           {newestFirst.map((entry, index) => (
             <li
               key={entry.id}
-              className={`flex flex-col gap-1 rounded-lg p-2 ${SURFACE_GROUP}`}
+              className={`flex flex-col gap-1 p-2 ${SURFACE_GROUP}`}
             >
               <span className="text-sm leading-tight">{entry.summaryRu}</span>
-              <span className="text-xs tabular-nums text-slate-600 dark:text-slate-400">
+              <span className="text-xs tabular-nums text-ink-quiet">
                 {timeRu(entry.at)}
               </span>
               {index === 0 ? (
@@ -85,7 +85,7 @@ export function Journal({
                     onUndo();
                   }}
                   aria-label={`${BUTTON_LABELS.undo}: ${entry.summaryRu}`}
-                  className={`min-h-11 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+                  className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
                 >
                   {BUTTON_LABELS.undo}
                 </button>

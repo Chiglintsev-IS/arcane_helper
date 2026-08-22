@@ -10,7 +10,7 @@
  * молча.
  */
 
-import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function DataCopy({ text, fileName }: { text: string; fileName: string }) {
   const download = (): void => {
@@ -27,14 +27,14 @@ export function DataCopy({ text, fileName }: { text: string; fileName: string })
       <button
         type="button"
         onClick={download}
-        className="min-h-11 grow rounded-xl bg-action-strong px-3 text-sm font-semibold text-white"
+        className={`min-h-11 grow ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
       >
         Скачать файл
       </button>
       <button
         type="button"
         onClick={() => void navigator.clipboard?.writeText(text)}
-        className={`min-h-11 grow rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+        className={`min-h-11 grow px-3 text-sm ${SURFACE_CONTROL}`}
       >
         Скопировать
       </button>

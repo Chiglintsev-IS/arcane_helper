@@ -47,8 +47,8 @@ function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
 
   return (
     <form onSubmit={submit}>
-      <label className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs ${SURFACE_CONTROL}`}>
-        <span className="shrink-0 text-slate-600 dark:text-slate-400">Новый статус</span>
+      <label className={`flex min-h-11 items-center gap-2 px-2 text-xs ${SURFACE_CONTROL}`}>
+        <span className="shrink-0 text-ink-quiet">Новый статус</span>
         <input
           type="text"
           value={value}
@@ -73,34 +73,34 @@ function ConcentrationSection({
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-lg font-semibold leading-tight text-concentration-strong dark:text-concentration-bright">
+      <h3 className="text-lg font-semibold leading-tight text-concentration">
         <span aria-hidden="true">✦</span> {summary.nameRu}
       </h3>
-      <p className="text-xs text-slate-600 dark:text-slate-400">
+      <p className="text-xs text-ink-quiet">
         {summary.slotLabel} · начата в {summary.startLabel} · {summary.durationLabel}
       </p>
-      <p className="text-xs text-slate-600 dark:text-slate-400">Отсчёта нет — за длительностью следит игрок</p>
+      <p className="text-xs text-ink-quiet">Отсчёта нет — за длительностью следит игрок</p>
 
       <p>{summary.shortRulesRu}</p>
-      <p className="text-xs text-slate-600 dark:text-slate-400">{summary.mechanicsLabel}</p>
+      <p className="text-xs text-ink-quiet">{summary.mechanicsLabel}</p>
       {summary.rulesAvailable && onOpenSpell !== undefined ? (
         <button
           type="button"
           onClick={onOpenSpell}
-          className={`min-h-11 self-start rounded-lg px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 self-start px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Полные правила <span aria-hidden="true">›</span>
         </button>
       ) : null}
 
-      <h4 className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">Прерывается</h4>
+      <h4 className="text-xs font-semibold uppercase text-ink-quiet">Прерывается</h4>
       <ul aria-label="Чем прерывается" className="flex flex-col gap-1">
         {summary.breakers.map((breaker) => (
           <li key={breaker.textRu} className="flex gap-2">
             <span aria-hidden="true">•</span>
             <span>
               {breaker.atDiscretion ? (
-                <span className="text-slate-600 dark:text-slate-400">На усмотрение мастера: </span>
+                <span className="text-ink-quiet">На усмотрение мастера: </span>
               ) : null}
               {breaker.textRu}
             </span>
@@ -112,14 +112,14 @@ function ConcentrationSection({
         <button
           type="button"
           onClick={onTakeDamage}
-          className={`min-h-11 flex-1 rounded-xl px-3 text-sm font-semibold text-reaction-strong dark:text-reaction-bright ${SURFACE_CONTROL}`}
+          className={`min-h-11 flex-1 px-3 text-sm font-semibold text-reaction ${SURFACE_CONTROL}`}
         >
           Получил урон
         </button>
         <button
           type="button"
           onClick={onDrop}
-          className={`min-h-11 flex-1 rounded-xl px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 flex-1 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           Снять концентрацию
         </button>
@@ -167,7 +167,7 @@ export function ActiveEffectsSheet({
         <button
           type="button"
           onClick={onClose}
-          className="min-h-11 px-2 text-sm text-slate-600 dark:text-slate-400 underline"
+          className="min-h-11 px-2 text-sm text-ink-quiet underline"
         >
           Закрыть
         </button>
@@ -195,7 +195,7 @@ export function ActiveEffectsSheet({
                    * делает и таймера не ведёт — оно напоминает, что бросок нужен.
                    */}
                   {effect.repeatableAction === undefined ? null : (
-                    <span className="block text-xs text-action-strong dark:text-action-bright">
+                    <span className="block text-xs text-action">
                       ↻ {effect.repeatableAction.label}: {effect.repeatableAction.description}
                     </span>
                   )}
@@ -204,7 +204,7 @@ export function ActiveEffectsSheet({
                   type="button"
                   onClick={() => onEndEffect(effect.id)}
                   aria-label={`Завершить: ${effect.nameRu}`}
-                  className={`min-h-11 shrink-0 rounded-lg px-3 text-xs ${SURFACE_CONTROL}`}
+                  className={`min-h-11 shrink-0 px-3 text-xs ${SURFACE_CONTROL}`}
                 >
                   Завершить
                 </button>
@@ -214,7 +214,7 @@ export function ActiveEffectsSheet({
         ) : null}
 
         {concentration === null && otherEffects.length === 0 ? (
-          <p className="text-slate-600 dark:text-slate-400">Сейчас ничего не действует.</p>
+          <p className="text-ink-quiet">Сейчас ничего не действует.</p>
         ) : null}
 
         <NewStatusField onAdd={onAddStatus} />

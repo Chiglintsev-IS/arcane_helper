@@ -4,7 +4,7 @@ import { Fragment, type ReactNode } from "react";
 
 import type { ChoicesView, ItemView } from "@/contract/views";
 import { editName } from "@/ui/shared/ui/buttonLabels";
-import { TONE_CLASS } from "@/ui/shared/ui/tone";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 
 import { itemMeta } from "../lib/itemMeta";
 
@@ -46,12 +46,12 @@ export function ItemRow({
         type="button"
         onClick={onOpen}
         aria-label={editName(item.nameRu)}
-        className="min-h-11 min-w-0 flex-1 rounded-lg px-1 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-900"
+        className="min-h-11 min-w-0 flex-1 px-1 py-1.5 text-left"
       >
         <span className="flex items-baseline justify-between gap-2">
           <span className="min-w-0 text-sm font-medium">{item.nameRu}</span>
           {countRu === undefined ? null : (
-            <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-slate-600 dark:text-slate-400">
+            <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-ink-quiet">
               {countRu}
             </span>
           )}
@@ -61,9 +61,9 @@ export function ItemRow({
             {facts.map((fact) => (
               <span
                 key={`${fact.valueRu} ${fact.labelsRu.join(" ")}`}
-                className={`rounded-md px-1.5 py-0.5 text-xs leading-tight ${TONE_CLASS.muted}`}
+                className={`px-1.5 py-0.5 text-xs leading-tight text-ink-quiet ${RULE_MARK.muted}`}
               >
-                <span className="font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                <span className="font-semibold tabular-nums text-ink">
                   {fact.valueRu}
                 </span>
                 {fact.labelsRu.map((labelRu) => (
@@ -77,12 +77,12 @@ export function ItemRow({
               </span>
             ))}
             {neededFor === undefined ? null : (
-              <span className="min-w-0 text-xs leading-snug text-slate-600 dark:text-slate-400">
+              <span className="min-w-0 text-xs leading-snug text-ink-quiet">
                 {neededFor}
               </span>
             )}
             {note === undefined ? null : (
-              <span className="min-w-0 text-xs leading-snug text-slate-600 dark:text-slate-400">
+              <span className="min-w-0 text-xs leading-snug text-ink-quiet">
                 {note}
               </span>
             )}

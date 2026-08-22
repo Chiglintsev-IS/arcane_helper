@@ -41,6 +41,27 @@ describe("SpellCardCompact — дальность в ряду фактов бе�
   });
 });
 
+describe("роль строки названа тремя носителями", () => {
+  it("знак, слово и левая линейка — цвет последний, а не единственный", () => {
+    const { container } = renderRow("lightning-bolt");
+
+    // Убрать цвет совсем — строка обязана остаться понятной: знак и слово стоят рядом.
+    expect(screen.getByText(/Боевое/).textContent).toBe("✚ Боевое");
+    // Обводить строку целиком роль перестала: цвет ушёл на край и места у списка не занял.
+    const row = container.querySelector("button");
+    expect(row?.className).toContain("border-l-offense");
+    expect(row?.className).not.toContain("border-offense");
+  });
+
+  it("«ни то, ни другое» линейку получает нейтральную, а не пустую", () => {
+    const { container } = renderRow("detect-magic");
+
+    const row = container.querySelector("button");
+    expect(row?.className).toContain("border-l-[3px]");
+    expect(row?.className).toContain("border-l-rule-strong");
+  });
+});
+
 describe("ряд фактов строки списка", () => {
   it("разделитель берёт тон ряда, а не заводит свой", () => {
     // Свой тон у разделителя был один на обе темы, и на белой подложке светлой темы точка давала
@@ -79,8 +100,8 @@ describe("компоненты на строке списка (FR-010)", () => {
     renderRow("lightning-bolt");
 
     const components = screen.getByRole("img", { name: /^Компоненты/ });
-    // Тот же угол, что и подпись роли: своей строки буквы не заводят, и список не растёт.
-    expect(components.parentElement?.textContent).toBe("ВСМБоевое");
+    // Тот же угол, что и знак с подписью роли: своей строки буквы не заводят, и список не растёт.
+    expect(components.parentElement?.textContent).toBe("ВСМ✚ Боевое");
   });
 
   it("строка того, что не требует ничего, компонентов и не называет", () => {

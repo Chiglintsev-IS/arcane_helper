@@ -28,10 +28,10 @@ import {
 import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PAGE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 /** Второстепенное в этой карточке: тот же тон, каким названы ярлыки, и он проходит контраст. */
-const MUTED = "text-slate-600 dark:text-slate-400";
+const MUTED = "text-ink-quiet";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -106,11 +106,11 @@ export function SpellCardDetails({
       <header className={`flex items-start justify-between gap-2 p-3 ${SURFACE_GROUP}`}>
         <div>
           <h2 className="text-lg font-semibold leading-tight">{row.nameRu}</h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-ink-quiet">
             {card.nameEn} · {card.school} · {levelLabel(row.level)}
           </p>
         </div>
-        <button type="button" onClick={onClose} className="px-2 text-sm text-slate-600 dark:text-slate-400 underline">
+        <button type="button" onClick={onClose} className="px-2 text-sm text-ink-quiet underline">
           Закрыть
         </button>
       </header>
@@ -121,12 +121,12 @@ export function SpellCardDetails({
             {castingTimePhrase(row.castingTime)}
           </Badge>
           {row.concentration ? (
-            <Badge tone="concentration" icon="✦">
+            <Badge tone="concentration">
               Концентрация
             </Badge>
           ) : null}
           {row.ritual ? (
-            <Badge tone="ritual" icon="❖">
+            <Badge tone="ritual">
               Ритуал
             </Badge>
           ) : null}
@@ -137,19 +137,19 @@ export function SpellCardDetails({
           <button
             type="button"
             onClick={() => setDiagramOpen(true)}
-            className={`min-h-11 rounded-lg px-3 text-sm font-medium text-ritual ${SURFACE_CONTROL}`}
+            className={`min-h-11 px-3 text-sm font-medium text-ritual ${SURFACE_CONTROL}`}
           >
             Схема ритуала
           </button>
         )}
 
-        <p className="text-slate-700 dark:text-slate-300">{row.shortRulesRu}</p>
+        <p className="text-ink-soft">{row.shortRulesRu}</p>
 
         <section aria-label="Что сделать" className="flex flex-col gap-1">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">Что сделать</h3>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">Что сделать</h3>
           <ul className="flex flex-col gap-1 text-sm">
             {row.instructions.map((step) => (
-              <li key={step} className={`rounded-md px-2 py-1 ${SURFACE_GROUP}`}>
+              <li key={step} className={`px-2 py-1 ${SURFACE_GROUP}`}>
                 {step}
               </li>
             ))}
@@ -189,11 +189,11 @@ export function SpellCardDetails({
           )}
         </dl>
 
-        <details className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
+        <details className={`p-2 ${SURFACE_GROUP}`}>
           <summary className="cursor-pointer text-sm font-medium">Как объявить</summary>
           <p className="mt-2 text-sm">{row.announcement.text}</p>
           {shownGaps.length === 0 ? null : (
-            <ul className="mt-2 flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-400">
+            <ul className="mt-2 flex flex-col gap-1 text-xs text-ink-quiet">
               {shownGaps.map((gap) => (
                 <li key={gap.placeholder ?? gap.reasonRu}>{gap.reasonRu}</li>
               ))}
@@ -202,13 +202,13 @@ export function SpellCardDetails({
         </details>
 
         {card.tacticalAdviceRu === undefined ? null : (
-          <details className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
+          <details className={`p-2 ${SURFACE_GROUP}`}>
             <summary className="cursor-pointer text-sm font-medium">Тактический совет</summary>
             <p className="mt-2 text-sm">{card.tacticalAdviceRu}</p>
           </details>
         )}
 
-        <details className={`rounded-lg p-2 ${SURFACE_GROUP}`}>
+        <details className={`p-2 ${SURFACE_GROUP}`}>
           <summary className="cursor-pointer text-sm font-medium">Полные правила</summary>
           <p className="mt-2 text-sm">{card.fullRulesRu}</p>
         </details>
@@ -222,7 +222,7 @@ export function SpellCardDetails({
             onChange={(event) => onNoteChange(event.target.value)}
             rows={2}
             placeholder="Домашнее правило или напоминание"
-            className={`rounded-lg p-2 text-sm ${SURFACE_CONTROL}`}
+            className={`p-2 text-sm ${SURFACE_CONTROL}`}
           />
         </label>
       </div>
@@ -231,7 +231,7 @@ export function SpellCardDetails({
         <button
           type="button"
           onClick={onCast}
-          className="w-full rounded-xl bg-action-strong px-4 py-3 text-base font-semibold text-white"
+          className={`w-full ${SURFACE_PRIMARY} px-4 py-3 text-base font-semibold`}
         >
           Сотворить
         </button>

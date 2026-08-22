@@ -112,11 +112,11 @@ export function BookScreen() {
         <p
           role="status"
           aria-label={`Подготовлено ${counted}${reasonTail}`}
-          className="text-xs tabular-nums text-slate-600 dark:text-slate-400"
+          className="text-xs tabular-nums text-ink-quiet"
         >
           {counted}
           {reasonTail === "" ? null : (
-            <span className={refused ? "font-medium text-reaction-strong dark:text-reaction-bright" : ""}>
+            <span className={refused ? "font-medium text-reaction" : ""}>
               {reasonTail}
             </span>
           )}
