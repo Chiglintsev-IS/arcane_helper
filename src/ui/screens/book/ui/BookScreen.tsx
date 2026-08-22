@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 
-import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
+import { BLOOD_MAGIC_TRAITS, lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
+import { LastHintRow } from "@/ui/features/last-hint/ui/LastHintRow";
+import { LastHintSheet } from "@/ui/features/last-hint/ui/LastHintSheet";
 import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
@@ -30,6 +32,7 @@ export function BookScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
+  const [hintOpen, setHintOpen] = useState(false);
   const [preparationRefusal, setPreparationRefusal] = useState<string | null>(null);
 
   /**
@@ -67,6 +70,8 @@ export function BookScreen() {
   const shown = filterSpells(inMode, filters);
   const dividing = dividingCategories(inMode);
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
+  const hintTraits = lastHintTraits(snapshot.resources.lastHint.nameRu);
+  const hintShown = matchesActionRow(hintTraits, filters);
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
   const rows = shown.map((spell) => (
@@ -92,7 +97,19 @@ export function BookScreen() {
       />
     ));
   }
-  const listLabel = spellListLabel(bloodShown);
+  if (hintShown) {
+    rows.splice(positionInList(shown, hintTraits, "book"), 0, (
+      <LastHintRow
+        key="last-hint"
+        resources={snapshot.resources}
+        onOpen={() => {
+          closeSearch();
+          setHintOpen(true);
+        }}
+      />
+    ));
+  }
+  const listLabel = spellListLabel(bloodShown || hintShown);
   const counted = `${casting.preparedCount} из ${casting.preparedLimit}`;
   const refused = !inFight && preparationRefusal !== null;
   const reason = inFight ? PREPARATION_OUT_OF_FIGHT : preparationRefusal;
@@ -152,6 +169,14 @@ export function BookScreen() {
           onCast={() => draftStore.getState().start(openRow)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openRow.id, note })}
           onClose={() => setOpenSpellId(null)}
+        />
+      )}
+
+      {!hintOpen ? null : (
+        <LastHintSheet
+          resources={snapshot.resources}
+          onAdjust={(delta) => void execute({ kind: "adjust_last_hint", delta })}
+          onClose={() => setHintOpen(false)}
         />
       )}
 

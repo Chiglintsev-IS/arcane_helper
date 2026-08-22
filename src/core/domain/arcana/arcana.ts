@@ -36,7 +36,8 @@ type ArcanaState = Pick<
 >;
 
 const RUNES_RU = "Рун";
-const LAST_HINT_RU = "Последняя подсказка";
+/** Имя ресурса: его называет владелец, и оттуда же его читает экран. */
+export const LAST_HINT_RU = "Последняя подсказка";
 const ARCANE_RECOVERY_RU = "Бюджет магического восстановления";
 
 export class Arcana {

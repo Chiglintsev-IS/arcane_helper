@@ -22,7 +22,6 @@ async function openResources(): Promise<void> {
       onSpendSlot={() => {}}
       onRefundSlot={() => {}}
       onAdjustRunes={() => {}}
-      onAdjustLastHint={() => {}}
       onSunlight={() => {}}
       onClose={() => {}}
     />,

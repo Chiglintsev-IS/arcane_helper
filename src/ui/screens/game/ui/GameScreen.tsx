@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 
-import { BLOOD_MAGIC_TRAITS } from "@/ui/shared/model/actionTraits";
+import { BLOOD_MAGIC_TRAITS, lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import type { Command } from "@/contract/commands";
@@ -13,6 +13,8 @@ import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
 import { ActiveEffectsSheet } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { BloodMagicRow } from "@/ui/features/blood-magic/ui/BloodMagicRow";
+import { LastHintRow } from "@/ui/features/last-hint/ui/LastHintRow";
+import { LastHintSheet } from "@/ui/features/last-hint/ui/LastHintSheet";
 import { BloodMagicWizard } from "@/ui/widgets/blood-magic-wizard/ui/BloodMagicWizard";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
@@ -49,6 +51,7 @@ export function GameScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [openSpellId, setOpenSpellId] = useState<string | null>(null);
   const [bloodOpen, setBloodOpen] = useState(false);
+  const [hintOpen, setHintOpen] = useState(false);
   const [activeOpen, setActiveOpen] = useState(false);
   const [damageOpen, setDamageOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
@@ -101,6 +104,8 @@ export function GameScreen() {
   const shown = filterSpells(inMode, filters);
   const dividing = dividingCategories(inMode);
   const bloodShown = matchesActionRow(BLOOD_MAGIC_TRAITS, filters);
+  const hintTraits = lastHintTraits(snapshot.resources.lastHint.nameRu);
+  const hintShown = matchesActionRow(hintTraits, filters);
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
   /*
@@ -137,7 +142,19 @@ export function GameScreen() {
       />
     ));
   }
-  const listLabel = spellListLabel(bloodShown);
+  if (hintShown) {
+    rows.splice(positionInList(others, hintTraits, "play"), 0, (
+      <LastHintRow
+        key="last-hint"
+        resources={snapshot.resources}
+        onOpen={() => {
+          closeSearch();
+          setHintOpen(true);
+        }}
+      />
+    ));
+  }
+  const listLabel = spellListLabel(bloodShown || hintShown);
 
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
@@ -345,6 +362,14 @@ export function GameScreen() {
         />
       )}
 
+      {!hintOpen ? null : (
+        <LastHintSheet
+          resources={snapshot.resources}
+          onAdjust={(delta) => void execute({ kind: "adjust_last_hint", delta })}
+          onClose={() => setHintOpen(false)}
+        />
+      )}
+
       {bloodOpen ? (
         <BloodMagicWizard
           bloodMagic={snapshot.bloodMagic}
@@ -424,7 +449,6 @@ export function GameScreen() {
           onSpendSlot={(level) => void execute({ kind: "spend_spell_slot", slotLevel: level })}
           onRefundSlot={(level) => void execute({ kind: "refund_spell_slot", slotLevel: level })}
           onAdjustRunes={(delta) => void execute({ kind: "adjust_runes", delta })}
-          onAdjustLastHint={(delta) => void execute({ kind: "adjust_last_hint", delta })}
           onSunlight={(under) => void execute({ kind: "set_sunlight", underSunlight: under })}
           onClose={() => setResourcesOpen(false)}
         />

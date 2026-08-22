@@ -629,6 +629,20 @@ describe("магия крови в списке действий (FR-207)", () =
 
 });
 
+describe("последняя подсказка в списке действий (FR-329)", () => {
+  it("стоит строкой среди того, что ячейки не стоит, и открывается в чтение", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<GameScreen />);
+
+    await user.click(screen.getByRole("button", { name: /Последняя подсказка/ }));
+
+    // Читают её здесь же: значок в шапке отвечал только «сколько осталось».
+    const sheet = within(screen.getByRole("dialog", { name: "Последняя подсказка" }));
+    expect(sheet.getByText(/бонус мастерства/)).toBeDefined();
+    expect(sheet.getByRole("button", { name: "Потратить: Последняя подсказка" })).toBeDefined();
+  });
+});
+
 describe("подготовка правится только в «Книге» (FR-214)", () => {
   it("в «Игре» подготовку не меняют: состав уже определён", async () => {
     await renderWithStores(<GameScreen />);

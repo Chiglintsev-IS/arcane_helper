@@ -127,6 +127,19 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
 
 });
 
+describe("последняя подсказка в списке действий (FR-329)", () => {
+  it("хода она не занимает, и переключатель времени её не находит", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<BookScreen />);
+
+    expect(screen.getByRole("button", { name: /Последняя подсказка/ })).toBeDefined();
+
+    // Её тратят вслед за проваленной проверкой, а не в свой ход: «Действие» ей не отвечает.
+    await user.click(screen.getByRole("button", { name: "Действие" }));
+    expect(screen.queryByRole("button", { name: /Последняя подсказка/ })).toBeNull();
+  });
+});
+
 describe("магия крови в списке действий (FR-207)", () => {
   it("её роль — «другое», и фильтр «Боевое» её тоже убирает", async () => {
     const user = userEvent.setup();

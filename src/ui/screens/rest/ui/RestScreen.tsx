@@ -164,7 +164,6 @@ export function RestScreen() {
           onSpendSlot={(level) => void execute({ kind: "spend_spell_slot", slotLevel: level })}
           onRefundSlot={(level) => void execute({ kind: "refund_spell_slot", slotLevel: level })}
           onAdjustRunes={(delta) => void execute({ kind: "adjust_runes", delta })}
-          onAdjustLastHint={(delta) => void execute({ kind: "adjust_last_hint", delta })}
           onSunlight={(under) => void execute({ kind: "set_sunlight", underSunlight: under })}
           onClose={() => setResourcesOpen(false)}
         />

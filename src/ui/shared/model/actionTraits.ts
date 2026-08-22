@@ -33,6 +33,20 @@ export const BLOOD_MAGIC_TRAITS: ActionTraits = {
   role: "other",
 };
 
+/**
+ * Строка последней подсказки: особенность предыстории, а не заклинание.
+ *
+ * Имя приходит параметром, а не набирается здесь: его называет владелец ресурса, и по нему же
+ * строку находит поиск.
+ *
+ * Времени накладывания у неё нет вовсе: её тратят не в свой ход, а вслед за проваленной проверкой,
+ * и переключатель «Действие» её не находит — это и верно, ход она не занимает. Ячейки она тоже не
+ * стоит и потому стоит среди того, что ячейки не стоит.
+ */
+export function lastHintTraits(nameRu: string): ActionTraits {
+  return { nameRu, castingTime: "special", level: 0, concentration: false, role: "other" };
+}
+
 export function traitsOf(spell: SpellRowView): ActionTraits {
   return {
     nameRu: spell.nameRu,
