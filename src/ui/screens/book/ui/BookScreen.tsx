@@ -75,6 +75,7 @@ export function BookScreen() {
       key={spell.id}
       spell={spell}
       casting={casting}
+      armorClass={snapshot.sheet.armorClass}
       onOpen={() => openSpell(spell.id)}
       onTogglePrepared={!inFight ? () => void togglePreparation(spell.id) : undefined}
     />

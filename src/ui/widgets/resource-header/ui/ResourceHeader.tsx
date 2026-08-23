@@ -19,36 +19,38 @@ import { DERIVED_LABELS, skillLabel } from "@/ui/entities/character/lib/labels";
 import { HIT_POINTS_EVENTS } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { RESOURCES_EDIT_LABEL } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { type Tone } from "@/ui/shared/ui/tone";
 import { hitDicePool } from "@/ui/widgets/resource-header/lib/hitDicePool";
 import { signed } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /**
- * Ярлык того, чем платят: ресурса хода и пула с остатком.
+ * Ресурсы хода: чем ходят, в том порядке, в каком их называют правила.
  *
- * Подпись одна и та же в обоих состояниях: израсходованность несут знак и пониженная контрастность,
- * а словами её называет доступное имя, которое ставит вызывающий. Цвет отвечает на вопрос «есть ли
- * ещё»: постоянный отвечал бы «да» и при нуле, и пустой пул был бы неотличим от полного.
+ * Подпись на экране короткая, доступное имя — полное: на iPhone SE места нет, но «Бонусное» без
+ * пояснения незрячему пользователю ничего не говорит. Имя называет и род: действие израсходовано,
+ * реакция израсходована, и одна строка на оба случая читалась бы как ошибка приложения.
  */
-function SpendableResource({
-  available,
-  tone,
-  icon,
-  children,
-}: {
-  available: boolean;
-  tone: Tone;
-  /** Знак ресурса, пока им есть чем платить: кончившийся носит знак отказа. */
-  icon: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Badge tone={available ? tone : "muted"} icon={available ? icon : "✗"}>
-      {children}
-    </Badge>
-  );
-}
+const TURN_RESOURCES: readonly {
+  labelRu: string;
+  spentRu: string;
+  spentIn: (turn: TurnView) => boolean;
+}[] = [
+  {
+    labelRu: "Действие",
+    spentRu: "Действие израсходовано",
+    spentIn: (turn) => !turn.actionAvailable,
+  },
+  {
+    labelRu: "Бонусное",
+    spentRu: "Бонусное действие израсходовано",
+    spentIn: (turn) => !turn.bonusActionAvailable,
+  },
+  {
+    labelRu: "Реакция",
+    spentRu: "Реакция израсходована",
+    spentIn: (turn) => !turn.reactionAvailable,
+  },
+];
 
 /**
  * Шкура плитки ряда оплаты: ступень отвечает, метит ли в плитку палец, приглушённость — кончился ли
@@ -402,32 +404,20 @@ export function ResourceBadges({
           </li>
         ) : null}
         {/*
-         * Экономия хода показывается только в бою: вне боя ходов нет, и правила отвечают «всё
-         * доступно» независимо от лога. Три вечно зелёные галочки не сообщали бы ничего.
-         *
-         * Подпись на экране короткая, а доступное имя — полное: на iPhone SE места нет, но
-         * «Действие» без пояснения незрячему пользователю ничего не говорит.
+         * Экономия хода показывается только в бою и только у потраченного: вне боя ходов нет, а в
+         * начале своего хода доступно всё. Вечно зелёная галочка отвечает то же, что и начало хода,
+         * а места в ряду занимает столько же, сколько новость, — и на трёх ресурсах ряд от неё
+         * переносится, унося первую карточку списка за край экрана.
          */}
-        {inFight ? (
-          <>
-            <li aria-label={turn.actionAvailable ? "Действие доступно" : "Действие израсходовано"}>
-              <SpendableResource available={turn.actionAvailable} tone="action" icon="✓">
-                Действие
-              </SpendableResource>
-            </li>
-            <li
-              aria-label={
-                turn.bonusActionAvailable
-                  ? "Бонусное действие доступно"
-                  : "Бонусное действие израсходовано"
-              }
-            >
-              <SpendableResource available={turn.bonusActionAvailable} tone="bonus" icon="✓">
-                Бонусное
-              </SpendableResource>
-            </li>
-          </>
-        ) : null}
+        {!inFight
+          ? null
+          : TURN_RESOURCES.filter((resource) => resource.spentIn(turn)).map((resource) => (
+              <li key={resource.labelRu} aria-label={resource.spentRu}>
+                <Badge tone="muted" icon="✗">
+                  {resource.labelRu}
+                </Badge>
+              </li>
+            ))}
     </ul>
   );
 }

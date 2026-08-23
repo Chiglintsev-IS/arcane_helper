@@ -8,8 +8,7 @@
   "combatRole": "defense",
   "castingTime": {
     "type": "reaction",
-    "reactionTrigger": "в вас попали атакой или вы стали целью «Волшебной стрелы»",
-    "trigger": "attacked"
+    "reactionTrigger": "в вас попали атакой или вы стали целью «Волшебной стрелы»"
   },
   "range": {
     "type": "self"

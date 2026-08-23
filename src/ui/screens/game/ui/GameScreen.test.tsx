@@ -71,21 +71,36 @@ describe("состав экрана (FR-001, AC-14)", () => {
   it("вне боя не показывает экономию действий (FR-001, FR-143)", async () => {
     // Вне боя ходов нет: правила отвечают «всё доступно» независимо от лога, и
     // значки сообщали бы не состояние, а неправду.
+    const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    expect(screen.queryByLabelText("Действие доступно")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Реакция доступна/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(screen.queryByLabelText("Действие израсходовано")).toBeNull();
   });
 
-  it("показывает все три вида экономии, когда все три есть в списке (FR-001)", async () => {
-    // Бонусное действие появилось вместе с «Туманным шагом»: значку стало что отражать, и
-    // переключатель вернулся сам, без правки интерфейса.
+  it("значок приходит к потраченному, а не к целому ходу (FR-001)", async () => {
+    const user = userEvent.setup();
     await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
 
-    expect(screen.getByLabelText("Действие доступно")).toBeDefined();
-    // Остаток реакции стоит на кнопке, которой её и тратят.
-    expect(screen.getByRole("button", { name: /^Реакции\. Реакция доступна/ })).toBeDefined();
-    expect(screen.getByLabelText("Бонусное действие доступно")).toBeDefined();
+    // Начало своего хода: доступно всё, и говорить ряду не о чем.
+    const badges = () => within(screen.getByLabelText("Прочие ресурсы")).queryAllByRole("listitem");
+    expect(badges()).toHaveLength(0);
+
+    for (const name of [/Доспехи мага/, /^Туманный шаг/, /^Щит/]) {
+      await user.click(screen.getByRole("button", { name }));
+      await user.click(screen.getByRole("button", { name: "Сотворить" }));
+      await user.click(screen.getByRole("button", { name: "Далее" }));
+      await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    }
+
+    // Три ресурса хода — три значка, и каждый назван своим родом.
+    expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
+    expect(screen.getByLabelText("Бонусное действие израсходовано")).toBeDefined();
+    expect(screen.getByLabelText("Реакция израсходована")).toBeDefined();
   });
 
   it("вида действия, которого в списке нет, в шапке тоже нет (FR-001)", async () => {
@@ -135,8 +150,10 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(shown(stores).turn.reactionAvailable).toBe(false);
-    const spent = screen.getByRole("button", { name: /^Реакции\. Реакция израсходована/ });
-    expect(within(spent).getByText("израсходована")).toBeDefined();
+    const spent = screen.getByLabelText("Реакция израсходована");
+    // Подпись одна и та же в обоих состояниях: израсходованность несут знак и доступное имя.
+    expect(within(spent).getByText("Реакция")).toBeDefined();
+    expect(screen.queryByLabelText("Реакция доступна")).toBeNull();
   });
 
 });
@@ -195,7 +212,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
 
     // Начавшийся бой ни одну плитку не сдвинул: значком пришло только то, что случилось.
     const badges = within(screen.getByLabelText("Прочие ресурсы"))
-      .getAllByRole("listitem")
+      .queryAllByRole("listitem")
       .map((item) => item.textContent ?? "");
     // Начавшийся бой ни одной плитки не сдвинул, а его числа встали на кнопки, которыми ходят.
     expect(badges.join(" ")).not.toContain("Кости");
@@ -249,10 +266,10 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 
     await user.click(screen.getByRole("button", { name: "Защита" }));
 
-    // Семь защитных строк из двадцати: «Щит», «Поглощение стихий», «Доспехи мага», «Туманный шаг»,
-    // «Отражения», «Невидимость», «Контрзаклинание».
+    // Восемь защитных строк: «Щит», «Поглощение стихий», «Доспехи мага», «Туманный шаг»,
+    // «Отражения», «Невидимость», «Контрзаклинание» и «Знаки ограждения» — ими тоже закрываются.
     const list = screen.getByLabelText(/^Заклинания/);
-    expect(within(list).getAllByRole("listitem")).toHaveLength(7);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(8);
     expect(within(list).getByText("Щит")).toBeDefined();
     expect(within(list).getByText("Контрзаклинание")).toBeDefined();
   });
@@ -381,86 +398,64 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
 
 });
 
-describe("реакции (FR-060, FR-061, FR-062)", () => {
-  it("вход одним нажатием, вопрос о событии первым", async () => {
+describe("реакции (FR-060, FR-062)", () => {
+  it("переключатель «Реакция» оставляет в списке только то, чем отвечают", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
+    await user.click(screen.getByRole("button", { name: "Реакция" }));
 
-    const sheet = within(screen.getByRole("dialog", { name: /^Реакции/ }));
-    expect(sheet.getByText("Что произошло?")).toBeDefined();
-    // Список заклинаний до выбора события не показывается: игрок думает о событии, а не о названии.
-    expect(screen.queryByLabelText("Подходящие реакции")).toBeNull();
+    // Ответы стоят в одном списке независимо от того, стоят ли они ячейки: «Щит» и
+    // «Контрзаклинание» её тратят, «Знаки ограждения» — руну.
+    const list = within(screen.getByLabelText(/^Заклинания/));
+    expect(list.getByText("Щит")).toBeDefined();
+    expect(list.getByText("Контрзаклинание")).toBeDefined();
+    expect(list.getByText("Знаки ограждения")).toBeDefined();
+    // Того, чем ходят в свой ход, среди ответов нет.
+    expect(list.queryByText("Луч холода")).toBeNull();
   });
 
-  it("событие находит своё заклинание и называет изменённое число (FR-062)", async () => {
+  it("строка реакции называет изменённое число готовым (FR-062)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-    await user.click(screen.getByRole("radio", { name: "По мне попали" }));
+    await user.click(screen.getByRole("button", { name: "Реакция" }));
 
-    const matching = within(screen.getByLabelText("Подходящие реакции"));
-    expect(matching.getByText("Щит")).toBeDefined();
     // Готовое число, а не формула: 14 базовых плюс 5.
-    expect(matching.getByText("КД 19 вместо 14")).toBeDefined();
+    expect(screen.getByText("КД 19 вместо 14")).toBeDefined();
   });
 
-  it("на событие без ответа переключателя нет (FR-002)", async () => {
+  it("строка реакции ведёт в мастер применения (FR-022)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-    // На падение отвечает одно «Падение пёрышком», и оно не подготовлено: события нет вовсе.
-    expect(screen.queryByRole("radio", { name: "Кто-то падает" })).toBeNull();
-    expect(screen.getByRole("radio", { name: "По мне попали" })).toBeDefined();
-    await user.click(screen.getByRole("button", { name: "Закрыть" }));
-
-    // Ответ исчез — исчезло и событие: список триггеров задаётся карточками, а не движком.
-    await stores.session.getState().execute({ kind: "toggle_preparation", spellId: "shield" });
-
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-    expect(screen.queryByRole("radio", { name: "По мне попали" })).toBeNull();
-    expect(screen.getByRole("radio", { name: "Я провалил спасбросок" })).toBeDefined();
-  });
-
-  it("выбор реакции открывает мастер применения (FR-022)", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<GameScreen />);
-
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-    await user.click(screen.getByRole("radio", { name: "Враг творит заклинание" }));
-    await user.click(
-      within(screen.getByLabelText("Подходящие реакции")).getByRole("button", {
-        name: /Контрзаклинание/,
-      }),
-    );
+    await user.click(screen.getByRole("button", { name: "Реакция" }));
+    await user.click(screen.getByRole("button", { name: /Контрзаклинание/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
 
     expect(screen.getByRole("dialog", { name: /Применение/ })).toBeDefined();
     // До подтверждения состояние не тронуто.
     expect(shown(stores).log).toHaveLength(0);
   });
 
-  it("израсходованная реакция не прячет варианты, а объясняет причину (FR-031)", async () => {
+  it("израсходованная реакция не прячет строку, а объясняет причину (FR-031)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    // Тратим реакцию «Щитом», затем открываем экран реакций снова.
+    // Тратим реакцию «Щитом», затем ищем её же переключателем снова.
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /^Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-    await user.click(screen.getByRole("radio", { name: "По мне попали" }));
+    await user.click(screen.getByRole("button", { name: "Реакция" }));
+    const list = within(screen.getByLabelText(/^Заклинания/));
+    expect(list.getByText("Щит")).toBeDefined();
 
-    const suitable = within(screen.getByLabelText("Подходящие реакции"));
-    expect(suitable.getByText("Щит")).toBeDefined();
-
-    // Причина стоит там, где выбирают: вариант открывается, и мастер называет её словами.
-    await user.click(suitable.getByText("Щит"));
+    // Причина стоит там, где выбирают: строка открывается, и мастер называет её словами.
+    await user.click(list.getByText("Щит"));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
     expect(screen.getByText("Реакция уже израсходована")).toBeDefined();
     expect(screen.getByRole("button", { name: "Применить всё равно" })).toBeDefined();
   });
@@ -469,12 +464,24 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
 
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-    await user.click(screen.getByRole("radio", { name: "Я провалил спасбросок" }));
-    await user.click(screen.getByRole("button", { name: /Потратить руну/ }));
+    await user.click(screen.getByRole("button", { name: /Знаки ограждения/ }));
+    await user.click(screen.getByRole("button", { name: "Потратить руну" }));
 
     expect(shown(stores).resources.runes.remaining).toBe(2);
     expect(shown(stores).turn.reactionAvailable).toBe(false);
+  });
+
+  it("руны кончились — строка остаётся, а отказ называет причину (FR-153)", async () => {
+    const user = userEvent.setup();
+    const spentRunes = { ...createThorne(), runes: { remaining: 0, maximum: 3 } };
+    await renderWithStores(<GameScreen />, spentRunes, IN_FIGHT);
+
+    await user.click(screen.getByRole("button", { name: /Знаки ограждения/ }));
+    await user.click(screen.getByRole("button", { name: "Потратить руну" }));
+
+    // Причина приходит от правил и остаётся в шторке: погашенная кнопка сказала бы «нельзя» и не
+    // сказала бы, что именно кончилось.
+    expect(screen.getByRole("alert").textContent).toContain("Рун не осталось");
   });
 
 });
@@ -650,7 +657,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: /^Новый ход/ }));
-    expect(screen.getByLabelText("Действие доступно")).toBeDefined();
+    expect(screen.queryByLabelText("Действие израсходовано")).toBeNull();
     expect(shown(stores).turn.actionAvailable).toBe(true);
   });
 
@@ -799,16 +806,12 @@ describe("«Книга» говорит только о книге (FR-217)", ()
 });
 
 describe("«Знаки ограждения» вне боя (FR-153)", () => {
-  it("вне боя лист предлагает руну: триггер приходит и до схватки", async () => {
+  it("вне боя строка предлагает руну: провалить спасбросок можно и до схватки", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: /^Реакции/ }));
-
-    const sheet = screen.getByRole("dialog", { name: /^Реакции/ });
-    await user.click(within(sheet).getByRole("radio", { name: /провалил спасбросок/i }));
-
-    await user.click(within(sheet).getByRole("button", { name: /Потратить руну/ }));
+    await user.click(screen.getByRole("button", { name: /Знаки ограждения/ }));
+    await user.click(screen.getByRole("button", { name: "Потратить руну" }));
 
     expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
   });

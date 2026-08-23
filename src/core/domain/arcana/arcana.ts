@@ -36,6 +36,8 @@ type ArcanaState = Pick<
 const RUNES_RU = "Рун";
 /** Имя ресурса: его называет владелец, и оттуда же его читает экран. */
 export const LAST_HINT_RU = "Последняя подсказка";
+/** Имя особенности, которую руна и оплачивает: её называют и строкой списка, и записью лога. */
+export const WARDING_SIGIL_RU = "Знаки ограждения";
 const ARCANE_RECOVERY_RU = "Бюджет магического восстановления";
 
 export class Arcana {

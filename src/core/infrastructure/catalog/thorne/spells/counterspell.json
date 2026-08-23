@@ -8,8 +8,7 @@
   "combatRole": "defense",
   "castingTime": {
     "type": "reaction",
-    "reactionTrigger": "вы видите, как существо в пределах 60 футов от вас накладывает заклинание",
-    "trigger": "enemy_casts"
+    "reactionTrigger": "вы видите, как существо в пределах 60 футов от вас накладывает заклинание"
   },
   "range": {
     "type": "distance",

@@ -8,8 +8,7 @@
   "combatRole": "defense",
   "castingTime": {
     "type": "reaction",
-    "reactionTrigger": "вы или видимое вами в пределах 60 футов существо падаете",
-    "trigger": "falling"
+    "reactionTrigger": "вы или видимое вами в пределах 60 футов существо падаете"
   },
   "range": {
     "type": "distance",

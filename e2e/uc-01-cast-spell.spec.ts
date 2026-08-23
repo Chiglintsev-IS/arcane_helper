@@ -66,14 +66,13 @@ test("play-screen renders all resource blocks", async ({ page }) => {
   await expect(paying).toContainText("Руны");
   await expect(paying).toContainText("Кости d6");
 
-  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет. Экономия хода
-  // приходит с боем, а бонусное действие появилось вместе с «Туманным шагом».
+  // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет; ресурс хода, которым
+  // ещё не ходили, значка не получает ни до боя, ни в бою.
   await expect(page.getByRole("button", { name: "Действует: ничего" })).toBeVisible();
-  await expect(page.getByLabel("Реакция доступна")).toBeHidden();
+  await expect(page.getByLabel("Прочие ресурсы")).toBeEmpty();
 
   await page.getByRole("button", { name: /^Начать бой/ }).click();
-  await expect(page.getByLabel("Реакция доступна")).toBeVisible();
-  await expect(page.getByLabel("Бонусное действие доступно")).toBeVisible();
+  await expect(page.getByLabel("Прочие ресурсы")).toBeEmpty();
   await expect(page.getByRole("button", { name: "Учёт хода", exact: true })).toBeHidden();
 });
 
@@ -399,7 +398,7 @@ test("reaction shows when it returns", async ({ page }) => {
   // Вне боя ход не считается и реакция не тратится, поэтому прогон идёт в бою: «Щит» её
   // расходует, а «Новый ход» возвращает.
   await page.getByRole("button", { name: /^Начать бой/ }).click();
-  await expect(page.getByLabel("Реакция доступна")).toBeVisible();
+  await expect(page.getByLabel("Реакция израсходована")).toBeHidden();
 
   await page.getByRole("button", { name: /Щит/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
@@ -408,7 +407,7 @@ test("reaction shows when it returns", async ({ page }) => {
   await expect(page.getByLabel("Реакция израсходована")).toBeVisible();
 
   await page.getByRole("button", { name: /^Новый ход/ }).click();
-  await expect(page.getByLabel("Реакция доступна")).toBeVisible();
+  await expect(page.getByLabel("Реакция израсходована")).toBeHidden();
 });
 
 test("concentration block explains the effect", async ({ page }) => {
@@ -488,15 +487,16 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Короткий отдых/ })).toBeVisible();
   await scan("привал");
 
-  // «Реакции» стоит только в «Игре»: привал её не показывает — там читают отдых, а не ждут триггер.
+  // Ответы на чужой ход стоят только в «Игре»: привал их не показывает — там читают отдых.
   await switchMode(page, /^Игра/);
 
   // Точное совпадение: строка «Электрошока» говорит, что цель «не может совершать реакции», и по
-  // подстроке кнопка шапки перестала быть единственной.
-  await page.getByRole("button", { name: "Реакции", exact: true }).click();
-  await page.getByRole("radio", { name: "По мне попали" }).click();
-  await scan("экран реакций");
+  // подстроке переключатель полосы перестал быть единственным.
+  await page.getByRole("button", { name: "Реакция", exact: true }).click();
+  await page.getByRole("button", { name: /Знаки ограждения/ }).click();
+  await scan("шторка руны");
   await page.getByRole("button", { name: "Закрыть" }).click();
+  await page.getByRole("button", { name: "Реакция", exact: true }).click();
 
   // Лог — седьмой экран сверки: в нём стоит единственная кнопка отмены, и её
   // доступное имя строится из текста записи, а не задано вручную.
@@ -587,17 +587,19 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
 });
 
 test("reactions in one tap", async ({ page }) => {
-  // Триггер приходит в чужой ход: путь от события до результата обязан быть коротким.
-  // Имя точное по той же причине, что и в прогоне axe: «реакции» есть и в тексте «Электрошока».
-  await page.getByRole("button", { name: "Реакции", exact: true }).click();
-  await page.getByRole("radio", { name: "По мне попали" }).click();
+  // Триггер приходит в чужой ход: путь от услышанного до результата обязан быть коротким.
+  // Имя точное по той же причине, что и в прогоне axe: «реакция» есть и в тексте «Электрошока».
+  await page.getByRole("button", { name: "Реакция", exact: true }).click();
 
-  const matching = page.getByLabel("Подходящие реакции");
-  await expect(matching.getByText("Щит", { exact: true })).toBeVisible();
+  const list = page.getByLabel(/^Заклинания/);
+  await expect(list.getByText("Щит", { exact: true })).toBeVisible();
   // Готовое число, а не формула.
-  await expect(matching.getByText("КД 19 вместо 14")).toBeVisible();
+  await expect(list.getByText("КД 19 вместо 14")).toBeVisible();
+  // Ячейку тратит не всякий ответ: руна стоит в том же списке, что и заклинания.
+  await expect(list.getByText("Знаки ограждения", { exact: true })).toBeVisible();
 
-  await matching.getByRole("button", { name: /Щит/ }).click();
+  await list.getByRole("button", { name: /Щит/ }).click();
+  await page.getByRole("button", { name: "Сотворить" }).click();
   await expect(page.getByRole("dialog", { name: /Применение/ })).toBeVisible();
 });
 
@@ -731,5 +733,5 @@ test("search reaches a row without scrolling", async ({ page }) => {
   await lightning.click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await expect(page.getByRole("searchbox", { name: "Поиск по названию" })).toBeHidden();
-  await expect(list.getByRole("listitem")).toHaveCount(20);
+  await expect(list.getByRole("listitem")).toHaveCount(21);
 });

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 
-import { lastHintTraits } from "@/ui/shared/model/actionTraits";
+import { lastHintTraits, wardingSigilTraits } from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import type { Command } from "@/contract/commands";
@@ -14,12 +14,13 @@ import { ActiveEffectsSheet } from "@/ui/widgets/active-effects/ui/ActiveEffects
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { LastHintRow } from "@/ui/features/last-hint/ui/LastHintRow";
 import { LastHintSheet } from "@/ui/features/last-hint/ui/LastHintSheet";
+import { WardingSigilRow } from "@/ui/features/warding-sigil/ui/WardingSigilRow";
+import { WardingSigilSheet } from "@/ui/features/warding-sigil/ui/WardingSigilSheet";
 import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
-import { REACTIONS_LABEL, ReactionsSheet } from "@/ui/features/reactions/ui/ReactionsSheet";
 import { ResourceBadges, ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
@@ -30,7 +31,7 @@ import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext"
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { signed } from "@/shared/language";
-import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 import { RULE_MARK } from "@/ui/shared/ui/rule";
 
 export function GameScreen() {
@@ -46,7 +47,7 @@ export function GameScreen() {
   const [activeOpen, setActiveOpen] = useState(false);
   const [damageOpen, setDamageOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
-  const [reactionsOpen, setReactionsOpen] = useState(false);
+  const [sigilOpen, setSigilOpen] = useState(false);
   const [armorClassOpen, setArmorClassOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [checkOpen, setCheckOpen] = useState(false);
@@ -96,6 +97,8 @@ export function GameScreen() {
   const dividing = dividingCategories(inMode);
   const hintTraits = lastHintTraits(snapshot.resources.lastHint.nameRu);
   const hintShown = matchesActionRow(hintTraits, filters);
+  const sigilTraits = wardingSigilTraits(snapshot.resources.runes.nameRu);
+  const sigilShown = matchesActionRow(sigilTraits, filters);
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
   const card = (spell: SpellRowView) => (
@@ -103,6 +106,7 @@ export function GameScreen() {
       key={spell.id}
       spell={spell}
       casting={casting}
+      armorClass={snapshot.sheet.armorClass}
       onOpen={() => openSpell(spell.id)}
     />
   );
@@ -120,7 +124,20 @@ export function GameScreen() {
       />
     ));
   }
-  const listLabel = spellListLabel(hintShown);
+  if (sigilShown) {
+    rows.splice(positionInList(shown, sigilTraits, "play"), 0, (
+      <WardingSigilRow
+        key="warding-sigil"
+        resources={snapshot.resources}
+        onOpen={() => {
+          closeSearch();
+          setRefusal(null);
+          setSigilOpen(true);
+        }}
+      />
+    ));
+  }
+  const listLabel = spellListLabel(hintShown || sigilShown);
 
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
@@ -193,8 +210,8 @@ export function GameScreen() {
 
         {/*
          * Число, которое произносят, стоит на кнопке, которой в этот миг и пользуются: инициативу
-         * называют, начиная бой, номер раунда — ведя ход, остаток реакции — открывая реакции.
-         * Отдельными значками они стояли бы целой строкой ради того, что и так под пальцем.
+         * называют, начиная бой, номер раунда — ведя ход. Отдельными значками они стояли бы целой
+         * строкой ради того, что и так под пальцем.
          */}
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -223,32 +240,6 @@ export function GameScreen() {
               </span>
             </button>
           ) : null}
-          {/*
-           * Подпись короткая, произносимое имя полное: слово «реакция» звучит для читающей вслух
-           * программы и не занимает места там, где его нет.
-           */}
-          <button
-            type="button"
-            onClick={() => setReactionsOpen(true)}
-            aria-label={
-              inFight
-                ? `${REACTIONS_LABEL}. Реакция ${turn.reactionAvailable ? "доступна" : "израсходована"}`
-                : REACTIONS_LABEL
-            }
-            className={`min-h-11 grow whitespace-nowrap px-1 text-sm font-semibold leading-tight ${
-              turn.reactionAvailable || !inFight
-              ? SURFACE_CHOSEN
-              : `text-ink-quiet ${SURFACE_GROUP}`
-            }`}
-          >
-            {REACTIONS_LABEL}
-            {inFight ? (
-              <span className="block text-[0.625rem] font-normal leading-tight">
-                <span aria-hidden="true">{turn.reactionAvailable ? "✓" : "✗"}</span>{" "}
-                {turn.reactionAvailable ? "доступна" : "израсходована"}
-              </span>
-            ) : null}
-          </button>
           <HourMark
             nextHour={snapshot.recovery.nextHour}
             onRecoverMaximum={() =>
@@ -372,23 +363,17 @@ export function GameScreen() {
         />
       ) : null}
 
-      {reactionsOpen ? (
-        <ReactionsSheet
-          rows={inMode}
-          armorClass={snapshot.sheet.armorClass}
-          runesRemaining={snapshot.resources.runes.remaining}
-          reactionAvailable={turn.reactionAvailable}
-          runeAvailable={snapshot.resources.wardingSigilAvailable}
-          onCast={(row) => {
-            setReactionsOpen(false);
-            draftStore.getState().start(row);
+      {sigilOpen ? (
+        <WardingSigilSheet
+          resources={snapshot.resources}
+          refusalRu={refusal}
+          onSpendRune={() =>
+            void saveEdit({ kind: "spend_rune_on_warding_sigil" }, () => setSigilOpen(false))
+          }
+          onClose={() => {
+            setRefusal(null);
+            setSigilOpen(false);
           }}
-          onSpendRune={async () => {
-            if ((await execute({ kind: "spend_rune_on_warding_sigil" })) === null) {
-              setReactionsOpen(false);
-            }
-          }}
-          onClose={() => setReactionsOpen(false)}
         />
       ) : null}
 

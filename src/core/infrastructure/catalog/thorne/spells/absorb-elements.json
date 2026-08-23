@@ -8,8 +8,7 @@
   "combatRole": "defense",
   "castingTime": {
     "type": "reaction",
-    "reactionTrigger": "вы получаете урон кислотой, холодом, огнём, электричеством или звуком",
-    "trigger": "elemental_damage"
+    "reactionTrigger": "вы получаете урон кислотой, холодом, огнём, электричеством или звуком"
   },
   "range": {
     "type": "self"

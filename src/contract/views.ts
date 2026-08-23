@@ -318,7 +318,7 @@ export const craftingViewSchema = z.object({
 export const resourcesViewSchema = z.object({
   /** Ячейки по возрастанию уровня: порядок принадлежит правилам, а не порядку ключей состояния. */
   slots: z.array(z.object({ level: whole, remaining: whole, maximum: whole })),
-  runes: z.object({ remaining: whole, maximum: whole }),
+  runes: z.object({ nameRu: z.string(), remaining: whole, maximum: whole }),
   /** Последняя подсказка: одно применение до долгого отдыха. Истраченная едет нулём, а не пропажей. */
   lastHint: z.object({ nameRu: z.string(), remaining: whole, maximum: whole }),
   /** Ручная поправка Класса Доспеха: правится там же, где видна. */
@@ -537,13 +537,8 @@ export const spellCardViewSchema = z.object({
   /** Что даёт успех и что провал того броска, который называет строка. */
   successEffectRu: word.optional(),
   failureEffectRu: word.optional(),
-  /**
-   * На что срабатывает реакция; нет вовсе — заклинание реакцией не творится.
-   *
-   * Род события — чтобы отобрать по вопросу «что произошло», фраза — чтобы прочесть её целиком:
-   * разбирать прозу строкой значит менять поведение от запятой в описании.
-   */
-  reaction: z.object({ trigger: word.optional(), textRu: word }).optional(),
+  /** На что срабатывает реакция; нет вовсе — заклинание реакцией не творится. */
+  reaction: z.object({ textRu: word }).optional(),
   /**
    * Что требуется, чтобы заклинание сработало: голос, руки и вещь в руке.
    *

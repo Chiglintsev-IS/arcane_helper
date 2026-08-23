@@ -82,12 +82,15 @@ function componentMarks(spell: SpellRowView): ComponentMark[] {
 export function SpellCardCompact({
   spell,
   casting,
+  armorClass,
   onOpen,
   onTogglePrepared,
 }: {
   spell: SpellRowView;
   /** Числа заклинателя: ими называется бросок. */
   casting: CastingView;
+  /** Нынешний Класс Доспеха: с ним сравнивают тот, который заклинание обещает. */
+  armorClass: number;
   onOpen: () => void;
 /**
    * Переключение подготовки. Передаётся только там, где подготовка уместна, — в «Книге»:
@@ -132,8 +135,16 @@ export function SpellCardCompact({
 
   const marks = componentMarks(spell);
 
+  /**
+   * Обещанный Класс Доспеха — число, которое называют мастеру вслух, и потому стоит оно в громкой
+   * строке, а не среди цены и дальности. Готовым, а не формулой: складывать базу, Ловкость,
+   * предметы и два эффекта в чужой ход — ровно та работа, ради избавления от которой приложение и
+   * существует.
+   */
+  const promisedArmorClass = spell.armorClassIfCast;
+
   // Громкая строка появляется, только когда есть что произнести: пустая заняла бы место молчанием.
-  const loud = resolution.spoken || damage !== null;
+  const loud = resolution.spoken || damage !== null || promisedArmorClass !== undefined;
 
   const preparable = onTogglePrepared !== undefined && spell.level !== CANTRIP_LEVEL;
   const isPrepared = spell.prepared;
@@ -214,6 +225,11 @@ export function SpellCardCompact({
               </span>
             ) : null}
             {damage === null ? null : <span className="whitespace-nowrap">Урон {damage}</span>}
+            {promisedArmorClass === undefined ? null : (
+              <span className="whitespace-nowrap">
+                КД {promisedArmorClass} вместо {armorClass}
+              </span>
+            )}
           </span>
         )}
 

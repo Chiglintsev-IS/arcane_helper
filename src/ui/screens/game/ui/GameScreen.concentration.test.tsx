@@ -171,7 +171,9 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Провал" }));
 
-    expect(screen.getByText(/Знаки ограждения/)).toBeDefined();
+    // Внутри карточки проверки: тем же именем зовётся строка списка, и запрос без неё нашёл бы обе.
+    const check = within(screen.getByRole("dialog", { name: /^Проверка концентрации/ }));
+    expect(check.getByText(/Знаки ограждения/)).toBeDefined();
     // Эффект ещё держится: предложение обязано появиться до завершения.
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
   });

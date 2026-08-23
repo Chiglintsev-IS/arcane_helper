@@ -2,6 +2,7 @@
  * Концентрация и активные эффекты: завершение вручную, по провалу проверки и по замене.
  */
 
+import { WARDING_SIGIL_RU } from "@/core/domain/arcana/arcana";
 import { Character } from "@/core/domain/assembly/character";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
@@ -80,7 +81,7 @@ export function spendRuneOnWardingSigil(session: Session, occasion: Occasion): S
     root.withArcana(root.arcana.spendRune()),
     {
       kind: "rune_spent",
-      summaryRu: "Знаки ограждения: провал спасброска считается успехом",
+      summaryRu: `${WARDING_SIGIL_RU}: провал спасброска считается успехом`,
       actionUsed: "reaction",
     },
     occasion,

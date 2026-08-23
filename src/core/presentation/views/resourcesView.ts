@@ -14,7 +14,7 @@
 
 import type { ResourcesView } from "@/contract/views";
 
-import { LAST_HINT_RU } from "@/core/domain/arcana/arcana";
+import { LAST_HINT_RU, WARDING_SIGIL_RU } from "@/core/domain/arcana/arcana";
 import { slotsInOrder } from "@/core/domain/arcana/slots";
 import { Character } from "@/core/domain/assembly/character";
 import type { Session } from "@/core/application/session";
@@ -31,7 +31,7 @@ export function toResourcesView(session: Session): ResourcesView {
       remaining,
       maximum,
     })),
-    runes: { remaining: runes.remaining, maximum: runes.maximum },
+    runes: { nameRu: WARDING_SIGIL_RU, remaining: runes.remaining, maximum: runes.maximum },
     lastHint: { nameRu: LAST_HINT_RU, remaining: lastHint.remaining, maximum: lastHint.maximum },
     armorClassAdjustment: root.effects.manualAdjustment("armorAdjustment"),
     passivePerception: root.sheet.value("passivePerception"),

@@ -173,12 +173,7 @@ function spellCardView(spell: Spell): SpellCardView {
       : { failureEffectRu: resolution.failureEffect }),
     ...(castingTime.reactionTrigger === undefined
       ? {}
-      : {
-          reaction: {
-            ...(castingTime.trigger === undefined ? {} : { trigger: castingTime.trigger }),
-            textRu: castingTime.reactionTrigger,
-          },
-        }),
+      : { reaction: { textRu: castingTime.reactionTrigger } }),
     components: {
       verbal: components.verbal,
       somatic: components.somatic,

@@ -194,21 +194,19 @@ describe("карточка", () => {
     expect(row("shield", withoutSlots(createThorne())).card).toEqual(row("shield").card);
   });
 
-  it("реакция приезжает родом события и его фразой", () => {
-    expect(row("shield").card.reaction).toMatchObject({ trigger: "attacked" });
+  it("реакция приезжает фразой своего условия", () => {
     expect(row("shield").card.reaction?.textRu).toContain("попали атакой");
     // Заклинание, которое реакцией не творится, о событии молчит, а не отвечает пустой строкой.
     expect(row("ray-of-frost").card.reaction).toBeUndefined();
   });
 
-  it("несказанного не выдумывает: без рода события и без совета их нет вовсе", () => {
-    // Оба поля необязательны, потому что та же схема читает пользовательский импорт: файл,
+  it("несказанного не выдумывает: без совета его нет вовсе", () => {
+    // Поле необязательно, потому что та же схема читает пользовательский импорт: файл,
     // выгруженный прежней сборкой, обязан открываться.
     const found = loadThorneSpells().find((spell) => spell.id === "shield");
     if (found === undefined) throw new Error("нет карточки реакции");
     const { tacticalAdviceRu: _advice, ...bare } = found;
-    const { trigger: _kind, ...castingTime } = found.castingTime;
-    const shown = row("shield", createThorne(), [], [{ ...bare, castingTime }]).card;
+    const shown = row("shield", createThorne(), [], [bare]).card;
 
     expect(shown.tacticalAdviceRu).toBeUndefined();
     expect(shown.reaction).toEqual({ textRu: found.castingTime.reactionTrigger });

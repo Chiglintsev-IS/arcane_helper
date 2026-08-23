@@ -277,12 +277,18 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
 
+    // Ряду нужно о чём-то говорить: пока не потрачено ничего, он молчит в обоих режимах одинаково.
+    await user.click(screen.getByRole("button", { name: /^Туманный шаг/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
     const inGame = badgeRow();
 
     await openMode(user, /^Привал/);
 
-    // Повторённый блок повторяется целиком: ресурс, пропавший при смене режима, читается как
-    // потраченный, хотя за ту же минуту с ним ничего не случилось.
+    // Повторённый блок повторяется целиком: значок, пропавший при смене режима, читается как
+    // вернувшийся ресурс, хотя за ту же минуту с ним ничего не случилось.
     expect(inGame.join(" ")).toContain("Бонусное");
     expect(badgeRow()).toEqual(inGame);
   });
@@ -385,34 +391,37 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />);
 
-    // Кнопки «Учёт хода» нет: она умела выключить счёт и оставить зелёные галочки.
+    // Кнопки «Учёт хода» нет: она умела выключить счёт и оставить ресурс потраченным.
     expect(screen.queryByRole("button", { name: "Учёт хода" })).toBeNull();
-    expect(screen.queryByLabelText("Действие доступно")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
-    expect(screen.getByLabelText("Действие доступно")).toBeDefined();
+    await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
+    await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
 
     // Уход в «Книгу» на учёт не влияет: признак приходит из лога, а не из вкладки.
     await openMode(user, /^Книга/);
     await openMode(user, /^Игра/);
-    expect(screen.getByLabelText("Действие доступно")).toBeDefined();
+    expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
   });
 
 });
 
 describe("«Знаки ограждения» вне боя (FR-153)", () => {
-  it("кнопка «Реакции» есть в «Игре», но не в «Книге» (FR-217)", async () => {
+  it("строка руны есть в «Игре», но не в «Книге» (FR-217)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />);
 
-    expect(screen.getByRole("button", { name: /^Реакции/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Знаки ограждения/ })).toBeDefined();
 
-    // «Книга» — не место для реакции: её открывают заранее, а не в чужой ход.
+    // «Книга» — не место для ответа в чужой ход: там смотрят состав, а не то, чем отвечают.
     await openMode(user, /^Книга/);
-    expect(screen.queryByRole("button", { name: /^Реакции/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Знаки ограждения/ })).toBeNull();
 
     await openMode(user, /^Игра/);
-    expect(screen.getByRole("button", { name: /^Реакции/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Знаки ограждения/ })).toBeDefined();
   });
 
 });
@@ -564,7 +573,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
     // Значок траты реакции есть только в бою — он проверяется до ухода в лог.
-    expect(screen.getByRole("button", { name: /^Реакции\. Реакция израсходована/ })).toBeDefined();
+    expect(screen.getByLabelText("Реакция израсходована")).toBeDefined();
 
     await openMode(userEvent.setup(), /^Лог/);
     expect(
@@ -722,7 +731,7 @@ describe("экран показывает только своё (FR-217, FR-220)
     // Ни ячеек, ни чисел боя, ни номера раунда: лог отвечает, что уже случилось.
     expect(screen.queryByRole("region", { name: "Ресурсы" })).toBeNull();
     expect(screen.queryByLabelText("Чем платить")).toBeNull();
-    expect(screen.queryByLabelText("Действие доступно")).toBeNull();
+    expect(screen.queryByLabelText("Прочие ресурсы")).toBeNull();
     expect(screen.queryByText(/раунд/i)).toBeNull();
   });
 

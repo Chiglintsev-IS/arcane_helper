@@ -22,7 +22,12 @@ function rowOf(id: string) {
 
 function renderRow(id: string) {
   return render(
-    <SpellCardCompact spell={rowOf(id)} casting={SNAPSHOT.casting} onOpen={() => {}} />,
+    <SpellCardCompact
+      spell={rowOf(id)}
+      casting={SNAPSHOT.casting}
+      armorClass={SNAPSHOT.sheet.armorClass}
+      onOpen={() => {}}
+    />,
   );
 }
 
@@ -32,6 +37,7 @@ describe("SpellCardCompact — дальность в ряду фактов бе�
       <SpellCardCompact
         spell={{ ...BASE_ROW, range: { type: "special" } }}
         casting={SNAPSHOT.casting}
+        armorClass={SNAPSHOT.sheet.armorClass}
         onOpen={() => {}}
       />,
     );
@@ -112,6 +118,7 @@ describe("компоненты на строке списка (FR-010)", () => {
           card: { ...BASE_ROW.card, components: { verbal: false, somatic: false } },
         }}
         casting={SNAPSHOT.casting}
+        armorClass={SNAPSHOT.sheet.armorClass}
         onOpen={() => {}}
       />,
     );

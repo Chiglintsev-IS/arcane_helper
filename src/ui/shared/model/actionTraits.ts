@@ -35,6 +35,17 @@ export function lastHintTraits(nameRu: string): ActionTraits {
   return { nameRu, castingTime: "special", level: 0, concentration: false, role: "other" };
 }
 
+/**
+ * Строка «Знаков ограждения»: особенность подкласса, а не заклинание.
+ *
+ * Реакцией — потому что реакцией она и тратится, а значит переключатель «Реакция» обязан её
+ * находить: ответ на провал спасброска стоит в том же списке, что и ответ на попадание. Ячейки
+ * она не стоит и потому стоит среди того, что ячейки не стоит; роль — защита: ею закрываются.
+ */
+export function wardingSigilTraits(nameRu: string): ActionTraits {
+  return { nameRu, castingTime: "reaction", level: 0, concentration: false, role: "defense" };
+}
+
 export function traitsOf(spell: SpellRowView): ActionTraits {
   return {
     nameRu: spell.nameRu,

@@ -12,7 +12,6 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 import { GLYPH_IDS, SEAL_KINDS } from "@/core/domain/catalog/diagram/glyphs";
 import { isRune } from "@/core/domain/catalog/diagram/futhark";
 import { COMBAT_ROLES } from "@/core/domain/catalog/combatRole";
-import { REACTION_TRIGGERS } from "@/core/domain/catalog/reactions";
 import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { nonEmpty } from "@/core/domain/shared/schema";
@@ -48,20 +47,10 @@ const castingTimeSchema = z
     type: z.enum(["action", "bonus_action", "reaction", "minute", "hour"]),
     value: z.number().int().positive().optional(),
     reactionTrigger: nonEmpty.optional(),
-    /**
-     * Вид триггера для отбора по событию. Текст рядом написан для человека, а этот ключ —
-     * для приложения: разбирать прозу строкой значит менять поведение от запятой в описании.
-     * Необязательный по той же причине, что `source` и `combatRole`.
-     */
-    trigger: z.enum(REACTION_TRIGGERS).optional(),
   })
   .refine((value) => value.type !== "reaction" || value.reactionTrigger !== undefined, {
     message: "Заклинание с временем накладывания «реакция» обязано описывать триггер",
     path: ["reactionTrigger"],
-  })
-  .refine((value) => value.trigger === undefined || value.type === "reaction", {
-    message: "Вид триггера есть только у заклинания с временем накладывания «реакция»",
-    path: ["trigger"],
   })
   .refine(
     (value) =>
