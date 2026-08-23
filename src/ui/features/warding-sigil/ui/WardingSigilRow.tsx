@@ -13,6 +13,7 @@
 import type { ResourcesView } from "@/contract/views";
 import { castingTimeBadge, combatRole } from "@/ui/entities/spell/lib/format";
 import { wardingSigilTraits } from "@/ui/shared/model/actionTraits";
+import { ActionRow } from "@/ui/shared/ui/ActionRow";
 import { Badge } from "@/ui/shared/ui/Badge";
 
 /** Правило словами: что руна покупает и чем за это платят. */
@@ -29,37 +30,25 @@ export function WardingSigilRow({
 }) {
   const { runes } = resources;
   const spent = runes.remaining <= 0;
-  const castingTime = castingTimeBadge(wardingSigilTraits(runes.nameRu).castingTime);
+  const traits = wardingSigilTraits(runes.nameRu);
+  const castingTime = castingTimeBadge(traits.castingTime);
 
   return (
-    <li>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex w-full flex-col items-start gap-1 p-2 text-left"
-      >
-        <span className="flex w-full items-baseline justify-between gap-2">
-          <span className="font-medium leading-tight">{runes.nameRu}</span>
-          <span className="shrink-0 text-[0.625rem] text-ink-quiet">
-            {combatRole(wardingSigilTraits(runes.nameRu).role).label}
-          </span>
-        </span>
+    <ActionRow nameRu={runes.nameRu} role={combatRole(traits.role)} onOpen={onOpen}>
+      <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+        <Badge tone={castingTime.tone} icon={castingTime.icon}>
+          {castingTime.label}
+        </Badge>
+        {/*
+         Запас смыслового цвета не берёт: восемь тонов заняты правилами, и он читался бы как ещё
+         одно свойство строки. Отвечают знак и само число — так же, как у последней подсказки.
+         */}
+        <Badge tone="muted" icon={spent ? "✗" : "✚"}>
+          {runes.remaining}/{runes.maximum}
+        </Badge>
+      </span>
 
-        <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
-          <Badge tone={castingTime.tone} icon={castingTime.icon}>
-            {castingTime.label}
-          </Badge>
-          {/*
-           Запас смыслового цвета не берёт: восемь тонов заняты правилами, и он читался бы как ещё
-           одно свойство строки. Отвечают знак и само число — так же, как у последней подсказки.
-           */}
-          <Badge tone="muted" icon={spent ? "✗" : "✚"}>
-            {runes.remaining}/{runes.maximum}
-          </Badge>
-        </span>
-
-        <span className="text-xs text-ink-soft">{WARDING_SIGIL_SHORT_RU}</span>
-      </button>
-    </li>
+      <span className="text-xs text-ink-soft">{WARDING_SIGIL_SHORT_RU}</span>
+    </ActionRow>
   );
 }

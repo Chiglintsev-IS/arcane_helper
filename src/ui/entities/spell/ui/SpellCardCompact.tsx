@@ -30,22 +30,12 @@ import {
   slotCostLabel,
 } from "@/ui/entities/spell/lib/format";
 import { rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
+import { ActionRow } from "@/ui/shared/ui/ActionRow";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { RULE_GROUP, RULE_ROLE } from "@/ui/shared/ui/rule";
-import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PAGE } from "@/ui/shared/ui/surface";
-import { TONE_GLYPH, TONE_TEXT } from "@/ui/shared/ui/tone";
+import { SURFACE_CHOSEN, SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /** Заговор кнопки подготовки не получает: он вне лимита. Цена, а не вид заклинания. */
 const CANTRIP_LEVEL = 0;
-
-/**
- * Ступень приглушённой строки: она остаётся лежать на странице, пока доступная приподнята.
- *
- * Прозрачностью строку гасить нельзя: она гасит и текст, и значки вместе с ним — контраст падает до
- * 2.8 при требуемых 4.5, и это ловит прогон axe. Приглушение живёт в ступени, а причина, по которой
- * строка приглушена, написана на ней словами.
- */
-const DIMMED_SURFACE = `${SURFACE_PAGE} ${RULE_GROUP}`;
 
 /** Выделенное среди нейтрального: тем же весом на строке отмечена длительность. */
 const STRONG = "font-medium text-ink";
@@ -108,16 +98,8 @@ export function SpellCardCompact({
   const damage = damageLabel(spell.damage);
   const slotCost = slotCostLabel(spell);
 
-/**
-   * Роль стоит левой линейкой строки, знаком и словом в углу — тремя носителями сразу.
- *
-   * Обводить строку целиком роль перестала: обводка занята структурой, и цветная рамка вокруг
-   * каждой строки списка читалась бы как ещё один уровень вложенности. Место при этом не выросло:
-   * линейка стоит с краю, а угол имени и раньше был занят подписью роли.
- */
   const role = combatRole(spell.role);
   const dimmed = unavailable || active;
-  const frame = `${dimmed ? DIMMED_SURFACE : SURFACE_GROUP} ${RULE_ROLE[role.tone]}`;
 
 /**
    * Нейтральные сведения строки. Длительность выделена контрастом: рядом с ней в значке стоит время
@@ -150,38 +132,49 @@ export function SpellCardCompact({
   const isPrepared = spell.prepared;
 
   return (
-    <li className="flex items-stretch gap-1">
-      <button
-        type="button"
-        onClick={onOpen}
-        className={`flex flex-1 flex-col items-start gap-1 p-2 text-left ${frame}`}
-      >
-        <span className="flex w-full items-baseline justify-between gap-2">
-          <span className="font-medium leading-tight">{spell.nameRu}</span>
-          <span className="flex shrink-0 items-baseline gap-1.5 text-[0.625rem]">
-            {marks.length === 0 ? null : (
-              <span
-                role="img"
-                aria-label={`Компоненты: ${marks.map((mark) => mark.wordRu).join(", ")}`}
-                className="text-ink-quiet"
-              >
-                {marks.map((mark) => (
-                  <span key={mark.letter} className={mark.strong ? STRONG : ""}>
-                    {mark.letter}
-                  </span>
-                ))}
+    <ActionRow
+      nameRu={spell.nameRu}
+      role={role}
+      dimmed={dimmed}
+      onOpen={onOpen}
+      corner={
+        marks.length === 0 ? null : (
+          <span
+            role="img"
+            aria-label={`Компоненты: ${marks.map((mark) => mark.wordRu).join(", ")}`}
+            className="text-ink-quiet"
+          >
+            {marks.map((mark) => (
+              <span key={mark.letter} className={mark.strong ? STRONG : ""}>
+                {mark.letter}
               </span>
-            )}
-            {/*
- Английское название нужно, чтобы найти заклинание в чужой книге, — а в бою по книгам не
- ищут. В «Бою» тот же угол занимает роль, и строка не становится выше.
- */}
-            <span className={TONE_TEXT[role.tone]}>
-              <span aria-hidden="true">{TONE_GLYPH[role.tone]}</span> {role.label}
-            </span>
+            ))}
           </span>
-        </span>
-
+        )
+      }
+      aside={
+        /*
+ Подготовка — отдельная кнопка рядом со строкой, а не внутри карточки заклинания:
+ собрать одиннадцать заклинаний открытием и закрытием одиннадцати карточек значит превратить
+ подготовку после каждого отдыха в упражнение. Заговор кнопки не получает: он вне лимита.
+ */
+        !preparable ? null : (
+          <button
+            type="button"
+            aria-pressed={isPrepared}
+            onClick={onTogglePrepared}
+            aria-label={`${isPrepared ? "Снять подготовку" : "Подготовить"}: ${spell.nameRu}`}
+            className={`w-11 shrink-0 text-lg ${
+              isPrepared
+              ? SURFACE_CHOSEN
+              : `text-ink-quiet ${SURFACE_CONTROL}`
+            }`}
+          >
+            <span aria-hidden="true">{isPrepared ? "✓" : "+"}</span>
+          </button>
+        )
+      }
+    >
         <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
           <Badge tone={castingTime.tone} icon={castingTime.icon}>
             {castingTimePhrase(spell.castingTime)}
@@ -257,28 +250,6 @@ export function SpellCardCompact({
         {unavailableReason === undefined ? null : (
           <span className="text-xs font-medium text-reaction">Недоступно: {unavailableReason}</span>
         )}
-      </button>
-
-      {/*
- Подготовка — отдельная кнопка рядом со строкой, а не внутри карточки заклинания:
- собрать одиннадцать заклинаний открытием и закрытием одиннадцати карточек значит превратить
- подготовку после каждого отдыха в упражнение. Заговор кнопки не получает: он вне лимита.
- */}
-      {preparable ? (
-        <button
-          type="button"
-          aria-pressed={isPrepared}
-          onClick={onTogglePrepared}
-          aria-label={`${isPrepared ? "Снять подготовку" : "Подготовить"}: ${spell.nameRu}`}
-          className={`w-11 shrink-0 text-lg ${
-            isPrepared
-            ? SURFACE_CHOSEN
-            : `text-ink-quiet ${SURFACE_CONTROL}`
-          }`}
-        >
-          <span aria-hidden="true">{isPrepared ? "✓" : "+"}</span>
-        </button>
-      ) : null}
-    </li>
+    </ActionRow>
   );
 }

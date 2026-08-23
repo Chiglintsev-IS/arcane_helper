@@ -415,6 +415,23 @@ describe("реакции (FR-060, FR-062)", () => {
     expect(list.queryByText("Луч холода")).toBeNull();
   });
 
+  it("строка руны одета как соседние: роль, линейка и рамка те же", async () => {
+    const user = userEvent.setup();
+    const { container } = await renderWithStores(<GameScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Реакция" }));
+
+    // Разный вид строк одного списка читается как разное правило: пока строка руны рисовала себя
+    // сама, она стояла без рамки, а роль называла одним серым словом.
+    const rows = [...container.querySelectorAll("[aria-label^='Заклинания'] > li > button")];
+    expect(rows).toHaveLength(4);
+    for (const row of rows) {
+      expect(row.className, row.textContent ?? "").toContain("border-l-defense");
+      // Знак и слово стоят рядом у каждой: цвет — третий носитель, а не единственный.
+      expect(row.textContent, row.textContent ?? "").toContain("◇ Защита");
+    }
+  });
+
   it("строка реакции называет изменённое число готовым (FR-062)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
