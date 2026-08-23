@@ -40,7 +40,7 @@ function played(character: CharacterState, commands: readonly Command[]): Sessio
   return live.session;
 }
 
-/** Сессия без единой команды: журнал пуст, бой не начат. */
+/** Сессия без единой команды: лог пуст, бой не начат. */
 function fresh(character: CharacterState): Session {
   return createSession(character);
 }

@@ -87,11 +87,11 @@ export function describeRepositoryContract(
     expect(loaded?.character.hitPoints.current).toBe(60);
   });
 
-  it("журнал переживает запись и чтение", async () => {
+  it("лог переживает запись и чтение", async () => {
     const repository = await createRepository();
     const stored = {
       ...snapshot(),
-      journal: [
+      log: [
         {
           id: "id-1",
           at: SAVED_AT,
@@ -105,7 +105,7 @@ export function describeRepositoryContract(
       ],
     } satisfies PersistedSession;
     await repository.save(stored);
-    expect((await repository.load())?.journal).toEqual(stored.journal);
+    expect((await repository.load())?.log).toEqual(stored.log);
   });
 
   it("каталог заклинаний переживает запись и чтение (FR-123)", async () => {
@@ -178,7 +178,7 @@ export function describeParsingContract(): void {
     const base = snapshot();
     const stored = {
       ...base,
-      journal: [
+      log: [
         {
           id: "old-entry",
           at: SAVED_AT,
@@ -198,17 +198,32 @@ export function describeParsingContract(): void {
     // Отмена старой записи обязана возвращать вещь новой формы: род переведён, вещь и запас
     // разведены по разным местам, счёт обрезан пределом. Расходник надетым не бывает, и его
     // запас переходит в сумку, а не в надетое, даже если старая запись утверждала обратное.
-    expect(parsed.journal[0]?.undoPatch?.itemDefinitions?.[0]).toMatchObject({
+    expect(parsed.log[0]?.undoPatch?.itemDefinitions?.[0]).toMatchObject({
       kind: "consumable",
     });
-    expect(parsed.journal[0]?.undoPatch?.equipment?.bag?.[0]).toMatchObject({
+    expect(parsed.log[0]?.undoPatch?.equipment?.bag?.[0]).toMatchObject({
       itemId: "potion",
       count: 9999,
     });
 
     // Запись, не являющаяся объектом со снимком, не приводится и не роняет разбор молча:
     // её отвергнет схема с указанием поля.
-    expect(() => parsePersisted({ ...base, journal: ["не запись"] })).toThrow(StorageCorruptedError);
+    expect(() => parsePersisted({ ...base, log: ["не запись"] })).toThrow(StorageCorruptedError);
+  });
+
+  it("записи прежнего имени доезжают до нынешнего: обновление не теряет сыгранного", () => {
+    const { log, ...base } = snapshot();
+    const entry = {
+      id: "old-entry",
+      at: SAVED_AT,
+      kind: "short_rest",
+      summaryRu: "Короткий отдых",
+      undoPatch: { inspiration: false },
+    };
+
+    const parsed = parsePersisted({ ...base, schemaVersion: 2, journal: [entry] });
+
+    expect(parsed.log).toEqual([entry]);
   });
 
   it("сообщает, какое поле не прошло проверку", () => {

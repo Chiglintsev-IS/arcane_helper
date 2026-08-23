@@ -131,18 +131,18 @@ describe("применение заклинания (FR-023)", () => {
     expect(after.character.spellSlots[1]?.remaining).toBe(3);
     expect(after.character.activeEffects).toHaveLength(1);
     expect(after.character.activeEffects[0]?.nameRu).toBe("Доспехи мага");
-    expect(after.journal).toHaveLength(1);
-    expect(after.journal[0]?.summaryRu).toBe("Доспехи мага — ячейкой 1 уровня");
+    expect(after.log).toHaveLength(1);
+    expect(after.log[0]?.summaryRu).toBe("Доспехи мага — ячейкой 1 уровня");
   });
 
-  it("одно применение — одна запись журнала", () => {
+  it("одно применение — одна запись лога", () => {
     const after = castSpell(
       session,
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
       occasion,
     );
-    expect(after.journal).toHaveLength(1);
-    expect(after.journal[0]?.kind).toBe("reaction_cast");
+    expect(after.log).toHaveLength(1);
+    expect(after.log[0]?.kind).toBe("reaction_cast");
   });
 
   it("заговор не расходует ячейку (FR-072)", () => {
@@ -152,7 +152,7 @@ describe("применение заклинания (FR-023)", () => {
       occasion,
     );
     expect(after.character.spellSlots).toEqual(session.character.spellSlots);
-    expect(after.journal[0]?.summaryRu).toBe("Луч холода — заговором");
+    expect(after.log[0]?.summaryRu).toBe("Луч холода — заговором");
   });
 
   it("ритуал не расходует ячейку (FR-073)", () => {
@@ -162,7 +162,7 @@ describe("применение заклинания (FR-023)", () => {
       occasion,
     );
     expect(after.character.spellSlots).toEqual(session.character.spellSlots);
-    expect(after.journal[0]?.summaryRu).toBe("Обнаружение магии — ритуалом");
+    expect(after.log[0]?.summaryRu).toBe("Обнаружение магии — ритуалом");
   });
 
   it("отклоняет оплату ячейкой для заговора и ритуала", () => {
@@ -336,7 +336,7 @@ describe("истечение эффекта в раундах (FR-094)", () => {
 
     const next = beginTurn(shielded, occasion);
     expect(next.character.activeEffects).toEqual([]);
-    expect(next.journal.at(-1)?.summaryRu).toContain("«Щит» истёк");
+    expect(next.log.at(-1)?.summaryRu).toContain("«Щит» истёк");
   });
 
   it("снятие обратимо: ошибка возвращается отменой (FR-111)", () => {
@@ -468,7 +468,7 @@ describe("концентрация (FR-080, FR-081)", () => {
       const ended = endConcentration(started, reason, occasion);
       expect(ended.character.concentration).toBeUndefined();
       expect(ended.character.activeEffects.filter((effect) => effect.isConcentration)).toHaveLength(0);
-      expect(ended.journal.at(-1)?.kind).toBe("concentration_ended");
+      expect(ended.log.at(-1)?.kind).toBe("concentration_ended");
     },
   );
 
@@ -486,7 +486,7 @@ describe("«Знаки ограждения» (FR-153, FR-154)", () => {
     const after = spendRuneOnWardingSigil(withTurnTracking(session), occasion);
     expect(after.character.runes.remaining).toBe(2);
     expect(deriveTurnEconomy(after).reactionAvailable).toBe(false);
-    expect(after.journal.at(-1)?.kind).toBe("rune_spent");
+    expect(after.log.at(-1)?.kind).toBe("rune_spent");
   });
 
   it("недоступны без реакции", () => {
@@ -598,10 +598,10 @@ describe("руна жизни начисляет временные хиты (FR
     expect(withRune("life", 3).character.temporaryHitPoints).toBe(15);
   });
 
-  it("начисление идёт той же записью журнала, что и сотворение (FR-023)", () => {
+  it("начисление идёт той же записью лога, что и сотворение (FR-023)", () => {
     const after = withRune("life", 2);
-    expect(after.journal).toHaveLength(1);
-    expect(after.journal[0]?.summaryRu).toBe(
+    expect(after.log).toHaveLength(1);
+    expect(after.log[0]?.summaryRu).toBe(
       "Доспехи мага — ячейкой 2 уровня · руна жизни: 10 временных хитов",
     );
   });
@@ -628,7 +628,7 @@ describe("руна жизни начисляет временные хиты (FR
 
     expect(cast.character.temporaryHitPoints).toBe(0);
     expect(cast.character.runes.remaining).toBe(2);
-    expect(cast.journal.at(-1)?.summaryRu).toContain("15 временных хитов другому");
+    expect(cast.log.at(-1)?.summaryRu).toContain("15 временных хитов другому");
   });
 
   it("руны войны и ветра состояния Торна не меняют: чужих бросков приложение не ведёт", () => {
@@ -656,7 +656,7 @@ describe("кровавое колдовство (FR-170…FR-174, FR-333)", () =
     expect(cast.character.spellSlots[1]?.remaining).toBe(4);
     expect(cast.character.hitPoints.current).toBe(before - 6);
     expect(cast.character.hitPoints.bloodReduction).toBe(6);
-    expect(cast.journal.at(-1)?.summaryRu).toContain("ячейкой 1 уровня из крови (6 хитов)");
+    expect(cast.log.at(-1)?.summaryRu).toContain("ячейкой 1 уровня из крови (6 хитов)");
   });
 
   it("ячейка старшего уровня стоит дороже, а пул по-прежнему цел", () => {
@@ -714,7 +714,7 @@ describe("урон, подавление и регенерация (FR-180…FR-
   it("огненный урон подавляет особенности до конца следующего хода", () => {
     const burned = takeDamage(session, 5, occasion, { fire: true });
     expect(Vitality.of(burned.character).firedUpon).toBe(true);
-    expect(burned.journal.at(-1)?.summaryRu).toContain("огонь");
+    expect(burned.log.at(-1)?.summaryRu).toContain("огонь");
 
     const nextTurn = beginTurn(burned, occasion);
     expect(Vitality.of(nextTurn.character).firedUpon).toBe(true);
@@ -849,7 +849,7 @@ describe("отдых и восстановление", () => {
     const rested = longRest(marked, occasion);
 
     expect(rested.character.activeEffects).toEqual([]);
-    expect(rested.journal.at(-1)?.summaryRu).toBe("Долгий отдых · «Отравлен» истёк");
+    expect(rested.log.at(-1)?.summaryRu).toBe("Долгий отдых · «Отравлен» истёк");
     expect(undoLast(rested).character.activeEffects).toHaveLength(1);
   });
 
@@ -961,7 +961,7 @@ describe("отдых и восстановление", () => {
     );
     current = refundSpellSlot(current, 2, occasion);
     expect(current.character.spellSlots[2]?.remaining).toBe(3);
-    expect(current.journal.at(-1)?.kind).toBe("slot_refunded");
+    expect(current.log.at(-1)?.kind).toBe("slot_refunded");
   });
 });
 
@@ -994,7 +994,7 @@ describe("активные эффекты (FR-091)", () => {
 });
 
 describe("ручной эффект (FR-236)", () => {
-  it("создаёт эффект без заклинания и пишет это в журнал", () => {
+  it("создаёт эффект без заклинания и пишет это в лог", () => {
     const after = startManualEffect(session, { nameRu: "Опутанный" }, occasion);
 
     expect(after.character.activeEffects).toHaveLength(1);
@@ -1003,7 +1003,7 @@ describe("ручной эффект (FR-236)", () => {
     expect(effect?.spellId).toBeUndefined();
     expect(effect?.isConcentration).toBe(false);
     expect(effect?.contributions).toEqual([]);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Эффект начат: Опутанный");
+    expect(after.log.at(-1)?.summaryRu).toBe("Эффект начат: Опутанный");
   });
 
   it("вклад в Класс Доспеха складывается с активными эффектами заклинаний", () => {
@@ -1030,7 +1030,7 @@ describe("ручной эффект (FR-236)", () => {
     const ended = endEffect(started, effectId, occasion);
 
     expect(ended.character.activeEffects).toHaveLength(0);
-    expect(ended.journal.at(-1)?.summaryRu).toBe("Эффект завершён: Опутанный");
+    expect(ended.log.at(-1)?.summaryRu).toBe("Эффект завершён: Опутанный");
   });
 
   it("отклоняет пустое имя", () => {
@@ -1056,25 +1056,25 @@ describe("поправка к КД (FR-236)", () => {
 
     expect(after.character.activeEffects).toHaveLength(1);
     expect(Character.of(after.character).sheet.value("armorClass")).toBe(16);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Поправка к КД: +2");
+    expect(after.log.at(-1)?.summaryRu).toBe("Поправка к КД: +2");
   });
 
   it("допускает отрицательное значение", () => {
     const after = setArmorClassAdjustment(session, -3, occasion);
 
     expect(Character.of(after.character).sheet.value("armorClass")).toBe(11);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Поправка к КД: −3");
+    expect(after.log.at(-1)?.summaryRu).toBe("Поправка к КД: −3");
   });
 
   it("новое значение заменяет прежнее одним переходом, а не двумя", () => {
     const first = setArmorClassAdjustment(session, 2, occasion);
-    const journalLengthAfterFirst = first.journal.length;
+    const logLengthAfterFirst = first.log.length;
 
     const second = setArmorClassAdjustment(first, 5, occasion);
 
     expect(second.character.activeEffects).toHaveLength(1);
     expect(Character.of(second.character).sheet.value("armorClass")).toBe(19);
-    expect(second.journal.length).toBe(journalLengthAfterFirst + 1);
+    expect(second.log.length).toBe(logLengthAfterFirst + 1);
   });
 
   it("ноль снимает поправку вовсе", () => {
@@ -1132,7 +1132,7 @@ describe("отмена последнего действия (FR-111)", () => {
     );
     const undone = undoLast(after);
     expect(undone.character).toEqual(before);
-    expect(undone.journal).toHaveLength(0);
+    expect(undone.log).toHaveLength(0);
   });
 
   it.each([
@@ -1161,7 +1161,7 @@ describe("отмена последнего действия (FR-111)", () => {
     const start = session;
     const changed = operation(start);
     let current = changed;
-    while (current.journal.length > 0) current = undoLast(current);
+    while (current.log.length > 0) current = undoLast(current);
     expect(current.character).toEqual(start.character);
   });
 
@@ -1177,8 +1177,8 @@ describe("отмена последнего действия (FR-111)", () => {
     expect(current.character).toEqual(beforeRest);
   });
 
-  it("пустой журнал отменять нечего", () => {
-    expect(() => undoLast(session)).toThrow(/Журнал пуст/);
+  it("пустой лог отменять нечего", () => {
+    expect(() => undoLast(session)).toThrow(/Лог пуст/);
   });
 
   it("испорченный снимок отмены не становится состоянием", () => {
@@ -1189,14 +1189,14 @@ describe("отмена последнего действия (FR-111)", () => {
     const corrupted = fromPersisted(
       parsePersisted({
         ...stored,
-        journal: stored.journal.map((entry) => ({ ...entry, undoPatch: { hitPoints: "banana" } })),
+        log: stored.log.map((entry) => ({ ...entry, undoPatch: { hitPoints: "banana" } })),
       }),
     );
 
     expect(() => undoLast(corrupted)).toThrow(DomainError);
     expect(() => undoLast(corrupted)).toThrow(/hitPoints/);
     expect(corrupted.character.spellSlots[1]?.remaining).toBe(3);
-    expect(corrupted.journal).toHaveLength(1);
+    expect(corrupted.log).toHaveLength(1);
   });
 
   it("отмена записи без снимка называет причину, а не делает вид, что вернула состояние", () => {
@@ -1206,7 +1206,7 @@ describe("отмена последнего действия (FR-111)", () => {
     const legacy = fromPersisted(
       parsePersisted({
         ...stored,
-        journal: stored.journal.map((entry) => ({
+        log: stored.log.map((entry) => ({
           ...entry,
           undoPatch: { turnTracking: { enabled: false } },
         })),
@@ -1215,7 +1215,7 @@ describe("отмена последнего действия (FR-111)", () => {
 
     expect(() => undoLast(legacy)).toThrow(DomainError);
     expect(() => undoLast(legacy)).toThrow(/снимка отмены/);
-    expect(legacy.journal).toHaveLength(1);
+    expect(legacy.log).toHaveLength(1);
     expect(legacy.character.spellSlots[1]?.remaining).toBe(3);
   });
 
@@ -1237,7 +1237,7 @@ describe("отмена последнего действия (FR-111)", () => {
   });
 });
 
-describe("журнал (FR-110, FR-112)", () => {
+describe("лог (FR-110, FR-112)", () => {
   it("событие без изменения ресурсов всё равно записывается", () => {
     // Заговор вне боя не тратит ничего, но требует записать применение.
     const before = outOfCombat(session);
@@ -1246,19 +1246,19 @@ describe("журнал (FR-110, FR-112)", () => {
       { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
       occasion,
     );
-    expect(after.journal).toHaveLength(1);
-    expect(after.journal[0]?.undoPatch).toEqual({});
+    expect(after.log).toHaveLength(1);
+    expect(after.log[0]?.undoPatch).toEqual({});
     expect(after.character).toEqual(before.character);
   });
 
-  it("отмена записи без изменений убирает только строку журнала", () => {
+  it("отмена записи без изменений убирает только строку лога", () => {
     const after = castSpell(
       session,
       { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
       occasion,
     );
     const undone = undoLast(after);
-    expect(undone.journal).toHaveLength(0);
+    expect(undone.log).toHaveLength(0);
     expect(undone.character).toEqual(session.character);
   });
 
@@ -1272,7 +1272,7 @@ describe("журнал (FR-110, FR-112)", () => {
       );
       current = { ...current, character: { ...current.character, activeEffects: [] } };
     }
-    expect(current.journal).toHaveLength(100);
+    expect(current.log).toHaveLength(100);
   });
 
   it("записи содержат идентификатор заклинания и уровень ячейки", () => {
@@ -1281,17 +1281,17 @@ describe("журнал (FR-110, FR-112)", () => {
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 3 } },
       occasion,
     );
-    expect(after.journal[0]).toMatchObject({ spellId: "mage-armor", slotLevel: 3 });
+    expect(after.log[0]).toMatchObject({ spellId: "mage-armor", slotLevel: 3 });
   });
 });
 
-describe("экономия хода выводится из журнала (ADR-0008, FR-144)", () => {
+describe("экономия хода выводится из лога (ADR-0008, FR-144)", () => {
   it("до первой отметки хода считает всё доступным", () => {
     const economy = deriveTurnEconomy(withTurnTracking(session));
     expect(economy).toMatchObject({ inFight: true, reactionAvailable: true, round: 1 });
   });
 
-  it("вне боя всё доступно независимо от журнала", () => {
+  it("вне боя всё доступно независимо от лога", () => {
     let current = beginTurn(outOfCombat(session), occasion);
     current = castSpell(
       current,
@@ -1343,7 +1343,7 @@ describe("экономия хода выводится из журнала (ADR-
     let current = beginTurn(withTurnTracking(session), occasion);
     current = spendRuneOnWardingSigil(current, occasion);
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
-    expect(current.journal.at(-1)?.actionUsed).toBe("reaction");
+    expect(current.log.at(-1)?.actionUsed).toBe("reaction");
   });
 
   it("отмена реакции возвращает доступность без отдельной логики", () => {
@@ -1371,7 +1371,7 @@ describe("экономия хода выводится из журнала (ADR-
       { spell: spell("shield"), mode: "normal", payment: { kind: "blood", castLevel: 1 } },
       occasion,
     );
-    expect(current.journal.at(-1)?.actionUsed).toBe("reaction");
+    expect(current.log.at(-1)?.actionUsed).toBe("reaction");
     expect(current.character.hitPoints.bloodReduction).toBe(6);
   });
 
@@ -1382,7 +1382,7 @@ describe("экономия хода выводится из журнала (ADR-
       { spell: spell("find-familiar"), mode: "ritual", payment: { kind: "none" } },
       occasion,
     );
-    expect(current.journal.at(-1)?.actionUsed).toBeUndefined();
+    expect(current.log.at(-1)?.actionUsed).toBeUndefined();
     expect(deriveTurnEconomy(current).actionAvailable).toBe(true);
   });
 
@@ -1406,18 +1406,18 @@ describe("экономия хода выводится из журнала (ADR-
 });
 
 describe("регенерация тролля начисляется в начале хода (FR-182)", () => {
-  it("восстанавливает хиты и пишет величину в журнал", () => {
+  it("восстанавливает хиты и пишет величину в лог", () => {
     let current = takeDamage(session, 40, occasion);
     expect(current.character.hitPoints.current).toBe(20);
     current = beginTurn(current, occasion);
     expect(current.character.hitPoints.current).toBe(23);
-    expect(current.journal.at(-1)?.summaryRu).toBe("Начало хода · регенерация +3");
+    expect(current.log.at(-1)?.summaryRu).toBe("Начало хода · регенерация +3");
   });
 
   it("не начисляет выше половины максимума", () => {
     const current = beginTurn(session, occasion);
     expect(current.character.hitPoints.current).toBe(60);
-    expect(current.journal.at(-1)?.summaryRu).toBe("Начало хода");
+    expect(current.log.at(-1)?.summaryRu).toBe("Начало хода");
   });
 
   it("не начисляет под подавлением огнём", () => {
@@ -1505,16 +1505,16 @@ describe("правка хитов: лечение и временные (FR-205,
     return { ...session, character: { ...session.character, hitPoints: { current, maximumBase: 60, bloodReduction: 0, masterReduction: 0 } } };
   }
 
-  it("лечение поднимает текущие хиты и пишется в журнал", () => {
+  it("лечение поднимает текущие хиты и пишется в лог", () => {
     const after = heal(hurt(40), 12, occasion);
     expect(after.character.hitPoints.current).toBe(52);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Вылечено: 12");
+    expect(after.log.at(-1)?.summaryRu).toBe("Вылечено: 12");
   });
 
   it("выше максимума не поднимает и говорит об этом", () => {
     const after = heal(hurt(55), 20, occasion);
     expect(after.character.hitPoints.current).toBe(60);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Вылечено: 5 (из 20: упёрлись в максимум)");
+    expect(after.log.at(-1)?.summaryRu).toBe("Вылечено: 5 (из 20: упёрлись в максимум)");
   });
 
   it("упирается в снижённый максимум, а не в исходный (FR-172)", () => {
@@ -1539,7 +1539,7 @@ describe("правка хитов: лечение и временные (FR-205,
     const after = grantTemporaryHitPoints(session, 8, occasion);
     expect(after.character.temporaryHitPoints).toBe(8);
     expect(after.character.hitPoints.current).toBe(60);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Временные хиты: 8");
+    expect(after.log.at(-1)?.summaryRu).toBe("Временные хиты: 8");
   });
 
   it("не складываются: меньшее значение отклоняется", () => {
@@ -1557,7 +1557,7 @@ describe("правка хитов: лечение и временные (FR-205,
     const after = takeDamage(granted, 5, occasion);
     expect(after.character.temporaryHitPoints).toBe(3);
     expect(after.character.hitPoints.current).toBe(60);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Получено урона: 5, из них 5 временными хитами");
+    expect(after.log.at(-1)?.summaryRu).toBe("Получено урона: 5, из них 5 временными хитами");
   });
 
   it("остаток урона сверх временных хитов бьёт по текущим", () => {
@@ -1615,14 +1615,14 @@ describe("окончание эффекта называет срок число
 });
 
 describe("заметка к заклинанию (FR-012)", () => {
-  it("сохраняется в состоянии и не попадает в журнал", () => {
+  it("сохраняется в состоянии и не попадает в лог", () => {
     const after = setSpellNote(session, "shield", "мастер считает, что щит гасит и «Волшебную стрелу»");
 
     expect(after.character.spellNotes.shield).toBe(
       "мастер считает, что щит гасит и «Волшебную стрелу»",
     );
-    // Заметка не меняет игровое состояние, поэтому журнал не засоряет.
-    expect(after.journal).toHaveLength(0);
+    // Заметка не меняет игровое состояние, поэтому лог не засоряет.
+    expect(after.log).toHaveLength(0);
   });
 
   it("заменяет прежнюю заметку того же заклинания", () => {
@@ -1784,12 +1784,12 @@ describe("предпочтения отыгрыша (FR-053)", () => {
     expect(defaultRoleplayVariant(current.character, card, "short")).toBeUndefined();
   });
 
-  it("предпочтения журнала не касаются и проходят схему состояния", () => {
+  it("предпочтения лога не касаются и проходят схему состояния", () => {
     let current = addRoleplayVariant(session, card.id, "sarcastic", "Опять?", occasion);
     current = toggleRoleplayFavorite(current, card.id, short0);
     current = useRoleplayVariant(current, card.id, short0);
 
-    expect(current.journal).toHaveLength(0);
+    expect(current.log).toHaveLength(0);
     expect(characterStateSchema.safeParse(current.character).success).toBe(true);
   });
 
@@ -1823,7 +1823,7 @@ describe("художественный текст не влияет на мех�
     const second = castSpell(session, { spell: rewritten, ...request }, testOccasion());
 
     expect(second.character).toEqual(first.character);
-    expect(second.journal).toEqual(first.journal);
+    expect(second.log).toEqual(first.log);
   });
 });
 
@@ -1844,14 +1844,14 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     };
   }
 
-  it("готовит и снимает подготовку, записывая каждое действие в журнал", () => {
+  it("готовит и снимает подготовку, записывая каждое действие в лог", () => {
     const prepared = togglePreparation(withRoom(), spell("detect-magic"), occasion);
     expect(prepared.character.preparedSpellIds).toContain("detect-magic");
-    expect(prepared.journal.at(-1)?.summaryRu).toBe("Подготовлено: Обнаружение магии");
+    expect(prepared.log.at(-1)?.summaryRu).toBe("Подготовлено: Обнаружение магии");
 
     const dropped = togglePreparation(prepared, spell("detect-magic"), occasion);
     expect(dropped.character.preparedSpellIds).not.toContain("detect-magic");
-    expect(dropped.journal.at(-1)?.summaryRu).toBe("Снята подготовка: Обнаружение магии");
+    expect(dropped.log.at(-1)?.summaryRu).toBe("Снята подготовка: Обнаружение магии");
   });
 
   it("подготовка обратима (FR-111)", () => {
@@ -1940,14 +1940,14 @@ describe("материальные компоненты (FR-030, FR-268)", () =>
 
   const ritual = { mode: "ritual" as const, payment: { kind: "none" as const } };
 
-  it("компонент покупается вещью, и журнал называет её словами карточки (FR-268)", () => {
+  it("компонент покупается вещью, и лог называет её словами карточки (FR-268)", () => {
     const bought = toggleMaterial(session, spell("identify"), occasion);
     expect(inBag(bought, pearl)).toBe(1);
-    expect(bought.journal.at(-1)?.summaryRu).toBe(`Добавлено: ${pearl} (стало 1)`);
+    expect(bought.log.at(-1)?.summaryRu).toBe(`Добавлено: ${pearl} (стало 1)`);
 
     const spent = toggleMaterial(bought, spell("identify"), occasion);
     expect(inBag(spent, pearl)).toBe(0);
-    expect(spent.journal.at(-1)?.summaryRu).toBe(`Потрачено: ${pearl} (в сумке 0)`);
+    expect(spent.log.at(-1)?.summaryRu).toBe(`Потрачено: ${pearl} (в сумке 0)`);
   });
 
   it("обратимо, как любой расход (FR-111)", () => {
@@ -1968,7 +1968,7 @@ describe("материальные компоненты (FR-030, FR-268)", () =>
     const cast = castSpell(bought, { spell: spell("find-familiar"), ...ritual }, occasion);
     expect(inBag(cast, ashes)).toBe(0);
     // Молча уменьшившийся запас читался бы за столом как ошибка приложения.
-    expect(cast.journal.at(-1)?.summaryRu).toContain(`компонент израсходован: ${ashes}`);
+    expect(cast.log.at(-1)?.summaryRu).toContain(`компонент израсходован: ${ashes}`);
 
     // Одна запись на одно нажатие: отмена возвращает и ритуал, и сгоревшее в нём.
     expect(inBag(undoLast(cast), ashes)).toBe(1);
@@ -1978,7 +1978,7 @@ describe("материальные компоненты (FR-030, FR-268)", () =>
     const cast = castSpell(session, { spell: spell("find-familiar"), ...ritual }, occasion);
 
     expect(inBag(cast, ashes)).toBe(0);
-    expect(cast.journal.at(-1)?.summaryRu).not.toContain("компонент");
+    expect(cast.log.at(-1)?.summaryRu).not.toContain("компонент");
   });
 });
 
@@ -2004,17 +2004,17 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
   it("возвращает и тратит руну, записывая обе правки", () => {
     const spent = adjustRunes(session, -1, occasion);
     expect(spent.character.runes.remaining).toBe(2);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачена руна: 2");
+    expect(spent.log.at(-1)?.summaryRu).toBe("Потрачена руна: 2");
 
     const returned = adjustRunes(spent, 1, occasion);
     expect(returned.character.runes.remaining).toBe(3);
-    expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена руна: 3");
+    expect(returned.log.at(-1)?.summaryRu).toBe("Возвращена руна: 3");
   });
 
   it("подсказка тратится один раз и возвращается долгим отдыхом", () => {
     const spent = adjustLastHint(session, -1, occasion);
     expect(spent.character.lastHint.remaining).toBe(0);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачена подсказка");
+    expect(spent.log.at(-1)?.summaryRu).toBe("Потрачена подсказка");
 
     // Второго применения до отдыха нет: пустой пул отвечает причиной, а не уходит в минус.
     expect(() => adjustLastHint(spent, -1, occasion)).toThrow(/от 0 до 1/);
@@ -2027,7 +2027,7 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
 
     const returned = adjustLastHint(spent, 1, occasion);
     expect(returned.character.lastHint.remaining).toBe(1);
-    expect(returned.journal.at(-1)?.summaryRu).toBe("Возвращена подсказка");
+    expect(returned.log.at(-1)?.summaryRu).toBe("Возвращена подсказка");
 
     expect(undoLast(spent).character.lastHint.remaining).toBe(1);
   });
@@ -2038,10 +2038,10 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
     expect(() => adjustRunes(empty, -1, occasion)).toThrow(/от 0 до 3/);
   });
 
-  it("ручное списание ячейки пишется в журнал и обратимо (FR-111)", () => {
+  it("ручное списание ячейки пишется в лог и обратимо (FR-111)", () => {
     const spent = spendSpellSlot(session, 1, occasion);
     expect(spent.character.spellSlots[1]?.remaining).toBe(3);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Списана ячейка 1 уровня");
+    expect(spent.log.at(-1)?.summaryRu).toBe("Списана ячейка 1 уровня");
     expect(undoLast(spent).character.spellSlots[1]?.remaining).toBe(4);
   });
 
@@ -2061,7 +2061,7 @@ describe("конец боя (FR-216)", () => {
   it("поднимает здоровье до половины максимума", () => {
     const after = endCombat(wounded(12), occasion);
     expect(after.character.hitPoints.current).toBe(30);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен: восстановлено 18 до половины максимума");
+    expect(after.log.at(-1)?.summaryRu).toBe("Бой закончен: восстановлено 18 до половины максимума");
   });
 
   it("выше половины не поднимает: до полного здоровья регенерация не доводит", () => {
@@ -2071,8 +2071,8 @@ describe("конец боя (FR-216)", () => {
   it("закончить бой можно и здоровым: конец боя — факт, а не лечение", () => {
     const after = endCombat(wounded(30), occasion);
     expect(after.character.hitPoints.current).toBe(30);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен");
-    expect(after.journal.at(-1)?.kind).toBe("combat_ended");
+    expect(after.log.at(-1)?.summaryRu).toBe("Бой закончен");
+    expect(after.log.at(-1)?.kind).toBe("combat_ended");
   });
 
   it("считает половину от снижённого максимума, а не от исходного (FR-172)", () => {
@@ -2088,7 +2088,7 @@ describe("конец боя (FR-216)", () => {
 
     const after = endCombat(sunlit, occasion);
     expect(after.character.hitPoints.current).toBe(12);
-    expect(after.journal.at(-1)?.summaryRu).toBe("Бой закончен");
+    expect(after.log.at(-1)?.summaryRu).toBe("Бой закончен");
   });
 
   it("сбитому с ног конец боя не лечит: при нуле хитов регенерация не идёт", () => {
@@ -2149,7 +2149,7 @@ describe("конец боя (FR-216)", () => {
 
     const ended = endCombat(current, occasion);
     expect(ended.character.activeEffects.map((effect) => effect.nameRu)).toEqual(["Доспехи мага"]);
-    expect(ended.journal.at(-1)?.summaryRu).toBe("Бой закончен: «Щит» истёк");
+    expect(ended.log.at(-1)?.summaryRu).toBe("Бой закончен: «Щит» истёк");
     expect(undoLast(ended).character.activeEffects).toHaveLength(2);
   });
 
@@ -2205,7 +2205,7 @@ describe("почасовое восстановление максимума х�
     expect(() => recoverHitPointMaximum(withTurnTracking(afterBlood()), occasion)).toThrow(/бой/);
   });
 
-  it("обратимо через журнал", () => {
+  it("обратимо через лог", () => {
     const recovered = recoverHitPointMaximum(afterBlood(), occasion);
     expect(undoLast(recovered).character.hitPoints.bloodReduction).toBe(9);
   });
@@ -2218,7 +2218,7 @@ describe("почасовое восстановление максимума х�
 
     const recovered = recoverHitPointMaximum(wounded, occasion);
     expect(recovered.character.hitPoints).toEqual({ current: 27, maximumBase: 60, bloodReduction: 6, masterReduction: 0 });
-    expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: максимум +3, регенерация +7");
+    expect(recovered.log.at(-1)?.summaryRu).toBe("Прошёл час: максимум +3, регенерация +7");
   });
 
   it("одна регенерация тоже оправдывает час — без снижения максимума", () => {
@@ -2228,7 +2228,7 @@ describe("почасовое восстановление максимума х�
     };
     const recovered = recoverHitPointMaximum(injured, occasion);
     expect(recovered.character.hitPoints.current).toBe(30);
-    expect(recovered.journal.at(-1)?.summaryRu).toBe("Прошёл час: регенерация +20");
+    expect(recovered.log.at(-1)?.summaryRu).toBe("Прошёл час: регенерация +20");
   });
 })
 
@@ -2246,7 +2246,7 @@ describe("короткий отдых не делает того, что дел�
     // доходит и за эти минуты. Сам максимум при этом не растёт: ступень поднимает только час.
     const rested = shortRest(wounded, occasion);
     expect(rested.character.hitPoints).toEqual({ current: 25, maximumBase: 60, bloodReduction: 9, masterReduction: 0 });
-    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · регенерация +5");
+    expect(rested.log.at(-1)?.summaryRu).toBe("Короткий отдых · регенерация +5");
   });
 
   it("час после такого отдыха возвращает ступень — своё он делает по-прежнему", () => {
@@ -2256,7 +2256,7 @@ describe("короткий отдых не делает того, что дел�
   });
 
   it("здоровому отдых пишется коротко", () => {
-    expect(shortRest(session, occasion).journal.at(-1)?.summaryRu).toBe("Короткий отдых");
+    expect(shortRest(session, occasion).log.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 
   it("обожжённому короткий отдых регенерацию возвращает: отдых длиннее срока огня (FR-266)", () => {
@@ -2266,7 +2266,7 @@ describe("короткий отдых не делает того, что дел�
     const rested = shortRest(burned, occasion);
     expect(Vitality.of(rested.character).firedUpon).toBe(false);
     expect(rested.character.hitPoints.current).toBe(25);
-    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых · регенерация +5");
+    expect(rested.log.at(-1)?.summaryRu).toBe("Короткий отдых · регенерация +5");
   });
 
   it("под солнцем короткий отдых не лечит: признак его переживает (FR-181)", () => {
@@ -2274,7 +2274,7 @@ describe("короткий отдых не делает того, что дел�
 
     expect(rested.character.suppression.underDirectSunlight).toBe(true);
     expect(rested.character.hitPoints.current).toBe(20);
-    expect(rested.journal.at(-1)?.summaryRu).toBe("Короткий отдых");
+    expect(rested.log.at(-1)?.summaryRu).toBe("Короткий отдых");
   });
 
   it("магическое восстановление отдых открывает по-прежнему (FR-131)", () => {
@@ -2313,8 +2313,8 @@ describe("схема ритуала не влияет на механику (FR-
     const other = castSpell(session, { spell: repainted, ...request }, testOccasion());
 
     expect(other.character).toEqual(original.character);
-    expect(other.journal.map((entry) => entry.summaryRu)).toEqual(
-      original.journal.map((entry) => entry.summaryRu),
+    expect(other.log.map((entry) => entry.summaryRu)).toEqual(
+      original.log.map((entry) => entry.summaryRu),
     );
   });
 });
@@ -2323,43 +2323,43 @@ describe("сотворённое вне боя не переносится в б
   it("вне боя действие не записывается: в бою оно остаётся целым", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      { character: createThorne(), journal: [] },
+      { character: createThorne(), log: [] },
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
 
-    expect(session.journal.at(-1)?.actionUsed).toBeUndefined();
+    expect(session.log.at(-1)?.actionUsed).toBeUndefined();
     expect(deriveTurnEconomy(startCombat(session, occasion)).actionAvailable).toBe(true);
   });
 
   it("в бою действие записывается по-прежнему", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      startCombat({ character: createThorne(), journal: [] }, occasion),
+      startCombat({ character: createThorne(), log: [] }, occasion),
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
 
-    expect(session.journal.at(-1)?.actionUsed).toBe("action");
+    expect(session.log.at(-1)?.actionUsed).toBe("action");
     expect(deriveTurnEconomy(session).actionAvailable).toBe(false);
   });
 
   it("раундовый эффект вне боя истекает сразу: КД не входит в бой", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      { character: createThorne(), journal: [] },
+      { character: createThorne(), log: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
 
     expect(session.character.activeEffects).toEqual([]);
-    expect(session.journal.at(-1)?.summaryRu).toContain("вне боя раундов нет");
+    expect(session.log.at(-1)?.summaryRu).toContain("вне боя раундов нет");
   });
 
   it("в бою раундовый эффект остаётся висеть", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      startCombat({ character: createThorne(), journal: [] }, occasion),
+      startCombat({ character: createThorne(), log: [] }, occasion),
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
@@ -2370,7 +2370,7 @@ describe("сотворённое вне боя не переносится в б
   it("ячейка тратится в обоих случаях: сотворить игрок выбрал сам", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      { character: createThorne(), journal: [] },
+      { character: createThorne(), log: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
@@ -2403,7 +2403,7 @@ describe("расход костей хитов заклинанием (FR-135)",
     expect(after.character.spellSlots[2]?.remaining).toBe(2);
   });
 
-  it("одна запись журнала называет и кости, и восстановленное", () => {
+  it("одна запись лога называет и кости, и восстановленное", () => {
     const after = castSpell(
       wounded(),
       {
@@ -2414,9 +2414,9 @@ describe("расход костей хитов заклинанием (FR-135)",
       },
       occasion,
     );
-    expect(after.journal).toHaveLength(1);
-    expect(after.journal[0]?.summaryRu).toContain("2 кости");
-    expect(after.journal[0]?.summaryRu).toContain("13");
+    expect(after.log).toHaveLength(1);
+    expect(after.log[0]?.summaryRu).toContain("2 кости");
+    expect(after.log[0]?.summaryRu).toContain("13");
   });
 
   it("отмена возвращает ячейку, кости и хиты разом (FR-111)", () => {
@@ -2450,7 +2450,7 @@ describe("расход костей хитов заклинанием (FR-135)",
     );
     expect(after.character.hitPoints.current).toBe(60);
     expect(after.character.hitDice?.remaining).toBe(6);
-    expect(after.journal[0]?.summaryRu).toContain("хиты уже на максимуме");
+    expect(after.log[0]?.summaryRu).toContain("хиты уже на максимуме");
   });
 
   it("у персонажа без костей вовсе — отказ с нулём: поле необязательное ради чужих выгрузок", () => {

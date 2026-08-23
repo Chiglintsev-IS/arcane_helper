@@ -1,11 +1,11 @@
 /**
  * Схватка: идёт ли бой, какой раунд и чем ещё можно сходить.
  *
- * Состояния у схватки своего нет — она выводится из журнала. Хранимый признак «бой идёт» разошёлся
+ * Состояния у схватки своего нет — она выводится из лога. Хранимый признак «бой идёт» разошёлся
  * бы с записями, и следующий бой начинался бы шестым раундом вместо первого.
  */
 
-import type { JournalEntry, TurnResource } from "@/core/domain/journal/entry";
+import type { LogEntry, TurnResource } from "@/core/domain/log/entry";
 
 export type TurnEconomy = {
   /** Номер раунда — число отметок начала хода плюс текущий. */
@@ -24,9 +24,9 @@ const ALL_AVAILABLE = {
 } as const;
 
 export class Encounter {
-  private constructor(private readonly entries: readonly JournalEntry[]) {}
+  private constructor(private readonly entries: readonly LogEntry[]) {}
 
-  static fromJournal(entries: readonly JournalEntry[]): Encounter {
+  static fromLog(entries: readonly LogEntry[]): Encounter {
     return new Encounter(entries);
   }
 

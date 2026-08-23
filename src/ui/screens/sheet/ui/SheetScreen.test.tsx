@@ -3,7 +3,7 @@
 /**
  * «Лист» на настоящем состоянии и настоящих операциях: моков нет.
  *
- * Лист — база персонажа целиком и ничего из боя: правка доходит до состояния и до журнала, а
+ * Лист — база персонажа целиком и ничего из боя: правка доходит до состояния и до лога, а
  * отменённая шторка не оставляет следа.
  */
 
@@ -30,7 +30,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(screen.queryByRole("heading", { name: "Класс Доспеха" })).toBeNull();
   });
 
-  it("«Лист»: правка характеристики доходит до состояния и в журнал (FR-231)", async () => {
+  it("«Лист»: правка характеристики доходит до состояния и в лог (FR-231)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
     await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
@@ -55,8 +55,8 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
         .filter((skill) => skill.training !== undefined)
         .map((skill) => skill.id),
     ).toEqual(["sleightOfHand", "arcana", "investigation", "nature", "perception", "survival"]);
-    // Одна запись журнала на весь блок, а не три.
-    expect(shown(stores).journal).toHaveLength(1);
+    // Одна запись лога на весь блок, а не три.
+    expect(shown(stores).log).toHaveLength(1);
     expect(screen.queryByRole("dialog", { name: "Правка: Интеллект" })).toBeNull();
     expect(screen.getByText("20 (+5)")).toBeDefined();
   });
@@ -76,8 +76,8 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     // Правка языков не унесла с собой инструменты: шторка отдаёт владения целиком, а не своей частью.
     expect(shown(stores).sheet.proficiencies.tools).toEqual(["Инструменты кузнеца"]);
     expect(shown(stores).sheet.proficiencies.languages).toEqual(["Общий", "Троллий"]);
-    // Справочная правка записи журнала не создаёт: журнал возвращает ресурсы, а не текст.
-    expect(shown(stores).journal).toHaveLength(0);
+    // Справочная правка записи лога не создаёт: лог возвращает ресурсы, а не текст.
+    expect(shown(stores).log).toHaveLength(0);
   });
 
   it("«Лист»: уровень пересчитывает ресурсы одной записью (FR-227)", async () => {
@@ -99,7 +99,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
       maximum: 2,
       remaining: 2,
     });
-    expect(shown(stores).journal).toHaveLength(1);
+    expect(shown(stores).log).toHaveLength(1);
   });
 
   it("«Лист»: отмена шторки состояния не трогает", async () => {
@@ -110,7 +110,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
     expect(shown(stores).sheet.exhaustion).toBe(0);
-    expect(shown(stores).journal).toHaveLength(0);
+    expect(shown(stores).log).toHaveLength(0);
   });
 
 

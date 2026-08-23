@@ -14,7 +14,7 @@ import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
 import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
 import { CraftingScreen } from "@/ui/screens/crafting/ui/CraftingScreen";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
-import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
+import { LogScreen } from "@/ui/screens/log/ui/LogScreen";
 import { NotesScreen } from "@/ui/screens/notes/ui/NotesScreen";
 import { SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
@@ -34,8 +34,8 @@ function ScreenContent({ mode }: { mode: ScreenMode }) {
       return <CraftingScreen />;
     case "rest":
       return <RestScreen />;
-    case "journal":
-      return <JournalScreen />;
+    case "log":
+      return <LogScreen />;
     case "notes":
       return <NotesScreen />;
   }

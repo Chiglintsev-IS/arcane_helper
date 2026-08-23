@@ -42,8 +42,8 @@ async function openMode(
   await user.click(within(screen.getByRole("dialog", { name: "Режимы" })).getByRole("button", { name: title }));
 }
 
-async function openJournal(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  await openMode(user, /^Журнал/);
+async function openLog(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await openMode(user, /^Лог/);
 }
 
 async function openSheet(user: ReturnType<typeof userEvent.setup>): Promise<void> {
@@ -206,9 +206,9 @@ describe("состав экрана (FR-001, AC-14)", () => {
 
     expect(screen.getByRole("button", { name: /^КД 17/ })).toBeDefined();
 
-    // Отменяют только в журнале. Шапки там нет, но блок действующего есть: отмена уносит эффект,
+    // Отменяют только в логе. Шапки там нет, но блок действующего есть: отмена уносит эффект,
     // и это видно на том же экране, где нажали кнопку.
-    await openMode(user, /^Журнал/);
+    await openMode(user, /^Лог/);
     await user.click(screen.getByRole("button", { name: /^Вернуть/ }));
     expect(screen.queryByText(/Доспехи мага · КД/)).toBeNull();
 
@@ -230,14 +230,14 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(list.getByText("Поиск фамильяра")).toBeDefined();
   });
 
-  it("режим попадает в состояние, а журнал не засоряет (FR-204)", async () => {
+  it("режим попадает в состояние, а лог не засоряет (FR-204)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<PlayShell />);
 
     await openMode(user, /^Книга/);
 
-    // Сохранение — да, запись в журнал — нет: режим меняет вид, отменять в нём нечего.
-    expect(shown(stores).journal).toHaveLength(0);
+    // Сохранение — да, запись в лог — нет: режим меняет вид, отменять в нём нечего.
+    expect(shown(stores).log).toHaveLength(0);
   });
 
   it("«Ритуал» спрашивает про способ, а не про признак записи (FR-002)", async () => {
@@ -298,8 +298,8 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
     expect(shown(stores).resources.runes.remaining).toBe(2);
 
     await user.click(screen.getByRole("button", { name: "Закрыть" }));
-    // Кнопка отмены живёт только в журнале — путь к ней длиннее на одно нажатие.
-    await openMode(user, /^Журнал/);
+    // Кнопка отмены живёт только в логе — путь к ней длиннее на одно нажатие.
+    await openMode(user, /^Лог/);
     await user.click(screen.getByRole("button", { name: /^Вернуть/ }));
     expect(shown(stores).resources.runes.remaining).toBe(3);
   });
@@ -307,14 +307,14 @@ describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", 
 });
 
 describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => {
-  it("«Данные» живут в «Журнале» (FR-222)", async () => {
+  it("«Данные» живут в «Логе» (FR-222)", async () => {
     await renderWithStores(<PlayShell />);
     expect(screen.queryByRole("button", { name: "Данные" })).toBeNull();
 
     await inBookMode();
     expect(screen.queryByRole("button", { name: "Данные" })).toBeNull();
 
-    await renderWithStores(<PlayShell initialMode="journal" />);
+    await renderWithStores(<PlayShell initialMode="log" />);
     expect(screen.getByRole("button", { name: "Данные" })).toBeDefined();
   });
 
@@ -392,7 +392,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
 
-    // Уход в «Книгу» на учёт не влияет: признак приходит из журнала, а не из вкладки.
+    // Уход в «Книгу» на учёт не влияет: признак приходит из лога, а не из вкладки.
     await openMode(user, /^Книга/);
     await openMode(user, /^Игра/);
     expect(screen.getByLabelText("Действие доступно")).toBeDefined();
@@ -417,7 +417,7 @@ describe("«Знаки ограждения» вне боя (FR-153)", () => {
 
 });
 
-describe("режим «Журнал» (FR-114, FR-220)", () => {
+describe("режим «Лог» (FR-114, FR-220)", () => {
   it("в «Игре» и «Книге» кнопки отмены нет", async () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
@@ -427,19 +427,19 @@ describe("режим «Журнал» (FR-114, FR-220)", () => {
     expect(screen.queryByRole("button", { name: /^Вернуть/ })).toBeNull();
   });
 
-  it("переключение в «Журнал» показывает записи", async () => {
+  it("переключение в «Лог» показывает записи", async () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />);
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
-    await openJournal(user);
+    await openLog(user);
 
     expect(
-      within(screen.getByRole("list", { name: "Журнал событий" })).getByText(/Бой начался/),
+      within(screen.getByRole("list", { name: "Лог событий" })).getByText(/Бой начался/),
     ).toBeDefined();
   });
 
-  it("отмена из журнала возвращает потраченную ячейку", async () => {
+  it("отмена из лога возвращает потраченную ячейку", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
 
@@ -449,7 +449,7 @@ describe("режим «Журнал» (FR-114, FR-220)", () => {
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     expect(slotsLeft(stores, 1)).toBe(3);
 
-    await openJournal(user);
+    await openLog(user);
     await user.click(screen.getByRole("button", { name: /^Вернуть/ }));
 
     expect(slotsLeft(stores, 1)).toBe(4);
@@ -514,7 +514,7 @@ describe("одно дело — одно слово (FR-264)", () => {
     await renderWithStores(<PlayShell />);
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
-    await openJournal(user);
+    await openLog(user);
 
     // Пока оба дела звались отменой, соседство «Отменить» и «Отмена» обещало одно и то же.
     expect(screen.getByRole("button", { name: "Вернуть: Бой начался" })).toBeDefined();
@@ -523,7 +523,7 @@ describe("одно дело — одно слово (FR-264)", () => {
 });
 
 describe("лист концентрации (FR-084, FR-091)", () => {
-  it("снимает концентрацию вручную и пишет это в журнал", async () => {
+  it("снимает концентрацию вручную и пишет это в лог", async () => {
     await openPanel();
 
     await userEvent.click(screen.getByRole("button", { name: "Снять концентрацию" }));
@@ -531,7 +531,7 @@ describe("лист концентрации (FR-084, FR-091)", () => {
     expect(screen.queryByLabelText("Концентрация")).toBeNull();
     expect(screen.queryByRole("dialog", { name: /Концентрация/ })).toBeNull();
 
-    await openMode(userEvent.setup(), /^Журнал/);
+    await openMode(userEvent.setup(), /^Лог/);
     expect(
       screen.getByRole("button", { name: /Вернуть: Концентрация завершена: снята вручную/ }),
     ).toBeDefined();
@@ -548,8 +548,8 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.queryByRole("dialog", { name: /^Проверка концентрации/ })).toBeNull();
 
-    await openMode(userEvent.setup(), /^Журнал/);
-    // Последняя запись журнала — урон, а не результат проверки.
+    await openMode(userEvent.setup(), /^Лог/);
+    // Последняя запись лога — урон, а не результат проверки.
     expect(screen.getByRole("button", { name: /Вернуть: Получено урона: 24/ })).toBeDefined();
   });
 
@@ -563,10 +563,10 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
-    // Значок траты реакции есть только в бою — он проверяется до ухода в журнал.
+    // Значок траты реакции есть только в бою — он проверяется до ухода в лог.
     expect(screen.getByRole("button", { name: /^Реакции\. Реакция израсходована/ })).toBeDefined();
 
-    await openMode(userEvent.setup(), /^Журнал/);
+    await openMode(userEvent.setup(), /^Лог/);
     expect(
       screen.getByRole("button", { name: /Вернуть: Знаки ограждения/ }),
     ).toBeDefined();
@@ -580,7 +580,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     expect(screen.queryByLabelText("Концентрация")).toBeNull();
 
-    await openMode(userEvent.setup(), /^Журнал/);
+    await openMode(userEvent.setup(), /^Лог/);
     expect(
       screen.getByRole("button", {
         name: /Вернуть: Концентрация завершена: провалена проверка концентрации/,
@@ -591,7 +591,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 });
 
 describe("завершение активного эффекта (FR-091)", () => {
-  it("закрывает неконцентрационный эффект и пишет это в журнал", async () => {
+  it("закрывает неконцентрационный эффект и пишет это в лог", async () => {
     const character: CharacterState = {
       ...createThorne(),
       activeEffects: [
@@ -616,7 +616,7 @@ describe("завершение активного эффекта (FR-091)", () =
 
     expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
 
-    await openMode(userEvent.setup(), /^Журнал/);
+    await openMode(userEvent.setup(), /^Лог/);
     expect(
       screen.getByRole("button", { name: /Вернуть: Эффект завершён: Доспехи мага/ }),
     ).toBeDefined();
@@ -644,7 +644,7 @@ describe("ручной статус (FR-236)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Закрыть" }));
     expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
 
-    await openMode(userEvent.setup(), /^Журнал/);
+    await openMode(userEvent.setup(), /^Лог/);
     // Отменить можно только последнюю запись — снятие эффекта; начало осталось строкой без кнопки.
     expect(screen.getByText("Эффект начат: Опутанный")).toBeDefined();
     expect(
@@ -689,21 +689,21 @@ describe("отдых и бой: отказ приходит с причиной 
       screen.getByRole("button", { name: "Долгий отдых Пока идёт бой, долгий отдых недоступен" }),
     );
 
-    expect(shown(stores).journal.at(-1)?.kind).not.toBe("long_rest");
+    expect(shown(stores).log.at(-1)?.kind).not.toBe("long_rest");
     expect(screen.queryByRole("dialog", { name: "Долгий отдых?" })).toBeNull();
   });
 });
 
 describe("экран показывает только своё (FR-217, FR-220)", () => {
-  it("списка, фильтров и отметок схватки в журнале нет", async () => {
+  it("списка, фильтров и отметок схватки в логе нет", async () => {
     const user = userEvent.setup();
     // Бой отмечен начатым до перехода: до него переключатель называется «Начать бой», и проверка
     // одного имени «Окончить бой» прошла бы при любой утечке. Ищем все имена сразу.
     await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
-    await openJournal(user);
+    await openLog(user);
 
     expect(screen.queryByLabelText("Фильтры")).toBeNull();
-    // Различающая здесь — проверка «Фильтры»: список пуст и без утечки, потому что режим «Журнал»
+    // Различающая здесь — проверка «Фильтры»: список пуст и без утечки, потому что режим «Лог»
     // списка не отбирает вовсе. Проверка списка стоит страховкой от обратного.
     expect(screen.queryByRole("list", { name: /Заклинания/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Реакции/ })).toBeNull();
@@ -712,27 +712,27 @@ describe("экран показывает только своё (FR-217, FR-220)
     ).toBeNull();
   });
 
-  it("шапки ресурсов в журнале нет вовсе (FR-220)", async () => {
+  it("шапки ресурсов в логе нет вовсе (FR-220)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />);
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
-    await openJournal(user);
+    await openLog(user);
 
-    // Ни ячеек, ни чисел боя, ни номера раунда: журнал отвечает, что уже случилось.
+    // Ни ячеек, ни чисел боя, ни номера раунда: лог отвечает, что уже случилось.
     expect(screen.queryByRole("region", { name: "Ресурсы" })).toBeNull();
     expect(screen.queryByLabelText("Чем платить")).toBeNull();
     expect(screen.queryByLabelText("Действие доступно")).toBeNull();
     expect(screen.queryByText(/раунд/i)).toBeNull();
   });
 
-  it("действующего в журнале нет: журнал — только записи (FR-220)", async () => {
+  it("действующего в логе нет: лог — только записи (FR-220)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />, concentrating());
 
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
 
-    await openJournal(user);
+    await openLog(user);
 
     expect(screen.queryByRole("button", { name: /Концентрация/ })).toBeNull();
     expect(screen.queryByLabelText("Действует")).toBeNull();
@@ -805,8 +805,8 @@ describe("полоса обновления (FR-325)", () => {
     expect(place?.contains(panel)).toBe(false);
 
     // Пока полоса висит, навигация работает: другой у приложения нет.
-    await openMode(user, /^Журнал/);
-    expect(selected("Журнал")).toBe(true);
+    await openMode(user, /^Лог/);
+    expect(selected("Лог")).toBe(true);
     expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
   });
 

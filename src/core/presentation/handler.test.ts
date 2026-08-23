@@ -38,12 +38,12 @@ function handlerThat(
 }
 
 describe("чтение", () => {
-  it("отдаёт снимок с версией, проекциями и журналом", async () => {
+  it("отдаёт снимок с версией, проекциями и логом", async () => {
     const handler = handlerThat(async () => OPENED);
 
     const snapshot = await handler.read();
 
-    expect(snapshot).toMatchObject({ version: 0, journal: [] });
+    expect(snapshot).toMatchObject({ version: 0, log: [] });
     // Состав проекции проверяет её собственный прогон; здесь важно, что она доехала.
     expect(snapshot).toHaveProperty("sheet.name", "Торн");
   });

@@ -16,16 +16,22 @@ import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { parsedBySchema } from "@/core/domain/shared/schema";
 import { checkIntegrity } from "@/core/application/dataExchange";
-import { JOURNAL_KINDS } from "@/core/domain/journal/entry";
+import { LOG_KINDS } from "@/core/domain/log/entry";
 import type { Session } from "@/core/application/session";
 
 /** Версия формата хранения. Читать чужое будущее приложение не берётся. */
-const STORAGE_SCHEMA_VERSION = 2;
+const STORAGE_SCHEMA_VERSION = 3;
 
-const journalEntrySchema = z.object({
+/**
+ * Как записи звались в хранилище до версии 3. Сохранение с прежним именем читается, а не
+ * отвергается: переименование в приложении не имеет права стоить игроку сыгранного.
+ */
+const LEGACY_LOG_FIELD = "journal";
+
+const logEntrySchema = z.object({
   id: z.string().min(1),
   at: z.string().min(1),
-  kind: z.enum(JOURNAL_KINDS),
+  kind: z.enum(LOG_KINDS),
   summaryRu: z.string().min(1),
   /**
    * Снимок отмены — подмножество полей состояния, и проверяется он той же схемой: вид записи и форма
@@ -52,7 +58,7 @@ const persistedSessionSchema = z.object({
   schemaVersion: z.literal(STORAGE_SCHEMA_VERSION),
   savedAt: z.string().min(1),
   character: characterStateSchema,
-  journal: z.array(journalEntrySchema),
+  log: z.array(logEntrySchema),
   /**
    * Каталог заклинаний, загруженный игроком. Отсутствие поля означает встроенный каталог,
    * а не пустую книгу: копия встроенных карточек в хранилище заморозила бы книгу на дате установки
@@ -119,7 +125,7 @@ export function toPersisted(
     schemaVersion: STORAGE_SCHEMA_VERSION,
     savedAt,
     character: session.character,
-    journal: session.journal,
+    log: session.log,
     // Ключа нет вовсе, а не `undefined`: «поля нет» и «каталог пуст» — разные состояния.
     ...(spellCatalog === null ? {} : { spellCatalog: [...spellCatalog] }),
   };
@@ -129,7 +135,7 @@ export function toPersisted(
 export function fromPersisted(persisted: PersistedSession): Session {
   return {
     character: persisted.character,
-    journal: persisted.journal,
+    log: persisted.log,
   };
 }
 
@@ -143,6 +149,7 @@ export function fromPersisted(persisted: PersistedSession): Session {
  */
 export function parsePersisted(raw: unknown): PersistedSession {
   const stored = fieldsOf(raw);
+  const storedEntries = Array.isArray(stored.log) ? stored.log : stored[LEGACY_LOG_FIELD];
   const version = stored.schemaVersion;
   if (typeof version === "number" && version > STORAGE_SCHEMA_VERSION) {
     throw new StorageVersionError(version);
@@ -156,9 +163,9 @@ export function parsePersisted(raw: unknown): PersistedSession {
           schemaVersion: STORAGE_SCHEMA_VERSION,
           character: migrateCharacterState(stored.character),
           // Снимки отмены несут снаряжение прежней формы: без приведения отмена вернула бы его.
-          ...(Array.isArray(stored.journal)
+          ...(Array.isArray(storedEntries)
             ? {
-                journal: stored.journal.map((entry) =>
+                log: storedEntries.map((entry) =>
                   entry !== null && typeof entry === "object" && "undoPatch" in entry
                     ? { ...entry, undoPatch: migrateUndoPatch(entry.undoPatch) }
                     : entry,

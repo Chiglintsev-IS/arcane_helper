@@ -46,7 +46,7 @@ export function spell(id: string): Spell {
 
 export const testSpells = loadThorneSpells();
 
-/** Детерминированные часы: снимки и записи журнала не должны зависеть от времени прогона. */
+/** Детерминированные часы: снимки и записи лога не должны зависеть от времени прогона. */
 export function testClock(): Clock {
   let tick = 0;
   return {

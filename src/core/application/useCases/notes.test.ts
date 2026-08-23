@@ -16,7 +16,7 @@ function occasionOf(commandId: string): Occasion {
 }
 
 function session(): Session {
-  return { character: createThorne(), journal: [] };
+  return { character: createThorne(), log: [] };
 }
 
 function written(): Session {
@@ -28,27 +28,27 @@ function only(state: Session["character"]) {
 }
 
 describe("заметки про мир", () => {
-  it("заметка про мир журнала не занимает и переживает отмену (FR-320)", () => {
+  it("заметка про мир лога не занимает и переживает отмену (FR-320)", () => {
     const start = written();
 
-    expect(start.journal).toEqual([]);
+    expect(start.log).toEqual([]);
     expect(only(start.character)).toEqual({ id: "command-1-1", at: AT, text: BARON });
 
     // Отмена возвращает потраченное, а записанное словами не трогает: его в снимке отмены нет.
     const spent = spendSpellSlot(start, 1, occasionOf("command-2"));
     const returned = undoLast(spent);
 
-    expect(returned.journal).toEqual([]);
+    expect(returned.log).toEqual([]);
     expect(only(returned.character)).toEqual({ id: "command-1-1", at: AT, text: BARON });
   });
 
-  it("правка и удаление записи журнала не заводят (FR-320)", () => {
+  it("правка и удаление записи лога не заводят (FR-320)", () => {
     const start = written();
     const noteId = only(start.character)?.id ?? "";
 
     const edited = editWorldNote(start, noteId, "Барон обещал мост к весне");
 
-    expect(edited.journal).toEqual([]);
+    expect(edited.log).toEqual([]);
     expect(only(edited.character)).toEqual({
       id: noteId,
       at: AT,
@@ -57,7 +57,7 @@ describe("заметки про мир", () => {
 
     const removed = removeWorldNote(edited, noteId);
 
-    expect(removed.journal).toEqual([]);
+    expect(removed.log).toEqual([]);
     expect(Notes.of(removed.character).all).toEqual([]);
   });
 });

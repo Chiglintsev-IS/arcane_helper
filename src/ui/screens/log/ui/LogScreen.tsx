@@ -8,9 +8,9 @@ import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { usePreview } from "@/ui/shared/model/usePreview";
 
 import { DataSheet } from "@/ui/features/data-exchange/ui/DataSheet";
-import { Journal } from "@/ui/widgets/journal/ui/Journal";
+import { Log } from "@/ui/widgets/log/ui/Log";
 
-export function JournalScreen() {
+export function LogScreen() {
   const { session: sessionStore } = useStores();
   const snapshot = useSession((state) => state.snapshot)!;
 
@@ -26,8 +26,8 @@ export function JournalScreen() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
-      <Journal
-        entries={snapshot.journal}
+      <Log
+        entries={snapshot.log}
         onUndo={() => void execute({ kind: "undo_last" })}
         onData={() => setDataOpen(true)}
       />

@@ -140,7 +140,7 @@ describe("инвариант FR-022: до подтверждения ресур�
 });
 
 describe("подтверждение (FR-023, AC-11)", () => {
-  it("списывает выбранную ячейку, создаёт эффект и одну запись журнала", async () => {
+  it("списывает выбранную ячейку, создаёт эффект и одну запись лога", async () => {
     const { stores } = await renderWithStores(<GameScreen />, withTurnTracking());
 
     const user = await openWizard(/Доспехи мага/);
@@ -152,8 +152,8 @@ describe("подтверждение (FR-023, AC-11)", () => {
     expect(slotsLeft(stores, 1)).toBe(4);
     expect(shown(stores).effects).toHaveLength(1);
     // Две записи: «Бой начался» из `openWizard`, затем само применение.
-    expect(shown(stores).journal).toHaveLength(2);
-    expect(shown(stores).journal.at(-1)?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
+    expect(shown(stores).log).toHaveLength(2);
+    expect(shown(stores).log.at(-1)?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
     expect(shown(stores).turn.actionAvailable).toBe(false);
   });
 

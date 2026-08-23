@@ -54,7 +54,7 @@ export function toggleMaterial(session: Session, spell: Spell, occasion: Occasio
 /**
  * Заметка игрока к заклинанию: место для домашних правил мастера.
  *
- * Игрового состояния не меняет, поэтому записи журнала не создаёт и отмене не подлежит: журнал —
+ * Игрового состояния не меняет, поэтому записи лога не создаёт и отмене не подлежит: лог —
  * механизм возврата ресурсов, а не история правок текста.
  */
 export function setSpellNote(session: Session, spellId: string, note: string): Session {

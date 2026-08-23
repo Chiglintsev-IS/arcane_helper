@@ -67,7 +67,7 @@ describe("ход и схватка", () => {
   it("начало боя, новый ход и конец боя записываются", () => {
     const live = run([{ kind: "start_combat" }, { kind: "begin_turn" }, { kind: "end_combat" }]);
 
-    expect(live.session.journal.map((entry) => entry.kind)).toEqual([
+    expect(live.session.log.map((entry) => entry.kind)).toEqual([
       "combat_started",
       "turn_started",
       "combat_ended",
@@ -112,7 +112,7 @@ describe("жизнеспособность", () => {
   it("огонь подавляет особенности: признак доезжает до сценария", () => {
     const live = run([{ kind: "take_damage", damage: 6, fire: true }]);
 
-    expect(live.session.journal[0]?.summaryRu).toMatch(/огонь/);
+    expect(live.session.log[0]?.summaryRu).toMatch(/огонь/);
   });
 
   it("плата кровью и возврат максимума", () => {
@@ -122,13 +122,13 @@ describe("жизнеспособность", () => {
     expect(paid.session.character.hitPoints.bloodReduction).toBeGreaterThan(0);
 
     const recovered = run([{ kind: "recover_hit_point_maximum" }], paid);
-    expect(recovered.session.journal.at(-1)?.kind).toBe("hit_points_changed");
+    expect(recovered.session.log.at(-1)?.kind).toBe("hit_points_changed");
   });
 
   it("солнечный свет отмечается", () => {
     const live = run([{ kind: "set_sunlight", underSunlight: true }]);
 
-    expect(live.session.journal[0]?.kind).toBe("suppression_changed");
+    expect(live.session.log[0]?.kind).toBe("suppression_changed");
   });
 });
 
@@ -136,7 +136,7 @@ describe("отдых", () => {
   it("короткий отдых записывается", () => {
     const live = run([{ kind: "short_rest" }]);
 
-    expect(live.session.journal[0]?.kind).toBe("short_rest");
+    expect(live.session.log[0]?.kind).toBe("short_rest");
   });
 
   it("магическое восстановление принимает уровни ключами", () => {
@@ -186,7 +186,7 @@ describe("эффекты и концентрация", () => {
   it("концентрация завершается названной причиной", () => {
     const live = run([cast("web", 2), { kind: "end_concentration", reason: "failed_check" }]);
 
-    expect(live.session.journal.at(-1)?.summaryRu).toMatch(/провалена проверка/);
+    expect(live.session.log.at(-1)?.summaryRu).toMatch(/провалена проверка/);
   });
 
   it("причина конца концентрации не из списка отвергается", () => {
@@ -217,11 +217,11 @@ describe("книга", () => {
     );
   });
 
-  it("заметка к заклинанию сохраняется и журнала не касается", () => {
+  it("заметка к заклинанию сохраняется и лога не касается", () => {
     const live = run([{ kind: "set_spell_note", spellId: "shield", note: "перед боем" }]);
 
     expect(live.session.character.spellNotes.shield).toBe("перед боем");
-    expect(live.session.journal).toHaveLength(0);
+    expect(live.session.log).toHaveLength(0);
   });
 });
 
@@ -444,7 +444,7 @@ describe("сотворение", () => {
       },
     ]);
 
-    expect(live.session.journal[0]?.summaryRu).toMatch(/руна жизни/);
+    expect(live.session.log[0]?.summaryRu).toMatch(/руна жизни/);
     expect(live.session.character.runes.remaining).toBe(2);
   });
 
@@ -533,7 +533,7 @@ describe("ремесло", () => {
       spellCatalogSource: "built_in",
     });
 
-    expect(live.session.journal.at(-1)?.kind).toBe("batch_crafted");
+    expect(live.session.log.at(-1)?.kind).toBe("batch_crafted");
   });
 
   it("вид записывается, свойство раскрывается, вид забывается", () => {

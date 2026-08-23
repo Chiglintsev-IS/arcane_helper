@@ -51,7 +51,7 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
       at: note.at,
       text: note.text,
     })),
-    journal: live.session.journal.map((entry) => ({
+    log: live.session.log.map((entry) => ({
       id: entry.id,
       at: entry.at,
       kind: entry.kind,

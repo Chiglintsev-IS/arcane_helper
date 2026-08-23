@@ -216,7 +216,7 @@ async function castCantrip(page: Page, name: RegExp): Promise<void> {
  * раз.
  *
  * Сотворений несколько, а не одно: наверху списка стоит собранное из случившегося, и на чистом
- * журнале этого веса нет вовсе — бюджет, снятый до первого сотворения, меряет тот экран, которого
+ * логе этого веса нет вовсе — бюджет, снятый до первого сотворения, меряет тот экран, которого
  * в бою не бывает.
  */
 async function holdConcentrationAfterSeveralCasts(page: Page): Promise<void> {
@@ -333,7 +333,7 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^Действует: Доспехи мага/ })).toBeVisible();
 });
 
-test("undo returns the slot through the journal screen", async ({ page }) => {
+test("undo returns the slot through the log screen", async ({ page }) => {
   const slots = page.getByLabel("Чем платить");
 
   await page.getByRole("button", { name: /^Начать бой/ }).click();
@@ -343,14 +343,14 @@ test("undo returns the slot through the journal screen", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(slots.getByText("3/4")).toBeVisible();
 
-  // Отмена живёт только в журнале: в бою кнопки нет вовсе.
+  // Отмена живёт только в логе: в бою кнопки нет вовсе.
   await expect(page.getByRole("button", { name: /^Вернуть/ })).toBeHidden();
-  await switchMode(page, /^Журнал/);
+  await switchMode(page, /^Лог/);
   await page.getByRole("button", { name: /^Вернуть/ }).click();
-  // Ячейку возвращают из журнала, а видят в бою: шапки ресурсов в журнале нет.
+  // Ячейку возвращают из лога, а видят в бою: шапки ресурсов в логе нет.
   await expect(page.getByRole("button", { name: "Вернуть: Бой начался" })).toBeVisible();
 
-  // Возврат в бой застаёт тот же бой: журнал его не заканчивает.
+  // Возврат в бой застаёт тот же бой: лог его не заканчивает.
   await switchMode(page, /^Игра/);
   await expect(slots.getByText("4/4")).toBeVisible();
   await expect(page.getByRole("button", { name: "Окончить бой" })).toBeVisible();
@@ -498,11 +498,11 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("экран реакций");
   await page.getByRole("button", { name: "Закрыть" }).click();
 
-  // Журнал — седьмой экран сверки: в нём стоит единственная кнопка отмены, и её
+  // Лог — седьмой экран сверки: в нём стоит единственная кнопка отмены, и её
   // доступное имя строится из текста записи, а не задано вручную.
-  await switchMode(page, /^Журнал/);
-  await expect(page.getByRole("list", { name: "Журнал событий" })).toBeVisible();
-  await scan("экран журнала");
+  await switchMode(page, /^Лог/);
+  await expect(page.getByRole("list", { name: "Лог событий" })).toBeVisible();
+  await scan("экран лога");
 
   // Лист — восьмой экран сверки: блоки персонажа, шторка правки и переключатели внутри неё.
   await switchToSheet(page);
@@ -579,7 +579,7 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
     await switchMode(page, /^Игра/);
     await scan(`${scheme}: игра`);
 
-    for (const mode of ["Книга", "Журнал", "Вещи", "Привал", "Лист", "Ремесло", "Заметки"]) {
+    for (const mode of ["Книга", "Лог", "Вещи", "Привал", "Лист", "Ремесло", "Заметки"]) {
       await switchMode(page, new RegExp(`^${mode}`));
       await scan(`${scheme}: ${mode.toLowerCase()}`);
     }

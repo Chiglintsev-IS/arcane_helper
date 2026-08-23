@@ -673,7 +673,7 @@ describe("приведение состояния версии 1", () => {
       expect(characterStateSchema.safeParse(migrateCharacterState(legacy)).success).toBe(true);
     });
 
-    it("прочитанное состояние их не несёт: экономию хода считает журнал, режим держит оболочка", () => {
+    it("прочитанное состояние их не несёт: экономию хода считает лог, режим держит оболочка", () => {
       const state = characterStateSchema.parse(migrateCharacterState(legacy));
       expect(state).not.toHaveProperty("reactionAvailable");
       expect(state).not.toHaveProperty("turnTracking");

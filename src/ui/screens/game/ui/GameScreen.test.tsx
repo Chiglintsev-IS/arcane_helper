@@ -69,7 +69,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 
   it("вне боя не показывает экономию действий (FR-001, FR-143)", async () => {
-    // Вне боя ходов нет: правила отвечают «всё доступно» независимо от журнала, и
+    // Вне боя ходов нет: правила отвечают «всё доступно» независимо от лога, и
     // значки сообщали бы не состояние, а неправду.
     await renderWithStores(<GameScreen />);
 
@@ -127,7 +127,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
   it("израсходованная реакция видна ярлыком, а её состояние — доступным именем (FR-144)", async () => {
     const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
 
-    // Реакция считается потраченной по журналу: отмечаем её расход применением «Щита».
+    // Реакция считается потраченной по логу: отмечаем её расход применением «Щита».
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
@@ -439,7 +439,7 @@ describe("реакции (FR-060, FR-061, FR-062)", () => {
 
     expect(screen.getByRole("dialog", { name: /Применение/ })).toBeDefined();
     // До подтверждения состояние не тронуто.
-    expect(shown(stores).journal).toHaveLength(0);
+    expect(shown(stores).log).toHaveLength(0);
   });
 
   it("израсходованная реакция не прячет варианты, а объясняет причину (FR-031)", async () => {
@@ -504,7 +504,7 @@ describe("конец боя (FR-216, FR-221)", () => {
 
     // 15, а не 12: начало боя — это первый ход, и регенерация тролля на нём сработала.
     expect(shown(stores).sheet.hitPoints.current).toBe(15);
-    expect(shown(stores).journal.at(-1)?.kind).toBe("combat_started");
+    expect(shown(stores).log.at(-1)?.kind).toBe("combat_started");
   });
 
   it("при полном здоровье бой всё равно можно закончить, но лечения не обещает", async () => {
@@ -520,7 +520,7 @@ describe("конец боя (FR-216, FR-221)", () => {
     expect(within(sheet).queryByText(/здоровье поднимется/)).toBeNull();
 
     await user.click(within(sheet).getByRole("button", { name: "Да, бой закончен" }));
-    expect(shown(stores).journal.at(-1)?.kind).toBe("combat_ended");
+    expect(shown(stores).log.at(-1)?.kind).toBe("combat_ended");
   });
 
   it("отметки схватки (FR-221)", async () => {
@@ -709,7 +709,7 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     expect(screen.getByText(/Атака заклинанием, модификатор \+8/)).toBeDefined();
   });
 
-  it("заметка сохраняется в состоянии и не попадает в журнал", async () => {
+  it("заметка сохраняется в состоянии и не попадает в лог", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />);
 
@@ -717,7 +717,7 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     await user.type(screen.getByLabelText("Заметка"), "гасит и стрелу");
 
     expect(shown(stores).spells.find((row) => row.id === "shield")?.note).toBe("гасит и стрелу");
-    expect(shown(stores).journal).toHaveLength(0);
+    expect(shown(stores).log).toHaveLength(0);
   });
 
 });

@@ -164,7 +164,7 @@ describe("открытие сессии", () => {
     const snapshot = await second.api.open();
 
     expect(slotsLeft(snapshot, 2)).toBe(2);
-    expect(snapshot.journal).toHaveLength(1);
+    expect(snapshot.log).toHaveLength(1);
   });
 });
 
@@ -293,7 +293,7 @@ describe("узнавание повтора", () => {
     await api.execute(attemptEnvelope);
 
     expect(slotsLeft(await shown(api), 1)).toBe(3);
-    expect((await shown(api)).journal).toHaveLength(1);
+    expect((await shown(api)).log).toHaveLength(1);
   });
 
   it("повтор отвечает нынешним снимком, а не отказом", async () => {
@@ -367,14 +367,14 @@ describe("каталог заклинаний (FR-123)", () => {
     expect((await shown(second.api)).spells.map((row) => row.id)).toContain("thorne-signature");
   });
 
-  it("импорт начинает журнал заново: отменять нечего", async () => {
+  it("импорт начинает лог заново: отменять нечего", async () => {
     const { api } = connect();
     await api.open();
     await api.execute(castMageArmor(1));
 
     await api.execute(envelope({ kind: "import_snapshot", raw: renamedCatalogFile() }));
 
-    expect((await shown(api)).journal).toHaveLength(0);
+    expect((await shown(api)).log).toHaveLength(0);
     expect(slotsLeft(await shown(api), 1)).toBe(4);
   });
 
@@ -467,7 +467,7 @@ describe("сброс", () => {
     await api.execute(envelope({ kind: "reset" }));
 
     expect(slotsLeft(await shown(api), 1)).toBe(4);
-    expect((await shown(api)).journal).toHaveLength(0);
+    expect((await shown(api)).log).toHaveLength(0);
     expect((await repository.load())?.character.spellSlots[1]?.remaining).toBe(4);
   });
 
@@ -513,6 +513,6 @@ describe("до открытия сессии", () => {
 
     await api.execute(envelope({ kind: "long_rest" }));
 
-    expect((await shown(api)).journal).toHaveLength(1);
+    expect((await shown(api)).log).toHaveLength(1);
   });
 });

@@ -50,7 +50,7 @@ export function maximumHitDiceForCast(
  * Что вообще может выпасть на стольких костях: от числа костей до числа костей на грань.
  *
  * Приложение кубики не бросает и принимает результат от игрока — значит обязано знать, какой
- * результат возможен: опечатка в вводе иначе уходит в состояние и в журнал.
+ * результат возможен: опечатка в вводе иначе уходит в состояние и в лог.
  */
 export function hitDiceRollRange(count: number, size: number): { minimum: number; maximum: number } {
   if (!Number.isInteger(count) || count <= 0) {

@@ -12,7 +12,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { addItem, adjustBagCount, adjustWornCount, editItem, editMoney, removeItem } from "./equipment";
 
-const session = () => ({ character: createThorne(), journal: [] });
+const session = () => ({ character: createThorne(), log: [] });
 
 function testOccasion(commandId = "command-1"): Occasion {
   let tick = 0;
@@ -43,23 +43,23 @@ function spellCard(id: string): Spell {
 const mageArmor = spellCard("mage-armor");
 
 describe("правка снаряжения", () => {
-  it("одноимённая находка пополняет запас, и журнал называет получившееся количество", () => {
+  it("одноимённая находка пополняет запас, и лог называет получившееся количество", () => {
     const stacked = addItem(addItem(session(), potions, occasion), potions, occasion);
 
     expect(Equipment.of(stacked.character).bagCount(POTION_ID)).toBe(2);
-    expect(stacked.journal[0]?.summaryRu).toBe("Добавлено: Зелье лечения (стало 1)");
-    expect(stacked.journal[1]?.summaryRu).toBe("Добавлено: Зелье лечения (стало 2)");
+    expect(stacked.log[0]?.summaryRu).toBe("Добавлено: Зелье лечения (стало 1)");
+    expect(stacked.log[1]?.summaryRu).toBe("Добавлено: Зелье лечения (стало 2)");
     // Пополнение обратимо, как всякая правка: запас возвращается к прежнему числу.
     expect(Equipment.of(undoLast(stacked).character).bagCount(POTION_ID)).toBe(1);
   });
 
-  it("правка вещи меняет её саму и обратима через журнал (FR-235)", () => {
+  it("правка вещи меняет её саму и обратима через лог (FR-235)", () => {
     const carried = addItem(session(), ring, occasion);
     const noted = editItem(carried, { id: RING_ID, nameRu: ring.nameRu, kind: "gear", note: "фамильное" }, occasion);
 
     const item = Items.of(noted.character).find(RING_ID);
     expect(item?.note).toBe("фамильное");
-    expect(noted.journal[1]?.summaryRu).toBe("Правка вещи: Кольцо защиты");
+    expect(noted.log[1]?.summaryRu).toBe("Правка вещи: Кольцо защиты");
     expect(Items.of(undoLast(noted).character).find(RING_ID)?.note).toBeUndefined();
   });
 
@@ -92,22 +92,22 @@ describe("правка снаряжения", () => {
 
     // Снятое кольцо перестаёт считаться: остаётся только прибавка уже надетой мантии и плаща.
     expect(Character.of(removedFromBody.character).sheet.value("armorClass")).toBe(14);
-    expect(removedFromBody.journal.at(-1)?.summaryRu).toBe("Снято: Кольцо защиты");
+    expect(removedFromBody.log.at(-1)?.summaryRu).toBe("Снято: Кольцо защиты");
     expect(Character.of(undoLast(removedFromBody).character).sheet.value("armorClass")).toBe(15);
   });
 
   it("надевание лежащего в сумке названо своим словом", () => {
     const carried = addItem(session(), ring, occasion);
-    expect(adjustWornCount(carried, RING_ID, 1, occasion).journal.at(-1)?.summaryRu).toBe("Надето: Кольцо защиты");
+    expect(adjustWornCount(carried, RING_ID, 1, occasion).log.at(-1)?.summaryRu).toBe("Надето: Кольцо защиты");
   });
 
-  it("вещь убирается только когда её запас пуст, и это своя запись журнала", () => {
+  it("вещь убирается только когда её запас пуст, и это своя запись лога", () => {
     const added = addItem(session(), ring, occasion);
     const emptied = adjustBagCount(added, RING_ID, -1, occasion);
     const gone = removeItem(emptied, RING_ID, occasion);
 
     expect(Items.of(gone.character).find(RING_ID)).toBeUndefined();
-    expect(gone.journal.at(-1)?.summaryRu).toBe("Убрано: Кольцо защиты");
+    expect(gone.log.at(-1)?.summaryRu).toBe("Убрано: Кольцо защиты");
   });
 
   it("вещь с непустым запасом не убирается, отказ называет причину", () => {
@@ -127,12 +127,12 @@ describe("правка снаряжения", () => {
     expect(() => adjustBagCount(session(), "нет-такой", -1, occasion)).toThrow(/столько не потратить/);
   });
 
-  it("расход тратит по одной, журнал называет остаток в сумке, отмена возвращает (FR-239)", () => {
+  it("расход тратит по одной, лог называет остаток в сумке, отмена возвращает (FR-239)", () => {
     const withThree = adjustBagCount(addItem(session(), potions, occasion), POTION_ID, 2, occasion);
     const spent = adjustBagCount(withThree, POTION_ID, -1, occasion);
 
     expect(Equipment.of(spent.character).bagCount(POTION_ID)).toBe(2);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения (в сумке 2)");
+    expect(spent.log.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения (в сумке 2)");
 
     const undone = undoLast(spent);
     expect(Equipment.of(undone.character).bagCount(POTION_ID)).toBe(3);
@@ -143,7 +143,7 @@ describe("правка снаряжения", () => {
     const spent = adjustBagCount(single, POTION_ID, -1, occasion);
 
     expect(Equipment.of(spent.character).bagCount(POTION_ID)).toBe(0);
-    expect(spent.journal.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения (в сумке 0)");
+    expect(spent.log.at(-1)?.summaryRu).toBe("Потрачено: Зелье лечения (в сумке 0)");
   });
 
   it("пополнение — то же приращение с другим словом (FR-239)", () => {
@@ -151,14 +151,14 @@ describe("правка снаряжения", () => {
     const refilled = adjustBagCount(stacked, POTION_ID, 2, occasion);
 
     expect(Equipment.of(refilled.character).bagCount(POTION_ID)).toBe(3);
-    expect(refilled.journal.at(-1)?.summaryRu).toBe("Пополнено: Зелье лечения (в сумке 3)");
+    expect(refilled.log.at(-1)?.summaryRu).toBe("Пополнено: Зелье лечения (в сумке 3)");
   });
 
-  it("кошелёк правится итогом, журнал называет только сдвинувшиеся монеты (FR-242)", () => {
+  it("кошелёк правится итогом, лог называет только сдвинувшиеся монеты (FR-242)", () => {
     const paid = editMoney(session(), { gold: 215, silver: 30, copper: 0 }, occasion);
 
     expect(paid.character.equipment.money.gold).toBe(215);
-    expect(paid.journal[0]?.summaryRu).toBe("Деньги: зм 0 → 215, см 0 → 30");
+    expect(paid.log[0]?.summaryRu).toBe("Деньги: зм 0 → 215, см 0 → 30");
 
     const undone = undoLast(paid);
     expect(undone.character.equipment.money.gold).toBe(0);
@@ -166,7 +166,7 @@ describe("правка снаряжения", () => {
 
   it("правка кошелька без изменений так и называется", () => {
     const same = editMoney(session(), { gold: 0, silver: 0, copper: 0 }, occasion);
-    expect(same.journal[0]?.summaryRu).toBe("Деньги: без изменений");
+    expect(same.log[0]?.summaryRu).toBe("Деньги: без изменений");
   });
 
   it("снятая фокусировка возвращает требование материала", () => {

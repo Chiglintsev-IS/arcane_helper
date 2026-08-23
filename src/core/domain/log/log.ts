@@ -1,20 +1,20 @@
 /**
- * Журнал: последовательность записей, дополняемая только с конца, и отмена последней.
+ * Лог: последовательность записей, дополняемая только с конца, и отмена последней.
  *
  * Снимок отмены вычисляется сравнением состояния до и после, а не пишется руками под каждую
  * операцию. Поэтому новая операция не требует писать обратную к себе, а отмена остаётся одной
  * функцией на все случаи.
  *
- * Чьё это состояние и какие его поля обратимы, журнал не знает: список сравниваемых полей приходит
- * при создании. Знай он это сам, обратимость персонажа стала бы правилом журнала, и запись о чём
- * угодно другом потребовала бы второго журнала.
+ * Чьё это состояние и какие его поля обратимы, лог не знает: список сравниваемых полей приходит
+ * при создании. Знай он это сам, обратимость персонажа стала бы правилом лога, и запись о чём
+ * угодно другом потребовала бы второго лога.
  */
 
 import { DomainError } from "@/core/domain/shared/errors";
-import type { JournalEntry, Recorded } from "./entry";
+import type { LogEntry, Recorded } from "./entry";
 
-/** Глубина журнала: механизм обратимости, а не история кампании. */
-const JOURNAL_LIMIT = 100;
+/** Глубина лога: механизм обратимости, а не история кампании. */
+const LOG_LIMIT = 100;
 
 /**
  * Поля, значения которых изменились. Сравнение по сериализации: состояние заведомо сериализуемо,
@@ -34,31 +34,31 @@ function changedFields<TState extends object>(
   return patch;
 }
 
-export class Journal<TState extends object = Record<string, unknown>> {
+export class Log<TState extends object = Record<string, unknown>> {
   private constructor(
-    private readonly entries: readonly JournalEntry<TState>[],
+    private readonly entries: readonly LogEntry<TState>[],
     /** Поля, обратимые отменой. Чьи они и почему именно эти — знает вызывающий. */
     private readonly mutableKeys: readonly (keyof TState)[],
   ) {}
 
   static of<TState extends object>(
-    entries: readonly JournalEntry<TState>[],
+    entries: readonly LogEntry<TState>[],
     mutableKeys: readonly (keyof TState)[],
-  ): Journal<TState> {
-    return new Journal(entries, mutableKeys);
+  ): Log<TState> {
+    return new Log(entries, mutableKeys);
   }
 
-  get list(): readonly JournalEntry<TState>[] {
+  get list(): readonly LogEntry<TState>[] {
     return this.entries;
   }
 
-  get last(): JournalEntry<TState> | undefined {
+  get last(): LogEntry<TState> | undefined {
     return this.entries.at(-1);
   }
 
   /**
    * Пустой снимок допустим: заговор вне схватки не тратит ни ячейки, ни действия, но остаётся
-   * применением заклинания, которое журнал обязан записать. Отмена такой записи просто убирает
+   * применением заклинания, которое лог обязан записать. Отмена такой записи просто убирает
    * строку.
    */
   append(
@@ -66,8 +66,8 @@ export class Journal<TState extends object = Record<string, unknown>> {
     after: TState,
     recorded: Recorded,
     stamp: { id: string; at: string; commandId?: string },
-  ): Journal<TState> {
-    const entry: JournalEntry<TState> = {
+  ): Log<TState> {
+    const entry: LogEntry<TState> = {
       id: stamp.id,
       at: stamp.at,
       kind: recorded.kind,
@@ -80,24 +80,24 @@ export class Journal<TState extends object = Record<string, unknown>> {
       ...(recorded.damage === undefined ? {} : { damage: recorded.damage }),
     };
     const entries = [...this.entries, entry];
-    return new Journal(
-      entries.length > JOURNAL_LIMIT ? entries.slice(-JOURNAL_LIMIT) : entries,
+    return new Log(
+      entries.length > LOG_LIMIT ? entries.slice(-LOG_LIMIT) : entries,
       this.mutableKeys,
     );
   }
 
   /** Отмена последней записи: применить снимок и снять строку. */
-  undoLast(state: TState): { state: TState; journal: Journal<TState> } {
+  undoLast(state: TState): { state: TState; log: Log<TState> } {
     const last = this.last;
     if (last === undefined) {
-      throw new DomainError("Журнал пуст, отменять нечего");
+      throw new DomainError("Лог пуст, отменять нечего");
     }
     if (last.undoPatch === null) {
       throw new DomainError("У записи нет снимка отмены: она осталась историей, возвращать нечего");
     }
     return {
       state: { ...state, ...last.undoPatch },
-      journal: new Journal(this.entries.slice(0, -1), this.mutableKeys),
+      log: new Log(this.entries.slice(0, -1), this.mutableKeys),
     };
   }
 }

@@ -544,7 +544,7 @@ describe("заявка на применение", () => {
 });
 
 describe("инвариант FR-022: до подтверждения состояние не меняется", () => {
-  it("полный проход мастера не трогает ни персонажа, ни журнал", () => {
+  it("полный проход мастера не трогает ни персонажа, ни лог", () => {
     const session: Session = createSession(createThorne());
     const before = structuredClone(session);
     const row = rowOf(mageArmor, session.character);

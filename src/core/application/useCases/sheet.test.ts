@@ -14,7 +14,7 @@ import {
   editMarks,
 } from "./sheet";
 
-const session = () => ({ character: createThorne(), journal: [] });
+const session = () => ({ character: createThorne(), log: [] });
 
 /** Детерминированные часы: чистые функции время не изобретают. */
 function testOccasion(commandId = "command-1"): Occasion {
@@ -147,10 +147,10 @@ describe("смена уровня", () => {
     expect(after.character.hitDice?.remaining).toBe(6);
   });
 
-  it("одна запись журнала, и отмена возвращает и лист, и ресурсы", () => {
+  it("одна запись лога, и отмена возвращает и лист, и ресурсы", () => {
     const before = session();
     const after = changeLevel(before, { level: 8, hitPointMaximumBase: 66 }, occasion);
-    expect(after.journal).toHaveLength(1);
+    expect(after.log).toHaveLength(1);
 
     const undone = undoLast(after);
     expect(undone.character.level).toBe(7);
@@ -190,13 +190,13 @@ describe("смена уровня", () => {
 });
 
 describe("правка листа", () => {
-  it("характеристика записывается в журнал и меняет производные", () => {
+  it("характеристика записывается в лог и меняет производные", () => {
     const after = editAbility(
       session(),
       { ability: "intelligence", score: 20, saveProficient: true, skills: {} },
       occasion,
     );
-    expect(after.journal).toHaveLength(1);
+    expect(after.log).toHaveLength(1);
     expect(Character.of(after.character).sheet.value("spellSaveDc")).toBe(17);
   });
 
@@ -233,21 +233,21 @@ describe("правка листа", () => {
     expect(added.character.saveProficiencies).toEqual(["strength", "intelligence"]);
   });
 
-  it("справочные поля журнала не создают", () => {
+  it("справочные поля лога не создают", () => {
     const after = editIdentity(session(), { age: 142, species: "Лунный тролль" });
-    expect(after.journal).toHaveLength(0);
+    expect(after.log).toHaveLength(0);
     expect(after.character.age).toBe(142);
   });
 
   it("отметки мастера записываются", () => {
     const after = editMarks(session(), { exhaustion: 2, inspiration: true }, occasion);
     expect(after.character.exhaustion).toBe(2);
-    expect(after.journal).toHaveLength(1);
+    expect(after.log).toHaveLength(1);
   });
 
   it("снятое истощение записывается общей подписью", () => {
     const after = editMarks(session(), { exhaustion: 0, inspiration: true }, occasion);
-    expect(after.journal[0]?.summaryRu).toBe("Отметки мастера изменены");
+    expect(after.log[0]?.summaryRu).toBe("Отметки мастера изменены");
   });
 
   it("здоровье правится базой и снижением мастера", () => {
@@ -258,7 +258,7 @@ describe("правка листа", () => {
       bloodReduction: 0,
       masterReduction: 10,
     });
-    expect(after.journal[0]?.summaryRu).toBe("Максимум хитов: 60");
+    expect(after.log[0]?.summaryRu).toBe("Максимум хитов: 60");
   });
 
   it("недопустимая характеристика отвергается схемой, состояние не тронуто", () => {

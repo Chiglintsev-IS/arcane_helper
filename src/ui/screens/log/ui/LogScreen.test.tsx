@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
 /**
- * «Журнал» на настоящем состоянии: моков нет.
+ * «Лог» на настоящем состоянии: моков нет.
  *
  * Обмен данными живёт здесь: это операция над всем сохранением, а не над одним числом. Отмена
- * записи и то, чего в журнале нет, проверяются у оболочки — сделать запись можно только в «Игре».
+ * записи и то, чего в логе нет, проверяются у оболочки — сделать запись можно только в «Игре».
  */
 
 import { screen } from "@testing-library/react";
@@ -16,13 +16,13 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { exportSnapshot } from "@/core/application/dataExchange";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
-import { JournalScreen } from "@/ui/screens/journal/ui/JournalScreen";
+import { LogScreen } from "@/ui/screens/log/ui/LogScreen";
 import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 /** Выгрузка приложения, снятая с текущего состояния: её же и загружаем обратно. */
 async function openData(character: CharacterState = createThorne()) {
   const user = userEvent.setup();
-  const rendered = await renderWithStores(<JournalScreen />, character);
+  const rendered = await renderWithStores(<LogScreen />, character);
   await user.click(screen.getByRole("button", { name: "Данные" }));
   return { user, ...rendered };
 }
@@ -51,8 +51,8 @@ describe("выгрузка и загрузка (FR-120, FR-121, FR-122)", () => 
     await user.click(screen.getByRole("button", { name: "Загрузить" }));
 
     expect(slotsLeft(stores, 1)).toBe(4);
-    // Журнал начинается заново: записи прежнего персонажа к новому состоянию не относятся.
-    expect(shown(stores).journal).toEqual([]);
+    // Лог начинается заново: записи прежнего персонажа к новому состоянию не относятся.
+    expect(shown(stores).log).toEqual([]);
   });
 
 });

@@ -1,7 +1,7 @@
 /**
  * Разбор прочитанного из хранилища на настоящем сохранении игрока.
  *
- * Слепок снят с телефона: версия 1, журнал с записями о бое, ходе и реакции. Поэтому он лежит здесь
+ * Слепок снят с телефона: версия 1, лог с записями о бое, ходе и реакции. Поэтому он лежит здесь
  * целиком, а не удобной выжимкой — сохранение не открывалось именно тем, чего выжимка не показала бы.
  */
 
@@ -63,7 +63,7 @@ const PLAYER_SAVE = {
     spellNotes: {},
     roleplayPreferences: {},
   },
-  journal: [
+  log: [
     {
       id: "f1adbf6b-73b8-43c1-ac1a-2468fd9bcc34",
       at: "2026-07-31T15:29:26.868Z",
@@ -106,7 +106,7 @@ describe("настоящее сохранение игрока", () => {
     expect(parsed.character.level).toBe(7);
     expect(parsed.character.hitPoints.current).toBe(60);
     expect(parsed.character.spellSlots[4]?.remaining).toBe(1);
-    expect(parsed.journal.map((entry) => entry.summaryRu)).toEqual([
+    expect(parsed.log.map((entry) => entry.summaryRu)).toEqual([
       "Учёт хода включён",
       "Бой начат",
       "Щит — реакцией",
@@ -116,23 +116,23 @@ describe("настоящее сохранение игрока", () => {
   it("снимок отмены теряет поля, которых состояние не знает, и остаётся тем, что знает", () => {
     const parsed = parsePersisted(PLAYER_SAVE);
 
-    expect(parsed.journal[0]?.undoPatch).toBeNull();
-    expect(parsed.journal[1]?.undoPatch).toBeNull();
-    expect(parsed.journal[2]?.undoPatch?.spellSlots?.[1]?.remaining).toBe(4);
-    expect(parsed.journal[2]?.undoPatch).not.toHaveProperty("reactionAvailable");
+    expect(parsed.log[0]?.undoPatch).toBeNull();
+    expect(parsed.log[1]?.undoPatch).toBeNull();
+    expect(parsed.log[2]?.undoPatch?.spellSlots?.[1]?.remaining).toBe(4);
+    expect(parsed.log[2]?.undoPatch).not.toHaveProperty("reactionAvailable");
   });
 
   it("записи без идентификатора попытки читаются: версия формата от него не выросла", () => {
     const parsed = parsePersisted(PLAYER_SAVE);
 
-    expect(parsed.journal).toHaveLength(3);
-    expect(parsed.journal[2]).not.toHaveProperty("commandId");
+    expect(parsed.log).toHaveLength(3);
+    expect(parsed.log[2]).not.toHaveProperty("commandId");
   });
 
   it("идентификатор попытки переживает запись и чтение", () => {
-    const [first, ...rest] = PLAYER_SAVE.journal;
-    const marked = { ...PLAYER_SAVE, journal: [{ ...first, commandId: "command-1" }, ...rest] };
+    const [first, ...rest] = PLAYER_SAVE.log;
+    const marked = { ...PLAYER_SAVE, log: [{ ...first, commandId: "command-1" }, ...rest] };
 
-    expect(parsePersisted(marked).journal[0]?.commandId).toBe("command-1");
+    expect(parsePersisted(marked).log[0]?.commandId).toBe("command-1");
   });
 });

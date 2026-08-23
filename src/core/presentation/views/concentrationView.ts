@@ -29,14 +29,14 @@ import { saveStatId } from "@/core/domain/shared/stats";
 import type { LiveSession, Session } from "@/core/application/session";
 
 /**
- * Урон, на который ещё не ответили проверкой: последняя запись журнала, если это был урон.
+ * Урон, на который ещё не ответили проверкой: последняя запись лога, если это был урон.
  *
  * Последняя, а не любая: ответом на проверку служит следующее действие — потраченная руна,
  * оборванная концентрация или что угодно ещё, — и запись, легшая после урона, означает, что вопрос
- * закрыт. Раньше начала концентрации такая запись не встаёт: её начало журнал записывает тоже.
+ * закрыт. Раньше начала концентрации такая запись не встаёт: её начало лог записывает тоже.
  */
 function unansweredDamage(session: Session): number | undefined {
-  return session.journal.at(-1)?.damage;
+  return session.log.at(-1)?.damage;
 }
 
 function checkView(damage: number, save: number): ConcentrationCheckView {
@@ -76,7 +76,7 @@ export function toConcentrationView(live: LiveSession): ConcentrationView | unde
   // исчезнуть с экрана из-за этого не вправе.
   const spell = live.spellCatalog.find((candidate) => candidate.id === effect.spellId);
   const damage = spell === undefined ? undefined : damageView(spell, effect, character);
-  const start = startRound(session.journal, effect.startedAt);
+  const start = startRound(session.log, effect.startedAt);
   const save = Character.of(character).sheet.value(saveStatId("constitution"));
   const unanswered = unansweredDamage(session);
 

@@ -42,7 +42,7 @@ describe("панель режимов отмечает показанное (FR-
     const list = within(await openModes("play"));
 
     // Все восемь стоят одинаково: второго этажа у навигации нет.
-    const titles = ["Игра", "Книга", "Журнал", "Лист", "Вещи", "Ремесло", "Привал", "Заметки"];
+    const titles = ["Игра", "Книга", "Лог", "Лист", "Вещи", "Ремесло", "Привал", "Заметки"];
     const rows = list.getAllByRole("button").filter((row) => row.textContent !== "Закрыть");
 
     expect(rows).toHaveLength(titles.length);

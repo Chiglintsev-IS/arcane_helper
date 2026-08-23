@@ -145,13 +145,13 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     expect(screen.queryByRole("button", { name: /^(Начать бой|Окончить бой|Новый ход)/ })).toBeNull();
   });
 
-  it("короткий отдых доступен кнопкой и пишется в журнал", async () => {
+  it("короткий отдых доступен кнопкой и пишется в лог", async () => {
     const user = userEvent.setup();
     const { stores } = await atCamp();
 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
 
-    expect(shown(stores).journal.at(-1)?.kind).toBe("short_rest");
+    expect(shown(stores).log.at(-1)?.kind).toBe("short_rest");
   });
 
   it("долгий отдых требует подтверждения и возвращает ячейки (FR-133)", async () => {
@@ -173,7 +173,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await user.click(screen.getByRole("button", { name: /Долгий отдых/ }));
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
-    expect(shown(stores).journal).toHaveLength(0);
+    expect(shown(stores).log).toHaveLength(0);
     expect(slotsLeft(stores, 1)).toBe(2);
   });
 

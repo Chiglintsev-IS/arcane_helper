@@ -61,7 +61,7 @@ function stocked(portionsEach: number): Session {
         portionsEach - 1,
         occasion,
       ),
-    { character: known, journal: [] },
+    { character: known, log: [] },
   );
 }
 
@@ -83,21 +83,21 @@ function poisonous(): Session {
         5,
         occasion,
       ),
-    { character: known, journal: [] },
+    { character: known, log: [] },
   );
 }
 
 describe("изготовление состава", () => {
-  it("изготовление списывает все виды одной записью журнала", () => {
+  it("изготовление списывает все виды одной записью лога", () => {
     const before = stocked(6);
-    const entriesBefore = before.journal.length;
+    const entriesBefore = before.log.length;
 
     const crafted = craftBatch(before, { formula: STANDARD, portions: 4, rolled: 15 }, occasion);
 
     expect(bagCount(crafted, MOON_HERB)).toBe(2);
     expect(bagCount(crafted, CRIMSON_ROOT)).toBe(2);
-    expect(crafted.journal).toHaveLength(entriesBefore + 1);
-    expect(crafted.journal.at(-1)?.summaryRu).toBe(
+    expect(crafted.log).toHaveLength(entriesBefore + 1);
+    expect(crafted.log.at(-1)?.summaryRu).toBe(
       "Изготовлено: Лечение здоровья, 5 единиц. Проверка 22 против 10. Истрачено по 4 порции: Лунная трава, Багровый корень",
     );
 
@@ -145,7 +145,7 @@ describe("проверка разработки", () => {
     // Первое условие: те же виды. Порядок выбора рецепта не меняет, замена вида — меняет.
     const reordered = { ...STANDARD, kinds: [CRIMSON_ROOT, MOON_HERB] };
     const repeated = craftBatch(developed, { formula: reordered, portions: 1 }, occasion);
-    expect(repeated.journal.at(-1)?.summaryRu).toBe(
+    expect(repeated.log.at(-1)?.summaryRu).toBe(
       "Изготовлено: Лечение здоровья, 1 единица. Истрачено по 1 порции: Багровый корень, Лунная трава",
     );
 
@@ -175,7 +175,7 @@ describe("проверка разработки", () => {
     const hybrid = poisonous();
     const failed = craftBatch(hybrid, { formula: HYBRID, portions: 1, rolled: 11 }, occasion);
 
-    expect(failed.journal.at(-1)?.summaryRu).toContain("Не вышло: Лечение здоровья. Проверка 15");
+    expect(failed.log.at(-1)?.summaryRu).toContain("Не вышло: Лечение здоровья. Проверка 15");
   });
 
   it("провал тратит заложенное и рецепта не записывает", () => {
@@ -183,7 +183,7 @@ describe("проверка разработки", () => {
     const failed = craftBatch(stock, { formula: STANDARD, portions: 2, rolled: 2 }, occasion);
 
     expect(bagCount(failed, MOON_HERB)).toBe(4);
-    expect(failed.journal.at(-1)?.summaryRu).toBe(
+    expect(failed.log.at(-1)?.summaryRu).toBe(
       "Не вышло: Лечение здоровья. Проверка 9 против 10. Истрачено по 2 порции: Лунная трава, Багровый корень",
     );
     expect(() => craftBatch(failed, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
@@ -202,7 +202,7 @@ describe("проверка разработки", () => {
       { formula: STANDARD, portions: 1, rolled: 1, mishapRolled: 5 },
       occasion,
     );
-    expect(mishap.journal.at(-1)?.summaryRu).toBe(
+    expect(mishap.log.at(-1)?.summaryRu).toBe(
       "Авария: Лечение здоровья. Смесь воздействует на область радиусом 1 метр. Истрачено по 1 порции: Лунная трава, Багровый корень",
     );
   });
@@ -210,22 +210,22 @@ describe("проверка разработки", () => {
   it("натуральная двадцать при успехе называет свою награду", () => {
     const crafted = craftBatch(stocked(6), { formula: STANDARD, portions: 1, rolled: 20 }, occasion);
 
-    expect(crafted.journal.at(-1)?.summaryRu).toContain("Натуральная двадцать");
+    expect(crafted.log.at(-1)?.summaryRu).toContain("Натуральная двадцать");
   });
 });
 
 describe("полнота знания о виде", () => {
-  it("отметка о полноте знания возвращается журналом", () => {
+  it("отметка о полноте знания возвращается логом", () => {
     // Запас тут ни при чём: отметка — про знание о виде, и сумку она не спрашивает.
     const before: Session = {
       character: withIngredientKnowledge(createThorne(), MOON_HERB, [HEALING]),
-      journal: [],
+      log: [],
     };
 
     const marked = markPropertiesExhausted(before, { nameRu: MOON_HERB, exhausted: true }, occasion);
 
     expect(exhaustedOf(marked, MOON_HERB)).toBe(true);
-    expect(marked.journal.at(-1)?.summaryRu).toBe(`У вида больше нет свойств: ${MOON_HERB}`);
+    expect(marked.log.at(-1)?.summaryRu).toBe(`У вида больше нет свойств: ${MOON_HERB}`);
 
     // Ошибочно сказанное за столом возвращается так же, как всё прочее записанное.
     expect(exhaustedOf(undoLast(marked), MOON_HERB)).toBe(false);

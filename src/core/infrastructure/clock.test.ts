@@ -7,7 +7,7 @@ describe("системные часы", () => {
     expect(Number.isNaN(Date.parse(systemClock().now()))).toBe(false);
   });
 
-  it("дают разные идентификаторы: на одинаковых журнал потерял бы записи", () => {
+  it("дают разные идентификаторы: на одинаковых лог потерял бы записи", () => {
     const clock = systemClock();
 
     expect(clock.nextId()).not.toBe(clock.nextId());

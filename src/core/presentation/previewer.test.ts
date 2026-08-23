@@ -58,7 +58,7 @@ describe("здоровье", () => {
     answerQuestion(live, { kind: "health_preview", maximumBase: 70, masterReduction: 0 }, NOW);
 
     expect(live.session.character).toBe(before);
-    expect(live.session.journal).toHaveLength(0);
+    expect(live.session.log).toHaveLength(0);
   });
 });
 
@@ -284,7 +284,7 @@ describe("сотворение", () => {
     }, NOW);
 
     expect(live.session.character).toBe(before);
-    expect(live.session.journal).toHaveLength(0);
+    expect(live.session.log).toHaveLength(0);
   });
 });
 

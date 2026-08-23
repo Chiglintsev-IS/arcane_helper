@@ -128,7 +128,7 @@ describe("«Вещи» (FR-304)", () => {
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(shown(stores).bag.money.find((coin) => coin.currency === "gold")?.amount).toBe(215);
-    expect(shown(stores).journal.at(-1)?.summaryRu).toBe("Деньги: зм 0 → 215");
+    expect(shown(stores).log.at(-1)?.summaryRu).toBe("Деньги: зм 0 → 215");
   });
 
   it("«Сумка»: вещь без прибавок меняет категорию, а не получает отказ про прибавки (FR-235)", async () => {

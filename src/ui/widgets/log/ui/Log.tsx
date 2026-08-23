@@ -1,5 +1,5 @@
 /**
- * Список записей журнала: единственное место, где отменяют, и единственный вход к данным.
+ * Список записей лога: единственное место, где отменяют, и единственный вход к данным.
  *
  * Список плоский и свежее сверху: отменяемая запись всегда первая и не требует прокрутки. Кнопка
  * возврата стоит только на ней — отменяется лишь последнее действие, а кнопка на остальных записях
@@ -26,13 +26,13 @@ import { timeRu } from "@/ui/shared/lib/timeRu";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-export function Journal({
+export function Log({
   entries,
   onUndo,
   onData,
 }: {
-  /** Записи в порядке хранения: старое первым, как их держит журнал. */
-  entries: Snapshot["journal"];
+  /** Записи в порядке хранения: старое первым, как их держит лог. */
+  entries: Snapshot["log"];
   onUndo: () => void;
   /** Выгрузка и загрузка: копию делают, разбирая случившееся, а не выбирая, чем сходить. */
   onData: () => void;
@@ -67,7 +67,7 @@ export function Journal({
       {newestFirst.length === 0 ? (
         <p className="text-sm text-ink-quiet">Пока ничего не произошло.</p>
       ) : (
-        <ul aria-label="Журнал событий" className="flex flex-col gap-2">
+        <ul aria-label="Лог событий" className="flex flex-col gap-2">
           {newestFirst.map((entry, index) => (
             <li
               key={entry.id}

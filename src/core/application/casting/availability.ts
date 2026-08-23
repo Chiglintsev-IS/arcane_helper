@@ -299,7 +299,7 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
   const { slotLevel } = payment;
   if (slotLevel < spell.level) {
     // Ячейка ниже уровня заклинания сотворения не даёт: списать её значило бы потратить ресурс
-    // впустую и записать в журнал заклинание, которого не было.
+    // впустую и записать в лог заклинание, которого не было.
     return [
       {
         code: "slot_too_low",

@@ -177,7 +177,7 @@ function Variants({
         </div>
       )}
 
-      {/* Отключённое не исчезает: предпочтения журналом не отменяются, и вернуть их больше нечем. */}
+      {/* Отключённое не исчезает: предпочтения логом не отменяются, и вернуть их больше нечем. */}
       {hidden.length === 0 ? null : (
         <details className="text-xs not-italic text-ink-quiet">
           <summary className="min-h-11 cursor-pointer py-3">Отключено: {hidden.length}</summary>

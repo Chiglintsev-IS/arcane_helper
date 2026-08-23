@@ -168,8 +168,8 @@ describe("состав по режимам (FR-203, FR-220, FR-230)", () => {
     expect(spellsForScreen(inFight, "book")).toEqual(inFight);
   });
 
-  it("в «Журнале» и «Листе» списка нет", () => {
-    for (const mode of ["journal", "sheet", "things", "rest"] as const) {
+  it("в «Логе» и «Листе» списка нет", () => {
+    for (const mode of ["log", "sheet", "things", "rest"] as const) {
       expect(spellsForScreen(testSpellRows(), mode), mode).toEqual([]);
     }
   });

@@ -45,7 +45,7 @@ export function StartOver({ onConfirm }: { onConfirm: () => void }) {
       {asking ? (
         <ConfirmSheet
           title="Начать заново?"
-          body="Персонаж, журнал и загруженные карточки будут заменены чистыми. Вернуть их получится только из копии, забранной до очистки."
+          body="Персонаж, лог и загруженные карточки будут заменены чистыми. Вернуть их получится только из копии, забранной до очистки."
           confirmLabel="Удалить и начать"
           cancelLabel={BUTTON_LABELS.dismiss}
           onConfirm={() => {

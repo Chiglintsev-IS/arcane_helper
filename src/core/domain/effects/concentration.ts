@@ -18,12 +18,12 @@ function roundsHint(rounds: number): string {
   return rounds > MAXIMUM_USEFUL_ROUNDS ? "" : ` (${withPlural(rounds, ROUND_FORMS)})`;
 }
 
-/** Записи журнала в том объёме, который нужен для счёта раундов. */
+/** Записи лога в том объёме, который нужен для счёта раундов. */
 type TurnMark = { at: string; kind: string };
 
 type StartRound = {
   round: number;
-  /** Начало вытеснено из обрезанного журнала: число — нижняя граница, а не точное значение. */
+  /** Начало вытеснено из обрезанного лога: число — нижняя граница, а не точное значение. */
   approximate: boolean;
 };
 

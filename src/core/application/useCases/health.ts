@@ -63,7 +63,7 @@ export function regenerationNote(healed: number): string[] {
   return healed > 0 ? [`регенерация +${healed}`] : [];
 }
 
-/** Строки журнала одного часа: что вернулось максимуму и что долечила регенерация. */
+/** Строки лога одного часа: что вернулось максимуму и что долечила регенерация. */
 function hourNotes(returned: number, healed: number): string[] {
   return [...(returned > 0 ? [`максимум +${returned}`] : []), ...regenerationNote(healed)];
 }

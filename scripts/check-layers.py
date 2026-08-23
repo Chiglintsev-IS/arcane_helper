@@ -141,7 +141,7 @@ ALLOWED_CONTEXT_EDGES = {
     ("spellbook", "catalog"),
     ("arcana", "catalog"),
     ("effects", "catalog"),
-    ("encounter", "journal"),
+    ("encounter", "log"),
     ("sheet", "character"),
     ("sheet", "equipment"),
     ("sheet", "effects"),

@@ -15,7 +15,7 @@ import type { ActiveEffect, EffectsState } from "./schema";
 
 type EffectBoardState = EffectsState;
 
-/** Доска после истечения и то, что с неё ушло: подпись в журнале обязана назвать снятое. */
+/** Доска после истечения и то, что с неё ушло: подпись в логе обязана назвать снятое. */
 type Expiry = { board: EffectBoard; expired: ActiveEffect[] };
 
 /** Отчего концентрация кончилась — перечнем: тем же списком сужается слово, пришедшее снаружи. */
@@ -75,7 +75,7 @@ export class EffectBoard {
     );
   }
 
-  /** Снимает концентрацию и называет, чью: подпись в журнале обязана назвать заклинание. */
+  /** Снимает концентрацию и называет, чью: подпись в логе обязана назвать заклинание. */
   endConcentration(): { board: EffectBoard; spellId: string } {
     const current = this.state.concentration;
     if (current === undefined) {
@@ -101,7 +101,7 @@ export class EffectBoard {
 
   /**
    * Истечение раундовых эффектов. Сколько раундов прошло, решает вызывающий: раунды считаются по
-   * журналу, а доска эффектов про журнал не знает.
+   * логу, а доска эффектов про лог не знает.
    */
   expire(elapsedRounds: (effect: ActiveEffect) => number): Expiry {
     return this.dropRounds((effect, rounds) => elapsedRounds(effect) >= rounds);

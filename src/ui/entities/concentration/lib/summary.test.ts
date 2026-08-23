@@ -78,7 +78,7 @@ describe("describeConcentration (FR-084)", () => {
     expect(summary.mechanicsLabel).toBe("60 футов · Атака d20+8 · Урон 2d8 (холод)");
   });
 
-  it("помечает раунд неточным, если начало вытеснено из журнала", () => {
+  it("помечает раунд неточным, если начало вытеснено из лога", () => {
     expect(summaryOf({ startApproximate: true }).startLabel).toBe("раунд ≥ 1");
   });
 
