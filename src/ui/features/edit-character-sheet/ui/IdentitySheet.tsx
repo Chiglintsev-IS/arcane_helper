@@ -41,7 +41,7 @@ export function IdentitySheet({
   const [subclass, setSubclass] = useState(sheet.subclass);
   const [ageText, setAgeText] = useState(String(sheet.age));
   const [size, setSize] = useState(sheet.size);
-  const [speedText, setSpeedText] = useState(String(sheet.speed));
+  const [speedText, setSpeedText] = useState(String(sheet.speedBase));
 
   const required = useRequiredNumbers();
   const age = requiredFieldNumber(ageText);

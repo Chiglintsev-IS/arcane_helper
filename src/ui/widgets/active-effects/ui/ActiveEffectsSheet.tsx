@@ -190,6 +190,10 @@ export function ActiveEffectsSheet({
                 <span>
                   <span aria-hidden="true">◈</span> {effect.nameRu}
                   {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
+                  {/* Число, которым эффект держится: руна названа именем, а действует прибавкой. */}
+                  {effect.noteRu === undefined ? null : (
+                    <span className="block text-xs text-ink-quiet">{effect.noteRu}</span>
+                  )}
                   {/*
                    * Что придётся делать каждый ход, пока эффект держится. Приложение бросок не
                    * делает и таймера не ведёт — оно напоминает, что бросок нужен.

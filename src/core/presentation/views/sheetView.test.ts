@@ -21,6 +21,36 @@ function ability(id: string) {
   return found;
 }
 
+describe("скорость листа приходит действующей (FR-334)", () => {
+  /** Прибавка к скорости приходит действующим: чем она заведена, лист не спрашивает. */
+  function hastened() {
+    const base = createThorne();
+    return toSheetView({
+      ...base,
+      activeEffects: [
+        {
+          id: "effect-1",
+          nameRu: "Руна ветра",
+          startedAt: "2026-07-31T18:00:00.000Z",
+          duration: { type: "rounds", value: 1 },
+          isConcentration: false,
+          slotLevelUsed: 2,
+          contributions: [{ stat: "speed", kind: "bonus", value: 10 }],
+          endConditionRu: "Держится до начала вашего следующего хода.",
+        },
+      ],
+    });
+  }
+
+  it("прибавка видна тем же числом, каким по столу и ходят", () => {
+    expect(hastened().speed).toBe(thorne().speed + 10);
+  });
+
+  it("правится при этом своя скорость: чужая прибавка в неё не запекается", () => {
+    expect(hastened().speedBase).toBe(thorne().speedBase);
+  });
+});
+
 describe("величины", () => {
   it("характеристики едут в порядке правил, каждая со своим модификатором", () => {
     expect(thorne().abilities.map((entry) => entry.id)).toEqual([

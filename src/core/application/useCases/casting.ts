@@ -15,6 +15,7 @@ import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import {
   lifeRuneTemporaryHitPoints,
   RUNE_LABEL,
+  runeTrace,
   type Rune,
   type RuneTarget,
 } from "@/core/domain/arcana/runes";
@@ -191,6 +192,31 @@ function buildEffect(request: CastRequest, occasion: Occasion): ActiveEffect | n
   };
 }
 
+/**
+ * След пробуждённой руны на доске: имя руны, её число и мгновение, которым срок кончится.
+ *
+ * Имя эффекта — имя самой руны: в списке действующего игрок ищет её тем же словом, каким
+ * прикладывал. Уровня заклинания у следа нет — есть уровень сотворения, от которого руна считана.
+ */
+function buildRuneEffect(request: CastRequest, occasion: Occasion): ActiveEffect | null {
+  const level = castLevelOf(request.payment);
+  if (request.rune === undefined || level === undefined) return null;
+  const trace = runeTrace(request.rune, level);
+  if (trace === null) return null;
+
+  return {
+    id: occasion.nextId(),
+    nameRu: RUNE_LABEL[request.rune],
+    startedAt: occasion.now(),
+    duration: { type: "rounds", value: trace.rounds },
+    isConcentration: false,
+    slotLevelUsed: level,
+    contributions: trace.contributions,
+    endConditionRu: trace.endConditionRu,
+    note: trace.noteRu,
+  };
+}
+
 /** Подтверждённое применение: оплата, действие, руна, концентрация, эффект — одной записью. */
 export function castSpell(session: Session, request: CastRequest, occasion: Occasion): Session {
   const { spell } = request;
@@ -225,19 +251,20 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
   const burned = burnMaterial(root, spell);
   root = burned.root;
 
-  const effect = buildEffect(request, occasion);
   /*
  * Раундовый эффект вне схватки не успевает начаться: раундов нет, значит эффект истёк бы в тот же
  * миг, в который родился. Ячейка при этом уже потрачена — сотворить игрок выбрал сам, и молча
- * вернуть её значило бы решать за него, что он ошибся.
+ * вернуть её значило бы решать за него, что он ошибся. Со следом руны то же и по той же причине.
  */
-  const expiresImmediately =
-    effect !== null && effect.duration.type === "rounds" && !inFight(session);
-  const expiredNote = expiresImmediately
-    ? ` · «${spell.nameRu}» истёк сразу: вне боя раундов нет`
-    : "";
+  const inCombat = inFight(session);
+  let expiredNote = "";
 
-  if (effect !== null && !expiresImmediately) {
+  for (const effect of [buildEffect(request, occasion), buildRuneEffect(request, occasion)]) {
+    if (effect === null) continue;
+    if (effect.duration.type === "rounds" && !inCombat) {
+      expiredNote += ` · «${effect.nameRu}» истёк сразу: вне боя раундов нет`;
+      continue;
+    }
     root = root.withEffects(root.effects.start(effect, occasion.now()));
   }
 
@@ -273,7 +300,7 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
       slotLevel: level,
       // Вне схватки ход не отслеживается, значит и тратить нечего: записанное действие
       // предъявлялось бы игроку в бою, потому что до отметки о начале боя границы в логе нет.
-      ...(used === undefined || !inFight(session) ? {} : { actionUsed: used }),
+      ...(used === undefined || !inCombat ? {} : { actionUsed: used }),
     },
     occasion,
   );

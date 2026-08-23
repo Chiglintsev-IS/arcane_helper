@@ -584,6 +584,65 @@ describe("руна при сотворении (FR-151)", () => {
   });
 });
 
+describe("след руны на доске эффектов (FR-334)", () => {
+  /** «Шаг в туман» мгновенен: на доске остаётся только след руны, и считать нечего больше. */
+  function withRune(rune: "life" | "war" | "wind", from = withTurnTracking(session)): Session {
+    return castSpell(
+      from,
+      { spell: spell("misty-step"), mode: "normal", payment: { kind: "slot", slotLevel: 2 }, rune },
+      occasion,
+    );
+  }
+
+  function speedOf(current: Session): number {
+    return Character.of(current.character).sheet.value("speed");
+  }
+
+  it("ветер встаёт строкой, поднимает скорость и снимается началом хода", () => {
+    const cast = withRune("wind");
+
+    expect(cast.character.activeEffects).toHaveLength(1);
+    expect(cast.character.activeEffects[0]?.nameRu).toBe("Руна ветра");
+    expect(cast.character.activeEffects[0]?.note).toContain("+10 футов скорости");
+    expect(speedOf(cast)).toBe(speedOf(session) + 10);
+
+    const next = beginTurn(cast, occasion);
+    expect(next.character.activeEffects).toEqual([]);
+    expect(speedOf(next)).toBe(speedOf(session));
+    expect(next.log.at(-1)?.summaryRu).toContain("«Руна ветра» истёк");
+  });
+
+  it("война переживает ваш следующий ход и снимается тем, что за ним", () => {
+    const first = beginTurn(withRune("war"), occasion);
+    expect(first.character.activeEffects).toHaveLength(1);
+    // Скорость чужая прибавка не двигает: война кладётся на существо, а не на лист Торна.
+    expect(speedOf(first)).toBe(speedOf(session));
+
+    const second = beginTurn(first, occasion);
+    expect(second.character.activeEffects).toEqual([]);
+  });
+
+  it("жизнь строки не заводит: её оставленное — временные хиты", () => {
+    const cast = withRune("life");
+
+    expect(cast.character.activeEffects).toEqual([]);
+    expect(cast.character.temporaryHitPoints).toBe(10);
+  });
+
+  it("вне боя след истекает тем же мгновением, и лог это называет", () => {
+    const cast = withRune("wind", session);
+
+    expect(cast.character.activeEffects).toEqual([]);
+    expect(cast.log.at(-1)?.summaryRu).toContain("«Руна ветра» истёк сразу");
+    // Руна всё равно потрачена: пробудить её игрок выбрал сам.
+    expect(cast.character.runes.remaining).toBe(2);
+  });
+
+  it("след снимается отменой вместе с сотворением (FR-111)", () => {
+    expect(undoLast(withRune("wind")).character.activeEffects).toEqual([]);
+  });
+});
+
 describe("руна жизни начисляет временные хиты (FR-152)", () => {
   function withRune(rune: "life" | "war" | "wind", slotLevel: number, from = session): Session {
     return castSpell(
@@ -631,7 +690,7 @@ describe("руна жизни начисляет временные хиты (FR
     expect(cast.log.at(-1)?.summaryRu).toContain("15 временных хитов другому");
   });
 
-  it("руны войны и ветра состояния Торна не меняют: чужих бросков приложение не ведёт", () => {
+  it("руны войны и ветра временных хитов не дают: их след держится сроком, а не запасом", () => {
     expect(withRune("war", 4).character.temporaryHitPoints).toBe(0);
     expect(withRune("wind", 4).character.temporaryHitPoints).toBe(0);
   });

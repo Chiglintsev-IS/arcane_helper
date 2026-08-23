@@ -143,7 +143,10 @@ export const sheetViewSchema = z.object({
   species: text,
   age: whole,
   size: word,
+  /** Скорость, которая действует прямо сейчас: с прибавками вещей и действующего. */
   speed: whole,
+  /** Скорость, которую правят: своя скорость персонажа, без чужих прибавок. */
+  speedBase: whole,
   className: text,
   level: whole,
   subclass: text,
@@ -387,6 +390,8 @@ export const activeEffectViewSchema = z.object({
   isConcentration: z.boolean(),
   /** Двигает ли эффект Класс Доспеха: «Доспехи мага» на союзника видно только так. */
   changesArmorClass: z.boolean(),
+  /** Число, которым эффект держится за столом; нет вовсе — оно уже названо самим эффектом. */
+  noteRu: word.optional(),
   /** Что придётся делать каждый ход, пока эффект держится; нет вовсе — эффект висит сам. */
   repeatableAction: z.object({ label: word, description: word }).optional(),
 });

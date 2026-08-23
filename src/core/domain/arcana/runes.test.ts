@@ -6,6 +6,7 @@ import {
   RUNES,
   RUNE_LABEL,
   runeEffect,
+  runeTrace,
   runeUnavailability,
 } from "@/core/domain/arcana/runes";
 
@@ -85,5 +86,45 @@ describe("runeUnavailability", () => {
 
   it("без рун называет, когда они вернутся", () => {
     expect(runeUnavailability(1, 0)).toBe("Рун не осталось, вернутся долгим отдыхом");
+  });
+});
+
+describe("runeTrace (FR-334)", () => {
+  it("руна жизни следа не оставляет: её оставленное — временные хиты", () => {
+    expect(runeTrace("life", 3)).toBeNull();
+  });
+
+  it("ветер держится один раунд: срок кончается началом вашего следующего хода", () => {
+    const trace = runeTrace("wind", 2);
+
+    expect(trace?.rounds).toBe(1);
+    expect(trace?.endConditionRu).toContain("до начала вашего следующего хода");
+  });
+
+  it("война держится два раунда: начало вашего следующего хода срок переживает", () => {
+    const trace = runeTrace("war", 2);
+
+    expect(trace?.rounds).toBe(2);
+    expect(trace?.endConditionRu).toContain("до конца вашего следующего хода");
+  });
+
+  it("ветер приносит листу прибавку к скорости, война — ничего", () => {
+    expect(runeTrace("wind", 3)?.contributions).toEqual([
+      { stat: "speed", kind: "bonus", value: 15 },
+    ]);
+    expect(runeTrace("war", 3)?.contributions).toEqual([]);
+  });
+
+  it("число следа то же, что названо мастеру: формула одна", () => {
+    for (const rune of RUNES) {
+      const trace = runeTrace(rune, 4);
+      if (trace === null) continue;
+      expect(runeEffect(rune, 4)).toContain(trace.noteRu);
+    }
+  });
+
+  it("уровень вне диапазона ячеек — ошибка, а не выдуманный след", () => {
+    expect(() => runeTrace("wind", 0)).toThrow(DomainError);
+    expect(() => runeTrace("war", 10)).toThrow(DomainError);
   });
 });
