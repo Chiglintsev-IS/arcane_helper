@@ -109,7 +109,7 @@ describe("сторы для браузера", () => {
     const stores = createBrowserStores();
     await stores.session.getState().hydrate();
 
-    expect(shown(stores).spells).toHaveLength(30);
+    expect(shown(stores).spells).toHaveLength(33);
     expect(shown(stores).catalogSource).toBe("built_in");
   });
 });

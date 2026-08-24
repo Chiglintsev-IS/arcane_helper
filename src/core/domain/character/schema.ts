@@ -24,7 +24,6 @@ const roleplayProfileSchema = z.object({
   magicThemes: z.array(nonEmpty),
   speechStyle: nonEmpty,
   gestureStyle: nonEmpty,
-  preferredElements: z.array(nonEmpty),
   prohibitedThemes: z.array(nonEmpty),
   maximumPhraseLength: z.number().int().positive(),
 });

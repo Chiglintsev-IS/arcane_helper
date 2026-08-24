@@ -295,7 +295,7 @@ test("filter by casting time", async ({ page }) => {
   // Снимаем тот же переключатель: кнопки сброса нет — выбранное снимают там, где поставили.
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
   // Вся книга Торна с заговорами и одна строка-не-заклинание: последняя подсказка.
-  await expect(list.getByRole("listitem")).toHaveCount(31);
+  await expect(list.getByRole("listitem")).toHaveCount(34);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {

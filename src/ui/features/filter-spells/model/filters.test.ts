@@ -142,8 +142,8 @@ describe("filterSpells: значения одной категории соед�
     const both = ids(filterSpells(book(), filters({ prices: [0, 1] })));
 
     expect(onlyCantrips).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
-    // Четыре заговора и семь заклинаний первого уровня.
-    expect(both).toHaveLength(11);
+    // Четыре заговора и восемь заклинаний первого уровня.
+    expect(both).toHaveLength(12);
   });
 });
 

@@ -36,7 +36,6 @@ const VERSION_ONE = {
     magicThemes: [],
     speechStyle: "…",
     gestureStyle: "…",
-    preferredElements: [],
     prohibitedThemes: [],
     maximumPhraseLength: 15,
   },

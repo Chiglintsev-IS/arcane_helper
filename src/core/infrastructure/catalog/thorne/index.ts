@@ -17,6 +17,7 @@ import absorbElements from "./spells/absorb-elements.json";
 import alarm from "./spells/alarm.json";
 import arcaneLock from "./spells/arcane-lock.json";
 import arcaneVigor from "./spells/arcane-vigor.json";
+import catapult from "./spells/catapult.json";
 import counterspell from "./spells/counterspell.json";
 import detectMagic from "./spells/detect-magic.json";
 import dispelMagic from "./spells/dispel-magic.json";
@@ -42,6 +43,8 @@ import spiderClimb from "./spells/spider-climb.json";
 import stormSphere from "./spells/storm-sphere.json";
 import tashasMindWhip from "./spells/tashas-mind-whip.json";
 import thunderStep from "./spells/thunder-step.json";
+import tidalWave from "./spells/tidal-wave.json";
+import vitriolicSphere from "./spells/vitriolic-sphere.json";
 import web from "./spells/web.json";
 
 /** Сырые карточки в порядке уровня, затем по алфавиту. Импорты явные: каталог сам себя не соберёт. */
@@ -56,6 +59,7 @@ const RAW_SPELLS: readonly unknown[] = [
   featherFall,
   mageArmor,
   magicMissile,
+  catapult,
   alarm,
   detectMagic,
 
@@ -76,10 +80,12 @@ const RAW_SPELLS: readonly unknown[] = [
   haste,
   sleetStorm,
   intellectFortress,
+  tidalWave,
 
   polymorph,
   stormSphere,
   iceStorm,
+  vitriolicSphere,
 ];
 
 export class ContentError extends Error {

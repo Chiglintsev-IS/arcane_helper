@@ -75,13 +75,14 @@ const RAW: unknown = {
   inspiration: false,
 
   cantripIds: ["shocking-grasp", "ray-of-frost", "message", "mending"],
-  // Двадцать шесть записей книги: состав назван игроком.
+  // Двадцать девять записей книги: состав назван игроком.
   spellbookSpellIds: [
     "shield",
     "absorb-elements",
     "feather-fall",
     "mage-armor",
     "magic-missile",
+    "catapult",
     "alarm",
     "detect-magic",
 
@@ -102,10 +103,12 @@ const RAW: unknown = {
     "haste",
     "sleet-storm",
     "intellect-fortress",
+    "tidal-wave",
 
     "polymorph",
     "storm-sphere",
     "ice-storm",
+    "vitriolic-sphere",
   ],
   /**
    * Стартовый набор подготовки — 11 из 11.
@@ -137,7 +140,6 @@ const RAW: unknown = {
     magicThemes: ["руны", "молнии", "холод", "алхимические символы"],
     speechStyle: "Короткие формулы и язвительные замечания",
     gestureStyle: "Рисует знаки пальцами, посохом или мелом",
-    preferredElements: ["электричество", "холод", "сила"],
     prohibitedThemes: ["огонь"],
     maximumPhraseLength: 15,
   },

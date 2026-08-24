@@ -72,7 +72,6 @@ function thorne(): unknown {
       magicThemes: ["руны", "молнии", "холод", "алхимические символы"],
       speechStyle: "Короткие формулы и язвительные замечания",
       gestureStyle: "Рисует знаки пальцами, посохом или мелом",
-      preferredElements: ["электричество", "холод", "сила"],
       prohibitedThemes: ["огонь"],
       maximumPhraseLength: 15,
     },

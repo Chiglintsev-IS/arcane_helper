@@ -46,16 +46,16 @@ function roleplayTexts(spell: (typeof spells)[number]): string[] {
 }
 
 describe("книга заклинаний Торна", () => {
-  it("состоит из 30 карточек: 4 заговора и 26 заклинаний по уровням", () => {
+  it("состоит из 33 карточек: 4 заговора и 29 заклинаний по уровням", () => {
     // Состав назван игроком. Числа держат этот тест и реестр
     // подготовки: карточка, забытая в загрузчике, иначе исчезает молча.
-    expect(spells).toHaveLength(30);
+    expect(spells).toHaveLength(33);
     const byLevel = (level: number) => spells.filter((spell) => spell.level === level).length;
     expect(byLevel(CANTRIP_LEVEL)).toBe(4);
-    expect(byLevel(1)).toBe(7);
+    expect(byLevel(1)).toBe(8);
     expect(byLevel(2)).toBe(8);
-    expect(byLevel(3)).toBe(8);
-    expect(byLevel(4)).toBe(3);
+    expect(byLevel(3)).toBe(9);
+    expect(byLevel(4)).toBe(4);
   });
 
   it("у каждой карточки указан источник (ADR-0020)", () => {
