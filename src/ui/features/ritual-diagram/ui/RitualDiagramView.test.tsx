@@ -9,10 +9,10 @@ import { RitualDiagramView } from "./RitualDiagramView";
 
 describe("полноэкранный вид схемы (FR-192)", () => {
   it("показывает название ритуала, схему и подпись", () => {
-    const row = testSpellRow("identify");
+    const row = testSpellRow("detect-magic");
     render(<RitualDiagramView row={row} onClose={() => {}} />);
 
-    expect(screen.getByRole("dialog", { name: /Схема ритуала «Опознание»/ })).toBeDefined();
+    expect(screen.getByRole("dialog", { name: /Схема ритуала «Обнаружение магии»/ })).toBeDefined();
     expect(screen.getByRole("img", { name: "Схема ритуала" })).toBeDefined();
     const caption = row.card.ritualDiagram?.captionRu;
     if (caption === undefined) throw new Error("у «Опознания» нет подписи схемы");
@@ -21,7 +21,7 @@ describe("полноэкранный вид схемы (FR-192)", () => {
 
   it("закрывается кнопкой", async () => {
     const onClose = vi.fn();
-    render(<RitualDiagramView row={testSpellRow("identify")} onClose={onClose} />);
+    render(<RitualDiagramView row={testSpellRow("detect-magic")} onClose={onClose} />);
     await userEvent.click(screen.getByRole("button", { name: "Закрыть" }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -34,7 +34,7 @@ describe("полноэкранный вид схемы (FR-192)", () => {
   });
 
   it("кнопки печати нет: смысл в том, чтобы вести линию рукой", () => {
-    render(<RitualDiagramView row={testSpellRow("identify")} onClose={() => {}} />);
+    render(<RitualDiagramView row={testSpellRow("detect-magic")} onClose={() => {}} />);
     expect(screen.queryByRole("button", { name: /Печать|Печатать/ })).toBeNull();
   });
 });

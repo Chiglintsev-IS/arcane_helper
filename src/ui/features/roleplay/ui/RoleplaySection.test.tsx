@@ -110,7 +110,7 @@ describe("в блоке отыгрыша нет механических стр�
   });
 
   it("не называет и материального компонента", async () => {
-    await requirementsAbsentFrom("identify");
+    await requirementsAbsentFrom("find-familiar");
   });
 
   it("художественное при этом на месте", async () => {

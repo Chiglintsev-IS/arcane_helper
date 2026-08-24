@@ -210,10 +210,10 @@ describe("книга", () => {
   });
 
   it("компонент кладётся в сумку вещью", () => {
-    const live = run([{ kind: "toggle_material", spellId: "identify" }]);
+    const live = run([{ kind: "toggle_material", spellId: "find-familiar" }]);
 
     expect(live.session.character.itemDefinitions.map((item) => item.nameRu)).toContain(
-      "жемчужина стоимостью не менее 100 зм",
+      "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне",
     );
   });
 

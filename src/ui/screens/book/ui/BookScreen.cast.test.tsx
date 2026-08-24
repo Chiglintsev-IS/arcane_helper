@@ -20,7 +20,7 @@ describe("шаг компонентов", () => {
     await renderWithStores(<BookScreen />);
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
+    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     // Чем сотворить → компоненты → объявление: жемчужина требует отдельного шага.
     await user.click(screen.getByRole("button", { name: "Далее" }));

@@ -14,23 +14,18 @@ function spell(id: string): Spell {
   return found;
 }
 
-const identify = spell("identify");
 const findFamiliar = spell("find-familiar");
 const mageArmor = spell("mage-armor");
 const shield = spell("shield");
 
 describe("материал заклинания", () => {
   it("компонент заклинания опознаётся вещью с ценой и судьбой из карточки (FR-268)", () => {
-    expect(materialOf(identify.components)).toEqual({
-      id: "жемчужина-стоимостью-не-менее-100-зм",
-      nameRu: "жемчужина стоимостью не менее 100 зм",
-      kind: "other",
-      consumed: false,
-      price: { amount: 100, currency: "gold" },
-    });
-
     // Судьба компонента — его категория: сжигаемое ритуалом тратится счётом, как всякий расходник.
-    expect(materialOf(findFamiliar.components)).toMatchObject({
+    // Компонента с ценой, который при этом не расходуется, в книге сейчас нет; вещь без цены
+    // проверяется следующим тестом.
+    expect(materialOf(findFamiliar.components)).toEqual({
+      id: "уголь,-благовония-и-травы-стоимостью-10-зм,-сжигаемые-в-огне-в-латунной-жаровне",
+      nameRu: "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне",
       kind: "consumable",
       consumed: true,
       price: { amount: 10, currency: "gold" },
@@ -54,7 +49,7 @@ describe("материал заклинания", () => {
     // Объявление карточки такого не пропускает: материал обязан быть назван словами. Приложение
     // всё равно не выдумывает вещи — назвать её нечем, и в сумке она не нашлась бы никогда.
     const unnamed: Spell = {
-      ...identify,
+      ...findFamiliar,
       components: { verbal: true, somatic: true, material: true, consumed: true },
     };
     expect(materialOf(unnamed.components)).toBeUndefined();
@@ -70,7 +65,8 @@ describe("что закрывает фокусировка", () => {
   });
 
   it("названную стоимость и расход не закрывает ничто", () => {
-    expect(materialCoveredByFocus(identify.components, createThorne())).toBe(false);
+    // Прежде здесь стояли две карточки — с ценой и с расходом отдельно. Компонента с ценой, который
+    // не расходуется, в книге не осталось, и обе черты несёт одна карточка.
     expect(materialCoveredByFocus(findFamiliar.components, createThorne())).toBe(false);
   });
 
@@ -103,11 +99,11 @@ describe("кому нужна вещь", () => {
   });
 
   it("закрытое фокусировкой требование остаётся требованием (FR-295)", () => {
-    const withFocus = materialNeeds([mageArmor, identify], createThorne());
+    const withFocus = materialNeeds([mageArmor, findFamiliar], createThorne());
     expect(withFocus.map((need) => need.coveredByFocus)).toEqual([true, false]);
 
     // Фокусировку сняли — требование то же самое, и оно снова срочно.
-    const bare = materialNeeds([mageArmor, identify], withoutSpellcastingFocus(createThorne()));
+    const bare = materialNeeds([mageArmor, findFamiliar], withoutSpellcastingFocus(createThorne()));
     expect(bare.map((need) => need.coveredByFocus)).toEqual([false, false]);
 
     // Дешёвый компонент, названный ещё и тем, кто его сжигает, срочен у обоих: сжигаемое не закрыто.

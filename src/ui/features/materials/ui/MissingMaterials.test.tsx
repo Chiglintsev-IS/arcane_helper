@@ -31,15 +31,30 @@ function materialOfSpell(spellId: string) {
   return material;
 }
 
-const pearl = materialOfSpell("identify");
+const charcoal = materialOfSpell("find-familiar");
+const leather = materialOfSpell("mage-armor");
 
-/** Жемчужина куплена и истрачена: запись о ней есть, запаса не осталось. */
-function withEmptiedPearl(): CharacterState {
-  const thorne = Character.of(createThorne());
+/**
+ * Уголь куплен и сгорел: запись о нём есть, запаса не осталось.
+ *
+ * Фокусировка при этом снята: заведённая вещь и незаведённая стоят в разделе рядом только тогда,
+ * когда требований в нём больше одного, а с надетой фокусировкой срочным остаётся ровно уголь.
+ */
+function withEmptiedCharcoal(): CharacterState {
+  const thorne = Character.of(withoutSpellcastingFocus(createThorne()));
   const bought = thorne
-    .withItems(thorne.items.addDefinition(pearl))
-    .withEquipment(thorne.equipment.adjustBagCount(pearl.id, 1));
-  return bought.withEquipment(bought.equipment.adjustBagCount(pearl.id, -1)).toState();
+    .withItems(thorne.items.addDefinition(charcoal))
+    .withEquipment(thorne.equipment.adjustBagCount(charcoal.id, 1));
+  return bought.withEquipment(bought.equipment.adjustBagCount(charcoal.id, -1)).toState();
+}
+
+/** Строка раздела, названная своей вещью: место в списке сдвинет любая правка состава книги. */
+function rowNamed(list: HTMLElement, nameRu: string): HTMLElement {
+  const row = within(list)
+    .getAllByRole("listitem")
+    .find((candidate) => candidate.textContent?.includes(nameRu) === true);
+  if (row === undefined) throw new Error(`нет строки «${nameRu}»`);
+  return row;
 }
 
 describe("«Покупки» в «Вещах»", () => {
@@ -48,10 +63,9 @@ describe("«Покупки» в «Вещах»", () => {
 
     // Своё требуется купить: строка называет цену, судьбу и того, кто его требует.
     const rows = within(screen.getByRole("list", { name: "Купить" })).getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(1);
     expect(rows[0]?.textContent).toContain("уголь, благовония и травы");
     expect(rows[0]?.textContent).toContain("10 зм · расходуется · Требуется для: Поиск фамильяра");
-    expect(rows[1]?.textContent).toContain("100 зм · Требуется для: Опознание");
 
     // Закрытое фокусировкой названо целиком — и прямо сказано, что покупать его не обязательно.
     const covered = screen.getByText(/Закрывает фокусировка/);
@@ -68,8 +82,15 @@ describe("«Покупки» в «Вещах»", () => {
     // Закрывать нечем — каждое требование стало строкой, и перечня несрочного нет вовсе.
     expect(screen.queryByText(/Закрывает фокусировка/)).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Добавить один в сумку: кусок обработанной кожи" }),
+      screen.getByRole("button", { name: `Добавить один в сумку: ${leather.nameRu}` }),
     ).toBeDefined();
+
+    // Строка называет только то, что назвала карточка: ни цены, ни расхода у такого требования нет,
+    // и приложение их не выдумывает.
+    const line = rowNamed(screen.getByRole("list", { name: "Купить" }), leather.nameRu).textContent;
+    expect(line).toContain("Требуется для: Доспехи мага");
+    expect(line).not.toContain("зм");
+    expect(line).not.toContain("расходуется");
   });
 
   it("нехватка заводит вещь одним нажатием (FR-296)", async () => {
@@ -77,10 +98,10 @@ describe("«Покупки» в «Вещах»", () => {
     const onBuy = vi.fn();
     render(<MissingMaterials missing={missingOf()} {...NOOP} onBuy={onBuy} />);
 
-    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: жемчужина/ }));
+    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: уголь/ }));
 
     // Вещь заводит карточка: цену и судьбу приложение берёт у неё, а не спрашивает у игрока.
-    expect(onBuy).toHaveBeenCalledWith("identify");
+    expect(onBuy).toHaveBeenCalledWith("find-familiar");
   });
 
   it("строка заведённой вещи открывает её, а строка незаведённой не гаснет (FR-302)", async () => {
@@ -89,7 +110,7 @@ describe("«Покупки» в «Вещах»", () => {
     const onRefill = vi.fn();
     render(
       <MissingMaterials
-        missing={missingOf(withEmptiedPearl())}
+        missing={missingOf(withEmptiedCharcoal())}
         {...NOOP}
         onOpenItem={onOpenItem}
         onRefill={onRefill}
@@ -98,22 +119,25 @@ describe("«Покупки» в «Вещах»", () => {
 
     // Обе строки — одна с записью, другая без — стоят в разделе одинаково и целиком.
     const list = screen.getByRole("list", { name: "Купить" });
-    const rows = within(list).getAllByRole("listitem");
-    expect(rows).toHaveLength(2);
-    expect(rows[1]?.textContent).toContain("100 зм · Требуется для: Опознание");
+    expect(rowNamed(list, charcoal.nameRu).textContent).toContain(
+      "10 зм · расходуется · Требуется для: Поиск фамильяра",
+    );
+    expect(rowNamed(list, leather.nameRu).textContent).toContain("Требуется для: Доспехи мага");
     // Погашенного в разделе нет ни одного: открывать нечего — значит действия нет вовсе.
     for (const button of within(list).getAllByRole("button")) {
       expect(button).toHaveProperty("disabled", false);
     }
 
     // Заведённая вещь открывается и пополняется своей строкой — переезд ничего у неё не отнял.
-    await user.click(screen.getByRole("button", { name: `Правка: ${pearl.nameRu}` }));
-    expect(onOpenItem).toHaveBeenCalledWith(pearl.id);
-    await user.click(screen.getByRole("button", { name: `Добавить один в сумку: ${pearl.nameRu}` }));
-    expect(onRefill).toHaveBeenCalledWith(pearl.id);
+    await user.click(screen.getByRole("button", { name: `Правка: ${charcoal.nameRu}` }));
+    expect(onOpenItem).toHaveBeenCalledWith(charcoal.id);
+    await user.click(
+      screen.getByRole("button", { name: `Добавить один в сумку: ${charcoal.nameRu}` }),
+    );
+    expect(onRefill).toHaveBeenCalledWith(charcoal.id);
 
     // Незаведённой вещи открывать нечего: открывающего действия у её строки нет вовсе.
-    expect(screen.queryByRole("button", { name: /Правка: уголь/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: `Правка: ${leather.nameRu}` })).toBeNull();
   });
 
   it("список покупок пополняет заведённое той же кнопкой, что заводит незаведённое (FR-302)", async () => {
@@ -122,7 +146,7 @@ describe("«Покупки» в «Вещах»", () => {
     const onRefill = vi.fn();
     render(
       <MissingMaterials
-        missing={missingOf(withEmptiedPearl())}
+        missing={missingOf(withEmptiedCharcoal())}
         {...NOOP}
         onBuy={onBuy}
         onRefill={onRefill}
@@ -130,12 +154,16 @@ describe("«Покупки» в «Вещах»", () => {
     );
 
     // У заведённой вещи плюс тот же, каким её пополняли в категории.
-    await user.click(screen.getByRole("button", { name: `Добавить один в сумку: ${pearl.nameRu}` }));
-    expect(onRefill).toHaveBeenCalledWith(pearl.id);
+    await user.click(
+      screen.getByRole("button", { name: `Добавить один в сумку: ${charcoal.nameRu}` }),
+    );
+    expect(onRefill).toHaveBeenCalledWith(charcoal.id);
 
     // Незаведённую тот же плюс заводит по словам карточки.
-    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: уголь/ }));
-    expect(onBuy).toHaveBeenCalledWith("find-familiar");
+    await user.click(
+      screen.getByRole("button", { name: `Добавить один в сумку: ${leather.nameRu}` }),
+    );
+    expect(onBuy).toHaveBeenCalledWith("mage-armor");
   });
 
   it("пустые покупки отвечают словами, а не молчанием", () => {

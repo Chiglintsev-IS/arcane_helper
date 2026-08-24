@@ -40,7 +40,7 @@ function spell(id: string): Spell {
 const rayOfFrost = spell("ray-of-frost");
 const mageArmor = spell("mage-armor");
 const detectMagic = spell("detect-magic");
-const identify = spell("identify");
+const findFamiliar = spell("find-familiar");
 const shield = spell("shield");
 
 /** Бой идёт: этот файл проверяет черновик мастера, а не факт начала боя. */
@@ -242,8 +242,8 @@ describe("начало применения", () => {
   });
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
-    // Вне боя: в бою ритуального способа нет вовсе, +10 минут в раунд не помещаются.
-    store.getState().start(rowOf(identify, createThorne(), OUTSIDE_FIGHT));
+    // Вне боя: накладывание идёт час, и в раунд оно не помещается ни ритуалом, ни ячейкой.
+    store.getState().start(rowOf(findFamiliar, createThorne(), OUTSIDE_FIGHT));
     expect(draftOf().option).toMatchObject({ mode: "ritual", payment: { kind: "none" } });
   });
 
@@ -308,7 +308,8 @@ describe("шаги мастера (FR-021, M-03)", () => {
   });
 
   it("компонент со стоимостью добавляет шаг проверки компонентов", () => {
-    const row = rowOf(identify);
+    // Вне боя: единственный компонент со стоимостью — у ритуала, который накладывают час.
+    const row = rowOf(findFamiliar, createThorne(), OUTSIDE_FIGHT);
     store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("components");
   });

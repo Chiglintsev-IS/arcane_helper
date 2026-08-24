@@ -114,7 +114,7 @@ describe("начальное состояние Торна", () => {
 
   it("ритуалы не входят в подготовленные (FR-103)", () => {
     const thorne = createThorne();
-    for (const id of ["find-familiar", "detect-magic", "identify", "unseen-servant"]) {
+    for (const id of ["find-familiar", "detect-magic"]) {
       expect(thorne.preparedSpellIds).not.toContain(id);
       expect(thorne.spellbookSpellIds).toContain(id);
     }
@@ -176,7 +176,7 @@ describe("применение заклинания (FR-023)", () => {
     expect(() =>
       castSpell(
         session,
-        { spell: spell("identify"), mode: "ritual", payment: { kind: "slot", slotLevel: 1 } },
+        { spell: spell("find-familiar"), mode: "ritual", payment: { kind: "slot", slotLevel: 1 } },
         occasion,
       ),
     ).toThrow(/Ритуальное применение не расходует ячейку/);
@@ -251,7 +251,7 @@ describe("экономия действий (FR-141)", () => {
     );
     expect(deriveTurnEconomy(current).reactionAvailable).toBe(false);
 
-    const bonus: Spell = { ...spell("disguise-self"), castingTime: { type: "bonus_action" } };
+    const bonus: Spell = { ...spell("magic-missile"), castingTime: { type: "bonus_action" } };
     current = castSpell(
       current,
       { spell: bonus, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
@@ -280,7 +280,7 @@ describe("экономия действий (FR-141)", () => {
   });
 
   it("не даёт потратить бонусное действие дважды", () => {
-    const bonus: Spell = { ...spell("disguise-self"), castingTime: { type: "bonus_action" } };
+    const bonus: Spell = { ...spell("magic-missile"), castingTime: { type: "bonus_action" } };
     let current = withTurnTracking(session);
     current = castSpell(current, { spell: bonus, mode: "normal", payment: { kind: "slot", slotLevel: 1 } }, occasion);
     expect(() =>
@@ -585,11 +585,11 @@ describe("руна при сотворении (FR-151)", () => {
 });
 
 describe("след руны на доске эффектов (FR-334)", () => {
-  /** «Шаг в туман» мгновенен: на доске остаётся только след руны, и считать нечего больше. */
+  /** «Волшебная стрела» мгновенна: на доске остаётся только след руны, и считать нечего больше. */
   function withRune(rune: "life" | "war" | "wind", from = withTurnTracking(session)): Session {
     return castSpell(
       from,
-      { spell: spell("misty-step"), mode: "normal", payment: { kind: "slot", slotLevel: 2 }, rune },
+      { spell: spell("magic-missile"), mode: "normal", payment: { kind: "slot", slotLevel: 2 }, rune },
       occasion,
     );
   }
@@ -1950,7 +1950,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     // тремя: своим счётом отказ не хвалится — его называет тот, кто счёт показывает.
     const narrowed = atLimitOfThree();
     expect(narrowed.character.preparedSpellIds).toHaveLength(3);
-    expect(() => togglePreparation(narrowed, spell("identify"), occasion)).toThrow(
+    expect(() => togglePreparation(narrowed, spell("find-familiar"), occasion)).toThrow(
       /Снимите другое заклинание/,
     );
   });
@@ -1964,7 +1964,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
 
   it("набор Торна начинается ровно на пределе: 11 из 11 (FR-101)", () => {
     expect(session.character.preparedSpellIds).toHaveLength(LIMIT);
-    expect(() => togglePreparation(session, spell("blink"), occasion)).toThrow(
+    expect(() => togglePreparation(session, spell("haste"), occasion)).toThrow(
       /Снимите другое заклинание/,
     );
   });
@@ -1983,13 +1983,12 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   it("ритуал готовится как обычное заклинание (FR-103)", () => {
     // говорит, что ритуалом его можно творить и без подготовки, а не что готовить нельзя:
     // подготовленный ритуал в бою творится за ячейку обычным временем.
-    const after = togglePreparation(withRoom(), spell("identify"), occasion);
-    expect(after.character.preparedSpellIds).toContain("identify");
+    const after = togglePreparation(withRoom(), spell("find-familiar"), occasion);
+    expect(after.character.preparedSpellIds).toContain("find-familiar");
   });
 });
 
 describe("материальные компоненты (FR-030, FR-268)", () => {
-  const pearl = "жемчужина стоимостью не менее 100 зм";
   const ashes = "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне";
 
   /** Сколько компонента лежит в сумке: он вещь, и спрашивают о нём как о вещи. */
@@ -2000,18 +1999,18 @@ describe("материальные компоненты (FR-030, FR-268)", () =>
   const ritual = { mode: "ritual" as const, payment: { kind: "none" as const } };
 
   it("компонент покупается вещью, и лог называет её словами карточки (FR-268)", () => {
-    const bought = toggleMaterial(session, spell("identify"), occasion);
-    expect(inBag(bought, pearl)).toBe(1);
-    expect(bought.log.at(-1)?.summaryRu).toBe(`Добавлено: ${pearl} (стало 1)`);
+    const bought = toggleMaterial(session, spell("find-familiar"), occasion);
+    expect(inBag(bought, ashes)).toBe(1);
+    expect(bought.log.at(-1)?.summaryRu).toBe(`Добавлено: ${ashes} (стало 1)`);
 
-    const spent = toggleMaterial(bought, spell("identify"), occasion);
-    expect(inBag(spent, pearl)).toBe(0);
-    expect(spent.log.at(-1)?.summaryRu).toBe(`Потрачено: ${pearl} (в сумке 0)`);
+    const spent = toggleMaterial(bought, spell("find-familiar"), occasion);
+    expect(inBag(spent, ashes)).toBe(0);
+    expect(spent.log.at(-1)?.summaryRu).toBe(`Потрачено: ${ashes} (в сумке 0)`);
   });
 
   it("обратимо, как любой расход (FR-111)", () => {
-    const bought = toggleMaterial(session, spell("identify"), occasion);
-    expect(inBag(undoLast(bought), pearl)).toBe(0);
+    const bought = toggleMaterial(session, spell("find-familiar"), occasion);
+    expect(inBag(undoLast(bought), ashes)).toBe(0);
   });
 
   it("заклинанию без материального компонента отвечает причиной", () => {
@@ -2353,7 +2352,7 @@ describe("короткий отдых не делает того, что дел�
 
 describe("схема ритуала не влияет на механику (FR-193)", () => {
   it("подмена схемы не меняет результат применения", () => {
-    const ritual = spell("unseen-servant");
+    const ritual = spell("detect-magic");
     const diagram = ritual.ritualDiagram;
     if (diagram === undefined) throw new Error("у «Незримого слуги» нет схемы");
     const repainted: Spell = {

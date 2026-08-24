@@ -184,15 +184,15 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     // Неподготовленные ритуалы в списке скрыты: показываем их фильтром.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
+    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
 
-    const card = screen.getByRole("dialog", { name: /Опознание/ });
-    expect(within(card).getByText(/Прорицание/)).toBeDefined();
+    const card = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
+    expect(within(card).getByText(/Вызов/)).toBeDefined();
     // Материал назван и среди механики, и среди действий: первое отвечает «что это», второе — «что
     // делать сейчас», и спрашивать их приходится порознь.
     const mechanics = within(within(card).getByLabelText("Механика"));
     expect(
-      mechanics.getByText(new RegExp(spell("identify").components.materialText ?? "")),
+      mechanics.getByText(new RegExp(spell("find-familiar").components.materialText ?? "")),
     ).toBeDefined();
     expect(within(card).getByText(/фокусировка не заменяет/)).toBeDefined();
     expect(within(card).getByText("Без броска: эффект применяется сразу")).toBeDefined();
@@ -203,28 +203,28 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     // Способ выбирает ядро, а не карточка: в бою ритуального способа среди предложенных нет, и
     // объявление обязано предупредить, что шаблон написан под ритуал.
     await renderWithStores(<BookScreen />, createThorne(), { inFight: true });
-    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
+    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
 
-    const card = screen.getByRole("dialog", { name: /Опознание/ });
+    const card = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
     expect(within(card).getByText(/Шаблон написан для ритуального применения/)).toBeDefined();
   });
 
   it("вне боя ритуал остаётся способом по умолчанию: замечания о шаблоне нет", async () => {
     const { user } = await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
+    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
 
-    const card = screen.getByRole("dialog", { name: /Опознание/ });
+    const card = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
     expect(within(card).queryByText(/Шаблон написан для ритуального применения/)).toBeNull();
   });
 
   it("строка «Разрешение» показывает общую подпись, не свою копию (FR-211)", async () => {
     const user = userEvent.setup();
-    // Опознание разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
+    // «Поиск фамильяра» разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Опознание/ }));
-    const automaticCard = screen.getByRole("dialog", { name: /Опознание/ });
+    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
+    const automaticCard = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
     expect(within(automaticCard).getByText("Разрешение").nextElementSibling?.textContent).toBe(
       "Без броска",
     );
@@ -239,11 +239,13 @@ describe("схема ритуала (FR-192)", () => {
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(
-      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name: /^Опознание/ }),
+      within(screen.getByLabelText(/^Заклинания/)).getByRole("button", {
+        name: /^Поиск фамильяра/,
+      }),
     );
     await user.click(screen.getByRole("button", { name: "Схема ритуала" }));
 
-    expect(screen.getByRole("dialog", { name: /Схема ритуала «Опознание»/ })).toBeDefined();
+    expect(screen.getByRole("dialog", { name: /Схема ритуала «Поиск фамильяра»/ })).toBeDefined();
   });
 
 });

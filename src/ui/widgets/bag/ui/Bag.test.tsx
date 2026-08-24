@@ -88,25 +88,27 @@ describe("«Сумка» в «Вещах»", () => {
   });
 
   it("истраченная до нуля вещь ушла из своей категории (FR-302)", () => {
-    const pearl = materialOf(spellOf("identify").components);
-    if (pearl === undefined) throw new Error("«Опознание» материала не требует");
+    const ashes = materialOf(spellOf("find-familiar").components);
+    if (ashes === undefined) throw new Error("«Поиск фамильяра» материала не требует");
 
-    render(<Bag bag={toBagView(withStock([{ definition: pearl, bag: 0 }]), spells)} {...NOOP} />);
+    render(<Bag bag={toBagView(withStock([{ definition: ashes, bag: 0 }]), spells)} {...NOOP} />);
 
     // Переезд, а не копия: перед вылазкой ноль ищут в покупках, и в своей категории вещи на это
-    // время нет вовсе.
-    expect(screen.queryByRole("list", { name: "Другое" })?.textContent ?? "").not.toContain(
-      pearl.nameRu,
+    // время нет вовсе. Категорию называет карточка: сжигаемое ритуалом — расходник.
+    expect(screen.queryByRole("list", { name: "Расходники" })?.textContent ?? "").not.toContain(
+      ashes.nameRu,
     );
   });
 
   it("пополненная вещь вернулась в свою категорию (FR-302)", () => {
-    const pearl = materialOf(spellOf("identify").components);
-    if (pearl === undefined) throw new Error("«Опознание» материала не требует");
+    const ashes = materialOf(spellOf("find-familiar").components);
+    if (ashes === undefined) throw new Error("«Поиск фамильяра» материала не требует");
 
-    render(<Bag bag={toBagView(withStock([{ definition: pearl, bag: 1 }]), spells)} {...NOOP} />);
+    render(<Bag bag={toBagView(withStock([{ definition: ashes, bag: 1 }]), spells)} {...NOOP} />);
 
-    expect(within(screen.getByRole("list", { name: "Другое" })).getByText(pearl.nameRu)).toBeDefined();
+    expect(
+      within(screen.getByRole("list", { name: "Расходники" })).getByText(ashes.nameRu),
+    ).toBeDefined();
   });
 
   it("кошелёк показывает все три монеты стола, включая нули (FR-242)", () => {

@@ -131,16 +131,18 @@ function withComponentOf(spellId: string): CharacterState {
     .toState();
 }
 
-const pearlId = "жемчужина-стоимостью-не-менее-100-зм";
+const charcoalId = "уголь,-благовония-и-травы-стоимостью-10-зм,-сжигаемые-в-огне-в-латунной-жаровне";
 
 describe("чем вещь требуется", () => {
   it("вещь называет тех, кто её требует, а сама о них не знает (FR-295)", () => {
-    const bought = withComponentOf("identify");
-    const pearl = toBagView(bought, spells).items.find(
-      (item) => item.nameRu === "жемчужина стоимостью не менее 100 зм",
+    const bought = withComponentOf("find-familiar");
+    const charcoal = toBagView(bought, spells).items.find(
+      (item) =>
+        item.nameRu ===
+        "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне",
     );
 
-    expect(pearl?.neededForRu).toEqual(["Опознание"]);
+    expect(charcoal?.neededForRu).toEqual(["Поиск фамильяра"]);
     // Записи о потребителях у самой вещи нет: без карточек требование не собирается вовсе.
     expect(toBagView(bought, []).items.every((item) => item.neededForRu.length === 0)).toBe(true);
   });
@@ -157,10 +159,9 @@ describe("чего не хватает", () => {
     // Срочное впереди: без него сотворить нельзя, а закрытое фокусировкой лишь ждёт её снятия.
     expect(missing.filter((need) => !need.coveredByFocus).map((need) => need.spellId)).toEqual([
       "find-familiar",
-      "identify",
     ]);
-    expect(missing.slice(0, 2).every((need) => !need.coveredByFocus)).toBe(true);
-    expect(missing.slice(2).every((need) => need.coveredByFocus)).toBe(true);
+    expect(missing.slice(0, 1).every((need) => !need.coveredByFocus)).toBe(true);
+    expect(missing.slice(1).every((need) => need.coveredByFocus)).toBe(true);
 
     // Цену и судьбу называет карточка: приложение их не выдумывает.
     expect(missing[0]).toMatchObject({
@@ -171,33 +172,33 @@ describe("чего не хватает", () => {
   });
 
   it("истраченная до нуля вещь стоит в списке покупок со всем, что у неё было (FR-302)", () => {
-    const bought = withComponentOf("identify");
+    const bought = withComponentOf("find-familiar");
     // Лежащее в сумке покупать не надо: пока запас есть, вещь в список покупок не едет.
-    expect(toBagView(bought, spells).missingMaterials.some((need) => need.itemId === pearlId)).toBe(
+    expect(toBagView(bought, spells).missingMaterials.some((need) => need.itemId === charcoalId)).toBe(
       false,
     );
 
     const root = Character.of(bought);
-    const emptied = root.withEquipment(root.equipment.adjustBagCount(pearlId, -1)).toState();
+    const emptied = root.withEquipment(root.equipment.adjustBagCount(charcoalId, -1)).toState();
     const view = toBagView(emptied, spells);
 
     // Ноль требуемого — вопрос лавки, и вещь едет строкой со всем, что у неё было.
-    expect(view.missingMaterials.find((need) => need.spellId === "identify")).toMatchObject({
-      itemId: pearlId,
-      price: { amount: 100, currency: "gold" },
-      neededForRu: ["Опознание"],
+    expect(view.missingMaterials.find((need) => need.spellId === "find-familiar")).toMatchObject({
+      itemId: charcoalId,
+      price: { amount: 10, currency: "gold" },
+      neededForRu: ["Поиск фамильяра"],
     });
     // Запись никуда не делась: ею вещь открывают и ею же пополняют.
-    expect(view.items.find((item) => item.id === pearlId)?.bagCount).toBe(0);
+    expect(view.items.find((item) => item.id === charcoalId)?.bagCount).toBe(0);
 
     // Написанное рукой едет со строкой: переезд не отнимает у неё ничего.
-    const stored = Character.of(emptied).items.find(pearlId);
-    if (stored === undefined) throw new Error("жемчужина не заведена");
+    const stored = Character.of(emptied).items.find(charcoalId);
+    if (stored === undefined) throw new Error("уголь не заведён");
     const shop = "у ювелира в порту";
     const noted = Character.of(emptied);
     const withNote = noted.withItems(noted.items.replaceDefinition({ ...stored, note: shop }));
     expect(
-      toBagView(withNote.toState(), spells).missingMaterials.find((need) => need.itemId === pearlId)
+      toBagView(withNote.toState(), spells).missingMaterials.find((need) => need.itemId === charcoalId)
         ?.note,
     ).toBe(shop);
   });

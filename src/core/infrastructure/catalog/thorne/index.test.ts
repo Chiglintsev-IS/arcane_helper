@@ -46,16 +46,16 @@ function roleplayTexts(spell: (typeof spells)[number]): string[] {
 }
 
 describe("книга заклинаний Торна", () => {
-  it("состоит из 29 карточек: 4 заговора и 25 заклинаний по уровням", () => {
+  it("состоит из 30 карточек: 4 заговора и 26 заклинаний по уровням", () => {
     // Состав назван игроком. Числа держат этот тест и реестр
     // подготовки: карточка, забытая в загрузчике, иначе исчезает молча.
-    expect(spells).toHaveLength(29);
+    expect(spells).toHaveLength(30);
     const byLevel = (level: number) => spells.filter((spell) => spell.level === level).length;
     expect(byLevel(CANTRIP_LEVEL)).toBe(4);
-    expect(byLevel(1)).toBe(9);
+    expect(byLevel(1)).toBe(7);
     expect(byLevel(2)).toBe(8);
-    expect(byLevel(3)).toBe(6);
-    expect(byLevel(4)).toBe(2);
+    expect(byLevel(3)).toBe(8);
+    expect(byLevel(4)).toBe(3);
   });
 
   it("у каждой карточки указан источник (ADR-0020)", () => {
@@ -89,9 +89,9 @@ describe("книга заклинаний Торна", () => {
     expect(byId.get("shocking-grasp")).toBe("offense");
     // «Паутина» урона не наносит и всё же боевая: она выключает противника, а не защищает своих.
     expect(byId.get("web")).toBe("offense");
-    expect(byId.get("hypnotic-pattern")).toBe("offense");
+    expect(byId.get("slow")).toBe("offense");
     expect(byId.get("counterspell")).toBe("defense");
-    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(10);
+    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(7);
   });
 
 });
@@ -109,10 +109,11 @@ describe("имена навыков в тексте карточек", () => {
       }
     }
 
-    // Обратная сторона: запрет проходит и на книге, где проверок нет вовсе.
+    // Обратная сторона: запрет проходит и на книге, где проверок нет вовсе. Свидетель — то имя,
+    // которое контент действительно называет: состав книги меняется, и требовать оба имени значило
+    // бы держать в книге заклинание ради теста.
     const named = (skill: string) =>
       spells.filter((spell) => JSON.stringify(spell).includes(skill)).length;
-    expect(named("(Анализ)")).toBeGreaterThan(0);
     expect(named("(Внимательность)")).toBeGreaterThan(0);
   });
 });
@@ -242,7 +243,7 @@ describe("покрытие механик первой партией", () => {
     ["время «минута»", "mending", (s: NonNullable<ReturnType<typeof byId.get>>) => s.castingTime.type === "minute"],
     ["время «час»", "find-familiar", (s: NonNullable<ReturnType<typeof byId.get>>) => s.castingTime.type === "hour"],
     ["расходуемый компонент", "find-familiar", (s: NonNullable<ReturnType<typeof byId.get>>) => s.components.consumed === true],
-    ["компонент со стоимостью", "identify", (s: NonNullable<ReturnType<typeof byId.get>>) => s.components.costGp === 100],
+    ["компонент со стоимостью", "find-familiar", (s: NonNullable<ReturnType<typeof byId.get>>) => s.components.costGp === 10],
     ["область-сфера", "detect-magic", (s: NonNullable<ReturnType<typeof byId.get>>) => s.area?.shape === "sphere"],
   ])("механика «%s» покрыта карточкой %s", (_mechanic, id, predicate) => {
     const spell = byId.get(id);
@@ -267,12 +268,7 @@ describe("покрытие механик первой партией", () => {
 
   it("ритуалы не расходуют ячейку и потому не входят в подготовку", () => {
     const rituals = spells.filter((spell) => spell.ritual);
-    expect(rituals.map((spell) => spell.id).sort()).toEqual([
-      "detect-magic",
-      "find-familiar",
-      "identify",
-      "unseen-servant",
-    ]);
+    expect(rituals.map((spell) => spell.id).sort()).toEqual(["detect-magic", "find-familiar"]);
   });
 });
 
@@ -372,7 +368,7 @@ describe("схемы ритуалов (FR-190)", () => {
     const shapes = spells
       .filter((spell) => spell.ritual)
       .map((spell) => JSON.stringify(spell.ritualDiagram));
-    expect(new Set(shapes).size).toBe(4);
+    expect(new Set(shapes).size).toBe(2);
   });
 });
 

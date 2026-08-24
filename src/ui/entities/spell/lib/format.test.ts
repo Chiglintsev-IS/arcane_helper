@@ -62,13 +62,17 @@ describe("слово вне словаря значков", () => {
 });
 
 describe("targetingLabel", () => {
-  it("предел числа целей назван числом: «Дверь в измерение» берёт двоих", () => {
-    expect(targetingLabel(testSpellRow("dimension-door").card.targeting)).toBe("До 2 существ");
+  it("предел числа целей назван числом: «Замедление» берёт шестерых", () => {
+    expect(targetingLabel(testSpellRow("slow").card.targeting)).toBe("До 6 существ");
   });
 
   it("без предела цели названы несколькими: выдуманное число обещало бы правило", () => {
     // Предел необязателен у самих правил, и заклинание без него доезжает до карточки как есть.
     expect(targetingLabel({ type: "creatures" })).toBe("Несколько существ");
+  });
+
+  it("цель-предмет названа предметом: существом она не станет", () => {
+    expect(targetingLabel(testSpellRow("mending").card.targeting)).toBe("Предмет");
   });
 });
 
@@ -100,7 +104,7 @@ describe("ritualOnlyBadge (FR-219)", () => {
   });
 
   it("неподготовленное — тоже: причину скажет строка недоступности словами", () => {
-    expect(ritualOnlyBadge(row("blink"))).toBeNull();
+    expect(ritualOnlyBadge(row("haste"))).toBeNull();
   });
 
   it("заговор значка не получает: цену он называет строкой «Без ячейки»", () => {

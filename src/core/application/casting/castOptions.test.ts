@@ -87,8 +87,8 @@ describe("castPlans: какие способы вообще есть", () => {
   });
 
   it("для ритуального заклинания добавляет ритуальный режим", () => {
-    const identify = allSpells.find((spell) => spell.id === "identify")!;
-    expect(optionsOf(identify, outsideCombat(), ALL_TURN_RESOURCES)).toContainEqual({
+    const findFamiliar = allSpells.find((spell) => spell.id === "find-familiar")!;
+    expect(optionsOf(findFamiliar, outsideCombat(), ALL_TURN_RESOURCES)).toContainEqual({
       mode: "ritual",
       payment: { kind: "none" },
     });

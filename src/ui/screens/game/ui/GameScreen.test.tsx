@@ -26,6 +26,37 @@ import {
 /** Бой отмечен начатым: только тогда ведётся учёт хода. */
 const IN_FIGHT = { inFight: true } as const;
 
+/**
+ * Раненый Торн с подготовленной «Мистической бодростью» — единственным, что творится бонусным
+ * действием.
+ *
+ * Подготовка нужна затем, что в боевом списке стоят заговоры и подготовленное, а ранение — затем,
+ * что заклинание лечит и в целого не пройдёт.
+ */
+function withBonusActionSpell(): CharacterState {
+  const wounded = withDamage(createThorne(), 30);
+  return { ...wounded, preparedSpellIds: [...wounded.preparedSpellIds, "arcane-vigor"] };
+}
+
+/** Проход мастера от строки списка до подтверждения — там, где выбирать нечего, кроме ячейки. */
+async function castThrough(user: ReturnType<typeof userEvent.setup>, name: RegExp): Promise<void> {
+  await user.click(screen.getByRole("button", { name }));
+  await user.click(screen.getByRole("button", { name: "Сотворить" }));
+  await user.click(screen.getByRole("button", { name: "Далее" }));
+  await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+}
+
+/** То же, но с шагом костей хитов: их число и выпавшее знает игрок, а не приложение. */
+async function castArcaneVigor(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByRole("button", { name: /Мистическая бодрость/ }));
+  await user.click(screen.getByRole("button", { name: "Сотворить" }));
+  await user.click(screen.getByRole("button", { name: "Далее" }));
+  await user.click(screen.getByRole("button", { name: "1d6" }));
+  await user.type(screen.getByLabelText("Что выпало на 1d6"), "4");
+  await user.click(screen.getByRole("button", { name: "Далее" }));
+  await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+}
+
 function concentrating(): CharacterState {
   return {
     ...createThorne(),
@@ -84,18 +115,15 @@ describe("состав экрана (FR-001, AC-14)", () => {
 
   it("значок приходит к потраченному, а не к целому ходу (FR-001)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+    await renderWithStores(<GameScreen />, withBonusActionSpell(), IN_FIGHT);
 
     // Начало своего хода: доступно всё, и говорить ряду не о чем.
     const badges = () => within(screen.getByLabelText("Прочие ресурсы")).queryAllByRole("listitem");
     expect(badges()).toHaveLength(0);
 
-    for (const name of [/Доспехи мага/, /^Туманный шаг/, /^Щит/]) {
-      await user.click(screen.getByRole("button", { name }));
-      await user.click(screen.getByRole("button", { name: "Сотворить" }));
-      await user.click(screen.getByRole("button", { name: "Далее" }));
-      await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-    }
+    await castThrough(user, /Доспехи мага/);
+    await castArcaneVigor(user);
+    await castThrough(user, /^Щит/);
 
     // Три ресурса хода — три значка, и каждый назван своим родом.
     expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
@@ -104,14 +132,12 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 
   it("вида действия, которого в списке нет, в шапке тоже нет (FR-001)", async () => {
-    // Снимаем «Туманный шаг» с подготовки — бонусных заклинаний в бою не остаётся.
-    const character = {
-      ...createThorne(),
-      preparedSpellIds: createThorne().preparedSpellIds.filter((id) => id !== "misty-step"),
-    };
-    await renderWithStores(<GameScreen />, character);
+    // Бонусным действием у Торна творится одна «Мистическая бодрость», и по умолчанию она не
+    // подготовлена: бонусных заклинаний в боевом списке нет вовсе.
+    await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
 
-    expect(screen.queryByLabelText("Бонусное действие доступно")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Мистическая бодрость/ })).toBeNull();
+    expect(screen.queryByLabelText("Бонусное действие израсходовано")).toBeNull();
   });
 
   it("показывает активную концентрацию карточкой с механикой (FR-084)", async () => {
@@ -266,10 +292,10 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 
     await user.click(screen.getByRole("button", { name: "Защита" }));
 
-    // Восемь защитных строк: «Щит», «Поглощение стихий», «Доспехи мага», «Туманный шаг»,
-    // «Отражения», «Невидимость», «Контрзаклинание» и «Знаки ограждения» — ими тоже закрываются.
+    // Семь защитных строк: «Щит», «Поглощение стихий», «Доспехи мага», «Отражения»,
+    // «Контрзаклинание», «Громовой шаг» и «Знаки ограждения» — ими тоже закрываются.
     const list = screen.getByLabelText(/^Заклинания/);
-    expect(within(list).getAllByRole("listitem")).toHaveLength(8);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(7);
     expect(within(list).getByText("Щит")).toBeDefined();
     expect(within(list).getByText("Контрзаклинание")).toBeDefined();
   });

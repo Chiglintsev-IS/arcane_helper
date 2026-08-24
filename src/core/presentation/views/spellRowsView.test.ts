@@ -120,7 +120,7 @@ describe("почему нельзя", () => {
     // книге Торна нет, поэтому она берётся из настоящей и поднимается уровнем. Мастер применения
     // всё равно откроется — и обязан сказать, чем это заклинание сотворяли бы.
     const catalog = loadThorneSpells();
-    const highest = catalog.find((spell) => spell.id === "polymorph");
+    const highest = catalog.find((spell) => spell.id === "storm-sphere");
     if (highest === undefined) throw new Error("нет карточки для подъёма уровня");
     const beyond = [{ ...highest, level: 6, ritual: false }];
     const shown = row(highest.id, createThorne(), [], beyond);
@@ -220,12 +220,12 @@ describe("карточка", () => {
   });
 
   it("свой компонент назван словами, и строка знает, лежит ли он в сумке", () => {
-    // Компонент «Опознания» — жемчужина за 100 зм: фокусировка её не заменяет.
-    expect(row("identify").card.components.material?.textRu).toContain("жемчуж");
-    expect(row("identify").ownComponentCarried).toBe(false);
+    // Компонент «Поиска фамильяра» — уголь и травы за 10 зм: фокусировка их не заменяет.
+    expect(row("find-familiar").card.components.material?.textRu).toContain("уголь");
+    expect(row("find-familiar").ownComponentCarried).toBe(false);
 
-    const bought = row("identify", createThorne(), [
-      { kind: "toggle_material", spellId: "identify" },
+    const bought = row("find-familiar", createThorne(), [
+      { kind: "toggle_material", spellId: "find-familiar" },
     ]);
     expect(bought.ownComponentCarried).toBe(true);
     // Заклинание без материального компонента о нём молчит.
@@ -294,9 +294,9 @@ describe("способы сотворения", () => {
   it("шаги мастера решаются признаками строки, а не разбором карточки на экране", () => {
     expect(row("arcane-vigor").spendsHitDice).toBe(true);
     expect(row("mage-armor").spendsHitDice).toBe(false);
-    // Компонент «Опознания» — жемчужина за 100 зм: фокусировка её не заменяет.
-    expect(row("identify").ownComponentRequired).toBe(true);
-    expect(row("identify").componentReminders.join(" ")).toContain("жемчуж");
+    // Компонент «Поиска фамильяра» — уголь и травы за 10 зм: фокусировка их не заменяет.
+    expect(row("find-familiar").ownComponentRequired).toBe(true);
+    expect(row("find-familiar").componentReminders.join(" ")).toContain("уголь");
   });
 });
 

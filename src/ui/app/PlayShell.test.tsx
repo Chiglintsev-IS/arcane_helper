@@ -55,6 +55,18 @@ function wounded(): CharacterState {
   return withDamage(createThorne(), 48);
 }
 
+/**
+ * Раненый Торн с подготовленной «Мистической бодростью» — единственным, что творится бонусным
+ * действием.
+ *
+ * Подготовка нужна затем, что в боевом списке стоят заговоры и подготовленное, а ранение — затем,
+ * что заклинание лечит и в целого не пройдёт.
+ */
+function withBonusActionSpell(): CharacterState {
+  const hurt = withDamage(createThorne(), 30);
+  return { ...hurt, preparedSpellIds: [...hurt.preparedSpellIds, "arcane-vigor"] };
+}
+
 /** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
   return {
@@ -275,11 +287,16 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
 
   it("ряд значков одинаков во всех режимах, где он есть", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
+    await renderWithStores(<PlayShell />, withBonusActionSpell(), IN_FIGHT);
 
     // Ряду нужно о чём-то говорить: пока не потрачено ничего, он молчит в обоих режимах одинаково.
-    await user.click(screen.getByRole("button", { name: /^Туманный шаг/ }));
+    // Бонусным действием творится одна «Мистическая бодрость», и между ячейкой и итогом у неё стоит
+    // шаг костей хитов: их число и выпавшее знает игрок.
+    await user.click(screen.getByRole("button", { name: /^Мистическая бодрость/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
+    await user.click(screen.getByRole("button", { name: "Далее" }));
+    await user.click(screen.getByRole("button", { name: "1d6" }));
+    await user.type(screen.getByLabelText("Что выпало на 1d6"), "4");
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 

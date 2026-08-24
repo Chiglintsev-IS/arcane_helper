@@ -93,7 +93,7 @@ describe("dividingCategories", () => {
   });
 
   it("время накладывания следует составу: долгого в бою нет", () => {
-    // Вне боя «Починка» и «Опознание» делят список минутами; в бою их там нет вовсе.
+    // Вне боя «Починка» делит список минутами, «Поиск фамильяра» — часами; в бою их там нет вовсе.
     expect(categoriesOf(false).castingTimes.has("minute")).toBe(true);
     expect(categoriesOf(true).castingTimes.has("minute")).toBe(false);
   });
@@ -111,8 +111,6 @@ describe("filterSpells: список без фильтров", () => {
     expect(ids(filterSpells(outOfFight(), filters({ ritual: true })))).toEqual([
       "find-familiar",
       "detect-magic",
-      "identify",
-      "unseen-servant",
     ]);
   });
 });
@@ -125,7 +123,7 @@ describe("filterSpells: значения одной категории соед�
     expect(shown).toContain("mage-armor");
     // Реакции, бонусные действия и долгое накладывание отсеиваются.
     expect(shown).not.toContain("shield");
-    expect(shown).not.toContain("misty-step");
+    expect(shown).not.toContain("arcane-vigor");
     expect(shown).not.toContain("mending");
   });
 
@@ -144,8 +142,8 @@ describe("filterSpells: значения одной категории соед�
     const both = ids(filterSpells(book(), filters({ prices: [0, 1] })));
 
     expect(onlyCantrips).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
-    // Четыре заговора и девять заклинаний первого уровня.
-    expect(both).toHaveLength(13);
+    // Четыре заговора и семь заклинаний первого уровня.
+    expect(both).toHaveLength(11);
   });
 });
 
@@ -341,7 +339,7 @@ describe("поиск по названию (FR-303)", () => {
   });
 
   it("«е» находит «ё»: на телефоне «ё» лежит под удержанием", () => {
-    expect(ids(filterSpells(outOfFight(), filters({ query: "полет" })))).toEqual(["fly"]);
+    expect(ids(filterSpells(book(), filters({ query: "лед" })))).toEqual(["rimes-binding-ice"]);
     expect(ids(filterSpells(outOfFight(), filters({ query: "перышком" })))).toEqual([
       "feather-fall",
     ]);

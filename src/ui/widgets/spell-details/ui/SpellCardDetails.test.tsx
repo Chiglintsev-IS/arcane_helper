@@ -34,9 +34,9 @@ describe("подробная карточка называет три компо
   });
 
   it("материал, которого фокусировка не заменяет, назван своим предметом", async () => {
-    const mechanics = await mechanicsOf("identify");
+    const mechanics = await mechanicsOf("find-familiar");
 
-    const material = mechanics.getByText(/жемчужина/);
+    const material = mechanics.getByText(/уголь, благовония и травы/);
     expect(material.textContent).toContain("свой предмет");
     expect(material.className).toBe("");
   });
@@ -54,7 +54,7 @@ describe("подробная карточка называет три компо
   });
 
   it("заклинание без материала называет и это", async () => {
-    const mechanics = await mechanicsOf("misty-step");
+    const mechanics = await mechanicsOf("thunder-step");
 
     expect(mechanics.getByText(/без жеста · без материала/)).toBeDefined();
   });

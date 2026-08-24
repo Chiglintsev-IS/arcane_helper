@@ -157,7 +157,7 @@ describe("сотворение", () => {
 
   it("у ритуала уровня сотворения нет, и руна не предлагается вовсе", () => {
     const preview = castPreview({
-      spellId: "identify",
+      spellId: "find-familiar",
       mode: "ritual",
       payment: { kind: "none" },
     });

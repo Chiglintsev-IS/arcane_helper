@@ -295,7 +295,7 @@ test("filter by casting time", async ({ page }) => {
   // Снимаем тот же переключатель: кнопки сброса нет — выбранное снимают там, где поставили.
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
   // Вся книга Торна с заговорами и одна строка-не-заклинание: последняя подсказка.
-  await expect(list.getByRole("listitem")).toHaveCount(30);
+  await expect(list.getByRole("listitem")).toHaveCount(31);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {
@@ -733,5 +733,5 @@ test("search reaches a row without scrolling", async ({ page }) => {
   await lightning.click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await expect(page.getByRole("searchbox", { name: "Поиск по названию" })).toBeHidden();
-  await expect(list.getByRole("listitem")).toHaveCount(21);
+  await expect(list.getByRole("listitem")).toHaveCount(19);
 });

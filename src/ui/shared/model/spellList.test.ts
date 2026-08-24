@@ -22,13 +22,13 @@ function playList(inFight: boolean): string[] {
 describe("вне боя: заговоры, подготовленные и ритуальные из книги (FR-209)", () => {
   it("ритуал из книги стоит в списке без подготовки", () => {
     // Ни одного ритуала Торн сегодня не подготовил, а сотворить их всё равно может.
-    for (const id of ["detect-magic", "identify", "find-familiar", "unseen-servant"]) {
+    for (const id of ["detect-magic", "find-familiar"]) {
       expect(playList(false), id).toContain(id);
     }
   });
 
   it("неподготовленное неритуальное в список не попадает", () => {
-    for (const id of ["blink", "fly", "dimension-door"]) {
+    for (const id of ["haste", "ice-storm", "polymorph"]) {
       expect(playList(false), id).not.toContain(id);
     }
   });
@@ -52,7 +52,7 @@ describe("в бою: заговоры и подготовленные, твор�
   });
 
   it("подготовленное остаётся: в бою оно творится ячейкой", () => {
-    for (const id of ["shield", "web", "polymorph"]) {
+    for (const id of ["shield", "web", "storm-sphere"]) {
       expect(playList(true), id).toContain(id);
     }
   });
@@ -67,19 +67,17 @@ describe("порядок: сначала бесплатное, потом по �
       "mending",
       "find-familiar",
       "detect-magic",
-      "identify",
-      "unseen-servant",
+      "magic-missile",
       "shield",
       "absorb-elements",
       "mage-armor",
       "web",
-      "misty-step",
       "mirror-image",
-      "invisibility",
-      "hypnotic-pattern",
       "lightning-bolt",
+      "slow",
       "counterspell",
-      "polymorph",
+      "thunder-step",
+      "storm-sphere",
     ]);
   });
 
@@ -89,17 +87,17 @@ describe("порядок: сначала бесплатное, потом по �
       "shocking-grasp",
       "ray-of-frost",
       "message",
+      "magic-missile",
       "shield",
       "absorb-elements",
       "mage-armor",
       "web",
-      "misty-step",
       "mirror-image",
-      "invisibility",
-      "hypnotic-pattern",
       "lightning-bolt",
+      "slow",
       "counterspell",
-      "polymorph",
+      "thunder-step",
+      "storm-sphere",
     ]);
   });
 
@@ -134,15 +132,15 @@ describe("строка-действие встаёт среди того, что
       "ray-of-frost",
       "message",
       "последняя-подсказка",
-      "shield",
+      "magic-missile",
     ]);
   });
 
   it("вне боя — за ритуалами: они тоже ничего не стоят", () => {
     const shown = spellsForScreen(testSpellRows(), "play");
     const at = positionInList(shown, LAST_HINT_TRAITS, "play");
-    expect(shown[at - 1]?.id).toBe("unseen-servant");
-    expect(shown[at]?.id).toBe("shield");
+    expect(shown[at - 1]?.id).toBe("detect-magic");
+    expect(shown[at]?.id).toBe("magic-missile");
   });
 
   it("в «Книге» место ищется уровнем: там смотрят состав, а не цену момента", () => {

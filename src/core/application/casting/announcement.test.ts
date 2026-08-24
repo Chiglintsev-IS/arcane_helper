@@ -53,8 +53,8 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
 
   it("подставляет фактическую КС спасброска из состояния, а не базовую", () => {
     const announcement = renderAnnouncement(
-      spell("disguise-self"),
-      context({ payment: { kind: "slot", slotLevel: 1 } }),
+      spell("web"),
+      context({ payment: { kind: "slot", slotLevel: 2 } }),
     );
     // КС 16, а не 15: предмет добавляет +1.
     expect(announcement.text).toContain("против КС 16");
@@ -63,8 +63,8 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
   it("объявление берёт КС из характеристик, а не из хранимого числа", () => {
     const smarter = { ...thorne, abilities: { ...thorne.abilities, intelligence: 20 } };
     const announcement = renderAnnouncement(
-      spell("disguise-self"),
-      context({ character: smarter, payment: { kind: "slot", slotLevel: 1 } }),
+      spell("web"),
+      context({ character: smarter, payment: { kind: "slot", slotLevel: 2 } }),
     );
     expect(announcement.text).toContain("против КС 17");
   });
@@ -88,7 +88,7 @@ describe("renderAnnouncement: подстановки (FR-041)", () => {
 
   it("называет выбранный уровень ячейки при повышении", () => {
     const announcement = renderAnnouncement(
-      spell("disguise-self"),
+      spell("web"),
       context({ payment: { kind: "slot", slotLevel: 3 } }),
     );
     expect(announcement.text).toContain("ячейкой 3 уровня");
@@ -131,11 +131,11 @@ describe("renderAnnouncement: режим применения (FR-041)", () => {
 
   it("ритуальное применение берёт шаблон как есть", () => {
     const announcement = renderAnnouncement(
-      spell("identify"),
-      context({ mode: "ritual", targetLabel: "кольцо из склепа" }),
+      spell("find-familiar"),
+      context({ mode: "ritual" }),
     );
 
-    expect(announcement.text).toContain("ритуалом на предмете кольцо из склепа");
+    expect(announcement.text).toContain("«Поиск фамильяра» ритуалом");
     expect(announcement.gaps).toEqual([]);
   });
 
@@ -298,9 +298,10 @@ describe("castInstructions: что сделать этому персонажу 
   });
 
   it("для спасброска называет характеристику и порог, а не сокращение (ADR-0012)", () => {
-    // В первой партии контента заклинаний со спасброском нет: они появятся на уровнях 2–4.
+    // Базой взята настоящая карточка, а проверяются слова: своего спасброска у «Волшебной стрелы»
+    // нет, и подменённое разрешение показывает формулировку, не приписывая её карточке.
     const withSave: Spell = {
-      ...spell("disguise-self"),
+      ...spell("magic-missile"),
       resolution: { type: "saving_throw", savingThrow: "DEX" },
     };
     const steps = castInstructions(
@@ -312,7 +313,7 @@ describe("castInstructions: что сделать этому персонажу 
 
   it("на испорченных данных без характеристики называет хотя бы порог", () => {
     const broken: Spell = {
-      ...spell("disguise-self"),
+      ...spell("magic-missile"),
       resolution: { type: "saving_throw" },
     };
     expect(
@@ -345,7 +346,7 @@ describe("castInstructions: что сделать этому персонажу 
       spell("mage-armor"),
       context({ payment: { kind: "blood", castLevel: 1 } }),
     );
-    const byRitual = castInstructions(spell("identify"), context({ mode: "ritual" }));
+    const byRitual = castInstructions(spell("find-familiar"), context({ mode: "ritual" }));
 
     expect(bySlot).toContain("Спишется ячейка 3 уровня");
     expect(byBlood).toContain(
@@ -372,7 +373,7 @@ describe("castInstructions: что сделать этому персонажу 
 
   it("эффекты успеха и провала показываются, когда они заданы", () => {
     const withEffects: Spell = {
-      ...spell("disguise-self"),
+      ...spell("magic-missile"),
       resolution: {
         type: "saving_throw",
         savingThrow: "DEX",
@@ -437,7 +438,7 @@ describe("руна в объявлении (FR-151, FR-152)", () => {
 
   it("без уровня сотворения руну не называет", () => {
     const announcement = renderAnnouncement(
-      spell("identify"),
+      spell("find-familiar"),
       context({ mode: "ritual", rune: "war" }),
     );
     expect(announcement.text).not.toMatch(/руну/);
