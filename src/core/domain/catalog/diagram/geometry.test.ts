@@ -111,6 +111,22 @@ describe("знак на своём месте", () => {
     expect(placed).toEqual({ kind: "line", x1: 175, y1: 300, x2: 225, y2: 300 });
   });
 
+  it("незамкнутая ломаная замкнутости не приобретает: признак приходит от штриха", () => {
+    // Замкнутость несёт сам штрих, и её отсутствие — не «false», а отсутствие поля: рисующая
+    // сторона не должна отличать «не замкнуто» от «не сказано».
+    const [open] = placedStrokes([{ kind: "polyline", points: [[0, 0], [100, 100]] }], {
+      at: { x: 100, y: 100 },
+      size: 100,
+    });
+    const [closed] = placedStrokes(
+      [{ kind: "polyline", points: [[0, 0], [100, 100]], closed: true }],
+      { at: { x: 100, y: 100 }, size: 100 },
+    );
+
+    expect(open).not.toHaveProperty("closed");
+    expect(closed).toMatchObject({ closed: true });
+  });
+
   it("поворот идёт по часовой стрелке вокруг той же точки", () => {
     const [placed] = placedStrokes([{ kind: "line", x1: 50, y1: 0, x2: 50, y2: 100 }], {
       at: { x: 100, y: 100 },

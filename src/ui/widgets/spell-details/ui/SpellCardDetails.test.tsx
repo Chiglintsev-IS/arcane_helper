@@ -34,17 +34,17 @@ describe("подробная карточка называет три компо
   });
 
   it("материал, которого фокусировка не заменяет, назван своим предметом", async () => {
-    const mechanics = await mechanicsOf("find-familiar");
+    const mechanics = await mechanicsOf("arcane-lock");
 
-    const material = mechanics.getByText(/уголь, благовония и травы/);
+    const material = mechanics.getByText(/золотая пыль/);
     expect(material.textContent).toContain("свой предмет");
     expect(material.className).toBe("");
   });
 
   it("расходуемый материал называет и то, что сгорает", async () => {
-    const mechanics = await mechanicsOf("find-familiar");
+    const mechanics = await mechanicsOf("arcane-lock");
 
-    expect(mechanics.getByText(/уголь, благовония и травы/).textContent).toContain("расходуется");
+    expect(mechanics.getByText(/золотая пыль/).textContent).toContain("расходуется");
   });
 
   it("ненужный компонент назван словом: сотворить молча — решение, а не пробел", async () => {

@@ -92,7 +92,7 @@ describe("компоненты на строке списка (FR-010)", () => {
   });
 
   it("материал, которого фокусировка не заменяет, выделен среди букв", () => {
-    renderRow("find-familiar");
+    renderRow("arcane-lock");
 
     const components = screen.getByRole("img", { name: /^Компоненты/ });
     const [verbal, somatic, material] = [...components.children];

@@ -91,7 +91,7 @@ describe("книга заклинаний Торна", () => {
     expect(byId.get("web")).toBe("offense");
     expect(byId.get("slow")).toBe("offense");
     expect(byId.get("counterspell")).toBe("defense");
-    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(7);
+    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(8);
   });
 
 });
@@ -241,9 +241,8 @@ describe("покрытие механик первой партией", () => {
     ["концентрация", "detect-magic", (s: NonNullable<ReturnType<typeof byId.get>>) => s.concentration],
     ["цель-предмет", "mending", (s: NonNullable<ReturnType<typeof byId.get>>) => s.targeting.type === "object"],
     ["время «минута»", "mending", (s: NonNullable<ReturnType<typeof byId.get>>) => s.castingTime.type === "minute"],
-    ["время «час»", "find-familiar", (s: NonNullable<ReturnType<typeof byId.get>>) => s.castingTime.type === "hour"],
-    ["расходуемый компонент", "find-familiar", (s: NonNullable<ReturnType<typeof byId.get>>) => s.components.consumed === true],
-    ["компонент со стоимостью", "find-familiar", (s: NonNullable<ReturnType<typeof byId.get>>) => s.components.costGp === 10],
+    ["расходуемый компонент", "arcane-lock", (s: NonNullable<ReturnType<typeof byId.get>>) => s.components.consumed === true],
+    ["компонент со стоимостью", "arcane-lock", (s: NonNullable<ReturnType<typeof byId.get>>) => s.components.costGp === 25],
     ["область-сфера", "detect-magic", (s: NonNullable<ReturnType<typeof byId.get>>) => s.area?.shape === "sphere"],
   ])("механика «%s» покрыта карточкой %s", (_mechanic, id, predicate) => {
     const spell = byId.get(id);
@@ -268,7 +267,7 @@ describe("покрытие механик первой партией", () => {
 
   it("ритуалы не расходуют ячейку и потому не входят в подготовку", () => {
     const rituals = spells.filter((spell) => spell.ritual);
-    expect(rituals.map((spell) => spell.id).sort()).toEqual(["detect-magic", "find-familiar"]);
+    expect(rituals.map((spell) => spell.id).sort()).toEqual(["alarm", "detect-magic"]);
   });
 });
 

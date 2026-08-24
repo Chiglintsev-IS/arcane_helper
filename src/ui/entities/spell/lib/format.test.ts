@@ -74,6 +74,11 @@ describe("targetingLabel", () => {
   it("цель-предмет названа предметом: существом она не станет", () => {
     expect(targetingLabel(testSpellRow("mending").card.targeting)).toBe("Предмет");
   });
+
+  it("точка в пространстве целью-существом не притворяется", () => {
+    // Заклинания, целящегося в точку, в книге сейчас нет: проверяется слово, а не состав книги.
+    expect(targetingLabel({ type: "point" })).toBe("Точка в пространстве");
+  });
 });
 
 describe("durationPhrase (FR-014)", () => {

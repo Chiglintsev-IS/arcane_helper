@@ -194,7 +194,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Луч холода")).toBeDefined();
     expect(list.queryByText("Починка")).toBeNull();
-    expect(list.queryByText("Поиск фамильяра")).toBeNull();
+    expect(list.queryByText("Волшебный замок")).toBeNull();
     // Неподготовленный ритуал уходит совсем: ячейкой его не сотворить.
     expect(list.queryByText("Обнаружение магии")).toBeNull();
   });
@@ -292,7 +292,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 
     await user.click(screen.getByRole("button", { name: "Защита" }));
 
-    // Семь защитных строк: «Щит», «Поглощение стихий», «Доспехи мага», «Отражения»,
+    // Семь защитных строк: «Щит», «Поглощение стихий», «Доспехи мага», «Крепость интеллекта»,
     // «Контрзаклинание», «Громовой шаг» и «Знаки ограждения» — ими тоже закрываются.
     const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).getAllByRole("listitem")).toHaveLength(7);
@@ -375,14 +375,15 @@ describe("повторяемое действие эффекта (FR-092)", () =
     await renderWithStores(<GameScreen />);
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
-    await user.click(screen.getByRole("button", { name: /^Отражения/ }));
+    await user.click(screen.getByRole("button", { name: /^Сфера бури/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    // Ежеходная работа названа на самой строке: за раскрытием её забудут на втором раунде.
+    // Ежеходная работа названа на самой строке: за раскрытием её забудут на втором раунде. Работа
+    // висит на удерживаемом заклинании — разряд стоит бонусного действия каждый ход.
     const line = within(screen.getByLabelText("Действует"));
-    expect(line.getByText(/Считать отражения/)).toBeDefined();
+    expect(line.getByText(/Разряд молнии бонусным действием/)).toBeDefined();
   });
 
   it("у эффекта без ежеходной работы напоминания нет", async () => {

@@ -40,7 +40,7 @@ function spell(id: string): Spell {
 const rayOfFrost = spell("ray-of-frost");
 const mageArmor = spell("mage-armor");
 const detectMagic = spell("detect-magic");
-const findFamiliar = spell("find-familiar");
+const alarm = spell("alarm");
 const shield = spell("shield");
 
 /** Бой идёт: этот файл проверяет черновик мастера, а не факт начала боя. */
@@ -242,8 +242,8 @@ describe("начало применения", () => {
   });
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
-    // Вне боя: накладывание идёт час, и в раунд оно не помещается ни ритуалом, ни ячейкой.
-    store.getState().start(rowOf(findFamiliar, createThorne(), OUTSIDE_FIGHT));
+    // Вне боя: накладывание идёт минуту, и в раунд оно не помещается ни ритуалом, ни ячейкой.
+    store.getState().start(rowOf(alarm, createThorne(), OUTSIDE_FIGHT));
     expect(draftOf().option).toMatchObject({ mode: "ritual", payment: { kind: "none" } });
   });
 
@@ -308,8 +308,9 @@ describe("шаги мастера (FR-021, M-03)", () => {
   });
 
   it("компонент со стоимостью добавляет шаг проверки компонентов", () => {
-    // Вне боя: единственный компонент со стоимостью — у ритуала, который накладывают час.
-    const row = rowOf(findFamiliar, createThorne(), OUTSIDE_FIGHT);
+    // Единственный компонент со стоимостью — у «Волшебного замка»; вне боя, потому что
+    // неподготовленное заклинание в боевом списке не стоит.
+    const row = rowOf(spell("arcane-lock"), createThorne(), OUTSIDE_FIGHT);
     store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("components");
   });

@@ -16,19 +16,7 @@ function diagramOf(id: string) {
   return found;
 }
 
-/**
- * Числовой квадрат: у книжных ритуалов его нет — их два, и оба обходятся без него. Слой собирается
- * здесь знаками, потому что проверяется отрисовка числа, а не состав книги.
- */
-function withNumbers(diagram: ReturnType<typeof diagramOf>): ReturnType<typeof diagramOf> {
-  const numbers = [4, 9, 2, 3, 5, 7, 8, 1, 6].map((value, index) => ({
-    kind: "number" as const,
-    at: { x: 100 + (index % 3) * 40, y: 100 + Math.floor(index / 3) * 40 },
-    size: 24,
-    value,
-  }));
-  return { ...diagram, marks: [...diagram.marks, { layer: "magic-square", figures: numbers }] };
-}
+
 
 function layers(container: HTMLElement, layer: string): Element[] {
   return [...container.querySelectorAll(`[data-layer="${layer}"]`)];
@@ -50,12 +38,13 @@ describe("слои схемы", () => {
     expect(layers(container, "inscription-rune")).toHaveLength(6);
   });
 
-  it("восьмиконечная звезда — один обход, гексаграмма — два", () => {
+  it("звезда рисуется обходом, а её отсутствие не рисуется вовсе", () => {
     const eight = render(<RitualDiagram diagram={diagramOf("detect-magic")} />);
     expect(layers(eight.container, "star-cycle")).toHaveLength(1);
 
-    const six = render(<RitualDiagram diagram={diagramOf("find-familiar")} />);
-    expect(layers(six.container, "star-cycle")).toHaveLength(2);
+    // У «Сигнала тревоги» звезды нет в самих данных: пустой случай настоящий, а не подставленный.
+    const none = render(<RitualDiagram diagram={diagramOf("alarm")} />);
+    expect(layers(none.container, "star-cycle")).toHaveLength(0);
   });
 
   it("рисует восемь рунных знаков на вершинах", () => {
@@ -64,7 +53,7 @@ describe("слои схемы", () => {
   });
 
   it("рисует числовой квадрат с девятью числами", () => {
-    const { container } = render(<RitualDiagram diagram={withNumbers(diagramOf("detect-magic"))} />);
+    const { container } = render(<RitualDiagram diagram={diagramOf("alarm")} />);
     expect(layers(container, "magic-square")).toHaveLength(1);
     expect([...container.querySelectorAll("text")].map((node) => node.textContent)).toEqual([
       "4", "9", "2", "3", "5", "7", "8", "1", "6",
@@ -72,19 +61,19 @@ describe("слои схемы", () => {
   });
 
   it("рисует печать центра", () => {
-    const { container } = render(<RitualDiagram diagram={diagramOf("find-familiar")} />);
+    const { container } = render(<RitualDiagram diagram={diagramOf("alarm")} />);
     expect(layers(container, "central-seal")).toHaveLength(1);
   });
 
-  it("рисует четыре угловых знака у круга вызова", () => {
-    const { container } = render(<RitualDiagram diagram={diagramOf("find-familiar")} />);
+  it("рисует четыре угловых знака по сторонам листа", () => {
+    const { container } = render(<RitualDiagram diagram={diagramOf("alarm")} />);
     expect(layers(container, "corner-mark")).toHaveLength(4);
   });
 
   it("не рисует слоёв, которых в данных нет", () => {
-    const { container } = render(<RitualDiagram diagram={diagramOf("find-familiar")} />);
-    expect(layers(container, "tick")).toHaveLength(0);
+    const { container } = render(<RitualDiagram diagram={diagramOf("detect-magic")} />);
     expect(layers(container, "magic-square")).toHaveLength(0);
+    expect(layers(container, "corner-mark")).toHaveLength(0);
   });
 
   it("цвет берётся у текста, заливки нет: рисунок повторим пером", () => {

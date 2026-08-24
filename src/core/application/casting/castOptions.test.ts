@@ -87,8 +87,8 @@ describe("castPlans: какие способы вообще есть", () => {
   });
 
   it("для ритуального заклинания добавляет ритуальный режим", () => {
-    const findFamiliar = allSpells.find((spell) => spell.id === "find-familiar")!;
-    expect(optionsOf(findFamiliar, outsideCombat(), ALL_TURN_RESOURCES)).toContainEqual({
+    const alarm = allSpells.find((spell) => spell.id === "alarm")!;
+    expect(optionsOf(alarm, outsideCombat(), ALL_TURN_RESOURCES)).toContainEqual({
       mode: "ritual",
       payment: { kind: "none" },
     });
@@ -168,7 +168,7 @@ describe("в бою творится только то, что укладыва�
     ["shocking-grasp", true], // действие
     ["shield", true], // реакция
     ["mending", false], // 1 минута
-    ["find-familiar", false], // 1 час
+    ["alarm", false], // 1 минута
   ])("«%s» — %s", (id, expected) => {
     const spell = allSpells.find((candidate) => candidate.id === id);
     expect(spell, id).toBeDefined();

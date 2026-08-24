@@ -38,7 +38,13 @@ const CORNER_RADIUS = 1.06;
 /** Доля клетки, которой пишется число квадрата: цифра не упирается в линии. */
 const NUMBER_SIZE = 0.42;
 
-function figureOf(stroke: Stroke): DiagramFigure {
+/**
+ * Штрих справочника знаков — фигурой рисунка.
+ *
+ * Незамкнутая ломаная договором разрешена, но ни один знак справочника ею не нарисован, поэтому
+ * через контент эта ветвь недостижима: отображение проверяется прогоном напрямую.
+ */
+export function figureOf(stroke: Stroke): DiagramFigure {
   const dashed = stroke.dashed === true ? { dashed: true } : {};
   switch (stroke.kind) {
     case "circle":

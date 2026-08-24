@@ -3,8 +3,8 @@
 /**
  * Применение из «Книги»: шаг, которого в бою не бывает.
  *
- * «Опознание» творится минуту, поэтому в списке боя его нет вовсе — единственный экран, где этот
- * путь проходится, книжный.
+ * «Волшебный замок» подготовки не занимает и в боевом списке не стоит, поэтому единственный экран,
+ * где этот путь проходится, — книжный.
  */
 
 import { screen } from "@testing-library/react";
@@ -13,16 +13,27 @@ import { describe, expect, it } from "vitest";
 
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 import { renderWithStores } from "@/ui/app/testing/stores";
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 describe("шаг компонентов", () => {
   it("появляется для компонента со стоимостью и объясняет, что фокусировка его не заменяет", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<BookScreen />);
+    // Замок подготовлен: иначе мастер сначала спрашивает про подготовку, а проверяется здесь шаг
+    // компонентов.
+    const thorne = createThorne();
+    const withLock = {
+      ...thorne,
+      preparedSpellIds: [
+        ...thorne.preparedSpellIds.filter((id) => id !== "intellect-fortress"),
+        "arcane-lock",
+      ],
+    };
+    await renderWithStores(<BookScreen />, withLock);
 
-    await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
+    await user.click(screen.getByRole("button", { name: /^Волшебный замок/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    // Чем сотворить → компоненты → объявление: жемчужина требует отдельного шага.
+    // Условия → чем сотворить → компоненты → объявление: золотая пыль требует отдельного шага, а
+    // первым мастер спрашивает про условия, потому что ни пыли в сумке, ни подготовки нет.
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
     expect(screen.getByText(/Шаг 2 из 3: Компоненты/)).toBeDefined();

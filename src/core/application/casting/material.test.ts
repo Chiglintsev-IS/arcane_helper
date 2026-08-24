@@ -14,7 +14,7 @@ function spell(id: string): Spell {
   return found;
 }
 
-const findFamiliar = spell("find-familiar");
+const arcaneLock = spell("arcane-lock");
 const mageArmor = spell("mage-armor");
 const shield = spell("shield");
 
@@ -23,12 +23,12 @@ describe("материал заклинания", () => {
     // Судьба компонента — его категория: сжигаемое ритуалом тратится счётом, как всякий расходник.
     // Компонента с ценой, который при этом не расходуется, в книге сейчас нет; вещь без цены
     // проверяется следующим тестом.
-    expect(materialOf(findFamiliar.components)).toEqual({
-      id: "уголь,-благовония-и-травы-стоимостью-10-зм,-сжигаемые-в-огне-в-латунной-жаровне",
-      nameRu: "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне",
+    expect(materialOf(arcaneLock.components)).toEqual({
+      id: "золотая-пыль-стоимостью-минимум-25-зм,-расходуемая-заклинанием",
+      nameRu: "золотая пыль стоимостью минимум 25 зм, расходуемая заклинанием",
       kind: "consumable",
       consumed: true,
-      price: { amount: 10, currency: "gold" },
+      price: { amount: 25, currency: "gold" },
     });
   });
 
@@ -49,7 +49,7 @@ describe("материал заклинания", () => {
     // Объявление карточки такого не пропускает: материал обязан быть назван словами. Приложение
     // всё равно не выдумывает вещи — назвать её нечем, и в сумке она не нашлась бы никогда.
     const unnamed: Spell = {
-      ...findFamiliar,
+      ...arcaneLock,
       components: { verbal: true, somatic: true, material: true, consumed: true },
     };
     expect(materialOf(unnamed.components)).toBeUndefined();
@@ -67,7 +67,7 @@ describe("что закрывает фокусировка", () => {
   it("названную стоимость и расход не закрывает ничто", () => {
     // Прежде здесь стояли две карточки — с ценой и с расходом отдельно. Компонента с ценой, который
     // не расходуется, в книге не осталось, и обе черты несёт одна карточка.
-    expect(materialCoveredByFocus(findFamiliar.components, createThorne())).toBe(false);
+    expect(materialCoveredByFocus(arcaneLock.components, createThorne())).toBe(false);
   });
 
   it("заклинанию без материала закрывать нечего", () => {
@@ -99,17 +99,17 @@ describe("кому нужна вещь", () => {
   });
 
   it("закрытое фокусировкой требование остаётся требованием (FR-295)", () => {
-    const withFocus = materialNeeds([mageArmor, findFamiliar], createThorne());
+    const withFocus = materialNeeds([mageArmor, arcaneLock], createThorne());
     expect(withFocus.map((need) => need.coveredByFocus)).toEqual([true, false]);
 
     // Фокусировку сняли — требование то же самое, и оно снова срочно.
-    const bare = materialNeeds([mageArmor, findFamiliar], withoutSpellcastingFocus(createThorne()));
+    const bare = materialNeeds([mageArmor, arcaneLock], withoutSpellcastingFocus(createThorne()));
     expect(bare.map((need) => need.coveredByFocus)).toEqual([false, false]);
 
     // Дешёвый компонент, названный ещё и тем, кто его сжигает, срочен у обоих: сжигаемое не закрыто.
     const alsoBurnt: Spell = {
-      ...findFamiliar,
-      components: { ...findFamiliar.components, materialText: "кусок обработанной кожи" },
+      ...arcaneLock,
+      components: { ...arcaneLock.components, materialText: "кусок обработанной кожи" },
     };
     expect(materialNeeds([mageArmor, alsoBurnt], createThorne())[0]?.coveredByFocus).toBe(false);
   });

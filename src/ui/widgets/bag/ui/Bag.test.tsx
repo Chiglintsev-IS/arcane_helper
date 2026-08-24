@@ -88,8 +88,8 @@ describe("«Сумка» в «Вещах»", () => {
   });
 
   it("истраченная до нуля вещь ушла из своей категории (FR-302)", () => {
-    const ashes = materialOf(spellOf("find-familiar").components);
-    if (ashes === undefined) throw new Error("«Поиск фамильяра» материала не требует");
+    const ashes = materialOf(spellOf("arcane-lock").components);
+    if (ashes === undefined) throw new Error("«Волшебный замок» материала не требует");
 
     render(<Bag bag={toBagView(withStock([{ definition: ashes, bag: 0 }]), spells)} {...NOOP} />);
 
@@ -101,8 +101,8 @@ describe("«Сумка» в «Вещах»", () => {
   });
 
   it("пополненная вещь вернулась в свою категорию (FR-302)", () => {
-    const ashes = materialOf(spellOf("find-familiar").components);
-    if (ashes === undefined) throw new Error("«Поиск фамильяра» материала не требует");
+    const ashes = materialOf(spellOf("arcane-lock").components);
+    if (ashes === undefined) throw new Error("«Волшебный замок» материала не требует");
 
     render(<Bag bag={toBagView(withStock([{ definition: ashes, bag: 1 }]), spells)} {...NOOP} />);
 

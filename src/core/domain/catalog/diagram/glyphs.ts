@@ -99,7 +99,7 @@ export const SEALS: Record<SealKind, Stroke[]> = {
     { kind: "circle", cx: 50, cy: 50, r: 28 },
     { kind: "circle", cx: 50, cy: 50, r: 12 },
   ],
-  // Треугольник вызова: внутри круг — место под уголь и травы.
+  // Треугольник вызова: внутри круг — место под материал ритуала.
   "summoning-triangle": [
     { kind: "polyline", points: [[50, 8], [92, 84], [8, 84]], closed: true },
     { kind: "circle", cx: 50, cy: 62, r: 14 },

@@ -114,7 +114,7 @@ describe("начальное состояние Торна", () => {
 
   it("ритуалы не входят в подготовленные (FR-103)", () => {
     const thorne = createThorne();
-    for (const id of ["find-familiar", "detect-magic"]) {
+    for (const id of ["arcane-lock", "detect-magic"]) {
       expect(thorne.preparedSpellIds).not.toContain(id);
       expect(thorne.spellbookSpellIds).toContain(id);
     }
@@ -176,7 +176,7 @@ describe("применение заклинания (FR-023)", () => {
     expect(() =>
       castSpell(
         session,
-        { spell: spell("find-familiar"), mode: "ritual", payment: { kind: "slot", slotLevel: 1 } },
+        { spell: spell("alarm"), mode: "ritual", payment: { kind: "slot", slotLevel: 1 } },
         occasion,
       ),
     ).toThrow(/Ритуальное применение не расходует ячейку/);
@@ -303,7 +303,7 @@ describe("экономия действий (FR-141)", () => {
   it("время «минута» и «час» действие не расходуют", () => {
     const current = castSpell(
       withTurnTracking(session),
-      { spell: spell("find-familiar"), mode: "ritual", payment: { kind: "none" } },
+      { spell: spell("alarm"), mode: "ritual", payment: { kind: "none" } },
       occasion,
     );
     expect(deriveTurnEconomy(current).actionAvailable).toBe(true);
@@ -554,7 +554,7 @@ describe("руна при сотворении (FR-151)", () => {
       castSpell(
         session,
         {
-          spell: spell("find-familiar"),
+          spell: spell("arcane-lock"),
           mode: "ritual",
           payment: { kind: "none" },
           rune: "life",
@@ -1438,7 +1438,7 @@ describe("экономия хода выводится из лога (ADR-0008, 
     let current = beginTurn(withTurnTracking(session), occasion);
     current = castSpell(
       current,
-      { spell: spell("find-familiar"), mode: "ritual", payment: { kind: "none" } },
+      { spell: spell("alarm"), mode: "ritual", payment: { kind: "none" } },
       occasion,
     );
     expect(current.log.at(-1)?.actionUsed).toBeUndefined();
@@ -1950,7 +1950,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     // тремя: своим счётом отказ не хвалится — его называет тот, кто счёт показывает.
     const narrowed = atLimitOfThree();
     expect(narrowed.character.preparedSpellIds).toHaveLength(3);
-    expect(() => togglePreparation(narrowed, spell("find-familiar"), occasion)).toThrow(
+    expect(() => togglePreparation(narrowed, spell("arcane-lock"), occasion)).toThrow(
       /Снимите другое заклинание/,
     );
   });
@@ -1983,13 +1983,13 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   it("ритуал готовится как обычное заклинание (FR-103)", () => {
     // говорит, что ритуалом его можно творить и без подготовки, а не что готовить нельзя:
     // подготовленный ритуал в бою творится за ячейку обычным временем.
-    const after = togglePreparation(withRoom(), spell("find-familiar"), occasion);
-    expect(after.character.preparedSpellIds).toContain("find-familiar");
+    const after = togglePreparation(withRoom(), spell("arcane-lock"), occasion);
+    expect(after.character.preparedSpellIds).toContain("arcane-lock");
   });
 });
 
 describe("материальные компоненты (FR-030, FR-268)", () => {
-  const ashes = "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне";
+  const ashes = "золотая пыль стоимостью минимум 25 зм, расходуемая заклинанием";
 
   /** Сколько компонента лежит в сумке: он вещь, и спрашивают о нём как о вещи. */
   function inBag(current: Session, nameRu: string): number {
@@ -1999,17 +1999,17 @@ describe("материальные компоненты (FR-030, FR-268)", () =>
   const ritual = { mode: "ritual" as const, payment: { kind: "none" as const } };
 
   it("компонент покупается вещью, и лог называет её словами карточки (FR-268)", () => {
-    const bought = toggleMaterial(session, spell("find-familiar"), occasion);
+    const bought = toggleMaterial(session, spell("arcane-lock"), occasion);
     expect(inBag(bought, ashes)).toBe(1);
     expect(bought.log.at(-1)?.summaryRu).toBe(`Добавлено: ${ashes} (стало 1)`);
 
-    const spent = toggleMaterial(bought, spell("find-familiar"), occasion);
+    const spent = toggleMaterial(bought, spell("arcane-lock"), occasion);
     expect(inBag(spent, ashes)).toBe(0);
     expect(spent.log.at(-1)?.summaryRu).toBe(`Потрачено: ${ashes} (в сумке 0)`);
   });
 
   it("обратимо, как любой расход (FR-111)", () => {
-    const bought = toggleMaterial(session, spell("find-familiar"), occasion);
+    const bought = toggleMaterial(session, spell("arcane-lock"), occasion);
     expect(inBag(undoLast(bought), ashes)).toBe(0);
   });
 
@@ -2020,10 +2020,10 @@ describe("материальные компоненты (FR-030, FR-268)", () =>
   });
 
   it("расходуемый компонент списывается сотворением и возвращается отменой", () => {
-    const bought = toggleMaterial(session, spell("find-familiar"), occasion);
+    const bought = toggleMaterial(session, spell("arcane-lock"), occasion);
     expect(inBag(bought, ashes)).toBe(1);
 
-    const cast = castSpell(bought, { spell: spell("find-familiar"), ...ritual }, occasion);
+    const cast = castSpell(bought, { spell: spell("arcane-lock"), ...ritual }, occasion);
     expect(inBag(cast, ashes)).toBe(0);
     // Молча уменьшившийся запас читался бы за столом как ошибка приложения.
     expect(cast.log.at(-1)?.summaryRu).toContain(`компонент израсходован: ${ashes}`);
@@ -2033,7 +2033,7 @@ describe("материальные компоненты (FR-030, FR-268)", () =>
   });
 
   it("нечему гореть — сотворение проходит молча", () => {
-    const cast = castSpell(session, { spell: spell("find-familiar"), ...ritual }, occasion);
+    const cast = castSpell(session, { spell: spell("arcane-lock"), ...ritual }, occasion);
 
     expect(inBag(cast, ashes)).toBe(0);
     expect(cast.log.at(-1)?.summaryRu).not.toContain("компонент");

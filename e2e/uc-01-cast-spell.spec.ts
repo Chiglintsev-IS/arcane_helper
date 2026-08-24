@@ -608,7 +608,7 @@ test("book mode prepares spells", async ({ page }) => {
   // Стартовый набор занимает лимит целиком, и двенадцатое заклинание в него не влезает.
   await expect(page.getByLabel("Подготовлено 11 из 11")).toBeVisible();
 
-  await page.getByRole("button", { name: "Снять подготовку: Отражения" }).click();
+  await page.getByRole("button", { name: "Снять подготовку: Крепость интеллекта" }).click();
   await expect(page.getByLabel("Подготовлено 10 из 11")).toBeVisible();
 
   await page.getByRole("button", { name: "Подготовить: Обнаружение магии" }).click();

@@ -14,13 +14,14 @@ import { parsedBySchema } from "@/core/domain/shared/schema";
 import type { BannedSpell } from "@/core/domain/spellbook/restrictions";
 
 import absorbElements from "./spells/absorb-elements.json";
+import alarm from "./spells/alarm.json";
+import arcaneLock from "./spells/arcane-lock.json";
 import arcaneVigor from "./spells/arcane-vigor.json";
 import counterspell from "./spells/counterspell.json";
 import detectMagic from "./spells/detect-magic.json";
 import dispelMagic from "./spells/dispel-magic.json";
 import enlargeReduce from "./spells/enlarge-reduce.json";
 import featherFall from "./spells/feather-fall.json";
-import findFamiliar from "./spells/find-familiar.json";
 import haste from "./spells/haste.json";
 import iceStorm from "./spells/ice-storm.json";
 import intellectFortress from "./spells/intellect-fortress.json";
@@ -29,7 +30,6 @@ import mageArmor from "./spells/mage-armor.json";
 import magicMissile from "./spells/magic-missile.json";
 import mending from "./spells/mending.json";
 import message from "./spells/message.json";
-import mirrorImage from "./spells/mirror-image.json";
 import polymorph from "./spells/polymorph.json";
 import rayOfFrost from "./spells/ray-of-frost.json";
 import rimesBindingIce from "./spells/rimes-binding-ice.json";
@@ -56,10 +56,10 @@ const RAW_SPELLS: readonly unknown[] = [
   featherFall,
   mageArmor,
   magicMissile,
-  findFamiliar,
+  alarm,
   detectMagic,
 
-  mirrorImage,
+  arcaneLock,
   arcaneVigor,
   web,
   rimesBindingIce,
@@ -157,6 +157,13 @@ export const BANNED_SPELLS: readonly BannedSpell[] = [
     nameEn: "Blink",
     reason: "dungeon_master",
     explanationRu: "Заклинания нет в мире: мерцать некуда, иных планов не существует.",
+  },
+  {
+    nameRu: "Поиск фамильяра",
+    nameEn: "Find Familiar",
+    reason: "dungeon_master",
+    explanationRu:
+      "Не срабатывает: фамильяр — дух в облике зверя, а призывать в этом мире неоткуда, иных планов нет.",
   },
   {
     nameRu: "Полёт",

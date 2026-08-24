@@ -93,7 +93,7 @@ describe("dividingCategories", () => {
   });
 
   it("время накладывания следует составу: долгого в бою нет", () => {
-    // Вне боя «Починка» делит список минутами, «Поиск фамильяра» — часами; в бою их там нет вовсе.
+    // Вне боя «Починка» делит список минутами, «Сигнал тревоги» — тоже минутой; в бою их там нет вовсе.
     expect(categoriesOf(false).castingTimes.has("minute")).toBe(true);
     expect(categoriesOf(true).castingTimes.has("minute")).toBe(false);
   });
@@ -109,7 +109,7 @@ describe("filterSpells: список без фильтров", () => {
   it("показывает ритуалы по фильтру «ритуал»", () => {
     // «Ритуал» спрашивает про способ: он есть, только пока бой не идёт.
     expect(ids(filterSpells(outOfFight(), filters({ ritual: true })))).toEqual([
-      "find-familiar",
+      "alarm",
       "detect-magic",
     ]);
   });

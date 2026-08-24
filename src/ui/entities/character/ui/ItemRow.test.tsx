@@ -125,15 +125,15 @@ describe("строка вещи", () => {
   });
 
   it("строка вещи называет, чем вещь требуется (FR-295)", () => {
-    const ritual = spells.find((spell) => spell.id === "find-familiar");
+    const ritual = spells.find((spell) => spell.id === "arcane-lock");
     const material = ritual === undefined ? undefined : materialOf(ritual.components);
-    if (material === undefined) throw new Error("«Поиск фамильяра» материала не требует");
+    if (material === undefined) throw new Error("«Волшебный замок» материала не требует");
 
     renderRow(viewOf(material));
 
     // Требование стоит тем же перечнем подробностей, что и цена: отдельной строки под него нет.
-    expect(screen.getByText("Требуется для: Поиск фамильяра")).toBeDefined();
-    expect(factAt("10")).toBe("10 зм");
+    expect(screen.getByText("Требуется для: Волшебный замок")).toBeDefined();
+    expect(factAt("25")).toBe("25 зм");
   });
 
   it("у вещи без подробностей второй строки нет вовсе (FR-250)", () => {

@@ -150,14 +150,14 @@ describe("«Вещи» (FR-304)", () => {
     const { stores } = await renderWithStores(<ThingsScreen initialPart="shopping" />);
 
     // Уголь картой не заведён: его строка заводит вещь по словам карточки.
-    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: уголь/ }));
+    await user.click(screen.getByRole("button", { name: /Добавить один в сумку: золотая пыль/ }));
 
-    expect(screen.queryByRole("button", { name: /Добавить один в сумку: уголь/ })).toBeNull();
-    const bought = shown(stores).bag.items.find((item) => item.nameRu.startsWith("уголь"));
+    expect(screen.queryByRole("button", { name: /Добавить один в сумку: золотая пыль/ })).toBeNull();
+    const bought = shown(stores).bag.items.find((item) => item.nameRu.startsWith("золотая пыль"));
     expect(bought?.bagCount).toBe(1);
 
     // Купленное ищут там, где лежит остальное счётное, а не там, где его выбирали.
     await user.click(screen.getByRole("radio", { name: "Сумка" }));
-    expect(screen.getByRole("button", { name: /^Правка: уголь/ })).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Правка: золотая пыль/ })).toBeDefined();
   });
 });

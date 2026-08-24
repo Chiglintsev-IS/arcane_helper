@@ -220,12 +220,12 @@ describe("карточка", () => {
   });
 
   it("свой компонент назван словами, и строка знает, лежит ли он в сумке", () => {
-    // Компонент «Поиска фамильяра» — уголь и травы за 10 зм: фокусировка их не заменяет.
-    expect(row("find-familiar").card.components.material?.textRu).toContain("уголь");
-    expect(row("find-familiar").ownComponentCarried).toBe(false);
+    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет.
+    expect(row("arcane-lock").card.components.material?.textRu).toContain("золотая пыль");
+    expect(row("arcane-lock").ownComponentCarried).toBe(false);
 
-    const bought = row("find-familiar", createThorne(), [
-      { kind: "toggle_material", spellId: "find-familiar" },
+    const bought = row("arcane-lock", createThorne(), [
+      { kind: "toggle_material", spellId: "arcane-lock" },
     ]);
     expect(bought.ownComponentCarried).toBe(true);
     // Заклинание без материального компонента о нём молчит.
@@ -294,9 +294,9 @@ describe("способы сотворения", () => {
   it("шаги мастера решаются признаками строки, а не разбором карточки на экране", () => {
     expect(row("arcane-vigor").spendsHitDice).toBe(true);
     expect(row("mage-armor").spendsHitDice).toBe(false);
-    // Компонент «Поиска фамильяра» — уголь и травы за 10 зм: фокусировка их не заменяет.
-    expect(row("find-familiar").ownComponentRequired).toBe(true);
-    expect(row("find-familiar").componentReminders.join(" ")).toContain("уголь");
+    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет.
+    expect(row("arcane-lock").ownComponentRequired).toBe(true);
+    expect(row("arcane-lock").componentReminders.join(" ")).toContain("золотая пыль");
   });
 });
 

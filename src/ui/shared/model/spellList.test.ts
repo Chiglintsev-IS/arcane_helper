@@ -22,7 +22,7 @@ function playList(inFight: boolean): string[] {
 describe("вне боя: заговоры, подготовленные и ритуальные из книги (FR-209)", () => {
   it("ритуал из книги стоит в списке без подготовки", () => {
     // Ни одного ритуала Торн сегодня не подготовил, а сотворить их всё равно может.
-    for (const id of ["detect-magic", "find-familiar"]) {
+    for (const id of ["detect-magic", "alarm"]) {
       expect(playList(false), id).toContain(id);
     }
   });
@@ -65,18 +65,18 @@ describe("порядок: сначала бесплатное, потом по �
       "ray-of-frost",
       "message",
       "mending",
-      "find-familiar",
+      "alarm",
       "detect-magic",
       "magic-missile",
       "shield",
       "absorb-elements",
       "mage-armor",
       "web",
-      "mirror-image",
       "lightning-bolt",
       "slow",
       "counterspell",
       "thunder-step",
+      "intellect-fortress",
       "storm-sphere",
     ]);
   });
@@ -92,11 +92,11 @@ describe("порядок: сначала бесплатное, потом по �
       "absorb-elements",
       "mage-armor",
       "web",
-      "mirror-image",
       "lightning-bolt",
       "slow",
       "counterspell",
       "thunder-step",
+      "intellect-fortress",
       "storm-sphere",
     ]);
   });

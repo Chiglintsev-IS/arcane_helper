@@ -210,10 +210,10 @@ describe("книга", () => {
   });
 
   it("компонент кладётся в сумку вещью", () => {
-    const live = run([{ kind: "toggle_material", spellId: "find-familiar" }]);
+    const live = run([{ kind: "toggle_material", spellId: "arcane-lock" }]);
 
     expect(live.session.character.itemDefinitions.map((item) => item.nameRu)).toContain(
-      "уголь, благовония и травы стоимостью 10 зм, сжигаемые в огне в латунной жаровне",
+      "золотая пыль стоимостью минимум 25 зм, расходуемая заклинанием",
     );
   });
 

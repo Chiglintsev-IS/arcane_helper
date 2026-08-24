@@ -131,11 +131,11 @@ describe("renderAnnouncement: режим применения (FR-041)", () => {
 
   it("ритуальное применение берёт шаблон как есть", () => {
     const announcement = renderAnnouncement(
-      spell("find-familiar"),
+      spell("alarm"),
       context({ mode: "ritual" }),
     );
 
-    expect(announcement.text).toContain("«Поиск фамильяра» ритуалом");
+    expect(announcement.text).toContain("«Сигнал тревоги» ритуалом");
     expect(announcement.gaps).toEqual([]);
   });
 
@@ -346,7 +346,7 @@ describe("castInstructions: что сделать этому персонажу 
       spell("mage-armor"),
       context({ payment: { kind: "blood", castLevel: 1 } }),
     );
-    const byRitual = castInstructions(spell("find-familiar"), context({ mode: "ritual" }));
+    const byRitual = castInstructions(spell("alarm"), context({ mode: "ritual" }));
 
     expect(bySlot).toContain("Спишется ячейка 3 уровня");
     expect(byBlood).toContain(
@@ -438,7 +438,7 @@ describe("руна в объявлении (FR-151, FR-152)", () => {
 
   it("без уровня сотворения руну не называет", () => {
     const announcement = renderAnnouncement(
-      spell("find-familiar"),
+      spell("alarm"),
       context({ mode: "ritual", rune: "war" }),
     );
     expect(announcement.text).not.toMatch(/руну/);

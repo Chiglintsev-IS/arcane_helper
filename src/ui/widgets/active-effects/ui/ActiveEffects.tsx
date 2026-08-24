@@ -18,6 +18,11 @@ import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summa
 import { ACTIVE_SHEET_LABEL, armorClassNote } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
+/** Ежеходная работа эффекта: без неё строка о ней молчит, а не показывает пустое место. */
+function repeatableNote(effect: ActiveEffectView | undefined): string {
+  return effect?.repeatableAction === undefined ? "" : ` ↻ ${effect.repeatableAction.label}`;
+}
+
 /** Что держится: имя, вклад в защиту и ежеходная работа, если она есть. */
 function heldNames(
   effects: readonly ActiveEffectView[],
@@ -29,14 +34,20 @@ function heldNames(
     .map((effect) => ({
       key: effect.id,
       markRu: "◈",
-      textRu: `${effect.nameRu}${armorClassNote(effect, armorClass)}${
-        effect.repeatableAction === undefined ? "" : ` ↻ ${effect.repeatableAction.label}`
-      }`,
+      textRu: `${effect.nameRu}${armorClassNote(effect, armorClass)}${repeatableNote(effect)}`,
       concentrating: false,
     }));
   if (concentration === null) return held;
+  // Удерживаемое напоминает о ежеходной работе так же, как всё прочее: разряд «Сферы бури» стоит
+  // бонусного действия каждый ход, и забыть о нём на втором раунде проще всего.
+  const heldByConcentration = effects.find((effect) => effect.isConcentration);
   return [
-    { key: "concentration", markRu: "✦", textRu: concentration.nameRu, concentrating: true },
+    {
+      key: "concentration",
+      markRu: "✦",
+      textRu: `${concentration.nameRu}${repeatableNote(heldByConcentration)}`,
+      concentrating: true,
+    },
     ...held,
   ];
 }

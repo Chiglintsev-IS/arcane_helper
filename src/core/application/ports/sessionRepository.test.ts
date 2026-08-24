@@ -30,7 +30,7 @@ const PLAYER_SAVE = {
       "absorb-elements",
       "mage-armor",
       "magic-missile",
-      "find-familiar",
+      "arcane-lock",
       "detect-magic",
       "see-invisibility",
       "slow",

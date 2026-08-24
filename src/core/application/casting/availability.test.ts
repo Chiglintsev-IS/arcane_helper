@@ -41,7 +41,8 @@ const mageArmor = spell("mage-armor");
 const shield = spell("shield");
 const detectMagic = spell("detect-magic");
 const mending = spell("mending");
-const findFamiliar = spell("find-familiar");
+const arcaneLock = spell("arcane-lock");
+const alarm = spell("alarm");
 
 function check(overrides: Partial<AvailabilityInput> & { spell: Spell }) {
   const input: AvailabilityInput = {
@@ -140,7 +141,7 @@ describe("checkAvailability: экономия хода (FR-030, FR-141)", () => 
 
   it("накладывание в минуты и часы экономию хода не тратит", () => {
     const availability = check({
-      spell: findFamiliar,
+      spell: alarm,
       mode: "ritual",
       payment: { kind: "none" },
       turn: {
@@ -170,8 +171,11 @@ describe("checkAvailability: накладывание дольше хода (FR-
   });
 
   it("часы называют время в своих единицах", () => {
+    // Заклинания с накладыванием в часы в книге сейчас нет: время подменено у настоящей карточки,
+    // потому что проверяются единицы в предупреждении, а не состав книги.
+    const forHours: Spell = { ...alarm, castingTime: { type: "hour", value: 1 } };
     const availability = check({
-      spell: findFamiliar,
+      spell: forHours,
       character: inCombat(),
       mode: "ritual",
       payment: { kind: "none" },
@@ -319,7 +323,7 @@ describe("checkAvailability: оплата (FR-030, FR-070)", () => {
 
   it("ритуал с выбранной ячейкой — ошибка данных, а не предупреждение", () => {
     expect(() =>
-      check({ spell: findFamiliar, mode: "ritual", payment: { kind: "slot", slotLevel: 1 } }),
+      check({ spell: arcaneLock, mode: "ritual", payment: { kind: "slot", slotLevel: 1 } }),
     ).toThrow(/Ритуальное применение не расходует ячейку/);
   });
 
@@ -413,11 +417,11 @@ describe("перечень требований (FR-030)", () => {
   it("предупреждает, что фокусировка не заменяет компонент со стоимостью", () => {
     // Компонента «стоит денег, но не расходуется» в книге сейчас нет, поэтому цену и расход
     // свидетельствует одна карточка: здесь проверяется цена, следующим тестом — расход.
-    expect(requirements(findFamiliar).at(-1)).toContain("10 зм, фокусировка не заменяет");
+    expect(requirements(arcaneLock).at(-1)).toContain("25 зм, фокусировка не заменяет");
   });
 
   it("отмечает расходуемый компонент", () => {
-    expect(requirements(findFamiliar).at(-1)).toMatch(/расходуется/);
+    expect(requirements(arcaneLock).at(-1)).toMatch(/расходуется/);
   });
 
   it("заклинание без компонентов напоминаний не порождает", () => {
@@ -473,13 +477,13 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
     );
 
   it("дорогой компонент проверяется запасом в сумке (FR-268)", () => {
-    const missing = missingComponent(findFamiliar);
-    expect(missing?.reasonRu).toContain("уголь, благовония и травы");
+    const missing = missingComponent(arcaneLock);
+    expect(missing?.reasonRu).toContain("золотая пыль");
     // Проходимо: мастер вправе разрешить, а игрок — вспомнить, что запас всё-таки есть.
     expect(missing?.enforcement).toBe("advisory");
 
     expect(
-      missingComponent(findFamiliar, withMaterialInBag(createThorne(), findFamiliar)),
+      missingComponent(arcaneLock, withMaterialInBag(createThorne(), arcaneLock)),
     ).toBeUndefined();
   });
 
@@ -503,7 +507,7 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
     const base = createThorne();
     const { components: _none, ...withoutComponents } = base.equipment;
 
-    expect(missingComponent(findFamiliar, { ...base, equipment: withoutComponents })).toBeUndefined();
+    expect(missingComponent(arcaneLock, { ...base, equipment: withoutComponents })).toBeUndefined();
   });
 });
 

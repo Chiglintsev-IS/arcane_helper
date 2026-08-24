@@ -239,7 +239,7 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     expect(list.getByText("Луч холода")).toBeDefined();
     // Пока бой не идёт, торопиться некуда: долгое накладывание и ритуал из книги на месте.
     expect(list.getByText("Починка")).toBeDefined();
-    expect(list.getByText("Поиск фамильяра")).toBeDefined();
+    expect(list.getByText("Сигнал тревоги")).toBeDefined();
   });
 
   it("режим попадает в состояние, а лог не засоряет (FR-204)", async () => {
@@ -348,13 +348,13 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const user = userEvent.setup();
     await inBookMode();
 
-    await user.click(screen.getByRole("button", { name: "Снять подготовку: Отражения" }));
+    await user.click(screen.getByRole("button", { name: "Снять подготовку: Крепость интеллекта" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
     await openMode(user, /^Игра/);
 
     const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Обнаружение магии")).toBeDefined();
-    expect(list.queryByText("Отражения")).toBeNull();
+    expect(list.queryByText("Крепость интеллекта")).toBeNull();
   });
 
   it("отказ по лимиту не двигает список (FR-101)", async () => {

@@ -84,7 +84,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const { stores } = await inBookMode();
 
     // Набор Торна ровно на пределе, поэтому сначала освобождаем место.
-    await user.click(screen.getByRole("button", { name: "Снять подготовку: Отражения" }));
+    await user.click(screen.getByRole("button", { name: "Снять подготовку: Крепость интеллекта" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
     expect(shown(stores).spells.filter((row) => row.prepared).map((row) => row.id)).toContain("detect-magic");
 
@@ -184,18 +184,27 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     // Неподготовленные ритуалы в списке скрыты: показываем их фильтром.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
+    await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
 
-    const card = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
-    expect(within(card).getByText(/Вызов/)).toBeDefined();
+    const card = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
+    expect(within(card).getByText(/Ограждение/)).toBeDefined();
     // Материал назван и среди механики, и среди действий: первое отвечает «что это», второе — «что
     // делать сейчас», и спрашивать их приходится порознь.
     const mechanics = within(within(card).getByLabelText("Механика"));
     expect(
-      mechanics.getByText(new RegExp(spell("find-familiar").components.materialText ?? "")),
+      mechanics.getByText(new RegExp(spell("alarm").components.materialText ?? "")),
     ).toBeDefined();
-    expect(within(card).getByText(/фокусировка не заменяет/)).toBeDefined();
     expect(within(card).getByText("Без броска: эффект применяется сразу")).toBeDefined();
+  });
+
+  it("компонент со стоимостью назван ценой: фокусировка его не заменяет", async () => {
+    // Ритуал и оплачиваемый компонент теперь у разных карточек, поэтому цену спрашивают у той,
+    // которая её называет.
+    const { user } = await inBookMode();
+    await user.click(screen.getByRole("button", { name: /^Волшебный замок/ }));
+
+    const card = screen.getByRole("dialog", { name: /Волшебный замок/ });
+    expect(within(card).getByText(/фокусировка не заменяет/)).toBeDefined();
   });
 
   it("в бою карточка ритуала объявляет обычное сотворение: ритуала в бою нет (FR-208)", async () => {
@@ -203,28 +212,28 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     // Способ выбирает ядро, а не карточка: в бою ритуального способа среди предложенных нет, и
     // объявление обязано предупредить, что шаблон написан под ритуал.
     await renderWithStores(<BookScreen />, createThorne(), { inFight: true });
-    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
+    await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
 
-    const card = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
+    const card = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
     expect(within(card).getByText(/Шаблон написан для ритуального применения/)).toBeDefined();
   });
 
   it("вне боя ритуал остаётся способом по умолчанию: замечания о шаблоне нет", async () => {
     const { user } = await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
+    await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
 
-    const card = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
+    const card = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
     expect(within(card).queryByText(/Шаблон написан для ритуального применения/)).toBeNull();
   });
 
   it("строка «Разрешение» показывает общую подпись, не свою копию (FR-211)", async () => {
     const user = userEvent.setup();
-    // «Поиск фамильяра» разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
+    // «Сигнал тревоги» разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Поиск фамильяра/ }));
-    const automaticCard = screen.getByRole("dialog", { name: /Поиск фамильяра/ });
+    await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
+    const automaticCard = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
     expect(within(automaticCard).getByText("Разрешение").nextElementSibling?.textContent).toBe(
       "Без броска",
     );
@@ -240,12 +249,12 @@ describe("схема ритуала (FR-192)", () => {
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(
       within(screen.getByLabelText(/^Заклинания/)).getByRole("button", {
-        name: /^Поиск фамильяра/,
+        name: /^Сигнал тревоги/,
       }),
     );
     await user.click(screen.getByRole("button", { name: "Схема ритуала" }));
 
-    expect(screen.getByRole("dialog", { name: /Схема ритуала «Поиск фамильяра»/ })).toBeDefined();
+    expect(screen.getByRole("dialog", { name: /Схема ритуала «Сигнал тревоги»/ })).toBeDefined();
   });
 
 });
