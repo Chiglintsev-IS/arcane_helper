@@ -12,6 +12,7 @@ import type { Command } from "@/contract/commands";
 import type { CastOptionView, SpellRowView } from "@/contract/views";
 import { castSpell } from "@/core/application/useCases/casting";
 import { withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
@@ -310,7 +311,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
   it("компонент со стоимостью добавляет шаг проверки компонентов", () => {
     // Единственный компонент со стоимостью — у «Волшебного замка»; вне боя, потому что
     // неподготовленное заклинание в боевом списке не стоит.
-    const row = rowOf(spell("arcane-lock"), createThorne(), OUTSIDE_FIGHT);
+    const row = rowOf(spell("arcane-lock"), knowing(createThorne(), "arcane-lock"), OUTSIDE_FIGHT);
     store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("components");
   });

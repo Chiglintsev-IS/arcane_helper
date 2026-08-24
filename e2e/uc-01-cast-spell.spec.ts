@@ -294,8 +294,9 @@ test("filter by casting time", async ({ page }) => {
 
   // Снимаем тот же переключатель: кнопки сброса нет — выбранное снимают там, где поставили.
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
-  // Вся книга Торна с заговорами и одна строка-не-заклинание: последняя подсказка.
-  await expect(list.getByRole("listitem")).toHaveCount(34);
+  // Вся книга Торна с заговорами и одна строка-не-заклинание: последняя подсказка. Отложенного
+  // столом здесь нет: пул контента шире книги, а показывается знаемое.
+  await expect(list.getByRole("listitem")).toHaveCount(30);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {
@@ -533,9 +534,11 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("шторка денег");
   await page.getByRole("button", { name: "Отмена" }).click();
 
-  // Покупки: то, чего в сумке нет, со своей строкой и своим прибавлением.
+  // Покупки: сейчас купить нечего — единственный оплачиваемый компонент у заклинания, отложенного
+  // столом, а остальное закрывает надетая фокусировка. Раздел обязан сказать это словами, а не
+  // пустотой, и доступность проверяется на том, что он показывает.
   await page.getByRole("radio", { name: "Покупки" }).click();
-  await expect(page.getByRole("list", { name: "Купить" })).toBeVisible();
+  await expect(page.getByText(/Закрывает фокусировка/)).toBeVisible();
   await scan("покупки");
 
   await switchToSheet(page);

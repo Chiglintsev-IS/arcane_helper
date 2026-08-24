@@ -22,6 +22,7 @@ import { toResourcesView } from "./views/resourcesView";
 import { toSheetView } from "./views/sheetView";
 import {
   toCastingView,
+  knownSpells,
   toSpellRowViews,
   toSpellsRefusal,
   toTurnView,
@@ -34,7 +35,8 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
   return {
     version,
     sheet: toSheetView(live.session.character),
-    bag: toBagView(live.session.character, live.spellCatalog),
+    // Покупки считаются по книге, а не по пулу: компонент незнаемого заклинания игроку не нужен.
+    bag: toBagView(live.session.character, knownSpells(live)),
     crafting: toCraftingView(live.session.character),
     resources: toResourcesView(live.session),
     recovery: toRecoveryView(live.session),

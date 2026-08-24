@@ -28,6 +28,13 @@ const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 const mageArmor = spells.get("mage-armor")!;
 const NOW = "2026-07-31T18:00:00.000Z";
 const BUILT_IN_COUNT = loadThorneSpells().length;
+/**
+ * Сколько строк показывает приложение: заговоры и записи книги.
+ *
+ * Пул встроенного контента шире книги — из него запись в книгу добавляют, — поэтому строк меньше,
+ * чем карточек, и число берётся у персонажа, а не у каталога.
+ */
+const KNOWN_COUNT = createThorne().cantripIds.length + createThorne().spellbookSpellIds.length;
 
 function testClock(): Clock {
   let tick = 0;
@@ -325,7 +332,7 @@ describe("каталог заклинаний (FR-123)", () => {
     const { api } = connect();
     await api.open();
 
-    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT);
+    expect((await shown(api)).spells).toHaveLength(KNOWN_COUNT);
     expect((await shown(api)).catalogSource).toBe("built_in");
   });
 
@@ -362,7 +369,7 @@ describe("каталог заклинаний (FR-123)", () => {
     const second = connect(repository);
     await second.api.open();
 
-    expect((await shown(second.api)).spells).toHaveLength(BUILT_IN_COUNT + 1);
+    expect((await shown(second.api)).spells).toHaveLength(KNOWN_COUNT + 1);
     expect((await shown(second.api)).catalogSource).toBe("imported");
     expect((await shown(second.api)).spells.map((row) => row.id)).toContain("thorne-signature");
   });
@@ -427,7 +434,7 @@ describe("каталог заклинаний (FR-123)", () => {
 
     expect(!result.ok && result.reasonRu).toMatch(/thorne-signature/);
     // Каталог остался прежним: молча выбросить карточку из книги приложение не вправе.
-    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT + 1);
+    expect((await shown(api)).spells).toHaveLength(KNOWN_COUNT + 1);
     expect((await shown(api)).catalogSource).toBe("imported");
   });
 
@@ -440,7 +447,7 @@ describe("каталог заклинаний (FR-123)", () => {
     await api.open();
 
     expect((await shown(api)).sheet.hitPoints.current).toBe(17);
-    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT);
+    expect((await shown(api)).spells).toHaveLength(KNOWN_COUNT);
     expect((await shown(api)).catalogSource).toBe("built_in");
   });
 
@@ -479,7 +486,7 @@ describe("сброс", () => {
 
     await api.execute(envelope({ kind: "reset" }));
 
-    expect((await shown(api)).spells).toHaveLength(BUILT_IN_COUNT);
+    expect((await shown(api)).spells).toHaveLength(KNOWN_COUNT);
     expect((await shown(api)).catalogSource).toBe("built_in");
     expect((await repository.load())?.spellCatalog).toBeUndefined();
   });

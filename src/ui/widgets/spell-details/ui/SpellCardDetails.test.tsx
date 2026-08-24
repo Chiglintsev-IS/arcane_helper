@@ -3,6 +3,8 @@
 import { describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
 
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 
 import { SpellCardDetails } from "./SpellCardDetails";
@@ -13,7 +15,7 @@ const CASTING = testSnapshot().casting;
 async function mechanicsOf(id: string) {
   await renderWithStores(
     <SpellCardDetails
-      row={testSpellRow(id)}
+      row={testSpellRow(id, knowing(createThorne(), "arcane-lock"))}
       casting={CASTING}
       onCast={() => {}}
       onNoteChange={() => {}}

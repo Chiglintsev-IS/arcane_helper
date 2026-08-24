@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import type { Command } from "@/contract/commands";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
+  knowing,
   withSpentSlots,
   withoutComponentRecord,
   withoutSlots,
@@ -220,11 +221,14 @@ describe("карточка", () => {
   });
 
   it("свой компонент назван словами, и строка знает, лежит ли он в сумке", () => {
-    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет.
-    expect(row("arcane-lock").card.components.material?.textRu).toContain("золотая пыль");
-    expect(row("arcane-lock").ownComponentCarried).toBe(false);
+    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет. Само
+    // заклинание отложено столом, поэтому книга дописывается прогоном: проверяется строка, а не
+    // сегодняшний состав книги.
+    const knows = knowing(createThorne(), "arcane-lock");
+    expect(row("arcane-lock", knows).card.components.material?.textRu).toContain("золотая пыль");
+    expect(row("arcane-lock", knows).ownComponentCarried).toBe(false);
 
-    const bought = row("arcane-lock", createThorne(), [
+    const bought = row("arcane-lock", knows, [
       { kind: "toggle_material", spellId: "arcane-lock" },
     ]);
     expect(bought.ownComponentCarried).toBe(true);
@@ -294,9 +298,11 @@ describe("способы сотворения", () => {
   it("шаги мастера решаются признаками строки, а не разбором карточки на экране", () => {
     expect(row("arcane-vigor").spendsHitDice).toBe(true);
     expect(row("mage-armor").spendsHitDice).toBe(false);
-    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет.
-    expect(row("arcane-lock").ownComponentRequired).toBe(true);
-    expect(row("arcane-lock").componentReminders.join(" ")).toContain("золотая пыль");
+    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет; само
+    // заклинание отложено, и книга дописывается прогоном.
+    const knows = knowing(createThorne(), "arcane-lock");
+    expect(row("arcane-lock", knows).ownComponentRequired).toBe(true);
+    expect(row("arcane-lock", knows).componentReminders.join(" ")).toContain("золотая пыль");
   });
 });
 

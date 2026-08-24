@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
+  knowing,
   withBloodPaid,
   withDamage,
   withForeignSlots,
@@ -75,5 +76,16 @@ describe("состояния Торна операциями", () => {
 
   it("чужие ячейки принимаются как есть: игра таких состояний не создаёт", () => {
     expect(withForeignSlots(createThorne(), {}).spellSlots).toEqual({});
+  });
+
+  it("знание отложенного дописывает книгу, а знакомое второй записи не заводит", () => {
+    // Повтор в списке запрещён инвариантом книги, и фикстура не вправе его создать: «Щит» Торн
+    // знает, а «Волшебный замок» отложен столом.
+    const known = knowing(createThorne(), "arcane-lock");
+    expect(known.spellbookSpellIds).toContain("arcane-lock");
+    expect(knowing(known, "arcane-lock")).toBe(known);
+    expect(knowing(createThorne(), "shield").spellbookSpellIds).toEqual(
+      createThorne().spellbookSpellIds,
+    );
   });
 });

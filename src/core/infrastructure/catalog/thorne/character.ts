@@ -75,7 +75,8 @@ const RAW: unknown = {
   inspiration: false,
 
   cantripIds: ["shocking-grasp", "ray-of-frost", "message", "mending"],
-  // Двадцать девять записей книги: состав назван игроком.
+  // Двадцать пять записей книги: состав назван игроком. Отложенное решением стола лежит в
+  // контенте, но в книге не числится — возврат равен добавлению строки сюда.
   spellbookSpellIds: [
     "shield",
     "absorb-elements",
@@ -86,12 +87,10 @@ const RAW: unknown = {
     "alarm",
     "detect-magic",
 
-    "arcane-lock",
     "arcane-vigor",
     "web",
     "rimes-binding-ice",
     "tashas-mind-whip",
-    "spider-climb",
     "enlarge-reduce",
     "see-invisibility",
 
@@ -101,13 +100,11 @@ const RAW: unknown = {
     "slow",
     "thunder-step",
     "haste",
-    "sleet-storm",
     "intellect-fortress",
     "tidal-wave",
 
     "polymorph",
     "storm-sphere",
-    "ice-storm",
     "vitriolic-sphere",
   ],
   /**

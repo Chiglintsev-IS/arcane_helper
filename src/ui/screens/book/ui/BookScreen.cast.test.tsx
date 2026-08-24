@@ -18,11 +18,13 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 describe("шаг компонентов", () => {
   it("появляется для компонента со стоимостью и объясняет, что фокусировка его не заменяет", async () => {
     const user = userEvent.setup();
-    // Замок подготовлен: иначе мастер сначала спрашивает про подготовку, а проверяется здесь шаг
-    // компонентов.
+    // «Волшебный замок» отложен столом: карточка в контенте есть, а в книге его нет. Единственный
+    // оплачиваемый компонент — у него, поэтому прогон записывает его в книгу и готовит: проверяется
+    // шаг компонентов, а не сегодняшний состав книги.
     const thorne = createThorne();
     const withLock = {
       ...thorne,
+      spellbookSpellIds: [...thorne.spellbookSpellIds, "arcane-lock"],
       preparedSpellIds: [
         ...thorne.preparedSpellIds.filter((id) => id !== "intellect-fortress"),
         "arcane-lock",

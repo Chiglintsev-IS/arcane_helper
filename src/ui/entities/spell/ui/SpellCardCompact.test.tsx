@@ -3,6 +3,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { SpellCardCompact } from "./SpellCardCompact";
@@ -10,7 +12,9 @@ import { SpellCardCompact } from "./SpellCardCompact";
 // Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
 
-const SNAPSHOT = testSnapshot();
+// «Волшебный замок» отложен столом, а нужен здесь как единственный оплачиваемый компонент:
+// снимок берётся у персонажа, который его знает.
+const SNAPSHOT = testSnapshot(knowing(createThorne(), "arcane-lock"));
 const BASE_ROW = SNAPSHOT.spells[0]!;
 
 /** Строка одного заклинания: прогон называет заклинания, а не места в списке. */

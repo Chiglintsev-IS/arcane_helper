@@ -331,10 +331,22 @@ export function toCastingView(character: CharacterState): CastingView {
   };
 }
 
+/**
+ * Карточки, которые персонаж знает: заговоры и записи книги.
+ *
+ * Каталог — пул всего, что в игре существует, и он шире книги: из него запись в книгу добавляют, а
+ * не наоборот. Незнаемое приложения не касается — строка, которую нельзя применить никогда, заняла
+ * бы место и обманула глаз.
+ */
+export function knownSpells(live: LiveSession): Spell[] {
+  const spellbook = Character.of(live.session.character).spellbook;
+  return live.spellCatalog.filter((spell) => spellbook.knows(spell.id, spell.level));
+}
+
 export function toSpellRowViews(live: LiveSession): SpellRowView[] {
   const { character } = live.session;
   const turn = deriveTurnEconomy(live.session);
-  return live.spellCatalog.map((spell) => spellRowView(spell, character, turn));
+  return knownSpells(live).map((spell) => spellRowView(spell, character, turn));
 }
 
 /**
@@ -348,7 +360,7 @@ export function toSpellsRefusal(live: LiveSession): string | undefined {
   const { character } = live.session;
   const turn = deriveTurnEconomy(live.session);
 
-  for (const spell of live.spellCatalog) {
+  for (const spell of knownSpells(live)) {
     const warning = plansFor(spell, character, turn).suggested.availability.warnings[0];
     if (warning !== undefined && closesWholeTurn(warning)) return warning.reasonRu;
   }

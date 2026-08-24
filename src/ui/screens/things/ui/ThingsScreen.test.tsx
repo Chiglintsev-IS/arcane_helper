@@ -14,6 +14,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { ItemView } from "@/contract/views";
 import type { AppStores } from "@/ui/shared/model/storeContext";
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, shown, testSnapshot } from "@/ui/app/testing/stores";
 import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
 
@@ -32,7 +34,9 @@ afterEach(() => {
 describe("«Вещи» (FR-304)", () => {
   it("«Вещи» показывают одну часть из трёх, и переключатель называет какую (FR-304)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<ThingsScreen />);
+    // Единственный оплачиваемый компонент — у отложенного «Волшебного замка»: без него лавка пуста,
+    // а проверяются здесь части «Вещей», а не состав книги.
+    await renderWithStores(<ThingsScreen />, knowing(createThorne(), "arcane-lock"));
 
     const parts = within(screen.getByRole("radiogroup", { name: "Что показать" }));
     expect(parts.getAllByRole("radio").map((button) => button.textContent)).toEqual([
@@ -147,9 +151,12 @@ describe("«Вещи» (FR-304)", () => {
 
   it("«Покупки»: купленное уходит из лавки и ложится в сумку (FR-302)", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen initialPart="shopping" />);
+    const { stores } = await renderWithStores(
+      <ThingsScreen initialPart="shopping" />,
+      knowing(createThorne(), "arcane-lock"),
+    );
 
-    // Уголь картой не заведён: его строка заводит вещь по словам карточки.
+    // Золотая пыль картой не заведена: её строка заводит вещь по словам карточки.
     await user.click(screen.getByRole("button", { name: /Добавить один в сумку: золотая пыль/ }));
 
     expect(screen.queryByRole("button", { name: /Добавить один в сумку: золотая пыль/ })).toBeNull();

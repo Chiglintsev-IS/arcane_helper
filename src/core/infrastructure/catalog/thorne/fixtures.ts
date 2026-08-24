@@ -170,3 +170,15 @@ export function withoutArcaneRecovery(character: CharacterState): CharacterState
   const root = Character.of(withSpentSlots(character, 1, budget));
   return root.withArcana(root.arcana.useArcaneRecovery({ 1: budget })).toState();
 }
+
+/**
+ * Персонаж, знающий отложенное заклинание.
+ *
+ * Пул контента шире книги: стол откладывает запись, карточка остаётся, а приложение показывает
+ * только знаемое. Прогону, которому нужен признак самой карточки — единственный оплачиваемый
+ * компонент, скажем, — книга дописывается здесь, а не пересобирается в каждом прогоне заново.
+ */
+export function knowing(character: CharacterState, spellId: string): CharacterState {
+  if (character.spellbookSpellIds.includes(spellId)) return character;
+  return { ...character, spellbookSpellIds: [...character.spellbookSpellIds, spellId] };
+}

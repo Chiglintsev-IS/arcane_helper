@@ -114,7 +114,7 @@ describe("начальное состояние Торна", () => {
 
   it("ритуалы не входят в подготовленные (FR-103)", () => {
     const thorne = createThorne();
-    for (const id of ["arcane-lock", "detect-magic"]) {
+    for (const id of ["alarm", "detect-magic"]) {
       expect(thorne.preparedSpellIds).not.toContain(id);
       expect(thorne.spellbookSpellIds).toContain(id);
     }
@@ -1950,7 +1950,7 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     // тремя: своим счётом отказ не хвалится — его называет тот, кто счёт показывает.
     const narrowed = atLimitOfThree();
     expect(narrowed.character.preparedSpellIds).toHaveLength(3);
-    expect(() => togglePreparation(narrowed, spell("arcane-lock"), occasion)).toThrow(
+    expect(() => togglePreparation(narrowed, spell("haste"), occasion)).toThrow(
       /Снимите другое заклинание/,
     );
   });
@@ -1983,8 +1983,8 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
   it("ритуал готовится как обычное заклинание (FR-103)", () => {
     // говорит, что ритуалом его можно творить и без подготовки, а не что готовить нельзя:
     // подготовленный ритуал в бою творится за ячейку обычным временем.
-    const after = togglePreparation(withRoom(), spell("arcane-lock"), occasion);
-    expect(after.character.preparedSpellIds).toContain("arcane-lock");
+    const after = togglePreparation(withRoom(), spell("alarm"), occasion);
+    expect(after.character.preparedSpellIds).toContain("alarm");
   });
 });
 

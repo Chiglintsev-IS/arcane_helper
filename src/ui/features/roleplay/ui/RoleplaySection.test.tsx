@@ -21,6 +21,7 @@ import type { RoleplayVariantView } from "@/contract/views";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { AppStores } from "@/ui/shared/model/storeContext";
+import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, spell, testSpells } from "@/ui/app/testing/stores";
 import { RoleplaySection } from "./RoleplaySection";
 
@@ -95,7 +96,12 @@ describe("в блоке отыгрыша нет механических стр�
    * заглавной буквы она набрана или со строчной.
    */
   async function requirementsAbsentFrom(spellId: string): Promise<void> {
-    const { stores, container } = await renderWithStores(<RoleplaySection spellId={spellId} />);
+    // «Волшебный замок» отложен столом, а нужен здесь как единственный оплачиваемый компонент:
+    // книга дописывается прогоном, потому что проверяется блок отыгрыша, а не состав книги.
+    const { stores, container } = await renderWithStores(
+      <RoleplaySection spellId={spellId} />,
+      knowing(createThorne(), "arcane-lock"),
+    );
     const reminders = componentRemindersOf(stores, spellId);
     const shown = (container.textContent ?? "").toLowerCase();
 

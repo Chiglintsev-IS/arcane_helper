@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, shown, spell } from "@/ui/app/testing/stores";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 
@@ -198,9 +199,10 @@ describe("подробная карточка (FR-011, FR-012)", () => {
   });
 
   it("компонент со стоимостью назван ценой: фокусировка его не заменяет", async () => {
-    // Ритуал и оплачиваемый компонент теперь у разных карточек, поэтому цену спрашивают у той,
-    // которая её называет.
-    const { user } = await inBookMode();
+    // Ритуал и оплачиваемый компонент у разных карточек, а сам «Волшебный замок» отложен столом:
+    // книга дописывается прогоном, потому что цену называет именно он.
+    const user = userEvent.setup();
+    await renderWithStores(<BookScreen />, knowing(createThorne(), "arcane-lock"));
     await user.click(screen.getByRole("button", { name: /^Волшебный замок/ }));
 
     const card = screen.getByRole("dialog", { name: /Волшебный замок/ });
