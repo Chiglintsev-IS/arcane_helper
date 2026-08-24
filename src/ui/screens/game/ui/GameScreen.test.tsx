@@ -8,10 +8,11 @@
  * Проверки, которым нужен переход на соседний экран, живут у оболочки — там же, где живёт переход.
  */
 
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import type { Command } from "@/contract/commands";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft, spell } from "@/ui/app/testing/stores";
@@ -38,24 +39,23 @@ function withBonusActionSpell(): CharacterState {
   return { ...wounded, preparedSpellIds: [...wounded.preparedSpellIds, "arcane-vigor"] };
 }
 
-/** Проход мастера от строки списка до подтверждения — там, где выбирать нечего, кроме ячейки. */
-async function castThrough(user: ReturnType<typeof userEvent.setup>, name: RegExp): Promise<void> {
-  await user.click(screen.getByRole("button", { name }));
-  await user.click(screen.getByRole("button", { name: "Сотворить" }));
-  await user.click(screen.getByRole("button", { name: "Далее" }));
-  await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-}
-
-/** То же, но с шагом костей хитов: их число и выпавшее знает игрок, а не приложение. */
-async function castArcaneVigor(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  await user.click(screen.getByRole("button", { name: /Мистическая бодрость/ }));
-  await user.click(screen.getByRole("button", { name: "Сотворить" }));
-  await user.click(screen.getByRole("button", { name: "Далее" }));
-  await user.click(screen.getByRole("button", { name: "1d6" }));
-  await user.type(screen.getByLabelText("Что выпало на 1d6"), "4");
-  await user.click(screen.getByRole("button", { name: "Далее" }));
-  await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-}
+/**
+ * Действие, бонусное действие и реакция — по сотворению на каждый род траты.
+ *
+ * «Мистическая бодрость» — единственное бонусное заклинание книги, и кости хитов у неё называет
+ * игрок: их число и выпавшее приходят командой, а не выдумываются приложением.
+ */
+const CAST_EACH_TURN_RESOURCE = [
+  { kind: "cast_spell", spellId: "mage-armor", mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+  {
+    kind: "cast_spell",
+    spellId: "arcane-vigor",
+    mode: "normal",
+    payment: { kind: "slot", slotLevel: 2 },
+    hitDice: { count: 1, rolled: 4 },
+  },
+  { kind: "cast_spell", spellId: "shield", mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
+] as const satisfies readonly Command[];
 
 function concentrating(): CharacterState {
   return {
@@ -114,16 +114,19 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 
   it("значок приходит к потраченному, а не к целому ходу (FR-001)", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<GameScreen />, withBonusActionSpell(), IN_FIGHT);
+    const { stores } = await renderWithStores(<GameScreen />, withBonusActionSpell(), IN_FIGHT);
 
     // Начало своего хода: доступно всё, и говорить ряду не о чем.
     const badges = () => within(screen.getByLabelText("Прочие ресурсы")).queryAllByRole("listitem");
     expect(badges()).toHaveLength(0);
 
-    await castThrough(user, /Доспехи мага/);
-    await castArcaneVigor(user);
-    await castThrough(user, /^Щит/);
+    // Три рода траты — тремя сотворениями, и каждое идёт настоящей операцией. Мастер применения
+    // здесь не при чём: его путь проверяют свои прогоны, а ряд значков читает лог хода.
+    for (const command of CAST_EACH_TURN_RESOURCE) {
+      await act(async () => {
+        await stores.session.getState().execute(command);
+      });
+    }
 
     // Три ресурса хода — три значка, и каждый назван своим родом.
     expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
