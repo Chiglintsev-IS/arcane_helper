@@ -157,6 +157,26 @@ describe("полнота текстовых полей (FR-013)", () => {
     }
   });
 
+  it("совет замкнут на своём заклинании", () => {
+    // Совет, построенный на соседях по книге, устаревает при первой же смене состава и читается
+    // только тем, кто помнит все карточки. О другом заклинании он говорит родом, а не именем.
+    // Исключение — имя, которое называют правила самого заклинания.
+    const allowedNames = (spell: (typeof spells)[number]): string[] =>
+      [spell.nameRu, ...(spell.fullRulesRu.match(/«[^»]+»/g) ?? []).map((quoted) => quoted.slice(1, -1))];
+    for (const spell of spells) {
+      const advice = spell.tacticalAdviceRu ?? "";
+      const allowed = allowedNames(spell);
+      for (const other of spells) {
+        if (other === spell || allowed.includes(other.nameRu)) continue;
+        const named = new RegExp(`(^|[^\\p{L}])${other.nameRu}([^\\p{L}]|$)`, "u");
+        expect(named.test(advice), `${spell.nameRu}: совет называет «${other.nameRu}»`).toBe(false);
+      }
+      for (const quoted of advice.match(/«[^»]+»/g) ?? []) {
+        expect(allowed, `${spell.nameRu}: в совете чужое имя ${quoted}`).toContain(quoted.slice(1, -1));
+      }
+    }
+  });
+
   it("в каждом совете названо число", () => {
     // Число — третья обязательная часть варианта. Его отсутствие машина различает, а
     // подмену выдуманным числом — нет: за это отвечает вычитка против источника.
