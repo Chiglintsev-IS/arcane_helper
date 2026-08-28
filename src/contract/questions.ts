@@ -44,7 +44,6 @@ export const questionSchema = z.discriminatedUnion("kind", [
     spellId: word,
     mode: word,
     payment: paymentSchema,
-    targetLabel: word.optional(),
     rune: word.optional(),
     hitDiceCount: numeric.optional(),
     hitDiceRolled: numeric.optional(),
@@ -115,13 +114,6 @@ export const previewSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("cast_preview"),
-    /** Что сказать мастеру и чего в этой фразе не хватает. */
-    announcement: z.object({
-      text: word,
-      gaps: z.array(z.object({ placeholder: word.optional(), reasonRu: word })),
-    }),
-    /** Что сделать за столом — числами этого персонажа и этой ячейки. */
-    instructions: z.array(word),
     /**
      * Руна на выбранной ячейке: что даст каждая и почему сейчас ни одной не приложить.
      *

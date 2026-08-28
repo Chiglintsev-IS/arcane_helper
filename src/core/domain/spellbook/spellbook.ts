@@ -1,8 +1,8 @@
 /**
  * Книга заклинаний: что персонаж знает, что подготовил и чем располагает из компонентов.
  *
- * Сюда же входят пометки игрока — заметки к заклинаниям и предпочтения отыгрыша: они привязаны к
- * записи книги и живут ровно столько же.
+ * Сюда же входят пометки игрока — заметки к заклинаниям: они привязаны к записи книги и живут
+ * ровно столько же.
  *
  * Про ячейки, снаряжение и ход книга не знает: она отвечает на вопрос «что я умею», а не «чем я это
  * оплачу». Сводит их сотворение.
@@ -11,25 +11,7 @@
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
-import type { RoleplayPreference, SpellbookState } from "./schema";
-
-
-/** Пустые предпочтения: запись заводится, только когда игрок что-то пометил. */
-const NO_PREFERENCES: RoleplayPreference = {
-  favoriteVariantIds: [],
-  disabledVariantIds: [],
-  customVariants: [],
-  usageCount: {},
-};
-
-function isEmptyPreference(preference: RoleplayPreference): boolean {
-  return (
-    preference.favoriteVariantIds.length === 0 &&
-    preference.disabledVariantIds.length === 0 &&
-    preference.customVariants.length === 0 &&
-    Object.keys(preference.usageCount).length === 0
-  );
-}
+import type { SpellbookState } from "./schema";
 
 export class Spellbook {
   private constructor(private readonly state: SpellbookState) {}
@@ -40,7 +22,6 @@ export class Spellbook {
     "spellbookSpellIds",
     "preparedSpellIds",
     "spellNotes",
-    "roleplayPreferences",
   ] as const satisfies readonly (keyof SpellbookState)[];
 
   static of(state: SpellbookState): Spellbook {
@@ -97,22 +78,6 @@ export class Spellbook {
   setNote(spellId: string, note: string): Spellbook {
     const { [spellId]: _replaced, ...rest } = this.state.spellNotes;
     return this.with({ spellNotes: note.trim() === "" ? rest : { ...rest, [spellId]: note } });
-  }
-
-  preferencesFor(spellId: string): RoleplayPreference {
-    return this.state.roleplayPreferences[spellId] ?? NO_PREFERENCES;
-  }
-
-  /** Запись без единой пометки удаляется целиком: пустая структура осталась бы мусором в выгрузке. */
-  changePreferences(
-    spellId: string,
-    change: (current: RoleplayPreference) => RoleplayPreference,
-  ): Spellbook {
-    const next = change(this.preferencesFor(spellId));
-    const { [spellId]: _replaced, ...rest } = this.state.roleplayPreferences;
-    return this.with({
-      roleplayPreferences: isEmptyPreference(next) ? rest : { ...rest, [spellId]: next },
-    });
   }
 
   toState(): SpellbookState {

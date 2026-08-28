@@ -21,7 +21,6 @@ import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
 import { revealedPropertyOf } from "@/core/domain/crafting/schema";
-import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ABILITIES, SKILL_IDS, type SkillId } from "@/core/domain/shared/stats";
 import { SKILL_TRAINING, type SkillTraining } from "@/core/domain/character/skills";
@@ -77,12 +76,6 @@ import {
   spendSpellSlot,
 } from "@/core/application/useCases/resources";
 import { longRest, shortRest, useArcaneRecovery } from "@/core/application/useCases/rest";
-import {
-  addRoleplayVariant,
-  toggleRoleplayDisabled,
-  toggleRoleplayFavorite,
-  useRoleplayVariant,
-} from "@/core/application/useCases/roleplay";
 import {
   changeLevel,
   editAbility,
@@ -173,7 +166,6 @@ export function applyCommand(
             spell: spellOf(spellCatalog, command.spellId),
             mode: castModeOf(command.mode),
             payment: command.payment,
-            ...(command.targetLabel === undefined ? {} : { targetLabel: command.targetLabel }),
             ...(command.rune === undefined ? {} : { rune: runeOf(command.rune) }),
             ...(command.runeTarget === undefined
               ? {}
@@ -270,25 +262,6 @@ export function applyCommand(
       return changed(editWorldNote(session, command.noteId, command.text));
     case "remove_world_note":
       return changed(removeWorldNote(session, command.noteId));
-
-    case "toggle_roleplay_favorite":
-      return changed(toggleRoleplayFavorite(session, command.spellId, command.variantId));
-    case "toggle_roleplay_disabled":
-      return changed(
-        toggleRoleplayDisabled(session, spellOf(spellCatalog, command.spellId), command.variantId),
-      );
-    case "add_roleplay_variant":
-      return changed(
-        addRoleplayVariant(
-          session,
-          command.spellId,
-          oneOf(ROLEPLAY_CATEGORIES, command.category, "род отыгрыша"),
-          command.text,
-          occasion,
-        ),
-      );
-    case "use_roleplay_variant":
-      return changed(useRoleplayVariant(session, command.spellId, command.variantId));
 
     case "add_item":
       return changed(

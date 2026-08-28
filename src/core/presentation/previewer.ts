@@ -34,12 +34,11 @@ import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
 import type { PropertyMatch, RecipeDifficulty } from "@/core/domain/crafting/recipe";
 import { refusalOf } from "@/core/domain/shared/errors";
 import { castLevelOf, type PaymentChoice } from "@/core/application/casting/availability";
-import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import { exportFileName, exportSnapshot } from "@/core/application/dataExchange";
 import type { LiveSession } from "@/core/application/session";
 import { previewLevelChange } from "@/core/application/useCases/sheet";
 
-import { castModeOf, directionOf, rarityOf, runeOf, spellOf } from "./words";
+import { directionOf, rarityOf, spellOf } from "./words";
 
 type CastQuestion = Extract<Question, { kind: "cast_preview" }>;
 
@@ -118,30 +117,12 @@ function runesOf(live: LiveSession, payment: PaymentChoice): PreviewOf<"cast_pre
 }
 
 function castPreview(live: LiveSession, question: CastQuestion): Preview {
-  const { character } = live.session;
   const spell = spellOf(live.spellCatalog, question.spellId);
   const { payment } = question;
-  const context = {
-    character,
-    mode: castModeOf(question.mode),
-    payment,
-    ...(question.targetLabel === undefined ? {} : { targetLabel: question.targetLabel }),
-    ...(question.rune === undefined ? {} : { rune: runeOf(question.rune) }),
-  };
-
-  const announcement = renderAnnouncement(spell, context);
   const hitDice = hitDiceOf(spell, live, payment, question.hitDiceCount, question.hitDiceRolled);
 
   return {
     kind: "cast_preview",
-    announcement: {
-      text: announcement.text,
-      gaps: announcement.gaps.map((gap) => ({
-        ...(gap.placeholder === undefined ? {} : { placeholder: gap.placeholder }),
-        reasonRu: gap.reasonRu,
-      })),
-    },
-    instructions: castInstructions(spell, context),
     runes: runesOf(live, payment),
     ...(hitDice === undefined ? {} : { hitDice }),
   };

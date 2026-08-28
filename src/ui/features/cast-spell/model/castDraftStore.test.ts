@@ -22,7 +22,6 @@ import { answerQuestion } from "@/core/presentation/previewer";
 import { toSpellRowViews } from "@/core/presentation/views/spellRowsView";
 import {
   createCastDraftStore,
-  RECENT_TARGETS_LIMIT,
   toCastCommand,
   visibleSteps,
   type CastDraft,
@@ -228,7 +227,6 @@ describe("начало применения", () => {
       option: { mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
       step: "slot",
       allowAnyway: false,
-      targetLabel: null,
     });
   });
 
@@ -238,8 +236,8 @@ describe("начало применения", () => {
   });
 
   it("заговор не выбирает ячейку", () => {
-    store.getState().start(rowOf(rayOfFrost));
-    expect(draftOf().option).toMatchObject({ mode: "cantrip", payment: { kind: "none" } });
+    const draft = store.getState().start(rowOf(rayOfFrost));
+    expect(draft?.option).toMatchObject({ mode: "cantrip", payment: { kind: "none" } });
   });
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
@@ -264,20 +262,23 @@ describe("начало применения", () => {
 });
 
 describe("шаги мастера (FR-021, M-03)", () => {
-  it("типовое боевое заклинание проходится за два шага", () => {
+  it("типовое боевое заклинание проходится за один шаг: он же и подтверждает", () => {
     const row = rowOf(mageArmor);
     store.getState().start(row);
-    expect(visibleSteps(draftOf(), row)).toEqual(["slot", "summary"]);
+    expect(visibleSteps(draftOf(), row)).toEqual(["slot"]);
   });
 
-  it("заговор применяется одним экраном: выбирать нечего", () => {
+  it("заговор без предупреждений мастера не открывает: start возвращает черновик", () => {
     const row = rowOf(rayOfFrost);
-    store.getState().start(row);
-    expect(visibleSteps(draftOf(), row)).toEqual(["summary"]);
+    const draft = store.getState().start(row);
+
+    expect(draft).not.toBeNull();
+    expect(store.getState().draft).toBeNull();
+    if (draft !== null) expect(visibleSteps(draft, row)).toEqual([]);
   });
 
   it("цель мастер не спрашивает: ввод текста в бою слишком медленный (OQ-10)", () => {
-    const row = rowOf(rayOfFrost);
+    const row = rowOf(mageArmor);
     store.getState().start(row);
     const steps: string[] = [...visibleSteps(draftOf(), row)];
     expect(steps).not.toContain("target");
@@ -292,7 +293,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
     const row = rowOf(mageArmor, createThorne(), spent);
     store.getState().start(row);
 
-    expect(visibleSteps(draftOf(), row)).toEqual(["availability", "slot", "summary"]);
+    expect(visibleSteps(draftOf(), row)).toEqual(["availability", "slot"]);
     expect(draftOf().step).toBe("availability");
   });
 
@@ -303,7 +304,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
   });
 
   it("занятая концентрация добавляет шаг замены (FR-081)", () => {
-    const row = rowOf(detectMagic, concentrating());
+    const row = rowOf(spell("web"), concentrating());
     store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("concentration");
   });
@@ -331,19 +332,20 @@ describe("шаги мастера (FR-021, M-03)", () => {
 });
 
 describe("навигация по шагам", () => {
+  // Занятая концентрация: за ячейкой идёт шаг замены — два шага, между которыми есть куда ходить.
   it("вперёд и назад ходят только по видимым шагам", () => {
-    const row = rowOf(mageArmor);
+    const row = rowOf(spell("web"), concentrating());
     store.getState().start(row);
     const steps = visibleSteps(draftOf(), row);
 
     store.getState().next(steps);
-    expect(draftOf().step).toBe("summary");
+    expect(draftOf().step).toBe("concentration");
     store.getState().back(steps);
     expect(draftOf().step).toBe("slot");
   });
 
   it("на последнем шаге вперёд не уходит, на первом — назад", () => {
-    const row = rowOf(mageArmor);
+    const row = rowOf(spell("web"), concentrating());
     store.getState().start(row);
     const steps = visibleSteps(draftOf(), row);
 
@@ -351,17 +353,15 @@ describe("навигация по шагам", () => {
     expect(draftOf().step).toBe("slot");
 
     for (const _ of steps) store.getState().next(steps);
-    expect(draftOf().step).toBe("summary");
+    expect(draftOf().step).toBe("concentration");
   });
 
   it("без черновика навигация ничего не делает", () => {
     const row = rowOf(mageArmor);
-    store.getState().next(["summary"]);
-    store.getState().back(["summary"]);
-    store.getState().setTarget("гоблин");
+    store.getState().next(["slot"]);
+    store.getState().back(["slot"]);
     store.getState().allowAnyway();
     store.getState().chooseCastOption(optionBy(row, (option) => option.payment.kind === "blood"));
-    store.getState().setRoleplayCategory("sarcastic");
     store.getState().setHitDiceCount(1);
     store.getState().setHitDiceRolled(3);
     store.getState().replaceConcentration();
@@ -421,16 +421,6 @@ describe("запоминание выбора", () => {
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 9 });
   });
 
-  it("запоминает категорию отыгрыша", () => {
-    const row = rowOf(mageArmor);
-    store.getState().start(row);
-    store.getState().setRoleplayCategory("sarcastic");
-    store.getState().cancel();
-
-    store.getState().start(row);
-    expect(draftOf().roleplayCategory).toBe("sarcastic");
-  });
-
   it("оплату кровью тоже запоминает", () => {
     const row = rowOf(mageArmor);
     store.getState().start(row);
@@ -478,39 +468,9 @@ describe("кости хитов в черновике", () => {
   });
 });
 
-describe("цель свободным текстом (OQ-10)", () => {
-  it("сохраняет недавние цели без повторов и новые сверху", () => {
-    store.getState().start(rowOf(rayOfFrost));
-    store.getState().setTarget("гоблин у двери");
-    store.getState().setTarget("огр");
-    store.getState().setTarget("гоблин у двери");
-
-    expect(store.getState().recentTargets).toEqual(["гоблин у двери", "огр"]);
-    expect(draftOf().targetLabel).toBe("гоблин у двери");
-  });
-
-  it("список недавних целей не растёт бесконечно", () => {
-    store.getState().start(rowOf(rayOfFrost));
-    for (let index = 0; index <= RECENT_TARGETS_LIMIT; index += 1) {
-      store.getState().setTarget(`цель ${index}`);
-    }
-    expect(store.getState().recentTargets).toHaveLength(RECENT_TARGETS_LIMIT);
-  });
-
-  it("пустая строка цель снимает и в недавние не попадает", () => {
-    store.getState().start(rowOf(rayOfFrost));
-    store.getState().setTarget("огр");
-    store.getState().setTarget("   ");
-
-    expect(draftOf().targetLabel).toBeNull();
-    expect(store.getState().recentTargets).toEqual(["огр"]);
-  });
-});
-
 describe("заявка на применение", () => {
   it("собирает заявку из черновика", () => {
     store.getState().start(rowOf(mageArmor));
-    store.getState().setTarget("на себя");
     store.getState().allowAnyway();
 
     expect(toCastCommand(draftOf())).toEqual({
@@ -518,7 +478,6 @@ describe("заявка на применение", () => {
       spellId: mageArmor.id,
       mode: "normal",
       payment: { kind: "slot", slotLevel: 1 },
-      targetLabel: "на себя",
       allowAnyway: true,
       replaceConcentration: false,
     });
@@ -539,11 +498,6 @@ describe("заявка на применение", () => {
     expect(request.replaceConcentration).toBe(true);
     expect(request.allowAnyway).toBe(false);
   });
-
-  it("без цели поля цели в заявке нет", () => {
-    store.getState().start(rowOf(shield));
-    expect(toCastCommand(draftOf())).not.toHaveProperty("targetLabel");
-  });
 });
 
 describe("инвариант FR-022: до подтверждения состояние не меняется", () => {
@@ -555,8 +509,6 @@ describe("инвариант FR-022: до подтверждения состо�
     store.getState().start(row);
     const steps = visibleSteps(draftOf(), row);
     store.getState().chooseCastOption(slotOption(row, 2));
-    store.getState().setTarget("на себя");
-    store.getState().setRoleplayCategory("atmospheric");
     store.getState().allowAnyway();
     for (const _ of steps) store.getState().next(steps);
     toCastCommand(draftOf());

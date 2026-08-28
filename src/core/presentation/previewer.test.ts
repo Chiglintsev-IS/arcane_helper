@@ -108,25 +108,6 @@ describe("сотворение", () => {
     return preview.kind === "cast_preview" ? preview : null;
   }
 
-  it("объявление называет выбранную ячейку, а не собственный уровень заклинания", () => {
-    const third = castPreview({
-      spellId: "lightning-bolt",
-      payment: { kind: "slot", slotLevel: 4 },
-    });
-
-    expect(third?.announcement.text).toContain("4");
-  });
-
-  it("незаполненная подстановка едет пробелом с причиной, а не выдумкой", () => {
-    const preview = castPreview({
-      spellId: "shocking-grasp",
-      mode: "cantrip",
-      payment: { kind: "none" },
-    });
-
-    expect(preview?.announcement.gaps.map((gap) => gap.placeholder)).toContain("target");
-  });
-
   it("эффекты рун считаются по выбранной ячейке", () => {
     const first = castPreview({ spellId: "mage-armor", payment: slotOne });
     const fourth = castPreview({ spellId: "mage-armor", payment: { kind: "slot", slotLevel: 4 } });
@@ -257,19 +238,6 @@ describe("сотворение", () => {
     }, NOW);
 
     expect(preview.kind === "cast_preview" && preview.hitDice).toEqual({ maximum: 0, modifier: 4 });
-  });
-
-  it("названная цель и приложенная руна попадают в объявление", () => {
-    const preview = castPreview({
-      spellId: "mage-armor",
-      payment: slotOne,
-      targetLabel: "на себя",
-      rune: "war",
-    });
-
-    expect(preview?.announcement.text).toContain("на себя");
-    expect(preview?.announcement.text).toContain("руну войны");
-    expect(preview?.instructions.join(" ")).toContain("руна войны");
   });
 
   it("вопрос состояния не двигает", () => {

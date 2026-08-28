@@ -201,12 +201,11 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   expect(restBottom, "кнопки отдыха «Привала» целиком").toBeLessThanOrEqual(viewport);
 });
 
-/** Заговор творится в один шаг: платить нечем, и мастер спрашивает только подтверждение. */
+/** Заговор творится одним нажатием «Сотворить»: платить нечем, и мастеру спросить нечего. */
 async function castCantrip(page: Page, name: RegExp): Promise<void> {
   await page.getByRole("button", { name }).first().click();
   await page.getByRole("button", { name: "Сотворить" }).click();
-  await page.getByRole("button", { name: "Подтвердить" }).click();
-  await expect(page.getByRole("button", { name: "Подтвердить" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Сотворить" })).toBeHidden();
   await page.getByRole("button", { name: /^Новый ход/ }).click();
 }
 
@@ -226,7 +225,6 @@ async function holdConcentrationAfterSeveralCasts(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^Паутина/ }).first().click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: /Ячейка 2 уровня/ }).first().click();
-  await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByRole("button", { name: "Подтвердить" })).toBeHidden();
   await page.getByRole("button", { name: /^Новый ход/ }).click();
@@ -300,10 +298,13 @@ test("filter by casting time", async ({ page }) => {
 });
 
 test("technical instruction is two taps away", async ({ page }) => {
+  // Одно нажатие — карточка, и бросок с числом стоит на ней сразу: раскрывать ничего не нужно.
   await page.getByRole("button", { name: /Луч холода/ }).click();
-  await page.getByText("Как объявить").click();
 
-  await expect(page.getByText(/Атака заклинанием, модификатор \+8/)).toBeVisible();
+  const card = page.getByRole("dialog", { name: /Луч холода/ });
+  const roll = card.getByLabel("Механика").locator("dt", { hasText: "Мой бросок" });
+  await expect(roll).toBeVisible();
+  await expect(roll.locator("xpath=following-sibling::dd[1]")).toHaveText("Атака d20+8");
 });
 
 test("wizard steps order and cast spends the slot", async ({ page }) => {
@@ -312,18 +313,10 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
 
-  // Два основных шага при бюджете в четыре: чем сотворить и объявление с подтверждением.
-  await expect(page.getByText("Шаг 1 из 2: Чем сотворить")).toBeVisible();
+  // Один шаг при бюджете в четыре: чем сотворить, и он же подтверждает.
+  await expect(page.getByText("Шаг 1 из 1: Чем сотворить")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Далее" })).toBeHidden();
   await page.getByRole("button", { name: /Ячейка 2 уровня/ }).click();
-  await page.getByRole("button", { name: "Далее" }).click();
-
-  await expect(page.getByLabel("Что сделать")).toContainText("Произнести вслух");
-  await expect(page.getByLabel("Что сделать")).toContainText("Спишется ячейка 2 уровня");
-  await expect(page.getByLabel("Объявление мастеру")).toContainText("ячейкой 2 уровня");
-  // Раздел целиком, вместе с вложенным списком вариантов: механической строки нет нигде в нём.
-  await expect(page.getByRole("region", { name: "Отыгрыш" })).not.toContainText(
-    /произнести вслух/i,
-  );
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
@@ -339,7 +332,6 @@ test("undo returns the slot through the log screen", async ({ page }) => {
   await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
-  await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(slots.getByText("3/4")).toBeVisible();
 
@@ -361,7 +353,6 @@ test("state survives a reload", async ({ page }) => {
   await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Луч холода/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
-  await page.getByRole("button", { name: "Подтвердить" }).click();
   // Заодно проверяется, что режим переживает перезапуск.
   await switchMode(page, /^Книга/);
 
@@ -403,7 +394,6 @@ test("reaction shows when it returns", async ({ page }) => {
 
   await page.getByRole("button", { name: /Щит/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
-  await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByLabel("Реакция израсходована")).toBeVisible();
 
@@ -420,12 +410,10 @@ test("concentration block explains the effect", async ({ page }) => {
   await page.getByRole("button", { name: /^Обнаружение магии/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: /Ячейка 1 уровня/ }).click();
-  await page.getByRole("button", { name: "Далее" }).click();
 
-  // Шагов три: условия (ритуал неподготовлен), чем сотворить, подтверждение. Отдельного экрана про
-  // концентрацию нет — заменять нечего, и о ней говорит инструкция на итоговом.
-  await expect(page.getByText("Шаг 3 из 3: Объявление и подтверждение")).toBeVisible();
-  await expect(page.getByText(/Держите концентрацию/)).toBeVisible();
+  // Шагов два: условия (ритуал неподготовлен) и чем сотворить, он же подтверждает. Отдельного
+  // экрана про концентрацию нет — заменять нечего.
+  await expect(page.getByText("Шаг 2 из 2: Чем сотворить")).toBeVisible();
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   // В «Книге» блока действующего нет: она отвечает, что персонаж знает, а не что сейчас держится.
@@ -665,7 +653,6 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   // Тратим ячейку в бою, чтобы на привале было что восстанавливать.
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
-  await page.getByRole("button", { name: "Далее" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
   await expect(page.getByLabel("Чем платить")).toContainText("3/4");
 
@@ -708,9 +695,6 @@ test("blood pays for a slot inside the cast wizard", async ({ page }) => {
 
   // Ячейки пула целы, а кровь стоит рядом с ними своим уровнем и своей ценой в хитах.
   await page.getByRole("button", { name: /^Кровью · ячейка 1 уровня/ }).click();
-  await page.getByRole("button", { name: "Далее" }).click();
-  await expect(page.getByText("Ячейку создаю кровью: 6 хитов.")).toBeVisible();
-
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   // Пул ячеек не тронут: заплачено здоровьем и максимумом, и оба числа названы.

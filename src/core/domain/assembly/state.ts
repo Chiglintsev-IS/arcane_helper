@@ -95,7 +95,6 @@ const UNRECORDED_KEYS: readonly (keyof CharacterStateShape)[] = [
   "size",
   "speed",
   "proficiencies",
-  "roleplayProfile",
 ];
 
 /**

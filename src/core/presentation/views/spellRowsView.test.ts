@@ -186,7 +186,6 @@ describe("карточка", () => {
       nameEn: "Shield",
       school: "Ограждение",
       targeting: { type: "self" },
-      roleplay: { incantation: "Мимо! И следующая тоже." },
     });
     expect(row("shield").card.fullRulesRu).not.toBe("");
   });
@@ -303,25 +302,6 @@ describe("способы сотворения", () => {
     const knows = knowing(createThorne(), "arcane-lock");
     expect(row("arcane-lock", knows).ownComponentRequired).toBe(true);
     expect(row("arcane-lock", knows).componentReminders.join(" ")).toContain("золотая пыль");
-  });
-});
-
-describe("что сделать и как объявить", () => {
-  it("собираются тем же способом, что предложит мастер применения", () => {
-    // Вне боя «Обнаружение магии» творится ритуалом — и объявление, и шаги говорят про него.
-    expect(row("detect-magic").instructions.join(" ")).toContain("10 минут");
-    expect(row("detect-magic", createThorne(), START).instructions.join(" ")).toContain("ячейка");
-  });
-
-  it("объявление называет числа этого персонажа", () => {
-    expect(row("ray-of-frost").announcement.text).toContain("8");
-  });
-
-  it("незаполненное в объявлении названо, а не замолчано", () => {
-    const gaps = row("ray-of-frost").announcement.gaps;
-
-    expect(gaps.some((gap) => gap.placeholder === "target")).toBe(true);
-    expect(gaps.every((gap) => gap.reasonRu !== "")).toBe(true);
   });
 });
 

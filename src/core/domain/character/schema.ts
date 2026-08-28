@@ -19,15 +19,6 @@ import { ABILITIES, SKILL_IDS } from "@/core/domain/shared/stats";
 import { characterFeaturesSchema } from "./features";
 import { SKILL_TRAINING } from "./skills";
 
-const roleplayProfileSchema = z.object({
-  tone: z.array(z.enum(["serious", "mysterious", "sarcastic", "wild"])).min(1),
-  magicThemes: z.array(nonEmpty),
-  speechStyle: nonEmpty,
-  gestureStyle: nonEmpty,
-  prohibitedThemes: z.array(nonEmpty),
-  maximumPhraseLength: z.number().int().positive(),
-});
-
 /**
  * Величины персонажа объявлены по одному разу: то же объявление проверяет и сохранённое состояние, и
  * правку с экрана. Второй проверки того же факта в приложении нет — разойтись им было бы нечем.
@@ -130,8 +121,6 @@ export const CHARACTER_FIELDS = {
   /** Отметки на листе: их ставят и снимают там же, где смотрят, — на «Листе». */
   exhaustion: z.number().int().min(0).max(MAXIMUM_EXHAUSTION).default(0),
   inspiration: z.boolean().default(false),
-
-  roleplayProfile: roleplayProfileSchema,
 };
 
 const characterSchema = z.object(CHARACTER_FIELDS);

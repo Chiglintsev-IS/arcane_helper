@@ -6,8 +6,8 @@
  * приложения, оставляет ресурсы нетронутыми, потому что менять их отсюда попросту нечем
  *
  * По правилам черновик не считает ничего: способы сотворения вместе с их ценой, уроном и вердиктом
- * приезжают строкой заклинания, а объявление и шаги — ответом на вопрос. Здесь остаётся выбор
- * игрока и то, что он уже набрал.
+ * приезжают строкой заклинания, эффект руны и границы броска костей — ответом на вопрос. Здесь
+ * остаётся выбор игрока и то, что он уже набрал.
  *
  * Подтверждение выполняет вызывающий: он берёт `toCastCommand` и отправляет намерение через
  * единственную дверь ядра — `sessionStore.execute`.
@@ -18,11 +18,9 @@ import type { CastOptionView, SpellRowView } from "@/contract/views";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 /**
- * Экраны мастера в порядке. Шаг, где нечего выбирать, не показывается.
- *
- * Последние три шага — объявление, отыгрыш и подтверждение — живут на одном экране
- * `summary` раздельными блоками: иначе типовое применение выходит за бюджет
- * в четыре основных шага.
+ * Экраны мастера в порядке. Каждый показывается по условию: шаг, где нечего выбирать и не о чём
+ * предупредить, не показывается, а последний из показанных и подтверждает. Заклинание, которому не
+ * нужен ни один, творится прямо с карточки.
  */
 export const WIZARD_STEPS = [
   "availability",
@@ -30,21 +28,9 @@ export const WIZARD_STEPS = [
   "hitDice",
   "components",
   "concentration",
-  "summary",
 ] as const;
 
 export type WizardStep = (typeof WIZARD_STEPS)[number];
-
-/** Итоговый экран: объявление, отыгрыш, подтверждение. Показывается всегда. */
-export const LAST_STEP = "summary" satisfies WizardStep;
-
-/** Шаги, которые показываются по условию. */
-const OPTIONAL_STEPS = WIZARD_STEPS.filter(
-  (step): step is Exclude<WizardStep, typeof LAST_STEP> => step !== LAST_STEP,
-);
-
-/** Сколько недавних целей помнить: ввод текста в бою — самая медленная операция. */
-export const RECENT_TARGETS_LIMIT = 5;
 
 /** Занятая концентрация: шаг замены — выбор между двумя эффектами, а не сообщение. */
 export const CONCENTRATION_BUSY = "concentration_busy";
@@ -63,10 +49,6 @@ export type CastDraft = {
   spellId: string;
   /** Выбранный способ сотворения — целиком, вместе с его ценой и вердиктом. */
   option: CastOptionView;
-  /** Цель свободным текстом; `null` — не указана, и объявление корректно без неё. */
-  targetLabel: string | null;
-  /** Выбранная категория отыгрыша словом правил; `null` — игрок не выбирал, и её назовёт строка. */
-  roleplayCategory: string | null;
   /** Мастер разрешил исключение. Замену концентрации это согласие не покрывает. */
   allowAnyway: boolean;
   /** Игрок согласился прервать идущую концентрацию: выбор между двумя эффектами — только его. */
@@ -95,7 +77,6 @@ const DEFAULT_RUNE_TARGET = "self";
 /** Ключ запоминания — идентификатор заклинания: выбор помнится по заклинанию, а не глобально. */
 type Remembered = {
   payment: Record<string, CastOptionView["payment"]>;
-  roleplay: Record<string, string>;
 };
 
 /** Один ли это способ оплаты: ячейки различаются уровнем, прочие роды — только собой. */
@@ -123,22 +104,18 @@ function defaultOption(row: SpellRowView, remembered: Remembered): CastOptionVie
 }
 
 /**
- * Видимые шаги. Шаг показывается, только если на нём есть что выбрать или о чём предупредить:
- * иначе мастер выходит за бюджет — не более четырёх основных шагов.
+ * Видимые шаги. Шаг показывается, только если на нём есть что выбрать или о чём предупредить.
+ * Пустой список — мастер не нужен: подтверждают прямо с карточки.
  *
  * Шага выбора цели среди них нет: ввод текста в бою — самая медленная операция, и решением игрока
- * мастер цель не спрашивает. Подстановка цели в
- * объявлении осталась: она понадобится, если решение изменится после игровой сессии.
+ * мастер цель не спрашивает.
  */
-export function visibleSteps(
-  draft: CastDraft,
-  row: SpellRowView,
-): [...WizardStep[], WizardStep] {
+export function visibleSteps(draft: CastDraft, row: SpellRowView): WizardStep[] {
   const { warnings } = draft.option;
   const blocking = warnings.filter((warning) => !OWN_STEP_WARNINGS.includes(warning.code));
   const replacesConcentration = warnings.some((warning) => warning.code === CONCENTRATION_BUSY);
 
-  const optional = OPTIONAL_STEPS.filter((step) => {
+  return WIZARD_STEPS.filter((step) => {
     switch (step) {
       case "availability":
         return blocking.length > 0;
@@ -152,9 +129,6 @@ export function visibleSteps(
         return replacesConcentration;
     }
   });
-
-  // Итоговый экран есть всегда: подтверждение — единственный шаг, который нельзя пропустить.
-  return [...optional, LAST_STEP];
 }
 
 /**
@@ -169,7 +143,6 @@ export function toCastCommand(draft: CastDraft): CommandOf<"cast_spell"> {
     spellId: draft.spellId,
     mode: draft.option.mode,
     payment: draft.option.payment,
-    ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
     ...(draft.rune === null ? {} : { rune: draft.rune, runeTarget: draft.runeTarget }),
     ...(draft.hitDiceCount === null || draft.hitDiceRolled === null
       ? {}
@@ -181,10 +154,12 @@ export function toCastCommand(draft: CastDraft): CommandOf<"cast_spell"> {
 
 export type CastDraftState = {
   draft: CastDraft | null;
-  /** Недавно введённые цели: выбор из списка вместо ввода экономит секунды в бою. */
-  recentTargets: string[];
 
-  start: (row: SpellRowView) => void;
+  /**
+   * Начать применение. Есть что спросить — мастер открыт, и возвращается `null`; спрашивать нечего —
+   * мастер не открывается, а возвращается черновик, который вызывающий подтверждает сразу.
+   */
+  start: (row: SpellRowView) => CastDraft | null;
   chooseCastOption: (option: CastOptionView) => void;
   /**
    * Приложить руну или снять её. Не более одной на заклинание.
@@ -198,8 +173,6 @@ export type CastDraftState = {
   setHitDiceCount: (count: number) => void;
   /** Что выпало на брошенных костях. */
   setHitDiceRolled: (rolled: number | null) => void;
-  setTarget: (label: string) => void;
-  setRoleplayCategory: (category: string) => void;
   /** «Применить всё равно»: предупреждения, которые снимает исключение мастера, перестают мешать. */
   allowAnyway: () => void;
   /** «Прервать и сотворить»: согласие на замену идущей концентрации. */
@@ -221,7 +194,7 @@ function shift(
 
 export function createCastDraftStore(): StoreApi<CastDraftState> {
   return createStore<CastDraftState>((set, get) => {
-    const remembered: Remembered = { payment: {}, roleplay: {} };
+    const remembered: Remembered = { payment: {} };
 
     /** Правка черновика в одном месте: без черновика правки просто нет. */
     const edit = (change: (draft: CastDraft) => CastDraft): void => {
@@ -232,26 +205,23 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
 
     return {
       draft: null,
-      recentTargets: [],
 
       start(row) {
         const draft: CastDraft = {
           spellId: row.id,
           option: defaultOption(row, remembered),
-          targetLabel: null,
-          // Невыбранную категорию называет строка: перечень категорий — правило, а не выбор мастера.
-          roleplayCategory: remembered.roleplay[row.id] ?? null,
           allowAnyway: false,
           replaceConcentration: false,
           rune: null,
           runeTarget: DEFAULT_RUNE_TARGET,
           hitDiceCount: null,
           hitDiceRolled: null,
-          step: "summary",
+          step: WIZARD_STEPS[0],
         };
-        // Первый видимый шаг: у списка всегда есть хотя бы итоговый экран.
         const [first] = visibleSteps(draft, row);
+        if (first === undefined) return draft;
         set({ draft: { ...draft, step: first } });
+        return null;
       },
 
       chooseRune(rune, choosesTarget) {
@@ -287,24 +257,6 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
         });
       },
 
-      setTarget(label) {
-        const trimmed = label.trim();
-        edit((draft) => ({ ...draft, targetLabel: trimmed === "" ? null : trimmed }));
-        if (trimmed === "") return;
-        set({
-          recentTargets: [
-            trimmed,
-            ...get().recentTargets.filter((candidate) => candidate !== trimmed),
-          ].slice(0, RECENT_TARGETS_LIMIT),
-        });
-      },
-
-      setRoleplayCategory(category) {
-        edit((draft) => {
-          remembered.roleplay[draft.spellId] = category;
-          return { ...draft, roleplayCategory: category };
-        });
-      },
 
       allowAnyway() {
         edit((draft) => ({ ...draft, allowAnyway: true }));

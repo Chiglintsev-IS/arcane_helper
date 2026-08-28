@@ -38,9 +38,6 @@ test("a party goes through the backend and the browser keeps no state", async ({
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: /Ячейка 2 уровня/ }).click();
-  await page.getByRole("button", { name: "Далее" }).click();
-  // Объявление приезжает ответом на вопрос: набранного в состоянии ещё нет.
-  await expect(page.getByLabel("Объявление мастеру")).toContainText("ячейкой 2 уровня");
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   await expect(spent).toBeVisible();

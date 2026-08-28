@@ -13,22 +13,13 @@ import { describe, expect, it } from "vitest";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { renderWithStores, shown, slotsLeft, spell } from "@/ui/app/testing/stores";
+import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import {
   withDamage,
   withoutHitDice,
   withoutRunes,
   withoutSlots,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
-
-// Художественный текст берётся из контента, а не переписывается в тесте: реплики правятся отдельно,
-// и тест не должен падать от смены формулировки.
-const rayOfFrost = spell("ray-of-frost");
-function firstVariant(category: "short" | "sarcastic"): string {
-  const text = rayOfFrost.roleplay.completeVariants[category][0];
-  if (text === undefined) throw new Error(`у «Луча холода» нет варианта «${category}»`);
-  return text;
-}
 
 /**
  * Учёт хода ведётся ровно в режиме «Бой», а он же начальный, — так что помощник ничего не
@@ -73,7 +64,8 @@ function concentrating(): CharacterState {
 }
 
 /**
- * Открывает мастер применения: «Начать бой», затем строка списка и «Сотворить».
+ * Нажимает «Сотворить»: «Начать бой», затем строка списка и кнопка карточки. Заклинанию, которому
+ * есть что спросить, открывается мастер; заговор без предупреждений творится этим же нажатием.
  *
  * Бой начинается по умолчанию: иначе перед тем, что проверяет тест, вставал бы лишний шаг «Бой не
  * начат» — во всех сценариях этого файла применение происходит в режиме «Бой». Тесты,
@@ -97,24 +89,30 @@ async function openWizard(
 describe("вход в мастер (FR-020)", () => {
   it("«Сотворить» открывает мастер применения", async () => {
     await renderWithStores(<GameScreen />);
-    await openWizard(/Луч холода/);
+    await openWizard(/Доспехи мага/);
 
-    expect(screen.getByRole("dialog", { name: /Применение «Луч холода»/ })).toBeDefined();
+    expect(screen.getByRole("dialog", { name: /Применение «Доспехи мага»/ })).toBeDefined();
   });
 
-  it("заговор применяется одним экраном: сотворить и подтвердить (M-03)", async () => {
-    await renderWithStores(<GameScreen />);
+  it("заговор творится с карточки одним нажатием (M-03)", async () => {
+    const { stores } = await renderWithStores(<GameScreen />, withTurnTracking());
+    const before = shown(stores).resources.slots;
     await openWizard(/Луч холода/);
 
-    expect(screen.getByText(/Шаг 1 из 1: Объявление и подтверждение/)).toBeDefined();
-    expect(screen.getByRole("button", { name: "Подтвердить" })).toBeDefined();
+    // Спрашивать нечего: ни мастера, ни карточки — заклинание уже сотворено.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(shown(stores).resources.slots).toEqual(before);
+    // Две записи: «Бой начался» из `openWizard`, затем само применение.
+    expect(shown(stores).log).toHaveLength(2);
+    expect(shown(stores).turn.actionAvailable).toBe(false);
   });
 
-  it("заклинание с ячейкой — за два шага", async () => {
+  it("заклинание с ячейкой — за один шаг, и он же подтверждает", async () => {
     await renderWithStores(<GameScreen />);
     await openWizard(/Доспехи мага/);
 
-    expect(screen.getByText(/Шаг 1 из 2: Чем сотворить/)).toBeDefined();
+    expect(screen.getByText(/Шаг 1 из 1: Чем сотворить/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Подтвердить" })).toBeDefined();
   });
 });
 
@@ -129,7 +127,6 @@ describe("инвариант FR-022: до подтверждения ресур�
 
     await openWizard(/Доспехи мага/, { user, startCombat: false });
     await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     expect(screen.getByRole("button", { name: "Подтвердить" })).toBeDefined();
 
     expect(shown(stores)).toEqual(before);
@@ -145,7 +142,6 @@ describe("подтверждение (FR-023, AC-11)", () => {
 
     const user = await openWizard(/Доспехи мага/);
     await user.click(screen.getByRole("button", { name: /Ячейка 2 уровня/ }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(slotsLeft(stores, 2)).toBe(2);
@@ -160,89 +156,20 @@ describe("подтверждение (FR-023, AC-11)", () => {
   it("после подтверждения мастер закрывается", async () => {
     await renderWithStores(<GameScreen />);
 
-    const user = await openWizard(/Луч холода/);
+    const user = await openWizard(/Доспехи мага/);
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
 
-describe("объявление мастеру (FR-041, AC-12)", () => {
-  it("называет выбранный уровень ячейки и цель", async () => {
-    // «Молния»: выбор ячейки есть, концентрации нет — значит шага замены между ними не встанет,
-    // а в объявлении стоят и уровень ячейки, и КС спасброска.
+describe("урон по выбранному уровню ячейки (FR-071)", () => {
+  it("показывает урон у каждого способа до подтверждения", async () => {
     await renderWithStores(<GameScreen />);
-
-    const user = await openWizard(/^Молния/);
-    await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
-
-    const announcement = screen.getByLabelText("Объявление мастеру");
-    expect(within(announcement).getByText(/ячейкой 3 уровня/)).toBeDefined();
-    expect(within(announcement).getByText(/против КС 16/)).toBeDefined();
-  });
-
-  it("показывает урон по выбранному уровню ячейки до подтверждения (FR-071)", async () => {
-    await renderWithStores(<GameScreen />);
-    const user = await openWizard(/Поглощение стихий/);
+    await openWizard(/Поглощение стихий/);
 
     expect(screen.getByRole("button", { name: /Ячейка 1 уровня/ })).toBeDefined();
     expect(within(screen.getByRole("button", { name: /Ячейка 3 уровня/ })).getByText(/3d6/)).toBeDefined();
-
-    await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
-    expect(screen.getByText(/добавит 3d6/)).toBeDefined();
-  });
-
-  it("механика и отыгрыш живут в разных блоках (AC-20)", async () => {
-    await renderWithStores(<GameScreen />);
-    const user = await openWizard(/Луч холода/);
-
-    const mechanics = screen.getByLabelText("Объявление мастеру");
-    const roleplay = screen.getByLabelText("Отыгрыш");
-    expect(mechanics.contains(roleplay)).toBe(false);
-    expect(within(roleplay).getByText(firstVariant("short"))).toBeDefined();
-
-    await user.click(within(roleplay).getByRole("button", { name: "Саркастично" }));
-    expect(within(roleplay).getByText(firstVariant("sarcastic"))).toBeDefined();
-  });
-});
-
-describe("порядок итогового шага (FR-255)", () => {
-  /** Блоки шага сверху вниз: раскладку в jsdom заменяет порядок в разметке. */
-  function blockLabels(): (string | null)[] {
-    const wizard = screen.getByRole("dialog", { name: /Применение/ });
-    return Array.from(wizard.querySelectorAll("section[aria-label]")).map((block) =>
-      block.getAttribute("aria-label"),
-    );
-  }
-
-  it("формулировка мастеру видна без прокрутки", async () => {
-    // «Молния»: объявление длинное — уровень ячейки, дальность, спасбросок и урон, — и именно на
-    // нём прежний порядок уводил произносимое под сгиб.
-    await renderWithStores(<GameScreen />);
-
-    const user = await openWizard(/^Молния/);
-    await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
-
-    const announcement = screen.getByLabelText("Объявление мастеру");
-    // Выше объявления нет ничего: ни соседа в блоке шага, ни блока над ним в прокручиваемом теле.
-    expect(announcement.previousElementSibling).toBeNull();
-    expect(announcement.parentElement?.previousElementSibling).toBeNull();
-    expect(blockLabels()).toEqual(["Объявление мастеру", "Отыгрыш", "Что сделать"]);
-  });
-
-  it("инструкция остаётся целиком, а не уходит за раскрытие", async () => {
-    await renderWithStores(<GameScreen />);
-
-    const user = await openWizard(/^Молния/);
-    await user.click(screen.getByRole("button", { name: /Ячейка 3 уровня/ }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
-
-    const instructions = screen.getByLabelText("Что сделать");
-    expect(instructions.querySelector("details")).toBeNull();
-    expect(within(instructions).getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 });
 
@@ -264,7 +191,6 @@ describe("предупреждение вместо запрета (FR-031)", ()
 
     await user.click(screen.getByRole("button", { name: "Применить всё равно" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(slotsLeft(stores, 1)).toBe(-1);
@@ -276,17 +202,17 @@ describe("замена концентрации (FR-081, AC-13)", () => {
     await renderWithStores(<GameScreen />, concentrating());
     const user = await openWizard(/^Обнаружение магии/);
 
-    expect(screen.getByText(/Шаг 1 из 3: Чем сотворить/)).toBeDefined();
+    expect(screen.getByText(/Шаг 1 из 2: Чем сотворить/)).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
     // Фразу выбирает проверка доступности: собранная в мастере заново, она разошлась бы с той,
     // которой та же помеха названа в списке, — и с отказом подтверждения.
     const wizard = within(screen.getByRole("dialog", { name: /Применение/ }));
     expect(wizard.getByText(/Уже идёт концентрация: «Обнаружение магии»/)).toBeDefined();
-    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Заменить концентрацию" }));
-    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(false);
   });
 
   it("после замены остаётся ровно одна концентрация (FR-080)", async () => {
@@ -295,7 +221,6 @@ describe("замена концентрации (FR-081, AC-13)", () => {
 
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Заменить концентрацию" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(shown(stores).effects.filter((effect) => effect.isConcentration)).toHaveLength(1);
@@ -321,24 +246,10 @@ describe("замена концентрации (FR-081, AC-13)", () => {
   });
 });
 
-describe("требование компонента названо перечнем, а не отыгрышем (FR-290)", () => {
-  it("обязательное стоит шагом в «Что сделать», а блок отыгрыша молчит о нём", async () => {
-    await renderWithStores(<GameScreen />);
-    await openWizard(/Луч холода/);
-
-    const instructions = screen.getByLabelText("Что сделать");
-    expect(within(instructions).getByText("Произнести вслух")).toBeDefined();
-    expect(within(instructions).getByText("Жест свободной рукой")).toBeDefined();
-
-    const roleplay = screen.getByLabelText("Отыгрыш");
-    expect(roleplay.textContent?.toLowerCase()).not.toContain("произнести вслух");
-  });
-});
-
 describe("цель мастером не спрашивается (OQ-10)", () => {
   it("не просит цель и не показывает её отсутствие как пробел (OQ-10)", async () => {
     await renderWithStores(<GameScreen />);
-    await openWizard(/Луч холода/);
+    await openWizard(/Доспехи мага/);
 
     expect(screen.queryByLabelText("Цель или точка")).toBeNull();
     expect(screen.queryByText("Цель не указана")).toBeNull();
@@ -382,13 +293,6 @@ describe("недоступность руны названа причиной (F
     const rune = screen.getByLabelText("Руна");
     expect(within(rune).getByText("Рун не осталось, вернутся долгим отдыхом")).toBeDefined();
   });
-
-  it("у заговора блока руны нет вовсе: ячейку он не тратит", async () => {
-    await renderWithStores(<GameScreen />);
-    await openWizard(/Луч холода/);
-
-    expect(screen.queryByLabelText("Руна")).toBeNull();
-  });
 });
 
 describe("руна жизни спрашивает кому (FR-156)", () => {
@@ -415,7 +319,6 @@ describe("руна жизни спрашивает кому (FR-156)", () => {
 
     await user.click(screen.getByRole("button", { name: /Руна жизни/ }));
     await user.click(screen.getByRole("button", { name: "Другому" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(shown(stores).sheet.hitPoints.temporary).toBe(0);
@@ -465,7 +368,7 @@ describe("шаг костей хитов (FR-135)", () => {
   it("без выбранного числа костей дальше не пускает", async () => {
     await renderWithStores(<GameScreen />, woundedThorne());
     await openHitDiceStep();
-    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("выпавшее вне возможного отвергается с причиной", async () => {
@@ -474,7 +377,7 @@ describe("шаг костей хитов (FR-135)", () => {
     await user.click(screen.getByRole("button", { name: "2d6" }));
     await user.type(screen.getByLabelText("Что выпало на 2d6"), "13");
     expect(screen.getByText("На 2d6 может выпасть от 2 до 12")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("возможное выпавшее показывает итог с модификатором", async () => {
@@ -483,7 +386,7 @@ describe("шаг костей хитов (FR-135)", () => {
     await user.click(screen.getByRole("button", { name: "2d6" }));
     await user.type(screen.getByLabelText("Что выпало на 2d6"), "9");
     expect(screen.getByText("9 + 4 — вернётся 13 хитов")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(false);
   });
 
   it("подтверждение списывает кости и лечит", async () => {
@@ -491,7 +394,6 @@ describe("шаг костей хитов (FR-135)", () => {
     const user = await openHitDiceStep();
     await user.click(screen.getByRole("button", { name: "2d6" }));
     await user.type(screen.getByLabelText("Что выпало на 2d6"), "9");
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(shown(stores).sheet.hitPoints.hitDice?.remaining).toBe(5);
@@ -504,6 +406,6 @@ describe("шаг костей хитов (FR-135)", () => {
     await openHitDiceStep();
     expect(screen.getByText(/бросать нечего/)).toBeTruthy();
     // Предупреждение, а не запрет: ячейку игрок вправе потратить впустую.
-    expect(screen.getByRole("button", { name: "Далее" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(false);
   });
 });

@@ -34,11 +34,10 @@ describe("шаг компонентов", () => {
 
     await user.click(screen.getByRole("button", { name: /^Волшебный замок/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    // Условия → чем сотворить → компоненты → объявление: золотая пыль требует отдельного шага, а
-    // первым мастер спрашивает про условия, потому что ни пыли в сумке, ни подготовки нет.
+    // Чем сотворить → компоненты: золотая пыль требует отдельного шага, и он же подтверждает.
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
-    expect(screen.getByText(/Шаг 2 из 3: Компоненты/)).toBeDefined();
+    expect(screen.getByText(/Шаг 2 из 2: Компоненты/)).toBeDefined();
     expect(screen.getByText(/фокусировка не заменяет/)).toBeDefined();
   });
 });

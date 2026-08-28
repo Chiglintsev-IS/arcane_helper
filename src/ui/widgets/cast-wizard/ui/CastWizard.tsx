@@ -2,8 +2,9 @@
  * Компонент меняет только черновик: состояние персонажа трогает лишь кнопка подтверждения.
  *
  * По правилам он не считает ничего. Способы сотворения с их ценой, уроном и вердиктом приезжают
- * строкой заклинания; объявление, шаги, эффект руны и границы броска костей — ответом на вопрос про
- * набранное. Здесь остаются слова, порядок и то, открыт ли шаг.
+ * строкой заклинания; эффект руны и границы броска костей — ответом на вопрос про набранное. Здесь
+ * остаются слова, порядок и то, открыт ли шаг. Последний показанный шаг и подтверждает: отдельного
+ * итогового экрана нет, всё, что он повторял, стоит на карточке.
  */
 
 "use client";
@@ -12,17 +13,9 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 import type { CastOptionView, ChoicesView, ResourcesView, SpellRowView } from "@/contract/views";
 import type { PreviewOf, Question } from "@/contract/questions";
 
-import { useState } from "react";
-
-import {
-  ANNOUNCEMENT_LABEL,
-  WIZARD_STEP_TITLES,
-  WizardShell,
-} from "@/ui/shared/ui/WizardShell";
+import { WIZARD_STEP_TITLES, WizardShell } from "@/ui/shared/ui/WizardShell";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import { castingTimeBadge, castingTimePhrase, levelLabel } from "@/ui/entities/spell/lib/format";
-import { RoleplaySection } from "@/ui/features/roleplay/ui/RoleplaySection";
 import {
   visibleSteps,
   CONCENTRATION_BUSY,
@@ -49,7 +42,6 @@ const STEP_TITLES: Record<WizardStep, string> = {
   hitDice: "Кости хитов",
   components: "Компоненты",
   concentration: "Концентрация",
-  summary: WIZARD_STEP_TITLES.summary,
 };
 
 /**
@@ -442,86 +434,10 @@ function ConcentrationStep({
 }
 
 /**
- * Итоговый экран: что сказать мастеру, отыгрыш, что сделать — три раздельных блока.
- *
- * Порядок — порядок хода за столом: сначала произносят, потом отыгрывают, потом действуют. Поэтому
- * объявление стоит первым и видно целиком, а инструкция — последней и напоминанием: числа этого
- * персонажа («бросьте d20 + 8», а не «атака заклинанием») нужны после ответа мастера, но нужны
- * целиком, и потому она не сворачивается.
- */
-function SummaryStep({
-  draft,
-  row,
-  preview,
-  onRoleplay,
-}: {
-  draft: CastDraft;
-  row: SpellRowView;
-  preview: CastPreview | null;
-  onRoleplay: (category: string) => void;
-}) {
-  const [diagramOpen, setDiagramOpen] = useState(false);
-  // Отсутствие цели — решение, а не пробел: мастер её не спрашивает.
-  const shownGaps = (preview?.announcement.gaps ?? []).filter(
-    (gap) => gap.placeholder !== "target",
-  );
-
-  return (
-    <div className="flex flex-col gap-3">
-      <section aria-label={ANNOUNCEMENT_LABEL} className="flex flex-col gap-2">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">
-          Сказать мастеру
-        </h3>
-        <p className={`p-2 text-base leading-snug ${SURFACE_GROUP}`}>
-          {preview?.announcement.text ?? ""}
-        </p>
-        {shownGaps.length === 0 ? null : (
-          <ul className="flex flex-col gap-1 text-xs text-ink-quiet">
-            {shownGaps.map((gap) => (
-              <li key={gap.placeholder ?? gap.reasonRu}>{gap.reasonRu}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <RoleplaySection
-        spellId={row.id}
-        category={draft.roleplayCategory}
-        onCategory={onRoleplay}
-      />
-
-      <section aria-label="Что сделать" className="flex flex-col gap-1">
-        <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">Что сделать</h3>
-        <ol className="flex list-inside list-decimal flex-col gap-1 text-sm text-ink-quiet">
-          {(preview?.instructions ?? []).map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-      </section>
-
-      {/* Схема только в ритуальном режиме: рисовать десять минут в бою нельзя. */}
-      {draft.option.mode === "ritual" && row.card.ritualDiagram !== undefined ? (
-        <button
-          type="button"
-          onClick={() => setDiagramOpen(true)}
-          className={`min-h-11 px-3 text-sm font-medium text-ritual ${SURFACE_CONTROL}`}
-        >
-          Схема ритуала
-        </button>
-      ) : null}
-
-      {diagramOpen ? (
-        <RitualDiagramView row={row} onClose={() => setDiagramOpen(false)} />
-      ) : null}
-    </div>
-  );
-}
-
-/**
  * Что спросить у ядра про набранное. `null` — мастер закрыт, и спрашивать не о чем.
  *
- * Вопрос везёт выбранный способ и всё, что игрок успел набрать: объявление, шаги, эффект руны и
- * границы броска зависят и от того, и от другого, и ответ на них один.
+ * Вопрос везёт выбранный способ и всё, что игрок успел набрать: эффект руны и границы броска
+ * зависят и от того, и от другого, и ответ на них один.
  */
 function castQuestion(draft: CastDraft | null, row: SpellRowView | null): Question | null {
   if (draft === null || row === null) return null;
@@ -530,7 +446,6 @@ function castQuestion(draft: CastDraft | null, row: SpellRowView | null): Questi
     spellId: row.id,
     mode: draft.option.mode,
     payment: draft.option.payment,
-    ...(draft.targetLabel === null ? {} : { targetLabel: draft.targetLabel }),
     ...(draft.rune === null ? {} : { rune: draft.rune }),
     ...(draft.hitDiceCount === null ? {} : { hitDiceCount: draft.hitDiceCount }),
     ...(draft.hitDiceRolled === null ? {} : { hitDiceRolled: draft.hitDiceRolled }),
@@ -568,7 +483,7 @@ export function CastWizard({
   const { warnings } = draft.option;
 
   const index = steps.indexOf(draft.step);
-  const isLast = draft.step === "summary";
+  const isLast = index === steps.length - 1;
   const castingTime = castingTimeBadge(row.castingTime.type);
   const actions = draftStore.getState();
 
@@ -603,16 +518,12 @@ export function CastWizard({
       }}
       stepLabel={`Шаг ${index + 1} из ${steps.length}: ${STEP_TITLES[draft.step]}`}
       onCancel={() => actions.cancel()}
-      footer={
-        isLast
-          ? { ...back, primaryLabel: BUTTON_LABELS.confirm, onPrimary: () => onConfirm(draft) }
-          : {
-              ...back,
-              primaryLabel: "Далее",
-              onPrimary: () => actions.next(steps),
-              primaryDisabled: availabilityBlocked || concentrationBlocked || hitDiceBlocked,
-            }
-      }
+      footer={{
+        ...back,
+        primaryLabel: isLast ? BUTTON_LABELS.confirm : "Далее",
+        onPrimary: isLast ? () => onConfirm(draft) : () => actions.next(steps),
+        primaryDisabled: availabilityBlocked || concentrationBlocked || hitDiceBlocked,
+      }}
     >
       {draft.step === "availability" ? (
         <AvailabilityStep
@@ -662,14 +573,6 @@ export function CastWizard({
           replaceConfirmed={draft.replaceConcentration}
           onReplace={() => actions.replaceConcentration()}
           onCancel={() => actions.cancel()}
-        />
-      ) : null}
-      {draft.step === "summary" ? (
-        <SummaryStep
-          draft={draft}
-          row={row}
-          preview={preview}
-          onRoleplay={(category) => actions.setRoleplayCategory(category)}
         />
       ) : null}
 

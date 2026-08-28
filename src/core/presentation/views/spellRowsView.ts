@@ -25,7 +25,6 @@ import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
 import { CANTRIP_LEVEL, needsOwnComponent, type Spell } from "@/core/domain/catalog/spell";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
-import { castInstructions, renderAnnouncement } from "@/core/application/casting/announcement";
 import {
   bloodPrice,
   castLevelOf,
@@ -45,11 +44,6 @@ import {
   type CastPlans,
 } from "@/core/application/casting/castOptions";
 import type { LiveSession } from "@/core/application/session";
-import {
-  defaultRoleplayVariant,
-  roleplayCategories,
-  roleplayVariants,
-} from "@/core/application/useCases/roleplay";
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 
 import { toDiagramView } from "./diagramView";
@@ -183,37 +177,10 @@ function spellCardView(spell: Spell): SpellCardView {
             material: { textRu: components.materialText, consumed: components.consumed === true },
           }),
     },
-    roleplay: { incantation: spell.roleplay.incantation, gesture: spell.roleplay.gesture },
     ...(spell.ritualDiagram === undefined
       ? {}
       : { ritualDiagram: toDiagramView(spell.ritualDiagram) }),
   };
-}
-
-/**
- * Отыгрыш так, как его показывают: категории с вариантами, пометками игрока и ротацией.
- *
- * Какой вариант показать первым, решают правила отыгрыша, и наружу едет их ответ, а не счётчик
- * показов: второй способ выбрать «реже других использованный» разошёлся бы с первым молча.
- */
-function roleplayCategoryViews(
-  spell: Spell,
-  character: CharacterState,
-): SpellRowView["roleplayCategories"] {
-  return roleplayCategories(character, spell).map((category) => {
-    const rotated = defaultRoleplayVariant(character, spell, category);
-    return {
-      id: category,
-      variants: roleplayVariants(character, spell, category).map((variant) => ({
-        id: variant.id,
-        text: variant.text,
-        own: variant.own,
-        favorite: variant.favorite,
-        disabled: variant.disabled,
-        suggested: variant.id === rotated?.id,
-      })),
-    };
-  });
 }
 
 /** Каким станет Класс Доспеха, если сотворить: у заклинания без вклада в защиту — ничем. */
@@ -227,8 +194,6 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
   const [first, ...rest] = plans.all;
   const reason = unavailableReason(plans.suggested);
   const ownReason = ownUnavailableReason(plans.suggested);
-  const announcementContext = { character, ...plans.suggested.option };
-  const announcement = renderAnnouncement(spell, announcementContext);
   const armorClass = armorClassIfCast(spell, character);
   const note = character.spellNotes[spell.id];
   const material = materialOf(spell.components);
@@ -297,16 +262,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
       ...rest.map((plan) => castOptionView(plan, plans, spell, character)),
     ],
     componentReminders: componentRequirements(spell.components, materialCovered),
-    instructions: castInstructions(spell, announcementContext),
-    announcement: {
-      text: announcement.text,
-      gaps: announcement.gaps.map((gap) => ({
-        ...(gap.placeholder === undefined ? {} : { placeholder: gap.placeholder }),
-        reasonRu: gap.reasonRu,
-      })),
-    },
     ...(note === undefined ? {} : { note }),
-    roleplayCategories: roleplayCategoryViews(spell, character),
     card: spellCardView(spell),
   };
 }

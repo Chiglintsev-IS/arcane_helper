@@ -440,29 +440,6 @@ export const castOptionViewSchema = z.object({
   damage: z.object({ formula: word, type: word }).optional(),
 });
 
-/**
- * Вариант отыгрыша: готовая фраза карточки или написанная игроком, с его же пометками на ней.
- *
- * Счётчика показов здесь нет: ротацию решают правила отыгрыша, и наружу едет её ответ — какой
- * вариант показать. Второй счёт по числам разошёлся бы с ним при первой же правке порядка.
- */
-export const roleplayVariantViewSchema = z.object({
-  id: word,
-  text: word,
-  /** Написан игроком: идёт первым в своей категории. */
-  own: z.boolean(),
-  favorite: z.boolean(),
-  disabled: z.boolean(),
-  /** Что показать при открытии категории; ровно один включённый вариант на категорию. */
-  suggested: z.boolean(),
-});
-
-/** Категория отыгрыша со всеми её вариантами, включая отключённые: их возвращают там же. */
-export const roleplayCategoryViewSchema = z.object({
-  id: word,
-  variants: z.array(roleplayVariantViewSchema),
-});
-
 const pointSchema = z.object({ x: z.number(), y: z.number() });
 
 /**
@@ -555,8 +532,6 @@ export const spellCardViewSchema = z.object({
     somatic: z.boolean(),
     material: z.object({ textRu: word, consumed: z.boolean() }).optional(),
   }),
-  /** Что произносят и что показывают руками: слова книги, а не выбор игрока. */
-  roleplay: z.object({ incantation: word, gesture: word }),
   /** Схема ритуала, начерченная; нет вовсе — ритуалом заклинание не творится. */
   ritualDiagram: diagramViewSchema.optional(),
 });
@@ -628,30 +603,9 @@ export const spellRowViewSchema = z.object({
   /** Что требуется произнести, показать и приложить: перечень словами, а не «В, С, М». */
   componentReminders: z.array(word),
 
-  /**
-   * Что сделать и что сказать мастеру — способом, который предложит мастер применения.
-   *
-   * Едет со строкой, а не отдельным ответом на «расскажи про это заклинание»: способ выбирают
-   * правила, и спросить их дважды значит однажды получить два разных ответа на один вопрос.
-   */
-  instructions: z.array(word),
-  announcement: z.object({
-    text: word,
-    /** Чего в объявлении не хватает и почему: пробел назван, а не замолчан. */
-    gaps: z.array(z.object({ placeholder: word.optional(), reasonRu: word })),
-  }),
-
   /** Заметка игрока: домашнее правило или напоминание; нет вовсе — не писал. */
   note: text.optional(),
-  /**
-   * Отыгрыш у этого персонажа: категории с вариантами, пометками и ротацией.
-   *
-   * Стоит в строке, а не в карточке: любимое, отключённое и то, что показать следующим, — свойства
-   * игрока, а не книги. Категория, в которой не осталось включённых вариантов, не приезжает вовсе:
-   * выбирать в ней нечего.
-   */
-  roleplayCategories: z.array(roleplayCategoryViewSchema),
-  /** Что о заклинании написано: полные правила, отыгрыш и всё, чего в строке нет. */
+  /** Что о заклинании написано: полные правила и всё, чего в строке нет. */
   card: spellCardViewSchema,
 });
 
@@ -729,8 +683,6 @@ export type RecoveryView = z.infer<typeof recoveryViewSchema>;
 export type TurnView = z.infer<typeof turnViewSchema>;
 export type CastOptionView = z.infer<typeof castOptionViewSchema>;
 export type DiagramFigure = z.infer<typeof diagramFigureSchema>;
-export type RoleplayVariantView = z.infer<typeof roleplayVariantViewSchema>;
-export type RoleplayCategoryView = z.infer<typeof roleplayCategoryViewSchema>;
 export type DiagramView = z.infer<typeof diagramViewSchema>;
 export type SpellCardView = z.infer<typeof spellCardViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;

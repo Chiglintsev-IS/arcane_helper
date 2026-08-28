@@ -25,7 +25,6 @@
 | [quality.md](quality.md) | Критерии приёмки и стратегия тестирования |
 | [open-questions.md](open-questions.md) | Что ещё не решено и блокирует ли это разработку |
 | [ux.md](ux.md) | Правила интерфейса, цветовая система |
-| [voice.md](voice.md) | Как звучит персонаж: регистр реплики |
 | [constraints.md](constraints.md) | Риски и право |
 | [roadmap.md](roadmap.md) | Состояние на сегодня и следующий шаг |
 

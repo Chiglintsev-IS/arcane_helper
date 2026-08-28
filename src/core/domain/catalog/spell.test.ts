@@ -28,18 +28,6 @@ function web(): unknown {
     shortRulesRu: "Заполняет куб 20 футов паутиной, опутывая провалившихся.",
     fullRulesRu: "Собственный пересказ механики заклинания.",
     tacticalAdviceRu: "Удобно против группы противников в узком проходе.",
-    roleplay: {
-      incantation: "Стой.",
-      gesture: "Чертит мелом знак связи.",
-      visualEffect: "Из воздуха проступают ледяные нити.",
-      completeVariants: {
-        short: ["Чертит знак — проход зарастает нитями."],
-        atmospheric: ["Воздух густеет, и между камнями прорастает морозная сеть."],
-        sarcastic: ["Торн вздыхает: «Опять придётся всё делать самому»."],
-      },
-    },
-    announcementTemplate:
-      "Использую действие и сотворяю «Паутину» ячейкой {slotLevel} уровня. Спасбросок Ловкости против КС {spellSaveDc}.",
   };
 }
 
@@ -62,17 +50,6 @@ function rayOfFrost(): unknown {
     damage: { dice: "1d8", type: "холод", scaling: { 5: "2d8", 11: "3d8", 17: "4d8" } },
     shortRulesRu: "Луч холода наносит урон и снижает скорость цели на 10 футов.",
     fullRulesRu: "Собственный пересказ механики заклинания.",
-    roleplay: {
-      incantation: "Холодно.",
-      gesture: "Ведёт пальцем короткую руну.",
-      visualEffect: "Тонкий белый луч оставляет иней на камне.",
-      completeVariants: {
-        short: ["Короткий взмах — и по цели проходит изморозь."],
-        atmospheric: ["Руна на пальце вспыхивает синим, воздух звенит от холода."],
-        sarcastic: ["«Остынь», — советует Торн."],
-      },
-    },
-    announcementTemplate: "Атака заклинанием, модификатор {spellAttackModifier}. Урон {damage} холодом.",
   };
 }
 
@@ -97,9 +74,6 @@ function mutateLayer(
     draft[key] = layer;
   });
 }
-
-const withRoleplay = (change: (roleplay: Record<string, unknown>) => void): unknown =>
-  mutateLayer(web(), "roleplay", change);
 
 const withDiagram = (change: (diagram: Record<string, unknown>) => void): unknown =>
   mutateLayer(ritualCard(), "ritualDiagram", change);
@@ -234,135 +208,6 @@ describe("масштабирование заклинаний уровня 1 и 
         }),
       ),
     ).toContain("вне диапазона 2…9");
-  });
-});
-
-describe("минимум художественного контента (FR-050)", () => {
-  it("отклоняет менее трёх вариантов отыгрыша", () => {
-    expect(
-      firstError(
-        withRoleplay((roleplay) => {
-          roleplay.completeVariants = { short: ["Один."], atmospheric: [], sarcastic: [] };
-        }),
-      ),
-    ).toContain("минимум 3 варианта");
-  });
-
-  it("отклоняет пустую реплику", () => {
-    expect(
-      spellSchema.safeParse(
-        withRoleplay((roleplay) => {
-          roleplay.incantation = "   ";
-        }),
-      ).success,
-    ).toBe(false);
-  });
-
-  it("отклоняет список реплик: реплика ровно одна (FR-050)", () => {
-    expect(
-      spellSchema.safeParse(
-        withRoleplay((roleplay) => {
-          roleplay.incantation = ["Стой.", "Холодно."];
-        }),
-      ).success,
-    ).toBe(false);
-  });
-});
-
-describe("отыгрыш против компонентов", () => {
-  /** Заклинание, которое творится молча: голоса компоненты не требуют. */
-  const voiceless = (incantation: string): unknown =>
-    mutate(
-      withRoleplay((roleplay) => {
-        roleplay.incantation = incantation;
-      }),
-      (draft) => {
-        draft.components = { verbal: false, somatic: true, material: false };
-      },
-    );
-
-  /** Заклинание, которое творится без рук: соматики компоненты не требуют. */
-  const handless = (change: (roleplay: Record<string, unknown>) => void): unknown =>
-    mutate(withRoleplay(change), (draft) => {
-      draft.components = { verbal: true, somatic: false, material: false };
-    });
-
-  const wordless = (roleplay: Record<string, unknown>): void => {
-    roleplay.gesture = "Делает полшага вперёд и не завершает его.";
-    roleplay.completeVariants = {
-      short: ["Шагает — и оказывается за спиной у противника."],
-      atmospheric: ["Иней оседает там, где он только что стоял."],
-      sarcastic: ["«Продолжайте без меня», — доносится уже издалека."],
-    };
-  };
-
-  it("возглас в реплике молча творимого заклинания отклоняется", () => {
-    expect(firstError(voiceless("Замри! Ноль по Кельвину."))).toContain("творится молча");
-  });
-
-  it("реплика без возгласа принимается: молчащее заклинание говорить не запрещает", () => {
-    expect(spellSchema.safeParse(voiceless("Ноль по Кельвину.")).success).toBe(true);
-  });
-
-  it("рука в жесте заклинания без соматики отклоняется, и отказ называет слово", () => {
-    expect(
-      firstError(
-        handless((roleplay) => {
-          wordless(roleplay);
-          roleplay.gesture = "Разжимает ладонь вниз.";
-        }),
-      ),
-    ).toContain("«ладонь» предписывает жест");
-  });
-
-  it("рука находится и в готовом варианте отыгрыша, а не только в жесте", () => {
-    expect(
-      firstError(
-        handless((roleplay) => {
-          wordless(roleplay);
-          roleplay.completeVariants = {
-            short: ["Короткий взмах — и падение становится спуском."],
-            atmospheric: ["Воздух под сорвавшимися густеет и держит."],
-            sarcastic: ["«Перо в кармане было», — доносится сверху."],
-          };
-        }),
-      ),
-    ).toContain("«взмах» предписывает жест");
-  });
-
-  it("текст, не называющий рук, принимается: предписывать нечего", () => {
-    expect(spellSchema.safeParse(handless(wordless)).success).toBe(true);
-  });
-});
-
-describe("подстановки объявления (FR-041)", () => {
-  it("отклоняет подстановку вне закрытого словаря", () => {
-    expect(
-      firstError(
-        mutate(web(), (draft) => {
-          draft.announcementTemplate = "Сотворяю «Паутину» ячейкой {slotLevel}, урон {fireDamage}.";
-        }),
-      ),
-    ).toContain("Неизвестная подстановка «{fireDamage}»");
-  });
-
-  it("принимает шаблон вовсе без подстановок", () => {
-    const plain = mutate(web(), (draft) => {
-      draft.announcementTemplate = "Сотворяю «Паутину» и выбираю точку в пределах дальности.";
-    });
-    expect(spellSchema.safeParse(plain).success).toBe(true);
-  });
-});
-
-describe("чистота технической формулировки (FR-042)", () => {
-  it("отклоняет объявление с художественным текстом", () => {
-    expect(
-      firstError(
-        mutate(web(), (draft) => {
-          draft.announcementTemplate = "Сотворяю «Паутину». Стой.";
-        }),
-      ),
-    ).toContain("художественный текст");
   });
 });
 

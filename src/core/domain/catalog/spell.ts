@@ -12,32 +12,12 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 import { GLYPH_IDS, SEAL_KINDS } from "@/core/domain/catalog/diagram/glyphs";
 import { isRune } from "@/core/domain/catalog/diagram/futhark";
 import { COMBAT_ROLES } from "@/core/domain/catalog/combatRole";
-import { ROLEPLAY_CATEGORIES } from "@/core/domain/catalog/roleplay";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { nonEmpty } from "@/core/domain/shared/schema";
 import { statContributionSchema } from "@/core/domain/shared/stats";
 
 export const CANTRIP_LEVEL = 0;
 export const MAXIMUM_SPELL_LEVEL = 9;
-
-/** Минимум художественного контента на заклинание. */
-const MINIMUM_COMPLETE_VARIANTS = 3;
-
-/**
- * Закрытый словарь подстановок объявления мастеру.
- * Подстановка вне списка — ошибка контента: заполнить её приложению нечем.
- */
-export const ANNOUNCEMENT_PLACEHOLDERS = [
-  "slotLevel",
-  "spellSaveDc",
-  "spellAttackModifier",
-  "damage",
-  "target",
-  "range",
-  "armorClass",
-] as const;
-
-const PLACEHOLDER_PATTERN = /\{[^}]*\}/g;
 
 /** Минуты и часы — единственные типы, у которых число осмысленно: 1 минута ≠ 10 минут. */
 const LONG_CASTING_TYPES: readonly string[] = ["minute", "hour"];
@@ -171,19 +151,6 @@ const hitDiceCostSchema = z.object({
   maximumDice: z.number().int().positive(),
   extraDicePerSlotLevel: z.number().int().nonnegative(),
   addsSpellcastingModifier: z.boolean(),
-});
-
-const roleplaySchema = z.object({
-  // Ровно одна реплика, один жест, один эффект: список из двух склеивался в карточке
-  // через « · » и читался обрывками. Разнообразие живёт в completeVariants, где оно и задумано.
-  incantation: nonEmpty,
-  gesture: nonEmpty,
-  visualEffect: nonEmpty,
-  completeVariants: z.object({
-    short: z.array(nonEmpty),
-    atmospheric: z.array(nonEmpty),
-    sarcastic: z.array(nonEmpty),
-  }),
 });
 
 /** Доля внешнего радиуса схемы: 1 — внешнее кольцо, 0 — центр. */
@@ -365,62 +332,8 @@ const spellShape = z.object({
   higherLevelsRu: nonEmpty.optional(),
   tacticalAdviceRu: nonEmpty.optional(),
 
-  roleplay: roleplaySchema,
   ritualDiagram: ritualDiagramSchema.optional(),
-  announcementTemplate: nonEmpty,
 });
-
-type RoleplayEntry = { path: (string | number)[]; text: string };
-
-/** Все художественные тексты заклинания с их местом в карточке — для проверки. */
-function roleplayEntries(roleplay: z.infer<typeof roleplaySchema>): RoleplayEntry[] {
-  const entries: RoleplayEntry[] = [
-    { path: ["incantation"], text: roleplay.incantation },
-    { path: ["gesture"], text: roleplay.gesture },
-    { path: ["visualEffect"], text: roleplay.visualEffect },
-  ];
-  for (const category of ROLEPLAY_CATEGORIES) {
-    for (const [index, text] of roleplay.completeVariants[category].entries()) {
-      entries.push({ path: ["completeVariants", category, index], text });
-    }
-  }
-  return entries;
-}
-
-function roleplayTexts(roleplay: z.infer<typeof roleplaySchema>): string[] {
-  return roleplayEntries(roleplay).map((entry) => entry.text);
-}
-
-/** Возглас — восклицание: голос, поднятый в момент сотворения. */
-const EXCLAMATION = "!";
-
-/** Слова, которыми текст называет руку заклинателя: жест прописывается ею. */
-const HAND_WORDS = [
-  "жест",
-  "рук",
-  "ладон",
-  "палец",
-  "пальц",
-  "кулак",
-  "взмах",
-  "щёлк",
-  "щелк",
-  "черти",
-] as const;
-
-const NON_LETTERS = /[^\p{L}]+/u;
-
-function handWord(text: string): string | undefined {
-  return text
-    .toLowerCase()
-    .split(NON_LETTERS)
-    .find((word) => HAND_WORDS.some((marker) => word.startsWith(marker)));
-}
-
-function countCompleteVariants(roleplay: z.infer<typeof roleplaySchema>): number {
-  const { short, atmospheric, sarcastic } = roleplay.completeVariants;
-  return short.length + atmospheric.length + sarcastic.length;
-}
 
 export const spellSchema = spellShape.superRefine((spell, context) => {
   // Карточка несёт только положительный вклад: отрицательный — это поправка мастера, и она
@@ -466,61 +379,6 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
       path: ["ritual"],
       message: "Заговор не может быть ритуальным",
     });
-  }
-
-  //: минимум три готовых варианта отыгрыша суммарно по категориям.
-  if (countCompleteVariants(spell.roleplay) < MINIMUM_COMPLETE_VARIANTS) {
-    context.addIssue({
-      code: "custom",
-      path: ["roleplay", "completeVariants"],
-      message: `Нужно минимум ${MINIMUM_COMPLETE_VARIANTS} варианта отыгрыша, найдено ${countCompleteVariants(spell.roleplay)}`,
-    });
-  }
-
-  // Предписывают компоненты: чего они не требуют, того художественный слой не велит делать.
-  if (!spell.components.verbal && spell.roleplay.incantation.includes(EXCLAMATION)) {
-    context.addIssue({
-      code: "custom",
-      path: ["roleplay", "incantation"],
-      message: `«${spell.nameRu}» творится молча: возглас в реплике предписывает речь, которой компоненты не требуют`,
-    });
-  }
-  if (!spell.components.somatic) {
-    for (const entry of roleplayEntries(spell.roleplay)) {
-      const hand = handWord(entry.text);
-      if (hand === undefined) continue;
-      context.addIssue({
-        code: "custom",
-        path: ["roleplay", ...entry.path],
-        message: `«${spell.nameRu}» творится без рук: «${hand}» предписывает жест, которого компоненты не требуют`,
-      });
-    }
-  }
-
-  //: подстановки только из закрытого словаря — остальное приложению нечем заполнить.
-  const allowed = new Set<string>(ANNOUNCEMENT_PLACEHOLDERS);
-  for (const token of spell.announcementTemplate.match(PLACEHOLDER_PATTERN) ?? []) {
-    const placeholder = token.slice(1, -1);
-    if (!allowed.has(placeholder)) {
-      context.addIssue({
-        code: "custom",
-        path: ["announcementTemplate"],
-        message: `Неизвестная подстановка «{${placeholder}}»: допустимы ${ANNOUNCEMENT_PLACEHOLDERS.join(", ")}`,
-      });
-    }
-  }
-
-  //: техническая формулировка не содержит художественного текста.
-  const template = spell.announcementTemplate;
-  for (const text of roleplayTexts(spell.roleplay)) {
-    if (template.includes(text)) {
-      context.addIssue({
-        code: "custom",
-        path: ["announcementTemplate"],
-        message: `Объявление мастеру содержит художественный текст: «${text}»`,
-      });
-      break;
-    }
   }
 
   if (spell.damage?.scaling !== undefined) {

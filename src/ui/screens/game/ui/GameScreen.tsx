@@ -281,7 +281,10 @@ export function GameScreen() {
         <SpellCardDetails
           row={openRow}
           casting={casting}
-          onCast={() => draftStore.getState().start(openRow)}
+          onCast={() => {
+            const ready = draftStore.getState().start(openRow);
+            if (ready !== null) void confirm(ready);
+          }}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openRow.id, note })}
           onClose={() => setOpenSpellId(null)}
         />

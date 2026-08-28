@@ -107,7 +107,6 @@ describe("состав экрана (FR-001, AC-14)", () => {
 
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.queryByLabelText("Действие израсходовано")).toBeNull();
@@ -160,7 +159,6 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.getByRole("button", { name: /^КД 17/ })).toBeDefined();
@@ -175,7 +173,6 @@ describe("состав экрана (FR-001, AC-14)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(shown(stores).turn.reactionAvailable).toBe(false);
@@ -380,7 +377,6 @@ describe("повторяемое действие эффекта (FR-092)", () =
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /^Сфера бури/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     // Ежеходная работа названа на самой строке: за раскрытием её забудут на втором раунде. Работа
@@ -396,7 +392,6 @@ describe("повторяемое действие эффекта (FR-092)", () =
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /^Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const line = within(screen.getByLabelText("Действует"));
@@ -493,7 +488,6 @@ describe("реакции (FR-060, FR-062)", () => {
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /^Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     await user.click(screen.getByRole("button", { name: "Реакция" }));
@@ -699,7 +693,6 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
 
@@ -714,7 +707,6 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 
     await user.click(screen.getByRole("button", { name: /Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.getByRole("button", { name: /^КД 19/ })).toBeDefined();
@@ -729,18 +721,28 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 });
 
 describe("подробная карточка (FR-011, FR-012)", () => {
-  it("строка «Разрешение» показывает атаку заклинанием общей подписью (FR-211)", async () => {
+  it("строка броска подписана «Мой бросок» и показывает атаку заклинанием общей подписью (FR-211)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
     await user.click(screen.getByRole("button", { name: /Луч холода/ }));
     const attackCard = screen.getByRole("dialog", { name: /Луч холода/ });
-    expect(within(attackCard).getByText("Разрешение").nextElementSibling?.textContent).toBe(
+    expect(within(attackCard).queryByText("Разрешение")).toBeNull();
+    expect(within(attackCard).getByText("Мой бросок").nextElementSibling?.textContent).toBe(
       "Атака d20+8",
     );
   });
 
-  it("полные правила и отыгрыш закрыты по умолчанию", async () => {
+  it("спасбросок подписан «Бросок цели»: бросает противник", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<GameScreen />);
+
+    await user.click(screen.getByRole("button", { name: /^Молния/ }));
+    const card = screen.getByRole("dialog", { name: /Молния/ });
+    expect(within(card).getByText("Бросок цели").nextElementSibling?.textContent).toContain("КС 16");
+  });
+
+  it("полные правила и тактический совет закрыты по умолчанию", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
@@ -748,19 +750,22 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     const card = screen.getByRole("dialog", { name: /Луч холода/ });
 
     const fullRules = within(card).getByText("Полные правила").closest("details");
-    const roleplay = within(card).getByText("Отыгрыш").closest("details");
     expect(fullRules?.hasAttribute("open")).toBe(false);
-    expect(roleplay?.hasAttribute("open")).toBe(false);
+    const advice = within(card).queryByText("Тактический совет")?.closest("details");
+    if (advice !== undefined && advice !== null) expect(advice.hasAttribute("open")).toBe(false);
   });
 
   it("техническая инструкция доступна за два нажатия (M-02)", async () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
+    // Одно нажатие — карточка, и бросок с числом стоит на ней сразу, без раскрытий.
     await user.click(screen.getByRole("button", { name: /Луч холода/ }));
-    await user.click(screen.getByText("Как объявить"));
+    const card = screen.getByRole("dialog", { name: /Луч холода/ });
 
-    expect(screen.getByText(/Атака заклинанием, модификатор \+8/)).toBeDefined();
+    expect(within(card).getByText("Мой бросок").nextElementSibling?.textContent).toBe("Атака d20+8");
+    expect(within(card).getByText("Накладывание").nextElementSibling).not.toBeNull();
+    expect(within(card).getByText("Длительность").nextElementSibling).not.toBeNull();
   });
 
   it("заметка сохраняется в состоянии и не попадает в лог", async () => {

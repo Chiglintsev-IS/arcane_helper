@@ -213,7 +213,6 @@ describe("состав экрана (FR-001, AC-14)", () => {
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.getByRole("button", { name: /^КД 17/ })).toBeDefined();
@@ -290,14 +289,13 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     await renderWithStores(<PlayShell />, withBonusActionSpell(), IN_FIGHT);
 
     // Ряду нужно о чём-то говорить: пока не потрачено ничего, он молчит в обоих режимах одинаково.
-    // Бонусным действием творится одна «Мистическая бодрость», и между ячейкой и итогом у неё стоит
-    // шаг костей хитов: их число и выпавшее знает игрок.
+    // Бонусным действием творится одна «Мистическая бодрость», и за ячейкой у неё стоит шаг костей
+    // хитов, он же подтверждает: их число и выпавшее знает игрок.
     await user.click(screen.getByRole("button", { name: /^Мистическая бодрость/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
     await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "1d6" }));
     await user.type(screen.getByLabelText("Что выпало на 1d6"), "4");
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const inGame = badgeRow();
@@ -414,7 +412,6 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     expect(screen.getByLabelText("Действие израсходовано")).toBeDefined();
 
@@ -471,7 +468,6 @@ describe("режим «Лог» (FR-114, FR-220)", () => {
 
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
-    await user.click(screen.getByRole("button", { name: "Далее" }));
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
     expect(slotsLeft(stores, 1)).toBe(3);
 

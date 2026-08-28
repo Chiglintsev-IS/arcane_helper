@@ -50,8 +50,6 @@ export const commandSchema = z.discriminatedUnion("kind", [
     spellId: word,
     mode: word,
     payment: paymentSchema,
-    /** Кого назвали целью: слова игрока, попадающие в объявление мастеру. */
-    targetLabel: word.optional(),
     rune: word.optional(),
     runeTarget: word.optional(),
     allowAnyway: z.boolean().optional(),
@@ -99,12 +97,6 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("add_world_note", { text: word }),
   command("edit_world_note", { noteId: word, text: word }),
   command("remove_world_note", { noteId: word }),
-
-  // Отыгрыш
-  command("toggle_roleplay_favorite", { spellId: word, variantId: word }),
-  command("toggle_roleplay_disabled", { spellId: word, variantId: word }),
-  command("add_roleplay_variant", { spellId: word, category: word, text: word }),
-  command("use_roleplay_variant", { spellId: word, variantId: word }),
 
   // Снаряжение
   command("add_item", { nameRu: word, itemKind: word }),

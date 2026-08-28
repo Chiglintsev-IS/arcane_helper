@@ -25,11 +25,7 @@ import { SURFACE_CONTROL, SURFACE_DISABLED, SURFACE_PAGE, SURFACE_GROUP } from "
  */
 export const WIZARD_STEP_TITLES = {
   availability: "Проверьте условия",
-  summary: "Объявление и подтверждение",
 } as const;
-
-/** Ярлык блока объявления: что произносят вслух мастеру. */
-export const ANNOUNCEMENT_LABEL = "Объявление мастеру";
 
 export type WizardFooter = {
   /** Кнопка «Назад»: нет её — нет и первого шага позади. */

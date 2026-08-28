@@ -43,7 +43,6 @@ type CastRequest = {
   spell: Spell;
   mode: CastMode;
   payment: Payment;
-  targetLabel?: string;
   /** Руна применяется только к сотворению, у которого есть уровень. */
   rune?: Rune;
   /** Кому досталась «Руна жизни»: остальные руны цели не выбирают. */

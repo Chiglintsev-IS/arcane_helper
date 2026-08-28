@@ -13,7 +13,6 @@ import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, shown, spell } from "@/ui/app/testing/stores";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 
@@ -189,54 +188,22 @@ describe("подробная карточка (FR-011, FR-012)", () => {
 
     const card = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
     expect(within(card).getByText(/Ограждение/)).toBeDefined();
-    // Материал назван и среди механики, и среди действий: первое отвечает «что это», второе — «что
-    // делать сейчас», и спрашивать их приходится порознь.
     const mechanics = within(within(card).getByLabelText("Механика"));
     expect(
       mechanics.getByText(new RegExp(spell("alarm").components.materialText ?? "")),
     ).toBeDefined();
-    expect(within(card).getByText("Без броска: эффект применяется сразу")).toBeDefined();
+    expect(mechanics.getByText("Накладывание").nextElementSibling).not.toBeNull();
+    expect(mechanics.getByText("Длительность").nextElementSibling).not.toBeNull();
   });
 
-  it("компонент со стоимостью назван ценой: фокусировка его не заменяет", async () => {
-    // Ритуал и оплачиваемый компонент у разных карточек, а сам «Волшебный замок» отложен столом:
-    // книга дописывается прогоном, потому что цену называет именно он.
+  it("строка броска без броска подписана «Бросок» и показывает общую подпись (FR-211)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<BookScreen />, knowing(createThorne(), "arcane-lock"));
-    await user.click(screen.getByRole("button", { name: /^Волшебный замок/ }));
-
-    const card = screen.getByRole("dialog", { name: /Волшебный замок/ });
-    expect(within(card).getByText(/фокусировка не заменяет/)).toBeDefined();
-  });
-
-  it("в бою карточка ритуала объявляет обычное сотворение: ритуала в бою нет (FR-208)", async () => {
-    const user = userEvent.setup();
-    // Способ выбирает ядро, а не карточка: в бою ритуального способа среди предложенных нет, и
-    // объявление обязано предупредить, что шаблон написан под ритуал.
-    await renderWithStores(<BookScreen />, createThorne(), { inFight: true });
-    await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
-
-    const card = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
-    expect(within(card).getByText(/Шаблон написан для ритуального применения/)).toBeDefined();
-  });
-
-  it("вне боя ритуал остаётся способом по умолчанию: замечания о шаблоне нет", async () => {
-    const { user } = await inBookMode();
-    await user.click(screen.getByRole("button", { name: "Ритуал" }));
-    await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
-
-    const card = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
-    expect(within(card).queryByText(/Шаблон написан для ритуального применения/)).toBeNull();
-  });
-
-  it("строка «Разрешение» показывает общую подпись, не свою копию (FR-211)", async () => {
-    const user = userEvent.setup();
-    // «Сигнал тревоги» разрешается автоматически, Луч холода — атакой заклинанием: две из трёх схем.
+    // «Сигнал тревоги» разрешается автоматически: бросать здесь никому.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
     const automaticCard = screen.getByRole("dialog", { name: /Сигнал тревоги/ });
-    expect(within(automaticCard).getByText("Разрешение").nextElementSibling?.textContent).toBe(
+    expect(within(automaticCard).getByText("Бросок").nextElementSibling?.textContent).toBe(
       "Без броска",
     );
   });

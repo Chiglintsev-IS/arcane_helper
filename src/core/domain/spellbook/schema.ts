@@ -12,33 +12,12 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 import { nonEmpty } from "@/core/domain/shared/schema";
 
-/**
- * Пометки игрока на вариантах отыгрыша одного заклинания.
- *
- * Идентификатор готового варианта — категория и место в карточке (`short-0`), собственного — тот,
- * что выдан при создании. Счётчик использований ведёт ротацию: показывается реже других
- * использованный вариант.
- */
-const roleplayPreferenceSchema = z.object({
-  favoriteVariantIds: z.array(nonEmpty),
-  disabledVariantIds: z.array(nonEmpty),
-  customVariants: z.array(
-    z.object({
-      id: nonEmpty,
-      category: z.enum(["short", "atmospheric", "sarcastic"]),
-      text: nonEmpty,
-    }),
-  ),
-  usageCount: z.record(nonEmpty, z.number().int().nonnegative()),
-});
-
 /** Поля контекста для сборки полной схемы состояния. */
 export const SPELLBOOK_FIELDS = {
   cantripIds: z.array(nonEmpty),
   spellbookSpellIds: z.array(nonEmpty),
   preparedSpellIds: z.array(nonEmpty),
   spellNotes: z.record(nonEmpty, nonEmpty),
-  roleplayPreferences: z.record(nonEmpty, roleplayPreferenceSchema),
 };
 
 /**
@@ -50,7 +29,6 @@ export const SPELLBOOK_FIELDS = {
 const spellbookStateSchema = z.object(SPELLBOOK_FIELDS).superRefine(refineSpellbook);
 
 export type SpellbookState = DeepReadonly<z.infer<typeof spellbookStateSchema>>;
-export type RoleplayPreference = DeepReadonly<z.infer<typeof roleplayPreferenceSchema>>;
 
 /**
  * Инварианты книги, которые видны только по нескольким полям сразу.

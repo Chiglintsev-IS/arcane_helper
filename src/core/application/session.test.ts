@@ -20,7 +20,6 @@ import {
 import { grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
 import { adjustLastHint, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
-import { addRoleplayVariant, defaultRoleplayVariant, roleplayCategories, roleplayVariants, toggleRoleplayDisabled, toggleRoleplayFavorite, useRoleplayVariant } from "@/core/application/useCases/roleplay";
 import { castSpell } from "@/core/application/useCases/casting";
 import { DomainError } from "@/core/domain/shared/errors";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -30,7 +29,6 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { characterStateSchema } from "@/core/domain/assembly/state";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import type { Spell } from "@/core/domain/catalog/spell";
-import type { RoleplayCategory } from "@/core/domain/catalog/roleplay";
 import { createSession, undoLast, type Session } from "@/core/application/session";
 import { fromPersisted, parsePersisted, toPersisted } from "@/core/application/ports/sessionRepository";
 import {
@@ -148,7 +146,7 @@ describe("применение заклинания (FR-023)", () => {
   it("заговор не расходует ячейку (FR-072)", () => {
     const after = castSpell(
       session,
-      { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" }, targetLabel: "гоблин" },
+      { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
       occasion,
     );
     expect(after.character.spellSlots).toEqual(session.character.spellSlots);
@@ -1326,7 +1324,7 @@ describe("лог (FR-110, FR-112)", () => {
     for (let index = 0; index < 100 + 15; index += 1) {
       current = castSpell(
         current,
-        { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" }, targetLabel: `цель ${index}` },
+        { spell: spell("ray-of-frost"), mode: "cantrip", payment: { kind: "none" } },
         occasion,
       );
       current = { ...current, character: { ...current.character, activeEffects: [] } };
@@ -1702,189 +1700,6 @@ describe("заметка к заклинанию (FR-012)", () => {
     expect(characterStateSchema.safeParse(cleared.character).success).toBe(true);
   });
 })
-
-describe("предпочтения отыгрыша (FR-053)", () => {
-  /**
-   * Карточка с тремя вариантами в одной категории. В контенте их по одному на категорию
-   * ( требует минимум три на заклинание), а порядок показа виден только на нескольких.
-   */
-  const card: Spell = (() => {
-    const base = spell("shield");
-    return {
-      ...base,
-      roleplay: {
-        ...base.roleplay,
-        completeVariants: {
-          short: ["Первый.", "Второй.", "Третий."],
-          atmospheric: ["Атмосферный."],
-          sarcastic: ["Саркастичный."],
-        },
-      },
-    };
-  })();
-
-  /** Идентификатор варианта берётся у самого варианта: его форму знает отыгрыш, а не прогон. */
-  function variantId(
-    current: Session,
-    index: number,
-    category: RoleplayCategory = "short",
-  ): string {
-    const variant = roleplayVariants(current.character, card, category)[index];
-    if (variant === undefined) throw new Error(`нет варианта ${category} №${index}`);
-    return variant.id;
-  }
-
-  // Своя сессия: ярлыки вариантов нужны при сборке прогонов, когда общая ещё не заведена.
-  const pristine = createSession(createThorne());
-  const short0 = variantId(pristine, 0);
-  const short1 = variantId(pristine, 1);
-  const short2 = variantId(pristine, 2);
-
-  function texts(current: Session, category: RoleplayCategory = "short"): string[] {
-    return roleplayVariants(current.character, card, category).map((variant) => variant.text);
-  }
-
-  function disableAll(current: Session, category: RoleplayCategory): Session {
-    // Ярлыки берутся у целого списка заранее: отключённый вариант меняет порядок показа.
-    let next = current;
-    for (const [index] of card.roleplay.completeVariants[category].entries()) {
-      next = toggleRoleplayDisabled(next, card, variantId(pristine, index, category));
-    }
-    return next;
-  }
-
-  it("без пометок показывает варианты в порядке карточки", () => {
-    expect(texts(session)).toEqual(["Первый.", "Второй.", "Третий."]);
-    expect(session.character.roleplayPreferences).toEqual({});
-  });
-
-  it("свой вариант показывается первым в своей категории", () => {
-    const own = addRoleplayVariant(session, card.id, "short", "Не сегодня.", occasion);
-    expect(texts(own)).toEqual(["Не сегодня.", "Первый.", "Второй.", "Третий."]);
-    // Категории не смешиваются: свой вариант живёт только в той, куда написан.
-    expect(texts(own, "atmospheric")).toEqual(["Атмосферный."]);
-  });
-
-  it("пустой свой вариант отклоняется, а не сохраняется пробелами", () => {
-    expect(() => addRoleplayVariant(session, card.id, "short", "   ", occasion)).toThrow(DomainError);
-  });
-
-  it("любимый идёт раньше остальных, но позже своего", () => {
-    let current = addRoleplayVariant(session, card.id, "short", "Не сегодня.", occasion);
-    current = toggleRoleplayFavorite(current, card.id, short2);
-    expect(texts(current)).toEqual(["Не сегодня.", "Третий.", "Первый.", "Второй."]);
-  });
-
-  it("пометка «любимое» снимается тем же нажатием", () => {
-    const once = toggleRoleplayFavorite(session, card.id, short1);
-    expect(once.character.roleplayPreferences[card.id]?.favoriteVariantIds).toEqual([short1]);
-
-    const twice = toggleRoleplayFavorite(once, card.id, short1);
-    // Запись без единой пометки не хранится: в выгрузке ей взяться неоткуда.
-    expect(twice.character.roleplayPreferences).toEqual({});
-  });
-
-  it("отключённый вариант уходит в конец, но категория остаётся видимой", () => {
-    const after = toggleRoleplayDisabled(session, card, short0);
-    const variants = roleplayVariants(after.character, card, "short");
-
-    expect(variants.at(-1)?.id).toBe(short0);
-    expect(variants.at(-1)?.disabled).toBe(true);
-    expect(roleplayCategories(after.character, card)).toContain("short");
-  });
-
-  it("категория без включённых вариантов скрывается", () => {
-    const current = disableAll(session, "short");
-    expect(roleplayCategories(current.character, card)).toEqual(["atmospheric", "sarcastic"]);
-  });
-
-  it("последнюю категорию отключить нельзя: шаг потерял бы смысл", () => {
-    let current = disableAll(session, "short");
-    current = disableAll(current, "atmospheric");
-    expect(roleplayCategories(current.character, card)).toEqual(["sarcastic"]);
-
-    expect(() => toggleRoleplayDisabled(current, card, variantId(pristine, 0, "sarcastic"))).toThrow(
-      /Последний вариант отыгрыша/,
-    );
-  });
-
-  it("отключение снимается тем же нажатием", () => {
-    const off = toggleRoleplayDisabled(session, card, short0);
-    const on = toggleRoleplayDisabled(off, card, short0);
-    expect(roleplayVariants(on.character, card, "short")[0]?.disabled).toBe(false);
-  });
-
-  it("ротация показывает реже использованный вариант", () => {
-    expect(defaultRoleplayVariant(session.character, card, "short")?.id).toBe(short0);
-
-    const used = useRoleplayVariant(session, card.id, short0);
-    expect(used.character.roleplayPreferences[card.id]?.usageCount[short0]).toBe(1);
-    expect(defaultRoleplayVariant(used.character, card, "short")?.id).toBe(short1);
-
-    // Порядок показа от счётчика не зависит: список не пересобирается под пальцем.
-    expect(texts(used)).toEqual(["Первый.", "Второй.", "Третий."]);
-  });
-
-  it("счётчик копится, и ротация возвращается к первому варианту", () => {
-    let current = session;
-    for (const variantId of [short0, short1, short2]) {
-      current = useRoleplayVariant(current, card.id, variantId);
-    }
-    expect(defaultRoleplayVariant(current.character, card, "short")?.id).toBe(short0);
-  });
-
-  it("ротация обходит отключённые варианты", () => {
-    const off = toggleRoleplayDisabled(session, card, short0);
-    expect(defaultRoleplayVariant(off.character, card, "short")?.id).toBe(short1);
-  });
-
-  it("у скрытой категории показывать нечего", () => {
-    const current = disableAll(session, "short");
-    expect(defaultRoleplayVariant(current.character, card, "short")).toBeUndefined();
-  });
-
-  it("предпочтения лога не касаются и проходят схему состояния", () => {
-    let current = addRoleplayVariant(session, card.id, "sarcastic", "Опять?", occasion);
-    current = toggleRoleplayFavorite(current, card.id, short0);
-    current = useRoleplayVariant(current, card.id, short0);
-
-    expect(current.log).toHaveLength(0);
-    expect(characterStateSchema.safeParse(current.character).success).toBe(true);
-  });
-
-  it("предпочтения одного заклинания не задевают другое", () => {
-    const after = toggleRoleplayFavorite(session, card.id, short0);
-    expect(roleplayVariants(after.character, spell("mage-armor"), "short")[0]?.favorite).toBe(false);
-  });
-});
-
-describe("художественный текст не влияет на механику (FR-054)", () => {
-  it("подмена отыгрыша не меняет результат применения", () => {
-    const original = spell("mage-armor");
-    const rewritten: Spell = {
-      ...original,
-      roleplay: {
-        incantation: "Совсем другие слова.",
-        gesture: "Совсем другой жест.",
-        visualEffect: "Совсем другое свечение.",
-        completeVariants: {
-          short: ["Иначе."],
-          atmospheric: ["Иначе, но длиннее."],
-          sarcastic: ["Иначе, но с усмешкой."],
-        },
-      },
-    };
-    const request = { mode: "normal", payment: { kind: "slot", slotLevel: 2 } } as const;
-
-    // Двое одинаковых часов вместо одних общих: идентификаторы и время у обоих применений
-    // совпадают, и сравнение идёт по существу, а не по счётчику.
-    const first = castSpell(session, { spell: original, ...request }, testOccasion());
-    const second = castSpell(session, { spell: rewritten, ...request }, testOccasion());
-
-    expect(second.character).toEqual(first.character);
-    expect(second.log).toEqual(first.log);
-  });
-});
 
 describe("подготовка заклинаний (FR-100, FR-101, FR-214)", () => {
   const LIMIT = 11;

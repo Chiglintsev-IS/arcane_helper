@@ -67,27 +67,11 @@ function thorne(): unknown {
     },
     concentration: { spellId: "web", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [WEB_EFFECT],
-    roleplayProfile: {
-      tone: ["sarcastic", "mysterious"],
-      magicThemes: ["руны", "молнии", "холод", "алхимические символы"],
-      speechStyle: "Короткие формулы и язвительные замечания",
-      gestureStyle: "Рисует знаки пальцами, посохом или мелом",
-      prohibitedThemes: ["огонь"],
-      maximumPhraseLength: 15,
-    },
     arcaneRecovery: { maximum: 4, remaining: 4 },
     hitPoints: { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 },
     runes: { maximum: 3, remaining: 2 },
     suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
     spellNotes: { web: "Мастер считает, что паутина не горит." },
-    roleplayPreferences: {
-      web: {
-        favoriteVariantIds: ["web-short-1"],
-        disabledVariantIds: [],
-        customVariants: [{ id: "web-custom-1", category: "short", text: "Проход зарос." }],
-        usageCount: { "web-short-1": 3 },
-      },
-    },
   };
 }
 
@@ -151,8 +135,6 @@ describe("форма состояния", () => {
       "name",
       "preparedSpellIds",
       "proficiencies",
-      "roleplayPreferences",
-      "roleplayProfile",
       "runes",
       "saveProficiencies",
       "shortRestSinceLongRest",

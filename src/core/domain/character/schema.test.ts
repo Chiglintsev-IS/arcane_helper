@@ -47,11 +47,6 @@ describe("подсхема персонажа", () => {
     expect(thorneState.proficiencies.weapons).toContain("Боевой посох");
     expect(thorneState.proficiencies.armor).toEqual([]);
   });
-
-  it("профиль отыгрыша без тона отклоняется", () => {
-    const profile = { ...createThorne().roleplayProfile, tone: [] };
-    expect(CHARACTER_FIELDS.roleplayProfile.safeParse(profile).success).toBe(false);
-  });
 });
 
 describe("правка листа проходит объявления полей", () => {

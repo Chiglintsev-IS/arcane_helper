@@ -20,7 +20,6 @@ const BOOK: SpellbookState = {
   spellbookSpellIds: ["web", "magic-missile"],
   preparedSpellIds: ["web"],
   spellNotes: {},
-  roleplayPreferences: {},
 };
 
 function firstError(state: SpellbookState): string {

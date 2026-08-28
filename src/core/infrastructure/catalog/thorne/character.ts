@@ -132,15 +132,6 @@ const RAW: unknown = {
 
   activeEffects: [],
 
-  roleplayProfile: {
-    tone: ["sarcastic", "mysterious"],
-    magicThemes: ["руны", "молнии", "холод", "алхимические символы"],
-    speechStyle: "Короткие формулы и язвительные замечания",
-    gestureStyle: "Рисует знаки пальцами, посохом или мелом",
-    prohibitedThemes: ["огонь"],
-    maximumPhraseLength: 15,
-  },
-
   arcaneRecovery: { maximum: ARCANE_RECOVERY_BUDGET, remaining: ARCANE_RECOVERY_BUDGET },
 
   hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
@@ -204,7 +195,6 @@ const RAW: unknown = {
   studiedDirections: ["potions", "transmutation"],
 
   spellNotes: {},
-  roleplayPreferences: {},
 };
 
 /**

@@ -225,47 +225,6 @@ describe("книга", () => {
   });
 });
 
-describe("отыгрыш", () => {
-  it("любимый вариант отмечается и использование считается", () => {
-    const live = run([
-      { kind: "toggle_roleplay_favorite", spellId: "shield", variantId: "shield-short-1" },
-      { kind: "use_roleplay_variant", spellId: "shield", variantId: "shield-short-1" },
-    ]);
-
-    const preference = live.session.character.roleplayPreferences.shield;
-    expect(preference?.favoriteVariantIds).toContain("shield-short-1");
-    expect(preference?.usageCount["shield-short-1"]).toBe(1);
-  });
-
-  it("нежелательный вариант отключается", () => {
-    const live = run([
-      { kind: "toggle_roleplay_disabled", spellId: "shield", variantId: "shield-short-1" },
-    ]);
-
-    expect(live.session.character.roleplayPreferences.shield?.disabledVariantIds).toContain(
-      "shield-short-1",
-    );
-  });
-
-  it("свой вариант заводится в названном роде", () => {
-    const live = run([
-      { kind: "add_roleplay_variant", spellId: "shield", category: "short", text: "Не сегодня" },
-    ]);
-
-    expect(live.session.character.roleplayPreferences.shield?.customVariants[0]?.text).toBe(
-      "Не сегодня",
-    );
-  });
-
-  it("род отыгрыша не из списка отвергается", () => {
-    expect(
-      refusal([
-        { kind: "add_roleplay_variant", spellId: "shield", category: "былинный", text: "Гой еси" },
-      ]),
-    ).toMatch(/род отыгрыша/);
-  });
-});
-
 describe("снаряжение", () => {
   const rope: Command = { kind: "add_item", nameRu: "Верёвка", itemKind: "other" };
   // Надеть можно только экипировку — верёвку носят в сумке, и это правило её контекста.
@@ -440,7 +399,6 @@ describe("сотворение", () => {
         payment: { kind: "slot", slotLevel: 1 },
         rune: "life",
         runeTarget: "other",
-        targetLabel: "Аня",
       },
     ]);
 
