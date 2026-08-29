@@ -23,7 +23,7 @@ import { RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
 import { combatRoleOf } from "@/core/domain/catalog/combatRole";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
-import { CANTRIP_LEVEL, needsOwnComponent, type Spell } from "@/core/domain/catalog/spell";
+import { CANTRIP_LEVEL, DAMAGE_PLACEHOLDER, needsOwnComponent, type ListCard, type Spell } from "@/core/domain/catalog/spell";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import {
   bloodPrice,
@@ -174,12 +174,52 @@ function spellCardView(spell: Spell): SpellCardView {
       ...(components.materialText === undefined
         ? {}
         : {
-            material: { textRu: components.materialText, consumed: components.consumed === true },
+            material: {
+              textRu: components.materialText,
+              consumed: components.consumed === true,
+              ...(components.costGp === undefined ? {} : { costGp: components.costGp }),
+            },
           }),
     },
     ...(spell.ritualDiagram === undefined
       ? {}
       : { ritualDiagram: toDiagramView(spell.ritualDiagram) }),
+  };
+}
+
+/**
+ * Урон по собственному уровню заклинания: строка называет цену, а не щедрость. Нет вовсе — карточка
+ * урона не несёт.
+ */
+function ownLevelDamage(spell: Spell, character: CharacterState): string | undefined {
+  if (spell.damage === undefined) return undefined;
+  return effectiveDamage(spell.damage, {
+    spellLevel: spell.level,
+    slotLevel: spell.level,
+    characterLevel: character.level,
+  });
+}
+
+/**
+ * Строка списка с подставленным уроном: фраза контента называет место урона, число называет проекция.
+ */
+function listCardView(card: ListCard, formula: string | undefined): NonNullable<SpellRowView["listCard"]> {
+  const fill = (text: string): string =>
+    formula === undefined ? text : text.replaceAll(DAMAGE_PLACEHOLDER, formula);
+  const filled = (key: "effectLinesRu" | "hitLinesRu" | "failLinesRu" | "successLinesRu") => {
+    const lines = card[key];
+    return lines === undefined ? {} : { [key]: lines.map(fill) };
+  };
+  return {
+    whereRu: fill(card.whereRu),
+    ...(card.costMaterialRu === undefined ? {} : { costMaterialRu: card.costMaterialRu }),
+    ...filled("effectLinesRu"),
+    ...(card.rollSubjectRu === undefined ? {} : { rollSubjectRu: card.rollSubjectRu }),
+    ...(card.rollNoteRu === undefined ? {} : { rollNoteRu: card.rollNoteRu }),
+    ...filled("hitLinesRu"),
+    ...filled("failLinesRu"),
+    ...filled("successLinesRu"),
+    ...(card.noteRu === undefined ? {} : { noteRu: fill(card.noteRu) }),
   };
 }
 
@@ -198,6 +238,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
   const note = character.spellNotes[spell.id];
   const material = materialOf(spell.components);
   const materialCovered = materialCoveredByFocus(spell.components, character);
+  const damageFormula = ownLevelDamage(spell, character);
 
   return {
     id: spell.id,
@@ -243,19 +284,9 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     unavailable: reason !== undefined,
     ...(ownReason === undefined ? {} : { unavailableReason: ownReason }),
     active: character.activeEffects.some((effect) => effect.spellId === spell.id),
-    ...(spell.damage === undefined
+    ...(damageFormula === undefined || spell.damage === undefined
       ? {}
-      : {
-          damage: {
-            // Уровень ячейки — собственный уровень заклинания: строка называет цену, а не щедрость.
-            formula: effectiveDamage(spell.damage, {
-              spellLevel: spell.level,
-              slotLevel: spell.level,
-              characterLevel: character.level,
-            }),
-            type: spell.damage.type,
-          },
-        }),
+      : { damage: { formula: damageFormula, type: spell.damage.type } }),
     ...(armorClass === undefined ? {} : { armorClassIfCast: armorClass }),
     castOptions: [
       castOptionView(first, plans, spell, character),
@@ -263,6 +294,9 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     ],
     componentReminders: componentRequirements(spell.components, materialCovered),
     ...(note === undefined ? {} : { note }),
+    ...(spell.listCard === undefined
+      ? {}
+      : { listCard: listCardView(spell.listCard, damageFormula) }),
     card: spellCardView(spell),
   };
 }

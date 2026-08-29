@@ -438,6 +438,22 @@ describe("каталог заклинаний (FR-123)", () => {
     expect((await shown(api)).catalogSource).toBe("imported");
   });
 
+  it("книга сохранения следует каталогу сборки: убранная карточка снимается, а не запирает игру", async () => {
+    const thorne = createThorne();
+    const stale = {
+      ...thorne,
+      spellbookSpellIds: [...thorne.spellbookSpellIds, "disguise-self"],
+      preparedSpellIds: [...thorne.preparedSpellIds, "disguise-self"],
+    };
+    const { api } = connect(createMemoryRepository(toPersisted(createSession(stale), NOW, null)));
+
+    await api.open();
+    const result = await api.execute(envelope({ kind: "start_combat" }));
+
+    expect(result.ok).toBe(true);
+    expect((await shown(api)).spells).toHaveLength(KNOWN_COUNT);
+  });
+
   it("сохранение, сделанное до своего каталога, открывается со встроенным", async () => {
     const wounded = withDamage(createThorne(), 43);
     const { api } = connect(

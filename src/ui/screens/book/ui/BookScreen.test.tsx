@@ -145,18 +145,18 @@ describe("краткая карточка (FR-010)", () => {
     await inBookMode();
     const row = screen.getByRole("button", { name: /Починка/ });
 
-    expect(within(row).getByText("Накладывать 1 минуту")).toBeDefined();
-    expect(within(row).queryByText("Минуты")).toBeNull();
+    expect(within(row).getByText(/1 минута/)).toBeDefined();
+    expect(within(row).queryByText(/Минуты/)).toBeNull();
   });
 
   it("у заговора цена названа во всех режимах: строка не молчит о стоимости (FR-010)", async () => {
     await inBookMode();
 
-    // Цена названа один раз: значок «Заговор» повторял бы строку «Без ячейки» тем же словом.
+    // Цена названа один раз: значок «Заговор» повторял бы слово «бесплатно» другим словом.
     const row = within(screen.getByRole("button", { name: /Луч холода/ }));
-    expect(row.getByText(/Без ячейки/)).toBeDefined();
+    expect(row.getByText(/бесплатно/)).toBeDefined();
     expect(row.queryByText("Заговор")).toBeNull();
-    expect(row.queryByText(/Ячейка/)).toBeNull();
+    expect(row.queryByText(/ячейка/)).toBeNull();
   });
 
   it("неподготовленный ритуал не объясняется подготовкой (FR-103)", async () => {
@@ -192,8 +192,8 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     expect(
       mechanics.getByText(new RegExp(spell("alarm").components.materialText ?? "")),
     ).toBeDefined();
-    expect(mechanics.getByText("Накладывание").nextElementSibling).not.toBeNull();
-    expect(mechanics.getByText("Длительность").nextElementSibling).not.toBeNull();
+    expect(mechanics.getByText("Сотворение").nextElementSibling).not.toBeNull();
+    expect(mechanics.getByText("Действует").nextElementSibling).not.toBeNull();
   });
 
   it("строка броска без броска подписана «Бросок» и показывает общую подпись (FR-211)", async () => {

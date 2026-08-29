@@ -60,6 +60,7 @@ export const RULE_ROLE: Record<Tone, string> = {
   ritual: "border-l-[3px] border-l-ritual",
   offense: "border-l-[3px] border-l-offense",
   defense: "border-l-[3px] border-l-defense",
+  roll: "border-l-[3px] border-l-roll",
   muted: "border-l-[3px] border-l-rule-strong",
 };
 
@@ -82,5 +83,6 @@ export const RULE_MARK: Record<Tone, string> = {
   ritual: "border border-ritual",
   offense: "border border-offense",
   defense: "border border-defense",
+  roll: "border border-roll",
   muted: "border border-off",
 };

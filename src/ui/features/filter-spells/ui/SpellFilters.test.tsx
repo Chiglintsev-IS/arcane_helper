@@ -109,20 +109,15 @@ describe("состав фильтров идёт от списка (FR-002)", ()
 });
 
 describe("роль отбирает и в «Игре» (FR-212)", () => {
-  it("в «Игре» роль встаёт на место своего хода, а реакция остаётся", () => {
+  it("в «Игре» стоят время накладывания, роль вместе с «другим» и концентрация; ритуала нет", () => {
     renderFilters(EVERYTHING);
 
-    expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Защита" })).toBeDefined();
-    // Чем сходить в свой ход, говорит сама строка; чем ответить в чужой — спрашивают полосой.
-    expect(screen.getByRole("button", { name: "Реакция" })).toBeDefined();
-    for (const name of ["Действие", "Бонусное"]) {
-      expect(screen.queryByRole("button", { name }), name).toBeNull();
+    for (const name of ["Действие", "Бонусное", "Реакция", "Боевое", "Защита", "Другое", "Концентрация"]) {
+      expect(screen.getByRole("button", { name }), name).toBeDefined();
     }
-
-    // И ни одной кнопкой больше: полоса «Игры» задаёт пять вопросов — где строка, зачем она, чем
-    // ответить в чужой ход, держат ли её вниманием и берёт ли ритуал.
-    expect(screen.getAllByRole("button")).toHaveLength(6);
+    // Цена, подготовка и ритуал — вопросы «Книги»: в «Игре» список уже упорядочен ценой.
+    expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Подготовлено" })).toBeNull();
   });
 
   it("в «Книге» рядом стоят и роль, и время накладывания", () => {
@@ -133,13 +128,13 @@ describe("роль отбирает и в «Игре» (FR-212)", () => {
   });
 
   it("знак переключателя приходит от тона, а не набирается в полосе", () => {
-    renderFilters(EVERYTHING);
+    renderFilters(EVERYTHING, { mode: "book" });
 
     // Тот же знак, что и на строке списка: два знака у одного значения читались бы как два правила.
     expect(screen.getByRole("button", { name: "Боевое" }).textContent).toBe("✚Боевое");
     expect(screen.getByRole("button", { name: "Защита" }).textContent).toBe("◇Защита");
-    expect(screen.getByRole("button", { name: "Концентрация" }).textContent).toBe("◌Концентрация");
-    expect(screen.getByRole("button", { name: "Ритуал" }).textContent).toBe("✦Ритуал");
+    expect(screen.getByRole("button", { name: "Концентрация" }).textContent).toBe("◉Концентрация");
+    expect(screen.getByRole("button", { name: "Ритуал" }).textContent).toBe("◈Ритуал");
   });
 });
 

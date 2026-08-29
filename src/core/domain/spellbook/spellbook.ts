@@ -74,6 +74,21 @@ export class Spellbook {
     };
   }
 
+  /**
+   * Книга следует каталогу: запись, которой в нём нет, снимается вместе с подготовкой.
+   *
+   * Так читается сохранение, сделанное до того, как карточку убрали из сборки: обновление книги не
+   * вправе запереть игру ссылкой в пустоту. Заметки остаются — их писал игрок.
+   */
+  withinCatalog(knownIds: ReadonlySet<string>): Spellbook {
+    const known = (ids: readonly string[]) => ids.filter((id) => knownIds.has(id));
+    return this.with({
+      cantripIds: known(this.state.cantripIds),
+      spellbookSpellIds: known(this.state.spellbookSpellIds),
+      preparedSpellIds: known(this.state.preparedSpellIds),
+    });
+  }
+
   /** Заметка из одних пробелов удаляется: пустая строка не проходит схему состояния. */
   setNote(spellId: string, note: string): Spellbook {
     const { [spellId]: _replaced, ...rest } = this.state.spellNotes;

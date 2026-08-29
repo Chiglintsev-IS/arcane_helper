@@ -15,7 +15,6 @@ import type { ResourcesView } from "@/contract/views";
 import { combatRole } from "@/ui/entities/spell/lib/format";
 import { lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { ActionRow } from "@/ui/shared/ui/ActionRow";
-import { Badge } from "@/ui/shared/ui/Badge";
 
 /** Повод, по которому подсказку тратят. Список закрыт: алхимия в него не входит. */
 export const LAST_HINT_SHORT_RU =
@@ -42,14 +41,11 @@ export function LastHintRow({
       onOpen={onOpen}
     >
       {/*
-       Запас смыслового цвета не берёт: восемь тонов заняты правилами, и зелёный на остатке
-       читался бы как «ритуал». Отвечают знак и само число — тем же способом, что и в ряду
-       ресурсов, где эта же подсказка стоит значком.
+       * Каста у подсказки нет, и строка каста несёт одну цену — заряд. Запас смыслового цвета не
+       * берёт: отвечают слово и само число, как и в ряду ресурсов.
        */}
-      <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
-        <Badge tone="muted" icon={spent ? "✗" : "✚"}>
-          {lastHint.remaining}/{lastHint.maximum}
-        </Badge>
+      <span className="text-[0.84375rem] text-ink-quiet">
+        заряд {lastHint.remaining}/{lastHint.maximum}
       </span>
 
       <span className="text-xs text-ink-soft">{LAST_HINT_SHORT_RU}</span>

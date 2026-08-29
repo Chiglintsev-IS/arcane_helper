@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="height:100%;width:100%;min-width:0;position:relative;display:flex;flex-direction:column;background:var(--bg);color:var(--tx);font-family:'IBM Plex Sans',system-ui,sans-serif;overflow:hidden">
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;height:18px;padding:0 9px;font:500 10px/1 'IBM Plex Mono',monospace;color:var(--tx3)"><span>21:47</span><span>▮▮▯ ⌁</span></div>
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;height:54px;padding:0 9px;border-bottom:1px solid var(--line2);background:var(--bg)">
+<div style="display:flex;align-items:baseline;gap:7px;min-width:0">
+<span style="font:600 11px/1 'IBM Plex Sans';letter-spacing:.16em;color:var(--gold)">ЛИСТ</span>
+<span style="font:400 10px/1 'IBM Plex Mono',monospace;color:var(--tx3);white-space:nowrap">нажми блок — правка</span>
+</div>
+<button type="button" style="flex:none;height:44px;min-width:44px;padding:0 12px;background:var(--ctl);border:1px solid var(--line2);border-radius:2px;font-family:inherit;font-size:11px;color:var(--tx);cursor:pointer">Уровень 7</button>
+</div>
+<div data-sheet-scroll="a" style="flex:1;overflow-y:auto;padding:8px 9px 14px;display:flex;flex-direction:column;gap:8px">
+
+<div style="border:1px solid var(--line2);border-top:3px double var(--gold);background:var(--grp);padding:7px 9px 8px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+<span style="font:600 21px/1 Spectral,serif;letter-spacing:.01em">Торн</span>
+<span style="font:400 11px/1 'IBM Plex Mono',monospace;color:var(--tx3)">✎</span>
+</div>
+<div style="margin-top:5px;font:400 11.5px/1.35 'IBM Plex Sans';color:var(--tx2)">Волшебник 7 · Создатель рун · Лунный тролль</div>
+<div style="margin-top:2px;font:400 10.5px/1.35 'IBM Plex Mono',monospace;color:var(--tx3)">средний · рост — · 30 футов · возраст —</div>
+</div>
+
+
+
+<div style="display:flex;align-items:center;gap:7px;font:400 9.5px/1 'IBM Plex Mono',monospace;color:var(--tx3)">
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--gold)"></span>владение</span>
+<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:var(--gold);box-shadow:0 0 0 2px var(--goldq)"></span>компетентность</span>
+<span style="flex:1;height:1px;background:var(--line)"></span>
+</div>
+
+<div style="column-count:2;column-gap:7px;min-width:0;flex:none">
+<sc-for list="{{ abilities }}" as="a" hint-placeholder-count="6">
+<div style="break-inside:avoid;margin:0 0 7px;background:var(--grp);border:1px solid var(--line2);padding:6px 7px 5px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:4px;border-bottom:1px solid var(--line);padding-bottom:4px">
+<span style="font:600 9.5px/1 'IBM Plex Sans';letter-spacing:.09em;color:var(--tx2)">{{ a.name }}</span>
+<span style="display:flex;align-items:baseline;gap:4px"><span style="font:600 23px/1 Spectral,serif">{{ a.val }}</span><span style="font:500 12px/1 'IBM Plex Mono',monospace;color:var(--gold)">{{ a.mod }}</span></span>
+</div>
+<sc-for list="{{ a.rows }}" as="r" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:5px;padding:2px 0;min-height:16px">
+<span style="flex:none;width:6px;height:6px;background:{{ r.bg }};border:1px solid {{ r.bd }};box-shadow:{{ r.ring }}"></span>
+<span style="flex:1;min-width:0;font-size:10.5px;line-height:1.2;color:{{ r.lc }};text-wrap:pretty">{{ r.label }}</span>
+<span style="flex:none;font:500 11px/1 'IBM Plex Mono',monospace;color:var(--tx)">{{ r.val }}</span>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+
+<div style="background:var(--grp);border:1px solid var(--line2);padding:6px 8px 7px">
+<div style="font:600 9.5px/1 'IBM Plex Sans';letter-spacing:.09em;color:var(--tx2);border-bottom:1px solid var(--line);padding-bottom:4px">ВЛАДЕНИЯ</div>
+<div style="display:flex;gap:5px;margin-top:5px">
+<span style="flex:none;width:52px;font:400 10px/1.4 'IBM Plex Mono',monospace;color:var(--tx3)">Оружие</span>
+<span style="flex:1;display:flex;flex-wrap:wrap;gap:3px">
+<sc-for list="{{ weapons }}" as="w" hint-placeholder-count="5">
+<span style="padding:2px 5px;background:var(--ctl);border:1px solid var(--line);font-size:10.5px;line-height:1.3;color:var(--tx)">{{ w }}</span>
+</sc-for>
+</span>
+</div>
+<div style="display:flex;gap:5px;margin-top:4px"><span style="flex:none;width:52px;font:400 10px/1.4 'IBM Plex Mono',monospace;color:var(--tx3)">Доспехи</span><span style="font-size:10.5px;color:var(--tx2)">—</span></div>
+<div style="display:flex;gap:5px;margin-top:2px"><span style="flex:none;width:52px;font:400 10px/1.4 'IBM Plex Mono',monospace;color:var(--tx3)">Инстр-ты</span><span style="font-size:10.5px;color:var(--tx2)">—</span></div>
+<div style="display:flex;gap:5px;margin-top:6px;border-top:1px solid var(--line);padding-top:5px"><span style="flex:none;width:52px;font:400 10px/1.4 'IBM Plex Mono',monospace;color:var(--tx3)">Языки</span><span style="font-size:10.5px;color:var(--tx2)">—</span></div>
+</div>
+
+<div style="border:1px solid var(--line2);border-left:3px solid var(--goldl);background:var(--grp);padding:6px 9px 8px">
+<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font:600 9.5px/1 'IBM Plex Sans';letter-spacing:.09em;color:var(--tx2)">ОСОБЕННОСТИ</span><span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:var(--tx3)">правка недоступна</span></div>
+<div style="margin-top:6px;display:flex;align-items:baseline;gap:6px"><span style="font:600 13px/1.2 Spectral,serif;color:var(--gold)">Рунный почерк</span><span style="padding:1px 5px;border:1px solid var(--line2);font:400 9.5px/1.3 'IBM Plex Mono',monospace;color:var(--tx2);white-space:nowrap">подкласс</span></div>
+<div style="margin-top:3px;font:400 11.5px/1.4 'IBM Plex Sans';color:var(--tx2);text-wrap:pretty">Минута изучения записи отвечает, один ли у двух записей автор, есть ли позднейшая вставка, менялась ли структура.</div>
+</div>
+</div>
+<dc-import name="ArcNav" active="sheet" hint-size="100%,54px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:320,&quot;height&quot;:568}}">
+class Component extends DCLogic {
+  renderVals() {
+    const P = { bg: 'var(--gold)', bd: 'var(--gold)', ring: 'none', lc: 'var(--tx)' };
+    const N = { bg: 'transparent', bd: 'var(--line2)', ring: 'none', lc: 'var(--tx2)' };
+    const r = (label, val, prof) => Object.assign({ label, val }, prof ? P : N);
+    return {
+      weapons: ['Кинжал', 'Дротик', 'Праща', 'Боевой посох', 'Лёгкий арбалет'],
+      abilities: [
+        { name: 'СИЛА', val: 8, mod: '−1', rows: [r('Спасбросок', '−1'), r('Атлетика', '−1')] },
+        { name: 'ЛОВКОСТЬ', val: 14, mod: '+2', rows: [r('Спасбросок', '+2'), r('Акробатика', '+2'), r('Ловкость рук', '+5', 1), r('Скрытность', '+2')] },
+        { name: 'ТЕЛОСЛОЖЕНИЕ', val: 16, mod: '+3', rows: [r('Спасбросок', '+3')] },
+        { name: 'ИНТЕЛЛЕКТ', val: 18, mod: '+4', rows: [r('Спасбросок', '+7', 1), r('Магия', '+7', 1), r('История', '+4'), r('Анализ', '+7', 1), r('Природа', '+7', 1), r('Религия', '+4')] },
+        { name: 'МУДРОСТЬ', val: 12, mod: '+1', rows: [r('Спасбросок', '+4', 1), r('Обращение с животными', '+1'), r('Проницательность', '+1'), r('Медицина', '+1'), r('Внимательность', '+4', 1), r('Выживание', '+4', 1)] },
+        { name: 'ХАРИЗМА', val: 8, mod: '−1', rows: [r('Спасбросок', '−1'), r('Обман', '−1'), r('Запугивание', '−1'), r('Выступление', '−1'), r('Убеждение', '−1')] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

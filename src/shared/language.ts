@@ -52,6 +52,16 @@ export const SAVING_THROW_NAMES = {
   CHA: "Харизмы",
 } as const;
 
+/** Спасбросок тремя буквами — так его зовут за столом, когда места на слово нет: «спас ЛОВ». */
+export const SAVING_THROW_SHORT = {
+  STR: "СИЛ",
+  DEX: "ЛОВ",
+  CON: "ТЕЛ",
+  INT: "ИНТ",
+  WIS: "МДР",
+  CHA: "ХАР",
+} as const;
+
 /**
  * Сокращения монет: «зм», «см», «мм». Лог и лист называют одну и ту же монету одним словом.
  */
@@ -133,6 +143,9 @@ const TIME_FORMS_ACCUSATIVE: Record<TimeUnit, [string, string, string]> = {
   minute: ["минуту", "минуты", "минут"],
   hour: ["час", "часа", "часов"],
 };
+
+/** Раунд боя — шесть секунд по правилам: в минуте десять раундов. */
+export const ROUNDS_PER_MINUTE = 10;
 
 export function timeSpanAccusativeRu(unit: TimeUnit, value: number): string {
   return withPlural(value, TIME_FORMS_ACCUSATIVE[unit]);

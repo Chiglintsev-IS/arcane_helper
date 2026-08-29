@@ -61,12 +61,12 @@ describe("в бою: заговоры и подготовленные, твор�
 describe("порядок: сначала бесплатное, потом по уровню ячейки, потом роль (FR-210)", () => {
   it("вне боя ритуал стоит рядом с заговорами", () => {
     expect(playList(false)).toEqual([
-      "shocking-grasp",
-      "ray-of-frost",
       "message",
       "mending",
       "alarm",
       "detect-magic",
+      "shocking-grasp",
+      "ray-of-frost",
       "magic-missile",
       "shield",
       "absorb-elements",
@@ -84,9 +84,9 @@ describe("порядок: сначала бесплатное, потом по �
   it("в бою реакции наверх не всплывают, а цена решает всё", () => {
     // «Щит» — реакция первого уровня — стоит среди первых уровней, а не над заговорами.
     expect(playList(true)).toEqual([
+      "message",
       "shocking-grasp",
       "ray-of-frost",
-      "message",
       "magic-missile",
       "shield",
       "absorb-elements",
@@ -102,12 +102,13 @@ describe("порядок: сначала бесплатное, потом по �
   });
 
 
-  it("ключ: цена, затем роль", () => {
+  it("ключ: цена, затем роль — «другое» впереди боевого", () => {
     const reaction = { nameRu: "Дорогая реакция", castingTime: "reaction", level: 4, concentration: false, role: "other" } as const;
     const action = { nameRu: "Бесплатное действие", castingTime: "action", level: 0, concentration: false, role: "offense" } as const;
 
     expect(compareTraits(reaction, action)).toBeGreaterThan(0);
-    expect(orderKey(action)).toEqual([0, 0]);
+    expect(orderKey(action)).toEqual([0, 1]);
+    expect(orderKey({ ...action, role: "other" })).toEqual([0, 0]);
   });
 
   it("сортировка не меняет исходный список", () => {
@@ -121,26 +122,26 @@ describe("порядок: сначала бесплатное, потом по �
 const LAST_HINT_TRAITS = lastHintTraits("Последняя подсказка");
 
 describe("строка-действие встаёт среди того, что ячейки не стоит (FR-329, FR-210)", () => {
-  it("в бою — сразу за заговорами", () => {
+  it("в бою — среди бесплатного «другого», перед боевыми заговорами", () => {
     const shown = spellsForScreen(testSpellRows(undefined, IN_FIGHT), "play");
     const rows = shown.map((spell) => spell.id);
     rows.splice(positionInList(shown, LAST_HINT_TRAITS, "play"), 0, "последняя-подсказка");
 
-    // Последним бесплатным идёт «Сообщение» — та же цена и та же роль «другое», что у строки.
+    // Строка встаёт за «Сообщением» — той же цены и той же роли «другое» — и перед боевым.
     expect(rows.slice(0, 5)).toEqual([
-      "shocking-grasp",
-      "ray-of-frost",
       "message",
       "последняя-подсказка",
+      "shocking-grasp",
+      "ray-of-frost",
       "magic-missile",
     ]);
   });
 
-  it("вне боя — за ритуалами: они тоже ничего не стоят", () => {
+  it("вне боя — за ритуалами: они тоже ничего не стоят и тоже «другое»", () => {
     const shown = spellsForScreen(testSpellRows(), "play");
     const at = positionInList(shown, LAST_HINT_TRAITS, "play");
     expect(shown[at - 1]?.id).toBe("detect-magic");
-    expect(shown[at]?.id).toBe("magic-missile");
+    expect(shown[at]?.id).toBe("shocking-grasp");
   });
 
   it("в «Книге» место ищется уровнем: там смотрят состав, а не цену момента", () => {

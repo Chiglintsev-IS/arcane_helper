@@ -36,14 +36,11 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 /** Порядок переключателей времени накладывания. Показываются не все — только делящие список. */
 const CASTING_TIME_FILTERS = ["action", "bonus_action", "reaction"];
 
-/** О чём из времени накладывания спрашивают, пока идёт игра. */
-const CASTING_TIME_FILTERS_IN_PLAY: readonly string[] = ["reaction"];
-
 /**
- * Роли, по которым отбирают. «Другое» переключателя не получает: оно означает «ни то, ни другое», и
- * фильтр по нему отвечал бы на вопрос, которого в бою не задают.
+ * Роли, по которым отбирают. «Другое» отбирает наравне с боевым и защитой: небоевое заклинание
+ * иначе приходится искать глазами по всему списку — линейки роли у него нет.
  */
-const ROLE_FILTERS = ["offense", "defense"];
+const ROLE_FILTERS = ["offense", "defense", "other"];
 
 /** Имя дела: им зовётся и кнопка, и поле, которое она раскрывает. */
 const SEARCH_LABEL = "Поиск по названию";
@@ -108,10 +105,7 @@ export function SpellFilters({
   onSearchToggle: () => void;
 }) {
   const inBook = mode === "book";
-  const castingTimes = CASTING_TIME_FILTERS.filter(
-    (value) =>
-      dividing.castingTimes.has(value) && (inBook || CASTING_TIME_FILTERS_IN_PLAY.includes(value)),
-  );
+  const castingTimes = CASTING_TIME_FILTERS.filter((value) => dividing.castingTimes.has(value));
   const roles = ROLE_FILTERS.filter((value) => dividing.roles.has(value));
 
   return (
@@ -200,7 +194,7 @@ export function SpellFilters({
  прямо сейчас. В бою таких строк нет вовсе, и переключатель не показывается сам — отдельного
  условия про бой для этого не нужно.
  */}
-        {dividing.ritual ? (
+        {inBook && dividing.ritual ? (
           <Toggle
             pressed={filters.ritual}
             tone="ritual"

@@ -530,7 +530,7 @@ export const spellCardViewSchema = z.object({
   components: z.object({
     verbal: z.boolean(),
     somatic: z.boolean(),
-    material: z.object({ textRu: word, consumed: z.boolean() }).optional(),
+    material: z.object({ textRu: word, consumed: z.boolean(), costGp: whole.optional() }).optional(),
   }),
   /** Схема ритуала, начерченная; нет вовсе — ритуалом заклинание не творится. */
   ritualDiagram: diagramViewSchema.optional(),
@@ -543,6 +543,20 @@ export const spellCardViewSchema = z.object({
  * нет ни одной: род броска, роль и время накладывания едут словами правил, а слово, падеж и порядок
  * значков выбирает показывающий.
  */
+const lines = z.array(word);
+
+export const listCardViewSchema = z.object({
+  whereRu: word,
+  costMaterialRu: word.optional(),
+  effectLinesRu: lines.optional(),
+  rollSubjectRu: word.optional(),
+  rollNoteRu: word.optional(),
+  hitLinesRu: lines.optional(),
+  failLinesRu: lines.optional(),
+  successLinesRu: lines.optional(),
+  noteRu: word.optional(),
+});
+
 export const spellRowViewSchema = z.object({
   id: word,
   nameRu: word,
@@ -605,6 +619,11 @@ export const spellRowViewSchema = z.object({
 
   /** Заметка игрока: домашнее правило или напоминание; нет вовсе — не писал. */
   note: text.optional(),
+  /**
+   * Строка списка готовыми фразами: куда, что случится, кто бросает и что при исходе. Урон в них уже
+   * подставлен числом этого персонажа. Нет вовсе — строка обходится краткими правилами.
+   */
+  listCard: listCardViewSchema.optional(),
   /** Что о заклинании написано: полные правила и всё, чего в строке нет. */
   card: spellCardViewSchema,
 });
@@ -685,6 +704,7 @@ export type CastOptionView = z.infer<typeof castOptionViewSchema>;
 export type DiagramFigure = z.infer<typeof diagramFigureSchema>;
 export type DiagramView = z.infer<typeof diagramViewSchema>;
 export type SpellCardView = z.infer<typeof spellCardViewSchema>;
+export type ListCardView = z.infer<typeof listCardViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;

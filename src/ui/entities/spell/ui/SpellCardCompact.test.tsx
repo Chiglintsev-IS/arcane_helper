@@ -15,7 +15,6 @@ afterEach(cleanup);
 // «Волшебный замок» отложен столом, а нужен здесь как единственный оплачиваемый компонент:
 // снимок берётся у персонажа, который его знает.
 const SNAPSHOT = testSnapshot(knowing(createThorne(), "arcane-lock"));
-const BASE_ROW = SNAPSHOT.spells[0]!;
 
 /** Строка одного заклинания: прогон называет заклинания, а не места в списке. */
 function rowOf(id: string) {
@@ -35,98 +34,106 @@ function renderRow(id: string) {
   );
 }
 
-describe("SpellCardCompact — дальность в ряду фактов без ярлыка", () => {
-  it("особая дальность называет себя сама, а не показывает голое «Особая»", () => {
-    render(
-      <SpellCardCompact
-        spell={{ ...BASE_ROW, range: { type: "special" } }}
-        casting={SNAPSHOT.casting}
-        armorClass={SNAPSHOT.sheet.armorClass}
-        onOpen={() => {}}
-      />,
-    );
+describe("строка каста (FR-010)", () => {
+  it("тип каста, цена и срок стоят одной строкой, уровень отдельно не называется", () => {
+    renderRow("web");
 
-    expect(screen.getByText("Особая дальность")).toBeDefined();
-    expect(screen.queryByText("Особая", { exact: true })).toBeNull();
+    expect(screen.getByText(/Действие/).textContent).toContain("Действие");
+    expect(screen.getByText("· ячейка 2")).toBeDefined();
+    expect(screen.getByText("◉ 1 час")).toBeDefined();
+    expect(screen.queryByText(/уровень/)).toBeNull();
+  });
+
+  it("растущее от ячейки зовётся «от … ↑», ритуал стоит в цене, а не чипом", () => {
+    renderRow("lightning-bolt");
+    expect(screen.getByText("· ячейка от 3 ↑")).toBeDefined();
+
+    // Неподготовленный ритуал творится только ритуалом — и цена говорит ровно это.
+    cleanup();
+    renderRow("detect-magic");
+    expect(screen.getByText("· ◈ ритуал")).toBeDefined();
+    expect(screen.queryByText("Ритуал")).toBeNull();
+  });
+
+  it("материал со стоимостью назван в цене", () => {
+    renderRow("arcane-lock");
+    expect(screen.getByText("· ячейка 2 + пыль 25 зм")).toBeDefined();
+  });
+
+  it("мгновенное про срок молчит", () => {
+    renderRow("ray-of-frost");
+    expect(screen.queryByText(/Мгновенн/)).toBeNull();
+    expect(screen.queryByText("—")).toBeNull();
   });
 });
 
-describe("роль строки названа тремя носителями", () => {
-  it("знак, слово и левая линейка — цвет последний, а не единственный", () => {
+describe("бросок назван с бросающим (FR-211)", () => {
+  it("атака — числом этого персонажа и по КД цели", () => {
+    renderRow("ray-of-frost");
+    expect(screen.getByText(/Атака d20\+8 по КД цели/)).toBeDefined();
+    expect(screen.getByText("ПОПАЛ")).toBeDefined();
+    expect(screen.getByText("2d8 холодом")).toBeDefined();
+  });
+
+  it("спасбросок — кто бросает, какой и против какого КС; исходы подписаны", () => {
+    renderRow("rimes-binding-ice");
+    expect(screen.getByText(/Каждый в конусе бросает спас ТЕЛ против КС 16/)).toBeDefined();
+    expect(screen.getByText("ПРОВАЛ")).toBeDefined();
+    expect(screen.getByText("УСПЕХ")).toBeDefined();
+    expect(screen.getByText("3d8 холодом")).toBeDefined();
+  });
+
+  it("без броска строки броска нет вовсе", () => {
+    renderRow("mage-armor");
+    expect(screen.queryByText(/бросает|Атака|Без броска/)).toBeNull();
+  });
+});
+
+describe("компоненты и роль", () => {
+  it("компоненты стоят буквами в углу имени, только то, что требуется от игрока", () => {
+    renderRow("counterspell");
+    expect(screen.getByLabelText("Компоненты: Ж")).toBeDefined();
+
+    // Паутинку закрывает надетая фокусировка — иметь ничего не нужно, и буквы «М» нет.
+    cleanup();
+    renderRow("web");
+    expect(screen.getByLabelText("Компоненты: Г·Ж")).toBeDefined();
+
+    // Золотая пыль со стоимостью фокусировкой не заменяется — её надо иметь.
+    cleanup();
+    renderRow("arcane-lock");
+    expect(screen.getByLabelText("Компоненты: Г·Ж·М")).toBeDefined();
+  });
+
+  it("роль — линейкой с края и словом для чтения вслух, без чипа", () => {
     const { container } = renderRow("lightning-bolt");
 
-    // Убрать цвет совсем — строка обязана остаться понятной: знак и слово стоят рядом.
-    expect(screen.getByText(/Боевое/).textContent).toBe("✚ Боевое");
-    // Обводить строку целиком роль перестала: цвет ушёл на край и места у списка не занял.
     const row = container.querySelector("button");
     expect(row?.className).toContain("border-l-offense");
-    expect(row?.className).not.toContain("border-offense");
+    expect(screen.getByText(/Боевое/).className).toContain("sr-only");
   });
 
   it("«ни то, ни другое» линейку получает нейтральную, а не пустую", () => {
     const { container } = renderRow("detect-magic");
 
     const row = container.querySelector("button");
-    expect(row?.className).toContain("border-l-[3px]");
     expect(row?.className).toContain("border-l-rule-strong");
   });
 });
 
-describe("ряд фактов строки списка", () => {
-  it("разделитель берёт тон ряда, а не заводит свой", () => {
-    // Свой тон у разделителя был один на обе темы, и на белой подложке светлой темы точка давала
-    // 2.63 при требуемых 4.5. Тон ряда назван парой и проходит в обеих; axe этого не ловит —
-    // разделитель скрыт от чтения вслух, и правило контраста его обходит.
-    renderRow("lightning-bolt");
-
-    const separators = screen.getAllByText("·");
-    expect(separators).toHaveLength(2);
-    for (const separator of separators) expect(separator.className).toBe("");
-  });
-});
-
-describe("компоненты на строке списка (FR-010)", () => {
-  it("требуемое названо буквой, а не требуемое не названо вовсе", () => {
-    // «Сообщение» творится молча: голоса оно не требует, и буквы за него не получает.
-    renderRow("message");
-
-    const components = screen.getByRole("img", { name: /^Компоненты/ });
-    expect(components.textContent).toBe("СМ");
-    expect(components.getAttribute("aria-label")).toBe("Компоненты: жест, материал");
+describe("эффект и примечание", () => {
+  it("обещанный КД считается готовым и стоит громкой строкой", () => {
+    renderRow("mage-armor");
+    expect(screen.getByText(`КД 17 вместо ${SNAPSHOT.sheet.armorClass}`)).toBeDefined();
   });
 
-  it("материал, которого фокусировка не заменяет, выделен среди букв", () => {
-    renderRow("arcane-lock");
-
-    const components = screen.getByRole("img", { name: /^Компоненты/ });
-    const [verbal, somatic, material] = [...components.children];
-    expect(components.getAttribute("aria-label")).toBe("Компоненты: голос, жест, свой предмет");
-    expect(verbal?.className).toBe("");
-    expect(somatic?.className).toBe("");
-    expect(material?.className).not.toBe("");
+  it("триггер реакции стоит своей строкой и начинается с «когда»", () => {
+    renderRow("shield");
+    expect(screen.getByText(/^когда /)).toBeDefined();
   });
 
-  it("буквы встают в угол имени, а не заводят своей строки", () => {
-    renderRow("lightning-bolt");
-
-    const components = screen.getByRole("img", { name: /^Компоненты/ });
-    // Тот же угол, что и знак с подписью роли: своей строки буквы не заводят, и список не растёт.
-    expect(components.parentElement?.textContent).toBe("ВСМ✚ Боевое");
-  });
-
-  it("строка того, что не требует ничего, компонентов и не называет", () => {
-    render(
-      <SpellCardCompact
-        spell={{
-          ...BASE_ROW,
-          card: { ...BASE_ROW.card, components: { verbal: false, somatic: false } },
-        }}
-        casting={SNAPSHOT.casting}
-        armorClass={SNAPSHOT.sheet.armorClass}
-        onOpen={() => {}}
-      />,
-    );
-
-    expect(screen.queryByRole("img", { name: /^Компоненты/ })).toBeNull();
+  it("примечание — полными предложениями, отдельной строкой", () => {
+    renderRow("haste");
+    expect(screen.getByText("Когда заклинание кончается, цель пропускает свой ход.")).toBeDefined();
   });
 });

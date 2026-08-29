@@ -255,18 +255,17 @@ describe("режимы экрана (FR-200, FR-201, FR-204)", () => {
     const user = userEvent.setup();
     await renderWithStores(<PlayShell />);
 
-    // Пока бой не идёт, ритуалом сотворить можно — переключатель на месте и в «Игре», и в «Книге».
-    expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
+    // В «Игре» ритуал стоит внутри цены строки, и переключателя нет; в «Книге», пока бой не идёт,
+    // ритуалом сотворить можно — переключатель на месте.
+    expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
     await openMode(user, /^Книга/);
     expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
 
-    // С началом боя способа нет нигде: ритуал занимает на десять минут больше обычного, и вкладка
-    // этого не меняет.
+    // С началом боя способа нет: ритуал занимает на десять минут больше обычного, и переключатель
+    // уходит и из «Книги».
     await openMode(user, /^Игра/);
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
-    expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
-
     await openMode(user, /^Книга/);
     expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
   });
@@ -390,13 +389,13 @@ describe("краткая карточка (FR-010)", () => {
     await renderWithStores(<PlayShell />);
 
     const inFight = within(screen.getByRole("button", { name: /Луч холода/ }));
-    expect(inFight.getByText("Боевое")).toBeDefined();
+    expect(inFight.getByText(/Боевое/)).toBeDefined();
 
     await openMode(user, /^Книга/);
 
     // Карточка одна на все режимы: разный вид читался как две разные программы.
     const inBook = within(screen.getByRole("button", { name: /Луч холода/ }));
-    expect(inBook.getByText("Боевое")).toBeDefined();
+    expect(inBook.getByText(/Боевое/)).toBeDefined();
   });
 
 });

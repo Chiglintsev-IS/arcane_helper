@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="height:100%;width:100%;min-width:0;position:relative;display:flex;flex-direction:column;background:var(--bg);color:var(--tx);font-family:'IBM Plex Sans',system-ui,sans-serif;overflow:hidden">
+<div style="flex:none;display:flex;align-items:center;justify-content:space-between;height:18px;padding:0 11px;font:500 10px/1 'IBM Plex Mono',monospace;color:var(--tx3)"><span>21:47</span><span>▮▮▯ ⌁</span></div>
+
+<div style="flex:none;display:flex;padding:0 10px;border-bottom:1px solid var(--line2)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+<button type="button" style="flex:1;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;border:0;border-bottom:2px solid {{ t.bar }};font-family:inherit;font-size:12.5px;color:{{ t.col }};cursor:pointer">{{ t.label }}<span style="font:400 9px/1 'IBM Plex Mono',monospace;color:var(--tx3);white-space:nowrap">{{ t.sub }}</span></button>
+</sc-for>
+</div>
+
+<div data-bag-scroll="1" style="flex:1;min-height:0;overflow-y:auto;padding:8px 10px 12px;display:flex;flex-direction:column;gap:8px">
+
+<sc-if value="{{ hasMoney }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:8px;min-height:52px;padding:0 10px;background:var(--grp);border:1px solid var(--line2)">
+<span style="font:600 9px/1 'IBM Plex Sans';letter-spacing:.1em;color:var(--tx2)">ДЕНЬГИ</span>
+<span style="flex:1;display:flex;align-items:baseline;gap:12px">
+<span style="display:inline-flex;align-items:baseline;gap:4px"><span style="font:600 17px/1 Spectral,serif">120</span><span style="font:400 10px/1 'IBM Plex Mono',monospace;color:var(--tx3)">зм</span></span>
+<span style="display:inline-flex;align-items:baseline;gap:4px"><span style="font:600 17px/1 Spectral,serif">34</span><span style="font:400 10px/1 'IBM Plex Mono',monospace;color:var(--tx3)">см</span></span>
+<span style="display:inline-flex;align-items:baseline;gap:4px"><span style="font:600 17px/1 Spectral,serif">8</span><span style="font:400 10px/1 'IBM Plex Mono',monospace;color:var(--tx3)">мм</span></span>
+</span>
+<button type="button" style="flex:none;min-width:72px;min-height:44px;padding:0 12px;background:var(--ctl);border:1px solid var(--line2);font-family:inherit;font-size:12.5px;color:var(--tx);cursor:pointer">Править</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+<button type="button" style="flex:none;min-height:44px;min-width:44px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;gap:5px;background:var(--grp);border:1px solid {{ f.bd }};font-family:inherit;font-size:11px;color:{{ f.col }};cursor:pointer;white-space:nowrap">{{ f.label }}<span style="font:500 10px 'IBM Plex Mono',monospace;color:var(--tx3)">{{ f.n }}</span></button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="1">
+<div>
+<sc-if value="{{ g.title }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:8px;padding-bottom:4px;border-bottom:1px solid var(--line)">
+<span style="font:600 9.5px/1 'IBM Plex Sans';letter-spacing:.12em;color:var(--gold)">{{ g.title }}</span>
+<span style="flex:1"></span>
+<span style="font:400 9.5px/1.2 'IBM Plex Mono',monospace;color:var(--tx3)">{{ g.note }}</span>
+</div>
+</sc-if>
+<sc-for list="{{ g.items }}" as="i" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:7px;min-height:52px;padding:4px 0;border-bottom:1px solid var(--line)">
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 6px">
+<span style="font:600 13.5px/1.2 Spectral,serif;color:{{ i.nameC }}">{{ i.name }}</span>
+<span style="padding:1px 5px;border:1px solid var(--line2);font:400 10px/1.3 'IBM Plex Mono',monospace;color:var(--tx2);white-space:nowrap">{{ i.price }}</span>
+</div>
+<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:3px 5px">
+<sc-for list="{{ i.marks }}" as="m" hint-placeholder-count="1">
+<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 5px;border:1px solid {{ m.bd }};font:400 10px/1.35 'IBM Plex Mono',monospace;color:var(--tx2)"><span style="color:{{ m.c }}">{{ m.glyph }}</span>{{ m.label }}</span>
+</sc-for>
+<sc-if value="{{ i.plain }}" hint-placeholder-val="{{ false }}"><span style="font:400 10px/1.35 'IBM Plex Mono',monospace;color:var(--tx3)">{{ i.plain }}</span></sc-if>
+</div>
+</div>
+<sc-if value="{{ i.counter }}" hint-placeholder-val="{{ true }}">
+<span style="flex:none;display:flex;align-items:center;gap:7px">
+<button type="button" style="flex:none;width:44px;height:44px;background:{{ i.minusBg }};border:1px {{ i.minusBd }};font:400 16px 'IBM Plex Mono',monospace;color:{{ i.minusCol }};cursor:pointer">−</button>
+<span style="flex:none;min-width:22px;text-align:center;font:600 17px/1 Spectral,serif;color:{{ i.numCol }}">{{ i.n }}</span>
+<button type="button" style="flex:none;width:44px;height:44px;background:var(--ctl);border:1px solid var(--line2);font:400 16px 'IBM Plex Mono',monospace;color:var(--tx);cursor:pointer">+</button>
+</span>
+</sc-if>
+<sc-if value="{{ i.btn }}" hint-placeholder-val="{{ false }}">
+<button type="button" style="flex:none;min-width:{{ i.btnW }};min-height:44px;padding:0 10px;background:var(--ctl);border:1px solid var(--gold);font-family:inherit;font-size:12px;color:var(--tx);cursor:pointer">{{ i.btn }}</button>
+</sc-if>
+</div>
+</sc-for>
+<button type="button" style="display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 10px;background:var(--bg);border:1px dashed var(--line2);font-family:inherit;font-size:12px;color:var(--tx2);cursor:pointer;text-align:left"><span style="color:var(--gold);font-size:14px">+</span>{{ g.add }}</button>
+</div>
+</sc-for>
+
+</div>
+<dc-import name="ArcNav" active="things" hint-size="100%,54px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;flat&quot;,&quot;need&quot;],&quot;default&quot;:&quot;flat&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const v = this.props.variant || 'flat';
+    const T = [['equip', 'Экипировка', 'что на нём'], ['bag', 'Сумка', 'что при нём'], ['need', 'Нужно достать', 'чего нет']];
+    const activeTab = v === 'need' ? 'need' : 'bag';
+    // отметка = знание, добытое где-то, а не тип вещи
+    const craft = label => ({ label, glyph: '⚒', c: 'var(--rit)', bd: 'var(--line2)' });
+    const book = label => ({ label, glyph: '▤', c: 'var(--act)', bd: 'var(--line2)' });
+    const use = label => ({ label, glyph: '●', c: 'var(--act)', bd: 'var(--line2)' });
+    const it = (name, price, n, marks, extra) => Object.assign({
+      name, price, n, marks: marks || [], plain: '', counter: true, btn: '', btnW: '96px',
+      nameC: 'var(--tx)', numCol: 'var(--tx)',
+      minusBg: 'var(--ctl)', minusBd: 'solid var(--line2)', minusCol: 'var(--tx)'
+    }, extra || {});
+    const zero = { numCol: 'var(--off)', minusBg: 'var(--bg)', minusBd: 'dashed var(--off)', minusCol: 'var(--off)' };
+
+    const tabs = T.map(([k, label, sub]) => ({
+      label, sub,
+      bar: k === activeTab ? 'var(--gold)' : 'transparent',
+      col: k === activeTab ? 'var(--gold)' : 'var(--tx2)'
+    }));
+
+    if (v === 'need') {
+      // тот же счётчик, что в сумке: «+» и есть «достал». Отдельного глагола нет.
+      const need = (name, price, why) => it(name, price, 0, [], Object.assign({ plain: why }, zero));
+      return {
+        tabs, hasMoney: true, hasFilters: false,
+        groups: [
+          {
+            title: 'НУЖНО ЗАКЛИНАНИЯМ', note: 'выведено из «Книги»', add: 'Добавить, что искать',
+            items: [
+              need('Кокон гусеницы', '10 зм', 'нужен 1 · Превращение, фокусировка не заменяет'),
+              need('Известь, мешочек', '1 зм', 'нужен 1 · Паутина, расходуется при накладывании')
+            ]
+          },
+          {
+            title: 'НУЖНО РЕЦЕПТАМ', note: 'выведено из «Ремесла»', add: 'Добавить, что искать',
+            items: [
+              need('Чернила с серебром', '10 зм', 'нужен 1 · Свиток опознания')
+            ]
+          },
+          {
+            title: 'ИЩУ САМ', note: 'вписано игроком', add: 'Добавить, что искать',
+            items: [
+              need('Плащ сопротивления огню', '500 зм', 'денег 120 зм'),
+              need('Жезл ловли заклинаний', '900 зм', 'денег 120 зм')
+            ]
+          }
+        ]
+      };
+    }
+
+    return {
+      tabs, hasMoney: true, hasFilters: true,
+      filters: [
+        { label: 'Всё', n: '9', bd: 'var(--gold)', col: 'var(--gold)' },
+        { label: 'В наличии', n: '8', bd: 'var(--line2)', col: 'var(--tx)' },
+        { label: 'Нужно заклинаниям', n: '2', bd: 'var(--line2)', col: 'var(--tx)' },
+        { label: 'Шло в рецепты', n: '3', bd: 'var(--line2)', col: 'var(--tx)' }
+      ],
+      groups: [
+        {
+          title: '', note: '', add: 'Новая вещь',
+          items: [
+            it('Зелье лечения', '50 зм', 2, [use('пьётся действием, 2d4+2 хитов')]),
+            it('Корень мандрагоры', '10 зм', 3, [craft('шёл в рецепт: Опознание')]),
+            it('Мешочек с известью', '1 зм', 1, [book('нужен: Паутина')]),
+            it('Пергамент, лист', '1 зм', 10, [craft('шёл в рецепт: копирование заклинания')]),
+            it('Мел', '1 см', 9, [craft('шёл в рецепт: рунная работа')]),
+            it('Верёвка 50 футов', '1 зм', 1, [], { plain: 'ни в одном рецепте не была' }),
+            it('Кинжал', '2 зм', 1, [book('владение оружием')]),
+            it('Свиток опознания', '100 зм', 0, [use('разовое Опознание без ячейки')], zero)
+          ]
+        }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

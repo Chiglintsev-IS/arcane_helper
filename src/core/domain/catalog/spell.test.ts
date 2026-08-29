@@ -442,3 +442,68 @@ describe("вклады заклинания (FR-093)", () => {
     ).toBe(true);
   });
 });
+
+describe("строка списка согласована с механикой", () => {
+  const withListCard = (listCard: Record<string, unknown>, change: (draft: Record<string, unknown>) => void = () => {}) =>
+    spellSchema.safeParse(
+      mutate(web(), (draft) => {
+        change(draft);
+        draft.listCard = listCard;
+      }),
+    );
+
+  it("бросающего и исходы спасброска отвергает у заклинания без спасброска", () => {
+    const result = withListCard(
+      { whereRu: "60 футов", rollSubjectRu: "Цель", failLinesRu: ["падает"] },
+      (draft) => {
+        draft.resolution = { type: "automatic" };
+      },
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it("спасбросок без бросающего отвергает", () => {
+    expect(withListCard({ whereRu: "60 футов" }).success).toBe(false);
+  });
+
+  it("урон в исходе провала пишется подстановкой, а не числом", () => {
+    const damaged = (draft: Record<string, unknown>) => {
+      draft.damage = { dice: "3d8", type: "холод" };
+    };
+    expect(
+      withListCard({ whereRu: "60 футов", rollSubjectRu: "Цель", failLinesRu: ["3d8 холодом"] }, damaged)
+        .success,
+    ).toBe(false);
+    expect(
+      withListCard({ whereRu: "60 футов", rollSubjectRu: "Цель", failLinesRu: ["{damage} холодом"] }, damaged)
+        .success,
+    ).toBe(true);
+  });
+
+  it("исход попадания отвергает у заклинания без атаки", () => {
+    const result = withListCard({ whereRu: "60 футов", rollSubjectRu: "Цель", hitLinesRu: ["урон"] });
+    expect(result.success).toBe(false);
+  });
+
+  it("материал в цене отвергает у компонента без стоимости", () => {
+    const result = withListCard({ whereRu: "60 футов", rollSubjectRu: "Цель", costMaterialRu: "пыль" });
+    expect(result.success).toBe(false);
+  });
+
+  it("урон в исходе попадания тоже пишется подстановкой", () => {
+    const result = withListCard({ whereRu: "60 футов", hitLinesRu: ["2d8 холодом"] }, (draft) => {
+      draft.resolution = { type: "spell_attack" };
+      draft.damage = { dice: "2d8", type: "холод" };
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("подстановку урона у заклинания без урона отвергает", () => {
+    const result = withListCard({
+      whereRu: "60 футов",
+      rollSubjectRu: "Цель",
+      failLinesRu: ["{damage} холодом"],
+    });
+    expect(result.success).toBe(false);
+  });
+});

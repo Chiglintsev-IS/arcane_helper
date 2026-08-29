@@ -25,7 +25,7 @@ async function mechanicsOf(id: string) {
   return within(screen.getByLabelText("Механика"));
 }
 
-describe("подробная карточка называет три компонента (FR-011)", () => {
+describe("подробная карточка называет требуемые компоненты (FR-011)", () => {
   it("материал, закрытый фокусировкой, назван, а не замолчан", async () => {
     const mechanics = await mechanicsOf("lightning-bolt");
 
@@ -49,15 +49,16 @@ describe("подробная карточка называет три компо
     expect(mechanics.getByText(/золотая пыль/).textContent).toContain("расходуется");
   });
 
-  it("ненужный компонент назван словом: сотворить молча — решение, а не пробел", async () => {
+  it("ненужный компонент не называется: строка говорит, что нужно", async () => {
     const mechanics = await mechanicsOf("counterspell");
 
-    expect(mechanics.getByText(/без голоса/)).toBeDefined();
+    expect(mechanics.getByText("жест")).toBeDefined();
+    expect(mechanics.queryByText(/без голоса|без материала/)).toBeNull();
   });
 
-  it("заклинание без материала называет и это", async () => {
+  it("заклинание из одного голоса называет только его", async () => {
     const mechanics = await mechanicsOf("thunder-step");
 
-    expect(mechanics.getByText(/без жеста · без материала/)).toBeDefined();
+    expect(mechanics.getByText("голос")).toBeDefined();
   });
 });

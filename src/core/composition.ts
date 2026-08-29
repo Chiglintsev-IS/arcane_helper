@@ -12,6 +12,7 @@
 
 import type { Envelope } from "@/contract/commands";
 
+import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -73,6 +74,16 @@ export function createCore(parts: CoreParts): Core {
     }
   };
 
+  /**
+   * Книга сохранения следует каталогу сборки: карточка, убранная из сборки после записи, снимается
+   * из книги при чтении, а не запирает каждую команду отказом целостности.
+   */
+  const builtInIds = new Set(builtInCatalog.map((spell) => spell.id));
+  const withinBuiltIn = (character: CharacterState): CharacterState =>
+    Character.of(character)
+      .withSpellbook(Character.of(character).spellbook.withinCatalog(builtInIds))
+      .toState();
+
   const opened = async (): Promise<LiveSession> => {
     if (live !== null) return live;
 
@@ -86,8 +97,9 @@ export function createCore(parts: CoreParts): Core {
 
     // Каталога в записи нет — значит его и не подменяли: играем тем, что в сборке.
     const catalog = stored.spellCatalog;
+    const session = fromPersisted(stored);
     const restored: LiveSession = {
-      session: fromPersisted(stored),
+      session: catalog === undefined ? { ...session, character: withinBuiltIn(session.character) } : session,
       spellCatalog: catalog ?? builtInCatalog,
       spellCatalogSource: catalog === undefined ? "built_in" : "imported",
     };

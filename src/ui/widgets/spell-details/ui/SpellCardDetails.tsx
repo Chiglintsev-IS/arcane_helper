@@ -16,8 +16,9 @@ import type { CastingView, SpellRowView } from "@/contract/views";
 
 import { RitualDiagramView } from "@/ui/features/ritual-diagram/ui/RitualDiagramView";
 import {
-  castingTimeLabel,
-  durationLabel,
+  COMPONENT_WORDS,
+  castingTimeDetail,
+  durationDetail,
   levelLabel,
   slotCostLabel,
   targetingLabel,
@@ -59,25 +60,30 @@ function materialFate(row: SpellRowView, consumed: boolean): string {
 }
 
 /**
- * Три компонента одной строкой: что требуется, чего не требуется и чем оплачен материал.
+ * Компоненты одной строкой: только то, что требуется, и чем оплачен материал.
  *
- * Отсутствие названо словом, а не пропуском: молчание о голосе читается как «здесь ничего не
- * написано», а сотворить молча — решение, которое принимают за столом. Закрытый фокусировкой
- * материал приглушён: он назван, но делать с ним нечего.
+ * Ненужное не называется: строка отвечает «что нужно», и «без материала» в ней — слово ни о чём.
+ * Закрытый фокусировкой материал приглушён: он назван, но делать с ним нечего.
  */
 function Components({ row }: { row: SpellRowView }) {
   const { verbal, somatic, material } = row.card.components;
-  const spoken = `${verbal ? "голос" : "без голоса"} · ${somatic ? "жест" : "без жеста"}`;
-
-  if (material === undefined) return <>{spoken} · без материала</>;
+  const required: string[] = [
+    ...(verbal ? [COMPONENT_WORDS.verbal] : []),
+    ...(somatic ? [COMPONENT_WORDS.somatic] : []),
+  ];
 
   return (
     <>
-      {spoken} ·{" "}
-      <span className={row.materialCoveredByFocus ? MUTED : ""}>
-        {material.textRu}
-        {materialFate(row, material.consumed)}
-      </span>
+      {required.join(" · ")}
+      {material === undefined ? null : (
+        <>
+          {required.length === 0 ? "" : " · "}
+          <span className={row.materialCoveredByFocus ? MUTED : ""}>
+            {material.textRu}
+            {materialFate(row, material.consumed)}
+          </span>
+        </>
+      )}
     </>
   );
 }
@@ -148,9 +154,9 @@ export function SpellCardDetails({
           <Row label="Компоненты">
             <Components row={row} />
           </Row>
-          {/* Два времени подряд: подписанные, они сравниваются глазом и не путаются. */}
-          <Row label="Накладывание">{castingTimeLabel(row.castingTime)}</Row>
-          <Row label="Длительность">{durationLabel(row.duration)}</Row>
+          {/* Два времени подряд и подписаны глаголом: сколько творят и сколько действует. */}
+          <Row label="Сотворение">{castingTimeDetail(row.castingTime)}</Row>
+          <Row label="Действует">{durationDetail(row.duration)}</Row>
           {card.reaction === undefined ? null : (
             <Row label="Триггер реакции">{card.reaction.textRu}</Row>
           )}

@@ -6,13 +6,14 @@
  * словом — и строка читалась заголовком раздела, а не тем, чем можно сходить. Строки в одном списке
  * обязаны выглядеть одинаково: разный вид читается как разное правило.
  *
- * Роль приходит готовой парой «тон и слово»: подпись и цвет роли принадлежат её владельцу, а здесь
- * они только расставляются по трём носителям — линейка с краю, знак и слово в углу.
+ * Роль приходит готовой парой «тон и слово»: подпись и цвет роли принадлежат её владельцу. Глазу
+ * роль показывает линейка с краю, читателю вслух — слово: знак и слово в углу отняли бы у имени
+ * место, которое занимают компоненты.
  */
 
 import { RULE_GROUP, RULE_ROLE } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP, SURFACE_PAGE } from "@/ui/shared/ui/surface";
-import { TONE_GLYPH, TONE_TEXT, type Tone } from "@/ui/shared/ui/tone";
+import type { Tone } from "@/ui/shared/ui/tone";
 
 /**
  * Ступень приглушённой строки: она остаётся лежать на странице, пока доступная приподнята.
@@ -37,7 +38,7 @@ export function ActionRow({
   role: { tone: Tone; label: string };
   /** Строка приподнята, пока ею можно сходить: приглушённая объясняет причину словами внутри. */
   dimmed?: boolean;
-  /** Что стоит в углу перед ролью: буквы компонентов у заклинания, ничего — у прочих строк. */
+  /** Что стоит в углу имени: буквы компонентов у заклинания, ничего — у прочих строк. */
   corner?: React.ReactNode;
   /** Кнопка рядом со строкой, а не внутри неё: подготовка в «Книге». */
   aside?: React.ReactNode;
@@ -49,18 +50,19 @@ export function ActionRow({
       <button
         type="button"
         onClick={onOpen}
-        className={`flex flex-1 flex-col items-start gap-1 p-2 text-left ${
+        className={`relative flex flex-1 flex-col items-start gap-1 p-2 text-left ${
           dimmed ? DIMMED_SURFACE : SURFACE_GROUP
         } ${RULE_ROLE[role.tone]}`}
       >
         <span className="flex w-full items-baseline justify-between gap-2">
-          <span className="font-medium leading-tight">{nameRu}</span>
-          <span className="flex shrink-0 items-baseline gap-1.5 text-[0.625rem]">
-            {corner}
-            <span className={TONE_TEXT[role.tone]}>
-              <span aria-hidden="true">{TONE_GLYPH[role.tone]}</span> {role.label}
+          <span className="text-[1.0625rem] font-bold leading-tight">{nameRu}</span>
+          {/* Слово роли читателю вслух. Кнопка позиционирована: иначе скрытое слово стояло бы вне списка. */}
+          <span className="sr-only">{role.label}</span>
+          {corner === null || corner === undefined ? null : (
+            <span className="shrink-0 font-mono text-[0.625rem] tracking-[0.1em] text-ink-quiet">
+              {corner}
             </span>
-          </span>
+          )}
         </span>
         {children}
       </button>

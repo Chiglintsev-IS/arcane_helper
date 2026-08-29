@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { testSpellRow } from "@/ui/app/testing/stores";
+import { testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 
 import {
   castingTimeBadge,
@@ -11,6 +11,10 @@ import {
   durationPhrase,
   ritualOnlyBadge,
   targetingLabel,
+  castingTimeDetail,
+  durationDetail,
+  castCostPhrase,
+  rollPhrase,
 } from "./format";
 
 describe("castingTimeLabel (FR-033)", () => {
@@ -46,6 +50,46 @@ describe("castingTimePhrase (FR-014)", () => {
 
   it("без числа остаётся категория: врать о времени хуже, чем назвать приблизительно", () => {
     expect(castingTimePhrase({ type: "minute" })).toBe("Минуты");
+  });
+});
+
+describe("castingTimeDetail и durationDetail (FR-014)", () => {
+  it("ресурс хода назван вместе с тем, когда его тратят", () => {
+    expect(castingTimeDetail({ type: "action" })).toBe("Действие — в свой ход");
+    expect(castingTimeDetail({ type: "reaction" })).toBe("Реакция — в ответ, вне своего хода");
+  });
+
+  it("минуты переведены в раунды, часы остаются часами", () => {
+    expect(castingTimeDetail({ type: "minute", value: 1 })).toBe("1 минута — 10 раундов");
+    expect(castingTimeDetail({ type: "hour", value: 1 })).toBe("1 час");
+    expect(durationDetail({ type: "minutes", value: 10 })).toBe("10 минут — 100 раундов");
+    expect(durationDetail({ type: "hours", value: 8 })).toBe("8 часов");
+  });
+
+  it("один раунд объяснён ходом, мгновенное — эффектом сразу", () => {
+    expect(durationDetail({ type: "rounds", value: 1 })).toBe("1 раунд — до начала своего следующего хода");
+    expect(durationDetail({ type: "rounds", value: 3 })).toBe("3 раунда");
+    expect(durationDetail({ type: "instant" })).toBe("Мгновенная — эффект сразу");
+  });
+});
+
+describe("castCostPhrase и rollPhrase (FR-010, FR-211)", () => {
+  const snapshot = testSnapshot(createThorne());
+  const rowOf = (id: string) => {
+    const found = snapshot.spells.find((row) => row.id === id);
+    if (found === undefined) throw new Error(`нет строки ${id}`);
+    return found;
+  };
+
+  it("подготовленный ритуал вне боя стоит «ячейка или ритуал»", () => {
+    const prepared = { ...rowOf("alarm"), prepared: true, ritualAvailable: true, slotPrice: 1 };
+    expect(castCostPhrase(prepared)).toBe("ячейка 1 или ◈ ритуал");
+  });
+
+  it("спасбросок без названной характеристики и без бросающего всё же назван", () => {
+    const bare = { ...rowOf("web"), resolution: { type: "saving_throw" } };
+    const { listCard: _dropped, ...withoutCard } = bare;
+    expect(rollPhrase(withoutCard, snapshot.casting)).toBe("Цель бросает спасбросок против КС 16");
   });
 });
 

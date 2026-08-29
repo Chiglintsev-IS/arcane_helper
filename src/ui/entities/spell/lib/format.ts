@@ -6,8 +6,12 @@
  * выбирает слово и падеж. Аббревиатуры русские — «КС», «КД», а не DC и AC.
  */
 
-import type { SpellCardView, SpellRowView } from "@/contract/views";
+import type { CastingView, SpellCardView, SpellRowView } from "@/contract/views";
 import {
+  CHECK_DIE_RU,
+  CURRENCY_ABBREVIATIONS,
+  ROUNDS_PER_MINUTE,
+  SAVING_THROW_SHORT,
   longCastingTimeRu,
   plural,
   timeSpanAccusativeRu,
@@ -15,6 +19,7 @@ import {
   type TimeUnit,
 } from "@/shared/language";
 import { TONE_GLYPH, type Tone } from "@/ui/shared/ui/tone";
+import { signed } from "@/shared/language";
 
 /** Заговор ячейки не стоит. Число — цена строки, а не вид заклинания. */
 const CANTRIP_LEVEL = 0;
@@ -102,6 +107,55 @@ export function castingTimePhrase(castingTime: SpellRowView["castingTime"]): str
     return castingTimeLabel(castingTime);
   }
   return `Накладывать ${timeSpanAccusativeRu(unit, castingTime.value)}`;
+}
+
+/** Слова компонентов — одни на строку списка и подробную карточку. */
+export const COMPONENT_WORDS = { verbal: "голос", somatic: "жест", material: "материал" } as const;
+
+/** Ресурс хода в развёрнутом виде: чем платят и когда. */
+const TURN_COST_DETAIL: Readonly<Record<string, string>> = {
+  action: "Действие — в свой ход",
+  bonus_action: "Бонусное действие — в свой ход",
+  reaction: "Реакция — в ответ, вне своего хода",
+};
+
+/** Минуты — в раундах: за столом их считают ходами, а не часами на стене. */
+function minutesInRounds(minutes: number): string {
+  const rounds = minutes * ROUNDS_PER_MINUTE;
+  return `${rounds} ${plural(rounds, ["раунд", "раунда", "раундов"])}`;
+}
+
+/**
+ * Время накладывания для подробной карточки: единица названа так, чтобы читалась без словаря.
+ *
+ * Действие, бонусное действие и реакция — не отрезок времени, а ресурс хода, и подпись говорит,
+ * когда его тратят. Минуты переведены в раунды: в бою счёт идёт ходами.
+ */
+export function castingTimeDetail(castingTime: SpellRowView["castingTime"]): string {
+  const turnCost = TURN_COST_DETAIL[castingTime.type];
+  if (turnCost !== undefined) return turnCost;
+  const label = castingTimeLabel(castingTime);
+  if (castingTime.type === "minute" && castingTime.value !== undefined) {
+    return `${label} — ${minutesInRounds(castingTime.value)}`;
+  }
+  return label;
+}
+
+/**
+ * Длительность для подробной карточки: раунд и минуты объяснены ходами.
+ *
+ * Один раунд — «до начала своего следующего хода»: так его и отсчитывают за столом.
+ */
+export function durationDetail(duration: SpellRowView["duration"]): string {
+  const label = durationLabel(duration);
+  if (duration.type === "instant") return "Мгновенная — эффект сразу";
+  if (duration.type === "rounds" && duration.value === 1) {
+    return `${label} — до начала своего следующего хода`;
+  }
+  if (duration.type === "minutes" && duration.value !== undefined) {
+    return `${label} — ${minutesInRounds(duration.value)}`;
+  }
+  return label;
 }
 
 export function levelLabel(level: number): string {
@@ -195,12 +249,6 @@ export function durationPhrase(duration: SpellRowView["duration"]): string {
   return `Держится ${timeSpanAccusativeRu(unit, duration.value)}`;
 }
 
-/** Урон словами: формула с учётом уровня и род урона. Считает их проекция. */
-export function damageLabel(damage: SpellRowView["damage"]): string | null {
-  if (damage === undefined) return null;
-  return `${damage.formula} (${damage.type})`;
-}
-
 /**
  * Значок «Ритуал» — или `null`, когда добавлять нечего.
  *
@@ -215,4 +263,86 @@ export function ritualOnlyBadge(
     return { label: "Ритуал", icon: TONE_GLYPH.ritual, tone: "ritual" };
   }
   return null;
+}
+
+/** Слова правил приезжают строками, поэтому сокращение ищется, а не берётся ключом. */
+const SAVING_THROWS_SHORT: Readonly<Record<string, string>> = SAVING_THROW_SHORT;
+
+/**
+ * Компоненты буквами в углу строки: только то, что от игрока требуется, через точку. Материал,
+ * закрытый надетой фокусировкой, буквы не получает: иметь ничего не нужно, и буква отвечала бы на
+ * вопрос, которого за столом не задают. Слово к букве — в подробной карточке.
+ */
+export const COMPONENT_LETTERS = { verbal: "Г", somatic: "Ж", material: "М" } as const;
+
+export function componentLetters(spell: SpellRowView): string {
+  const { verbal, somatic, material } = spell.card.components;
+  const letters = [
+    ...(verbal ? [COMPONENT_LETTERS.verbal] : []),
+    ...(somatic ? [COMPONENT_LETTERS.somatic] : []),
+    ...(material === undefined || spell.materialCoveredByFocus ? [] : [COMPONENT_LETTERS.material]),
+  ];
+  return letters.join("·");
+}
+
+/**
+ * Чем тратится ход — подпись строки списка. Бонусное действие названо целиком: одно слово
+ * «Бонусное» на строке ничем не заканчивается, а долгий каст назван своим временем.
+ */
+export function castTypePhrase(castingTime: SpellRowView["castingTime"]): string {
+  if (castingTime.type === "bonus_action") return "Бонусное действие";
+  return castingTimeLabel(castingTime);
+}
+
+/**
+ * Цена одной фразой после типа каста: «бесплатно», «ячейка 2», «ячейка от 3 ↑», «ячейка 1 или
+ * ◈ ритуал», «ячейка 2 + пыль 25 зм». Уровень заклинания отдельно не называется — цена и есть уровень.
+ */
+export function castCostPhrase(spell: SpellRowView): string {
+  const material = spell.card.components.material;
+  const extra =
+    spell.listCard?.costMaterialRu !== undefined && material?.costGp !== undefined
+      ? ` + ${spell.listCard.costMaterialRu} ${material.costGp} ${CURRENCY_ABBREVIATIONS.gold}`
+      : "";
+  const ritual = `${TONE_GLYPH.ritual} ритуал`;
+  if (spell.ritual && !spell.prepared) return ritual;
+  if (spell.cantrip || spell.slotPrice === 0) return spell.ritualAvailable ? ritual : "бесплатно";
+  const slot = spell.benefitsFromHigherSlot
+    ? `ячейка от ${spell.slotPrice} ↑`
+    : `ячейка ${spell.slotPrice}`;
+  if (spell.ritualAvailable) return `${slot} или ${ritual}`;
+  return `${slot}${extra}`;
+}
+
+/**
+ * Сколько держится — правый край строки каста. Мгновенное молчит: «—» на месте длительности
+ * читалось бы как пропуск в данных. Концентрация стоит знаком внутри срока, а не своим чипом.
+ */
+export function holdsPhrase(spell: SpellRowView): { text: string; tone: Tone | null } | null {
+  const { duration, concentration } = spell;
+  if (duration.type === "instant") return null;
+  const text = duration.type === "special" ? "пока не рассеют" : durationLabel(duration);
+  return concentration
+    ? { text: `${TONE_GLYPH.concentration} ${text}`, tone: "concentration" }
+    : { text, tone: null };
+}
+
+/**
+ * Бросок с названным бросающим: «Атака d20+8 по КД цели», «Каждый в конусе бросает спас ЛОВ против
+ * КС 16». Без броска — ничего: строка «без броска» отвечала бы на вопрос, которого не задавали.
+ */
+export function rollPhrase(spell: SpellRowView, casting: CastingView): string | null {
+  const { resolution } = spell;
+  switch (resolution.type) {
+    case "spell_attack":
+      return `Атака ${CHECK_DIE_RU}${signed(casting.spellAttackModifier)} по КД цели`;
+    case "saving_throw": {
+      const subject = spell.listCard?.rollSubjectRu ?? "Цель";
+      const short = resolution.savingThrow === undefined ? undefined : SAVING_THROWS_SHORT[resolution.savingThrow];
+      const named = short === undefined ? "спасбросок" : `спас ${short}`;
+      return `${subject} бросает ${named} против КС ${casting.spellSaveDc}`;
+    }
+    default:
+      return null;
+  }
 }

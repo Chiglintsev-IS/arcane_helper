@@ -18,6 +18,7 @@ export type Tone =
   | "ritual"
   | "offense"
   | "defense"
+  | "roll"
   | "muted";
 
 /**
@@ -28,12 +29,13 @@ export type Tone =
  */
 export const TONE_GLYPH: Record<Tone, string> = {
   action: "●",
-  bonus: "◐",
-  reaction: "⟳",
-  concentration: "◌",
-  ritual: "✦",
+  bonus: "◆",
+  reaction: "↺",
+  concentration: "◉",
+  ritual: "◈",
   offense: "✚",
   defense: "◇",
+  roll: "⚄",
   muted: "✗",
 };
 
@@ -52,5 +54,6 @@ export const TONE_TEXT: Record<Tone, string> = {
   ritual: "text-ritual",
   offense: "text-offense",
   defense: "text-defense",
+  roll: "text-roll",
   muted: "text-off",
 };

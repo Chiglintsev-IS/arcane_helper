@@ -137,6 +137,7 @@ export function GameScreen() {
       />
     ));
   }
+
   const listLabel = spellListLabel(hintShown || sigilShown);
 
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {

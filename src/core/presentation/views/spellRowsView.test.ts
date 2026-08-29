@@ -245,6 +245,18 @@ describe("карточка", () => {
   });
 });
 
+describe("строка списка (FR-336)", () => {
+  it("урон в исходах подставлен числом уровня персонажа", () => {
+    expect(row("ray-of-frost").listCard?.hitLinesRu?.[0]).toBe("2d8 холодом");
+    expect(row("lightning-bolt").listCard?.failLinesRu?.[0]).toBe("8d6 электричеством");
+  });
+
+  it("карточка без строки списка едет без неё, а не с пустой", () => {
+    const bare = loadThorneSpells().map(({ listCard: _dropped, ...rest }) => rest);
+    expect(row("ray-of-frost", createThorne(), [], bare).listCard).toBeUndefined();
+  });
+});
+
 describe("способы сотворения", () => {
   it("у заговора способ один и без оплаты, и сам он назван заговором", () => {
     const shown = row("ray-of-frost");

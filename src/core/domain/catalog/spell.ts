@@ -282,6 +282,34 @@ function ritualDiagramIssues(diagram: RitualDiagram): DiagramIssue[] {
   return issues;
 }
 
+/** Подстановка урона в строке списка: число считает проекция по уровню персонажа и ячейки. */
+export const DAMAGE_PLACEHOLDER = "{damage}";
+
+const lines = z.array(nonEmpty).min(1);
+
+/**
+ * Строка списка: чем заклинание отвечает игроку до открытия карточки, готовыми фразами.
+ *
+ * Куда целить, что случится и что бросить — словами стола, а не полями схемы: «конус 30 футов от
+ * себя — задевает и своих» из полей не собрать. Числа урона в этих фразах не пишутся — на их месте
+ * стоит подстановка, которую заполняет проекция.
+ */
+const listCardSchema = z.object({
+  whereRu: nonEmpty,
+  /** Чем ещё платят сверх ячейки, одним словом: «пыль». Цену называет компонент. */
+  costMaterialRu: nonEmpty.optional(),
+  effectLinesRu: lines.optional(),
+  /** Кто бросает спасбросок: «Каждый в конусе», «Несогласная цель». */
+  rollSubjectRu: nonEmpty.optional(),
+  rollNoteRu: nonEmpty.optional(),
+  hitLinesRu: lines.optional(),
+  failLinesRu: lines.optional(),
+  successLinesRu: lines.optional(),
+  noteRu: nonEmpty.optional(),
+});
+
+export type ListCard = DeepReadonly<z.infer<typeof listCardSchema>>;
+
 const spellShape = z.object({
   id: nonEmpty,
 
@@ -332,10 +360,52 @@ const spellShape = z.object({
   higherLevelsRu: nonEmpty.optional(),
   tacticalAdviceRu: nonEmpty.optional(),
 
+  listCard: listCardSchema.optional(),
   ritualDiagram: ritualDiagramSchema.optional(),
 });
 
+type ListCardIssue = { path: string[]; message: string };
+
+/**
+ * Строка списка согласована с механикой: исходы называются у того броска, который есть, бросающий
+ * — только у спасброска, а урон приходит подстановкой, если карточка его вообще несёт.
+ */
+function listCardIssues(spell: z.infer<typeof spellShape>): ListCardIssue[] {
+  const card = spell.listCard;
+  if (card === undefined) return [];
+  const issues: ListCardIssue[] = [];
+  const kind = spell.resolution.type;
+
+  if (kind !== "saving_throw" && (card.rollSubjectRu !== undefined || card.failLinesRu !== undefined || card.successLinesRu !== undefined)) {
+    issues.push({ path: ["rollSubjectRu"], message: "Бросающий и исходы спасброска есть только у заклинания со спасброском" });
+  }
+  if (kind === "saving_throw" && card.rollSubjectRu === undefined) {
+    issues.push({ path: ["rollSubjectRu"], message: "Заклинание со спасброском называет, кто его бросает" });
+  }
+  if (kind !== "spell_attack" && card.hitLinesRu !== undefined) {
+    issues.push({ path: ["hitLinesRu"], message: "Исход попадания есть только у атаки заклинанием" });
+  }
+  if (card.costMaterialRu !== undefined && spell.components.costGp === undefined) {
+    issues.push({ path: ["costMaterialRu"], message: "Материал в цене называется только у компонента со стоимостью" });
+  }
+
+  const texts = [card.whereRu, card.noteRu ?? "", card.rollNoteRu ?? "", ...(card.effectLinesRu ?? []), ...(card.hitLinesRu ?? []), ...(card.failLinesRu ?? []), ...(card.successLinesRu ?? [])];
+  const usesPlaceholder = texts.some((text) => text.includes(DAMAGE_PLACEHOLDER));
+  if (usesPlaceholder && spell.damage === undefined) {
+    issues.push({ path: [], message: "Подстановка урона стоит в строке заклинания, которое урона не несёт" });
+  }
+  const damageOutcome = kind === "spell_attack" ? card.hitLinesRu : kind === "saving_throw" ? card.failLinesRu : undefined;
+  if (spell.damage !== undefined && damageOutcome !== undefined && !damageOutcome.some((line) => line.includes(DAMAGE_PLACEHOLDER))) {
+    issues.push({ path: [kind === "spell_attack" ? "hitLinesRu" : "failLinesRu"], message: "Урон в исходе пишется подстановкой, а не числом" });
+  }
+  return issues;
+}
+
 export const spellSchema = spellShape.superRefine((spell, context) => {
+  for (const issue of listCardIssues(spell)) {
+    context.addIssue({ code: "custom", path: ["listCard", ...issue.path], message: issue.message });
+  }
+
   // Карточка несёт только положительный вклад: отрицательный — это поправка мастера, и она
   // заводится вручную, а не приходит контентом.
   for (const [index, contribution] of spell.contributions.entries()) {
