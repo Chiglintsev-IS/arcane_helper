@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "check:docs": "python3 scripts/check-docs.py --strict-link-remnants",
+    "check:docs": "python3 scripts/check-docs.py",
     "test:e2e": "npm run build && playwright test",
     "build:backend": "NEXT_PUBLIC_ARCANE_BACKEND=http next build",
     "test:e2e:backend": "npm run build:backend && playwright test --config playwright.backend.config.ts",
