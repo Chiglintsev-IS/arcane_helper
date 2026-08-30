@@ -9,14 +9,10 @@ import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { SpellCardCompact } from "./SpellCardCompact";
 
-// Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
 
-// «Волшебный замок» отложен столом, а нужен здесь как единственный оплачиваемый компонент:
-// снимок берётся у персонажа, который его знает.
 const SNAPSHOT = testSnapshot(knowing(createThorne(), "arcane-lock"));
 
-/** Строка одного заклинания: прогон называет заклинания, а не места в списке. */
 function rowOf(id: string) {
   const found = SNAPSHOT.spells.find((row) => row.id === id);
   if (found === undefined) throw new Error(`нет строки ${id}`);
@@ -48,7 +44,6 @@ describe("строка каста (FR-010)", () => {
     renderRow("lightning-bolt");
     expect(screen.getByText("· ячейка от 3 ↑")).toBeDefined();
 
-    // Неподготовленный ритуал творится только ритуалом — и цена говорит ровно это.
     cleanup();
     renderRow("detect-magic");
     expect(screen.getByText("· ◈ ритуал")).toBeDefined();
@@ -94,12 +89,10 @@ describe("компоненты и роль", () => {
     renderRow("counterspell");
     expect(screen.getByLabelText("Компоненты: Ж")).toBeDefined();
 
-    // Паутинку закрывает надетая фокусировка — иметь ничего не нужно, и буквы «М» нет.
     cleanup();
     renderRow("web");
     expect(screen.getByLabelText("Компоненты: Г·Ж")).toBeDefined();
 
-    // Золотая пыль со стоимостью фокусировкой не заменяется — её надо иметь.
     cleanup();
     renderRow("arcane-lock");
     expect(screen.getByLabelText("Компоненты: Г·Ж·М")).toBeDefined();

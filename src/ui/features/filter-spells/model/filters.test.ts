@@ -1,11 +1,3 @@
-/**
- * Отбор списка: какие категории делят список и что остаётся после переключателей.
- *
- * Проверяется на настоящей книге Торна и на её боевом составе: перечня категорий по режимам больше
- * нет, и единственный способ убедиться, что набор верен в обеих ситуациях, — посчитать его от
- * обоих списков.
- */
-
 import { describe, expect, it } from "vitest";
 import { withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
@@ -26,18 +18,12 @@ import { lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { spellsForScreen } from "@/ui/shared/model/spellList";
 import { IN_FIGHT, testSpellRows } from "@/ui/app/testing/stores";
 
-/**
- * Книга Торна строками: обстановка набирается командами, а не словарём признаков — израсходованное
- * действие есть следствие сыгранного, и подделать его подстановкой нельзя.
- */
 function book(
   overrides: { character?: CharacterState; commands?: readonly Command[] } = {},
 ): SpellRowView[] {
-  // Бой уже начат: этот файл проверяет фильтры, а не сам факт начала боя.
   return testSpellRows(overrides.character ?? createThorne(), overrides.commands ?? IN_FIGHT);
 }
 
-/** Бой не начат: только тогда у ритуального заклинания есть ритуальный способ. */
 function outOfFight(character?: CharacterState): SpellRowView[] {
   return testSpellRows(character ?? createThorne(), []);
 }
@@ -55,7 +41,6 @@ function filters(overrides: Partial<SpellFilters> = {}): SpellFilters {
   return { ...NO_FILTERS, ...overrides };
 }
 
-/** Свободных ячеек нет: тратит их правило ресурсов, а не фикстура. */
 function spentThorne(): CharacterState {
   return withoutSlots(createThorne());
 }
@@ -87,13 +72,11 @@ describe("dividingCategories", () => {
   });
 
   it("цена считается тем же ключом, что и порядок: вне боя ритуал стоит ноль", () => {
-    // Заговоры и ритуалы стоят ноль, дальше идут уровни ячейки — те, что в списке есть.
     expect(categoriesOf(false).prices).toEqual([0, 1, 2, 3, 4]);
     expect(categoriesOf(true).prices).toEqual([0, 1, 2, 3, 4]);
   });
 
   it("время накладывания следует составу: долгого в бою нет", () => {
-    // Вне боя «Починка» делит список минутами, «Сигнал тревоги» — тоже минутой; в бою их там нет вовсе.
     expect(categoriesOf(false).castingTimes.has("minute")).toBe(true);
     expect(categoriesOf(true).castingTimes.has("minute")).toBe(false);
   });
@@ -101,13 +84,10 @@ describe("dividingCategories", () => {
 
 describe("filterSpells: список без фильтров", () => {
   it("ничего не скрывает: отбор по ситуации — дело режима, а не фильтров", () => {
-    // Неподготовленные ритуалы раньше пропадали из списка и доставались фильтром «Ритуал». Правило
-    // писалось для боя, где их и так нет, а на привале прятало сам смысл режима.
     expect(ids(filterSpells(book(), NO_FILTERS))).toEqual(ids(book()));
   });
 
   it("показывает ритуалы по фильтру «ритуал»", () => {
-    // «Ритуал» спрашивает про способ: он есть, только пока бой не идёт.
     expect(ids(filterSpells(outOfFight(), filters({ ritual: true })))).toEqual([
       "alarm",
       "detect-magic",
@@ -121,7 +101,6 @@ describe("filterSpells: значения одной категории соед�
 
     expect(shown).toContain("ray-of-frost");
     expect(shown).toContain("mage-armor");
-    // Реакции, бонусные действия и долгое накладывание отсеиваются.
     expect(shown).not.toContain("shield");
     expect(shown).not.toContain("arcane-vigor");
     expect(shown).not.toContain("mending");
@@ -142,7 +121,6 @@ describe("filterSpells: значения одной категории соед�
     const both = ids(filterSpells(book(), filters({ prices: [0, 1] })));
 
     expect(onlyCantrips).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
-    // Четыре заговора и восемь заклинаний первого уровня.
     expect(both).toHaveLength(12);
   });
 });
@@ -186,15 +164,12 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
     const shown = ids(
       filterSpells(book({ character: spentThorne() }), filters({ availableNow: true })),
     );
-    // «Починки» здесь нет, хотя она заговор: минута не укладывается в ход, а режим — «Бой».
-    // Прочее осталось: ячеек нет, но кровь заменяет их в любой момент и хода не занимает.
     expect(shown).toContain("ray-of-frost");
     expect(shown).toContain("lightning-bolt");
     expect(shown).not.toContain("mending");
   });
 
   it("израсходованное действие скрывает заклинания действием, но не реакции", () => {
-    // Действие тратится сотворением, а не подстановкой признака: «Луч холода» — заговор действием.
     const spent = book({
       commands: [...IN_FIGHT, { kind: "cast_spell", spellId: "ray-of-frost", mode: "cantrip", payment: { kind: "none" } }],
     });
@@ -206,7 +181,6 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
   });
 
   it("оплата кровью делает заклинание доступным без ячеек", () => {
-    // Запаса не требуется вовсе: кровь создаёт ячейку в момент сотворения.
     const character = spentThorne();
 
     expect(ids(filterSpells(book({ character }), filters({ availableNow: true })))).toContain(
@@ -238,8 +212,6 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
   it("«Защита» оставляет защитные, включая несущее урон «Поглощение стихий»", () => {
     const shown = ids(filterSpells(book(), filters({ roles: ["defense"] })));
 
-    // «Поглощение стихий» несёт урон в данных и всё же защитное — ровно тот случай, ради которого
-    // роль хранится, а не выводится.
     expect(shown).toContain("absorb-elements");
     expect(shown).toContain("shield");
     expect(shown).toContain("counterspell");
@@ -249,7 +221,6 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
   it("«Боевое» оставляет боевые", () => {
     const shown = ids(filterSpells(book(), filters({ roles: ["offense"] })));
 
-    // «Паутина» урона не наносит и всё же боевая: она выключает противника.
     expect(shown).toContain("ray-of-frost");
     expect(shown).toContain("web");
     expect(shown).toContain("polymorph");
@@ -265,7 +236,6 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
 
   it("роль соединяется с временем накладывания через «и»", () => {
     const both = filters({ roles: ["defense"], castingTimes: ["reaction"] });
-    // Все четыре реакции книги защитные, кроме «Падения пёрышком» — оно тоже защитное.
     expect(ids(filterSpells(book(), both))).toEqual([
       "shield",
       "absorb-elements",

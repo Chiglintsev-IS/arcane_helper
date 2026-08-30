@@ -1,10 +1,3 @@
-/**
- * Ведущий адаптер: разбор сообщения и разница между отказом и дефектом.
- *
- * Отказ по правилам — обычный ответ, по нему игроку есть что делать. Дефект — не ответ вовсе: он
- * летит наверх, потому что выдать его за причину отказа значит соврать игроку словами правил.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -24,10 +17,8 @@ function live(): LiveSession {
 
 const OPENED = { live: live(), version: 0 };
 
-/** Часы двери: снимку они не нужны, а выгрузке — да. */
 const NOW = "2026-07-31T18:00:00.000Z";
 
-/** Что лежит в хранилище: дверь отдаёт это копией, ни во что не разбирая. */
 const STORED = { schemaVersion: 1, savedAt: "", character: {} };
 
 function handlerThat(
@@ -44,7 +35,6 @@ describe("чтение", () => {
     const snapshot = await handler.read();
 
     expect(snapshot).toMatchObject({ version: 0, log: [] });
-    // Состав проекции проверяет её собственный прогон; здесь важно, что она доехала.
     expect(snapshot).toHaveProperty("sheet.name", "Торн");
   });
 

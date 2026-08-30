@@ -1,29 +1,13 @@
-/**
- * Что действует прямо сейчас — одной строкой.
- *
- * Строка стоит во всех режимах, где идёт игра, в отличие от шапки ресурсов: концентрация не может
- * уйти с экрана незаметно, а эффект со сроком в раундах истекает сам.
- *
- * Названо на строке то, чего нет больше нигде: имя того, что держится, и ежеходная работа, о
- * которой иначе забудут на втором раунде. Всё остальное — уровень ячейки, начало, механика и способы
- * прерывания — стоит за раскрытием: способ прерывания один и тот же у любой концентрации, и
- * приложение само называет его числом в тот момент, когда по персонажу попали.
- *
- * Компонент презентационный: состояние приходит параметрами, действия — из экрана.
- */
-
 import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 import { ACTIVE_SHEET_LABEL, armorClassNote } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
-/** Ежеходная работа эффекта: без неё строка о ней молчит, а не показывает пустое место. */
 function repeatableNote(effect: ActiveEffectView | undefined): string {
   return effect?.repeatableAction === undefined ? "" : ` ↻ ${effect.repeatableAction.label}`;
 }
 
-/** Что держится: имя, вклад в защиту и ежеходная работа, если она есть. */
 function heldNames(
   effects: readonly ActiveEffectView[],
   armorClass: number,
@@ -38,8 +22,6 @@ function heldNames(
       concentrating: false,
     }));
   if (concentration === null) return held;
-  // Удерживаемое напоминает о ежеходной работе так же, как всё прочее: разряд «Сферы бури» стоит
-  // бонусного действия каждый ход, и забыть о нём на втором раунде проще всего.
   const heldByConcentration = effects.find((effect) => effect.isConcentration);
   return [
     {
@@ -58,12 +40,9 @@ export function ActiveEffects({
   concentration,
   onOpen,
 }: {
-  /** Что висит на персонаже: посчитано ядром. */
   effects: readonly ActiveEffectView[];
-  /** Действующая защита: то же число, что в шапке и на «Листе», — его считает лист. */
   armorClass: number;
   concentration: ConcentrationSummary | null;
-  /** Раскрытие: подробности, снятие и новый статус живут в шторке. */
   onOpen: () => void;
 }) {
   const held = heldNames(effects, armorClass, concentration);

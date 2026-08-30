@@ -44,7 +44,6 @@ describe("шторка вещи", () => {
       kind: "consumable",
       price: { amount: 150, currency: "gold" },
       note: "3 уровень, КС 15",
-      // Набранное уходит как есть, включая нули: что из этого хранить, решает владелец.
       bonuses: {},
     });
   });
@@ -83,16 +82,13 @@ describe("шторка вещи", () => {
       />,
     );
 
-    // Прибавки набраны по одной на величину, и каждая названа своим словом.
     expect(screen.getByLabelText("Класс Доспеха")).toBeDefined();
     expect(screen.getByLabelText("Спасбросок: Телосложение")).toBeDefined();
 
     await userEvent.click(screen.getByRole("radio", { name: "Другое" }));
-    // Поля прибавок ушли вместе с категорией: зелье действует, когда его пьют, а не когда несут.
     expect(screen.queryByLabelText("Класс Доспеха")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-    // Прибавки уходят набранными: снимает их владелец, а не шторка.
     expect(onSave).toHaveBeenCalledWith({
       id: "кольцо",
       nameRu: "Кольцо защиты",
@@ -123,9 +119,7 @@ describe("шторка вещи", () => {
       />,
     );
 
-    // Поля нет вовсе: набранное до расхода число вернуло бы потраченный экземпляр обратно.
     expect(screen.queryByLabelText("Количество")).toBeNull();
-    // Заголовок шторки числа не называет: запас виден строкой «В сумке» рядом со счётчиком.
     expect(screen.getByRole("dialog", { name: "Правка: Зелье лечения" })).toBeDefined();
   });
 
@@ -190,7 +184,6 @@ describe("шторка вещи", () => {
     await userEvent.type(screen.getByLabelText("Цена"), "1.5");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Дробную цену отвергает снаряжение: шторка передаёт набранное как есть.
     expect(onSave.mock.calls[0]?.[0].price).toEqual({ amount: 1.5, currency: "gold" });
   });
 
@@ -223,7 +216,6 @@ describe("шторка вещи", () => {
     await userEvent.clear(bonus);
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Прибавка без числа — несобранная просьба: пустая цена рядом при этом законна и молчит.
     expect(onSave).not.toHaveBeenCalled();
     const reason = screen.getByRole("alert");
     expect(reason.textContent).toBe("Наберите число");
@@ -259,12 +251,10 @@ describe("шторка вещи", () => {
 
     await userEvent.clear(screen.getByLabelText("Класс Доспеха"));
     await userEvent.click(screen.getByRole("radio", { name: "Расходник" }));
-    // Поле ушло вместе с прибавками: причине негде было бы встать, и просить о ней не о чем.
     expect(screen.queryByLabelText("Класс Доспеха")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Нажатие не молчит: просьба собралась без ушедшего поля и ушла владельцу.
     expect(onSave).toHaveBeenCalledWith({
       id: "шлем",
       nameRu: "Шлем",
@@ -475,7 +465,6 @@ describe("шторка вещи", () => {
       spellcastingFocus: true,
     });
 
-    // Отметка — свойство экипировки: у расходника её не спрашивают вовсе.
     await userEvent.click(screen.getByRole("radio", { name: "Расходник" }));
     expect(screen.queryByRole("button", { name: "Магическая фокусировка" })).toBeNull();
   });

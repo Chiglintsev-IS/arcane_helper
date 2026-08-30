@@ -57,17 +57,11 @@ export function GameScreen() {
   const execute = sessionStore.getState().execute;
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
   const saveEdit = async (command: Command, close: () => void): Promise<void> => {
     const reason = await applyEdit(sessionStore, command);
     setRefusal(reason);
     if (reason === null) close();
   };
-  /**
-   * Поиск — способ дойти до строки, а не отбор: закрываясь, он отпускает список целиком. Иначе
-   * набранное слово продолжало бы прятать четырнадцать строк из пятнадцати, а поля, которое это
-   * объясняет, на экране уже нет.
-   */
   const closeSearch = (): void => {
     setSearchOpen(false);
     setFilters((current) => ({ ...current, query: "" }));
@@ -80,7 +74,6 @@ export function GameScreen() {
 
   const turn = snapshot.turn;
   const { inFight } = turn;
-  // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
   const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spellId) ?? null;
 
   const { concentration } = snapshot;
@@ -172,17 +165,7 @@ export function GameScreen() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/*
-       * Одна область прокрутки на весь экран: закреплена одна шапка ресурсов — её числа уезжать не
-       * вправе. Всё остальное едет вместе со списком, иначе первая карточка не влезает целиком.
-       * Край закреплённого идёт во всю ширину, до самого края экрана: линия отмечает, что
-       * содержимое уходит под шапку, а обрезанная полями она читалась бы как край самой шапки.
-       */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3">
-        {/*
-         * Фон у закреплённой полосы обязателен: без него уезжающие значки просвечивают сквозь неё.
-         * `Canvas` — системный цвет страницы, один и тот же в светлой и в тёмной теме.
-         */}
         <div className={`sticky top-0 z-10 -mx-3 bg-[Canvas] px-3 pb-1 pt-2 ${RULE_EDGE_BOTTOM}`}>
           <ResourceHeader
             sheet={snapshot.sheet}
@@ -193,11 +176,6 @@ export function GameScreen() {
           />
         </div>
 
-        {/*
-         * Что сейчас верно — одной строкой: что держится и что уже потрачено в этом ходу. Оба
-         * ответа об одном мгновении, и разведённые по двум строкам они стоили бы той строки
-         * списка, ради которой экран и разгружают.
-         */}
         <div className="flex flex-wrap items-center gap-2">
           <ActiveEffects
             effects={snapshot.effects}
@@ -214,11 +192,6 @@ export function GameScreen() {
           />
         </div>
 
-        {/*
-         * Число, которое произносят, стоит на кнопке, которой в этот миг и пользуются: инициативу
-         * называют, начиная бой, номер раунда — ведя ход. Отдельными значками они стояли бы целой
-         * строкой ради того, что и так под пальцем.
-         */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -263,10 +236,6 @@ export function GameScreen() {
           onSearchToggle={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
         />
 
-        {/*
-         Общая причина названа один раз и над списком: под каждой строкой она стояла одной и той же
-         фразой у двенадцати строк из пятнадцати и вытесняла ту причину, которая у строки своя.
-         */}
         {snapshot.spellsRefusalRu === undefined ? null : (
           <p className={`px-2 py-1 text-xs font-medium ${RULE_MARK.reaction}`}>
             Недоступно: {snapshot.spellsRefusalRu}
@@ -303,7 +272,6 @@ export function GameScreen() {
           onClose={() => setHintOpen(false)}
         />
       )}
-
 
       {activeOpen ? (
         <ActiveEffectsSheet
@@ -426,11 +394,6 @@ export function GameScreen() {
         />
       ) : null}
 
-      {/*
-       * Проверка приходит снимком: какого броска требует последний урон, знают правила, а экран
-       * решает лишь, открыта ли карточка. Ответом на неё служит следующая команда — потраченная
-       * руна или снятая концентрация, — и проверка уходит из снимка сама.
-       */}
       {!checkOpen || concentration?.checkAfterDamage === undefined ? null : (
         <ConcentrationCheckCard
           check={concentration.checkAfterDamage}

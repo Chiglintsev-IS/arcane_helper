@@ -48,7 +48,6 @@ describe("шторка денег", () => {
     await userEvent.clear(silver);
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Причину называет та монета, которой не набрали: соседние поля молчат.
     expect(onSave).not.toHaveBeenCalled();
     const reason = screen.getByRole("alert");
     expect(reason.textContent).toBe("Наберите число");
@@ -78,7 +77,6 @@ describe("шторка денег", () => {
     await userEvent.type(gold, "-5");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Набранное уходит кошельку как есть: дробное и отрицательное отвергает он, а не шторка.
     expect(onSave.mock.calls[0]?.[0]).toEqual({ gold: -5, silver: 0, copper: 0 });
   });
 });

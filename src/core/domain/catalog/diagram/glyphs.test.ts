@@ -4,7 +4,6 @@ import { GLYPHS, GLYPH_IDS, SEALS, SEAL_KINDS } from "@/core/domain/catalog/diag
 import { BOX, type Stroke } from "@/core/domain/catalog/diagram/strokes";
 import { RUNES, RUNE_BY_CHAR, RUNE_IDS, isRune } from "@/core/domain/catalog/diagram/futhark";
 
-/** Все координаты штриха: любой знак обязан жить в своём боксе. */
 function coordinates(stroke: Stroke): number[] {
   if (stroke.kind === "circle") return [stroke.cx, stroke.cy, stroke.cx + stroke.r, stroke.cy + stroke.r];
   if (stroke.kind === "line") return [stroke.x1, stroke.y1, stroke.x2, stroke.y2];

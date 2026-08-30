@@ -1,10 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Шторка «Действует» проверяется отдельно от экрана: компонент презентационный, строки подаются
- * параметром, и строка со своим числом видна рядом со строкой без него.
- */
-
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 

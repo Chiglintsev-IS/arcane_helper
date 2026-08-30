@@ -13,15 +13,10 @@ import {
 
 const allSpells = loadThorneSpells();
 
-/**
- * Торн вне боя. Ритуальный способ существует только здесь: в бою он убран, потому что занимает на
- * 10 минут больше обычного, а начальный режим персонажа — «Бой».
- */
 function outsideCombat(): CharacterState {
   return createThorne();
 }
 
-/** Идёт бой: счёт ходов ведётся. Раньше это следовало из режима экрана, теперь — из хода. */
 const IN_COMBAT_TURN = { ...ALL_TURN_RESOURCES, inFight: true };
 
 function plansOf(...args: Parameters<typeof castPlans>) {
@@ -49,12 +44,10 @@ describe("castPlans: какие способы вообще есть", () => {
       { mode: "normal", payment: { kind: "slot", slotLevel: 2 } },
       { mode: "normal", payment: { kind: "slot", slotLevel: 3 } },
       { mode: "normal", payment: { kind: "slot", slotLevel: 4 } },
-      // Кровью — только первый: «Доспехи мага» от старшей ячейки ничего не получают.
       { mode: "normal", payment: { kind: "blood", castLevel: 1 } },
     ]);
   });
 
-  /** Уровни, которыми кровь платит за это заклинание. */
   function bloodLevelsOf(id: string): number[] {
     const spell = allSpells.find((candidate) => candidate.id === id)!;
     return optionsOf(spell, createThorne(), IN_COMBAT_TURN)
@@ -63,19 +56,16 @@ describe("castPlans: какие способы вообще есть", () => {
   }
 
   it("оплата кровью повышает уровень сотворения", () => {
-    // «Молния» растёт с уровнем, и кровь предлагает все уровни пула от собственного и выше.
     expect(bloodLevelsOf("lightning-bolt")).toEqual([3, 4]);
   });
 
   it("дороже кровью платят только там, где повышение что-то даёт", () => {
-    // «Доспехам мага» старшая ячейка не даёт ничего, и предлагать за неё лишние хиты незачем.
     expect(bloodLevelsOf("mage-armor")).toEqual([1]);
   });
 
   it("не предлагает оплату кровью там, где её цена неизвестна", () => {
     const mageArmor = allSpells.find((spell) => spell.id === "mage-armor")!;
     const sixthLevel = { ...mageArmor, level: 6 };
-    // Ячейка шестого уровня Торну недоступна: состояние пришло чужой выгрузкой.
     const character = withForeignSlots(createThorne(), {
       ...createThorne().spellSlots,
       6: { maximum: 1, remaining: 1 },
@@ -99,13 +89,11 @@ describe("castPlans: какие способы вообще есть", () => {
     const inCombat = optionsOf(detectMagic, createThorne(), IN_COMBAT_TURN);
 
     expect(inCombat).not.toContainEqual({ mode: "ritual", payment: { kind: "none" } });
-    // Ячейкой заклинание при этом остаётся доступно: убран способ, а не заклинание.
     expect(inCombat).toContainEqual({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
   });
 
   it("проверяет каждый способ, а не только предложенный", () => {
     const mageArmor = allSpells.find((spell) => spell.id === "mage-armor")!;
-    // Ячейки первого уровня истрачены: способ остаётся в списке, но со своей причиной отказа.
     const spent = withSpentSlots(createThorne(), 1, 4);
 
     const plans = plansOf(mageArmor, spent, IN_COMBAT_TURN).all;
@@ -133,16 +121,12 @@ describe("castPlans: какой способ предложен", () => {
   });
 
   it("в бою тот же ритуал разрешается ячейкой (FR-208)", () => {
-    // Способ, которого нет, не может оказаться лучшим: в бою остаётся оплата ячейкой, и она же
-    // объясняет доступность.
     const plan = plansOf(detectMagic, createThorne(), IN_COMBAT_TURN).suggested;
 
     expect(plan.option).toEqual({ mode: "normal", payment: { kind: "slot", slotLevel: 1 } });
   });
 
   it("объясняет недоступность причиной лучшего способа, а не первого попавшегося", () => {
-    // Ритуалу подготовка не нужна, поэтому мешает ему только занятая концентрация. Причина
-    // «не подготовлено» пришла бы от ячейки — способа, которым это заклинание и не творят.
     const character = {
       ...outsideCombat(),
       concentration: { spellId: "web", startedAt: "2026-07-31T18:00:00.000Z" },
@@ -165,10 +149,10 @@ describe("castPlans: какой способ предложен", () => {
 
 describe("в бою творится только то, что укладывается в ход", () => {
   it.each([
-    ["shocking-grasp", true], // действие
-    ["shield", true], // реакция
-    ["mending", false], // 1 минута
-    ["alarm", false], // 1 минута
+    ["shocking-grasp", true],
+    ["shield", true],
+    ["mending", false],
+    ["alarm", false],
   ])("«%s» — %s", (id, expected) => {
     const spell = allSpells.find((candidate) => candidate.id === id);
     expect(spell, id).toBeDefined();
@@ -183,7 +167,6 @@ describe("slotPriceOf: цена сотворения прямо сейчас", (
 
     expect(slotPriceOf(detectMagic, false)).toBe(0);
     expect(slotPriceOf(detectMagic, true)).toBe(detectMagic.level);
-    // Повышаемое стоит наименьший уровень: платить больше — выбор игрока, а не цена.
     expect(slotPriceOf(shield, true)).toBe(1);
   });
 });

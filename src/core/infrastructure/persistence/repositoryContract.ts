@@ -1,10 +1,3 @@
-/**
- * Общий набор тестов для любой реализации порта хранилища.
- *
- * Взаимозаменяемость реализаций проверяется одинаковыми тестами, а не обещанием в комментарии:
- * если браузерная и оперативная версии разойдутся в поведении, упадёт одна и та же проверка.
- */
-
 import { expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
@@ -22,15 +15,10 @@ import { createSession } from "@/core/application/session";
 
 const SAVED_AT = "2026-07-31T18:00:00.000Z";
 
-/** Снимок на встроенном каталоге: карточки в записи не лежат. */
 function snapshot() {
   return toPersisted(createSession(createThorne()), SAVED_AT, null);
 }
 
-/**
- * @param createRepository — фабрика чистого хранилища; каждый тест получает своё, иначе
- * тесты видят данные друг друга и проходят по случайности.
- */
 export function describeRepositoryContract(
   createRepository: () => SessionRepository | Promise<SessionRepository>,
 ): void {
@@ -75,7 +63,6 @@ export function describeRepositoryContract(
 
   it("изменение объекта после записи не меняет сохранённое", async () => {
     const repository = await createRepository();
-    // Свой изменяемый объект: тип состояния править на месте не даёт, а хранилище обязано держаться
     // и против того, кто пришёл из нетипизированного кода — браузерная база сериализует переданное.
     const hitPoints = { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 };
     const base = snapshot();
@@ -123,7 +110,6 @@ export function describeRepositoryContract(
   });
 
   it("запись без каталога читается: играем встроенным (NFR-003)", async () => {
-    // Так выглядит сохранение, сделанное до. Обновление приложения не вправе его потерять.
     const repository = await createRepository();
     await repository.save(snapshot());
     const loaded = await repository.load();
@@ -136,7 +122,6 @@ export function describeRepositoryContract(
     const repository = await createRepository();
     expect(await repository.loadRaw()).toBeNull();
 
-    // Сохранение, которое разбор отвергает: копия для ручной починки на схему не смотрит.
     const withoutShield = loadThorneSpells().filter((spell) => spell.id !== "shield");
     const stored = toPersisted(createSession(createThorne()), SAVED_AT, withoutShield);
     await repository.save(stored);
@@ -146,7 +131,6 @@ export function describeRepositoryContract(
   });
 
   it("сохранённый каталог без нужной карточки не загружается (FR-123)", async () => {
-    // Ссылочная целостность после подмены каталога — инвариант хранилища, а не свойство файла.
     const repository = await createRepository();
     const withoutShield = loadThorneSpells().filter((spell) => spell.id !== "shield");
     await repository.save(toPersisted(createSession(createThorne()), SAVED_AT, withoutShield));
@@ -156,10 +140,8 @@ export function describeRepositoryContract(
   });
 }
 
-/** Проверки самого разбора, не зависящие от реализации. */
 export function describeParsingContract(): void {
   it("порченое состояние отвергает целиком: молча начать с чистого листа — потерять игру", () => {
-    // Так выглядело бы содержимое после неудачной миграции: снимок на месте, состояния в нём нет.
     expect(() => parsePersisted({ ...snapshot(), character: { id: "thorne" } })).toThrow(
       StorageCorruptedError,
     );
@@ -195,9 +177,6 @@ export function describeParsingContract(): void {
     };
 
     const parsed = parsePersisted(stored);
-    // Отмена старой записи обязана возвращать вещь новой формы: род переведён, вещь и запас
-    // разведены по разным местам, счёт обрезан пределом. Расходник надетым не бывает, и его
-    // запас переходит в сумку, а не в надетое, даже если старая запись утверждала обратное.
     expect(parsed.log[0]?.undoPatch?.itemDefinitions?.[0]).toMatchObject({
       kind: "consumable",
     });
@@ -206,8 +185,6 @@ export function describeParsingContract(): void {
       count: 9999,
     });
 
-    // Запись, не являющаяся объектом со снимком, не приводится и не роняет разбор молча:
-    // её отвергнет схема с указанием поля.
     expect(() => parsePersisted({ ...base, log: ["не запись"] })).toThrow(StorageCorruptedError);
   });
 
@@ -232,8 +209,6 @@ export function describeParsingContract(): void {
   });
 
   it("непрочитанное сохранение называет причину по-русски, а не словами библиотеки", () => {
-    // Эту причину игрок читает на экране выхода из непрочитанного сохранения — единственном, что у
-    // него в тот момент есть.
     const broken = { ...snapshot(), character: { id: "thorne" } };
     expect(() => parsePersisted(broken)).toThrow(/ожидалось|обязательн|строка/i);
     expect(() => parsePersisted(broken)).not.toThrow(/Invalid input|expected string|Too small/);
@@ -241,7 +216,6 @@ export function describeParsingContract(): void {
 
   it("версию старее приводит, а не отвергает: сохранение открывается целиком", () => {
     const legacy = snapshot();
-    // Полей нынешней формы у версии 1 не было — из образца они убираются вместе с их владельцами.
     const { abilities, equipment, hitPoints, ...character } = legacy.character;
     const before = parsePersisted({
       ...legacy,
@@ -257,8 +231,6 @@ export function describeParsingContract(): void {
       },
     });
     const totals = Character.of(before.character).sheet;
-    // Числа версии 1 считаются заново: КС — из Интеллекта 18 и уровня 7, защита — 10 + Ловкость 2.
-    // Введённое руками до нынешней формы не доезжает: величину складывают надетое и действующее.
     expect(totals.value("spellSaveDc")).toBe(15);
     expect(totals.value("armorClass")).toBe(12);
   });

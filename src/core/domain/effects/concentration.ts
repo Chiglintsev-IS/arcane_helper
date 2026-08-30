@@ -8,7 +8,6 @@ export const MINIMUM_CONCENTRATION_DC = 10;
 const ROUNDS_PER_MINUTE = 10;
 const ROUNDS_PER_HOUR = 600;
 
-/** Дольше десяти раундов перевод перестаёт помогать: столько длится бой, и эффект доживёт в любом случае. */
 const MAXIMUM_USEFUL_ROUNDS = 10;
 
 const ROUND_FORMS: [string, string, string] = ["раунд", "раунда", "раундов"];
@@ -18,12 +17,10 @@ function roundsHint(rounds: number): string {
   return rounds > MAXIMUM_USEFUL_ROUNDS ? "" : ` (${withPlural(rounds, ROUND_FORMS)})`;
 }
 
-/** Записи лога в том объёме, который нужен для счёта раундов. */
 type TurnMark = { at: string; kind: string };
 
 type StartRound = {
   round: number;
-  /** Начало вытеснено из обрезанного лога: число — нижняя граница, а не точное значение. */
   approximate: boolean;
 };
 
@@ -38,13 +35,6 @@ export function startRound(marks: readonly TurnMark[], startedAt: string): Start
   };
 }
 
-/**
- * Длительность словами: за столом время считают раундами, а карточка заклинания — минутами.
- *
- * Предлог входит в строку, потому что требует родительного падежа: склейка «до » с именительным
- * дала бы «до 3 раунда». Особая длительность предлога не получает — сроку, которого нет, границы
- * не назовёшь.
- */
 export function durationWithRoundsRu(duration: ActiveEffect["duration"]): string {
   const value = duration.value ?? 0;
   switch (duration.type) {
@@ -67,24 +57,15 @@ function concentrationCheckDc(damage: number): number {
 }
 
 type ConcentrationCheck = {
-  /** Спасбросок Телосложения — единственный вид проверки концентрации. */
   ability: "CON";
   dc: number;
   modifier: number;
   hasAdvantage: boolean;
-  /** Наименьший результат d20, который проходит проверку. */
   minimumRoll: number;
 };
 
-/** Грани d20: спасбросок автоматических успехов и провалов по правилам 2014 не знает. */
 const D20_FACES = 20;
 
-/**
- * Каким броском проверка решается: любым, никаким или начиная с определённого.
- *
- * Границы принадлежат правилу, а не подписи: натуральная 20 спасбросок не проходит сама по себе,
- * и «не проходит даже 20» — вывод из этого, а не из вёрстки.
- */
 type CheckOutcome = "any_roll" | "impossible" | "threshold";
 
 export function checkOutcome(check: ConcentrationCheck): CheckOutcome {

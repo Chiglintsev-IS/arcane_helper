@@ -1,13 +1,3 @@
-/**
- * Ответчик: вопрос договора — в предпросмотр.
- *
- * Отличается от контроллера тем, чего не делает: состояния не меняет, лога не пишет, повтора не
- * ищет. Спросить дважды — то же самое, что спросить один раз, и обратимости здесь нечему касаться.
- *
- * Считает не сам: набранное отдаётся владельцу правила, и наружу уходит его ответ. Свой расчёт
- * разошёлся бы с тем, которым команда потом откажет или согласится.
- */
-
 import type { Preview, PreviewOf, Question } from "@/contract/questions";
 
 import { Character } from "@/core/domain/assembly/character";
@@ -42,17 +32,10 @@ import { directionOf, rarityOf, spellOf } from "./words";
 
 type CastQuestion = Extract<Question, { kind: "cast_preview" }>;
 
-/** Уровень сотворения, а без него — собственный уровень заклинания: заговор и ритуал не растут. */
 function castLevel(spell: Spell, payment: PaymentChoice): number {
   return castLevelOf(payment) ?? spell.level;
 }
 
-/**
- * Кости хитов до броска: сколько позволено, что может выпасть и что вернётся.
- *
- * Диапазон появляется вместе с набранным числом костей, возможность и возврат — вместе с
- * набранным результатом: приложение кубики не бросает, но обязано отличить опечатку от броска.
- */
 function hitDiceOf(
   spell: Spell,
   live: LiveSession,
@@ -71,7 +54,6 @@ function hitDiceOf(
     castLevel(spell, payment),
     pool?.remaining ?? 0,
   );
-  // Прибавка называется правилом заклинания, а не листом: не всякое сотворение её прибавляет.
   const spellcasting = Character.of(character).sheet.abilityModifier(SPELLCASTING_ABILITY);
   const modifier = hitDiceHealing(cost, 0, spellcasting);
 
@@ -89,14 +71,6 @@ function hitDiceOf(
   };
 }
 
-/**
- * Что даст каждая руна на выбранном уровне сотворения и почему сейчас ни одной не приложить.
- *
- * Эффекты приезжают все три, а не только выбранный: игрок выбирает руну, читая, что каждая даст,
- * и посчитать половину уровня на экране значило бы завести второе правило о том же. Вместе с
- * эффектом едет и то, выбирает ли руна цель: это правило, и спросить его дважды значит однажды
- * предложить выбор там, где выбора нет.
- */
 function runesOf(live: LiveSession, payment: PaymentChoice): PreviewOf<"cast_preview">["runes"] {
   const { runes } = live.session.character;
   const level = castLevelOf(payment);
@@ -130,14 +104,6 @@ function castPreview(live: LiveSession, question: CastQuestion): Preview {
 
 type RecipeQuestion = Extract<Question, { kind: "recipe_preview" }>;
 
-/**
- * Чем обернётся замысел, собранный на верстаке.
- *
- * Считается по шагам и до первого отказа: наполовину собранный состав — обычное состояние верстака,
- * и уже посчитанное игрок обязан видеть вместе с причиной, по которой счёт дальше не пошёл. Отказ
- * приходит от владельца правила слово в слово: пересказанный здесь, он разошёлся бы с тем, которым
- * откажет само изготовление.
- */
 function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
   const root = Character.of(live.session.character);
   const crafting = root.crafting;
@@ -195,13 +161,6 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
 
 type ResearchQuestion = Extract<Question, { kind: "research_preview" }>;
 
-/**
- * Во что обойдётся раскрытие названного свойства.
- *
- * Порядок, оснащение и предел сложности стережёт сам вид: спрошенная цена свойства, до которого ещё
- * не добрались, приходит отказом с причиной, и причина эта — слово в слово та, которой откажет сама
- * работа. Пересказанная здесь, она разошлась бы с ней при первой же правке справочника.
- */
 function researchPreview(live: LiveSession, question: ResearchQuestion): Preview {
   const crafting = Character.of(live.session.character).crafting;
 
@@ -268,7 +227,6 @@ export function answerQuestion(live: LiveSession, question: Question, now: strin
       ...(validation.valid ? {} : { unavailabilityRu: validation.reason }),
     };
   }
-
 
   const { changes, hitPoints } = previewLevelChange(character, question.level);
   return {

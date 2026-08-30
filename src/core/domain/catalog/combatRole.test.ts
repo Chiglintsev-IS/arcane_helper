@@ -29,7 +29,6 @@ describe("combatRoleOf (FR-213)", () => {
   });
 
   it("молчание данных читается как «другое», а не как «боевое»", () => {
-    // Так выглядит карточка из чужой выгрузки: схема её пропускает, роли в ней нет.
     const { combatRole: _absent, ...imported } = byId("ray-of-frost");
     expect(combatRoleOf(imported)).toBe("other");
   });

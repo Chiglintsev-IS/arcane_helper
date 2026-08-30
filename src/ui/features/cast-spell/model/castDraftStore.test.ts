@@ -1,11 +1,3 @@
-/**
- * Черновик мастера применения.
- *
- * Способы сотворения приходят строкой заклинания, а не собираются здесь, поэтому и в прогоне они
- * настоящие: строка берётся у проекции ядра, собранной командами. Словарь чисел, набранный руками,
- * однажды разошёлся бы с тем, что приложение показывает игроку.
- */
-
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
@@ -43,7 +35,6 @@ const detectMagic = spell("detect-magic");
 const alarm = spell("alarm");
 const shield = spell("shield");
 
-/** Бой идёт: этот файл проверяет черновик мастера, а не факт начала боя. */
 const IN_FIGHT: readonly Command[] = [{ kind: "start_combat" }];
 
 function played(
@@ -67,10 +58,6 @@ function played(
   return live;
 }
 
-/**
- * Выбирает ли руна цель — правило, и мастер узнаёт его предпросмотром. Здесь спрошено у того же
- * ответчика: угаданный флаг проверял бы догадку прогона, а не приложение.
- */
 function choosesTarget(rune: string): boolean {
   const preview = answerQuestion(
     played(createThorne(), IN_FIGHT),
@@ -83,7 +70,6 @@ function choosesTarget(rune: string): boolean {
   return effect.choosesTarget;
 }
 
-/** Строка заклинания так, как её увидит мастер применения. */
 function rowOf(
   target: Spell,
   character: CharacterState = createThorne(),
@@ -98,7 +84,6 @@ function rowOf(
 
 const OUTSIDE_FIGHT: readonly Command[] = [];
 
-/** Способ оплаты ячейкой названного уровня. */
 function slotOption(row: SpellRowView, slotLevel: number): CastOptionView {
   const found = row.castOptions.find(
     (option) => option.payment.kind === "slot" && option.payment.slotLevel === slotLevel,
@@ -113,11 +98,6 @@ function optionBy(row: SpellRowView, match: (option: CastOptionView) => boolean)
   return found;
 }
 
-/**
- * Персонаж, который уже что-то держит. Собирается настоящим применением, а не вручную: схема
- * требует, чтобы у концентрации был соответствующий активный эффект, и фикстура, собранная руками,
- * однажды разошлась бы с тем, что порождает игра.
- */
 function concentrating(): CharacterState {
   const session = castSpell(
     createSession(createThorne()),
@@ -241,7 +221,6 @@ describe("начало применения", () => {
   });
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
-    // Вне боя: накладывание идёт минуту, и в раунд оно не помещается ни ритуалом, ни ячейкой.
     store.getState().start(rowOf(alarm, createThorne(), OUTSIDE_FIGHT));
     expect(draftOf().option).toMatchObject({ mode: "ritual", payment: { kind: "none" } });
   });
@@ -285,7 +264,6 @@ describe("шаги мастера (FR-021, M-03)", () => {
   });
 
   it("нарушенное условие добавляет шаг проверки доступности первым", () => {
-    // Действие уже израсходовано заговором: следующее заклинание объясняется этим первым шагом.
     const spent: readonly Command[] = [
       ...IN_FIGHT,
       { kind: "cast_spell", spellId: rayOfFrost.id, mode: "cantrip", payment: { kind: "none" } },
@@ -310,8 +288,6 @@ describe("шаги мастера (FR-021, M-03)", () => {
   });
 
   it("компонент со стоимостью добавляет шаг проверки компонентов", () => {
-    // Единственный компонент со стоимостью — у «Волшебного замка»; вне боя, потому что
-    // неподготовленное заклинание в боевом списке не стоит.
     const row = rowOf(spell("arcane-lock"), knowing(createThorne(), "arcane-lock"), OUTSIDE_FIGHT);
     store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("components");
@@ -332,7 +308,6 @@ describe("шаги мастера (FR-021, M-03)", () => {
 });
 
 describe("навигация по шагам", () => {
-  // Занятая концентрация: за ячейкой идёт шаг замены — два шага, между которыми есть куда ходить.
   it("вперёд и назад ходят только по видимым шагам", () => {
     const row = rowOf(spell("web"), concentrating());
     store.getState().start(row);
@@ -396,7 +371,6 @@ describe("запоминание выбора", () => {
     store.getState().chooseCastOption(slotOption(row, 4));
     store.getState().cancel();
 
-    // Персонаж потерял ячейки 4 уровня — например, состояние пришло из другого сохранения.
     const thorne = createThorne();
     const { 4: _lost, ...withoutFourth } = thorne.spellSlots;
     const weaker = { ...thorne, spellSlots: withoutFourth };

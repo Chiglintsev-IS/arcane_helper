@@ -1,11 +1,3 @@
-/**
- * Стор сессии как зеркало ядра.
- *
- * Правила игры проверяются там, где живут, — у ядра. Здесь проверяется ровно то, за что стор
- * отвечает: что снимок и показанное состояние приходят от ядра, что причина отказа доезжает до
- * экрана и что каждая отправка несёт свою попытку.
- */
-
 import { describe, expect, it } from "vitest";
 
 import type { Envelope } from "@/contract/commands";
@@ -18,10 +10,8 @@ import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { createSessionStore } from "./sessionStore";
 
-/** Снимок только что начатой сессии: проекции строит настоящий презентер, а не подделка рядом. */
 const FRESH: Snapshot = testSnapshot();
 
-/** Ядро-заглушка: здесь проверяется стор, а не правила, и ответы задаёт сам прогон. */
 function fakeApi(answers: Partial<ArcaneApi> = {}): {
   api: ArcaneApi;
   sent: Envelope[];
@@ -103,7 +93,6 @@ describe("открытие сессии", () => {
 
     await store.getState().hydrate();
 
-    // Схему оно не прошло, а копия у игрока обязана быть: по ней сохранение и починят.
     expect(store.getState().rawSave).toEqual(copy);
   });
 
@@ -164,7 +153,6 @@ describe("отправка намерений", () => {
   });
 
   it("ответ, отставший от показанного, экран назад не тянет", async () => {
-    // Две команды в полёте возвращаются в любом порядке: по сети это обычное дело.
     let answered = 0;
     const { api } = fakeApi({
       execute: async () => ({

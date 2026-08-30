@@ -8,7 +8,6 @@ import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNu
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 import { SURFACE_CHOSEN, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/** Справочная часть листа: что шторка набирает и отдаёт владельцу. Что из этого он примет — его дело. */
 type IdentityPatch = {
   name: string;
   species: string;
@@ -26,11 +25,8 @@ export function IdentitySheet({
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  /** Лист: начальные значения полей. */
   sheet: SheetView;
-  /** Из чего выбирают: размеры существа перечнем правил. */
   choices: ChoicesView;
   onSave: (patch: IdentityPatch) => void;
   onCancel: () => void;

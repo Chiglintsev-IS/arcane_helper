@@ -1,13 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Блок концентрации, ввод урона, статусы и поправка к КД — всё это «Игра» рисует и делает сама.
- * Состояние настоящее, операции настоящие: моков нет.
- *
- * Проверки, которым нужна запись лога, живут у оболочки: лог — соседний экран, и переход к
- * нему принадлежит ей.
- */
-
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -18,7 +10,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
 import { withoutRunes } from "@/core/infrastructure/catalog/thorne/fixtures";
 
-/** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
   return {
     ...createThorne(),
@@ -39,13 +30,11 @@ function concentrating(): CharacterState {
   };
 }
 
-/** Шторка «Действует» открывается со строки действующего. */
 async function openPanel(): Promise<void> {
   await renderWithStores(<GameScreen />, concentrating());
   await userEvent.click(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ }));
 }
 
-/** Ввод урона: он же вход в проверку концентрации, когда она идёт. */
 async function damage(
   amount: string,
   character: CharacterState = concentrating(),
@@ -59,7 +48,6 @@ async function damage(
 
 describe("строка действующего (FR-082, FR-084)", () => {
   it("без концентрации строка остаётся и говорит, что ничего не действует", async () => {
-    // Ноль — состояние: исчезнувшая строка заставляла бы гадать, держится что-то или нет.
     await renderWithStores(<GameScreen />);
 
     expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
@@ -74,7 +62,6 @@ describe("строка действующего (FR-082, FR-084)", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ }));
     expect(screen.getByRole("dialog", { name: "Действует" })).toBeDefined();
   });
-
 });
 
 describe("лист концентрации (FR-084, FR-091)", () => {
@@ -82,8 +69,6 @@ describe("лист концентрации (FR-084, FR-091)", () => {
     await openPanel();
 
     const panel = screen.getByRole("dialog", { name: "Действует" });
-    // Длительность ищется по всей строке шапки: те же «до 10 минут» стоят и в кратких правилах,
-    // и одиночный поиск по ним нашёл бы два элемента вместо одного.
     expect(within(panel).getByText(/ячейка 1 ур\..*до 10 минут/)).toBeDefined();
     expect(within(panel).getByText(/чувствует присутствие магии/)).toBeDefined();
 
@@ -100,7 +85,6 @@ describe("лист концентрации (FR-084, FR-091)", () => {
 
     expect(screen.getByRole("dialog", { name: /Заклинание «Обнаружение магии»/ })).toBeDefined();
   });
-
 });
 
 describe("ввод урона (FR-083, FR-180, FR-183)", () => {
@@ -148,7 +132,6 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
     const check = screen.getByRole("dialog", { name: /^Проверка концентрации/ });
     const title = within(check).getByRole("heading");
 
-    // Заголовок называет и проверку, и заклинание, которое ею держат: имя шторки — он сам.
     expect(check.getAttribute("aria-labelledby")).toBe(title.id);
     expect(check.hasAttribute("aria-label")).toBe(false);
     expect(title.textContent).toContain("Обнаружение магии");
@@ -162,7 +145,6 @@ describe("ввод урона (FR-083, FR-180, FR-183)", () => {
 
     expect(screen.getByText("60/60")).toBeDefined();
   });
-
 });
 
 describe("проверка концентрации (FR-083, FR-154)", () => {
@@ -171,10 +153,8 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Провал" }));
 
-    // Внутри карточки проверки: тем же именем зовётся строка списка, и запрос без неё нашёл бы обе.
     const check = within(screen.getByRole("dialog", { name: /^Проверка концентрации/ }));
     expect(check.getByText(/Знаки ограждения/)).toBeDefined();
-    // Эффект ещё держится: предложение обязано появиться до завершения.
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
   });
 
@@ -186,7 +166,6 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 
     expect(screen.getByRole("button", { name: "Действует: ничего" })).toBeDefined();
   });
-
 });
 
 describe("ручной статус (FR-236)", () => {
@@ -199,7 +178,6 @@ describe("ручной статус (FR-236)", () => {
 
     expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
   });
-
 });
 
 describe("поправка к КД (FR-236)", () => {
@@ -265,5 +243,4 @@ describe("поправка к КД (FR-236)", () => {
     expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
     expect(within(numbers).queryByText(/КД [+−]/)).toBeNull();
   });
-
 });

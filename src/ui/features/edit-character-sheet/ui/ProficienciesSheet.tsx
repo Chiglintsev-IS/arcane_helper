@@ -6,19 +6,12 @@ import type { SheetView } from "@/contract/views";
 import { asList } from "@/ui/features/edit-character-sheet/lib/lists";
 import { EditSheetFrame, TextField } from "./EditSheetFrame";
 
-/**
- * Чем Торн умеет пользоваться: оружие, доспехи, инструменты.
- *
- * Языки правятся своей шторкой: знание языка — не умение обращаться с вещью, и за столом их
- * спрашивают разными вопросами.
- */
 export function ProficienciesSheet({
   proficiencies,
   onSave,
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   proficiencies: SheetView["proficiencies"];
   onSave: (next: SheetView["proficiencies"]) => void;

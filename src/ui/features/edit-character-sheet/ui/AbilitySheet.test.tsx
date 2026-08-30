@@ -12,7 +12,6 @@ import { AbilitySheet } from "./AbilitySheet";
 
 afterEach(cleanup);
 
-/** Характеристика из настоящей проекции: подделка рядом проверяла бы себя, а не приложение. */
 function abilityOf(id: string, character: CharacterState = createThorne()): AbilityView {
   const found = toSheetView(character).abilities.find((ability) => ability.id === id);
   if (found === undefined) throw new Error(`нет характеристики ${id}`);
@@ -30,7 +29,6 @@ describe("шторка характеристики", () => {
       />,
     );
 
-    // Ровно пять навыков Интеллекта и ни одного чужого: блок и шторка держат одно и то же.
     expect(screen.getByRole("radiogroup", { name: "Аркана" })).toBeDefined();
     expect(screen.queryByRole("radiogroup", { name: "Скрытность" })).toBeNull();
 
@@ -39,7 +37,6 @@ describe("шторка характеристики", () => {
     await userEvent.type(field, "20");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Владения приходят из листа и возвращаются нетронутыми: правили значение, а не навыки.
     expect(onSave).toHaveBeenCalledWith({
       ability: "intelligence",
       score: 20,
@@ -59,7 +56,6 @@ describe("шторка характеристики", () => {
       />,
     );
 
-    // Годится ли 31, шторка не решает: она передаёт набранное и показывает ответ владельца.
     const field = screen.getByLabelText("Значение");
     await userEvent.clear(field);
     await userEvent.type(field, "31");
@@ -83,7 +79,6 @@ describe("шторка характеристики", () => {
     await userEvent.clear(field);
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Просьба не собрана: до разбора сообщения она не доходит, и сырого отказа схемы игрок не видит.
     expect(onSave).not.toHaveBeenCalled();
     const reason = screen.getByRole("alert");
     expect(reason.textContent).toBe("Наберите число");

@@ -1,13 +1,3 @@
-/**
- * Ручная правка ресурсов.
- *
- * Приложение знает правила Торна, но не знает правил стола: мастер вправе вернуть реакцию посреди
- * раунда, предмет — потратить руну без заклинания, а ячейка бывает списана по ошибке. Отказ в правке
- * означал бы, что игрок ведёт второй, настоящий учёт на бумаге, — и тогда приложение не нужно.
- *
- * Всё здесь пишется в лог и отменяется как любое другое изменение
- */
-
 "use client";
 
 import { useId } from "react";
@@ -16,7 +6,6 @@ import type { ResourcesView } from "@/contract/views";
 import { EDIT_LABEL } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
-/** Имя дела: им зовётся и сама шторка, и плитка, которая её открывает. */
 export const RESOURCES_EDIT_LABEL = `${EDIT_LABEL} ресурсов`;
 
 function Stepper({
@@ -74,8 +63,6 @@ export function ResourcesSheet({
   onSpendSlot: (level: number) => void;
   onRefundSlot: (level: number) => void;
   onAdjustRunes: (delta: number) => void;
-  /** Последняя подсказка: тратит и возвращает её игрок — повод и бросок ведёт стол. */
-  /** Признак «под прямым солнечным светом»: приложение его не знает, говорит игрок. */
   onSunlight: (under: boolean) => void;
   onClose: () => void;
 }) {
@@ -123,11 +110,6 @@ export function ResourcesSheet({
         />
       </ul>
 
-      {/*
- Солнце стоит здесь по той же причине, что и ручные правки: приложение не может узнать, где
- персонаж, — это говорит игрок. Значок ряда ресурсов только показывает признак; места под
- кнопку в 44 пикселя там нет, а ряд значков и так занимает пятую часть карточки.
- */}
       <section aria-label="Состояния" className="flex flex-col gap-1">
         <h3 className="text-xs font-medium uppercase tracking-wide text-ink-quiet">Состояния</h3>
         <button

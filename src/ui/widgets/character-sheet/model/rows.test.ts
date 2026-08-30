@@ -5,7 +5,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { abilityLedger, sheetBlocks } from "./rows";
 
-/** Проекцию строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
 const blocksOf = (character: CharacterState) => sheetBlocks(toSheetView(character));
 const ledgerOf = (character: CharacterState) => abilityLedger(toSheetView(character));
 
@@ -27,8 +26,6 @@ describe("«Кто он» — то, что спрашивают раз за ве
 
     expect(block?.features?.map((feature) => feature.nameRu)).toEqual(["Рунный почерк"]);
     expect(block?.features?.[0]?.summaryRu).toContain("Минута изучения записи");
-    // Ни строки со значением у правого края, ни кнопки правки: справку читают фразой, а
-    // особенность приходит с происхождением, а не заводится руками.
     expect(block?.rows).toEqual([]);
     expect(block?.edit).toBeUndefined();
   });
@@ -68,7 +65,6 @@ describe("«Кто он» — то, что спрашивают раз за ве
     expect(ids).not.toContain("inventory");
     expect(ids).not.toContain("armorClassBase");
     expect(ids).not.toContain("itemBonuses");
-    // Хиты и Кости хитов двигает игра: их дом — шапка «Игры» и «Привал», а не лист.
     expect(ids).not.toContain("health");
     expect(blocksOf(createThorne()).flatMap((block) => block.rows.map((row) => row.labelRu))).not
       .toContain("Кости хитов");
@@ -87,7 +83,6 @@ describe("«Кто он» — то, что спрашивают раз за ве
         worn: [...state.equipment.worn, { itemId: "scale-mail", count: 1 }],
       },
     };
-    // Ни блока, ни разбора, ни строки итога: КД на листе не показывают, потому что не правят.
     expect(blocksOf(withArmor).map((block) => block.id)).not.toContain("armorClass");
     expect(blocksOf(withArmor).flatMap((block) => block.rows.map((row) => row.labelRu))).not.toContain(
       "Чешуйчатый доспех",
@@ -107,7 +102,6 @@ describe("«Кто он» — то, что спрашивают раз за ве
     const proficiencies = blocksOf(armed).find((block) => block.id === "proficiencies");
     const languages = blocksOf(armed).find((block) => block.id === "languages");
 
-    // Владение вещью — умение самого Торна; снаряжение — то, что лежит в сумке, и слова этого здесь нет.
     expect(blocksOf(armed).map((block) => block.titleRu)).not.toContain("Снаряжение и языки");
     expect(proficiencies?.rows).toContainEqual({
       labelRu: "Инструменты",
@@ -127,7 +121,6 @@ describe("«Кто он» — то, что спрашивают раз за ве
       labelRu: "Уровень",
       edit: { block: "level" },
     });
-    // У владений и языков своя шторка: правят их порознь, потому что и спрашивают порознь.
     expect(blockById("proficiencies")?.edit).toEqual({ block: "proficiencies" });
     expect(blockById("languages")?.edit).toEqual({ block: "languages" });
   });
@@ -174,7 +167,6 @@ describe("«Броски» — гроссбух того, чем отвечаю�
 
   it("владение отмечено знаком, и знак назван словом — иначе точка ничего не значит", () => {
     expect(abilityById("intelligence")?.saveTraining).toEqual({ glyph: "●", labelRu: "владение" });
-    // Спасбросок без владения отметки не несёт: точка при нём обещала бы лишнюю тройку.
     expect(abilityById("strength")?.saveTraining).toBeUndefined();
   });
 
@@ -192,12 +184,10 @@ describe("«Броски» — гроссбух того, чем отвечаю�
   });
 
   it("отрицательный модификатор печатается тем же минусом, что и в значке", () => {
-    // Сила Торна — 8: модификатор −1, и минус обязан быть типографским, а не дефисом.
     expect(abilityById("strength")?.modifier).toBe("−1");
   });
 
   it("шапка зовётся голосом целиком: числа столбцов подписаны словами, а не местом в сетке", () => {
-    // Имя кнопки забирает содержимое, и без слов модификатор со спасброском не читались бы вовсе.
     expect(abilityById("intelligence")?.accessibleName).toBe(
       "Интеллект 18, +4, Спасбросок +8, владение. Правка: Интеллект",
     );
@@ -208,7 +198,6 @@ describe("«Броски» — гроссбух того, чем отвечаю�
 
   it("группа называет свою шторку и отдаёт ей саму характеристику", () => {
     const wisdom = abilityById("wisdom")?.edit;
-    // Шторка получает саму характеристику: второго поиска той же записи по имени не заводится.
     expect(wisdom?.block).toBe("ability");
     expect(wisdom?.block === "ability" ? wisdom.ability.id : null).toBe("wisdom");
   });

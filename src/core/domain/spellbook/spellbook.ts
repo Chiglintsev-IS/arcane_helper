@@ -1,13 +1,3 @@
-/**
- * Книга заклинаний: что персонаж знает, что подготовил и чем располагает из компонентов.
- *
- * Сюда же входят пометки игрока — заметки к заклинаниям: они привязаны к записи книги и живут
- * ровно столько же.
- *
- * Про ячейки, снаряжение и ход книга не знает: она отвечает на вопрос «что я умею», а не «чем я это
- * оплачу». Сводит их сотворение.
- */
-
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
@@ -16,7 +6,6 @@ import type { SpellbookState } from "./schema";
 export class Spellbook {
   private constructor(private readonly state: SpellbookState) {}
 
-  /** Владеет только своими полями: иначе объект-значение затирал бы правки соседа. */
   private static readonly KEYS = [
     "cantripIds",
     "spellbookSpellIds",
@@ -42,10 +31,6 @@ export class Spellbook {
     return this.state.preparedSpellIds.includes(spellId);
   }
 
-  /**
-   * Лимит подготовки — единственное жёсткое ограничение приложения: двенадцатого заклинания нет в
-   * правилах, и мастер здесь исключений не делает. Всё остальное предупреждает, но пускает.
-   */
   togglePreparation(
     spellId: string,
     spellNameRu: string,
@@ -74,12 +59,6 @@ export class Spellbook {
     };
   }
 
-  /**
-   * Книга следует каталогу: запись, которой в нём нет, снимается вместе с подготовкой.
-   *
-   * Так читается сохранение, сделанное до того, как карточку убрали из сборки: обновление книги не
-   * вправе запереть игру ссылкой в пустоту. Заметки остаются — их писал игрок.
-   */
   withinCatalog(knownIds: ReadonlySet<string>): Spellbook {
     const known = (ids: readonly string[]) => ids.filter((id) => knownIds.has(id));
     return this.with({
@@ -89,7 +68,6 @@ export class Spellbook {
     });
   }
 
-  /** Заметка из одних пробелов удаляется: пустая строка не проходит схему состояния. */
   setNote(spellId: string, note: string): Spellbook {
     const { [spellId]: _replaced, ...rest } = this.state.spellNotes;
     return this.with({ spellNotes: note.trim() === "" ? rest : { ...rest, [spellId]: note } });

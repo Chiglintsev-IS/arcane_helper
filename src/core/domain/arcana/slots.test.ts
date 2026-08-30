@@ -152,7 +152,6 @@ describe("восстановление ресурсов", () => {
 });
 
 describe("validateArcaneRecovery", () => {
-  /** Торн истратил всё, кроме ячейки четвёртого уровня. */
   const depleted = (): SpellSlots => ({
     1: { maximum: 4, remaining: 0 },
     2: { maximum: 3, remaining: 0 },
@@ -160,13 +159,11 @@ describe("validateArcaneRecovery", () => {
     4: { maximum: 1, remaining: 1 },
   });
 
-  /** Истрачено всё, включая четвёртый уровень: нужно для плана «одна ячейка 4 уровня». */
   const depletedIncludingFourth = (): SpellSlots => ({
     ...depleted(),
     4: { maximum: 1, remaining: 0 },
   });
 
-  // Допустимые наборы при остатке бюджета 4 — примеры из.
   const validPlans: ReadonlyArray<readonly [SlotRecoveryPlan, string]> = [
     [{ 4: 1 }, "одна ячейка 4 уровня"],
     [{ 3: 1, 1: 1 }, "ячейки 3 + 1"],
@@ -290,7 +287,6 @@ describe("курс ступени возвышения", () => {
     [16, 5],
     [20, 6],
   ])("на %i уровне единица цены стоит %i хитов", (level, expected) => {
-    // Курс виден ценой ячейки первого уровня: она стоит две единицы.
     expect(bloodSlotCost(1, level)).toBe(expected * 2);
   });
 
@@ -349,7 +345,6 @@ describe("bloodSlotLevels", () => {
   });
 
   it("выше пятого уровня цены нет, сколько бы ячеек ни было у персонажа", () => {
-    // Волшебник 17 уровня платит ячейками до девятого, но кровью — только до пятого.
     expect(bloodSlotLevels(spellSlotsForLevel(17), 4)).toEqual([4, 5]);
   });
 });

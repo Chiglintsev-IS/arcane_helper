@@ -103,15 +103,12 @@ describe("ремесло", () => {
       rarity: "common",
     });
 
-    // Без отметки знание неполно всегда: потолок справочника про этот корень ничего не говорит.
     expect(revealed.find("Лунная трава")?.propertiesExhausted).toBe(false);
 
     const exhausted = revealed.markPropertiesExhausted("Лунная трава", true);
     expect(exhausted.find("Лунная трава")?.propertiesExhausted).toBe(true);
-    // Раскрытое отметка не трогает: она про то, чего у вида нет, а не про то, что уже узнано.
     expect(exhausted.find("Лунная трава")?.properties).toHaveLength(1);
 
-    // Узнанное за столом бывает и ошибкой: снимается отметка тем же путём, каким ставится.
     expect(
       exhausted.markPropertiesExhausted("Лунная трава", false).find("Лунная трава")
         ?.propertiesExhausted,
@@ -134,14 +131,12 @@ describe("ремесло", () => {
   });
 });
 
-/** Вид с одним раскрытым свойством: столько знания хватает, чтобы искать совпадения. */
 function noting(known: Crafting, nameRu: string, property: RevealedProperty): Crafting {
   return known.noteIngredient(nameRu).revealProperty(nameRu, property);
 }
 
 const HEALING = { number: 1, nameRu: "Лечение здоровья", rarity: "common" } as const;
 
-/** Два вида, совпадающих «Лечением здоровья», и у каждого своё несовпавшее свойство. */
 function twoKinds(): Crafting {
   const moonHerb = noting(Crafting.of(EMPTY), "Лунная трава", HEALING).revealProperty(
     "Лунная трава",
@@ -154,7 +149,6 @@ function twoKinds(): Crafting {
   });
 }
 
-/** Столько видов с одним и тем же свойством, сколько нужно для проверяемой ступени. */
 function sharing(kinds: readonly string[], property: RevealedProperty): Crafting {
   return kinds.reduce((known, kind) => noting(known, kind, property), Crafting.of(EMPTY));
 }
@@ -225,7 +219,6 @@ const TWO_KINDS = FOUR_KINDS.slice(0, 2);
 const THREE_KINDS = FOUR_KINDS.slice(0, 3);
 const POISON = { number: 2, nameRu: "Ядовитый урон", rarity: "rare" } as const;
 
-/** Стандартная форма справочника: одна цель, немедленное начало, одно срабатывание. */
 const STANDARD: RecipeFormula = {
   kinds: TWO_KINDS,
   mainProperty: "Лечение здоровья",
@@ -240,25 +233,21 @@ const STANDARD: RecipeFormula = {
   limitations: [],
 };
 
-/** Оснащение, которое ничему не мешает: пределы его выше всего, что встречается в прогонах. */
 const GRAND_KITS: Apparatus = {
   potions: "Великий лабораторный модуль",
   poisons: "Великий лабораторный модуль",
   transmutation: "Великий лабораторный модуль",
 };
 
-/** Оснащение Торна: надёжные походные комплекты по изученным направлениям и ничего по ядам. */
 const TORN_KITS: Apparatus = {
   potions: "Надёжный походный комплект",
   transmutation: "Надёжный походный комплект",
 };
 
-/** Сложность стандартной формы с названными отличиями. */
 function grand(known: Crafting, changes: Partial<RecipeFormula>) {
   return known.difficultyOf({ ...STANDARD, ...changes }, GRAND_KITS);
 }
 
-/** Смесь, где совпало и полезное, и вредное: на такой и работают очистка с подавлением. */
 function healingAndPoison(): Crafting {
   return TWO_KINDS.reduce(
     (known, kind) => noting(known, kind, HEALING).revealProperty(kind, POISON),
@@ -378,7 +367,6 @@ describe("сложность рецепта", () => {
   it("неназванным основным становится самый редкий из оставшихся", () => {
     const rarest = grand(healingAndPoison(), { mainProperty: null });
 
-    // «Ядовитый урон» редкий, «Лечение здоровья» обычное: правила берут редкое основным.
     expect(rarest.mainRu).toBe("Ядовитый урон");
     expect(rarest.total).toBe(17);
   });

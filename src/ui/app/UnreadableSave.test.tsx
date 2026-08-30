@@ -1,13 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Выход из непрочитанного сохранения.
- *
- * Хранилище портится по-настоящему: то же ядро, тот же провод, испорчено только содержимое. Прогон
- * смотрит туда же, куда игрок, — на порядок блоков и на то, что первым под пальцем оказывается не
- * очистка.
- */
-
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -28,7 +20,6 @@ async function openScreen(
   return stores;
 }
 
-/** Порядок блоков на экране: прогон читает документ так же, как палец идёт сверху вниз. */
 function positionOf(node: Element): number {
   return [...document.querySelectorAll("h1, h2, button")].indexOf(node);
 }
@@ -43,12 +34,10 @@ describe("нечитаемое сохранение", () => {
     const startOver = screen.getByRole("button", { name: "Начать заново" });
     expect(positionOf(copy)).toBeLessThan(positionOf(startOver));
 
-    // Копия — содержимое хранилища как есть: по нему видно, что данные целы.
     expect(screen.getByLabelText("Содержимое хранилища").textContent).toContain("schemaVersion");
   });
 
   it("копия, которой нет, названа словами", async () => {
-    // Хранилище не открылось вовсе: причина есть, копировать нечего, и это два разных факта.
     await openScreen(createStoresOverBrokenStorage);
 
     expect(screen.getByText(/Копировать нечего/)).toBeDefined();
@@ -65,7 +54,6 @@ describe("нечитаемое сохранение", () => {
     const question = within(screen.getByRole("dialog", { name: "Начать заново?" }));
     expect(question.getByText(/забранной до очистки/)).toBeDefined();
 
-    // До подтверждения состояние остаётся непрочитанным: отказ на экране, снимка нет.
     expect(stores.session.getState().snapshot).toBeNull();
 
     await user.click(question.getByRole("button", { name: "Отмена" }));

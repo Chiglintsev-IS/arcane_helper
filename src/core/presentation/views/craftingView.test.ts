@@ -19,7 +19,6 @@ describe("проекция знания об ингредиентах", () => {
           { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
           { number: 3, nameRu: "Взрыв", rarity: "rare" },
         ],
-        // Стол не говорил, что свойств больше нет: пока не сказал, знание вида неполно.
         propertiesExhausted: false,
       },
     ]);

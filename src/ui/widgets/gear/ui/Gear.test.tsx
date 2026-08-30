@@ -11,12 +11,10 @@ import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { Gear } from "./Gear";
 
-/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
 const spells = loadThorneSpells();
 
 afterEach(cleanup);
 
-/** Перечни строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
 const { stats } = toChoicesView();
 
 const NOOP = {
@@ -26,7 +24,6 @@ const NOOP = {
   onAdjustWornCount: () => {},
 };
 
-/** Персонаж с добавленной вещью и её запасами — поверх обычного снаряжения Торна. */
 function withStock(
   definition: ItemDefinition,
   counts: { bag?: number; worn?: number },
@@ -60,17 +57,14 @@ describe("экран «Экипировка»", () => {
     expect(screen.getByRole("heading", { name: "На мне" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Про запас" })).toBeDefined();
 
-    // Число стоит там, где его двигают, — и называет доспех, по которому считается.
     expect(screen.getByText(/КД 14/)).toBeDefined();
     expect(screen.getByText(/без доспехов/)).toBeDefined();
 
-    // Надетое Торна стоит в своём разделе, и прибавка вещи читается целиком.
     const worn = screen.getByRole("list", { name: "На мне" });
     const cloak = within(worn).getByText("Плащ защиты").closest("li");
     expect(cloak?.textContent).toContain("+1 Класс Доспеха, Все спасброски");
     expect(cloak?.textContent).toContain("надето 1");
 
-    // Счётного и денег в режиме нет: их считают, а не надевают.
     expect(screen.queryByRole("heading", { name: "Деньги" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Расходники" })).toBeNull();
   });
@@ -92,8 +86,6 @@ describe("экран «Экипировка»", () => {
   it("надеть нечего — глагола нет вовсе, а не погашенным (FR-249)", () => {
     render(<Gear bag={toBagView(createThorne(), spells)} {...NOOP} />);
 
-    // Плащ надет, и запаса у него нет: надевать нечего, и кнопки нет — причину погашенной на
-    // строке назвать нечем.
     expect(screen.queryByRole("button", { name: "Надеть один: Плащ защиты" })).toBeNull();
     expect(screen.getByRole("button", { name: "Снять один: Плащ защиты" })).toBeDefined();
   });
@@ -106,7 +98,6 @@ describe("экран «Экипировка»", () => {
 
     expect(worn.getByText("надето 3")).toBeDefined();
     expect(spare.getByText("в сумке 7")).toBeDefined();
-    // Каждому разделу — свой глагол, и оба у одной вещи есть.
     expect(worn.getByRole("button", { name: "Снять один: Кольцо защиты" })).toBeDefined();
     expect(spare.getByRole("button", { name: "Надеть один: Кольцо защиты" })).toBeDefined();
   });

@@ -1,12 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * «Привал» на настоящем состоянии и настоящих операциях: моков нет.
- *
- * Экран проверяется сам по себе, без оболочки: шторки принадлежат ему, и открывать их обязан он, а
- * не общий слой поверх приложения.
- */
-
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -22,7 +15,6 @@ import {
   withoutArcaneRecovery,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 
-/** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
   return {
     ...createThorne(),
@@ -118,7 +110,6 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
     await user.click(screen.getByRole("button", { name: /^Хиты/ }));
     await user.type(screen.getByLabelText("Полученный урон"), "24");
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
-    // Руна и реакция на месте, поэтому провал сначала предлагает «Знаки ограждения».
     await user.click(screen.getByRole("button", { name: "Провал" }));
     await user.click(screen.getByRole("button", { name: "Всё равно провал" }));
 
@@ -128,7 +119,6 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
 });
 
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
-  /** Торн на привале, потративший ячейку первого уровня: восстанавливать есть что. */
   async function atCamp(character: CharacterState = createThorne()) {
     return renderWithStores(<RestScreen />, withSpentSlots(character, 1, 2));
   }
@@ -136,8 +126,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     await atCamp(concentrating());
 
     expect(screen.getByLabelText("Ресурсы")).toBeDefined();
-    // Концентрация — часть блока действующего: она обязана быть видна на «Привале» так же, как
-    // и на «Игре», ведь долгий отдых её снимает.
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
     expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
     expect(screen.queryByRole("button", { name: /^Реакции/ })).toBeNull();
@@ -159,7 +147,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     const { stores } = await atCamp();
 
     await user.click(screen.getByRole("button", { name: /Долгий отдых/ }));
-    // Случайное нажатие уничтожает состояние боя, поэтому между кнопкой и отдыхом стоит выбор.
     expect(slotsLeft(stores, 1)).toBe(2);
 
     await user.click(screen.getByRole("button", { name: "Подтвердить" }));
@@ -181,8 +168,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     const user = userEvent.setup();
     const { stores } = await atCamp();
 
-    // Короткий отдых — предусловие правила: до него восстановление недоступно. Экран остаётся
-    // «Привалом» после отдыха — закрывать здесь нечего.
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
     await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 1 уровня" }));
@@ -199,7 +184,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
     await user.click(screen.getByRole("button", { name: /Магическое восстановление/ }));
-    // Бюджет Торна — четыре уровня: ячейка четвёртого укладывается, ячейка сверх неё — уже нет.
     await user.click(screen.getByRole("button", { name: "Вернуть ячейку 4 уровня" }));
     expect(
       screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled"),
@@ -213,8 +197,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
   it("исчерпанный бюджет гаснет, но остаётся с причиной (FR-131)", async () => {
-    // Раньше кнопка исчезала. Пропавшая кнопка не отвечает на вопрос «почему нельзя», а за столом
-    // он возникает раньше, чем игрок вспомнит правило, — требование это изменило.
     await atCamp(withoutArcaneRecovery(createThorne()));
     const button = screen.getByRole("button", {
       name: "Магическое восстановление · осталось 0 уровней Дневной бюджет восстановления исчерпан до следующего долгого отдыха",
@@ -226,8 +208,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     const user = userEvent.setup();
     await atCamp(withSpentSlots(createThorne(), 1, 1));
 
-    // Причина названа словами на самой кнопке, и лечится она соседней — в том же ряду. Остаток
-    // бюджета виден в подписи ещё до того, как отдых его открыл.
     const blocked = screen.getByRole("button", {
       name: "Магическое восстановление · осталось 4 уровня Берётся после короткого отдыха",
     });
@@ -241,8 +221,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   it("причина недоступности видна без наведения (FR-131)", async () => {
     await atCamp(withSpentSlots(createThorne(), 1, 1));
 
-    // Причина стоит строкой внутри кнопки. Всплывающая подсказка её не заменяет: за столом наводить
-    // нечем, и причина, доступная только курсору, не показана вовсе.
     const blocked = screen.getByRole("button", { name: /^Магическое восстановление/ });
     expect(within(blocked).getByText("Берётся после короткого отдыха")).toBeDefined();
     expect(blocked.hasAttribute("title")).toBe(false);
@@ -269,7 +247,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
     it("только снижение максимума — называет только его", async () => {
-      // Здоровье целое, снижен только максимум: час вернёт ступень и больше ничего.
       const reduced = withBloodPaid(createThorne(), 2);
       await renderWithStores(<RestScreen />, reduced);
 
@@ -277,8 +254,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     });
 
     it("одна регенерация тоже называется: кнопка обещает всё, что случится", async () => {
-      // Хиты ниже половины и максимум цел: возвращать нечего, а час доводит регенерацией до
-      // половины — с 20 до 30.
       const wounded = withDamage(createThorne(), 40);
       await renderWithStores(<RestScreen />, wounded);
 
@@ -286,7 +261,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     });
 
     it("снижение и регенерация вместе — называет оба факта", async () => {
-      // Заплачено кровью за ячейку второго уровня, сверху получен урон: час вернёт и то, и другое.
       const both = withDamage(withBloodPaid(createThorne(), 2), 31);
       await renderWithStores(<RestScreen />, both);
 
@@ -294,7 +268,4 @@ describe("режим «Привал» и операции отдыха (FR-215, 
         screen.getByRole("button", { name: "Прошёл час · максимум +3, регенерация +7" }),
       ).toBeDefined();
     });
-
-
-
 });

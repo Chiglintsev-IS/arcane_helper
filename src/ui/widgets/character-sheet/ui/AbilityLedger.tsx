@@ -15,15 +15,6 @@ import {
   type TrainingMark,
 } from "../model/rows";
 
-/**
- * Гроссбух бросков: всё, чем отвечают на просьбу мастера бросить, на одном экране без прокрутки.
- *
- * Столбцы фиксированы, а не подогнаны под содержимое: модификаторы стоят один под другим, и нужное
- * число находится взглядом сверху вниз, а не чтением шести строк подряд. По той же причине знак
- * стоит при числе, а не при подписи — от владения ширина столбца не меняется.
- *
- * Компонент презентационный: числа приходят проекцией, дверь правки выбирает экран.
- */
 export function AbilityLedger({
   sheet,
   onEdit,
@@ -33,25 +24,7 @@ export function AbilityLedger({
 }) {
   return (
     <div className="flex flex-col gap-[5px]">
-      {/*
-       * Слагаемое, общее всем числам ниже, названо один раз и над ними: повторённое у каждого
-       * владения, оно заняло бы восемнадцать строк ради одной и той же тройки.
-       */}
-      <div
-        className={`flex h-[26px] items-center justify-between px-2.5 ${SURFACE_GROUP}`}
-      >
-        <span className="whitespace-nowrap text-xs text-ink-soft">
-          {DERIVED_LABELS.proficiencyBonus}{" "}
-          <b className="text-[0.9375rem] font-bold text-ink">{signed(sheet.proficiencyBonus)}</b>
-        </span>
-        <span className="whitespace-nowrap text-[0.6875rem] text-ink-quiet">
-          <span aria-hidden="true" className="text-accent">
-            {PROFICIENT_MARK.glyph}
-          </span>{" "}
-          {PROFICIENT_MARK.labelRu}
-        </span>
-      </div>
-
+      <ProficiencyBar bonus={signed(sheet.proficiencyBonus)} />
       {abilityLedger(sheet).map((ability) => (
         <AbilityGroup key={ability.id} ability={ability} onEdit={onEdit} />
       ))}
@@ -59,12 +32,23 @@ export function AbilityLedger({
   );
 }
 
-/**
- * Отметка владения при числе: знак для глаза, слово для голоса.
- *
- * Знак помечен `aria-hidden`, потому что рядом стоит слово: цвет и точка сами по себе значения не
- * несут, и без слова владение осталось бы видимым только зрячему.
- */
+function ProficiencyBar({ bonus }: { bonus: string }) {
+  return (
+    <div className={`flex h-[26px] items-center justify-between px-2.5 ${SURFACE_GROUP}`}>
+      <span className="whitespace-nowrap text-xs text-ink-soft">
+        {DERIVED_LABELS.proficiencyBonus}{" "}
+        <b className="text-[0.9375rem] font-bold text-ink">{bonus}</b>
+      </span>
+      <span className="whitespace-nowrap text-[0.6875rem] text-ink-quiet">
+        <span aria-hidden="true" className="text-accent">
+          {PROFICIENT_MARK.glyph}
+        </span>{" "}
+        {PROFICIENT_MARK.labelRu}
+      </span>
+    </div>
+  );
+}
+
 function Training({ mark }: { mark: TrainingMark | undefined }) {
   if (mark === undefined) return null;
   return (
@@ -78,14 +62,6 @@ function Training({ mark }: { mark: TrainingMark | undefined }) {
   );
 }
 
-/**
- * Одна характеристика: шапка со своими числами и её навыки под ней.
- *
- * Шапка целиком — дверь правки: за ней правят и значение, и владение спасброском, и степени владения
- * навыками, то есть ровно то, что в группе и показано. Знака правки при ней нет: нажимается вся
- * строка, и значок обещал бы, что правка живёт в нём одном, — а на 320 пикселях он забирал бы у
- * чисел восьмую часть ширины ради этого обещания.
- */
 function AbilityGroup({
   ability,
   onEdit,
@@ -113,11 +89,6 @@ function AbilityGroup({
         </span>
       </button>
 
-      {/*
-       * Навыки в две колонки: в одну восемнадцать строк заняли бы полтора экрана, и «Броски»
-       * перестали бы отвечать на свой вопрос одним взглядом. Перенос подписи запрещён — колонка
-       * подогнана под самую длинную из них, и переносящаяся строка ломала бы шаг в 22 пикселя.
-       */}
       {ability.skills.length === 0 ? null : (
         <ul aria-label={ability.titleRu} className="grid grid-cols-2 gap-x-2.5 px-2.5 pb-0.5">
           {ability.skills.map((skill) => (

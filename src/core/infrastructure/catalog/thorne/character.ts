@@ -1,21 +1,11 @@
-/**
- * Начальное состояние Торна.
- *
- * Числа — с листа персонажа и из документа расы, сведены в.
- * Производные значения записаны фактическими, а не вычисленными: предметы их сдвигают.
- */
-
 import { type CharacterState, characterStateSchema } from "@/core/domain/assembly/state";
 import { arcaneRecoveryBudget, spellSlotsForLevel } from "@/core/domain/arcana/slots";
 import { runesMaximum } from "@/core/domain/arcana/runes";
 import { proficiencyBonus } from "@/core/domain/character/abilities";
 import { RELIABLE_FIELD_KIT } from "@/core/domain/crafting/apparatus";
 
-/** Ячейки берём из движка, чтобы таблица уровней жила в одном месте. */
 const SLOTS = spellSlotsForLevel(7);
-/** Дневной бюджет восстановления из той же формулы, что и у движка. */
 const ARCANE_RECOVERY_BUDGET = arcaneRecoveryBudget(7);
-/** Максимум рун из той же формулы, что и у движка. */
 const RUNES_MAXIMUM = runesMaximum(proficiencyBonus(7));
 
 const RAW: unknown = {
@@ -26,7 +16,6 @@ const RAW: unknown = {
 
   species: "Лунный тролль",
   subclass: "Создатель рун",
-  // Возраст не назван игроком: пустое поле честнее выдуманного.
   age: 0,
   size: "medium",
   speed: 30,
@@ -39,7 +28,6 @@ const RAW: unknown = {
     wisdom: 12,
     charisma: 8,
   },
-  // Владение спасбросками волшебника; Телосложением игрок не владеет, и черт, меняющих это, нет.
   saveProficiencies: ["intelligence", "wisdom"],
   skills: {
     arcana: "proficient",
@@ -49,21 +37,12 @@ const RAW: unknown = {
     sleightOfHand: "proficient",
     survival: "proficient",
   },
-  /**
-   * Владения волшебника из «Книги игрока»: пять видов оружия и ни одного доспеха — класс не даёт
-   * владения доспехами вовсе. Инструменты и языки игроком не названы и потому пусты: пустой список
-   * честнее правдоподобного.
-   */
   proficiencies: {
     weapons: ["Кинжал", "Дротик", "Праща", "Боевой посох", "Лёгкий арбалет"],
     armor: [],
     tools: [],
     languages: [],
   },
-  /**
-   * Особенность предыстории «Нерадивый ученик», записанная её словами: чисел она не двигает, и
-   * приложение по ней не считает ничего — минуту изучения и ответ ведёт стол.
-   */
   features: [
     {
       nameRu: "Рунный почерк",
@@ -75,8 +54,6 @@ const RAW: unknown = {
   inspiration: false,
 
   cantripIds: ["shocking-grasp", "ray-of-frost", "message", "mending"],
-  // Двадцать пять записей книги: состав назван игроком. Отложенное решением стола лежит в
-  // контенте, но в книге не числится — возврат равен добавлению строки сюда.
   spellbookSpellIds: [
     "shield",
     "absorb-elements",
@@ -107,13 +84,6 @@ const RAW: unknown = {
     "storm-sphere",
     "vitriolic-sphere",
   ],
-  /**
-   * Стартовый набор подготовки — 11 из 11.
-   *
-   * Ритуалы в него не входят: подготовка им не нужна, и место в лимите они занимали бы зря.
-   * Набор — предложение спеки, а не выбор игрока: он пересобирается в «Книге» одним нажатием на
-   * строку.
-   */
   preparedSpellIds: [
     "shield",
     "absorb-elements",
@@ -164,7 +134,6 @@ const RAW: unknown = {
       },
     },
     {
-      // Прибавка кубиком и по обстановке: приложение её не считает, поэтому она заметка.
       id: "swamp-camouflage-kit",
       nameRu: "Комплект болотной маскировки",
       kind: "other",
@@ -180,27 +149,16 @@ const RAW: unknown = {
     ],
     components: { componentPouch: false },
   },
-  // Одна кость за уровень, размер по классу: волшебник — d6. Расовые «11 очков здоровья»
-  // на счёт костей не влияют: это надбавка к максимуму, а не замена кости.
   hitDice: { total: 7, size: 6, remaining: 7 },
   runes: { maximum: RUNES_MAXIMUM, remaining: RUNES_MAXIMUM },
   suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
 
-  /**
-   * Мастерская: надёжные походные комплекты по двум изученным направлениям. Синтезу ядов Торн не
-   * обучен и набора токсиколога не держит — работа с ядовитым свойством идёт импровизацией, а
-   * бонуса мастерства проверке не достаётся.
-   */
   alchemyApparatus: { potions: RELIABLE_FIELD_KIT, transmutation: RELIABLE_FIELD_KIT },
   studiedDirections: ["potions", "transmutation"],
 
   spellNotes: {},
 };
 
-/**
- * Свежее состояние Торна. Каждый вызов возвращает новый объект: состояние изменяемое,
- * и общий экземпляр протёк бы между тестами и сессиями.
- */
 export function createThorne(): CharacterState {
   return characterStateSchema.parse(structuredClone(RAW));
 }

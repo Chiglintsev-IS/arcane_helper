@@ -1,15 +1,8 @@
-/**
- * Здоровье: урон, лечение, временные хиты, час, подавление.
- *
- * Проверку концентрации приложение здесь не запускает: сложность оно называет, а бросает игрок.
- */
-
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 import { inFight } from "./turn";
 
-/** Полученный урон. Огненный урон подавляет расовые особенности. */
 export function takeDamage(
   session: Session,
   damage: number,
@@ -44,7 +37,6 @@ export function heal(session: Session, amount: number, occasion: Occasion): Sess
   );
 }
 
-/** Ручное начисление временных хитов. */
 export function grantTemporaryHitPoints(session: Session, amount: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(
@@ -55,35 +47,20 @@ export function grantTemporaryHitPoints(session: Session, amount: number, occasi
   );
 }
 
-/**
- * Что долечила регенерация. Строка одна на все отрезки времени, за которые она идёт: назвать её
- * дважды значило бы получить два разных слова об одном и том же росте хитов.
- */
 export function regenerationNote(healed: number): string[] {
   return healed > 0 ? [`регенерация +${healed}`] : [];
 }
 
-/** Строки лога одного часа: что вернулось максимуму и что долечила регенерация. */
 function hourNotes(returned: number, healed: number): string[] {
   return [...(returned > 0 ? [`максимум +${returned}`] : []), ...regenerationNote(healed)];
 }
 
-/**
- * Почему час сейчас не проходит; `null` — проходит.
- *
- * Спрашивают её и до нажатия, и при нём: погашенная кнопка называет ровно ту причину, которой
- * ответил бы отказ. Того, что часу нечего менять, здесь нет: это видно по числам самого часа.
- */
 export function hourUnavailability(session: Session): string | null {
   return inFight(session) ? IN_FIGHT_HOUR_REASON : null;
 }
 
 const IN_FIGHT_HOUR_REASON = "Пока идёт бой, час пройти не может";
 
-/**
- * Почасовое восстановление максимума хитов. Час отмечает игрок: таймеров в приложении нет, а внутри
- * боевого раунда часа не бывает.
- */
 export function recoverHitPointMaximum(session: Session, occasion: Occasion): Session {
   const unavailability = hourUnavailability(session);
   if (unavailability !== null) {
@@ -114,7 +91,6 @@ export function recoverHitPointMaximum(session: Session, occasion: Occasion): Se
   );
 }
 
-/** Признак прямого солнечного света переключается вручную. */
 export function setSunlight(session: Session, underSunlight: boolean, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(

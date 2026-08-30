@@ -1,11 +1,3 @@
-/**
- * Перевод команд в вызовы сценариев.
- *
- * Здесь проверяется именно перевод: что команда доходит до своего сценария и что слово, которого в
- * правилах нет, отвергается с причиной. Сами правила проверяются у своих владельцев — повторять их
- * здесь значило бы завести вторую копию, которая разойдётся с настоящей.
- */
-
 import { describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
@@ -37,7 +29,6 @@ function start(): LiveSession {
   };
 }
 
-/** Цепочка команд: каждая своей попыткой, иначе вторая сочлась бы повтором первой. */
 let attempts = 0;
 
 function run(commands: readonly Command[], from: LiveSession = start()): LiveSession {
@@ -227,10 +218,8 @@ describe("книга", () => {
 
 describe("снаряжение", () => {
   const rope: Command = { kind: "add_item", nameRu: "Верёвка", itemKind: "other" };
-  // Надеть можно только экипировку — верёвку носят в сумке, и это правило её контекста.
   const cloak: Command = { kind: "add_item", nameRu: "Плащ", itemKind: "gear" };
 
-  /** Заведённая вещь среди прочих: у Торна есть своё снаряжение, и индекс здесь не годится. */
   function idOf(live: LiveSession, nameRu: string): string {
     const found = live.session.character.itemDefinitions.find((item) => item.nameRu === nameRu);
     if (found === undefined) throw new Error(`нет вещи «${nameRu}»`);
@@ -248,11 +237,9 @@ describe("снаряжение", () => {
       ],
       added,
     );
-    // Надетое берётся из сумки: три в сумке минус один надетый — правило контекста снаряжения.
     expect(counted.session.character.equipment.bag.find((entry) => entry.itemId === id)?.count).toBe(2);
     expect(counted.session.character.equipment.worn.find((entry) => entry.itemId === id)?.count).toBe(1);
 
-    // Снять вещь можно, когда её запас исчерпан: это правило контекста снаряжения.
     const removed = run(
       [
         { kind: "adjust_bag_count", itemId: id, delta: -1 },
@@ -314,7 +301,6 @@ describe("лист персонажа", () => {
     ]);
 
     expect(live.session.character.name).toBe("Торн Второй");
-    // Правка листа — не дверь к ячейкам: чужое поле не прошло.
     expect(live.session.character.spellSlots[1]?.maximum).toBe(4);
   });
 
@@ -456,7 +442,6 @@ describe("ремесло", () => {
   const MOON_HERB = "Лунная трава";
   const CRIMSON_ROOT = "Багровый корень";
 
-  /** Замысел в той форме, в какой он приходит с той стороны договора: словами справочника. */
   const formula = {
     kinds: [MOON_HERB, CRIMSON_ROOT],
     mainProperty: "Лечение здоровья",

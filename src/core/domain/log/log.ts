@@ -1,25 +1,8 @@
-/**
- * Лог: последовательность записей, дополняемая только с конца, и отмена последней.
- *
- * Снимок отмены вычисляется сравнением состояния до и после, а не пишется руками под каждую
- * операцию. Поэтому новая операция не требует писать обратную к себе, а отмена остаётся одной
- * функцией на все случаи.
- *
- * Чьё это состояние и какие его поля обратимы, лог не знает: список сравниваемых полей приходит
- * при создании. Знай он это сам, обратимость персонажа стала бы правилом лога, и запись о чём
- * угодно другом потребовала бы второго лога.
- */
-
 import { DomainError } from "@/core/domain/shared/errors";
 import type { LogEntry, Recorded } from "./entry";
 
-/** Глубина лога: механизм обратимости, а не история кампании. */
 const LOG_LIMIT = 100;
 
-/**
- * Поля, значения которых изменились. Сравнение по сериализации: состояние заведомо сериализуемо,
- * а глубокое сравнение вручную дало бы больше кода и больше мест для ошибки.
- */
 function changedFields<TState extends object>(
   before: TState,
   after: TState,
@@ -37,7 +20,6 @@ function changedFields<TState extends object>(
 export class Log<TState extends object = Record<string, unknown>> {
   private constructor(
     private readonly entries: readonly LogEntry<TState>[],
-    /** Поля, обратимые отменой. Чьи они и почему именно эти — знает вызывающий. */
     private readonly mutableKeys: readonly (keyof TState)[],
   ) {}
 
@@ -56,11 +38,6 @@ export class Log<TState extends object = Record<string, unknown>> {
     return this.entries.at(-1);
   }
 
-  /**
-   * Пустой снимок допустим: заговор вне схватки не тратит ни ячейки, ни действия, но остаётся
-   * применением заклинания, которое лог обязан записать. Отмена такой записи просто убирает
-   * строку.
-   */
   append(
     before: TState,
     after: TState,
@@ -86,7 +63,6 @@ export class Log<TState extends object = Record<string, unknown>> {
     );
   }
 
-  /** Отмена последней записи: применить снимок и снять строку. */
   undoLast(state: TState): { state: TState; log: Log<TState> } {
     const last = this.last;
     if (last === undefined) {

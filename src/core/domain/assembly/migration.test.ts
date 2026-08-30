@@ -12,10 +12,8 @@ import { Items } from "@/core/domain/items/items";
 import { migrateCharacterState, migrateUndoPatch } from "./migration";
 import { characterStateSchema } from "./state";
 
-/** Список приведённого снимка: чего прогон ждёт увидеть, он объявляет сам. */
 const listOf = (value: unknown): unknown[] => z.array(z.unknown()).parse(value);
 
-/** Лист Торна в том виде, в каком его писала версия 1. */
 const VERSION_ONE = {
   id: "thorne",
   name: "Торн",
@@ -54,12 +52,9 @@ describe("приведение состояния версии 1", () => {
   it("числа, введённые руками, снимаются, а считанные из основания остаются", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_ONE));
     const sheet = Character.of(state).sheet;
-    // Версия 1 хранила КС и атаку числами; теперь они считаются из Интеллекта 18 и уровня 7.
     expect(sheet.value("spellSaveDc")).toBe(15);
     expect(sheet.value("spellAttackModifier")).toBe(7);
-    // Владений спасбросками версия 1 не знала: Телосложение 10 (+0), и ничего сверх.
     expect(sheet.value(saveStatId("constitution"))).toBe(0);
-    // База 10 и прибавка +2 вещи не называли: остаётся 10 + Ловкость 2.
     expect(sheet.value("armorClass")).toBe(12);
   });
 
@@ -117,14 +112,9 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(versionTwo));
 
-    // Ни база доспеха без вещи, ни прибавка без вещи до нынешней формы не доезжают: величина
-    // складывается из надетого и действующего, а надеть приведению нечего.
     expect(Character.of(state).sheet.value("armorClass")).toBe(12);
     expect(Character.of(state).sheet.value("spellSaveDc")).toBe(15);
-    // Владений спасбросками версия 2 не знала: Мудрость 12 (+1) и ничего сверх.
     expect(Character.of(state).sheet.value(saveStatId("wisdom"))).toBe(1);
-    // Вещей у версии 2 не было ни одной, кроме той, которой она называла фокусировку отметкой, и
-    // той, которой она называла купленный компонент.
     expect(state.itemDefinitions.map((item) => item.nameRu)).toEqual([
       "Магическая фокусировка",
       "жемчужина стоимостью не менее 100 зм",
@@ -153,7 +143,6 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(withComponents));
     expect(state.equipment.components?.componentPouch).toBe(false);
-    // Прибавка версии 1 вещи не называла — доехать ей не в чем, и приведение её снимает.
     expect(Character.of(state).sheet.value("armorClass")).toBe(12);
   });
 
@@ -165,7 +154,6 @@ describe("приведение состояния версии 1", () => {
     const state = characterStateSchema.parse(migrateCharacterState(overridden));
     const sheet = Character.of(state).sheet;
 
-    // Мудрость 12 (+1) с владением и плащом; Аркана — Интеллект 4, владение 3 и фокусировка.
     expect(sheet.value(saveStatId("wisdom"))).toBe(5);
     expect(sheet.value(skillStatId("arcana"))).toBe(7);
   });
@@ -189,14 +177,12 @@ describe("приведение состояния версии 1", () => {
     const contributionsOf = (state: unknown): unknown =>
       fieldsOf(listOf(fieldsOf(state).activeEffects)[0]).contributions;
 
-    // Замена базы была способом счёта и до того, как у способов появилось имя.
     expect(contributionsOf(migrateCharacterState(withEffect({ kind: "base_override", value: 13 })))).toEqual([
       { stat: "armorClass", kind: "method", method: { family: "spell", base: 13 } },
     ]);
     expect(contributionsOf(migrateCharacterState(withEffect({ kind: "bonus", value: 5 })))).toEqual([
       { stat: "armorClass", kind: "bonus", value: 5 },
     ]);
-    // Порченый вклад приведение не выдумывает: эффект остаётся, а вкладов у него нет.
     expect(contributionsOf(migrateCharacterState(withEffect({ kind: "bonus" })))).toEqual([]);
   });
 
@@ -212,7 +198,6 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(legacy));
 
-    // Ни +3, ни +9 в защиту не приходят: вещи за ними нет, а слагаемого без вещи форма не знает.
     expect(Character.of(state).sheet.value("armorClass")).toBe(14);
     expect("miscBonuses" in state).toBe(false);
   });
@@ -247,7 +232,6 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(legacy));
 
-    // Приводятся оба места сразу: и уже разведённые вещи, и ещё лежащие в снаряжении.
     expect(state.itemDefinitions[0]?.armor).toEqual({ base: 12 });
     expect(state.itemDefinitions[1]?.bonuses).toEqual({
       spellSaveDc: 1,
@@ -275,7 +259,6 @@ describe("приведение состояния версии 1", () => {
     const abilities = fieldsOf(migrated.abilities);
     expect(abilities.intelligence).toBe(10);
     expect(abilities.dexterity).toBe(10);
-    // Слагаемых без вещи приведение не заводит: выдумывать ему нечего.
     expect("overrides" in migrated).toBe(false);
     expect("miscBonuses" in migrated).toBe(false);
   });
@@ -322,7 +305,6 @@ describe("приведение состояния версии 1", () => {
   });
 
   describe("род вещи становится категорией, а место надетой вещи — независимым счётом", () => {
-    /** Сохранение с плоским прежним инвентарём вместо нынешних определений и запасов. */
     const withLegacyItems = (items: unknown[]) => {
       const state = createThorne();
       return { ...state, itemDefinitions: [], equipment: { ...state.equipment, items } };
@@ -362,8 +344,6 @@ describe("приведение состояния версии 1", () => {
         "gear",
         "other",
       ]);
-      // База доспеха у экипировки остаётся, приведённая к нынешней форме: снимать её значило бы
-      // терять доспех игрока.
       expect(fieldsOf(definitionsOf(migrated)[1]).armor).toEqual({ base: 14 });
     });
 
@@ -389,7 +369,6 @@ describe("приведение состояния версии 1", () => {
         ]),
       );
       expect(definitionsOf(migrated)[0]).toEqual({ id: "potion", nameRu: "Зелье", kind: "consumable" });
-      // Приведённое проходит объявление целиком: снимается ровно то, чего объявление не примет.
       expect(characterStateSchema.safeParse(migrated).success).toBe(true);
     });
 
@@ -439,7 +418,6 @@ describe("приведение состояния версии 1", () => {
       expect(definitionsOf(migrated)[0]).toEqual({ id: "potion", nameRu: "Зелье", kind: "consumable" });
       expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["potion"]);
       expect(wornOf(migrated)).toEqual([]);
-      // Снимок без снаряжения проходит насквозь: приводить в нём нечего.
       const bare = { hitPoints: { current: 1 } };
       expect(migrateUndoPatch(bare)).toBe(bare);
     });
@@ -465,7 +443,6 @@ describe("приведение состояния версии 1", () => {
 
   describe("«прибавки без вещи» снимаются вместе со своим прежним полем", () => {
     const bonuses = { spellcasting: 1, armorClass: 2, savingThrows: 0 };
-    /** Сохранение версии 3: прибавки лежат в снаряжении и вещи не называют. */
     const legacyState = () => {
       const state = fieldsOf(createThorne());
       return {
@@ -478,7 +455,6 @@ describe("приведение состояния версии 1", () => {
       const migrated = fieldsOf(migrateCharacterState(legacyState()));
       expect("otherBonuses" in fieldsOf(migrated.equipment)).toBe(false);
       expect("miscBonuses" in migrated).toBe(false);
-      // Защита осталась той, что дают надетые вещи: 10 + Ловкость 2 + мантия 1 + плащ 1.
       expect(
         Character.of(characterStateSchema.parse(migrated)).sheet.value("armorClass"),
       ).toBe(14);
@@ -498,7 +474,6 @@ describe("приведение состояния версии 1", () => {
   });
 
   describe("хранимая база защиты переезжает на надетый доспех", () => {
-    /** Сохранение версии 4: база лежит в снаряжении, а вещи ещё плоским списком. */
     const withStoredBase = (base: unknown, items: unknown[]) => {
       const state = createThorne();
       return {
@@ -622,7 +597,6 @@ describe("приведение состояния версии 1", () => {
   });
 
   describe("особый срок прежней формы", () => {
-    /** Одно слово прежней формы на всё, чего время не отмеряло. */
     const legacyUntimed = (overrides: Record<string, unknown>) => ({
       id: "legacy",
       nameRu: "Проклятие",
@@ -665,7 +639,6 @@ describe("приведение состояния версии 1", () => {
 
   describe("поля, которые перестали принадлежать персонажу, читаются и отбрасываются", () => {
     const legacy = VERSION_FIVE;
-    /** Снимок отмены версии 5: он возвращал ровно те поля, которых состояние больше не знает. */
     const forgotten = { turnTracking: legacy.turnTracking, reactionAvailable: legacy.reactionAvailable };
 
     it("сохранение прежней версии открывается", () => {
@@ -695,7 +668,6 @@ describe("приведение состояния версии 1", () => {
   });
 });
 
-/** Части сохранения, не менявшиеся от версии к версии: кто он, книга, ячейки, руны, отыгрыш. */
 const {
   intelligence: _derivedIntelligence,
   spellSaveDc: _derivedSaveDc,
@@ -707,13 +679,10 @@ const {
   ...UNCHANGED
 } = VERSION_ONE;
 
-/** Хиты в форме, появившейся вместе с характеристиками: база и снижение кровью раздельно. */
 const SPLIT_HIT_POINTS = { current: 51, maximumBase: 60, bloodReduction: 9, masterReduction: 0 };
 
-/** Компоненты: единственное, что знало плоское снаряжение версии 2. */
 const COMPONENTS = { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: ["identify"] };
 
-/** Версия 2: характеристики появились, снаряжение ещё плоское, прибавки лежат у персонажа. */
 const VERSION_TWO = {
   ...UNCHANGED,
   abilities: createThorne().abilities,
@@ -724,7 +693,6 @@ const VERSION_TWO = {
   hitPoints: SPLIT_HIT_POINTS,
 };
 
-/** Версия 3: у снаряжения появился инвентарь, и вещи носили прежние рода. */
 const VERSION_THREE = {
   ...UNCHANGED,
   abilities: createThorne().abilities,
@@ -740,7 +708,6 @@ const VERSION_THREE = {
   },
 };
 
-/** Версия 4: снаряжение хранило базу Класса Доспеха числом, без имени доспеха. */
 const VERSION_FOUR = {
   ...UNCHANGED,
   abilities: createThorne().abilities,
@@ -754,7 +721,6 @@ const VERSION_FOUR = {
   },
 };
 
-/** Версия 5: форма нынешняя, но экономию хода и режим экрана состояние ещё держало само. */
 const VERSION_FIVE = {
   ...createThorne(),
   reactionAvailable: false,
@@ -762,13 +728,10 @@ const VERSION_FIVE = {
   screenMode: "book",
 };
 
-/** Версия 6: то, что пишет приложение сегодня. */
 const VERSION_SIX = createThorne();
 
 describe("сохранение каждой версии открывается целиком, и числа за столом не едут", () => {
   it.each([
-    // Числа, введённые руками, до нынешней формы не доезжают: КС считается от характеристик и
-    // уровня, а защита — от надетого. Вещей ни в одном из этих сохранений нет.
     ["1", VERSION_ONE, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
     ["2", VERSION_TWO, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
     ["3", VERSION_THREE, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
@@ -788,15 +751,12 @@ describe("сохранение каждой версии открывается 
 
   it("рода вещей версии 3 становятся категориями, надетость вне экипировки снимается", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_THREE));
-    // Третья вещь — фокусировка: отметка версии 3 переехала на неё, и она единственная надета.
-    // Четвёртая — жемчужина: ею версия 3 называла купленный компонент «Опознания».
     expect(state.itemDefinitions.map((item) => item.kind)).toEqual([
       "consumable",
       "other",
       "gear",
       "other",
     ]);
-    // Верёвка была отмечена надетой в старой форме, но не экипировка — её запас переходит в сумку.
     expect(state.equipment.bag.map((entry) => entry.itemId)).toEqual([
       "healing-potion",
       "rope",
@@ -809,14 +769,12 @@ describe("сохранение каждой версии открывается 
 describe("отметка фокусировки становится вещью", () => {
   const FLAG = "spellcastingFocus";
 
-  /** Компоненты прежней формы: отметка фокусировки лежала при персонаже, рядом с мешочком. */
   const components = (spellcastingFocus: boolean) => ({
     componentPouch: false,
     materialsForSpellIds: [],
     spellcastingFocus,
   });
 
-  /** Сохранение с вещами Торна: вещь у фокусировки была, а отметки на ней ещё нет. */
   const withItems = () => {
     const thorne = createThorne();
     return {
@@ -826,7 +784,6 @@ describe("отметка фокусировки становится вещью"
     };
   };
 
-  /** Сохранение без единой вещи и без надетого: отметке нечего назвать. */
   const withoutItems = (spellcastingFocus: boolean) => {
     const { itemDefinitions: _none, ...thorne } = createThorne();
     return { ...thorne, equipment: { bag: [], components: components(spellcastingFocus) } };
@@ -839,7 +796,6 @@ describe("отметка фокусировки становится вещью"
     const state = characterStateSchema.parse(migrateCharacterState(withItems()));
     const focus = state.itemDefinitions.filter((item) => item.spellcastingFocus === true);
 
-    // Вещь у сохранения уже была: приведение отмечает её, а второй такой же не заводит.
     expect(focus.map((item) => item.nameRu)).toEqual(["Магическая фокусировка +1"]);
     expect(state.equipment.worn).toEqual(createThorne().equipment.worn);
     expect(componentsOf(withItems())).not.toHaveProperty(FLAG);
@@ -860,7 +816,6 @@ describe("отметка фокусировки становится вещью"
     expect(focus?.nameRu).toBe("Магическая фокусировка");
     expect(focus?.spellcastingFocus).toBe(true);
     expect(state.equipment.worn).toEqual([{ itemId: focus?.id, count: 1 }]);
-    // Прибавок заведённой вещи приведение не выдумывает: игрок про них ничего не говорил.
     expect(focus?.bonuses).toBeUndefined();
   });
 
@@ -902,7 +857,6 @@ describe("подавление огнём прежней формы", () => {
 describe("отметка купленного компонента становится вещью", () => {
   const LIST = "materialsForSpellIds";
 
-  /** Сохранение, где дорогой компонент был отмечен купленным при заклинании. */
   const withBought = (spellIds: unknown) => {
     const thorne = createThorne();
     return {
@@ -923,8 +877,6 @@ describe("отметка купленного компонента станов�
 
     expect(pearl).toMatchObject({ kind: "other", price: { amount: 100, currency: "gold" } });
     expect(state.equipment.bag).toContainEqual({ itemId: pearl?.id, count: 1 });
-    // Отметки при заклинании после приведения не остаётся: вторым способом сказать то же самое
-    // она разошлась бы с сумкой на первом же расходе.
     expect(componentsOf(withBought(["identify"]))).not.toHaveProperty(LIST);
   });
 
@@ -937,8 +889,6 @@ describe("отметка купленного компонента станов�
   });
 
   it("незнакомое заклинание вещи не получает: назвать её нечем", () => {
-    // Каталога у приведения нет, а имя вещи знают только слова карточки: выдуманное осталось бы в
-    // сумке навсегда и с карточкой не встретилось бы никогда.
     const state = characterStateSchema.parse(migrateCharacterState(withBought(["fireball", 7])));
 
     expect(state.itemDefinitions).toEqual(createThorne().itemDefinitions);
@@ -946,8 +896,6 @@ describe("отметка купленного компонента станов�
   });
 
   it("уже заведённая вещь второй не становится", () => {
-    // Сохранение, где список пережил приведение: вещь у компонента уже есть, и вторая её запись
-    // означала бы вторую жемчужину из ниоткуда.
     const once = fieldsOf(migrateCharacterState(withBought(["identify"])));
     const again = characterStateSchema.parse(
       migrateCharacterState({
@@ -965,8 +913,6 @@ describe("отметка купленного компонента станов�
   });
 
   it("порченую запись приведение не разбирает: отвечает за неё объявление", () => {
-    // Ни отметка не списком, ни сумка не списком приведению не поддаются: починенная наугад, они
-    // прошли бы объявление, и порча стала бы состоянием персонажа.
     const brokenList = withBought("identify");
     expect(migrateCharacterState(brokenList)).toBe(brokenList);
 

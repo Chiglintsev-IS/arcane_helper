@@ -52,7 +52,6 @@ export function RestScreen() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Поля те же, что у «Игры»: одна и та же шапка не вправе стоять в двух режимах по-разному. */}
       <div className="flex shrink-0 flex-col gap-2 px-3 pt-2">
         <ResourceHeader
           sheet={snapshot.sheet}
@@ -62,7 +61,6 @@ export function RestScreen() {
           onEditResources={() => setResourcesOpen(true)}
         />
 
-        {/* Тот же ряд, что и в «Игре»: что держится и что уже потрачено — об одном мгновении. */}
         <div className="flex flex-wrap items-center gap-2">
           <ActiveEffects
             effects={snapshot.effects}
@@ -89,12 +87,6 @@ export function RestScreen() {
         </div>
       </div>
 
-      {/*
-       Операции прижаты к нижнему краю, а не к верхнему: содержимое привала занимает четверть
-       экрана, и пустота под кнопками отодвигала главное действие из-под большого пальца. Пустота
-       остаётся, но уходит наверх, где ничего не стоит. Отступом сверху её не заменить: он замер бы
-       на одном размере экрана, а прижатие держится на всех.
-       */}
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
         <div className="flex min-h-full flex-col justify-end">
           <Camp
@@ -172,10 +164,6 @@ export function RestScreen() {
         />
       ) : null}
 
-      {/*
-       * Перехода в карточку заклинания у «Привала» нет: подробная карточка живёт в «Игре» и
-       * «Книге», а чужих шторок экран не открывает.
-       */}
       {activeOpen ? (
         <ActiveEffectsSheet
           effects={snapshot.effects}

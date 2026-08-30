@@ -1,10 +1,3 @@
-/**
- * Проекция схемы ритуала.
- *
- * Проверяется состав слоёв и то, что наружу уходит рисунок, а не описание: пропорции доводятся
- * глазом, и число в ожидании про красоту ничего не говорит.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
@@ -22,13 +15,6 @@ function layers(diagram: RitualDiagram, layer: string) {
   return toDiagramView(diagram).marks.filter((mark) => mark.layer === layer);
 }
 
-/**
- * Слой или вид печати, которых у книжных ритуалов нет.
- *
- * Ритуалов в книге два, и вида печати у каждого один: пунктирную печать и составную звезду
- * подменяют здесь, потому что проверяется рисование, а не состав книги — состав держит прогон
- * контента.
- */
 function withSeal(diagram: RitualDiagram, kind: "empty-hand" | "summoning-triangle"): RitualDiagram {
   return { ...diagram, centralSeal: { ...diagram.centralSeal, kind } };
 }
@@ -114,7 +100,6 @@ describe("рисунок вместо описания", () => {
   });
 
   it("дуга приезжает концами и флагами: синуса на рисующей стороне нет", () => {
-    // «Глаз» сложен из двух дуг: у каждой названы концы, радиус и какая из четырёх это дуга.
     const [seal] = layers(diagramOf("alarm"), "central-seal");
     const arcs = (seal?.figures ?? []).filter((figure) => figure.kind === "arc");
 
@@ -134,8 +119,6 @@ describe("рисунок вместо описания", () => {
   });
 
   it("необязательного слоя нет — нет и его знаков: обязательны кольца, печать и подпись", () => {
-    // Схема без надписи и делений законна: слои набираются по вкусу ритуала. Звезды, осей и
-    // радиальных знаков у «Сигнала тревоги» нет и в самом контенте — их пустой случай настоящий.
     const { inscription: _none, tickRing: _noTicks, ...bare } = diagramOf("alarm");
 
     expect(layers(bare, "inscription-rune")).toHaveLength(0);
@@ -148,8 +131,6 @@ describe("рисунок вместо описания", () => {
   });
 
   it("незамкнутая ломаная замкнутости не приобретает", () => {
-    // Ни один знак справочника незамкнутой ломаной не нарисован, поэтому отображение спрашивают
-    // напрямую: договор такую фигуру допускает, и рисующая сторона обязана отдать её как есть.
     expect(figureOf({ kind: "polyline", points: [[0, 0], [10, 10]] })).toEqual({
       kind: "polyline",
       points: [{ x: 0, y: 0 }, { x: 10, y: 10 }],

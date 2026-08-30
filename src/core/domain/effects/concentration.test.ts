@@ -8,11 +8,9 @@ import {
   startRound,
 } from "@/core/domain/effects/concentration";
 
-/** КС читается описанием проверки: своего входа у неё нет, и модификатор здесь ни при чём. */
 const dcFor = (damage: number): number => describeConcentrationCheck(damage, 0).dc;
 
 describe("КС проверки концентрации", () => {
-  // Таблица из — граница проходит между 21 и 22.
   it.each([
     [0, 10],
     [1, 10],
@@ -65,8 +63,6 @@ describe("describeConcentrationCheck", () => {
 });
 
 describe("checkOutcome", () => {
-  // Границы принадлежат правилу: натуральная 20 спасбросок сама по себе не проходит, и «не
-  // проходит даже 20» — вывод из граней кости, а не из подписи.
   it.each([
     [10, 9, "any_roll"],
     [10, 20, "any_roll"],
@@ -119,11 +115,9 @@ describe("startRound", () => {
 });
 
 describe("durationWithRoundsRu", () => {
-  // Предлог «до» требует родительного падежа: «до 3 раунда» читается как ошибка приложения.
   it.each([
     [{ type: "rounds", value: 3 } as const, "до 3 раундов"],
     [{ type: "rounds", value: 1 } as const, "до 1 раунда"],
-    // Перевод в раунды помогает, пока их можно пересчитать в уме и сравнить с длиной боя.
     [{ type: "minutes", value: 1 } as const, "до 1 минуты (10 раундов)"],
     [{ type: "minutes", value: 10 } as const, "до 10 минут"],
     [{ type: "hours", value: 1 } as const, "до 1 часа"],

@@ -19,10 +19,6 @@ import { ABILITIES, SKILL_IDS } from "@/core/domain/shared/stats";
 import { characterFeaturesSchema } from "./features";
 import { SKILL_TRAINING } from "./skills";
 
-/**
- * Величины персонажа объявлены по одному разу: то же объявление проверяет и сохранённое состояние, и
- * правку с экрана. Второй проверки того же факта в приложении нет — разойтись им было бы нечем.
- */
 const abilityScore = z
   .number()
   .int()
@@ -38,7 +34,6 @@ const characterLevel = z
 const age = z.number().int().nonnegative();
 const speedFeet = z.number().int().nonnegative();
 
-/** Размер существа: из перечисления правил, потому что от него зависят правила захвата и укрытия. */
 export const CREATURE_SIZES = [
   "tiny",
   "small",
@@ -57,19 +52,10 @@ const abilitiesSchema = z.object({
   charisma: abilityScore,
 });
 
-/** Бывает ли такой уровень: отвечает то же объявление, которым проверяется состояние. */
 export function isPossibleCharacterLevel(level: number): boolean {
   return characterLevel.safeParse(level).success;
 }
 
-/**
- * Поля листа с наложенной правкой — разобранные объявлениями, или отказ с причиной словами.
- *
- * Правка приходит непроверенной: экран передаёт набранное как есть. Разбирается персонаж целиком, а
- * не пришедшие поля по одному, потому что целым он и хранится — умолчания объявлений попадают в
- * состояние, а не в отброшенный результат проверки, и после правки лист заведомо цел. Другого места,
- * где эти числа проверяются, нет: экран получает либо новое состояние, либо отказ.
- */
 export function parsedCharacterFields(
   fields: CharacterFields,
   patch: Partial<Record<keyof typeof CHARACTER_FIELDS, unknown>>,
@@ -79,18 +65,15 @@ export function parsedCharacterFields(
   return parsed.data;
 }
 
-/** Отказ называет поле и причину словами объявления: их показывают там, где набирали. */
 function refusalOf(error: z.ZodError): string {
   const [field] = error.issues.map((issue) => String(issue.path[0]));
   return `Поле «${field}» не годится: ${reasonsOf(error)}`;
 }
 
-/** Причины отказа словами: их называет само объявление поля. */
 function reasonsOf(error: z.ZodError): string {
   return error.issues.map((issue) => issue.message).join("; ");
 }
 
-/** Поля контекста для сборки полной схемы состояния. */
 export const CHARACTER_FIELDS = {
   id: nonEmpty,
   name: nonEmpty,
@@ -118,7 +101,6 @@ export const CHARACTER_FIELDS = {
 
   features: characterFeaturesSchema,
 
-  /** Отметки на листе: их ставят и снимают там же, где смотрят, — на «Листе». */
   exhaustion: z.number().int().min(0).max(MAXIMUM_EXHAUSTION).default(0),
   inspiration: z.boolean().default(false),
 };

@@ -16,11 +16,9 @@ import {
 } from "@/core/application/casting/availability";
 import { materialCoveredByFocus, materialOf } from "@/core/application/casting/material";
 
-/** Вход проверки и одно её предупреждение: формы называет подпись, отдельных имён им не нужно. */
 type AvailabilityInput = Parameters<typeof checkAvailability>[0];
 type AvailabilityWarning = Availability["warnings"][number];
 
-/** Причины одного кода: проверка возвращает все предупреждения, а прогон спрашивает про одно. */
 function reasonsOf(availability: Availability, code: AvailabilityWarning["code"]): string[] {
   return availability.warnings
     .filter((warning) => warning.code === code)
@@ -35,7 +33,6 @@ function spell(id: string): Spell {
   return found;
 }
 
-/** Заговор действием, заклинание действием, реакция, ритуал — по одному на каждую ветку. */
 const rayOfFrost = spell("ray-of-frost");
 const mageArmor = spell("mage-armor");
 const shield = spell("shield");
@@ -47,7 +44,6 @@ const alarm = spell("alarm");
 function check(overrides: Partial<AvailabilityInput> & { spell: Spell }) {
   const input: AvailabilityInput = {
     character: createThorne(),
-    // Бой уже начат: только тогда ход считается, и проверки хода вообще что-то говорят.
     turn: { ...ALL_TURN_RESOURCES, inFight: true },
     mode: overrides.spell.level === 0 ? "cantrip" : "normal",
     payment:
@@ -158,7 +154,6 @@ describe("checkAvailability: экономия хода (FR-030, FR-141)", () => 
 });
 
 describe("checkAvailability: накладывание дольше хода (FR-033)", () => {
-  /** Предупреждение о минутах имеет смысл только там, где ход считается. */
   function inCombat(): CharacterState {
     return createThorne();
   }
@@ -171,8 +166,6 @@ describe("checkAvailability: накладывание дольше хода (FR-
   });
 
   it("часы называют время в своих единицах", () => {
-    // Заклинания с накладыванием в часы в книге сейчас нет: время подменено у настоящей карточки,
-    // потому что проверяются единицы в предупреждении, а не состав книги.
     const forHours: Spell = { ...alarm, castingTime: { type: "hour", value: 1 } };
     const availability = check({
       spell: forHours,
@@ -216,7 +209,6 @@ describe("checkAvailability: накладывание дольше хода (FR-
 });
 
 describe("checkAvailability: оплата (FR-030, FR-070)", () => {
-  /** Ячейки этого уровня истрачены: тратит их то же правило, что за столом. */
   function withoutSlots(level: number): CharacterState {
     const character = createThorne();
     const slot = character.spellSlots[level];
@@ -406,7 +398,6 @@ describe("перечень требований (FR-030)", () => {
     componentRequirements(target.components, materialCoveredByFocus(target.components, character));
 
   it("перечисляет действия словами, а не аббревиатурой «В, С, М»", () => {
-    // Фокусировки нет, поэтому кожа «Доспехов мага» названа: закрытая, она молчала бы.
     expect(requirements(mageArmor, withoutSpellcastingFocus(createThorne()))).toEqual([
       "Произнести вслух",
       "Жест свободной рукой",
@@ -415,8 +406,6 @@ describe("перечень требований (FR-030)", () => {
   });
 
   it("предупреждает, что фокусировка не заменяет компонент со стоимостью", () => {
-    // Компонента «стоит денег, но не расходуется» в книге сейчас нет, поэтому цену и расход
-    // свидетельствует одна карточка: здесь проверяется цена, следующим тестом — расход.
     expect(requirements(arcaneLock).at(-1)).toContain("25 зм, фокусировка не заменяет");
   });
 
@@ -460,7 +449,6 @@ describe("checkAvailability: несколько нарушений сразу", 
 });
 
 describe("наличие компонентов (FR-030, OQ-06)", () => {
-  /** Компонент куплен и лежит в сумке: он вещь и попадает туда как всякая вещь. */
   function withMaterialInBag(character: CharacterState, forSpell: Spell): CharacterState {
     const material = materialOf(forSpell.components);
     if (material === undefined) throw new Error(`«${forSpell.nameRu}» материала не требует`);
@@ -479,7 +467,6 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
   it("дорогой компонент проверяется запасом в сумке (FR-268)", () => {
     const missing = missingComponent(arcaneLock);
     expect(missing?.reasonRu).toContain("золотая пыль");
-    // Проходимо: мастер вправе разрешить, а игрок — вспомнить, что запас всё-таки есть.
     expect(missing?.enforcement).toBe("advisory");
 
     expect(
@@ -510,7 +497,6 @@ describe("наличие компонентов (FR-030, OQ-06)", () => {
     expect(missingComponent(arcaneLock, { ...base, equipment: withoutComponents })).toBeUndefined();
   });
 });
-
 
 describe("исполнение предупреждений по объявлению", () => {
   const advisory: AvailabilityWarning = {

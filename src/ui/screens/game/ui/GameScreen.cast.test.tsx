@@ -1,11 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Мастер применения проверяется целиком через экран боя: путь UC-01 от строки списка до
- * подтверждения. Ключевое здесь — инварианты, а их видно только на настоящих
- * операциях состояния.
- */
-
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -21,20 +15,14 @@ import {
   withoutSlots,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 
-/**
- * Учёт хода ведётся ровно в режиме «Бой», а он же начальный, — так что помощник ничего не
- * включает. Имя оставлено: оно объясняет, зачем тесту учёт.
- */
 function withTurnTracking(): CharacterState {
   return { ...createThorne() };
 }
 
-/** Свободных ячеек нет: их тратит правило ресурсов, а не фикстура. */
 function spentSlots(): CharacterState {
   return withoutSlots(withTurnTracking());
 }
 
-/** Ни ячеек, ни крови: под прямым солнцем кровавое колдовство не действует. */
 function withoutAnyPayment(): CharacterState {
   return {
     ...spentSlots(),
@@ -63,15 +51,6 @@ function concentrating(): CharacterState {
   };
 }
 
-/**
- * Нажимает «Сотворить»: «Начать бой», затем строка списка и кнопка карточки. Заклинанию, которому
- * есть что спросить, открывается мастер; заговор без предупреждений творится этим же нажатием.
- *
- * Бой начинается по умолчанию: иначе перед тем, что проверяет тест, вставал бы лишний шаг «Бой не
- * начат» — во всех сценариях этого файла применение происходит в режиме «Бой». Тесты,
- * которым нужно снять слепок состояния до открытия мастера, но после начала боя, передают свой
- * `user` и `startCombat: false`, начиная бой отдельным вызовом заранее.
- */
 async function openWizard(
   name: RegExp,
   options: { user?: ReturnType<typeof userEvent.setup>; startCombat?: boolean } = {},
@@ -80,7 +59,6 @@ async function openWizard(
   if (options.startCombat !== false) {
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
   }
-  // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием.
   await user.click(within(screen.getByLabelText(/^Заклинания/)).getByRole("button", { name }));
   await user.click(screen.getByRole("button", { name: "Сотворить" }));
   return user;
@@ -99,10 +77,8 @@ describe("вход в мастер (FR-020)", () => {
     const before = shown(stores).resources.slots;
     await openWizard(/Луч холода/);
 
-    // Спрашивать нечего: ни мастера, ни карточки — заклинание уже сотворено.
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(shown(stores).resources.slots).toEqual(before);
-    // Две записи: «Бой начался» из `openWizard`, затем само применение.
     expect(shown(stores).log).toHaveLength(2);
     expect(shown(stores).turn.actionAvailable).toBe(false);
   });
@@ -119,8 +95,6 @@ describe("вход в мастер (FR-020)", () => {
 describe("инвариант FR-022: до подтверждения ресурсы не тронуты", () => {
   it("полный проход мастера и отмена оставляют состояние прежним", async () => {
     const { stores } = await renderWithStores(<GameScreen />);
-    // Бой начат заранее: снимок «до» должен отражать состояние прямо перед открытием мастера,
-    // а не более раннее — иначе он не сойдётся с тем, что тест сравнивает после отмены.
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     const before = shown(stores);
@@ -147,7 +121,6 @@ describe("подтверждение (FR-023, AC-11)", () => {
     expect(slotsLeft(stores, 2)).toBe(2);
     expect(slotsLeft(stores, 1)).toBe(4);
     expect(shown(stores).effects).toHaveLength(1);
-    // Две записи: «Бой начался» из `openWizard`, затем само применение.
     expect(shown(stores).log).toHaveLength(2);
     expect(shown(stores).log.at(-1)?.summaryRu).toBe("Доспехи мага — ячейкой 2 уровня");
     expect(shown(stores).turn.actionAvailable).toBe(false);
@@ -205,8 +178,6 @@ describe("замена концентрации (FR-081, AC-13)", () => {
     expect(screen.getByText(/Шаг 1 из 2: Чем сотворить/)).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Далее" }));
 
-    // Фразу выбирает проверка доступности: собранная в мастере заново, она разошлась бы с той,
-    // которой та же помеха названа в списке, — и с отказом подтверждения.
     const wizard = within(screen.getByRole("dialog", { name: /Применение/ }));
     expect(wizard.getByText(/Уже идёт концентрация: «Обнаружение магии»/)).toBeDefined();
     expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(true);
@@ -229,19 +200,16 @@ describe("замена концентрации (FR-081, AC-13)", () => {
 
   it("отмена на шаге концентрации оставляет прежний эффект", async () => {
     const { stores } = await renderWithStores(<GameScreen />, concentrating());
-    // Бой начат заранее — по той же причине, что и в тесте выше.
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
     const before = shown(stores);
     await openWizard(/^Обнаружение магии/, { user, startCombat: false });
 
     await user.click(screen.getByRole("button", { name: "Далее" }));
-    // На шаге концентрации две кнопки: «Отмена» рядом с «Заменить концентрацию».
     const step = screen.getByRole("dialog", { name: /Применение/ });
     await user.click(within(step).getAllByRole("button", { name: "Отмена" })[1]!);
 
     expect(shown(stores)).toEqual(before);
-    // Мастер закрыт; открытой остаётся карточка заклинания, из которой пришли.
     expect(screen.queryByRole("dialog", { name: /Применение/ })).toBeNull();
   });
 });
@@ -279,8 +247,6 @@ describe("недоступность руны названа причиной (F
 
     await user.click(screen.getByRole("button", { name: /^Кровью · ячейка 4 уровня/ }));
 
-    // Кровь создала ячейку четвёртого уровня, и «Руна жизни» даёт за неё столько же, сколько за
-    // ячейку из пула.
     const rune = screen.getByLabelText("Руна");
     expect(within(rune).getByText(/20 временных хитов/)).toBeDefined();
   });
@@ -327,18 +293,11 @@ describe("руна жизни спрашивает кому (FR-156)", () => {
 });
 
 describe("шаг костей хитов (FR-135)", () => {
-  /**
-   * Раненый Торн с подготовленной «Мистической бодростью».
-   *
-   * Ранение — чтобы лечение не упёрлось в максимум. Подготовка — потому что в боевом списке только
-   * заговоры и подготовленное, а в книге Торна это заклинание по умолчанию не подготовлено.
-   */
   function woundedThorne(): CharacterState {
     const wounded = withDamage(withTurnTracking(), 30);
     return { ...wounded, preparedSpellIds: [...wounded.preparedSpellIds, "arcane-vigor"] };
   }
 
-  /** До костей мастер проходит через выбор ячейки: он идёт первым и от него зависит максимум. */
   async function openHitDiceStep() {
     const user = await openWizard(/Мистическая бодрость/);
     await user.click(screen.getByRole("button", { name: "Далее" }));
@@ -405,7 +364,6 @@ describe("шаг костей хитов (FR-135)", () => {
     await renderWithStores(<GameScreen />, spent);
     await openHitDiceStep();
     expect(screen.getByText(/бросать нечего/)).toBeTruthy();
-    // Предупреждение, а не запрет: ячейку игрок вправе потратить впустую.
     expect(screen.getByRole("button", { name: "Подтвердить" }).hasAttribute("disabled")).toBe(false);
   });
 });

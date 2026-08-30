@@ -1,28 +1,13 @@
-/**
- * Проверка разработки: бросок игрока против сложности рецепта.
- *
- * Кость кидает игрок, приложение принимает выпавшее и складывает. Своего бонуса у ремесла нет:
- * бонус мастерства и модификатор характеристики — числа листа, и приходят они сюда доводом. Ремесло
- * знает лишь то, чего лист не знает, — какому направлению алхимик обучен и какое направление в
- * работе самое слабое.
- *
- * Гибрид идёт одной проверкой, и бонус ей достаётся наименьший среди задействованных направлений:
- * рецепт, куда затесалось свойство неизученного направления, роняет проверку целиком.
- */
-
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { Ability } from "@/core/domain/shared/stats";
 import { CHECK_DIE_RU, MISHAP_DIE_RU } from "@/shared/language";
 
-/** Характеристика алхимических проверок: справочник называет Интеллект. */
 export const ALCHEMY_ABILITY: Ability = "intelligence";
 
-/** Кость проверки: справочник называет её двадцатигранной. */
 const CHECK_DIE_FACES = 20;
 const NATURAL_ONE = 1;
 
-/** Последствия критического провала по d6. */
 const MISHAPS: readonly string[] = [
   "Реакция гаснет без дополнительных последствий.",
   "Реакция гаснет без дополнительных последствий.",
@@ -32,18 +17,11 @@ const MISHAPS: readonly string[] = [
   "Повреждается оборудование, а алхимик подвергается случайному эффекту смеси.",
 ];
 
-/** Числа листа, которые проверка складывает: своих у ремесла нет. */
 export type CheckNumbers = {
   readonly proficiencyBonus: number;
   readonly abilityModifier: number;
 };
 
-/**
- * Чем работа прибавляется к броску и что мешает прибавиться сильнее.
- *
- * Необученные направления названы отдельно, а не выведены из числа: игрок обязан увидеть до броска,
- * почему бонус ниже привычного, а «на три меньше» само по себе на этот вопрос не отвечает.
- */
 export type DevelopmentCheck = {
   readonly bonus: number;
   readonly unstudied: readonly AlchemyDirection[];
@@ -78,27 +56,18 @@ function assertCheckRoll(rolled: number): void {
   }
 }
 
-/** Последствие аварии по выпавшему; выпасть такого не могло — отказ с причиной. */
 function mishapOf(rolled: number): string {
   const found = MISHAPS[rolled - NATURAL_ONE];
   if (found === undefined) throw new DomainError(impossibleRollRefusal(MISHAP_DIE_RU, rolled));
   return found;
 }
 
-/**
- * Чем кончилась проверка разработки.
- *
- * Натуральная единица — не просто провал: рецепт не создаётся, и происходит алхимическая авария,
- * последствие которой называет своя таблица. Натуральная двадцать сама по себе успеха не даёт:
- * справочник награждает её только при успешном результате.
- */
 export type DevelopmentOutcome = {
   readonly rolled: number;
   readonly bonus: number;
   readonly total: number;
   readonly success: boolean;
   readonly rewarded: boolean;
-  /** Последствие аварии; нет вовсе — аварии не случилось. */
   readonly mishapRu?: string;
 };
 

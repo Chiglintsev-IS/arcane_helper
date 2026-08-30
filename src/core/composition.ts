@@ -1,15 +1,3 @@
-/**
- * Сборка ядра: единственное место, видящее все четыре слоя сразу.
- *
- * Здесь ядро обзаводится состоянием, хранилищем и часами — и становится тем, к чему обращаются
- * сообщением. Сегодня эту функцию зовёт браузер, завтра позовёт серверный процесс: больше в
- * переезде ничего нет.
- *
- * Состояние живёт тут, а не у отображения. Это и есть разница между «логика лежит в отдельном
- * каталоге» и «логика отдельна»: пока состоянием владел стор экрана, ядро было библиотекой, к
- * которой он ходил, а не стороной, у которой спрашивают.
- */
-
 import type { Envelope } from "@/contract/commands";
 
 import { Character } from "@/core/domain/assembly/character";
@@ -30,18 +18,10 @@ import { createHandler, type Backend } from "@/core/presentation/handler";
 type CoreParts = {
   repository: SessionRepository;
   clock: Clock;
-  /** Как выглядит персонаж, если сохранений ещё нет. */
   createInitialCharacter: () => CharacterState;
-  /** Карточки из сборки. Ядро не знает, чей это контент, и не тянет его импортом. */
   loadBuiltInCatalog: () => Spell[];
 };
 
-/**
- * Собранное ядро: дверь договора и ничего кроме.
- *
- * Состояние наружу не отдаётся ни одним способом — ни функцией, ни полем: по сети его всё равно не
- * передать, и вторая дверь означала бы, что снаружи считают сами.
- */
 export type Core = Backend;
 
 export function createCore(parts: CoreParts): Core {
@@ -57,13 +37,6 @@ export function createCore(parts: CoreParts): Core {
     spellCatalogSource: "built_in",
   });
 
-  /**
-   * Запись идёт до ответа, а не после: ответ «применено» при незаписанном состоянии — обещание
-   * сохранности, которой нет.
-   *
-   * Встроенный каталог в запись не уходит: его копия заморозила бы книгу на дате установки, и
-   * заклинание из следующей сборки не появилось бы никогда.
-   */
   const persist = async (next: LiveSession): Promise<void> => {
     const stored = next.spellCatalogSource === "imported" ? next.spellCatalog : null;
     try {
@@ -74,10 +47,6 @@ export function createCore(parts: CoreParts): Core {
     }
   };
 
-  /**
-   * Книга сохранения следует каталогу сборки: карточка, убранная из сборки после записи, снимается
-   * из книги при чтении, а не запирает каждую команду отказом целостности.
-   */
   const builtInIds = new Set(builtInCatalog.map((spell) => spell.id));
   const withinBuiltIn = (character: CharacterState): CharacterState =>
     Character.of(character)
@@ -95,7 +64,6 @@ export function createCore(parts: CoreParts): Core {
       return started;
     }
 
-    // Каталога в записи нет — значит его и не подменяли: играем тем, что в сборке.
     const catalog = stored.spellCatalog;
     const session = fromPersisted(stored);
     const restored: LiveSession = {
@@ -119,11 +87,6 @@ export function createCore(parts: CoreParts): Core {
     },
 
     async execute(envelope: Envelope) {
-      /*
-       * Начать заново можно и поверх непрочитанного: этой команде прежнее состояние не нужно, а
-       * настаивать на нём значило бы отдать единственный выход тому самому отказу, из которого
-       * выходят.
-       */
       const current = startsOver(envelope.command) ? (live ?? fresh()) : await opened();
       const occasion: Occasion = { ...clock, commandId: envelope.commandId };
       const next = applyCommand(current, envelope.command, occasion, {
@@ -131,14 +94,8 @@ export function createCore(parts: CoreParts): Core {
         createInitialCharacter,
       });
 
-      // Повтор попытки состояние не двигает: контроллер вернул то же самое.
       if (next === current) return { live: current, version };
 
-      /*
-       * Целостность проверяется здесь, а не у просящего: после подмены каталога ссылка в пустоту —
-       * разрушенное состояние, а не спорный файл. Отказ приходит до записи, поэтому отвергнутая
-       * подмена не оставляет следа.
-       */
       const broken = checkIntegrity(next.session.character, next.spellCatalog);
       if (broken !== null) throw new DomainError(broken);
 

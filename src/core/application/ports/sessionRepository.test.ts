@@ -1,15 +1,7 @@
-/**
- * Разбор прочитанного из хранилища на настоящем сохранении игрока.
- *
- * Слепок снят с телефона: версия 1, лог с записями о бое, ходе и реакции. Поэтому он лежит здесь
- * целиком, а не удобной выжимкой — сохранение не открывалось именно тем, чего выжимка не показала бы.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { parsePersisted } from "./sessionRepository";
 
-/** Ход и реакция, какими их держало состояние версии 1: обоих полей у состояния больше нет. */
 const LEGACY_TURN_TRACKING = { enabled: false, actionAvailable: true, bonusActionAvailable: true };
 
 const PLAYER_SAVE = {

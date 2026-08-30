@@ -11,17 +11,11 @@ import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 const spells = loadThorneSpells();
 
-/** Совет состоит из 2–4 названных вариантов применения, каждый — отдельным абзацем. */
 const MINIMUM_ADVICE_VARIANTS = 2;
 const MAXIMUM_ADVICE_VARIANTS = 4;
 
-/**
- * Вариант обязан назвать «когда», «что именно сделать» и число. В сотню знаков все три
- * части не укладываются, поэтому абзац короче неё — не вариант, а обрывок.
- */
 const MINIMUM_VARIANT_LENGTH = 100;
 
-/** Абзацы отделяются пустой строкой — формат `fullRulesRu` и `tacticalAdviceRu` по. */
 function paragraphs(text: string): string[] {
   return text
     .split("\n\n")
@@ -31,8 +25,6 @@ function paragraphs(text: string): string[] {
 
 describe("книга заклинаний Торна", () => {
   it("состоит из 33 карточек: 4 заговора и 29 заклинаний по уровням", () => {
-    // Состав назван игроком. Числа держат этот тест и реестр
-    // подготовки: карточка, забытая в загрузчике, иначе исчезает молча.
     expect(spells).toHaveLength(33);
     const byLevel = (level: number) => spells.filter((spell) => spell.level === level).length;
     expect(byLevel(CANTRIP_LEVEL)).toBe(4);
@@ -43,8 +35,6 @@ describe("книга заклинаний Торна", () => {
   });
 
   it("у каждой карточки указан источник (ADR-0020)", () => {
-    // Смешанная редакция: 2024 там, где заклинание переиздано, иначе книга, где оно вышло.
-    // Без источника невозможно проверить, по какой версии написана карточка.
     for (const spell of spells) {
       expect(spell.source, `${spell.nameRu} без источника`).toBeTruthy();
     }
@@ -55,36 +45,27 @@ describe("книга заклинаний Торна", () => {
   });
 
   it("у каждой карточки указана роль в бою (FR-213)", () => {
-    // В схеме поле необязательное: та же схема читает чужие выгрузки, и файл без роли обязан
-    // открыться. Полноту собственного контента держит этот тест, а не схема.
     for (const spell of spells) {
       expect(spell.combatRole, `${spell.nameRu} без роли в бою`).toBeDefined();
     }
   });
 
   it("роли расставлены по смыслу, а не по наличию урона (FR-213)", () => {
-    // «Поглощение стихий» несёт урон в данных и при этом чисто защитное — ровно тот случай,
-    // из-за которого роль хранится, а не выводится.
     const byId = new Map(spells.map((spell) => [spell.id, spell.combatRole]));
     expect(byId.get("absorb-elements")).toBe("defense");
     expect(byId.get("shield")).toBe("defense");
     expect(byId.get("mage-armor")).toBe("defense");
     expect(byId.get("ray-of-frost")).toBe("offense");
     expect(byId.get("shocking-grasp")).toBe("offense");
-    // «Паутина» урона не наносит и всё же боевая: она выключает противника, а не защищает своих.
     expect(byId.get("web")).toBe("offense");
     expect(byId.get("slow")).toBe("offense");
     expect(byId.get("counterspell")).toBe("defense");
     expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(8);
   });
-
 });
 
 describe("имена навыков в тексте карточек", () => {
   it("карточки называют навык именем листа, а не прежним", () => {
-    // Карточка называет проверку словами, и прежнее имя вернётся с любой следующей — вычиткой это
-    // не ловится. «Магия» проверяется только в скобках проверки: само слово общее, и запретить его
-    // целиком значило бы запретить магию в тексте про магию.
     const retired = [/расследован/i, /восприят/i, /\(Магия\)/];
     for (const spell of spells) {
       const text = JSON.stringify(spell);
@@ -93,9 +74,6 @@ describe("имена навыков в тексте карточек", () => {
       }
     }
 
-    // Обратная сторона: запрет проходит и на книге, где проверок нет вовсе. Свидетель — то имя,
-    // которое контент действительно называет: состав книги меняется, и требовать оба имени значило
-    // бы держать в книге заклинание ради теста.
     const named = (skill: string) =>
       spells.filter((spell) => JSON.stringify(spell).includes(skill)).length;
     expect(named("(Внимательность)")).toBeGreaterThan(0);
@@ -111,8 +89,6 @@ describe("реестр запретов (FR-160, FR-161)", () => {
   });
 
   it("огонь запрещён данными, а не перечислением", () => {
-    // Перечислить всю огненную школу руками нельзя, а пропущенное заклинание было бы ошибкой в
-    // пользу опасного для тролля выбора.
     expect(HARMFUL_DAMAGE_TYPES).toContain("огонь");
     for (const spell of spells) {
       for (const harmful of HARMFUL_DAMAGE_TYPES) {
@@ -130,17 +106,12 @@ describe("реестр запретов (FR-160, FR-161)", () => {
 
 describe("полнота текстовых полей (FR-013)", () => {
   it("у каждой карточки есть тактический совет", () => {
-    // В схеме поле необязательное — той же схемой читается чужой импорт, и файл,
-    // выгруженный прежней версией, обязан открыться. Полноту собственного контента
-    // держит этот тест, как и для `source` с `combatRole`.
     for (const spell of spells) {
       expect(spell.tacticalAdviceRu, `${spell.nameRu} без тактического совета`).toBeDefined();
     }
   });
 
   it("совет состоит из 2–4 названных вариантов, и ни один не оборван", () => {
-    // Связная проза про ценность заклинания требованию не удовлетворяет: совет отвечает на вопрос
-    // «что мне сделать», и каждый ответ — отдельный абзац.
     for (const spell of spells) {
       const variants = paragraphs(spell.tacticalAdviceRu ?? "");
       expect(variants.length, `${spell.nameRu}: вариантов ${variants.length}`).toBeGreaterThanOrEqual(
@@ -158,9 +129,6 @@ describe("полнота текстовых полей (FR-013)", () => {
   });
 
   it("совет замкнут на своём заклинании", () => {
-    // Совет, построенный на соседях по книге, устаревает при первой же смене состава и читается
-    // только тем, кто помнит все карточки. О другом заклинании он говорит родом, а не именем.
-    // Исключение — имя, которое называют правила самого заклинания.
     const allowedNames = (spell: (typeof spells)[number]): string[] =>
       [spell.nameRu, ...(spell.fullRulesRu.match(/«[^»]+»/g) ?? []).map((quoted) => quoted.slice(1, -1))];
     for (const spell of spells) {
@@ -178,23 +146,18 @@ describe("полнота текстовых полей (FR-013)", () => {
   });
 
   it("у каждой карточки есть строка списка", () => {
-    // Без неё строка списка отвечает кратким пересказом — запасной вид, а не задуманный.
     for (const spell of spells) {
       expect(spell.listCard, `${spell.nameRu}: нет строки списка`).toBeDefined();
     }
   });
 
   it("в каждом совете названо число", () => {
-    // Число — третья обязательная часть варианта. Его отсутствие машина различает, а
-    // подмену выдуманным числом — нет: за это отвечает вычитка против источника.
     for (const spell of spells) {
       expect(/\d/.test(spell.tacticalAdviceRu ?? ""), `${spell.nameRu}: совет без чисел`).toBe(true);
     }
   });
 
   it("полные правила есть у каждой карточки и длиннее кратких", () => {
-    // Полное содержит краткое, а не продолжает его: обратное соотношение длин означает, что
-    // пересказ пересказа попал не в то поле.
     for (const spell of spells) {
       expect(spell.fullRulesRu, `${spell.nameRu} без полных правил`).toBeTruthy();
       expect(
@@ -205,8 +168,6 @@ describe("полнота текстовых полей (FR-013)", () => {
   });
 
   it("масштабирование урона в данных объяснено в тексте о повышении уровня", () => {
-    // Обратную сторону — «higherLevelsRu заполнено, хотя повышение ничего не меняет» — машина не
-    // видит: у «Невидимости» и «Полёта» растёт число целей, а не урон. Это ловит вычитка.
     for (const spell of spells.filter((candidate) => candidate.damage?.scaling !== undefined)) {
       expect(spell.higherLevelsRu, `${spell.nameRu}: есть масштабирование, нет текста`).toBeTruthy();
     }
@@ -234,8 +195,6 @@ describe("покрытие механик первой партией", () => {
   });
 
   it("каждая реакция описывает свой триггер", () => {
-    // Четыре разных триггера: попадание по себе, стихийный урон, чужое падение, чужое заклинание.
-    // Реакция без описанного триггера бесполезна — узнать её момент неоткуда.
     const reactions = spells.filter((spell) => spell.castingTime.type === "reaction");
     expect(reactions.map((spell) => spell.id).sort()).toEqual([
       "absorb-elements",
@@ -275,7 +234,6 @@ describe("загрузчик контента отказывает целико�
   });
 
   it("сообщает об ошибке и когда поле указать нельзя", () => {
-    // Не объект вовсе: ошибка относится к карточке целиком, а не к полю внутри неё.
     expect(() => parseSpells(["это не карточка"])).toThrow(/Карточка №1 не прошла проверку — —/);
   });
 });
@@ -310,15 +268,12 @@ describe("схемы ритуалов (FR-190)", () => {
 
 describe("расход костей хитов (FR-135)", () => {
   it("поле есть ровно у «Мистической бодрости»", () => {
-    // Не догма, а защита от копипасты: если поле появится у нового заклинания, тест меняют
-    // осознанно, а не обнаруживают расход у того, кто его не тратит.
     const withCost = spells.filter((spell) => spell.hitDiceCost !== undefined);
     expect(withCost.map((spell) => spell.nameRu)).toEqual(["Мистическая бодрость"]);
   });
 
   it("числа совпадают с тем, что карточка обещает игроку", () => {
     const [vigor] = spells.filter((spell) => spell.hitDiceCost !== undefined);
-    // «до четырёх ячейкой 3 уровня и до шести ячейкой 4» — из higherLevelsRu той же карточки.
     expect(vigor?.hitDiceCost).toEqual({
       maximumDice: 2,
       extraDicePerSlotLevel: 2,

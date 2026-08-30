@@ -9,13 +9,10 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 
 import { itemMeta } from "./itemMeta";
 
-/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
 const spells = loadThorneSpells();
 
-/** Перечни строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
 const { stats } = toChoicesView();
 
-/** Вещь так, как её показывает список: проекцию строит настоящий презентер. */
 function viewOf(definition: ItemDefinition): ItemView {
   const state = createThorne();
   const found = toBagView({
@@ -26,7 +23,6 @@ function viewOf(definition: ItemDefinition): ItemView {
   return found;
 }
 
-/** Надетая вещь Торна: она и есть предмет разговора, а её копия рядом отвечала бы за себя. */
 function wornOf(id: string): ItemView {
   const found = toBagView(createThorne(), spells).items.find((item) => item.id === id);
   if (found === undefined) throw new Error(`нет вещи ${id}`);
@@ -35,7 +31,6 @@ function wornOf(id: string): ItemView {
 
 describe("вторая строка вещи", () => {
   it("однородное приходит одним фактом: спасброски плаща защиты — целое", () => {
-    // Семь чисел плаща — одна прибавка при двух именах: свернул их владелец, строка не пересобирает.
     expect(itemMeta(wornOf("cloak-of-protection"), stats)).toEqual({
       facts: [{ valueRu: "+1", labelsRu: ["Класс Доспеха", "Все спасброски"] }],
       note: undefined,
@@ -43,8 +38,6 @@ describe("вторая строка вещи", () => {
   });
 
   it("цена и прибавки — неделимые факты второй строки, заметка — свободный текст", () => {
-    // Прибавки приезжают теми, что действуют: чьей категории они не положены, у того их и нет —
-    // это стережёт владелец вещи, и второй такой проверки здесь не заводится.
     expect(
       itemMeta(
         viewOf({
@@ -56,7 +49,6 @@ describe("вторая строка вещи", () => {
         stats,
       ),
     ).toEqual({ facts: [{ valueRu: "50", labelsRu: ["зм"] }], note: undefined });
-    // Прибавки стоят раньше цены: за столом вещь спрашивают о том, что она делает, а не почём она.
     expect(
       itemMeta(
         viewOf({
@@ -76,7 +68,6 @@ describe("вторая строка вещи", () => {
       ],
       note: "фамильное",
     });
-    // Числа разные — прибавки разные, и каждая называет свои величины.
     expect(
       itemMeta(
         viewOf({

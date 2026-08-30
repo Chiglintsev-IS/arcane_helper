@@ -1,16 +1,3 @@
-/**
- * Проекция концентрации: что держится вниманием и чем это срывается.
- *
- * Раунд начала, длительность словами правил, урон по потраченной ячейке и сложность спасброска
- * приходят отсюда посчитанными. Пока их считал блок действующего, он звал четыре правила подряд —
- * и «Урон → спасбросок Телосложения +3, КС от 10» собиралось на экране из чисел, ни одно из
- * которых экрану не принадлежало.
- *
- * Проверка после урона едет здесь же, а не отдельным ответом на команду: снимок обязан
- * складываться из одного состояния, иначе перечитанная сессия покажет не то, что показывала до
- * перезагрузки.
- */
-
 import type { ConcentrationCheckView, ConcentrationView } from "@/contract/views";
 
 import { Character } from "@/core/domain/assembly/character";
@@ -28,13 +15,6 @@ import type { ActiveEffect } from "@/core/domain/effects/schema";
 import { saveStatId } from "@/core/domain/shared/stats";
 import type { LiveSession, Session } from "@/core/application/session";
 
-/**
- * Урон, на который ещё не ответили проверкой: последняя запись лога, если это был урон.
- *
- * Последняя, а не любая: ответом на проверку служит следующее действие — потраченная руна,
- * оборванная концентрация или что угодно ещё, — и запись, легшая после урона, означает, что вопрос
- * закрыт. Раньше начала концентрации такая запись не встаёт: её начало лог записывает тоже.
- */
 function unansweredDamage(session: Session): number | undefined {
   return session.log.at(-1)?.damage;
 }
@@ -72,8 +52,6 @@ export function toConcentrationView(live: LiveSession): ConcentrationView | unde
   const effect = character.activeEffects.find((candidate) => candidate.isConcentration);
   if (effect === undefined) return undefined;
 
-  // Карточки может не быть вовсе: состояние приехало импортом из чужой сборки, а концентрация
-  // исчезнуть с экрана из-за этого не вправе.
   const spell = live.spellCatalog.find((candidate) => candidate.id === effect.spellId);
   const damage = spell === undefined ? undefined : damageView(spell, effect, character);
   const start = startRound(session.log, effect.startedAt);
@@ -81,8 +59,6 @@ export function toConcentrationView(live: LiveSession): ConcentrationView | unde
   const unanswered = unansweredDamage(session);
 
   return {
-    // Идентификатор едет вместе с карточкой: без неё вести за полными правилами всё равно некуда,
-    // и «заклинание известно, а правил нет» было бы двумя ответами на один вопрос.
     ...(spell === undefined ? {} : { spellId: spell.id }),
     nameRu: effect.nameRu,
     slotLevelUsed: effect.slotLevelUsed,

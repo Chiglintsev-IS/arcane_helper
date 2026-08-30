@@ -19,12 +19,6 @@ import { VITALITY_FIELDS } from "@/core/domain/vitality/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
-/**
- * Полная схема состояния: что она собирает и что отвергает целиком.
- *
- * Инварианты контекстов проверяются у владельцев — здесь проверяется, что сборка их зовёт: доводчик,
- * которого перестали вызывать, иначе умер бы молча.
- */
 const WEB_EFFECT = {
   id: "effect-web",
   spellId: "web",
@@ -41,7 +35,6 @@ const WEB_EFFECT = {
   endConditionRu: "До конца концентрации или 1 час.",
 };
 
-/** Торн: подготовлены «Паутина» и «Волшебная стрела», концентрация на «Паутине». */
 function thorne(): unknown {
   return {
     id: "thorne",
@@ -87,13 +80,6 @@ function firstError(input: unknown): string {
   return result.success ? "" : result.error.issues.map((issue) => issue.message).join(" | ");
 }
 
-/**
- * Та же сборка, но без снисхождения к лишнему ключу.
- *
- * Обычная схема лишнее срезает молча, и мёртвое поле в фикстуре жило годами: тест «состояние
- * принято» проходил, а поля в состоянии не было. Строгая копия отвечает на другой вопрос — не «можно
- * ли это прочитать», а «то ли это самое состояние».
- */
 const strictStateSchema = z.strictObject({
   ...CHARACTER_FIELDS,
   ...ARCANA_FIELDS,
@@ -108,9 +94,6 @@ const strictStateSchema = z.strictObject({
 
 describe("форма состояния", () => {
   it("ключи верхнего уровня — те, что названы владельцами", () => {
-    // Правишь список — реши, меняется ли форма выгрузки и нужен ли новый EXPORT_SCHEMA_VERSION.
-    // Перенос поля между владельцами формы не меняет: ключ остаётся тем же, меняется только то, чья
-    // подсхема его объявляет.
     expect(Object.keys(characterStateSchema.shape).sort()).toEqual([
       "abilities",
       "activeEffects",
@@ -205,7 +188,6 @@ describe("characterStateSchema принимает корректное сост�
     });
     const result = characterStateSchema.safeParse(legacy);
     expect(result.success).toBe(true);
-    // Ресурса больше нет, и состояние им не обзаводится: поле снимается чтением.
     if (result.success) expect("spellPoints" in result.data).toBe(false);
   });
 });
@@ -300,7 +282,6 @@ describe("exportFileSchema", () => {
     ).toBe(false);
   });
 });
-
 
 describe("состояние целиком", () => {
   it("Торн собирается схемой и не теряет полей со значением по умолчанию", () => {

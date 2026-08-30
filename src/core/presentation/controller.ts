@@ -1,16 +1,3 @@
-/**
- * Контроллер: перевод команды договора в вызов сценария.
- *
- * Единственное место, где внешний язык встречается с внутренним. Сценарии живут в словаре
- * предметной области — принимают карточку заклинания и сессию; команда приносит идентификаторы и
- * строки. Перевод стоит здесь, поэтому вторая версия договора однажды поглотится тоже здесь, не
- * задев ни одного сценария.
- *
- * Слово, пришедшее строкой, сужает владелец списка — тем же перечнем, которым пользуется сам.
- * Составное значение сужает объявление своего контекста и отказывает с причиной. Второй проверки
- * здесь нет: она разошлась бы с настоящей при первой же правке правил, и молча.
- */
-
 import type { Command } from "@/contract/commands";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
@@ -88,13 +75,11 @@ import { beginTurn, endCombat, startCombat } from "@/core/application/useCases/t
 
 import { castModeOf, oneOf, runeOf, spellOf } from "./words";
 
-/** Чем контроллер располагает помимо самой сессии: содержимое сборки. */
 type ControllerParts = {
   builtInCatalog: readonly Spell[];
   createInitialCharacter: () => CharacterState;
 };
 
-/** Уровни ячеек приезжают ключами объекта, а ключ объекта — всегда строка. */
 function slotPlanOf(plan: Readonly<Record<string, number>>): Record<number, number> {
   const levels: Record<number, number> = {};
   for (const [level, count] of Object.entries(plan)) {
@@ -107,7 +92,6 @@ function slotPlanOf(plan: Readonly<Record<string, number>>): Record<number, numb
   return levels;
 }
 
-/** Владения навыками правимой характеристики: и навык, и степень — слова закрытых списков. */
 function skillsOf(skills: Readonly<Record<string, string>>): Partial<Record<SkillId, SkillTraining>> {
   const trained: Partial<Record<SkillId, SkillTraining>> = {};
   for (const [skill, training] of Object.entries(skills)) {
@@ -117,35 +101,16 @@ function skillsOf(skills: Readonly<Record<string, string>>): Partial<Record<Skil
   return trained;
 }
 
-/**
- * Файл обмена из присланного текста.
- *
- * Разбирает его та же проверка, что читает собственный контент, и она же называет причину отказа:
- * второй разбор на стороне просящего принял бы то, чего эта не принимает, — и молча.
- */
 function exportFileOf(raw: string): ExportFile {
   const parsed = parseImport(raw);
   if (!parsed.ok) throw new DomainError(parsed.reasonRu);
   return parsed.file;
 }
 
-/**
- * Начинает ли команда состояние заново.
- *
- * Знание живёт рядом с переводом команд: словарь команд — его предмет. Такой команде прежнее
- * состояние не нужно ни для чего, и требовать его значило бы запереть игрока в непрочитанном
- * сохранении — единственном месте, где начать заново и просят всерьёз.
- */
 export function startsOver(command: Command): boolean {
   return command.kind === "reset";
 }
 
-/**
- * Применение команды. Отказ по правилам вылетает исключением владельца и становится ответом выше;
- * здесь его не ловят — решать, что делать с отказом, не дело перевода.
- *
- * Повтор узнаётся до применения: та же попытка, доставленная дважды, оставляет сессию как есть.
- */
 export function applyCommand(
   live: LiveSession,
   command: Command,

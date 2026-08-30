@@ -1,12 +1,3 @@
-/**
- * Компонент меняет только черновик: состояние персонажа трогает лишь кнопка подтверждения.
- *
- * По правилам он не считает ничего. Способы сотворения с их ценой, уроном и вердиктом приезжают
- * строкой заклинания; эффект руны и границы броска костей — ответом на вопрос про набранное. Здесь
- * остаются слова, порядок и то, открыт ли шаг. Последний показанный шаг и подтверждает: отдельного
- * итогового экрана нет, всё, что он повторял, стоит на карточке.
- */
-
 "use client";
 
 import { RULE_MARK } from "@/ui/shared/ui/rule";
@@ -30,7 +21,6 @@ import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE } fr
 
 type CastPreview = PreviewOf<"cast_preview">;
 
-/** Кому руна: перечень целей приезжает перечнем правил, а слово к слову выбирает экран. */
 const RUNE_TARGET_LABELS: Readonly<Record<string, string>> = {
   self: "Себе",
   other: "Другому",
@@ -44,19 +34,6 @@ const STEP_TITLES: Record<WizardStep, string> = {
   concentration: "Концентрация",
 };
 
-/**
- * Шаг руны.
- *
- * Число показывается до подтверждения и по выбранному уровню ячейки: «половина уровня с округлением
- * вверх, минимум +1» — ровно то, что игрок иначе считает в уме в момент объявления мастеру. Считает
- * его ядро: посчитать здесь значило бы завести второе правило о том же.
- *
- * Недоступное показывается с причиной, а не исчезает: пропавший блок читается как «руны в этой игре
- * нет», а не как «не к этому сотворению».
- *
- * Руна необязательна: шаг проходится дальше без выбора, и это отдельная кнопка «Без руны», а не
- * молчание — иначе непонятно, ждёт ли мастер выбора.
- */
 function RuneStep({
   draft,
   runes,
@@ -67,7 +44,6 @@ function RuneStep({
 }: {
   draft: CastDraft;
   runes: CastPreview["runes"];
-  /** Кому руна: перечень тех, между кем выбирают. */
   targets: ChoicesView["runeTargets"];
   pool: ResourcesView["runes"];
   onChoose: (rune: string, choosesTarget: boolean) => void;
@@ -140,13 +116,11 @@ function RuneStep({
   );
 }
 
-/** Подпись способа сотворения: что именно спишется. Числа приехали посчитанными. */
 function optionLabel(option: CastOptionView, resources: ResourcesView): string {
   if (option.mode === "ritual") {
     return `Ритуалом · +${option.extraMinutes} минут, ячейка не расходуется`;
   }
   if (option.payment.kind === "blood") {
-    // Начинается с крови, а не с ячейки: две подписи, начатые одинаково, за столом читают как одну.
     const cost = withPlural(option.hitPointCost ?? 0, ["хит", "хита", "хитов"]);
     return `Кровью · ячейка ${option.payment.castLevel} уровня, ${cost}`;
   }
@@ -209,8 +183,6 @@ function SlotStep({
   resources: ResourcesView;
   onChoose: (option: CastOptionView) => void;
 }) {
-  // Уровень сотворения приезжает посчитанным: разобранный здесь, он однажды сравнил бы две
-  // соседние строки как одну — так и вышло, когда уровень читался только у ячейки.
   const chosen = (option: CastOptionView): boolean =>
     option.mode === draft.option.mode &&
     option.payment.kind === draft.option.payment.kind &&
@@ -246,13 +218,6 @@ function SlotStep({
   );
 }
 
-/**
- * Сколько костей бросить и что выпало.
- *
- * Кубик бросает игрок, приложение принимает результат и складывает. Возможность выпавшего решают
- * правила: опечатку от броска приложение отличать обязано, а оспаривать возможный результат не
- * вправе.
- */
 function HitDiceStep({
   draft,
   hitDice,
@@ -262,14 +227,11 @@ function HitDiceStep({
 }: {
   draft: CastDraft;
   hitDice: NonNullable<CastPreview["hitDice"]>;
-  /** Остаток костей: их считает лист, и вторым числом здесь он не заводится. */
   pool: { remaining: number; total: number; size: number } | undefined;
   onCount: (count: number) => void;
   onRolled: (rolled: number | null) => void;
 }) {
   if (hitDice.maximum === 0) {
-    // Шаг не прячется, а объясняет: правило запрещает бросать несуществующие кости, но не
-    // запрещает потратить ячейку зря, и решение остаётся за игроком.
     return (
       <p className="text-sm opacity-80">
         Неистраченных Костей хитов не осталось — бросать нечего, и ячейка уйдёт впустую. Сотворить
@@ -310,8 +272,6 @@ function HitDiceStep({
       </div>
 
       {count === null ? null : (
-        // Подсказка вынесена из метки намеренно: внутри неё она попадала бы в доступное имя поля,
-        // и вместо «Что выпало на 2d6» экранный диктор читал бы имя, склеенное с подсказкой.
         <div className="flex flex-col gap-1">
           <label className="text-sm" htmlFor="hit-dice-rolled">
             Что выпало на {count}d{size}
@@ -351,8 +311,6 @@ function HitDiceStep({
 }
 
 function ComponentsStep({ row, warnings }: { row: SpellRowView; warnings: CastOptionView["warnings"] }) {
-  // Вердикт, а не напоминание: приложение знает про фокусировку и про то, что лежит в сумке
-  //. Пока был открыт, здесь стояла честная отговорка «проверьте по листу».
   const missing = warnings.filter((warning) => warning.code === NO_COMPONENT);
 
   return (
@@ -381,13 +339,6 @@ function ComponentsStep({ row, warnings }: { row: SpellRowView; warnings: CastOp
   );
 }
 
-/**
- * Предупреждение о концентрации. Единственное место мастера, где нужен выбор из двух:
- * «Применить всё равно» здесь недостаточно, потому что цена ошибки — молча потерянный эффект.
- *
- * Шаг показывается, только когда концентрация занята:
- * без замены выбирать не из чего, а о самой концентрации напоминает итоговый экран.
- */
 function ConcentrationStep({
   warnings,
   onReplace,
@@ -399,8 +350,6 @@ function ConcentrationStep({
   onCancel: () => void;
   replaceConfirmed: boolean;
 }) {
-  // Чем именно занята концентрация, называет та же проверка, которая её и обнаружила: собранная
-  // здесь заново фраза разошлась бы с отказом подтверждения.
   const busy = warnings.find((warning) => warning.code === CONCENTRATION_BUSY);
   if (busy === undefined) return null;
 
@@ -433,12 +382,6 @@ function ConcentrationStep({
   );
 }
 
-/**
- * Что спросить у ядра про набранное. `null` — мастер закрыт, и спрашивать не о чем.
- *
- * Вопрос везёт выбранный способ и всё, что игрок успел набрать: эффект руны и границы броска
- * зависят и от того, и от другого, и ответ на них один.
- */
 function castQuestion(draft: CastDraft | null, row: SpellRowView | null): Question | null {
   if (draft === null || row === null) return null;
   return {
@@ -460,15 +403,10 @@ export function CastWizard({
   onConfirm,
   error,
 }: {
-  /** Строка выбранного заклинания; `null` — мастер закрыт либо строки для него нет. */
   row: SpellRowView | null;
-  /** Из чего выбирают: кому достаётся руна, выбирающая цель. */
   choices: ChoicesView;
-  /** Чем платить: остатки ячеек, рун и очков. Считать по ним мастер ничего не вправе. */
   resources: ResourcesView;
-  /** Кости хитов персонажа; нет вовсе — состояние приехало из чужой сборки. */
   hitDice: { remaining: number; total: number; size: number } | undefined;
-  /** Подтверждение: единственное действие мастера, меняющее состояние персонажа. */
   onConfirm: (draft: CastDraft) => void;
   error: string | null;
 }) {
@@ -487,16 +425,11 @@ export function CastWizard({
   const castingTime = castingTimeBadge(row.castingTime.type);
   const actions = draftStore.getState();
 
-  // Замена концентрации требует явного выбора: без него дальше не пускаем. Согласие своё, а не
-  // общее с «Применить всё равно»: иначе брошенное заклинание молча разрешало бы и перерасход.
   const concentrationBlocked =
     draft.step === "concentration" &&
     warnings.some((warning) => warning.code === CONCENTRATION_BUSY) &&
     !draft.replaceConcentration;
   const availabilityBlocked = draft.step === "availability" && !draft.allowAnyway;
-  // Кости: пока число не выбрано или выпавшее вне возможного, дальше не пускаем. Возможность
-  // выпавшего решают правила, и ответ на этот шаг ещё может быть в пути. Костей может не остаться
-  // вовсе — тогда выбирать нечего, и шаг не задерживает.
   const hitDiceBlocked =
     draft.step === "hitDice" &&
     (preview === null ||
@@ -540,11 +473,6 @@ export function CastWizard({
             resources={resources}
             onChoose={(option) => actions.chooseCastOption(option)}
           />
-          {/*
- Руна живёт на этом же шаге, а не на своём: её эффект зависит от выбранного уровня
- ячейки, и отдельный экран сделал бы типовое применение трёхшаговым — против
- бюджета в четыре шага, из которых боевое заклинание сегодня тратит два.
- */}
           {row.cantrip || draft.option.mode === "ritual" || preview === null ? null : (
             <RuneStep
               draft={draft}

@@ -1,14 +1,3 @@
-/**
- * Фильтрация списка заклинаний.
- *
- * Правило комбинирования одно: значения внутри категории соединяются «или», категории между собой —
- * «и». Пустая категория ничего не ограничивает, поэтому список без фильтров показывает всё.
- *
- * Фильтр «доступно сейчас» не повторяет логику доступности, а читает её вердикт из строки: он
- * посчитан там же, где и причина, которую покажет мастер применения. Расхождение фильтра и мастера —
- * та ошибка, которая заставляет игрока перестать доверять приложению.
- */
-
 import type { SpellRowView } from "@/contract/views";
 
 import { matchesQuery } from "@/ui/shared/lib/searchable";
@@ -16,18 +5,15 @@ import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
 
 export type SpellFilters = {
   castingTimes: string[];
-  /** Цена в ячейках: 0 — «Без ячейки», далее уровни. Отбирают по цене, а не по виду строки. */
   prices: number[];
   roles: string[];
   concentration: boolean;
   ritual: boolean;
   prepared: boolean;
   availableNow: boolean;
-  /** Часть названия. Пустая строка не ограничивает — правило пустой категории общее. */
   query: string;
 };
 
-/** Ничего не выбрано. */
 export const NO_FILTERS: SpellFilters = {
   castingTimes: [],
   prices: [],
@@ -39,7 +25,6 @@ export const NO_FILTERS: SpellFilters = {
   query: "",
 };
 
-/** Что из категорий делит текущий список: только это и показывается переключателями. */
 export type DividingCategories = {
   castingTimes: ReadonlySet<string>;
   prices: number[];
@@ -48,7 +33,6 @@ export type DividingCategories = {
   ritual: boolean;
 };
 
-/** Часть отбора, общая для заклинания и для строки, заклинанием не являющейся. */
 export function matchesTraits(traits: ActionTraits, filters: SpellFilters): boolean {
   if (!matchesQuery(traits.nameRu, filters.query)) return false;
   if (filters.castingTimes.length > 0 && !filters.castingTimes.some((v) => v === traits.castingTime)) {
@@ -60,26 +44,12 @@ export function matchesTraits(traits: ActionTraits, filters: SpellFilters): bool
   return true;
 }
 
-/**
- * Полный отбор строки, заклинанием не являющейся.
- *
- * По цене она отбирается наравне с заклинаниями: «Без ячейки» ловит и заговоры, и обмен хитов на
- * очки. «Ритуал» прячет — обмен не ритуал. «Подготовлено» не прячет: подготовка к нему не
- * относится вовсе.
- */
 export function matchesActionRow(traits: ActionTraits, filters: SpellFilters): boolean {
   if (!matchesTraits(traits, filters)) return false;
   if (filters.ritual) return false;
   return true;
 }
 
-/**
- * Категории, которые делят список: часть строк им отвечает, часть — нет.
- *
- * Перечня категорий по режимам нет намеренно. Состав списка меняется от отметки схватки, и любой
- * заранее записанный перечень оказался бы неверен в одной из двух ситуаций; переключатель же,
- * который находит весь список или ни одной строки, ничего не отбирает и только занимает полосу.
- */
 export function dividingCategories(spells: readonly SpellRowView[]): DividingCategories {
   const divides = (count: number): boolean => count > 0 && count < spells.length;
   const countOf = (predicate: (spell: SpellRowView) => boolean): number =>
@@ -101,13 +71,11 @@ export function dividingCategories(spells: readonly SpellRowView[]): DividingCat
 function matches(spell: SpellRowView, filters: SpellFilters): boolean {
   if (!matchesTraits(traitsOf(spell), filters)) return false;
   if (filters.ritual && !spell.ritualAvailable) return false;
-  // «Подготовлено» не скрывает заговоры: они не готовятся, но доступны всегда.
   if (filters.prepared && !spell.prepared) return false;
   if (filters.availableNow && spell.unavailable) return false;
   return true;
 }
 
-/** Отфильтрованный список в исходном порядке: контент упорядочен по уровню, затем по алфавиту. */
 export function filterSpells(
   spells: readonly SpellRowView[],
   filters: SpellFilters,
@@ -115,7 +83,6 @@ export function filterSpells(
   return spells.filter((spell) => matches(spell, filters));
 }
 
-/** Переключение значения внутри категории фильтров. */
 export function toggleValue<T>(values: readonly T[], value: T): T[] {
   return values.includes(value)
     ? values.filter((candidate) => candidate !== value)

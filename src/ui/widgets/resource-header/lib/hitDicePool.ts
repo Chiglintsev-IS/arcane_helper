@@ -1,6 +1,5 @@
 import type { SheetView } from "@/contract/views";
 
-/** Пул костей хитов плиткой: имя с размером кости, остаток из общего числа и есть ли чем платить. */
 export function hitDicePool(dice: SheetView["hitPoints"]["hitDice"]): {
   nameRu: string;
   remaining: string;

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { Apparatus } from "./apparatus";
 import { researchPlan } from "./research";
 
-/** Оснащение Торна: надёжные походные комплекты по двум направлениям, по ядам — ничего. */
 const TORN_KITS: Apparatus = {
   potions: "Надёжный походный комплект",
   transmutation: "Надёжный походный комплект",
@@ -32,7 +31,6 @@ describe("исследование ингредиента", () => {
     expect([first.minutes, first.difficulty]).toEqual([10, 5]);
     expect([first.portionsOnSuccess, first.portionsOnFailure]).toEqual([0, 1]);
     expect(first.rawSampleRu).toContain("ослабленному проявлению");
-    // Материалов первое свойство не жжёт: справочник называет их со второго.
     expect([first.consumablesRu, first.consumablesGold]).toEqual([null, 0]);
   });
 
@@ -42,7 +40,6 @@ describe("исследование ингредиента", () => {
     expect([second.minutes, second.difficulty]).toEqual([60, 12]);
     expect([second.consumablesRu, second.consumablesGold]).toEqual(["Обычные", 1]);
 
-    // Сутки работы над четвёртым: очищенные материалы за каждый из двадцати четырёх часов.
     const fourth = plan(4, LABORATORY);
     expect([fourth.consumablesRu, fourth.consumablesGold]).toEqual(["Очищенные", 72]);
   });
@@ -53,7 +50,6 @@ describe("исследование ингредиента", () => {
   });
 
   it("сложность выше предела оснащения делает исследование невозможным", () => {
-    // Четвёртое свойство легендарной редкости: 25 + 7 против предела базового модуля в двадцать.
     expect(() =>
       researchPlan({
         number: 4,

@@ -12,7 +12,6 @@ import {
   spellsForScreen,
 } from "@/ui/shared/model/spellList";
 
-/** Список «Игры» для Торна: одна функция на обе ситуации, различает их отметка боя. */
 function playList(inFight: boolean): string[] {
   return spellsForScreen(testSpellRows(undefined, inFight ? IN_FIGHT : []), "play").map(
     (spell) => spell.id,
@@ -21,7 +20,6 @@ function playList(inFight: boolean): string[] {
 
 describe("вне боя: заговоры, подготовленные и ритуальные из книги (FR-209)", () => {
   it("ритуал из книги стоит в списке без подготовки", () => {
-    // Ни одного ритуала Торн сегодня не подготовил, а сотворить их всё равно может.
     for (const id of ["detect-magic", "alarm"]) {
       expect(playList(false), id).toContain(id);
     }
@@ -82,7 +80,6 @@ describe("порядок: сначала бесплатное, потом по �
   });
 
   it("в бою реакции наверх не всплывают, а цена решает всё", () => {
-    // «Щит» — реакция первого уровня — стоит среди первых уровней, а не над заговорами.
     expect(playList(true)).toEqual([
       "message",
       "shocking-grasp",
@@ -100,7 +97,6 @@ describe("порядок: сначала бесплатное, потом по �
       "storm-sphere",
     ]);
   });
-
 
   it("ключ: цена, затем роль — «другое» впереди боевого", () => {
     const reaction = { nameRu: "Дорогая реакция", castingTime: "reaction", level: 4, concentration: false, role: "other" } as const;
@@ -127,7 +123,6 @@ describe("строка-действие встаёт среди того, что
     const rows = shown.map((spell) => spell.id);
     rows.splice(positionInList(shown, LAST_HINT_TRAITS, "play"), 0, "последняя-подсказка");
 
-    // Строка встаёт за «Сообщением» — той же цены и той же роли «другое» — и перед боевым.
     expect(rows.slice(0, 5)).toEqual([
       "message",
       "последняя-подсказка",
@@ -191,7 +186,6 @@ describe("состав строки: цена считается тем же п�
       concentration: true,
       role: "other",
     });
-    // В бою ритуального способа нет, и то же заклинание стоит свой уровень.
     expect(traitsOf(testSpellRow("detect-magic", undefined, IN_FIGHT)).level).toBe(1);
   });
 

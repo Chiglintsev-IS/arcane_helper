@@ -1,9 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Отрисовка схемы. Проверяется состав слоёв, а не красота: пропорции доводятся глазом.
- */
-
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -15,8 +11,6 @@ function diagramOf(id: string) {
   if (found === undefined) throw new Error(`у ${id} нет схемы`);
   return found;
 }
-
-
 
 function layers(container: HTMLElement, layer: string): Element[] {
   return [...container.querySelectorAll(`[data-layer="${layer}"]`)];
@@ -42,7 +36,6 @@ describe("слои схемы", () => {
     const eight = render(<RitualDiagram diagram={diagramOf("detect-magic")} />);
     expect(layers(eight.container, "star-cycle")).toHaveLength(1);
 
-    // У «Сигнала тревоги» звезды нет в самих данных: пустой случай настоящий, а не подставленный.
     const none = render(<RitualDiagram diagram={diagramOf("alarm")} />);
     expect(layers(none.container, "star-cycle")).toHaveLength(0);
   });

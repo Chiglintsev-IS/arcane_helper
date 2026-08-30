@@ -1,9 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Шторка восстановления сама по себе, без «Привала»: чем она названа, отвечает она, а не экран.
- */
-
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
@@ -29,7 +25,6 @@ describe("шторка магического восстановления (FR-2
     const sheet = screen.getByRole("dialog", { name: "Магическое восстановление" });
     const title = within(sheet).getByRole("heading", { name: "Магическое восстановление" });
 
-    // Имя шторки не вторая копия заголовка, а он сам: расходиться двум строкам здесь не с чем.
     expect(sheet.getAttribute("aria-labelledby")).toBe(title.id);
     expect(sheet.hasAttribute("aria-label")).toBe(false);
   });

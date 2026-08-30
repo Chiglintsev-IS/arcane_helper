@@ -1,13 +1,3 @@
-/**
- * Рецепт: что совпало в составе и во сколько это обходится сложностью.
- *
- * Числа здесь — таблицы «Алхимии Сумрачного Доминиона» и ничего сверх них. Считать сложность в уме
- * за столом дорого: она собирается из восьми групп поправок, и каждая группа своя таблица.
- *
- * Что совпавшее свойство делает, рецепт не знает: справочник печатает у эффекта только название и
- * направление. Приложение считает цену формы, а действие остаётся столу.
- */
-
 import { z } from "zod";
 
 import { ALCHEMICAL_RARITIES, alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
@@ -18,14 +8,8 @@ import { apparatusLimits, IMPROVISED_DIFFICULTY } from "./apparatus";
 import type { Apparatus } from "./apparatus";
 import type { RevealedProperty } from "./schema";
 
-/** Ступень усиления: обычная, усиленная, концентрированная. */
 type MatchTier = "plain" | "amplified" | "concentrated";
 
-/**
- * Совпавшее свойство: чем названо, какой редкости, у каких видов раскрыто и какой ступенью
- * проявится. Насколько ступень усиливает сам эффект, здесь не считается — справочник называет это
- * приблизительно и чисел эффекта не печатает.
- */
 export type PropertyMatch = {
   readonly nameRu: RevealedProperty["nameRu"];
   readonly rarity: RevealedProperty["rarity"];
@@ -33,7 +17,6 @@ export type PropertyMatch = {
   readonly tier: MatchTier;
 };
 
-/** С какого числа разных источников совпадение поднимается ступенью выше. */
 const AMPLIFIED_FROM_SOURCES = 3;
 const CONCENTRATED_FROM_SOURCES = 4;
 
@@ -43,11 +26,9 @@ export function tierOf(sources: number): MatchTier {
   return "plain";
 }
 
-/** Всякий рецепт начинается с десяти и после всех поправок не опускается ниже пяти. */
 const BASE_DIFFICULTY = 10;
 export const LOWEST_DIFFICULTY = 5;
 
-/** Редкость эффекта: основной оплачивается по своей колонке, каждый дополнительный — по своей. */
 const EFFECT_DIFFICULTY = {
   common: { main: 0, additional: 2 },
   uncommon: { main: 2, additional: 3 },
@@ -56,14 +37,12 @@ const EFFECT_DIFFICULTY = {
   legendary: { main: 12, additional: 10 },
 } as const satisfies Record<RevealedProperty["rarity"], { main: number; additional: number }>;
 
-/** Цена ступени усиления. */
 const TIER_DIFFICULTY = {
   plain: 0,
   amplified: 3,
   concentrated: 6,
 } as const satisfies Record<MatchTier, number>;
 
-/** Длительность. Мгновенный эффект этой таблицей не пользуется вовсе. */
 const DURATION_DIFFICULTY = {
   "1 раунд": -2,
   "3 раунда": 0,
@@ -85,10 +64,6 @@ const ONSET_DIFFICULTY = {
   "Активация при заданном событии": 5,
 } as const;
 
-/**
- * Периодичность. Распределённое между моментами воздействие цены не меняет; полное повторение
- * оплачивается за каждое дополнительное срабатывание и упирается в потолок.
- */
 const FULL_REPEAT_DIFFICULTY = 3;
 const MOST_REPEAT_DIFFICULTY = 12;
 
@@ -121,10 +96,8 @@ const RESISTANCE_DIFFICULTY = {
   "Эффект не допускает спасброска": 8,
 } as const;
 
-/** Очистка: одна цена за всю группу противоположной направленности. */
 const PURIFICATION_DIFFICULTY = 5;
 
-/** Подавление поодиночке: платится за каждое свойство по его редкости. */
 const SUPPRESSION_DIFFICULTY = {
   common: 2,
   uncommon: 3,
@@ -144,14 +117,8 @@ const LIMITATION_DIFFICULTY = {
   "Неизбежное опасное последствие": -5,
 } as const;
 
-/** Сколько бы ограничений ни набрали, вместе они снимают не больше этого. */
 const MOST_LIMITATION_RELIEF = -6;
 
-/**
- * Направленность свойства. Справочник делит смесь на полезные и вредные свойства и прямо называет
- * нейтральными свойства трансмутации; отдельного признака у свойства он не печатает, поэтому
- * направленность читается по направлению алхимии.
- */
 type PropertyPolarity = "beneficial" | "harmful" | "neutral";
 
 const POLARITY_BY_DIRECTION = {
@@ -160,15 +127,12 @@ const POLARITY_BY_DIRECTION = {
   transmutation: "neutral",
 } as const satisfies Record<AlchemyDirection, PropertyPolarity>;
 
-/** Очистка оставляет одну группу и снимает противоположную; нейтральное остаётся при любой. */
 const OPPOSITE_POLARITY = { beneficial: "harmful", harmful: "beneficial" } as const;
 
 type KeptPolarity = keyof typeof OPPOSITE_POLARITY;
 
-/** Замысел состава: из чего собран и в какой форме проявляется. */
 export type RecipeFormula = {
   readonly kinds: readonly string[];
-  /** Названный основной эффект; не назван — его выбирают правила, по самой высокой редкости. */
   readonly mainProperty: string | null;
   readonly duration: keyof typeof DURATION_DIFFICULTY | null;
   readonly onset: keyof typeof ONSET_DIFFICULTY;
@@ -181,12 +145,6 @@ export type RecipeFormula = {
   readonly limitations: readonly (keyof typeof LIMITATION_DIFFICULTY)[];
 };
 
-/**
- * Слово из таблицы справочника: принимается то, что в ней есть, и отвергается всякое другое.
- *
- * Сужает пришедшую строку сам владелец таблицы: перечень, повторённый на границе, разошёлся бы с
- * этим при первой же правке справочника — и молча принял бы форму, которой уже нет.
- */
 function fromTable<TTable extends object>(table: TTable, what: string) {
   return z.string().refine((value): value is Extract<keyof TTable, string> => value in table, {
     error: (issue) => `справочник не знает: ${what} «${String(issue.input)}»`,
@@ -207,18 +165,7 @@ const recipeFormulaSchema = z.object({
   limitations: z.array(fromTable(LIMITATION_DIFFICULTY, "ограничение")),
 });
 
-/**
- * Перечни, из которых собирают замысел, — те же таблицы, которыми он и оценивается.
- *
- * Отдаются наружу целиком, потому что поле выбора обязано предлагать ровно то, что справочник
- * принимает: второй список тех же слов разъехался бы с первым и предложил бы форму, которой нет.
- */
 export const RECIPE_CHOICES = {
-  /**
-   * Стандартная форма справочника: одна цель, немедленное начало, одно срабатывание и профильное
-   * применение. Изменение стандартной формы и есть то, что меняет сложность, — значит форма
-   * принадлежит правилам, а не полю, с которого её набирают.
-   */
   standard: {
     duration: null,
     onset: "Немедленно",
@@ -237,18 +184,10 @@ export const RECIPE_CHOICES = {
   purifications: Object.keys(OPPOSITE_POLARITY),
 };
 
-/** Замысел, годный к счёту: проверенный объявлением и отвергнутый с причиной. */
 export function recipeFormulaOf(value: unknown): RecipeFormula {
   return parsedOrRefused(recipeFormulaSchema, value, "замысел состава");
 }
 
-/**
- * Записанный рецепт: формула, которую однажды разработали, и отметка отдельного риска.
- *
- * Риск приходит от игрока, а не выводится: справочник называет его описанием эффекта, а описаний
- * эффектов в приложении нет вовсе — их место остаётся столу. Рецепт с риском записан, но проверки
- * не отменяет: её требует каждая его партия.
- */
 const knownRecipeSchema = z.object({
   formula: recipeFormulaSchema,
   risky: z.boolean(),
@@ -256,17 +195,10 @@ const knownRecipeSchema = z.object({
 
 export type KnownRecipe = { readonly formula: RecipeFormula; readonly risky: boolean };
 
-/** Поле контекста: рецепты, разработанные однажды и потому повторяемые. */
 export const KNOWN_RECIPE_FIELDS = {
   knownRecipes: z.array(knownRecipeSchema).default([]),
 };
 
-/**
- * Формула в единственном её виде: порядок видов и порядок удалённого замысла не меняют.
- *
- * Порядок нажатий — не часть рецепта, а «те же виды ингредиентов» из справочника обязаны совпасть
- * и тогда, когда игрок выбрал их в другом порядке.
- */
 function canonical(formula: RecipeFormula): RecipeFormula {
   return recipeFormulaOf({
     ...formula,
@@ -276,31 +208,16 @@ function canonical(formula: RecipeFormula): RecipeFormula {
   });
 }
 
-/**
- * Отпечаток формулы: по нему и узнают, тот ли это рецепт.
- *
- * Совпадать обязано всё разом — виды, параметры эффекта, длительность, применение и очистка, — и
- * перечислять их по одному значило бы завести второй список полей формулы. Замена даже одного вида
- * даёт другой отпечаток, а значит и новую разработку.
- */
 export function recipeSignature(formula: RecipeFormula): string {
   return JSON.stringify(canonical(formula));
 }
 
 type DifficultyPart = { readonly nameRu: string; readonly modifier: number };
 
-/**
- * Сложность рецепта: итог, то, из чего он набран, и направления, которых работа касается.
- *
- * Направления здесь, а не рядом: они выясняются по оставшемуся в составе, и от них же зависит
- * поправка за оснащение. Гибрид идёт одной проверкой, и бонус ей достаётся наименьший среди этих
- * направлений — числа проверки спрашивают у листа, ремесло называет только направления.
- */
 export type RecipeDifficulty = {
   readonly parts: readonly DifficultyPart[];
   readonly total: number;
   readonly directions: readonly AlchemyDirection[];
-  /** Что сочтено основным эффектом: названное игроком либо выбранное правилами по редкости. */
   readonly mainRu: string;
 };
 
@@ -316,12 +233,6 @@ function emptyMixtureRefusal(): string {
   return "В составе не осталось ни одного свойства: оценивать нечего";
 }
 
-/**
- * Основной эффект, когда игрок его не назвал: самый редкий из оставшихся.
- *
- * Так велит справочник, и это не удобство отображения: цена основного и цена дополнительного
- * различаются, а значит «цель неочевидна» — тоже случай, у которого есть своя цена.
- */
 function mainOf(kept: readonly PropertyMatch[], named: string | null): PropertyMatch {
   if (named === null) return rarestOf(kept);
   const found = kept.find((match) => match.nameRu === named);
@@ -405,13 +316,6 @@ function rarityDifficulty(kept: readonly PropertyMatch[], main: PropertyMatch): 
   );
 }
 
-/**
- * Сложность рецепта из совпавшего и задуманной формы.
- *
- * Удалённое очисткой или подавлением дополнительным эффектом уже не считается: вместо его редкости
- * платится цена удаления. Отсюда и порядок — сначала выясняется, что в составе осталось, и только
- * потом это оценивается.
- */
 export function recipeDifficulty(
   matches: readonly PropertyMatch[],
   formula: RecipeFormula,

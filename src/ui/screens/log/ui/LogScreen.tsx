@@ -19,7 +19,6 @@ export function LogScreen() {
 
   const execute = sessionStore.getState().execute;
 
-  // Выгрузку собирает ядро: в ней стоит время, и своя копия сборки разошлась бы с настоящей.
   const answer = usePreview(dataOpen ? { kind: "export_preview" } : null);
   const exported: PreviewOf<"export_preview"> | null =
     answer?.kind === "export_preview" ? answer : null;

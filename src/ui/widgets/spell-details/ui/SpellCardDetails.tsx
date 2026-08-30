@@ -1,13 +1,3 @@
-/**
- * Подробная карточка заклинания.
- *
- * Отвечает на «что это такое» одной таблицей механики: каждый факт стоит в ней один раз, и ничего из
- * неё не пересказывается ниже другими словами. Совет и полные правила — за раскрытием: за ними
- * тянутся, когда решение уже принято.
- *
- * Пустые поля не показываются: заклинание без урона не должно иметь строки «Урон: —».
- */
-
 "use client";
 
 import { useState } from "react";
@@ -27,13 +17,8 @@ import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLab
 import { Badge } from "@/ui/shared/ui/Badge";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PAGE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-/** Второстепенное в этой карточке: тот же тон, каким названы ярлыки, и он проходит контраст. */
 const MUTED = "text-ink-quiet";
 
-/**
- * Кто бросает. Род броска приезжает словом правил, а подпись строки отвечает на вопрос, который
- * игрок задаёт первым: мой это бросок или бросок противника.
- */
 const ROLL_LABELS: Readonly<Record<string, string>> = {
   spell_attack: "Мой бросок",
   saving_throw: "Бросок цели",
@@ -52,19 +37,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Чем оплачен материал. Пусто — платить нечем и незачем: вещь нужна сама по себе. */
 function materialFate(row: SpellRowView, consumed: boolean): string {
   if (row.materialCoveredByFocus) return " (заменяет фокусировка)";
   if (!row.ownComponentRequired) return "";
   return consumed ? " (свой предмет, расходуется)" : " (свой предмет)";
 }
 
-/**
- * Компоненты одной строкой: только то, что требуется, и чем оплачен материал.
- *
- * Ненужное не называется: строка отвечает «что нужно», и «без материала» в ней — слово ни о чём.
- * Закрытый фокусировкой материал приглушён: он назван, но делать с ним нечего.
- */
 function Components({ row }: { row: SpellRowView }) {
   const { verbal, somatic, material } = row.card.components;
   const required: string[] = [
@@ -95,9 +73,7 @@ export function SpellCardDetails({
   onNoteChange,
   onClose,
 }: {
-  /** Заклинание целиком: написанное о нём и то, чем оно является для персонажа сейчас. */
   row: SpellRowView;
-  /** Числа заклинателя: ими называется бросок. */
   casting: CastingView;
   onCast: () => void;
   onNoteChange: (note: string) => void;
@@ -136,7 +112,6 @@ export function SpellCardDetails({
           </div>
         ) : null}
 
-        {/* Рядом со значками, а не в подвале: за десять минут ритуала схему открывают первой. */}
         {card.ritualDiagram === undefined ? null : (
           <button
             type="button"
@@ -154,7 +129,6 @@ export function SpellCardDetails({
           <Row label="Компоненты">
             <Components row={row} />
           </Row>
-          {/* Два времени подряд и подписаны глаголом: сколько творят и сколько действует. */}
           <Row label="Сотворение">{castingTimeDetail(row.castingTime)}</Row>
           <Row label="Действует">{durationDetail(row.duration)}</Row>
           {card.reaction === undefined ? null : (

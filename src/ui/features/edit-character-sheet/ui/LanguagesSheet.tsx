@@ -6,14 +6,12 @@ import type { SheetView } from "@/contract/views";
 import { asList } from "@/ui/features/edit-character-sheet/lib/lists";
 import { EditSheetFrame, TextField } from "./EditSheetFrame";
 
-/** Какие языки Торн знает. Отдельной шторкой: за столом об этом спрашивают отдельным вопросом. */
 export function LanguagesSheet({
   proficiencies,
   onSave,
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   proficiencies: SheetView["proficiencies"];
   onSave: (next: SheetView["proficiencies"]) => void;

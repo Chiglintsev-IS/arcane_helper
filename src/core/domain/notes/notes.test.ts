@@ -4,7 +4,6 @@ import { Notes } from "./notes";
 
 const EMPTY = { worldNotes: [] };
 
-/** Время приходит от часов ядра: агрегат его не выдумывает и не двигает. */
 const AT = "2026-08-16T19:30:00.000Z";
 
 const BARON = "Барон обещал мост";
@@ -31,7 +30,6 @@ describe("заметки про мир", () => {
     const both = withBaron().add({ id: "note-2", at: AT, text: "Мельник видел волка" });
     const edited = both.edit("note-1", "Барон обещал мост к весне");
 
-    // Правится одна запись и на своём месте: соседняя не двигается и не переписывается.
     expect(edited.all).toEqual([
       { id: "note-1", at: AT, text: "Барон обещал мост к весне" },
       { id: "note-2", at: AT, text: "Мельник видел волка" },

@@ -8,10 +8,6 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 
-/**
- * Поля самого Торна: кто он без вещей, ресурсов и заклинаний. Схема контекста лишнее отбрасывает,
- * поэтому полное состояние ей подходит как есть.
- */
 describe("подсхема персонажа", () => {
   it("принимает Торна", () => {
     expect(z.object(CHARACTER_FIELDS).safeParse(createThorne()).success).toBe(true);
@@ -43,7 +39,6 @@ describe("подсхема персонажа", () => {
       charisma: 8,
     });
     expect(thorneState.saveProficiencies).toEqual(["intelligence", "wisdom"]);
-    // Владения волшебника из «Книги игрока»: доспехами класс не владеет вовсе.
     expect(thorneState.proficiencies.weapons).toContain("Боевой посох");
     expect(thorneState.proficiencies.armor).toEqual([]);
   });
@@ -70,8 +65,6 @@ describe("правка листа проходит объявления поле
   });
 
   it("причина дробного отказа звучит по-русски целиком, без слова библиотеки внутри фразы", () => {
-    // Круг ревью до этого поймал ровно то, что здесь и проверяется: «int» словаря zod, оставшийся
-    // непереведённым внутри уже русской фразы («ожидалось int, получено число»).
     expect(refusal({ level: 7.5 })).toBe(
       "Поле «level» не годится: Неверный ввод: ожидалось целое число, получено число",
     );
@@ -95,14 +88,11 @@ describe("правка листа проходит объявления поле
     expect(refusal({ speed: -5 })).toContain("speed");
   });
 
-
   it("правка, прошедшая объявления, доходит до состояния", () => {
     expect(Character.of(createThorne()).withSheet({ age: 142 }).toState().age).toBe(142);
   });
 
   it("правка доходит до состояния разобранной, а не куском", () => {
-    // Патч, минующий типизированный вызов (импорт, ручная миграция), способен принести неполное
-    // поле — тот самый случай, который здесь проверяется.
     const partial: Record<string, unknown> = { skills: { arcana: "expert" } };
     const state = Character.of(createThorne()).withSheet(partial).toState();
     expect(state.skills).toEqual({ arcana: "expert" });

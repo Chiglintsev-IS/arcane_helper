@@ -1,11 +1,3 @@
-/**
- * Доска эффектов: что сейчас действует и что из этого держится концентрацией.
- *
- * Активные эффекты и концентрация — один объект-значение, потому что согласованы между собой:
- * концентрация без своего эффекта и второй концентрационный эффект одинаково означают испорченное
- * состояние.
- */
-
 import { outlastsLongRest } from "@/core/domain/effects/duration";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -15,15 +7,12 @@ import type { ActiveEffect, EffectsState } from "./schema";
 
 type EffectBoardState = EffectsState;
 
-/** Доска после истечения и то, что с неё ушло: подпись в логе обязана назвать снятое. */
 type Expiry = { board: EffectBoard; expired: ActiveEffect[] };
 
-/** Отчего концентрация кончилась — перечнем: тем же списком сужается слово, пришедшее снаружи. */
 export const CONCENTRATION_ENDS = ["manual", "failed_check", "replaced", "long_rest"] as const;
 
 export type ConcentrationEnd = (typeof CONCENTRATION_ENDS)[number];
 
-/** Вклады одного действующего с их источником: имя — то, чем игрок это назвал. */
 function contributionsOf(
   nameRu: string,
   contributions: Spell["contributions"],
@@ -32,7 +21,6 @@ function contributionsOf(
   return contributions.map((contribution) => ({ source, contribution }));
 }
 
-/** Концентрация ссылается на заклинание; эффект, заведённый вручную, её не держит. */
 function concentrationSpellId(effect: ActiveEffect): string {
   if (effect.spellId === undefined) {
     throw new DomainError("Концентрационный эффект обязан ссылаться на заклинание");
@@ -43,7 +31,6 @@ function concentrationSpellId(effect: ActiveEffect): string {
 export class EffectBoard {
   private constructor(private readonly state: EffectBoardState) {}
 
-  /** Владеет только своими полями: иначе агрегат затирал бы правки соседа. */
   private static readonly KEYS = ["activeEffects", "concentration"] as const satisfies readonly (keyof EffectBoardState)[];
 
   static of(state: EffectBoardState): EffectBoard {
@@ -57,12 +44,6 @@ export class EffectBoard {
     });
   }
 
-  /**
-   * Новый эффект. Концентрационный вытесняет прежний одним переходом — двух одновременно не бывает.
-   *
-   * `holdsConcentration` отделено от самого эффекта: раундовый эффект, созданный вне схватки,
-   * истекает в тот же миг и внимания не занимает, хотя заклинание концентрационное.
-   */
   start(effect: ActiveEffect, startedAt: string): EffectBoard {
     const kept = effect.isConcentration
       ? this.state.activeEffects.filter((existing) => !existing.isConcentration)
@@ -75,7 +56,6 @@ export class EffectBoard {
     );
   }
 
-  /** Снимает концентрацию и называет, чью: подпись в логе обязана назвать заклинание. */
   endConcentration(): { board: EffectBoard; spellId: string } {
     const current = this.state.concentration;
     if (current === undefined) {
@@ -99,15 +79,10 @@ export class EffectBoard {
     };
   }
 
-  /**
-   * Истечение раундовых эффектов. Сколько раундов прошло, решает вызывающий: раунды считаются по
-   * логу, а доска эффектов про лог не знает.
-   */
   expire(elapsedRounds: (effect: ActiveEffect) => number): Expiry {
     return this.dropRounds((effect, rounds) => elapsedRounds(effect) >= rounds);
   }
 
-  /** Конец схватки: раундов вне боя нет, и раундовое кончается вместе с ней — весь остаток сразу. */
   afterCombat(): Expiry {
     return this.dropRounds(() => true);
   }
@@ -132,12 +107,6 @@ export class EffectBoard {
     };
   }
 
-  /**
-   * Долгий отдых. Переживёт ли его эффект, отвечает его собственный срок.
-   *
-   * Концентрация сна не переживает ни при каком сроке, и её эффект уходит вместе с ней: эффект
-   * концентрации без самой концентрации — такая же испорченная доска, как и обратное.
-   */
   afterLongRest(): Expiry {
     const kept: ActiveEffect[] = [];
     const expired: ActiveEffect[] = [];
@@ -150,25 +119,12 @@ export class EffectBoard {
     return { board: this.with(kept, undefined), expired };
   }
 
-  /**
-   * Что действующее приносит листу: копии вкладов с именем того, кто их держит.
-   *
-   * Заклинание и заведённая мастером поправка приходят одинаково: для счёта они и есть одно, а
-   * различает их разве что подпись в разборе.
-   */
   contributions(): readonly SourcedContribution[] {
     return this.state.activeEffects.flatMap((effect) =>
       contributionsOf(effect.nameRu, effect.contributions),
     );
   }
 
-  /**
-   * Какими станут вклады, если сотворить заклинание, — предпросмотр до подтверждения.
-   *
-   * Повторное применение того же заклинания вклад не удваивает: второй «Щит» поверх первого не
-   * даёт десяти. Узнаётся это по заклинанию, а не по совпадению чисел, и потому здесь, а не в
-   * свёртке: движок вкладов одинаковых от разных не отличает и отличать не должен.
-   */
   contributionsWith(
     spell: Pick<Spell, "id" | "nameRu" | "contributions">,
   ): readonly SourcedContribution[] {
@@ -180,17 +136,10 @@ export class EffectBoard {
       : [...this.contributions(), ...contributionsOf(spell.nameRu, spell.contributions)];
   }
 
-  /** Эффект, заведённый шапкой ресурсов: опознаётся признаком рода, а не подписью. */
   manualEffect(kind: NonNullable<ActiveEffect["manualKind"]>): ActiveEffect | undefined {
     return this.state.activeEffects.find((effect) => effect.manualKind === kind);
   }
 
-  /**
-   * Число заведённой вручную поправки: ноль означает, что её нет вовсе.
-   *
-   * Доска отдаёт записанное, а не считает по правилам: какой величины касается поправка, сказано в
-   * самом вкладе, и доска в это не заглядывает дальше вида «прибавка».
-   */
   manualAdjustment(kind: NonNullable<ActiveEffect["manualKind"]>): number {
     const [contribution] = this.manualEffect(kind)?.contributions ?? [];
     return contribution?.kind === "bonus" ? contribution.value : 0;

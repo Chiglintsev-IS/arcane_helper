@@ -1,11 +1,3 @@
-/**
- * Подписи блока концентрации.
- *
- * Числа сюда приходят проекцией, и здесь проверяется только выбор слов: падеж, знак, порядок фактов
- * через точку и деградация без карточки. Правила — раунд начала, урон по ячейке, сложность — стоят
- * у своего владельца и проверяются его прогоном.
- */
-
 import { describe, expect, it } from "vitest";
 
 import type { ConcentrationView, SpellRowView } from "@/contract/views";
@@ -14,10 +6,8 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 
-/** Числа заклинателя Торна: их строит настоящий презентер. */
 const CASTING = testSnapshot().casting;
 
-/** Строка настоящей проекции: досягаемость и род броска блок берёт из неё. */
 const ROW = testSpellRow("detect-magic");
 
 function concentration(overrides: Partial<ConcentrationView> = {}): ConcentrationView {
@@ -103,7 +93,6 @@ describe("describeConcentration (FR-084)", () => {
     });
     const summary = describeConcentration({ concentration: withoutCard, row: null, casting: CASTING });
 
-    // Показать «Концентрации нет» нельзя: незаметная потеря концентрации запрещена.
     expect(summary.nameRu).toBe("Обнаружение магии");
     expect(summary.rulesAvailable).toBe(false);
     expect(summary.mechanicsLabel).toBe("Правил нет в контенте: состояние из другой сборки");
@@ -115,13 +104,10 @@ describe("describeConcentration (FR-084)", () => {
     const { area: _area, ...withoutArea } = ROW;
     const summary = summaryOf({}, { ...withoutArea, resolution: { type: "saving_throw" } });
 
-    // Схема требует характеристику при спасброске; без неё состояние испорчено, и назвать один
-    // порог честнее, чем выдумать характеристику.
     expect(summary.mechanicsLabel).toBe("На себя · Спасбросок КС 16");
   });
 
   it("показывает отрицательные модификаторы со знаком минус", () => {
-    // Волшебник со штрафом: у Торна оба модификатора положительные, а знак обязан быть верным.
     const base = createThorne();
     const character: CharacterState = {
       ...base,
@@ -144,7 +130,6 @@ describe("describeConcentration (FR-084)", () => {
     const summary = summaryOf(
       { save: -2, slotLevelUsed: 0 },
       testSpellRow("ray-of-frost", character),
-      // Числа проклятого заклинателя: их считает та же проекция, что и в приложении.
       testSnapshot(character).casting,
     );
 

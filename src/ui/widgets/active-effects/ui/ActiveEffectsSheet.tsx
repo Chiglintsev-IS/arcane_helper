@@ -1,13 +1,3 @@
-/**
- * Шторка «Действует»: всё, что висит на персонаже, целиком.
- *
- * Отвечает на два вопроса, за которыми игрок иначе полез бы в книгу: как работает то, что он
- * держит, и чем оно прервётся. Полные правила заклинания здесь не дублируются — к ним ведёт переход
- * в его карточку там, где карточка есть.
- *
- * Компонент презентационный: текст приходит готовым, состояние меняет экран.
- */
-
 "use client";
 
 import { useState, type FormEvent } from "react";
@@ -18,23 +8,12 @@ import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summa
 import { MARKS_LABEL } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/** Имя шторки: кнопка, которая её открывает, обещает ровно это слово. */
 export const ACTIVE_SHEET_LABEL = "Действует";
 
-/**
- * Подпись вклада эффекта в КД: отвечает на вопрос «почему КД 17, а не 14».
- *
- * Приложение не хранит цель эффекта, поэтому «Доспехи мага» на союзника поднимут КД Торна. Подпись
- * делает это видимым: неверный эффект снимается вручную.
- */
 export function armorClassNote(effect: ActiveEffectView, armorClass: number): string {
   return effect.changesArmorClass ? ` · КД ${armorClass}` : "";
 }
 
-/**
- * Строка ввода статуса: без кнопки и без листа, тем же нажатием Enter, что и любая форма из
- * одного поля. Заводит статус без вклада в КД — числовую поправку вводит плитка КД в шапке.
- */
 function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
   const [value, setValue] = useState("");
 
@@ -141,23 +120,14 @@ export function ActiveEffectsSheet({
   onOpenMarks,
   onClose,
 }: {
-  /** Что висит на персонаже: посчитано ядром, включая то, двигает ли эффект защиту. */
   effects: readonly ActiveEffectView[];
-  /** Действующая защита: то же число, что в шапке и на «Листе», — его считает лист. */
   armorClass: number;
   concentration: ConcentrationSummary | null;
-  /** Переход к полным правилам. Нет перехода — нет и кнопки. */
   onOpenSpell?: (() => void) | undefined;
   onTakeDamage: () => void;
   onDropConcentration: () => void;
   onEndEffect: (effectId: string) => void;
-  /** Заводит статус без вклада в КД: поле стоит здесь же, под списком того, что уже действует. */
   onAddStatus: (nameRu: string) => void;
-  /**
-   * Дверь в отметки мастера. Стоит здесь, а не только значком: значка нет, пока истощения и
-   * вдохновения нет, а завести их надо ровно тогда — и путь к ним не вправе появляться и пропадать
-   * вместе с тем, что за ним заводят.
-   */
   onOpenMarks: () => void;
   onClose: () => void;
 }) {
@@ -198,14 +168,9 @@ export function ActiveEffectsSheet({
                 <span>
                   <span aria-hidden="true">◈</span> {effect.nameRu}
                   {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
-                  {/* Число, которым эффект держится: руна названа именем, а действует прибавкой. */}
                   {effect.noteRu === undefined ? null : (
                     <span className="block text-xs text-ink-quiet">{effect.noteRu}</span>
                   )}
-                  {/*
-                   * Что придётся делать каждый ход, пока эффект держится. Приложение бросок не
-                   * делает и таймера не ведёт — оно напоминает, что бросок нужен.
-                   */}
                   {effect.repeatableAction === undefined ? null : (
                     <span className="block text-xs text-action">
                       ↻ {effect.repeatableAction.label}: {effect.repeatableAction.description}

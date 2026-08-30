@@ -1,10 +1,3 @@
-/**
- * Проекция действующего.
- *
- * Проверяется то, что строка списка обязана сказать сама: чем эффект держится и двигает ли он
- * защиту. Числа величин здесь не пересказываются — их складывает лист.
- */
-
 import { describe, expect, it } from "vitest";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
@@ -12,7 +5,6 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 
 import { toEffectViews } from "./effectsView";
 
-/** Действующий без заклинания: форма следа, оставленного не карточкой. */
 function holding(effect: Partial<CharacterState["activeEffects"][number]>): CharacterState {
   return {
     ...createThorne(),

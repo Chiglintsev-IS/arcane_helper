@@ -1,10 +1,3 @@
-/**
- * Схема заклинания.
- *
- * Единственный источник и типов, и валидации: та же схема проверяет контент в CI и
- * пользовательский импорт в рантайме.
- */
-
 import { z } from "zod";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
@@ -19,7 +12,6 @@ import { statContributionSchema } from "@/core/domain/shared/stats";
 export const CANTRIP_LEVEL = 0;
 export const MAXIMUM_SPELL_LEVEL = 9;
 
-/** Минуты и часы — единственные типы, у которых число осмысленно: 1 минута ≠ 10 минут. */
 const LONG_CASTING_TYPES: readonly string[] = ["minute", "hour"];
 
 const castingTimeSchema = z
@@ -78,7 +70,6 @@ const componentsSchema = z
     path: ["materialText"],
   });
 
-/** Считаемые сроки: у них число и есть длительность, а его отсутствие читается нулём. */
 const COUNTED_DURATION_TYPES: readonly string[] = ["rounds", "minutes", "hours"];
 
 const durationSchema = z
@@ -95,7 +86,6 @@ const durationSchema = z
   );
 
 const targetingSchema = z.object({
-  // "object" добавлен вместе с первой партией контента: «Починка» и «Опознание» целятся в предмет.
   type: z.enum(["self", "creature", "creatures", "object", "point", "area"]),
   maximumTargets: z.number().int().positive().optional(),
 });
@@ -112,7 +102,6 @@ const resolutionSchema = z
     path: ["savingThrow"],
   });
 
-/** Ключи масштабирования — целые числа в строковом виде: JSON других ключей не знает. */
 const scalingSchema = z.record(
   z.coerce.number().int().nonnegative(),
   nonEmpty,
@@ -124,36 +113,14 @@ const damageSchema = z.object({
   scaling: scalingSchema.optional(),
 });
 
-/**
- * Вклады заклинания в величины листа.
- *
- * Пустой список означает «на числа не влияет»: различие видно в данных и не требует от листа знать
- * список заклинаний, которые на что-то влияют. Форма вклада — общая, та же, что у вещи и у
- * постоянного вклада персонажа: лист не различает, кто прислал.
- *
- * Цели вклада заклинание не читает: во вкладе есть имя величины и число, но нет способа спросить,
- * чему эта величина сейчас равна. Поэтому «Доспехи мага, считающиеся от Класса Доспеха» — не
- * запрещённые данные, а невыразимые.
- */
 const spellContributionsSchema = z.array(statContributionSchema).default([]);
 
-/**
- * Расход Костей хитов заклинанием.
- *
- * Отсутствие поля означает «костей не тратит», а не ноль: различие видно в данных, и движку не нужен
- * список заклинаний, которые их тратят. Тем же приёмом сделан вклад в Класс Доспеха.
- *
- * `maximumDice` — сколько костей даёт бросить ячейка уровня самого заклинания, `extraDicePerSlotLevel`
- * — прибавка за каждый уровень ячейки выше. Модификатор заклинательной характеристики прибавляется
- * один раз на всё сотворение, а не на кость, поэтому это флаг, а не число.
- */
 const hitDiceCostSchema = z.object({
   maximumDice: z.number().int().positive(),
   extraDicePerSlotLevel: z.number().int().nonnegative(),
   addsSpellcastingModifier: z.boolean(),
 });
 
-/** Доля внешнего радиуса схемы: 1 — внешнее кольцо, 0 — центр. */
 const diagramRadius = z.number().gt(0).max(1);
 
 const glyphIdSchema = z.enum(GLYPH_IDS);
@@ -163,12 +130,6 @@ const magicSquareSchema = z.object({
   radius: diagramRadius,
 });
 
-/**
- * Схема ритуала.
- *
- * Слои перечисляются снаружи внутрь — этот же порядок игрок повторяет на бумаге. Обязательны только
- * кольца, печать и подпись: остальное набирается по вкусу ритуала.
- */
 const ritualDiagramSchema = z.object({
   rings: z.array(diagramRadius).min(2).max(4),
   tickRing: z.object({ count: z.union([z.literal(36), z.literal(72)]), radius: diagramRadius }).optional(),
@@ -192,13 +153,6 @@ const ritualDiagramSchema = z.object({
 
 export type RitualDiagram = DeepReadonly<z.infer<typeof ritualDiagramSchema>>;
 
-/**
- * Сумма строки, столбца и диагонали у магического квадрата одна и та же.
- *
- * Строки, столбцы и обе диагонали собираются одним проходом, а не индексацией `rows[0][2]`:
- * `noUncheckedIndexedAccess` такую запись не пропускает, а обкладывать её `?? 0` значило бы завести
- * ветки, недостижимые для теста — размер 3×3 уже гарантирован схемой.
- */
 function isMagicSquare(rows: readonly (readonly number[])[]): boolean {
   const columns: number[][] = [];
   const main: number[] = [];
@@ -220,10 +174,6 @@ function isMagicSquare(rows: readonly (readonly number[])[]): boolean {
 
 type DiagramIssue = { path: (string | number)[]; message: string };
 
-/**
- * Проверки слоёв, которые типами не выражаются. Возвращает список нарушений, а не пишет их сама:
- * так функция остаётся чистой и не зависит от типа контекста Zod.
- */
 function ritualDiagramIssues(diagram: RitualDiagram): DiagramIssue[] {
   const issues: DiagramIssue[] = [];
   const issue = (message: string, where: (string | number)[]): void => {
@@ -273,7 +223,6 @@ function ritualDiagramIssues(diagram: RitualDiagram): DiagramIssue[] {
         "rows",
       ]);
     }
-    // Печать садится в центральную клетку квадрата, иначе они наложатся друг на друга.
     if (diagram.centralSeal.radius > diagram.magicSquare.radius / 2) {
       issue("Печать не помещается в центральную клетку квадрата", ["centralSeal", "radius"]);
     }
@@ -282,24 +231,14 @@ function ritualDiagramIssues(diagram: RitualDiagram): DiagramIssue[] {
   return issues;
 }
 
-/** Подстановка урона в строке списка: число считает проекция по уровню персонажа и ячейки. */
 export const DAMAGE_PLACEHOLDER = "{damage}";
 
 const lines = z.array(nonEmpty).min(1);
 
-/**
- * Строка списка: чем заклинание отвечает игроку до открытия карточки, готовыми фразами.
- *
- * Куда целить, что случится и что бросить — словами стола, а не полями схемы: «конус 30 футов от
- * себя — задевает и своих» из полей не собрать. Числа урона в этих фразах не пишутся — на их месте
- * стоит подстановка, которую заполняет проекция.
- */
 const listCardSchema = z.object({
   whereRu: nonEmpty,
-  /** Чем ещё платят сверх ячейки, одним словом: «пыль». Цену называет компонент. */
   costMaterialRu: nonEmpty.optional(),
   effectLinesRu: lines.optional(),
-  /** Кто бросает спасбросок: «Каждый в конусе», «Несогласная цель». */
   rollSubjectRu: nonEmpty.optional(),
   rollNoteRu: nonEmpty.optional(),
   hitLinesRu: lines.optional(),
@@ -320,14 +259,6 @@ const spellShape = z.object({
   school: nonEmpty,
   source: nonEmpty.optional(),
 
-  /**
-   * Роль в бою. Необязательная здесь и обязательная для собственного контента — это
-   * проверяет `content.test.ts`.
-   *
-   * Обязательной в схеме её сделать нельзя: та же схема читает пользовательский импорт (,
-   *), и файл, выгруженный предыдущей версией, перестал бы открываться — обновление не имеет
-   * права терять данные.
-   */
   combatRole: z.enum(COMBAT_ROLES).optional(),
 
   castingTime: castingTimeSchema,
@@ -345,12 +276,6 @@ const spellShape = z.object({
   contributions: spellContributionsSchema,
   hitDiceCost: hitDiceCostSchema.optional(),
 
-  /**
-   * Что придётся делать каждый ход, пока эффект держится.
-   *
-   * Отсутствие поля означает «эффект висит сам», а не пустое напоминание: различие видно в данных.
-   * Копируется в активный эффект при применении — тем же способом, что и вклад в КД.
-   */
   repeatableAction: z
     .object({ label: nonEmpty, description: nonEmpty })
     .optional(),
@@ -366,10 +291,6 @@ const spellShape = z.object({
 
 type ListCardIssue = { path: string[]; message: string };
 
-/**
- * Строка списка согласована с механикой: исходы называются у того броска, который есть, бросающий
- * — только у спасброска, а урон приходит подстановкой, если карточка его вообще несёт.
- */
 function listCardIssues(spell: z.infer<typeof spellShape>): ListCardIssue[] {
   const card = spell.listCard;
   if (card === undefined) return [];
@@ -406,8 +327,6 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
     context.addIssue({ code: "custom", path: ["listCard", ...issue.path], message: issue.message });
   }
 
-  // Карточка несёт только положительный вклад: отрицательный — это поправка мастера, и она
-  // заводится вручную, а не приходит контентом.
   for (const [index, contribution] of spell.contributions.entries()) {
     if (contribution.kind === "method" || contribution.value > 0) continue;
     context.addIssue({
@@ -417,7 +336,6 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
     });
   }
 
-  //: схема ритуала есть ровно у ритуального заклинания.
   if (spell.ritual && spell.ritualDiagram === undefined) {
     context.addIssue({
       code: "custom",
@@ -442,7 +360,6 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
     }
   }
 
-  // Заговор не может быть ритуальным: ритуал требует уровня 1 и выше.
   if (spell.level === CANTRIP_LEVEL && spell.ritual) {
     context.addIssue({
       code: "custom",
@@ -454,7 +371,6 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
   if (spell.damage?.scaling !== undefined) {
     const thresholds = Object.keys(spell.damage.scaling).map(Number);
     if (spell.level === CANTRIP_LEVEL) {
-      // Для заговора ключи — пороги уровня персонажа.
       for (const threshold of thresholds) {
         if (threshold < MINIMUM_CHARACTER_LEVEL || threshold > MAXIMUM_CHARACTER_LEVEL) {
           context.addIssue({
@@ -465,7 +381,6 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
         }
       }
     } else {
-      // Для заклинания ключи — уровни ячейки, не ниже уровня самого заклинания.
       for (const threshold of thresholds) {
         if (threshold < spell.level || threshold > MAXIMUM_SPELL_LEVEL) {
           context.addIssue({
@@ -479,16 +394,8 @@ export const spellSchema = spellShape.superRefine((spell, context) => {
   }
 });
 
-/** Карточка неизменяема: контент приходит сборкой или выгрузкой игрока, а не правкой на месте. */
 export type Spell = DeepReadonly<z.infer<typeof spellSchema>>;
 
-
-/**
- * Компонент, который фокусировка не заменяет: со стоимостью или расходуемый.
- *
- * Правило про карточку и живёт у карточки: проверка доступности, шаг компонентов в мастере и список
- * покупок спрашивают одно и то же, и три копии одного условия расходятся на первой же правке.
- */
 export function needsOwnComponent(components: Spell["components"]): boolean {
   return components.material && (components.costGp !== undefined || components.consumed === true);
 }

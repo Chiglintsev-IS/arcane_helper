@@ -5,10 +5,6 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import { assertMoney, assertStockEntry } from "@/core/domain/equipment/schema";
 
-/**
- * Пределы и словари снаряжения на самом снаряжении: собирать ради них целого персонажа значило бы
- * проверять заодно и его правила.
- */
 function withStock(entry: unknown) {
   return EQUIPMENT_FIELDS.equipment.safeParse({ bag: [entry] });
 }
@@ -67,8 +63,6 @@ describe("правка запаса и кошелька проходит объ�
   });
 
   it("причина дробного отказа звучит по-русски целиком, без слова библиотеки внутри фразы", () => {
-    // Круг ревью до этого поймал ровно то, что здесь и проверяется: «int» словаря zod, оставшийся
-    // непереведённым внутри уже русской фразы («ожидалось int, получено число»).
     expect(reason(() => assertMoney({ gold: 12.5, silver: 0, copper: 0 }))).toBe(
       "Не годится кошелёк — поле «gold»: Неверный ввод: ожидалось целое число, получено число",
     );

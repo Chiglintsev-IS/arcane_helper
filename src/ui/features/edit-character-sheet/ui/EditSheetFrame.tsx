@@ -6,21 +6,6 @@ import { useId, type ReactNode } from "react";
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-/**
- * Рамка шторки правки: заголовок, содержимое, сохранение, уход и причина отказа.
- *
- * Одна на восемь шторок — иначе кнопка сохранения рано или поздно поехала бы в одной из них, и
- * пришлось бы проверять каждую. Слова на обеих кнопках приходят от их владельца: здесь правят
- * запись листа, и словом правки распоряжается не эта шторка.
- *
- * Годится ли набранное, шторка не знает и не спрашивает: она передаёт числа владельцу и показывает
- * его ответ. Своя проверка здесь была бы вторым правилом о том же — и разошлась бы с настоящим при
- * первой же правке предела.
- *
- * Прокручивается только содержимое: главное действие стоит внизу экрана и остаётся на месте. Пока
- * прокручивалась шторка целиком, на 320 × 568 кнопка сохранения у длинной шторки уходила за край, и
- * сохранение требовало сперва догадаться, что список полей продолжается.
- */
 export function EditSheetFrame({
   titleRu,
   children,
@@ -30,7 +15,6 @@ export function EditSheetFrame({
 }: {
   titleRu: string;
   children: ReactNode;
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   onSave: () => void;
   onCancel: () => void;
@@ -69,12 +53,6 @@ export function EditSheetFrame({
   );
 }
 
-/**
- * Числовое поле шторки: подпись слева, число справа. Одинаковое во всех восьми.
- *
- * Причина, по которой набранное не ушло, стоит второй строкой под самим полем и входит в его
- * описание: там, где набирали, а не поверх экрана.
- */
 export function NumberField({
   labelRu,
   value,
@@ -88,12 +66,10 @@ export function NumberField({
   onChange: (value: string) => void;
   min?: number;
   max?: number;
-  /** Почему набранное не ушло. Причина стоит у поля, в котором набирали, а не поверх экрана. */
   reasonRu?: string | null;
 }) {
   const reasonId = useId();
   return (
-    // Причина стоит рядом с полем, но вне подписи: внутри неё она стала бы частью имени поля.
     <div className="flex flex-col gap-1">
       <label className="flex items-center justify-between gap-2 text-sm">
         <span>{labelRu}</span>
@@ -124,7 +100,6 @@ export function NumberField({
   );
 }
 
-/** Текстовое поле шторки. */
 export function TextField({
   labelRu,
   value,

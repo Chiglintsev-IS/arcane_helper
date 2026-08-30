@@ -1,13 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Набор переключателей строится из того, что делит список, а не из перечня по режимам.
- *
- * Проверяется здесь, а не на «Игре»: у настоящей книги Торна сегодня нет бонусного действия, и обе
- * стороны каждого условия на ней не показать. Компонент презентационный — состав подаётся
- * параметром, и обе стороны видны сразу.
- */
-
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -18,7 +10,6 @@ import { NO_FILTERS } from "@/ui/features/filter-spells/model/filters";
 
 afterEach(cleanup);
 
-/** Чем список делится: состав подаётся параметром, а не выводится из книги. */
 type Dividing = {
   castingTimes: string[];
   prices: number[];
@@ -71,7 +62,6 @@ describe("состав фильтров идёт от списка (FR-002)", ()
 
     expect(screen.queryByRole("group", { name: "Цена" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Без ячейки" })).toBeNull();
-    // Остальные переключатели на месте: убрана одна категория, а не полоса.
     expect(screen.getByRole("button", { name: "Концентрация" })).toBeDefined();
   });
 
@@ -100,7 +90,6 @@ describe("состав фильтров идёт от списка (FR-002)", ()
   });
 
   it("роль без единой находки переключателя не получает", () => {
-    // Список из одних защитных: предлагать «Боевое» значит обещать пустой результат.
     renderFilters({ ...EVERYTHING, roles: ["defense"] }, { mode: "book" });
 
     expect(screen.getByRole("button", { name: "Защита" })).toBeDefined();
@@ -115,7 +104,6 @@ describe("роль отбирает и в «Игре» (FR-212)", () => {
     for (const name of ["Действие", "Бонусное", "Реакция", "Боевое", "Защита", "Другое", "Концентрация"]) {
       expect(screen.getByRole("button", { name }), name).toBeDefined();
     }
-    // Цена, подготовка и ритуал — вопросы «Книги»: в «Игре» список уже упорядочен ценой.
     expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Подготовлено" })).toBeNull();
   });
@@ -130,7 +118,6 @@ describe("роль отбирает и в «Игре» (FR-212)", () => {
   it("знак переключателя приходит от тона, а не набирается в полосе", () => {
     renderFilters(EVERYTHING, { mode: "book" });
 
-    // Тот же знак, что и на строке списка: два знака у одного значения читались бы как два правила.
     expect(screen.getByRole("button", { name: "Боевое" }).textContent).toBe("✚Боевое");
     expect(screen.getByRole("button", { name: "Защита" }).textContent).toBe("◇Защита");
     expect(screen.getByRole("button", { name: "Концентрация" }).textContent).toBe("◉Концентрация");
@@ -159,10 +146,8 @@ describe("цена — отдельная прокручиваемая стро�
     expect(prices.getByRole("button", { name: "1 ур." })).toBeDefined();
     expect(prices.getByRole("button", { name: "2 ур." })).toBeDefined();
 
-    // Остальные переключатели — не в контейнере цены: он не поглощает общую полосу.
     expect(prices.queryByRole("button", { name: "Ритуал" })).toBeNull();
     expect(prices.queryByRole("button", { name: "Подготовлено" })).toBeNull();
-    // А снаружи они по-прежнему есть — полоса их не потеряла.
     expect(screen.getByRole("button", { name: "Ритуал" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Подготовлено" })).toBeDefined();
   });
@@ -202,8 +187,6 @@ describe("поиск стоит в полосе всегда (FR-303)", () => {
   });
 
   it("поле встаёт на место переключателей, а не рядом с ними", () => {
-    // Полный набор в «Книге» — два ряда переключателей и шкала цены. Ряда поиск не добавляет:
-    // пока набирают название, полоса состоит из лупы и поля, и больше ни из чего.
     renderFilters(EVERYTHING, { mode: "book", searchOpen: true });
 
     for (const name of ["Действие", "Реакция", "Боевое", "Концентрация", "Ритуал", "Подготовлено"]) {

@@ -1,10 +1,3 @@
-/**
- * Партия: во что обходится рецепт этой сложности и сколько состава из него выйдет.
- *
- * Одна единица и полная допустимая партия требуют одного и того же времени, поэтому закладывать
- * помалу невыгодно, а закладывать сверх предела оснащения нельзя вовсе.
- */
-
 import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/shared/language";
 import { apparatusLimits } from "./apparatus";
@@ -14,15 +7,12 @@ import type { Consumables } from "./consumables";
 import { LOWEST_DIFFICULTY } from "./recipe";
 import type { RecipeDifficulty } from "./recipe";
 
-/** Время партии: полоса сложности шириной в пять, и каждая следующая полоса вдвое длиннее. */
 const DIFFICULTY_BAND = 5;
 const SHORTEST_BATCH_MINUTES = 15;
 const LONGER_PER_BAND = 2;
 
-/** Одна единица сверх каждых четырёх заложенных порций: на стенках сосудов теряется меньше. */
 const PORTIONS_PER_BONUS_UNIT = 4;
 
-/** Один часовой комплект расходников обслуживает столько рецептурных порций. */
 const PORTIONS_PER_CONSUMABLE_KIT = 5;
 
 function batchMinutes(difficulty: number): number {
@@ -30,12 +20,6 @@ function batchMinutes(difficulty: number): number {
   return SHORTEST_BATCH_MINUTES * LONGER_PER_BAND ** band;
 }
 
-/**
- * Отказ, называющий не только предел, но и то, чем набрано лишнее.
- *
- * «Слишком сложно» не отвечает на вопрос, ради которого рецепт и считают: что убрать, чтобы стало
- * возможно. Поправки названы от самой дорогой — с неё и начинают резать.
- */
 function tooHardRefusal(difficulty: RecipeDifficulty, hardest: number): string {
   const gathered = difficulty.parts
     .filter((part) => part.modifier > 0)
@@ -61,12 +45,6 @@ export type Batch = {
   readonly units: number;
 };
 
-/**
- * Что выйдет из заложенной партии: время, расходники и число готовых единиц.
- *
- * Расходники считаются за каждый начатый час и за каждые начатые пять рецептурных порций: часовой
- * комплект обслуживает пять, шестой порции нужен второй комплект.
- */
 export function batchFrom(
   difficulty: RecipeDifficulty,
   apparatus: Apparatus,

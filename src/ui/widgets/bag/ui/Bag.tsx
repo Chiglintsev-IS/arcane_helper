@@ -7,25 +7,12 @@ import { ItemSection } from "@/ui/shared/ui/ItemSection";
 import { EDIT_LABEL, editName } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/**
- * Разделы сумки — по категории счётной вещи. Порядок постоянен, пустой раздел остаётся на месте со
- * своей строкой ввода: раздел, появляющийся с первой вещью, заставлял бы искать, куда её ввести.
- *
- * Экипировки среди них нет: её надевают, и показывают её отдельно вместе с числом, которое от неё
- * зависит.
- */
 const SECTIONS: { kind: string; titleRu: string; addLabelRu: string }[] = [
   { kind: "consumable", titleRu: "Расходники", addLabelRu: "Новый расходник" },
   { kind: "ingredient", titleRu: "Ингредиенты", addLabelRu: "Новый ингредиент" },
   { kind: "other", titleRu: "Другое", addLabelRu: "Новая вещь" },
 ];
 
-/**
- * Сумка: деньги и счётные вещи по категориям.
- *
- * Компонент презентационный: состояние приходит параметрами, операции выбирает экран. Быстрый ввод
- * заводит вещь сразу в свою категорию — раздел и есть выбор категории, отдельного поля не нужно.
- */
 export function Bag({
   bag,
   stats,
@@ -35,7 +22,6 @@ export function Bag({
   onAdjustBagCount,
 }: {
   bag: BagView;
-  /** Величины с разбором: ими подписаны прибавки вещи. */
   stats: ChoicesView["stats"];
   onEditMoney: () => void;
   onOpenItem: (id: string) => void;
@@ -44,8 +30,6 @@ export function Bag({
 }) {
   const { money, items, missingMaterials } = bag;
   const moneyRu = "Деньги";
-  // Уехавшее в список покупок из своей категории ушло: переезд, а не копия — один и тот же ноль,
-  // стоящий в двух разделах, спрашивался бы дважды.
   const shopping = new Set(
     missingMaterials.flatMap((need) => (need.itemId === undefined ? [] : [need.itemId])),
   );
@@ -54,7 +38,6 @@ export function Bag({
     <div className="flex flex-col gap-2">
       <section className={`flex items-center gap-3 px-3 py-2 ${SURFACE_GROUP}`}>
         <h2 className="shrink-0 text-sm font-semibold">{moneyRu}</h2>
-        {/* Все монеты стола всегда: исчезнувший ноль заставляет гадать, кончился или забыт. */}
         <ul
           aria-label="Кошелёк"
           className="flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums"
@@ -96,11 +79,6 @@ export function Bag({
                     stats={stats}
                     onOpen={() => onOpenItem(item.id)}
                   >
-                    {/*
-                     * Запас стоит между расходом и пополнением: за столом со счётной вещью делают
-                     * ровно это, и число, которое меняется, обязано стоять там, куда смотрят.
-                     * Кончившееся видно нулём, и он же объясняет выключенный расход.
-                     */}
                     <button
                       type="button"
                       aria-label={`Потратить один из сумки: ${item.nameRu}`}

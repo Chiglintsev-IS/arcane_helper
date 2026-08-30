@@ -16,15 +16,6 @@ import {
 import { withPlural } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-/**
- * Верстак: что совпало, в какой форме это проявится и во что обойдётся.
- *
- * Ничего не считает — считает ядро, а верстак показывает названное им. Причина, по которой работа
- * не идёт, стоит там же, где стоял бы её итог: погашенная кнопка на вопрос «что убрать, чтобы стало
- * возможно» не отвечает, а разбор сложности отвечает по строке за раз.
- */
-
-/** Замысел так, как его набирают: те же поля, что уходят вопросом и командой. */
 export type RecipeDraft = {
   readonly kinds: readonly string[];
   readonly mainProperty: string | null;
@@ -57,7 +48,6 @@ function Field({
   label: string;
   value: string;
   options: readonly string[];
-  /** Подпись пустого выбора; нет вовсе — пустого выбора у поля не бывает. */
   empty?: string;
   onChange: (next: string) => void;
 }) {
@@ -89,7 +79,6 @@ function Matches({
 }: {
   matches: PreviewOf<"recipe_preview">["matches"];
   draft: RecipeDraft;
-  /** Что сочтено основным эффектом; нет вовсе — считать пока нечего. */
   mainRu: string | null;
   onMain: (nameRu: string) => void;
   onSuppress: (nameRu: string) => void;
@@ -133,7 +122,6 @@ function Matches({
   );
 }
 
-/** Разбор сложности: строка на группу, от самой дорогой — с неё и начинают резать. */
 function Tally({ difficulty }: { difficulty: PreviewOf<"recipe_preview">["difficulty"] }) {
   if (difficulty === null) return null;
   const parts = difficulty.parts
@@ -174,13 +162,11 @@ export function RecipeBench({
   onCraft,
 }: {
   choices: ChoicesView["recipeForm"];
-  /** Ответ ядра; нет вовсе — ядро ещё не ответило. */
   preview: PreviewOf<"recipe_preview"> | null;
   draft: RecipeDraft;
   portions: string;
   rolledText: string;
   mishapText: string;
-  /** Кости словами: их называет словарь правил, а не подпись поля. */
   rollLabels: { check: string; mishap: string };
   onDraft: (next: RecipeDraft) => void;
   onPortions: (next: string) => void;
@@ -189,7 +175,6 @@ export function RecipeBench({
   onCraft: () => void;
 }) {
   const benchId = useId();
-  /** Отказ владельца сам называет и число, и то, из чего оно набрано: разбор рядом был бы дублем. */
   const refused = preview?.refusalRu !== undefined;
   const change = (patch: Partial<RecipeDraft>): void => onDraft({ ...draft, ...patch });
   const toggle = (list: readonly string[], value: string): readonly string[] =>
@@ -254,7 +239,6 @@ export function RecipeBench({
         </label>
       </div>
 
-      {/* Длинные слова справочника в две колонки не помещаются, и обрезанное слово — потеря факта. */}
       <div className="flex flex-col gap-2">
         <Field
           label="Цели и область"

@@ -1,10 +1,3 @@
-/**
- * Подсхема ремесла: что игрок узнал про виды ингредиентов.
- *
- * Знание — не запас. Сколько порций лежит в сумке, знает снаряжение, и запись о виде живёт отдельно
- * именно поэтому: уничтоженный образец не отменяет того, что о нём успели узнать.
- */
-
 import { z } from "zod";
 
 import {
@@ -18,41 +11,25 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 import { APPARATUS_GRADES } from "./apparatus";
 import { KNOWN_RECIPE_FIELDS } from "./recipe";
 
-/**
- * Глубже четвёртого свойства у ингредиента не бывает — предел справочника.
- *
- * Отсюда же следует, что свойств у ингредиента не больше четырёх: номера не повторяются, а больше
- * четырёх различных номеров в этих границах не набрать. Второго счёта на то же самое нет.
- */
 const DEEPEST_PROPERTY_NUMBER = 4;
 
-/** Номера, под которыми свойство бывает раскрыто: их перечень и есть предел глубины. */
 export const PROPERTY_NUMBERS: readonly number[] = Array.from(
   { length: DEEPEST_PROPERTY_NUMBER },
   (_unused, index) => index + 1,
 );
 
-/** Отказ назвать свойство словом вне перечня: совпадение считается тождеством названий. */
 function unknownPropertyRefusal(name: string): string {
   return `свойства «${name}» нет в справочнике`;
 }
 
-/** Отказ занять номер, под которым свойство уже стоит. */
 function occupiedNumberRefusal(number: number): string {
   return `свойство под номером ${number} уже раскрыто`;
 }
 
-/** Отказ раскрыть у ингредиента то, что у него уже раскрыто под другим номером. */
 function repeatedPropertyRefusal(name: string): string {
   return `свойство «${name}» у этого ингредиента уже раскрыто`;
 }
 
-/**
- * Раскрытое свойство: под каким номером стоит, как называется и какой оно редкости.
- *
- * Редкость приходит от игрока, а не выводится: справочник её не печатает, а без неё не считается ни
- * сложность рецепта, ни сложность исследования.
- */
 const revealedPropertyFields = z.object({
   number: z.number().int().min(1).max(DEEPEST_PROPERTY_NUMBER),
   nameRu: z.string().refine(isAlchemicalPropertyName, {
@@ -67,7 +44,6 @@ type IngredientFields = {
   propertiesExhausted: boolean;
 };
 
-/** Хранится по возрастанию номера: порядок записи не должен решать, как знание читается. */
 function inNumberOrder(ingredient: IngredientFields): IngredientFields {
   return {
     ...ingredient,
@@ -75,24 +51,10 @@ function inNumberOrder(ingredient: IngredientFields): IngredientFields {
   };
 }
 
-/**
- * Знание о виде ингредиента: название вида и раскрытые у него свойства.
- *
- * Вид опознаётся названием — двух записей об одном виде не бывает. Нераскрытое свойство ничем не
- * хранится: «под этим номером ещё ничего не узнано» и есть отсутствие записи, а пустая ячейка была
- * бы вторым способом сказать то же самое.
- */
 const ingredientKnowledgeSchema = z
   .object({
     nameRu: nonEmpty,
     properties: z.array(revealedPropertyFields).default([]),
-    /**
-     * Установил ли стол, что свойств у вида больше нет.
-     *
-     * Отдельным полем, потому что вывести это не из чего: потолок справочника стоит на четырёх и
-     * молчит о том, сколько свойств у корня на самом деле. Без отметки знание неполно всегда — и
-     * у вида с одним раскрытым свойством, и у вида с четырьмя.
-     */
     propertiesExhausted: z.boolean().default(false),
   })
   .transform(inNumberOrder)
@@ -122,39 +84,20 @@ const ingredientKnowledgeSchema = z
 export type RevealedProperty = DeepReadonly<z.infer<typeof revealedPropertyFields>>;
 export type IngredientKnowledge = DeepReadonly<z.infer<typeof ingredientKnowledgeSchema>>;
 
-/**
- * Знание, годное к хранению: проверенное объявлением и отвергнутое с причиной.
- *
- * Наружу отдаётся сужение, а не схема: пусти схему за границу, и её начнут расширять на месте, а
- * объявление знания перестанет быть одним.
- */
 export function ingredientKnowledgeOf(value: unknown): IngredientKnowledge {
   return parsedOrRefused(ingredientKnowledgeSchema, value, "знание об ингредиенте");
 }
 
-/** Раскрытое свойство, годное к записи: проверенное объявлением и отвергнутое с причиной. */
 export function revealedPropertyOf(value: unknown): RevealedProperty {
   return parsedOrRefused(revealedPropertyFields, value, "раскрытое свойство");
 }
 
-/**
- * Чем алхимик оснащён по каждому направлению.
- *
- * Отсутствие записи и есть «набора нет»: пустой отметки о ненайденном не заводится, и работа по
- * такому направлению идёт импровизацией — так её и считает предел оснащения.
- */
 const apparatusFields = {
   potions: z.enum(APPARATUS_GRADES).optional(),
   poisons: z.enum(APPARATUS_GRADES).optional(),
   transmutation: z.enum(APPARATUS_GRADES).optional(),
 } satisfies Record<AlchemyDirection, z.ZodType>;
 
-/**
- * Мастерская алхимика: чем он оснащён и каким направлениям обучен.
- *
- * Названо одно и другое вместе, потому что и правится оно вместе: садясь за работу, алхимик
- * объявляет и набор, и умение. Направление, названное дважды, обучения не удваивает.
- */
 const alchemyWorkshopSchema = z
   .object({
     alchemyApparatus: z.object(apparatusFields),
@@ -167,19 +110,13 @@ const alchemyWorkshopSchema = z
 
 type AlchemyWorkshop = DeepReadonly<z.infer<typeof alchemyWorkshopSchema>>;
 
-/** Мастерская, годная к хранению: проверенная объявлением и отвергнутая с причиной. */
 export function alchemyWorkshopOf(value: unknown): AlchemyWorkshop {
   return parsedOrRefused(alchemyWorkshopSchema, value, "мастерскую алхимика");
 }
 
-/** Поля контекста для сборки полной схемы состояния. */
 export const CRAFTING_FIELDS = {
   ingredientKnowledge: z.array(ingredientKnowledgeSchema).default([]),
   alchemyApparatus: z.object(apparatusFields).default({}),
-  /**
-   * Направления, которым алхимик обучен: их профильный навык прибавляет к проверке бонус
-   * мастерства. Само число бонуса здесь не хранится — его знает лист.
-   */
   studiedDirections: z.array(z.enum(ALCHEMY_DIRECTIONS)).default([]),
   ...KNOWN_RECIPE_FIELDS,
 };

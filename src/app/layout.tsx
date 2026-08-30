@@ -7,17 +7,9 @@ export const metadata: Metadata = {
   description: "Оффлайн-помощник для магического боя",
   applicationName: "Arcane Helper",
   appleWebApp: { capable: true, title: "Arcane Helper", statusBarStyle: "black-translucent" },
-  // Относительные пути: статический экспорт кладут и в подкаталог, и абсолютный «/» там сломался бы.
   manifest: "./manifest.webmanifest",
-  /*
- * Из поиска приложение исключено. Оно личное: карточки — пересказ правил из справочника, числа
- * расы и подкласса взяты из документа мастера, и попадать в выдачу этому незачем. Запрет
- * индексации не делает адрес закрытым — он делает его ненаходимым, а это разные вещи.
- */
   robots: { index: false, follow: false },
-  // Устаревшее имя мета-тега рядом с современным: Next пишет только `mobile-web-app-capable`, а
   // Safari до iOS 17 читает полноэкранный режим из `apple-mobile-web-app-capable` и без него
-  // открывает приложение с домашнего экрана в обычной вкладке.
   other: { "apple-mobile-web-app-capable": "yes" },
   icons: {
     icon: [{ url: "./icon-192.png", sizes: "192x192", type: "image/png" }],
@@ -28,7 +20,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // Приложение держат в одной руке за столом; масштабирование не запрещаем ради доступности.
   maximumScale: 5,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },

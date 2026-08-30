@@ -11,10 +11,6 @@ import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
 type LevelChangeView = PreviewOf<"level_preview">["changes"][number];
 
-/**
- * Подпись сдвинутой величины: слово приезжает строкой правил, поэтому подпись ищется, а не берётся
- * ключом. Незнакомое слово показывается как есть — пропасть с экрана молча оно не вправе.
- */
 const CHANGE_LABELS: Readonly<Record<string, string>> = {
   runes: "Руны",
   arcaneRecovery: ARCANE_RECOVERY_LABEL,
@@ -38,11 +34,9 @@ export function LevelSheet({
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   level: number;
   hitPoints: SheetView["hitPoints"];
-  /** В каких границах набирают: пределы уровня приезжают от их владельца. */
   choices: ChoicesView;
   onSave: (next: { level: number; hitPointMaximumBase: number }) => void;
   onCancel: () => void;
@@ -53,7 +47,6 @@ export function LevelSheet({
   const required = useRequiredNumbers();
   const level = requiredFieldNumber(levelText);
   const maximum = requiredFieldNumber(maximumText);
-  // Незаполненное поле не спрашивают: что изменится «от пустого места», ответить нечем.
   const question = required.allTyped([level]) ? { kind: "level_preview" as const, level } : null;
   const preview = usePreview(question);
   const shown = preview?.kind === "level_preview" ? preview : null;
@@ -83,7 +76,6 @@ export function LevelSheet({
         reasonRu={required.reasonOf(maximum)}
       />
 
-      {/* Кость бросает игрок: приложение называет среднее, но не подставляет его. */}
       {shown?.hitPoints == null ? null : (
         <p className="text-xs text-ink-quiet">
           За взятый уровень среднее за уровень: +{shown.hitPoints.total} (

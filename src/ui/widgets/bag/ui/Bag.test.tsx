@@ -12,10 +12,8 @@ import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { Bag } from "./Bag";
 
-/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
 const spells = loadThorneSpells();
 
-/** Карточка по имени: подделка рядом отвечала бы за себя, а не за содержимое игры. */
 function spellOf(id: string) {
   const found = spells.find((spell) => spell.id === id);
   if (found === undefined) throw new Error(`нет карточки ${id}`);
@@ -24,7 +22,6 @@ function spellOf(id: string) {
 
 afterEach(cleanup);
 
-/** Перечни строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
 const { stats } = toChoicesView();
 
 const NOOP = {
@@ -35,7 +32,6 @@ const NOOP = {
   onAdjustBagCount: () => {},
 };
 
-/** Персонаж с добавленными вещами и их запасом в сумке — поверх обычного снаряжения Торна. */
 function withStock(entries: { definition: ItemDefinition; bag?: number }[]): CharacterState {
   const state = createThorne();
   return {
@@ -69,11 +65,9 @@ describe("«Сумка» в «Вещах»", () => {
     expect(screen.getByRole("heading", { name: "Ингредиенты" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Другое" })).toBeDefined();
 
-    // Надеваемое показывается отдельно вместе с числом, которое от него зависит.
     expect(screen.queryByRole("heading", { name: "Экипировка" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Защита" })).toBeNull();
     expect(screen.queryByText(/без доспехов/)).toBeNull();
-    // Прибавки без вещи — свойство персонажа: их карточка живёт на «Листе», не в сумке.
     expect(screen.queryByRole("heading", { name: "Прибавки без вещи" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Прочие прибавки" })).toBeNull();
   });
@@ -81,7 +75,6 @@ describe("«Сумка» в «Вещах»", () => {
   it("покупок в сумке нет: их показывают отдельно (FR-304)", () => {
     render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
 
-    // Сумка отвечает, что в ней есть; чего в ней нет — вопрос лавки, и у него своё место.
     const titles = screen.getAllByRole("heading").map((heading) => heading.textContent);
     expect(titles).toEqual(["Деньги", "Расходники", "Ингредиенты", "Другое"]);
     expect(screen.queryByRole("list", { name: "Купить" })).toBeNull();
@@ -93,8 +86,6 @@ describe("«Сумка» в «Вещах»", () => {
 
     render(<Bag bag={toBagView(withStock([{ definition: ashes, bag: 0 }]), spells)} {...NOOP} />);
 
-    // Переезд, а не копия: перед вылазкой ноль ищут в покупках, и в своей категории вещи на это
-    // время нет вовсе. Категорию называет карточка: сжигаемое ритуалом — расходник.
     expect(screen.queryByRole("list", { name: "Расходники" })?.textContent ?? "").not.toContain(
       ashes.nameRu,
     );
@@ -125,7 +116,6 @@ describe("«Сумка» в «Вещах»", () => {
 
     const consumables = screen.getByRole("list", { name: "Расходники" });
     expect(within(consumables).getByText("Зелье лечения")).toBeDefined();
-    // Раздел без вещей списка не держит, но строка ввода в нём есть.
     expect(screen.queryByRole("list", { name: "Ингредиенты" })).toBeNull();
     expect(screen.getByLabelText("Новый ингредиент")).toBeDefined();
   });
@@ -141,7 +131,6 @@ describe("«Сумка» в «Вещах»", () => {
       />,
     );
 
-    // Запас стоит между кнопками, которые его двигают.
     const row = within(screen.getByRole("list", { name: "Расходники" })).getByRole("listitem");
     expect(row.textContent).toContain("3");
 
@@ -171,7 +160,6 @@ describe("«Сумка» в «Вещах»", () => {
     await user.type(screen.getByLabelText("Новый расходник"), "Свиток огненного шара{Enter}");
     expect(onAddItem).toHaveBeenCalledWith("consumable", "Свиток огненного шара");
 
-    // Пустая отправка ничего не заводит.
     await user.type(screen.getByLabelText("Новая вещь"), "{Enter}");
     expect(onAddItem).toHaveBeenCalledTimes(1);
   });

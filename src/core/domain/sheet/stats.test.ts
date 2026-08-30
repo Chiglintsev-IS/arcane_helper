@@ -5,7 +5,6 @@ import type { StatContribution } from "@/core/domain/shared/stats";
 import { resolveStats } from "./resolve";
 import { statsOf, type StatFoundation } from "./stats";
 
-/** Основание Торна: то, что персонаж хранит сам, без единого вклада. */
 const THORNE: StatFoundation = {
   level: 7,
   abilities: {

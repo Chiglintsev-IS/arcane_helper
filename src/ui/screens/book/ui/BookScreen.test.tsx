@@ -1,12 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * «Книга» на настоящем состоянии: моков нет.
- *
- * Книга показывает весь состав — включая долгое накладывание и ритуалы, — и говорит только о книге:
- * шапки ресурсов, действующего и отмены здесь нет.
- */
-
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -16,7 +9,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, spell } from "@/ui/app/testing/stores";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 
-/** Торн, держащий «Обнаружение магии» ячейкой 1 уровня. */
 function concentrating(): CharacterState {
   return {
     ...createThorne(),
@@ -37,7 +29,6 @@ function concentrating(): CharacterState {
   };
 }
 
-/** Рендер книги: виден весь состав, а не то, чем можно сходить прямо сейчас. */
 async function inBookMode(character?: CharacterState) {
   const user = userEvent.setup();
   const result = await renderWithStores(<BookScreen />, character);
@@ -52,8 +43,6 @@ describe("состав «Книги» (FR-217)", () => {
     expect(list.getByText("Щит")).toBeDefined();
     expect(list.getByText("Починка")).toBeDefined();
   });
-
-
 });
 
 describe("фильтры (FR-002, FR-003, AC-07)", () => {
@@ -66,7 +55,6 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     expect(screen.getByRole("button", { name: "Подготовлено" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Доступно" })).toBeNull();
   });
-
 });
 
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
@@ -75,7 +63,6 @@ describe("режим «Привал» и операции отдыха (FR-215, 
     expect(screen.queryByRole("button", { name: /Долгий отдых/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Прошёл час/ })).toBeNull();
   });
-
 });
 
 describe("подготовка в «Книге» (FR-214, FR-101)", () => {
@@ -83,7 +70,6 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const user = userEvent.setup();
     const { stores } = await inBookMode();
 
-    // Набор Торна ровно на пределе, поэтому сначала освобождаем место.
     await user.click(screen.getByRole("button", { name: "Снять подготовку: Крепость интеллекта" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
     expect(shown(stores).spells.filter((row) => row.prepared).map((row) => row.id)).toContain("detect-magic");
@@ -97,7 +83,6 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
   it("в бою счётчик называет причину (FR-214, FR-217)", async () => {
     await renderWithStores(<BookScreen />, createThorne(), { inFight: true });
 
-    // Кнопок подготовки в бою нет ни одной — значит счёт обязан сказать, отчего их нет.
     expect(screen.queryByRole("button", { name: /^Подготовить: / })).toBeNull();
     expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/).textContent).toContain(
       "Подготовку меняют вне боя",
@@ -105,13 +90,10 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
   });
 
   it("причина дописана к счёту и не повторяет его чисел (FR-214)", async () => {
-    // Набор Торна занимает предел целиком: двенадцатое упирается в него без подготовки состояния.
     const { user } = await inBookMode();
 
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
 
-    // Счёт стоит там же, где стоял, и назван один раз: причина дописана к нему, а не пересказывает
-    // его числа второй раз. Пересказ занял бы на узком экране вторую строку.
     const line = screen.getByLabelText(/^Подготовлено \d+ из \d+/).textContent ?? "";
     expect(line).toBe("11 из 11 · Снимите другое заклинание");
   });
@@ -119,12 +101,9 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
   it("считает подготовленное и не считает заговоры (FR-102)", async () => {
     await inBookMode();
 
-    // Стартовый набор Торна занимает лимит целиком; четыре заговора в него не входят.
     expect(screen.getByLabelText("Подготовлено 11 из 11")).toBeDefined();
     expect(screen.queryByRole("button", { name: /Подготовить: Луч холода/ })).toBeNull();
   });
-
-
 });
 
 describe("последняя подсказка в списке действий (FR-329)", () => {
@@ -134,7 +113,6 @@ describe("последняя подсказка в списке действий
 
     expect(screen.getByRole("button", { name: /Последняя подсказка/ })).toBeDefined();
 
-    // Её тратят вслед за проваленной проверкой, а не в свой ход: «Действие» ей не отвечает.
     await user.click(screen.getByRole("button", { name: "Действие" }));
     expect(screen.queryByRole("button", { name: /Последняя подсказка/ })).toBeNull();
   });
@@ -152,7 +130,6 @@ describe("краткая карточка (FR-010)", () => {
   it("у заговора цена названа во всех режимах: строка не молчит о стоимости (FR-010)", async () => {
     await inBookMode();
 
-    // Цена названа один раз: значок «Заговор» повторял бы слово «бесплатно» другим словом.
     const row = within(screen.getByRole("button", { name: /Луч холода/ }));
     expect(row.getByText(/бесплатно/)).toBeDefined();
     expect(row.queryByText("Заговор")).toBeNull();
@@ -160,28 +137,22 @@ describe("краткая карточка (FR-010)", () => {
   });
 
   it("неподготовленный ритуал не объясняется подготовкой (FR-103)", async () => {
-    // Ритуалу подготовка не нужна, и мастер применения предложит именно ритуал. Строка списка
-    // обязана назвать ту же причину, иначе она отговаривает от способа, который работает.
     const user = userEvent.setup();
-    // Ритуал в бою не показывается, пока не подготовлен: сверяем причину в книге.
     await renderWithStores(<BookScreen />, concentrating());
 
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
 
-    // Поиск ограничен списком: карточка концентрации в шапке названа тем же заклинанием.
     const row = within(screen.getByLabelText(/^Заклинания/)).getByRole("button", {
       name: /^Обнаружение магии/,
     });
     expect(within(row).queryByText(/Заклинание не подготовлено/)).toBeNull();
     expect(within(row).getByText(/Уже идёт концентрация/)).toBeDefined();
   });
-
 });
 
 describe("подробная карточка (FR-011, FR-012)", () => {
   it("открывается по строке списка и показывает механику", async () => {
     const user = userEvent.setup();
-    // Неподготовленные ритуалы в списке скрыты: показываем их фильтром.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
@@ -198,7 +169,6 @@ describe("подробная карточка (FR-011, FR-012)", () => {
 
   it("строка броска без броска подписана «Бросок» и показывает общую подпись (FR-211)", async () => {
     const user = userEvent.setup();
-    // «Сигнал тревоги» разрешается автоматически: бросать здесь никому.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(screen.getByRole("button", { name: /^Сигнал тревоги/ }));
@@ -207,13 +177,11 @@ describe("подробная карточка (FR-011, FR-012)", () => {
       "Без броска",
     );
   });
-
 });
 
 describe("схема ритуала (FR-192)", () => {
   it("карточка ритуала открывает схему на полный экран", async () => {
     const user = userEvent.setup();
-    // Ритуалы в списке скрыты по умолчанию: сначала фильтр, потом строка списка.
     await inBookMode();
     await user.click(screen.getByRole("button", { name: "Ритуал" }));
     await user.click(
@@ -225,7 +193,6 @@ describe("схема ритуала (FR-192)", () => {
 
     expect(screen.getByRole("dialog", { name: /Схема ритуала «Сигнал тревоги»/ })).toBeDefined();
   });
-
 });
 
 describe("«Книга» говорит только о книге (FR-217)", () => {
@@ -240,7 +207,6 @@ describe("«Книга» говорит только о книге (FR-217)", ()
   it("действующего в книге нет: книга — только книга (FR-217)", async () => {
     await renderWithStores(<BookScreen />, concentrating());
 
-    // Имя точное: «Концентрация» есть и у переключателя фильтров.
     expect(screen.queryByRole("button", { name: /^Концентрация:/ })).toBeNull();
     expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
   });
@@ -255,7 +221,6 @@ describe("«Книга» говорит только о книге (FR-217)", ()
   it("поиск здесь есть, и поля он не держит (FR-303, ADR-0058)", async () => {
     await inBookMode();
 
-    // Убран был не поиск, а его постоянный ряд: кнопка стоит в полосе, поля до нажатия нет.
     expect(screen.getByRole("button", { name: "Поиск по названию" })).toBeDefined();
     expect(screen.queryByRole("searchbox")).toBeNull();
   });
@@ -264,5 +229,4 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     await inBookMode();
     expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/)).toBeDefined();
   });
-
 });

@@ -14,10 +14,6 @@ import { Sheet } from "./sheet";
 
 const sheetOf = (state: CharacterState = createThorne()) => Character.of(state).sheet;
 
-/**
- * Лист с принесёнными вкладами и без вещей: собирает их тот, кто вещами и эффектами владеет, а
- * здесь их приносит прогон — свёртка не спрашивает, кто отправитель.
- */
 const sheetBringing = (...brought: SourcedContribution[]) => Sheet.of(createThorne(), brought);
 
 const assigned = (stat: StatId, value: number): SourcedContribution => ({
@@ -42,7 +38,6 @@ describe("производные числа листа", () => {
     expect(sheet.value(saveStatId("intelligence"))).toBe(8);
     expect(sheet.value(saveStatId("wisdom"))).toBe(5);
     expect(sheet.value(saveStatId("strength"))).toBe(0);
-    // Без доспехов: 10 + Ловкость 2 + мантия 1 + плащ 1.
     expect(sheet.value("armorClass")).toBe(14);
     expect(sheet.value(skillStatId("arcana"))).toBe(7);
     expect(sheet.value(skillStatId("investigation"))).toBe(7);
@@ -53,15 +48,12 @@ describe("производные числа листа", () => {
 
   it("принесённые прибавки ложатся поверх основания", () => {
     const blessed = sheetBringing(granted("spellSaveDc", 2), granted(saveStatId("constitution"), 1));
-    // КС без вещей 15 = 8 + 3 + 4; благословение +2 поверх.
     expect(blessed.value("spellSaveDc")).toBe(17);
-    // Спасбросок Телосложения 3 без владения; дар +1 поверх.
     expect(blessed.value(saveStatId("constitution"))).toBe(4);
   });
 
   it("инициатива двигается за Мудростью, а не только за Ловкостью", () => {
     const state = createThorne();
-    // Ловкость 14 (+2), Мудрость 16 (+3): (2 + 3) ÷ 2 вниз.
     expect(
       sheetOf({ ...state, abilities: { ...state.abilities, wisdom: 16 } }).value("initiative"),
     ).toBe(2);
@@ -97,7 +89,6 @@ describe("производные числа листа", () => {
     expect(assignedSheet.value("proficiencyBonus")).toBe(5);
     expect(assignedSheet.value(saveStatId("intelligence"))).toBe(9);
     expect(assignedSheet.value(skillStatId("arcana"))).toBe(9);
-    // КС и атака заклинаний читают назначенный бонус, а не пересчитывают его из уровня.
     expect(assignedSheet.value("spellSaveDc")).toBe(17);
     expect(assignedSheet.value("spellAttackModifier")).toBe(9);
   });
@@ -118,7 +109,6 @@ describe("производные числа листа", () => {
   });
 
   it("действующее число не совпадает с одним основанием, и разница видна в разборе", () => {
-    // Одно основание без вкладов — 10 + Ловкость; надетое прибавляет ещё два.
     expect(Sheet.of(createThorne(), []).value("armorClass")).toBe(12);
     expect(sheetOf().value("armorClass")).toBe(14);
   });
@@ -140,7 +130,6 @@ describe("Класс Доспеха складывается той же свё�
 
   it("«Доспехи мага» и «Щит» действуют одновременно: способ счёта и прибавка не спорят", () => {
     const root = Character.of(createThorne());
-    // Без доспехов 14 = 10 + 2 + вещи 2; с «Доспехами мага» 13 + 2 + 2 = 17.
     expect(root.sheet.value("armorClass")).toBe(14);
     expect(root.sheetWith(mageArmor).value("armorClass")).toBe(17);
 

@@ -1,14 +1,3 @@
-/**
- * Приведение состояния прежней версии.
- *
- * Обновление приложения не имеет права терять данные, поэтому сохранение версии 1 читается, а не
- * отвергается: вещи, эффекты, ресурсы и характеристики доезжают до нынешней формы.
- *
- * Числа, введённые руками мимо вещи и мимо срока, до неё не доезжают: величина складывается из
- * надетого и действующего, и слагаемого без того и другого нынешняя форма не знает. Приведение их
- * снимает, а не выдумывает им вещь.
- */
-
 import { z } from "zod";
 
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
@@ -27,17 +16,12 @@ const UNKNOWN_ABILITY_SCORE = 10;
 
 const NO_LEGACY_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
-/**
- * Прежние формы объявлены, а не обещаны: приведение читает числа, поэтому числами они и обязаны
- * быть. Объявления открытые — всё, чего прежние версии не меняли, проходит сквозь них как есть.
- */
 const legacyArmorClass = z.looseObject({
   base: z.number(),
   dexterityModifier: z.number().optional(),
   itemBonus: z.number().optional(),
 });
 
-/** Версия 1 держала один максимум хитов и снижение кровью отдельным числом. */
 const versionOneShape = z.looseObject({
   intelligence: z.number().optional(),
   spellSaveDc: z.number().optional(),
@@ -50,7 +34,6 @@ const versionOneShape = z.looseObject({
   equipment: z.unknown().optional(),
 });
 
-/** Версия 2 узнаётся по характеристикам: снаряжение у неё плоское, а прибавки лежат у персонажа. */
 const versionTwoShape = z.looseObject({
   abilities: z.unknown().optional(),
   itemBonuses: z.unknown().optional(),
@@ -58,15 +41,10 @@ const versionTwoShape = z.looseObject({
   equipment: z.looseObject({ spellcastingFocus: z.boolean().optional() }).optional(),
 });
 
-/** Значение характеристики по модификатору: чётное, потому что 14 и 15 дают один и тот же +2. */
 function scoreFor(modifier: number): number {
   return UNKNOWN_ABILITY_SCORE + modifier * 2;
 }
 
-/**
- * Версия 2 держала снаряжение плоским объектом с компонентами, а прибавки предметов и базу Класса
- * Доспеха — на листе персонажа. Теперь всё это принадлежит снаряжению.
- */
 function migrateEquipment(state: z.infer<typeof versionTwoShape>, armorClassBase: number): unknown {
   const { equipment } = state;
   const known = equipment !== undefined && equipment.spellcastingFocus !== undefined;
@@ -78,10 +56,6 @@ function migrateEquipment(state: z.infer<typeof versionTwoShape>, armorClassBase
   };
 }
 
-/**
- * Признак «доступно/потрачено» становится бюджетом уровней ячеек: старое значение переносится без
- * потерь, потому что оба его состояния — ровно полный бюджет или ровно нулевой остаток.
- */
 function migrateArcaneRecovery(state: unknown): unknown {
   const fields = fieldsOf(state);
   const { arcaneRecoveryAvailable, arcaneRecovery, level } = fields;
@@ -99,19 +73,8 @@ function migrateArcaneRecovery(state: unknown): unknown {
   return { ...rest, arcaneRecovery: { maximum, remaining: arcaneRecoveryAvailable ? maximum : 0 } };
 }
 
-/** Прежние рода вещей, у которых в четырёх категориях есть прямой наследник. */
 const LEGACY_ITEM_KINDS: Record<string, string> = { potion: "consumable", junk: "other" };
 
-/**
- * Одна вещь прежней формы — к новой: род становится категорией (зелье — расходник, хлам —
- * «другое», без рода — по поведению: заполненное свойство экипировки выдаёт экипировку и до слова),
- * свойства экипировки вне экипировки снимаются — прежняя сборка позволяла надеть зелье и дать ему
- * прибавку, — а счёт выше предела обрезается пределом: старая схема потолка не знала, и отказ схемы
- * запирал бы всё сохранение.
- *
- * Какие свойства принадлежат экипировке, знает её объявление, а не приведение: перечислить их здесь
- * своим списком значило бы снимать не то, что отвергает схема.
- */
 function migrateItem(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
   const fields = fieldsOf(item);
@@ -145,19 +108,10 @@ function migrateItemCategories(state: unknown): unknown {
   if (!Array.isArray(stored)) return state;
 
   const items = stored.map(migrateItem);
-  // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
   if (items.every((item, index) => item === stored[index])) return state;
   return { ...fields, equipment: { ...equipment, items } };
 }
 
-/**
- * Хранимая база КД из снаряжения переезжает на надетый доспех.
- *
- * База принадлежит доспеху, а не сумке: у прежней формы имени доспеха при ней не было, зато была
- * надетая вещь, и число возвращается ей. База, равная базе без доспехов, не переезжает — это
- * умолчание, а не выбор игрока; не переезжает она и тогда, когда надето не одно: угаданный доспех
- * врал бы числом, а имени доспеха приведение не выдумывает.
- */
 function migrateArmorBase(state: unknown): unknown {
   const split = splitArmorBase(state);
   if (split === null) return state;
@@ -177,30 +131,17 @@ function migrateArmorBase(state: unknown): unknown {
   return { ...fields, equipment: { ...equipment, items: armored } };
 }
 
-/**
- * Надетая вещь, доспеха у которой ещё нет: ей и принадлежала хранимая база.
- *
- * Про `armorBase` прежней формы здесь не спрашивают: род вещи приводится раньше, и до этого места
- * доезжает уже `armor`.
- */
 function isBareWornItem(item: unknown): boolean {
   const fields = fieldsOf(item);
   return fields.worn === true && fields.armor === undefined;
 }
 
-/**
- * Снимок отмены хранимую базу просто теряет: перебивку из него не собрать — снимок не знает,
- * какие перебивки действовали в тот момент, а дописанная наугад затёрла бы чужие.
- */
 function migrateArmorBasePatch(patch: unknown): unknown {
   const split = splitArmorBase(patch);
   if (split === null) return patch;
   return { ...fieldsOf(patch), equipment: split.equipment };
 }
 
-/**
- * Снимает хранимую базу со снаряжения; `null` — приводить нечего.
- */
 function splitArmorBase(
   state: unknown,
 ): { equipment: Record<string, unknown>; base: unknown } | null {
@@ -210,12 +151,6 @@ function splitArmorBase(
   return { equipment: bare, base: armorClassBase };
 }
 
-/**
- * Вещь прежней формы знала про сумку и надетое одним счётом и одним флагом: число лежащих вместе, и
- * флаг «вся стопка надета». Теперь вещь — сама по себе, без места, а сумка и надетое — два
- * независимых счёта. Старая запись целиком лежала в одном месте, поэтому всё её число целиком
- * переходит либо в сумку, либо в надетое — расщепления между обоими старая форма не знала.
- */
 function migrateItemsSplit(state: unknown): unknown {
   const fields = fieldsOf(state);
   const equipment = fieldsOf(fields.equipment);
@@ -226,7 +161,6 @@ function migrateItemsSplit(state: unknown): unknown {
   const bag: unknown[] = [];
   const worn: unknown[] = [];
   for (const raw of stored) {
-    // Порченая запись объявления не подделывает: её отвергнет объявление вещи, а не приведение.
     if (raw === null || typeof raw !== "object") {
       itemDefinitions.push(raw);
       continue;
@@ -235,8 +169,6 @@ function migrateItemsSplit(state: unknown): unknown {
     const { worn: isWorn, count, ...definition } = item;
     itemDefinitions.push(definition);
     const entry = { itemId: definition.id, count: typeof count === "number" ? count : 1 };
-    // Надетость — факт места, не вещи: у прежней формы её хранила категория «экипировка», и
-    // не-экипировка надетой не бывает даже если старая запись так утверждала.
     (isWorn === true && definition.kind === "gear" ? worn : bag).push(entry);
   }
 
@@ -249,12 +181,6 @@ function migrateItemsSplit(state: unknown): unknown {
   };
 }
 
-/**
- * «Прибавки без вещи» жили в снаряжении; теперь это прочие прибавки самого персонажа.
- *
- * Работает и над состоянием, и над снимком отмены: у обоих одна и та же пара «снаряжение —
- * персонаж», и снимок со старым полем возвращал бы прибавку туда, откуда она уехала.
- */
 function migrateMiscBonuses(state: unknown): unknown {
   const fields = fieldsOf(state);
   const equipment = fieldsOf(fields.equipment);
@@ -268,46 +194,25 @@ function migrateMiscBonuses(state: unknown): unknown {
   };
 }
 
-/**
- * Вещь, которой прежние сохранения называли магическую фокусировку. Заморожена на дате приведения:
- * нынешние имя и опознание фокусировки вправе меняться, а прошлые сохранения — нет.
- */
 const LEGACY_FOCUS_ITEM_ID = "spellcasting-focus";
 const LEGACY_FOCUS_NAME_RU = "Магическая фокусировка";
 
-/** Та самая вещь — фокусировкой: её носят, а носят только экипировку. */
 function migrateFocusItem(item: unknown): unknown {
   const fields = fieldsOf(item);
   if (fields.id !== LEGACY_FOCUS_ITEM_ID || fields.spellcastingFocus === true) return item;
   return { ...fields, kind: "gear", spellcastingFocus: true };
 }
 
-/**
- * Отметка фокусировки переезжает на саму вещь — и в состоянии, и в снимке отмены: снимок несёт
- * прежние вещи, и отмена по неприведённому вернула бы вещь, переставшую быть фокусировкой.
- */
 function migrateFocusItems(state: unknown): unknown {
   const fields = fieldsOf(state);
   const stored = fields.itemDefinitions;
   if (!Array.isArray(stored)) return state;
 
   const items = stored.map(migrateFocusItem);
-  // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
   if (items.every((item, index) => item === stored[index])) return state;
   return { ...fields, itemDefinitions: items };
 }
 
-/**
- * Отметка «фокусировка есть» жила при персонаже и переживала снятие вещи; теперь фокусировка есть у
- * того, у кого она надета.
- *
- * Отметку приведение не теряет: вещь, которой она называлась, надевается, а если такой вещи в
- * сохранении нет вовсе — заводится. Прибавок ей приведение при этом не выдумывает: игрок сказал, что
- * фокусировка у него есть, а не то, что она что-то прибавляет.
- *
- * Снимку отмены это приведение не достаётся. Снимок возвращает ровно те поля, которые в нём лежат, и
- * дописанный в него список вещей стёр бы отменой все прочие заведённые вещи.
- */
 function migrateSpellcastingFocus(state: unknown): unknown {
   const fields = fieldsOf(state);
   const equipment = fieldsOf(fields.equipment);
@@ -336,12 +241,6 @@ function migrateSpellcastingFocus(state: unknown): unknown {
   };
 }
 
-/**
- * Вещи, которыми прежние сохранения называли купленные дорогие компоненты, — по заклинанию.
- *
- * Заморожены на дате приведения: слова карточки вправе меняться, а прошлые сохранения — нет.
- * Каталога у приведения нет, спросить карточку негде, и потому названия стоят здесь целиком.
- */
 const LEGACY_BOUGHT_MATERIALS: Record<
   string,
   { nameRu: string; kind: string; price: { amount: number; currency: string } }
@@ -360,22 +259,10 @@ const LEGACY_BOUGHT_MATERIALS: Record<
   },
 };
 
-/**
- * Отметка «компонент куплен» становится вещью в сумке: отметкой компонент нельзя было ни посчитать,
- * ни потратить, ни купить наравне с прочими вещами.
- *
- * Заклинание, которого замороженный список не знает, вещи не получает: назвать её могут только слова
- * его карточки, а выдуманное имя осталось бы в сумке навсегда и с карточкой не встретилось.
- *
- * Снимку отмены это приведение не достаётся — по той же причине, по которой не достаётся отметка
- * фокусировки: снимок возвращает ровно те поля, которые в нём лежат, и дописанный в него список
- * вещей стёр бы отменой все прочие заведённые.
- */
 function migrateBoughtMaterials(state: unknown): unknown {
   const fields = fieldsOf(state);
   const equipment = fieldsOf(fields.equipment);
   const { materialsForSpellIds, ...rest } = fieldsOf(equipment.components);
-  // Порченую запись приведение не разбирает: её отвергает объявление снаряжения.
   if (!Array.isArray(materialsForSpellIds) || !Array.isArray(equipment.bag)) return state;
 
   const bought = materialsForSpellIds.flatMap((spellId: unknown) => {
@@ -401,13 +288,8 @@ function migrateBoughtMaterials(state: unknown): unknown {
   };
 }
 
-/**
- * Имя, которым прежние версии опознавали поправку к КД среди активных эффектов. Заморожено на дате
- * приведения: нынешняя подпись поправки вправе меняться, а прошлые сохранения — нет.
- */
 const LEGACY_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
-/** Эффект прежней формы получает признак поправки: опознание по строке имени умерло. */
 function migrateAdjustmentEffect(effect: unknown): unknown {
   const fields = fieldsOf(effect);
   const { nameRu, armorClass, manualKind } = fields;
@@ -427,14 +309,6 @@ function migrateAdjustmentMarker(state: unknown): unknown {
   return { ...fields, activeEffects: effects };
 }
 
-/**
- * Снимает из снимка поля, которых состояние больше не знает: отменять поле, которого не существует,
- * нечего. Если после этого возвращать нечего вовсе, снимка у записи не остаётся — она остаётся в
- * логе историей, а отмена по ней отвечает отказом.
- *
- * Какие поля состояние знает, отвечает его владелец: свой список здесь снимал бы не то, что
- * отвергает объявление снимка.
- */
 function withoutForgottenFields(patch: unknown): unknown {
   const fields = fieldsOf(patch);
   const known = Object.entries(fields).filter(([key]) => isStateField(key));
@@ -442,26 +316,12 @@ function withoutForgottenFields(patch: unknown): unknown {
   return known.length === 0 ? null : Object.fromEntries(known);
 }
 
-/**
- * Приведение снимка отмены. Снимок держит прежние значения изменяемых полей, включая снаряжение
- * прежней формы; без приведения отмена старой записи вернула бы в состояние рода вещей, которых
- * новая модель не знает.
- *
- * Забытые поля снимаются последними: приведение прежних форм само дописывает в снимок поля, и
- * принадлежность проверяется у того набора ключей, который получился.
- */
-
-/** Прежние прибавки предмета словом: за каждым словом стоял свой набор величин. */
 const LEGACY_BONUS_TARGETS: Record<string, readonly StatId[]> = {
   spellcasting: ["spellSaveDc", "spellAttackModifier"],
   armorClass: ["armorClass"],
   savingThrows: ABILITIES.map(saveStatId),
 };
 
-/**
- * Прибавки прежней формы — величинами словаря: слово раскрывается в свои величины, ноль не
- * переносится, а имя, которое и так величина, остаётся собой.
- */
 function bonusesToStats(legacy: unknown): Record<string, number> {
   const bonuses: Record<string, number> = {};
   for (const [word, value] of Object.entries(fieldsOf(legacy))) {
@@ -473,20 +333,10 @@ function bonusesToStats(legacy: unknown): Record<string, number> {
   return bonuses;
 }
 
-/**
- * Прибавки названы словами прежней формы: «магия» и «спасброски» величинами не являются.
- *
- * «Защита» тем же словом называлась и тогда, и сейчас, и по ней одной прежнюю форму не отличить —
- * отличает её слово, которого в словаре величин нет.
- */
 function namedByLegacyWords(bonuses: unknown): boolean {
   return Object.keys(fieldsOf(bonuses)).some((word) => !isStatId(word));
 }
 
-/**
- * Числа, введённые руками, снимаются: перебивка и прочая прибавка жили мимо вещи и мимо срока, а
- * нынешняя форма складывает величину только из надетого и действующего.
- */
 function dropHandEnteredNumbers(state: unknown): unknown {
   const fields = fieldsOf(state);
   if (fields.overrides === undefined && fields.miscBonuses === undefined) return state;
@@ -495,17 +345,10 @@ function dropHandEnteredNumbers(state: unknown): unknown {
   return rest;
 }
 
-/**
- * Вещь прежней формы: прибавки словом становятся прибавками величинами, база доспеха — доспехом.
- *
- * Категорию доспеха приведение не выдумывает: прежняя вещь её не знала, а доспех без категории
- * Ловкость не режет — то же, что и было.
- */
 function migrateItemShape(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
   const fields = fieldsOf(item);
   const { bonuses, armorBase, ...rest } = fields;
-  // Вещь нынешней формы проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
   if (!namedByLegacyWords(bonuses) && armorBase === undefined) return item;
 
   const stats = bonusesToStats(bonuses);
@@ -516,11 +359,9 @@ function migrateItemShape(item: unknown): unknown {
   };
 }
 
-/** Вещи прежней формы — где бы они ни лежали: до разведения по местам и после него. */
 function migratedList(stored: unknown): unknown[] | null {
   if (!Array.isArray(stored)) return null;
   const items = stored.map(migrateItemShape);
-  // Свежее состояние проходит насквозь той же ссылкой: приведение не пересобирает приведённое.
   return items.every((item, index) => item === stored[index]) ? null : items;
 }
 
@@ -538,7 +379,6 @@ function migrateItemShapes(state: unknown): unknown {
   };
 }
 
-/** Вклад эффекта прежней формы: замена базы — способ счёта от заклинания, прибавка — прибавка. */
 function migrateEffectContributions(effect: unknown): unknown {
   if (effect === null || typeof effect !== "object") return effect;
   const fields = fieldsOf(effect);
@@ -559,12 +399,6 @@ function migrateEffectContributions(effect: unknown): unknown {
   };
 }
 
-/**
- * Подавление огнём прежней формы: признак «урон получен» вместо срока.
- *
- * Признак стоял ровно до первой отметки начала хода, поэтому целым сроком он и становится: отмерить
- * из него было ещё нечего.
- */
 function migrateFireSuppression(state: unknown): unknown {
   const fields = fieldsOf(state);
   const suppression = fieldsOf(fields.suppression);
@@ -580,14 +414,8 @@ function migrateFireSuppression(state: unknown): unknown {
   };
 }
 
-/** Одно слово прежней формы на всё, чего время не отмеряет. */
 const LEGACY_UNTIMED_DURATION = "special";
 
-/**
- * Особый срок прежней формы расходится по тому, чем он кончался: срок эффекта заклинания отмеряет
- * само заклинание, срок заведённого руками — рука игрока. Различает их сама запись: у ручного
- * эффекта заклинания нет, и угадывать приведению нечего.
- */
 function migrateEffectDuration(effect: unknown): unknown {
   const fields = fieldsOf(effect);
   const duration = fieldsOf(fields.duration);
@@ -667,8 +495,6 @@ export function migrateCharacterState(raw: unknown): unknown {
 }
 
 function migrateShape(raw: unknown): unknown {
-  // Версии 3 и 4 узнаются по снаряжению, знающему про инвентарь либо хранимую базу защиты;
-  // нынешняя форма — по разведённым сумке и надетому; версия 2 — по характеристикам.
   const equipment = fieldsOf(fieldsOf(raw).equipment);
   if (
     equipment.armorClassBase !== undefined ||
@@ -684,7 +510,6 @@ function migrateShape(raw: unknown): unknown {
   }
 
   const versionOne = versionOneShape.safeParse(raw);
-  // Испорченное сохранение приведению не поддаётся: его отвергнет схема, назвав поле и причину.
   if (!versionOne.success) return raw;
   return migrateVersionOne(versionOne.data);
 }
@@ -726,7 +551,6 @@ function migrateVersionOne(state: z.infer<typeof versionOneShape>): unknown {
       items: [],
       ...(state.equipment === undefined ? {} : { components: state.equipment }),
     },
-    /** Один максимум распадается на базу и кровавое снижение: мастерского в версии 1 не было. */
     hitPoints:
       state.hitPoints === undefined
         ? state.hitPoints

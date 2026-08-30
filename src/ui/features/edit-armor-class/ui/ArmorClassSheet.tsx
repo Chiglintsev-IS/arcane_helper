@@ -6,16 +6,6 @@ import { useId, useState } from "react";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-/**
- * Поправка к КД: одно число со знаком, как «Хиты» правят временные хиты. Новое значение заменяет
- * прежнее, а ноль снимает поправку вовсе.
- *
- * Поправку кладёт на стол мастер, и потому нажатие здесь не правит запись листа, а совершает
- * случившееся: слово на кнопке то же, каким подтверждают урон и сотворение. Тем же признаком выбран
- * и заголовок — он называет число, которого поправка касается, а самоё поправку называет поле.
- */
-
-/** Что здесь набирают. Тем же словом зовёт эту шторку плитка, которая её открывает. */
 export const ARMOR_CLASS_ADJUSTMENT = "Поправка";
 export function ArmorClassSheet({
   value,
@@ -23,7 +13,6 @@ export function ArmorClassSheet({
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   value: number;
   onSave: (value: number) => void;

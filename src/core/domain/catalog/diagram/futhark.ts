@@ -1,11 +1,3 @@
-/**
- * Старший футарк: 24 руны отрезками.
- *
- * Рисуются собственными путями, а не текстом: шрифта с рунным блоком на устройстве может не
- * оказаться, а схема должна выглядеть одинаково всегда — по ней рисуют. Символ Unicode хранится
- * рядом, чтобы надписи в JSON контента читались глазом.
- */
-
 import { line, stem, type Stroke } from "@/core/domain/catalog/diagram/strokes";
 
 export const RUNE_IDS = [
@@ -113,7 +105,6 @@ export const RUNES: Record<RuneId, { char: string; strokes: Stroke[] }> = {
   },
 };
 
-/** Символ Unicode → идентификатор: надписи в контенте хранятся рунами, а рисуются штрихами. */
 export const RUNE_BY_CHAR: Map<string, RuneId> = new Map(
   RUNE_IDS.map((id) => [RUNES[id].char, id]),
 );
@@ -122,4 +113,3 @@ export function isRune(char: string): boolean {
   return RUNE_BY_CHAR.has(char);
 }
 
-/** Полный футарк в каноническом порядке — надпись сама по себе (камень из Кюльвера). */

@@ -1,18 +1,3 @@
-/**
- * Краткая карточка — строка боевого списка.
- *
- * Задача строки — ответить на вопрос «что это для меня» без чтения: чем тратится, во что обойдётся,
- * сколько держится, куда целить, что случится и кто бросает. Числа подставлены под этого
- * персонажа: 2d8 у заговора — это его уровень, КС 16 и d20+8 — его листа.
- *
- * У каждого свойства своё место и свой канал, а не чип среди чипов: тип каста — единственный
- * сильный цвет строки; цена — серым за ним; срок — правым краем той же строки; роль — линейкой с
- * края; бросок — янтарём; исходы — подписанными строками. Рамок вокруг фактов нет: рамка вокруг
- * каждого была шумом, в котором не выделялось ничего.
- *
- * Причина недоступности пишется словами: серый цвет без объяснения оставляет игрока в тупике.
- */
-
 import type { CastingView, SpellRowView } from "@/contract/views";
 import {
   castCostPhrase,
@@ -27,13 +12,10 @@ import { ActionRow } from "@/ui/shared/ui/ActionRow";
 import { SURFACE_CHOSEN, SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 import { TONE_GLYPH, TONE_TEXT } from "@/ui/shared/ui/tone";
 
-/** Заговор кнопки подготовки не получает: он вне лимита. Цена, а не вид заклинания. */
 const CANTRIP_LEVEL = 0;
 
-/** Громкое: то, что произносят вслух и что случится. */
 const LOUD = "text-sm font-bold leading-snug text-ink";
 
-/** Метки исходов — тем же способом, что и подписи разделов: моно, разрядка, приглушённо. */
 const OUTCOME_LABELS = { hit: "ПОПАЛ", fail: "ПРОВАЛ", success: "УСПЕХ" } as const;
 
 function Outcome({ label, lines, loud }: { label: string; lines: readonly string[]; loud: boolean }) {
@@ -64,15 +46,9 @@ export function SpellCardCompact({
   onTogglePrepared,
 }: {
   spell: SpellRowView;
-  /** Числа заклинателя: ими называется бросок. */
   casting: CastingView;
-  /** Нынешний Класс Доспеха: с ним сравнивают тот, который заклинание обещает. */
   armorClass: number;
   onOpen: () => void;
-  /**
-   * Переключение подготовки. Передаётся только там, где подготовка уместна, — в «Книге»:
-   * в бою состав уже определён, и кнопка предлагала бы менять его под чужой ход.
-   */
   onTogglePrepared?: (() => void) | undefined;
 }) {
   const { active, unavailable, unavailableReason, listCard } = spell;
@@ -83,11 +59,6 @@ export function SpellCardCompact({
   const role = combatRole(spell.role);
   const dimmed = unavailable || active;
 
-  /**
-   * Обещанный Класс Доспеха — число, которое называют мастеру вслух: готовым, а не формулой.
-   * Складывать базу, Ловкость, предметы и два эффекта в чужой ход — ровно та работа, ради
-   * избавления от которой приложение и существует.
-   */
   const effectLines = [
     ...(spell.armorClassIfCast === undefined ? [] : [`КД ${spell.armorClassIfCast} вместо ${armorClass}`]),
     ...(listCard?.effectLinesRu ?? []),
@@ -104,11 +75,6 @@ export function SpellCardCompact({
       onOpen={onOpen}
       corner={letters === "" ? null : <span aria-label={`Компоненты: ${letters}`}>{letters}</span>}
       aside={
-        /*
-         * Подготовка — отдельная кнопка рядом со строкой, а не внутри карточки заклинания:
-         * собрать одиннадцать заклинаний открытием и закрытием одиннадцати карточек значит превратить
-         * подготовку после каждого отдыха в упражнение. Заговор кнопки не получает: он вне лимита.
-         */
         !preparable ? null : (
           <button
             type="button"
@@ -124,7 +90,6 @@ export function SpellCardCompact({
         )
       }
     >
-      {/* Строка каста: тип цветом, цена серым, срок правым краем. Левая часть не переносится. */}
       <span className="flex w-full items-baseline justify-between gap-3 text-[0.84375rem]">
         <span className="whitespace-nowrap">
           <span className={`font-semibold ${TONE_TEXT[castingTime.tone]}`}>
@@ -141,7 +106,6 @@ export function SpellCardCompact({
         )}
       </span>
 
-      {/* Триггер — вплотную к реакции и в её цвете: «когда …». */}
       {spell.card.reaction === undefined ? null : (
         <span className={`-mt-1 text-[0.8125rem] leading-snug ${TONE_TEXT[castingTime.tone]}`}>
           когда {spell.card.reaction.textRu}
@@ -184,7 +148,6 @@ export function SpellCardCompact({
         </span>
       )}
 
-      {/* Без готовых фраз строка отвечает кратким пересказом: контент ещё не размечен. */}
       {listCard === undefined ? (
         <span className="line-clamp-2 text-xs text-ink-soft">{spell.shortRulesRu}</span>
       ) : listCard.noteRu === undefined ? null : (

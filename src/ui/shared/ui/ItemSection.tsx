@@ -5,13 +5,6 @@ import type { ReactNode } from "react";
 import { QuickAddField } from "./QuickAddField";
 import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/**
- * Раздел списка вещей: заголовок, строки и строка быстрого ввода.
- *
- * Пустой раздел остаётся на месте и занимает одну строку: раздел, появляющийся с первой вещью,
- * заставлял бы искать, куда её ввести, а карточка ради одного заголовка отодвигает за край то, что
- * в разделе действительно лежит.
- */
 export function ItemSection({
   titleRu,
   addLabelRu,
@@ -19,10 +12,8 @@ export function ItemSection({
   children,
 }: {
   titleRu: string;
-  /** Ярлык быстрого ввода; нет вовсе — в этот раздел не вводят, вещь попадает в него операцией. */
   addLabelRu?: string;
   onAdd?: (nameRu: string) => void;
-  /** Строки раздела; `null` — раздел пуст, и тогда он живёт одной строкой со своим вводом. */
   children: ReactNode;
 }) {
   const add =

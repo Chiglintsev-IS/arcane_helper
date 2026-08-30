@@ -3,14 +3,12 @@ import type { CastingView, ConcentrationView, SpellRowView } from "@/contract/vi
 import { signed } from "@/shared/language";
 import { areaPhrase, rangePhrase, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 
-/** Способ прерывания концентрации. Право мастера помечено: приложение его не применяет само. */
 export type ConcentrationBreaker = {
   textRu: string;
   atDiscretion: boolean;
 };
 
 export type ConcentrationSummary = {
-  /** Карточка, к которой ведут полные правила; `null` — её нет в контенте. */
   spellId: string | null;
   nameRu: string;
   slotLabel: string;
@@ -19,17 +17,10 @@ export type ConcentrationSummary = {
   mechanicsLabel: string;
   breakLabel: string;
   shortRulesRu: string;
-  /** Есть ли карточка заклинания в контенте: без неё некуда вести за полными правилами. */
   rulesAvailable: boolean;
   breakers: ConcentrationBreaker[];
 };
 
-/**
- * Механика висящего эффекта в ряду фактов через точку.
- *
- * Каждый факт назван той же подписью, что в строке боевого списка: пока блок держал свои
- * формулировки, «Луч холода» показывал «атака заклинанием +8» там, где список говорил «Атака d20+8».
- */
 function mechanicsRu(
   row: SpellRowView,
   damage: ConcentrationView["damage"],
@@ -61,17 +52,9 @@ function breakers(constitutionModifier: string, minimumDc: number): Concentratio
   ];
 }
 
-/**
- * Подписи собираются при отрисовке, а числа приходят проекцией: сохранённый текст разошёлся бы с
- * обновлённым контентом, а посчитанное на экране — с правилами. Строки заклинания может не быть —
- * состояние пришло импортом из другой сборки, — и тогда механика деградирует до слов о том, что
- * правил в контенте нет: концентрация не может исчезнуть с экрана незаметно.
- */
 export function describeConcentration(input: {
   concentration: ConcentrationView;
-  /** Строка того же заклинания: досягаемость и род броска стоят в ней. */
   row: SpellRowView | null;
-  /** Числа заклинателя: ими называется бросок в строке механики. */
   casting: CastingView;
 }): ConcentrationSummary {
   const { concentration, row, casting } = input;

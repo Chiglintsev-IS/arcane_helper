@@ -1,10 +1,3 @@
-/**
- * Жизнеспособность: здоровье персонажа и всё, чем оно платит.
- *
- * Хиты, временные хиты, снижённый кровавым колдовством максимум, Кости хитов и подавление расовых
- * особенностей меняются вместе — потому это один объект-значение, а не четыре поля рядом.
- */
-
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
@@ -29,7 +22,6 @@ const HIT_DICE_RU = "Костей хитов";
 export class Vitality {
   private constructor(private readonly state: VitalityState) {}
 
-  /** Владеет только своими полями: иначе объект-значение затирал бы правки соседа. */
   private static readonly KEYS = ["hitPoints", "temporaryHitPoints", "hitDice", "suppression"] as const satisfies readonly (keyof VitalityState)[];
 
   static of(state: VitalityState): Vitality {
@@ -56,12 +48,10 @@ export class Vitality {
     return this.state.hitPoints.masterReduction;
   }
 
-  /** Насколько максимум урезан вообще: обе половины цены вместе. */
   get maximumReduction(): number {
     return this.bloodReduction + this.masterReduction;
   }
 
-  /** Действующий максимум: то, во что упирается лечение и от чего считается половина. */
   get maximum(): number {
     return effectiveMaximum(this.state.hitPoints);
   }
@@ -74,24 +64,16 @@ export class Vitality {
     return traitsSuppressed(this.state.suppression);
   }
 
-  /** Подавлены ли особенности именно огнём: у двух оснований подавления разные слова и разный конец. */
   get firedUpon(): boolean {
     return suppressedByFire(this.state.suppression);
   }
 
-  /** Кости хитов есть не у всякого состояния: чужая выгрузка могла их не знать. */
   get hitDice(): ResourcePool | null {
     const { hitDice } = this.state;
     if (hitDice === undefined) return null;
     return ResourcePool.from({ maximum: hitDice.total, remaining: hitDice.remaining }, HIT_DICE_RU);
   }
 
-  /**
-   * Урон: сначала временные хиты, остаток — по текущим.
-   *
-   * Возвращает и поглощённое временными, потому что подпись в логе обязана это назвать: иначе
-   * игрок видит «получено 12», а здоровье упало на 4.
-   */
   takeDamage(damage: number, options: { fire?: boolean } = {}): { vitality: Vitality; absorbed: number } {
     if (!isPossibleHitPointChange(damage)) {
       throw new DomainError(`Урон должен быть целым положительным, получено: ${damage}`);
@@ -115,10 +97,6 @@ export class Vitality {
     return { vitality, absorbed };
   }
 
-  /**
-   * Лечение до потолка. Потолок — максимум, уже уменьшенный кровавым колдовством: вычитать
-   * снижение второй раз значило бы уронить максимум дважды.
-   */
   heal(amount: number): { vitality: Vitality; restored: number } {
     if (!isPossibleHitPointChange(amount)) {
       throw new DomainError(`Лечение должно быть целым положительным, получено: ${amount}`);
@@ -131,7 +109,6 @@ export class Vitality {
     return { vitality: this.with({ hitPoints: { ...this.state.hitPoints, current } }), restored };
   }
 
-  /** Лечение как следствие другой операции: полные хиты здесь не отказ, а просто ноль. */
   healUpTo(amount: number): { vitality: Vitality; restored: number } {
     const restored = Math.min(this.maximum - this.current, Math.max(0, amount));
     if (restored === 0) return { vitality: this, restored: 0 };
@@ -141,12 +118,10 @@ export class Vitality {
     };
   }
 
-  /** Временные хиты не складываются: берётся большее из двух — таково правило. */
   grantTemporary(amount: number): Vitality {
     return this.with({ temporaryHitPoints: Math.max(this.temporary, amount) });
   }
 
-  /** Ручное начисление отказывает на меньшем числе: игрок ввёл его сам и вправе узнать результат. */
   grantTemporaryExplicitly(amount: number): Vitality {
     if (!isPossibleHitPointChange(amount)) {
       throw new DomainError(`Временные хиты должны быть целым положительным, получено: ${amount}`);
@@ -159,10 +134,6 @@ export class Vitality {
     return this.grantTemporary(amount);
   }
 
-  /**
-   * Трата Костей хитов сотворением. Отсутствие пула — тот же отказ, что и нехватка: чужая выгрузка
-   * могла не знать про кости, и для игрока это ровно «их нет ни одной».
-   */
   spendHitDice(count: number): Vitality {
     const pool = this.hitDice;
     const { hitDice } = this.state;
@@ -182,7 +153,6 @@ export class Vitality {
     });
   }
 
-  /** Плата кровью за ячейку: отданные хиты снижают и текущее здоровье, и максимум. */
   payWithBlood(hitPoints: number, options: { allowAnyway?: boolean } = {}): Vitality {
     const suppression = suppressionReason(this.state.suppression);
     if (suppression !== null && options.allowAnyway !== true) {
@@ -203,40 +173,26 @@ export class Vitality {
     });
   }
 
-  /**
-   * Идёт ли регенерация прямо сейчас. Ответ один на все отрезки времени, за которые её считают:
-   * подавление и ноль хитов выключают её и на своём ходу, и вне схватки.
-   */
   private get regenerating(): boolean {
     return !this.suppressed && this.current > 0;
   }
 
-  /** Регенерация тролля за свой ход: ниже половины действующего максимума — того, что сейчас. */
   regenerationDue(characterLevel: number): number {
     if (!this.regenerating) return 0;
     if (this.current >= this.maximum / 2) return 0;
     return regenerationPerTurn(characterLevel);
   }
 
-  /** Сколько долечит непрерывная регенерация: до половины действующего максимума. */
   continuousRegenerationDue(): number {
     if (!this.regenerating) return 0;
     return Math.max(0, Math.floor(this.maximum / 2) - this.current);
   }
 
-  /**
-   * Непрерывная регенерация вне схватки. Час, короткий отдых и конец боя доводят хиты до половины
-   * одним и тем же правилом: отрезок времени решает, когда её считать, а не докуда она достаёт.
-   */
   regeneratedContinuously(): { vitality: Vitality; healed: number } {
     const { vitality, restored } = this.healUpTo(this.continuousRegenerationDue());
     return { vitality, healed: restored };
   }
 
-  /**
-   * Час без солнца и без огня: ступень снижённого максимума возвращается, регенерация успевает
-   * дойти до половины. Порог считается от нового максимума — он только что вырос.
-   */
   afterAnHour(characterLevel: number): { vitality: Vitality; returned: number; healed: number } {
     if (this.suppressed) return { vitality: this, returned: 0, healed: 0 };
     const returned = Math.min(maximumRecoveryPerHour(characterLevel), this.bloodReduction);
@@ -256,11 +212,6 @@ export class Vitality {
     });
   }
 
-  /**
-   * Отметка начала хода отмеряет срок подавления огнём: он кончается, когда отмерять больше нечего.
-   *
-   * Регенерация спрашивается уже после отметки: она идёт в том же ходу, который отметка открыла.
-   */
   afterTurnStart(): Vitality {
     const { firedUponTurnStarts } = this.state.suppression;
     return this.with({
@@ -271,15 +222,10 @@ export class Vitality {
     });
   }
 
-  /** Отдых длиннее хода: срок подавления огнём он кончает целиком, не отмеряя отметками. */
   clearFireSuppression(): Vitality {
     return this.with({ suppression: { ...this.state.suppression, firedUponTurnStarts: 0 } });
   }
 
-  /**
-   * Долгий отдых: часть кровавого снижения возвращается, здоровье поднимается до нового максимума.
-   * Снижение мастера остаётся — отдыхом оно не снимается.
-   */
   restoredByLongRest(bloodReduction: number): Vitality {
     const maximum = effectiveMaximum({
       maximumBase: this.maximumBase,
@@ -291,7 +237,6 @@ export class Vitality {
     });
   }
 
-  /** Одна кость хитов за уровень. Пула может не быть — тогда менять нечего. */
   resizedHitDice(total: number): Vitality {
     const { hitDice } = this.state;
     if (hitDice === undefined) return this;
@@ -302,16 +247,6 @@ export class Vitality {
     return this.with({ hitDice: { ...hitDice, total: pool.maximum, remaining: pool.remaining } });
   }
 
-  /** Правка базового максимума с листа. Текущее здоровье обрезается новым потолком. */
-  /**
-   * Каким станет действующий максимум при таких числах листа: предпросмотр правки здоровья.
-   *
-   * Спрашивается до сохранения, поэтому отвечает числом, а не новым состоянием: собирать
-   * изменённый агрегат ради одного числа значило бы держать в экране правку, которой не было.
-   *
-   * `null` — такого максимума не бывает. Отвечает так же он: экран не решает, годится ли набранное,
-   * и не повторяет ни одного его условия.
-   */
   maximumWith(change: { maximumBase: number; masterReduction: number }): number | null {
     if (
       !isPossibleHitPointMaximum(change.maximumBase) ||
@@ -333,7 +268,6 @@ export class Vitality {
     return this.clamped({ ...this.state.hitPoints, maximumBase });
   }
 
-  /** Понижение максимума мастером: часовое восстановление и отдых его не трогают. */
   withMasterReduction(masterReduction: number): Vitality {
     if (!isPossibleReduction(masterReduction)) {
       throw new DomainError(

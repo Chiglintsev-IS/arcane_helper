@@ -1,10 +1,3 @@
-/**
- * Вещи: что персонаж завёл за столом — и ничего о том, сколько их у него и где они.
- *
- * Отдельно от снаряжения намеренно: снаряжение отвечает «сколько этого у меня и что на мне», вещи —
- * «что это такое». Разводить их значило бы дать вещи знать про сумку, которой у неё нет.
- */
-
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import { alignedItemDefinition, assertItemDefinition } from "./schema";
@@ -37,20 +30,10 @@ export class Items {
     return this.data.find((item) => item.id === id);
   }
 
-  /**
-   * id по умолчанию для новой вещи: строчными, пробелы дефисом. Одинаковое имя всегда даёт
-   * одинаковый id, поэтому вторая находка того же названия сама находит свою вещь.
-   */
   static idFromName(nameRu: string): string {
     return nameRu.trim().toLowerCase().replaceAll(" ", "-");
   }
 
-  /**
-   * Заводит вещь. Одноимённая той же категории уже заведена — вторую запись это не создаёт: правки
-   * природы вещи ждут «Правки вещи», а не повторного заведения.
-   *
-   * id можно не передавать: находка по имени получает его сама, а не от экрана.
-   */
   addDefinition(item: Omit<ItemDefinition, "id"> & { id?: string }): Items {
     const id = item.id ?? Items.idFromName(item.nameRu);
     const withId: ItemDefinition = { ...item, id };
@@ -63,7 +46,6 @@ export class Items {
     return this;
   }
 
-  /** Правка вещи целиком. Поля, которых её категории не положено, снимаются, а не отвергаются. */
   replaceDefinition(item: ItemDefinition): Items {
     const stored = alignedItemDefinition(item);
     if (!this.data.some((existing) => existing.id === item.id)) {

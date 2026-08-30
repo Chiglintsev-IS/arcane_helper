@@ -1,11 +1,3 @@
-/**
- * Проекция листа: наружу уходит посчитанное.
- *
- * Проверяется не пересказ полей, а то, ради чего проекция и заведена: числа приезжают сложенными
- * свёрткой, разбор объясняет их источниками, а слова правил едут словами правил — подписи выберет
- * показывающий.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -14,7 +6,6 @@ import { toSheetView } from "./sheetView";
 
 const thorne = () => toSheetView(createThorne());
 
-/** Характеристика по имени: прогон называет их словами правил, а не местами в списке. */
 function ability(id: string) {
   const found = thorne().abilities.find((candidate) => candidate.id === id);
   if (found === undefined) throw new Error(`нет характеристики ${id}`);
@@ -22,7 +13,6 @@ function ability(id: string) {
 }
 
 describe("скорость листа приходит действующей (FR-334)", () => {
-  /** Прибавка к скорости приходит действующим: чем она заведена, лист не спрашивает. */
   function hastened() {
     const base = createThorne();
     return toSheetView({
@@ -76,7 +66,6 @@ describe("величины", () => {
       value: 7,
       training: "proficient",
     });
-    // Нетренированный навык степени не несёт вовсе: пустое слово пришлось бы отличать от слова.
     expect(ability("intelligence").skills).toContainEqual({ id: "history", value: 4 });
   });
 
@@ -85,8 +74,6 @@ describe("величины", () => {
   });
 
   it("бонус мастерства едет отдельным числом, хотя уже сложен в спасброски и навыки", () => {
-    // Его называют вслух — им меряют, владение перед тобой или голая характеристика, — и
-    // вычесть его из спасброска показывающий не вправе: считает лист, а не экран.
     expect(thorne().proficiencyBonus).toBe(3);
     expect(toSheetView({ ...createThorne(), level: 9 }).proficiencyBonus).toBe(4);
   });
@@ -107,7 +94,6 @@ describe("разбор", () => {
       },
     });
 
-    // Одно число, а не итог со слагаемыми: показывает его шапка «Игры», и разбирать его там нечем.
     expect(thorne().armorClass).toBe(14);
     expect(armored.armorClass).toBe(18);
   });

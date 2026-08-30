@@ -1,28 +1,17 @@
-/**
- * Ход и схватка: начало боя, свой ход, конец боя.
- *
- * Начало хода — событие, на которое отзываются несколько доменов сразу: возвращаются ресурсы хода,
- * истекают раундовые эффекты, идёт регенерация, отмеряется срок подавления огнём. Поэтому оно живёт
- * здесь, а не внутри одного из объектов-значений.
- */
-
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Encounter, type TurnEconomy } from "@/core/domain/encounter/encounter";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 
-
 function encounterOf(session: Session): Encounter {
   return Encounter.fromLog(session.log);
 }
 
-/** Ушедшее с доски — строкой на эффект. Слово одно, каким бы событием срок ни кончился. */
 export function expiryNotes(expired: readonly ActiveEffect[]): string[] {
   return expired.map((effect) => `«${effect.nameRu}» истёк`);
 }
 
-/** Идёт ли бой прямо сейчас. Ответ один на всё приложение, и он выводится из лога. */
 export function inFight(session: Session): boolean {
   return encounterOf(session).economy.inFight;
 }
@@ -31,12 +20,6 @@ export function deriveTurnEconomy(session: Session): TurnEconomy {
   return encounterOf(session).economy;
 }
 
-/**
- * Начало боя: явная отметка, с которой считается первый раунд.
- *
- * Это и есть первый ход, поэтому вся работа начала хода выполняется здесь же. Без отметки
- * приложение не знает, где кончился прежний бой, и следующий начинается с шестого раунда.
- */
 export function startCombat(session: Session, occasion: Occasion): Session {
   return advanceTurn(session, occasion, "combat_started", "Бой начался");
 }
@@ -68,16 +51,10 @@ function advanceTurn(
   );
 }
 
-/** Сколько здоровья вернёт конец боя. Ноль — восстанавливать нечего. */
 export function combatEndRecovery(character: CharacterState): number {
   return Character.of(character).vitality.continuousRegenerationDue();
 }
 
-/**
- * Конец боя: отметка о факте, а восстановление тролля и истечение раундового — её следствия.
- *
- * Запись появляется всегда, даже когда лечить нечего: от неё считаются раунды следующего боя.
- */
 export function endCombat(session: Session, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const { vitality, healed } = root.vitality.regeneratedContinuously();

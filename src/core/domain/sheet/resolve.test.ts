@@ -6,10 +6,8 @@ import type { StatContribution } from "@/core/domain/shared/stats";
 
 import { breakdownOf, defineStat, ownCandidate, resolveStats } from "./resolve";
 
-/** Величина с собственным способом счёта: десятка, как у Класса Доспеха без доспехов. */
 const plain = defineStat({ id: "armorClass", methods: () => [ownCandidate(10)] });
 
-/** Величина, у которой собственного способа нет: считается только принесённым. */
 const brought = defineStat({
   id: "speed",
   methods: (_read, methods) =>

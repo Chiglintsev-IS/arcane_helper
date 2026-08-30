@@ -1,10 +1,3 @@
-/**
- * Подсхема магических ресурсов: ячейки, магическое восстановление, руны и последняя подсказка.
- *
- * Пределы и инварианты контекста объявляются в нём самом. Уровни заклинаний приходят из каталога:
- * какие они бывают вообще — вопрос правил, а не ячеек.
- */
-
 import { z } from "zod";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
@@ -12,12 +5,6 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 import { MAXIMUM_SPELL_LEVEL } from "@/core/domain/catalog/spell";
 import { MINIMUM_SPELL_LEVEL } from "@/core/domain/arcana/slots";
 
-/**
- * Ячейка одного уровня.
- *
- * Отрицательный остаток допускается: это долг, разрешённый мастером через «Применить всё равно», и
- * запрет на него превратил бы разрешённое исключение в испорченное состояние.
- */
 const slotSchema = z
   .object({
     maximum: z.number().int().nonnegative(),
@@ -28,17 +15,11 @@ const slotSchema = z
     path: ["remaining"],
   });
 
-/** Ключи — уровни ячеек 1…9 в строковом виде: JSON других ключей не знает. */
 const spellSlotsSchema = z.record(
   z.coerce.number().int().min(MINIMUM_SPELL_LEVEL).max(MAXIMUM_SPELL_LEVEL),
   slotSchema,
 );
 
-/**
- * Дневной бюджет «Магического восстановления» уровнями ячеек: сколько всего и сколько осталось
- * до следующего долгого отдыха. За столом его берут частями — остаток может быть нулём без
- * долгого отдыха, а не только целиком доступен или целиком потрачен.
- */
 const arcaneRecoverySchema = z
   .object({
     maximum: z.number().int().nonnegative(),
@@ -59,15 +40,8 @@ const runesSchema = z
     path: ["remaining"],
   });
 
-/** Одно применение последней подсказки до долгого отдыха. */
 const LAST_HINT_MAXIMUM = 1;
 
-/**
- * Последняя подсказка: пул того же устройства, что и руны.
- *
- * Умолчание обязательно: сохранение прежней версии поля не знает, а обновление не имеет права
- * терять данные — прочитанное без него открывает подсказку целой, и это честнее отказа читать.
- */
 const lastHintSchema = z
   .object({
     maximum: z.number().int().nonnegative(),
@@ -79,19 +53,8 @@ const lastHintSchema = z
   })
   .default({ maximum: LAST_HINT_MAXIMUM, remaining: LAST_HINT_MAXIMUM });
 
-/**
- * Был ли короткий отдых с последнего долгого.
- *
- * Признак принадлежит ресурсам: он существует только как предусловие магического восстановления и
- * ни на что другое не влияет.
- *
- * Необязательное намеренно: обязательное отвергло бы сохранения прежних версий, а обновление не
- * имеет права терять данные. `undefined` читается как «отдыха не было» — это честнее
- * молчаливого разрешения, а цена ошибки всего одно лишнее предупреждение.
- */
 const shortRestSinceLongRestSchema = z.boolean().optional();
 
-/** Поля контекста для сборки полной схемы состояния. */
 export const ARCANA_FIELDS = {
   spellSlots: spellSlotsSchema,
   arcaneRecovery: arcaneRecoverySchema,

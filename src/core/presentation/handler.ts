@@ -1,15 +1,3 @@
-/**
- * Ведущий адаптер: сообщение снаружи — в вызов собранного ядра и обратно.
- *
- * Про протокол не знает ничего: принимает `unknown`, отдаёт `unknown`. Всё знание о HTTP живёт в
- * трёх строках маршрута, поэтому один и тот же хендлер обслуживает и провод внутри процесса, и
- * сеть, и что угодно ещё.
- *
- * Отказ по правилам становится ответом, дефект остаётся исключением. Разница не косметическая: по
- * отказу игроку есть что сделать, по дефекту — нечего, и выдавать второе за первое значит врать
- * ему словами правил.
- */
-
 import { envelopeSchema, type Envelope } from "@/contract/commands";
 import { questionSchema } from "@/contract/questions";
 
@@ -20,17 +8,13 @@ import type { LiveSession } from "@/core/application/session";
 import { toRawSave, toSnapshot } from "./presenter";
 import { answerQuestion } from "./previewer";
 
-/** Чем хендлер располагает: собранное ядро, знающее своё состояние и его версию. */
 type Application = {
   open(): Promise<{ live: LiveSession; version: number }>;
-  /** Содержимое хранилища как есть. Сессию не открывает: её открытие здесь уже отказало. */
   readStored(): Promise<unknown>;
   execute(envelope: Envelope): Promise<{ live: LiveSession; version: number }>;
-  /** Часы ядра: в выгрузке стоит время, а состояние его не хранит. */
   now(): string;
 };
 
-/** Дверь ядра до провода: то же, что порт договора, но в сыром виде. */
 export type Backend = {
   read(): Promise<unknown>;
   readRaw(): Promise<unknown>;
@@ -68,10 +52,6 @@ export function createHandler(application: Application): Backend {
       }
     },
 
-    /**
-     * Вопрос разбирается строго: в отличие от команды, у предпросмотра нет ветки отказа, а
-     * неразобранный вопрос означает не игрока, а сломанную сторону — то есть дефект.
-     */
     async answer(raw: unknown): Promise<unknown> {
       const { live } = await application.open();
       return answerQuestion(live, questionSchema.parse(raw), application.now());

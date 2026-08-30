@@ -73,11 +73,9 @@ describe("производные характеристики Торна", () =>
 
 describe("производные числа листа", () => {
   it("спасбросок: модификатор и владение", () => {
-    // Торн: Телосложение 16 без владения. Прибавка плаща — вклад, а не часть формулы.
     expect(
       savingThrowModifier({ score: 16, proficient: false, proficiencyBonus: 3 }),
     ).toBe(3);
-    // Интеллект 18 с владением.
     expect(
       savingThrowModifier({ score: 18, proficient: true, proficiencyBonus: 3 }),
     ).toBe(7);
@@ -94,10 +92,8 @@ describe("производные числа листа", () => {
   });
 
   it("инициатива — половина суммы модификаторов Ловкости и Мудрости", () => {
-    // Торн: Ловкость 14 (+2), Мудрость 12 (+1).
     expect(initiativeModifier({ dexterity: 14, wisdom: 12 })).toBe(1);
     expect(initiativeModifier({ dexterity: 14, wisdom: 14 })).toBe(2);
-    // Округление вниз работает и на отрицательной сумме: (−1 + −2) ÷ 2 = −1,5.
     expect(initiativeModifier({ dexterity: 8, wisdom: 6 })).toBe(-2);
   });
 

@@ -1,5 +1,3 @@
-/** Русские подписи листа. Домен отдаёт числа и идентификаторы — называет их экран. */
-
 import type { StatChoiceView } from "@/contract/views";
 import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
 
@@ -33,7 +31,6 @@ const SKILL_LABELS: Readonly<Record<string, string>> = {
   survival: "Выживание",
 };
 
-/** Величины, которые лист показывает отдельной строкой, — в порядке этой строки. */
 export const DERIVED_STAT_IDS = [
   "proficiencyBonus",
   "spellSaveDc",
@@ -52,16 +49,11 @@ export const DERIVED_LABELS: Record<(typeof DERIVED_STAT_IDS)[number], string> =
   passivePerception: "Пассивная внимательность",
 };
 
-/**
- * Имена свойств персонажа, которые называют в двух местах сразу: правят их на «Листе», а читают в
- * шапке «Игры». Слово у них одно на оба места, иначе одно и то же поле звалось бы двумя словами.
- */
 export const SHEET_FIELD_LABELS = {
   speed: "Скорость",
   size: "Размер",
 } as const;
 
-/** Величины, у которых имя ничем не уточняется: подпись у каждой своя. */
 const SINGULAR_STAT_IDS = [...DERIVED_STAT_IDS, "armorClass", "speed"] as const;
 
 const SINGULAR_STAT_LABELS: Record<(typeof SINGULAR_STAT_IDS)[number], string> = {
@@ -70,13 +62,6 @@ const SINGULAR_STAT_LABELS: Record<(typeof SINGULAR_STAT_IDS)[number], string> =
   speed: SHEET_FIELD_LABELS.speed,
 };
 
-/**
- * Подпись по слову правил.
- *
- * Слово приезжает проекцией строкой, поэтому подпись ищется, а не берётся ключом: словарь подписей
- * — выбор слов, а список слов принадлежит правилам, и второй его копии здесь нет. Незнакомое слово
- * показывается как есть: пропасть с экрана молча оно не вправе.
- */
 function labelOf(labels: Readonly<Record<string, string>>, word: string): string {
   return labels[word] ?? word;
 }
@@ -97,12 +82,6 @@ export function trainingLabel(training: string): string {
   return labelOf(TRAINING_LABELS, training);
 }
 
-/**
- * Знак степени владения: он стоит при числе там, где слово не помещается.
- *
- * Знак без слова ничего не значит, поэтому оба приходят отсюда: тот, кто ставит знак при числе,
- * обязан назвать слово легендой рядом.
- */
 export function trainingGlyph(training: string): string {
   return labelOf(TRAINING_GLYPHS, training);
 }
@@ -123,13 +102,6 @@ export function armorCategoryLabel(category: string): string {
   return labelOf(ARMOR_CATEGORY_LABELS, category);
 }
 
-/**
- * Подпись величины: ею называют строку разбора — «откуда взялось это число».
- *
- * Имя величины составное, и разбирает его не подпись: разбор приезжает перечнем от того, кто имя и
- * составил. Своё знание о форме имени разошлось бы с составителем при первой же её правке — молча, и
- * сразу у восемнадцати навыков.
- */
 export function statLabel(stats: readonly StatChoiceView[], stat: string): string {
   const named = stats.find((candidate) => candidate.id === stat);
   if (named?.of === undefined) return labelOf(SINGULAR_STAT_LABELS, stat);
@@ -138,31 +110,17 @@ export function statLabel(stats: readonly StatChoiceView[], stat: string): strin
   return abilityLabel(named.of);
 }
 
-/**
- * Спасбросок: полное слово — для голоса, сокращение — для колонки, в которую слово не встаёт.
- *
- * Оба зовут одно и то же, и потому стоят рядом: сокращение, набранное отдельно от слова, рано или
- * поздно окажется сокращением другого слова.
- */
 export const SAVE_LABEL = "Спасбросок";
 export const SAVE_ABBR = "спас";
 
-/** Наборы величин, о которых правила говорят целиком; перечень их приезжает от того, кто их свёл. */
 const STAT_FAMILY_LABELS: Readonly<Record<string, string>> = {
   saves: "Все спасброски",
 };
 
-/**
- * Подпись семейства величин: стоит рядом с подписью величины и по той же причине.
- *
- * Чем факт назван — одной величиной или целым семейством, — решает тот, кто их считает; здесь к его
- * ответу подбирается слово.
- */
 export function statFamilyLabel(family: string): string {
   return labelOf(STAT_FAMILY_LABELS, family);
 }
 
-/** Имя особенности волшебника: его называет и своя шторка, и привал, и предпросмотр смены уровня. */
 export const ARCANE_RECOVERY_LABEL = "Магическое восстановление";
 
 const SIZE_LABELS: Readonly<Record<string, string>> = {
@@ -179,13 +137,11 @@ const TRAINING_LABELS: Readonly<Record<string, string>> = {
   expert: "компетентность",
 };
 
-/** Знаки степеней: столько же точек, сколько раз бонус мастерства вошёл в число. */
 const TRAINING_GLYPHS: Readonly<Record<string, string>> = {
   proficient: "●",
   expert: "◆",
 };
 
-/** Род доспеха и род вещи словами: перечень приезжает от правил, слово к слову — здесь. */
 const ARMOR_CATEGORY_LABELS: Readonly<Record<string, string>> = {
   light: "Лёгкий",
   medium: "Средний",
@@ -199,17 +155,14 @@ const ITEM_KIND_LABELS: Readonly<Record<string, string>> = {
   other: "Другое",
 };
 
-/** Полные имена монет — для полей правки кошелька. */
 const CURRENCY_LABELS: Readonly<Record<string, string>> = {
   gold: "Золото",
   silver: "Серебро",
   copper: "Медь",
 };
 
-/** Прочерк на месте незаполненного: одна черта на все пустые места листа. */
 export const DASH = "—";
 
-/** Пустое справочное поле — прочерк: ноль здесь читался бы как настоящий ноль. */
 export function orDash(value: string | number): string {
   return value === "" || value === 0 ? DASH : String(value);
 }

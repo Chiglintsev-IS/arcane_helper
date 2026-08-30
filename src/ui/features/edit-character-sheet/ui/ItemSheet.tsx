@@ -13,14 +13,6 @@ import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNu
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
-/**
- * Одна вещь целиком: категория, заметка, цена — и прибавки, если это экипировка.
- *
- * Открывается нажатием на саму вещь в списке сумки. Запас в сумке и надетое полей здесь не имеют:
- * их меняют кнопки на строке сумки — расход, пополнение, надевание, — а поле рядом с ними
- * показывало бы число, набранное до нажатия, и сохранение возвращало бы потраченное обратно.
- */
-/** Вещь так, как её набирают: то же, чем она приехала, — без запаса и надетого. */
 type ItemPatch = {
   id: string;
   nameRu: string;
@@ -42,14 +34,10 @@ export function ItemSheet({
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  /** Вещь со своим запасом: что это такое и сколько её у персонажа — обе половины уже сведены. */
   item: ItemView;
-  /** Из чего выбирают: категории, монеты и величины — перечнями правил. */
   choices: ChoicesView;
   onSave: (item: ItemPatch) => void;
-  /** Немедленный расход и пополнение — не черновик: применяется нажатием, как кнопки на строке. */
   onAdjustBagCount: (delta: number) => void;
   onAdjustWornCount: (delta: number) => void;
   onRemove: () => void;
@@ -61,15 +49,9 @@ export function ItemSheet({
   const [priceAmount, setPriceAmount] = useState(
     item.price === undefined ? "" : String(item.price.amount),
   );
-  // Монета вещи без цены — первая из предложенных: перечень идёт по достоинству, и старшая в нём
-  // первая. Пустой перечень оставил бы поле без выбора, и назвать монету было бы нечем.
   const [currency, setCurrency] = useState(
     item.price?.currency ?? choices.currencies[0] ?? "",
   );
-  /**
-   * Прибавки набираются по одной на величину: список величин общий, и своего словаря у шторки нет.
-   * Набранное уходит владельцу как есть — ноль он не сохранит сам.
-   */
   const [bonuses, setBonuses] = useState<readonly (readonly [string, string])[]>(
     item.bonuses.map((bonus) => [bonus.stat, String(bonus.value)] as const),
   );
@@ -87,18 +69,13 @@ export function ItemSheet({
     text,
     value: requiredFieldNumber(text),
   }));
-  /** Прибавки на экране: у вещи вне экипировки их полей нет, и незаполненное в них ничего не ждёт. */
   const shownBonuses = kind === "gear" ? typedBonuses : [];
-  // Прибавка без числа — не прибавка: в просьбу она не входит, а пока её поле на экране, просьба и
-  // не уходит — причину называет само поле.
   const numbers: Record<string, number> = Object.fromEntries(
     typedBonuses
       .filter((bonus) => required.typed(bonus.value))
       .map((bonus) => [bonus.stat, bonus.value]),
   );
-  // Пустая цена — вещь без цены, а не цена ноль: у находки её может не назвать и мастер.
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
-  // Пустая база — вещь не доспех: кольцо защищает прибавкой, а не заменой базы.
   const base = armorBase.trim() === "" ? undefined : Number(armorBase);
 
   return (
@@ -125,10 +102,6 @@ export function ItemSheet({
         )
       }
     >
-      {/*
-       * Запас меняется кнопками, а не полем: поле хранило бы число, набранное до расхода, и
-       * сохранение возвращало бы потраченное.
-       */}
       <div className="flex items-center justify-between gap-2 text-sm">
         <span className="text-ink-quiet">В сумке</span>
         <span className="flex items-center gap-1">
@@ -222,7 +195,6 @@ export function ItemSheet({
         ))}
       </div>
 
-      {/* Прибавки, база и фокусировка — свойства экипировки: зелье действует, когда его пьют. */}
       {kind === "gear" ? (
         <>
           <button

@@ -10,10 +10,6 @@ import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { LevelSheet } from "./LevelSheet";
 
-/**
- * Шторка рендерится на настоящем ядре: предпросмотр приходит ответом на вопрос, а не считается
- * здесь же. Без ядра проверять было бы нечего — сама шторка не знает ни одного правила.
- */
 async function openLevel(
   character: CharacterState = createThorne(),
   onSave: (next: { level: number; hitPointMaximumBase: number }) => void = () => {},
@@ -81,14 +77,12 @@ describe("шторка уровня", () => {
     await userEvent.clear(field);
     await userEvent.type(field, "21");
 
-    // Перечня изменений нет: считать по невозможному уровню нечего, а отказ придёт от владельца.
     expect(screen.queryByText(/Ячейки/)).toBeNull();
   });
 
   it("уровень: максимум хитов подсказывает среднее, но не подставляет", async () => {
     await openLevel();
     expect(screen.getByLabelText("Базовый максимум хитов")).toHaveProperty("value", "60");
-    // Предпросмотр приезжает ответом, а не рендером: до ответа его на экране нет.
     expect(await screen.findByText(/среднее за уровень: \+7/)).toBeDefined();
   });
 
@@ -100,7 +94,6 @@ describe("шторка уровня", () => {
     await userEvent.clear(maximum);
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Причина стоит под пустым полем, а набранный рядом уровень своей причины не получает.
     expect(onSave).not.toHaveBeenCalled();
     const reason = screen.getByRole("alert");
     expect(reason.textContent).toBe("Наберите число");

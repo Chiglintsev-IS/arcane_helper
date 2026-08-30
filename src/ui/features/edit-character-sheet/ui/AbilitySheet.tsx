@@ -8,13 +8,8 @@ import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNu
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/** Набранные владения: навык и степень словами правил — их же ждёт команда. */
 type Skills = Record<string, string>;
 
-/**
- * Три состояния навыка при двух степенях владения: отсутствие владения — снятый ключ, а не третья
- * степень, и потому в перечень правил оно не входит, а в выбор игрока входит.
- */
 function trainingChoices(
   trainings: ChoicesView["skillTrainings"],
 ): { training: string | undefined; labelRu: string }[] {
@@ -24,12 +19,6 @@ function trainingChoices(
   ];
 }
 
-/**
- * Правка одной характеристики: то же, что показывает её блок на листе.
- *
- * Шторка повторяет состав блока, а не собирает все шесть характеристик разом: правят одну, а
- * шесть значений в одном окне заставляли бы искать нужную строку среди чужих.
- */
 export function AbilitySheet({
   ability,
   choices,
@@ -37,10 +26,8 @@ export function AbilitySheet({
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   ability: AbilityView;
-  /** Из чего выбирают и в каких границах набирают: степени владения и пределы значения. */
   choices: ChoicesView;
   onSave: (change: {
     ability: string;

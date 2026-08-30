@@ -1,10 +1,3 @@
-/**
- * Проекция сумки: вещь вместе со своим запасом.
- *
- * Соединение здесь и проверяется: «что это такое» знают вещи, «сколько этого у меня» — снаряжение,
- * и до проекции их никто не сводил. Заодно — что защита называет доспех, по которому её считают.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
@@ -17,10 +10,8 @@ import { materialOf } from "@/core/application/casting/material";
 
 import { toBagView } from "./bagView";
 
-/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
 const spells = loadThorneSpells();
 
-/** Персонаж с заведённой вещью и её запасом — поверх обычного снаряжения Торна. */
 function withStock(definition: ItemDefinition, stock: { bag?: number; worn?: number } = {}): CharacterState {
   const state = createThorne();
   return {
@@ -97,7 +88,6 @@ describe("вещи", () => {
 
     expect(itemOf(withStock(mail), "mail").armor).toEqual({ base: 16, category: "medium" });
     expect(itemOf(withStock(found), "found").armor).toEqual({ base: 12 });
-    // Вещь, доспехом не являющаяся, о защите молчит вовсе.
     expect(itemOf(withStock(rope), "rope").armor).toBeUndefined();
   });
 });
@@ -117,7 +107,6 @@ describe("защита", () => {
   });
 });
 
-/** Компонент, заведённый вещью: её заводит та же операция, что и всякую покупку. */
 function withComponentOf(spellId: string): CharacterState {
   const spell = spells.find((candidate) => candidate.id === spellId);
   if (spell === undefined) throw new Error(`нет карточки ${spellId}`);
@@ -143,7 +132,6 @@ describe("чем вещь требуется", () => {
     );
 
     expect(charcoal?.neededForRu).toEqual(["Волшебный замок"]);
-    // Записи о потребителях у самой вещи нет: без карточек требование не собирается вовсе.
     expect(toBagView(bought, []).items.every((item) => item.neededForRu.length === 0)).toBe(true);
   });
 
@@ -156,14 +144,12 @@ describe("чего не хватает", () => {
   it("в списке покупок стоит то, без чего не сотворить, и срочное идёт первым (FR-296)", () => {
     const missing = toBagView(createThorne(), spells).missingMaterials;
 
-    // Срочное впереди: без него сотворить нельзя, а закрытое фокусировкой лишь ждёт её снятия.
     expect(missing.filter((need) => !need.coveredByFocus).map((need) => need.spellId)).toEqual([
       "arcane-lock",
     ]);
     expect(missing.slice(0, 1).every((need) => !need.coveredByFocus)).toBe(true);
     expect(missing.slice(1).every((need) => need.coveredByFocus)).toBe(true);
 
-    // Цену и судьбу называет карточка: приложение их не выдумывает.
     expect(missing[0]).toMatchObject({
       consumed: true,
       price: { amount: 25, currency: "gold" },
@@ -173,7 +159,6 @@ describe("чего не хватает", () => {
 
   it("истраченная до нуля вещь стоит в списке покупок со всем, что у неё было (FR-302)", () => {
     const bought = withComponentOf("arcane-lock");
-    // Лежащее в сумке покупать не надо: пока запас есть, вещь в список покупок не едет.
     expect(toBagView(bought, spells).missingMaterials.some((need) => need.itemId === charcoalId)).toBe(
       false,
     );
@@ -182,16 +167,13 @@ describe("чего не хватает", () => {
     const emptied = root.withEquipment(root.equipment.adjustBagCount(charcoalId, -1)).toState();
     const view = toBagView(emptied, spells);
 
-    // Ноль требуемого — вопрос лавки, и вещь едет строкой со всем, что у неё было.
     expect(view.missingMaterials.find((need) => need.spellId === "arcane-lock")).toMatchObject({
       itemId: charcoalId,
       price: { amount: 25, currency: "gold" },
       neededForRu: ["Волшебный замок"],
     });
-    // Запись никуда не делась: ею вещь открывают и ею же пополняют.
     expect(view.items.find((item) => item.id === charcoalId)?.bagCount).toBe(0);
 
-    // Написанное рукой едет со строкой: переезд не отнимает у неё ничего.
     const stored = Character.of(emptied).items.find(charcoalId);
     if (stored === undefined) throw new Error("золотая пыль не заведена");
     const shop = "у ювелира в порту";

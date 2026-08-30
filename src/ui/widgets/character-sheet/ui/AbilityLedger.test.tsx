@@ -1,12 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Гроссбух на настоящей проекции: числа считает тот же презентер, что и в приложении.
- *
- * Проверяется то, что на экране проверить нечем: что нажимается вся шапка целиком, что цвет и точка
- * не остаются единственным носителем владения и что число, которое называют вслух, читается вслух.
- */
-
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
@@ -24,7 +17,6 @@ function show(onEdit: (edit: unknown) => void = () => {}) {
 describe("гроссбух бросков", () => {
   it("бонус мастерства назван один раз и над всеми числами, что его несут", () => {
     show();
-    // Повторённый у каждого владения, он занял бы восемнадцать строк ради одной и той же тройки.
     expect(screen.getByText("Бонус мастерства").textContent).toContain("+3");
     expect(screen.getAllByText("Бонус мастерства")).toHaveLength(1);
   });
@@ -47,7 +39,6 @@ describe("гроссбух бросков", () => {
     show();
     const wisdom = within(screen.getByRole("list", { name: "Мудрость" }));
 
-    // Знак виден глазу, слово слышно голосу: цвет и точка тут не единственный носитель.
     expect(wisdom.getByText("Внимательность").closest("li")?.textContent).toContain("владение");
     expect(wisdom.getByText("Медицина").closest("li")?.textContent).not.toContain("владение");
   });

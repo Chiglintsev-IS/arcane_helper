@@ -1,10 +1,3 @@
-/**
- * Проекция ресурсов: то, чем платят и что мешает, посчитанным.
- *
- * Проверяется ровно то, чего до проекции не было ни у кого одного: порядок ячеек, ручная поправка
- * защиты, отделённая от самой защиты, и свёрнутые числа начала хода.
- */
-
 import { describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
@@ -23,7 +16,6 @@ import { toResourcesView } from "./resourcesView";
 
 const CLOCK = { now: () => "2026-07-31T18:00:00.000Z", nextId: () => "id-1" };
 
-/** Состояние набирается командами: поправку заводит та же операция, что и шапка ресурсов. */
 function played(character: CharacterState, commands: readonly Command[]): Session {
   const builtInCatalog = loadThorneSpells();
   let live: LiveSession = {
@@ -40,7 +32,6 @@ function played(character: CharacterState, commands: readonly Command[]): Sessio
   return live.session;
 }
 
-/** Сессия без единой команды: лог пуст, бой не начат. */
 function fresh(character: CharacterState): Session {
   return createSession(character);
 }

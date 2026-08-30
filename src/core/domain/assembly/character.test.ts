@@ -3,10 +3,6 @@ import { describe, expect, it } from "vitest";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { Character } from "./character";
 
-/**
- * Знание о виде и запас порций — разные факты у разных владельцев, и свести их может только корень.
- * Прогон стоит здесь по той же причине: контексты друг о друге не знают.
- */
 describe("персонаж целиком", () => {
   it("знание переживает исчезновение запаса", () => {
     const stocked = Character.of(createThorne());

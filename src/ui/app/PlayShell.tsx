@@ -49,15 +49,12 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
 
   const [mode, setMode] = useState<ScreenMode>(() => initialMode ?? DEFAULT_SCREEN_MODE);
 
-  // Статическая сборка отдаёт разметку без хранилища: прочитанный до гидратации режим разошёлся бы
-  // с отданным сервером.
   useEffect(() => {
     if (initialMode === undefined) {
       setMode(readRemembered(STORAGE_KEY, SCREEN_MODES, DEFAULT_SCREEN_MODE));
     }
   }, [initialMode]);
 
-  // Играть не на чем, а данные целы: вместо режимов — причина и выход из неё.
   if (status === "error" && snapshot === null) return <UnreadableSave />;
 
   if (status === "loading" || snapshot === null) {
@@ -73,18 +70,11 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
     writeRemembered(STORAGE_KEY, next);
   };
 
-  // Верхний системный отступ держит оболочка: приложение с домашнего экрана открывается под
-  // полупрозрачной строкой состояния, и содержимое уходило бы под неё.
   return (
     <main className="flex h-dvh flex-col pt-[env(safe-area-inset-top)]">
       <ScreenContent mode={mode} />
 
       <div className="relative shrink-0">
-        {/*
- Полосы висят над панелью поверх содержимого: в потоке они сдвигали список ровно в тот момент,
- когда игрок метил в его строку, а поверх панели — отнимали единственную навигацию. Нижний край
- стопки — верхний край панели, поэтому её высоту не приходится знать числом.
- */}
         <div className="absolute inset-x-3 bottom-full z-20 mb-2 flex flex-col gap-2">
           {error === null ? null : (
             <p

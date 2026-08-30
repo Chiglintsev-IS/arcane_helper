@@ -1,11 +1,3 @@
-/**
- * Персонаж — единственный агрегат: корень, через который проходит любое изменение состояния.
- *
- * Сам он ничего не считает: держит лист персонажа (то, что за сессию не меняется) и четыре
- * объекта-значения, каждый со своими правилами. Снаружи состояние правится только так — отдельные
- * поля недоступны, поэтому инвариант нельзя обойти, забыв про проверку.
- */
-
 import { Arcana } from "@/core/domain/arcana/arcana";
 import { Crafting } from "@/core/domain/crafting/crafting";
 import { EffectBoard } from "@/core/domain/effects/effectBoard";
@@ -20,10 +12,6 @@ import type { CharacterState } from "./state";
 import { CharacterBase } from "@/core/domain/character/base";
 import { parsedCharacterFields } from "@/core/domain/character/schema";
 
-/**
- * Поля, которые правятся с «Листа»: кто персонаж сам по себе и отметки на нём. Ресурсы, здоровье,
- * книга, вещи и эффекты сюда не входят — у каждого свой объект-значение со своими правилами.
- */
 type SheetField =
   | "name"
   | "species"
@@ -47,7 +35,6 @@ export class Character {
     return new Character(state);
   }
 
-  /** База персонажа. Итоговые числа складывает лист — он знает и про снаряжение. */
   get base(): CharacterBase {
     return CharacterBase.of(this.state);
   }
@@ -84,22 +71,10 @@ export class Character {
     return Notes.of(this.state);
   }
 
-  /**
-   * Лист персонажа: основание — его собственные поля, вклады — от надетого и от действующего.
-   *
-   * Собирает их корень, потому что больше некому: снаряжение, эффекты и лист друг о друге не знают,
-   * а знать, из чего состоит персонаж, — как раз его дело.
-   */
   get sheet(): Sheet {
     return Sheet.of(this.state, this.contributions());
   }
 
-  /**
-   * Лист, каким он станет, если сотворить заклинание, — состояние при этом не меняется.
-   *
-   * Предпросмотр и итог считаются одним и тем же кодом: расхождение между обещанным и случившимся
-   * возможно только там, где их считают дважды.
-   */
   sheetWith(spell: Parameters<EffectBoard["contributionsWith"]>[0]): Sheet {
     return Sheet.of(this.state, [
       ...this.equipment.contributions(this.items),
@@ -139,10 +114,6 @@ export class Character {
     return new Character({ ...this.state, ...notes.toState() });
   }
 
-  /**
-   * Концентрация необязательна, поэтому доска эффектов возвращает состояние без ключа, когда
-   * концентрации нет. Расстановка `...` его бы не убрала — ключ приходится снимать явно.
-   */
   withEffects(effects: EffectBoard): Character {
     const board = effects.toState();
     const { concentration: _dropped, ...rest } = this.state;
@@ -153,14 +124,6 @@ export class Character {
     });
   }
 
-  /**
-   * Правка листа персонажа: то, что за столом меняют руками, а не тратят.
-   *
-   * Список полей явный и узкий. Разрешив здесь любое поле состояния, корень отдал бы наружу и
-   * ячейки, и эффекты — мимо объектов-значений, которые их стерегут, а значит мимо их инвариантов.
-   * В состояние идёт разобранный патч, а не сырой: умолчания полей обязаны попасть персонажу, а не
-   * в отброшенный результат проверки.
-   */
   withSheet(change: Partial<Pick<CharacterState, SheetField>>): Character {
     return new Character({ ...this.state, ...parsedCharacterFields(this.state, change) });
   }

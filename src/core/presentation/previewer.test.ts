@@ -1,10 +1,3 @@
-/**
- * Ответ на вопрос: набранное, посчитанное владельцем правила.
- *
- * Проверяется главное свойство вопроса — он ничего не меняет: предпросмотр невозможной правки
- * приходит ответом, а не отказом, и состояние после вопроса то же, что до него.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { createSession, type LiveSession } from "@/core/application/session";
@@ -19,7 +12,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 
 import { answerQuestion } from "./previewer";
 
-/** Время выгрузки: часы приходят снаружи, и прогон называет своё. */
 const NOW = "2026-07-31T18:00:00.000Z";
 
 function alive(character: CharacterState = createThorne()): LiveSession {
@@ -102,7 +94,6 @@ describe("сотворение", () => {
 
   type CastAsk = Extract<Parameters<typeof answerQuestion>[1], { kind: "cast_preview" }>;
 
-  /** Обычное сотворение — умолчание вопроса: режим спрашивают только там, где он и проверяется. */
   function castPreview(question: Omit<CastAsk, "kind" | "mode"> & { mode?: string }) {
     const preview = answerQuestion(alive(), { kind: "cast_preview", mode: "normal", ...question }, NOW);
     return preview.kind === "cast_preview" ? preview : null;
@@ -181,7 +172,6 @@ describe("сотворение", () => {
     });
 
     expect(impossible?.hitDice?.rollPossible).toBe(false);
-    // Модификатор заклинательной характеристики Торна — +4, и прибавляется он один раз.
     expect(possible?.hitDice?.restored).toBe(11);
   });
 
@@ -192,7 +182,6 @@ describe("сотворение", () => {
       payment: { kind: "none" },
     });
 
-    // Ритуал уровня сотворения не даёт, и повышения нет: столько же, сколько за свой уровень.
     expect(ritual?.hitDice?.maximum).toBe(2);
   });
 
@@ -210,7 +199,6 @@ describe("сотворение", () => {
       payment: { kind: "blood", castLevel: 3 },
     });
 
-    // Кровь повышает сотворение так же, как ячейка старшего уровня, и кости растут вместе с ним.
     expect(own?.hitDice?.maximum).toBe(2);
     expect(raised?.hitDice?.maximum).toBe(4);
   });
@@ -227,7 +215,6 @@ describe("сотворение", () => {
   });
 
   it("без записи о костях хитов отвечать нечем даже про максимум", () => {
-    // Состояние пришло из сборки, которая про кости не знала: поля нет вовсе, и это не ноль.
     const { hitDice: _none, ...withoutPool } = createThorne();
     const preview = answerQuestion(alive(withoutPool), {
       kind: "cast_preview",
@@ -272,7 +259,6 @@ describe("магическое восстановление", () => {
   });
 
   it("набранное сверх бюджета отвечает причиной словами владельца, а не молчанием", () => {
-    // Дневной бюджет Торна — четыре уровня, а набрано пять.
     const spent = withSpentSlots(withSpentSlots(createThorne(), 4, 1), 1, 1);
     const answer = plan({ 4: 1, 1: 1 }, spent);
 
@@ -313,10 +299,8 @@ describe("цена исследования", () => {
 
     const answer = cost(1, "common", "potions", character);
 
-    // Десять минут против пятёрки: первое свойство надёжным походным комплектом.
     expect(answer?.plan?.minutes).toBe(10);
     expect(answer?.plan?.difficulty).toBe(5);
-    // Порция теряется только при провале, и материалов эта глубина ещё не жжёт.
     expect(answer?.plan?.portionsOnSuccess).toBe(0);
     expect(answer?.plan?.portionsOnFailure).toBe(1);
     expect(answer?.plan?.consumablesRu).toBeNull();
@@ -326,14 +310,11 @@ describe("цена исследования", () => {
   });
 
   it("цена исследования отказывает словами владельца", () => {
-    // Набора по синтезу ядов у Торна нет: работать нечем, и отказ называет чем именно.
     expect(cost(1, "common", "poisons")?.plan).toBeNull();
     expect(cost(1, "common", "poisons")?.refusalRu).toContain("без профильного оснащения");
 
-    // Порядок стережёт сам вид: цену свойства, до которого не добрались, называть незачем.
     expect(cost(2, "common", "potions")?.refusalRu).toContain("номером 1");
 
-    // Слово не из тех, что бывают, — тот же отказ с причиной, а не падение.
     expect(cost(1, "невиданная", "potions")?.refusalRu).toContain("не из тех");
     expect(cost(1, "common", "алхимия")?.refusalRu).toContain("не из тех");
   });
@@ -343,7 +324,6 @@ describe("цена исследования", () => {
       { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
     ]);
 
-    // Второе свойство: час работы, базовая двенадцать плюс два за редкость, комплект за час.
     const second = cost(2, "rare", "potions", twice);
     expect(second?.plan?.difficulty).toBe(14);
     expect(second?.plan?.consumablesRu).toBe("Обычные");

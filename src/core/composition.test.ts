@@ -1,10 +1,3 @@
-/**
- * Собранное ядро целиком: договор, провод, хендлер, контроллер и хранилище вместе.
- *
- * Прогон говорит с ядром так же, как отображение, — командами через клиент договора. Поэтому он
- * заодно доказывает, что сообщения сериализуемы: локальный провод гоняет их через JSON.
- */
-
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { createClient } from "@/contract/client";
@@ -28,12 +21,6 @@ const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 const mageArmor = spells.get("mage-armor")!;
 const NOW = "2026-07-31T18:00:00.000Z";
 const BUILT_IN_COUNT = loadThorneSpells().length;
-/**
- * Сколько строк показывает приложение: заговоры и записи книги.
- *
- * Пул встроенного контента шире книги — из него запись в книгу добавляют, — поэтому строк меньше,
- * чем карточек, и число берётся у персонажа, а не у каталога.
- */
 const KNOWN_COUNT = createThorne().cantripIds.length + createThorne().spellbookSpellIds.length;
 
 function testClock(): Clock {
@@ -63,17 +50,14 @@ function connect(repository: SessionRepository = createMemoryRepository()) {
   return { api };
 }
 
-/** Что ядро рассказало о себе: единственное чтение, и прогон пользуется тем же. */
 async function shown(api: ArcaneApi): Promise<Snapshot> {
   return api.open();
 }
 
-/** Остаток ячеек уровня: их спрашивают чаще всего остального. */
 function slotsLeft(snapshot: Snapshot, level: number): number {
   return snapshot.resources.slots.find((slot) => slot.level === level)?.remaining ?? 0;
 }
 
-/** Каждая попытка своя: одинаковый идентификатор ядро сочло бы повтором и не применило бы. */
 function envelope(command: Parameters<ArcaneApi["execute"]>[0]["command"]) {
   attempt += 1;
   return { commandId: `command-${attempt}`, command };
@@ -88,7 +72,6 @@ function castMageArmor(slotLevel: number) {
   });
 }
 
-/** Файл с тем же составом карточек, но переписанным названием: возврат к встроенным заметен. */
 function renamedCatalogFile(): string {
   const catalog = loadThorneSpells().map((spell) =>
     spell.id === "shield" ? { ...spell, nameRu: "Щит по-домашнему" } : spell,
@@ -96,7 +79,6 @@ function renamedCatalogFile(): string {
   return JSON.stringify(exportSnapshot(createThorne(), catalog, NOW));
 }
 
-/** Своя карточка, которой в сборке нет: после неё возврат к встроенным ломал бы книгу. */
 const HOMEBREW: Spell = { ...mageArmor, id: "thorne-signature", nameRu: "Подпись Торна" };
 
 function homebrewCatalogFile(): string {
@@ -115,7 +97,6 @@ describe("открытие сессии", () => {
     await api.open();
 
     expect((await shown(api)).sheet.name).toBe("Торн");
-    // Немедленная запись: закрытие приложения сразу после старта не теряет состояние.
     expect(await repository.load()).not.toBeNull();
   });
 
@@ -145,7 +126,6 @@ describe("открытие сессии", () => {
     const { api } = connect(repository);
 
     await expect(api.open()).rejects.toThrow(/повреждено/);
-    // Второе открытие отказывает так же: повреждённое осталось на месте и ждёт ручной выгрузки.
     await expect(api.open()).rejects.toThrow(/повреждено/);
   });
 
@@ -166,7 +146,6 @@ describe("открытие сессии", () => {
     await first.api.open();
     await first.api.execute(castMageArmor(2));
 
-    // Новое ядро на том же хранилище — как повторное открытие приложения.
     const second = connect(repository);
     const snapshot = await second.api.open();
 
@@ -337,7 +316,6 @@ describe("каталог заклинаний (FR-123)", () => {
   });
 
   it("встроенный каталог в хранилище не попадает", async () => {
-    // Копия встроенных карточек заморозила бы книгу на дате установки.
     const repository = createMemoryRepository();
     const { api } = connect(repository);
     await api.open();
@@ -399,7 +377,6 @@ describe("каталог заклинаний (FR-123)", () => {
     const { api } = connect(repository);
     await api.open();
 
-    // Файл, до которого разбор бы не допустил: карточки своего заклинания в нём нет.
     const broken = { ...JSON.parse(homebrewCatalogFile()), spells: loadThorneSpells() };
     const result = await api.execute(
       envelope({ kind: "import_snapshot", raw: JSON.stringify(broken) }),
@@ -433,7 +410,6 @@ describe("каталог заклинаний (FR-123)", () => {
     const result = await api.execute(envelope({ kind: "restore_built_in_catalog" }));
 
     expect(!result.ok && result.reasonRu).toMatch(/thorne-signature/);
-    // Каталог остался прежним: молча выбросить карточку из книги приложение не вправе.
     expect((await shown(api)).spells).toHaveLength(KNOWN_COUNT + 1);
     expect((await shown(api)).catalogSource).toBe("imported");
   });
@@ -508,14 +484,12 @@ describe("сброс", () => {
   });
 
   it("начать заново можно и поверх непрочитанного сохранения", async () => {
-    // Так выглядит сохранение, которое разбор отвергает: снимок на месте, состояния в нём нет.
     const repository = createMemoryRepository({ schemaVersion: 1, savedAt: "", character: {} });
     const { api } = connect(repository);
     await expect(api.open()).rejects.toThrow(/повреждено/);
 
     const result = await api.execute(envelope({ kind: "reset" }));
 
-    // Чистое состояние прежнего не читает, поэтому и не зависит от того, разобралось ли оно.
     expect(result.ok).toBe(true);
     expect((await shown(api)).sheet.name).toBe("Торн");
     expect((await repository.load())?.character.spellSlots[1]?.remaining).toBe(4);
@@ -527,7 +501,6 @@ describe("до открытия сессии", () => {
     const repository = createMemoryRepository();
     connect(repository);
 
-    // Сборка ядра сама по себе не читает и не пишет: сессия открывается первым обращением.
     expect(await repository.load()).toBeNull();
   });
 

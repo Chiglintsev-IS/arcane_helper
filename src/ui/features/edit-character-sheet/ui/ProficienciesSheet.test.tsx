@@ -35,7 +35,6 @@ describe("шторка владений", () => {
       <ProficienciesSheet proficiencies={proficiencies} onSave={onSave} onCancel={() => {}} />,
     );
 
-    // Языкам здесь нет ни поля, ни правки: их правит своя шторка, и потерять их эта не вправе.
     expect(screen.queryByLabelText("Знает")).toBeNull();
     await userEvent.type(screen.getByLabelText("Инструменты"), "инструменты кузнеца");
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));

@@ -1,19 +1,13 @@
 /**
- * Закрытый словарь алхимии: три направления, ступени редкости и перечень свойств.
- *
  * Источник — «Алхимия Сумрачного Доминиона. Справочник игрока», редакция 31 июля 2026: домашняя
- * система стола, а не SRD. Справочник приводит у свойства только название и направление; что
- * свойство делает, он не описывает, и потому здесь нет ни урона, ни длительности.
- *
- * Перечень закрыт, и это его смысл: состав собирается на совпадении свойств, совпадение считается
- * тождеством названий, а свободный текст «лечит» со свойством «Лечение здоровья» не совпадёт.
+ * система стола, а не SRD. Справочник приводит у свойства только название и направление — потому
+ * здесь нет ни урона, ни длительности.
  */
 
 export const ALCHEMY_DIRECTIONS = ["potions", "poisons", "transmutation"] as const;
 
 export type AlchemyDirection = (typeof ALCHEMY_DIRECTIONS)[number];
 
-/** Ступени редкости: ими свойство оплачивается в сложности рецепта и в сложности исследования. */
 export const ALCHEMICAL_RARITIES = [
   "common",
   "uncommon",
@@ -22,12 +16,6 @@ export const ALCHEMICAL_RARITIES = [
   "legendary",
 ] as const;
 
-/**
- * Свойство и направление, которому оно принадлежит.
- *
- * Одной таблицей, а не двумя списками: направление — часть того же факта, что и название, и
- * разнесённое по двум местам оно разошлось бы с названием при первой же правке справочника.
- */
 const DIRECTION_BY_PROPERTY = {
   "Лечение здоровья": "potions",
   "Регенерация здоровья": "potions",
@@ -258,16 +246,13 @@ const DIRECTION_BY_PROPERTY = {
 
 type AlchemicalPropertyName = keyof typeof DIRECTION_BY_PROPERTY;
 
-/** Перечень целиком: название и направление каждого свойства, в порядке справочника. */
 export const ALCHEMICAL_PROPERTIES: readonly { nameRu: string; direction: AlchemyDirection }[] =
   Object.entries(DIRECTION_BY_PROPERTY).map(([nameRu, direction]) => ({ nameRu, direction }));
 
-/** Есть ли такое свойство в справочнике. Названия вне перечня не бывает. */
 export function isAlchemicalPropertyName(value: string): value is AlchemicalPropertyName {
   return value in DIRECTION_BY_PROPERTY;
 }
 
-/** Направление свойства: оно читается по названию, а не записывается рядом с ним. */
 export function alchemyDirectionOf(name: AlchemicalPropertyName): AlchemyDirection {
   return DIRECTION_BY_PROPERTY[name];
 }

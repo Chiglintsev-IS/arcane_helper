@@ -1,14 +1,3 @@
-/**
- * Контент Торна: заклинания и запреты.
- *
- * Каждая карточка проходит ту же Zod-схему, что и пользовательский импорт, поэтому ошибка
- * в JSON обнаруживается в CI, а не за игровым столом.
- *
- * Это встроенный каталог: он действует, пока игрок не загрузил свой файл. Каталог здесь не
- * константа модуля, а функция, потому что владеет им стор сессии — контент подставляется ему
- * зависимостью и заменяется целиком.
- */
-
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 import { parsedBySchema } from "@/core/domain/shared/schema";
 import type { BannedSpell } from "@/core/domain/spellbook/restrictions";
@@ -47,7 +36,6 @@ import tidalWave from "./spells/tidal-wave.json";
 import vitriolicSphere from "./spells/vitriolic-sphere.json";
 import web from "./spells/web.json";
 
-/** Сырые карточки в порядке уровня, затем по алфавиту. Импорты явные: каталог сам себя не соберёт. */
 const RAW_SPELLS: readonly unknown[] = [
   shockingGrasp,
   rayOfFrost,
@@ -95,13 +83,6 @@ export class ContentError extends Error {
   }
 }
 
-/**
- * Разбирает и проверяет карточки. Ошибка в одной — ошибка всего контента: частично загруженная
- * книга заклинаний хуже, чем явный отказ.
- *
- * Список принимается параметром, чтобы проверки отказа можно было испытать на битых данных:
- * иначе защитные ветви существуют, но никогда не исполняются, и их поведение неизвестно.
- */
 export function parseSpells(rawSpells: readonly unknown[]): Spell[] {
   const spells: Spell[] = [];
   const seen = new Set<string>();
@@ -124,25 +105,10 @@ export function parseSpells(rawSpells: readonly unknown[]): Spell[] {
   return spells;
 }
 
-/**
- * Встроенный каталог целиком: реализация зависимости `loadBuiltInCatalog` стора сессии.
- *
- * В хранилище эти карточки не попадают: их
- * копия заморозила бы книгу на дате установки, и заклинание, добавленное следующей сборкой, не
- * появилось бы у игрока никогда.
- */
 export function loadThorneSpells(): Spell[] {
   return parseSpells(RAW_SPELLS);
 }
 
-/**
- * Реестр запретов. Огонь определяется по типу урона в данных заклинания и здесь не перечисляется;
- * поимённо перечисляется только то, что нельзя вывести из данных.
- *
- * Категория допуска запретом не является: заклинание, на которое у Торна есть личное разрешение,
- * остаётся в книге. Здесь стоит лишь то, чего нет в мире, что мир запретил без исключений и что
- * назвал мастер.
- */
 export const BANNED_SPELLS: readonly BannedSpell[] = [
   {
     nameRu: "Понимание языков",
@@ -211,5 +177,4 @@ export const BANNED_SPELLS: readonly BannedSpell[] = [
   },
 ];
 
-/** Типы урона, вредные виду персонажа: заклинание с таким уроном запрещено без записи в реестре. */
 export const HARMFUL_DAMAGE_TYPES: readonly string[] = ["огонь"];

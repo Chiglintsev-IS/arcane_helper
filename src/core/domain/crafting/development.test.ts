@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { developmentCheck, developmentOutcome } from "./development";
 
-/** Числа Торна: бонус мастерства седьмого уровня и модификатор Интеллекта 18. */
 const THORNE = { proficiencyBonus: 3, abilityModifier: 4 };
 const STUDIED = ["potions", "transmutation"] as const;
 

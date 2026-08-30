@@ -20,9 +20,6 @@ const shield = spell("shield");
 
 describe("материал заклинания", () => {
   it("компонент заклинания опознаётся вещью с ценой и судьбой из карточки (FR-268)", () => {
-    // Судьба компонента — его категория: сжигаемое ритуалом тратится счётом, как всякий расходник.
-    // Компонента с ценой, который при этом не расходуется, в книге сейчас нет; вещь без цены
-    // проверяется следующим тестом.
     expect(materialOf(arcaneLock.components)).toEqual({
       id: "золотая-пыль-стоимостью-минимум-25-зм,-расходуемая-заклинанием",
       nameRu: "золотая пыль стоимостью минимум 25 зм, расходуемая заклинанием",
@@ -46,8 +43,6 @@ describe("материал заклинания", () => {
   });
 
   it("материала нет у того, кто его не назвал: сумке нечего искать", () => {
-    // Объявление карточки такого не пропускает: материал обязан быть назван словами. Приложение
-    // всё равно не выдумывает вещи — назвать её нечем, и в сумке она не нашлась бы никогда.
     const unnamed: Spell = {
       ...arcaneLock,
       components: { verbal: true, somatic: true, material: true, consumed: true },
@@ -65,8 +60,6 @@ describe("что закрывает фокусировка", () => {
   });
 
   it("названную стоимость и расход не закрывает ничто", () => {
-    // Прежде здесь стояли две карточки — с ценой и с расходом отдельно. Компонента с ценой, который
-    // не расходуется, в книге не осталось, и обе черты несёт одна карточка.
     expect(materialCoveredByFocus(arcaneLock.components, createThorne())).toBe(false);
   });
 
@@ -76,7 +69,6 @@ describe("что закрывает фокусировка", () => {
 });
 
 describe("кому нужна вещь", () => {
-  /** Заклинание, называющее чужой компонент своими словами: карточки такое допускают. */
   function naming(source: Spell, id: string, nameRu: string, materialText: string): Spell {
     return { ...source, id, nameRu, components: { ...source.components, materialText } };
   }
@@ -94,7 +86,6 @@ describe("кому нужна вещь", () => {
 
     expect(needs.map((need) => need.material.nameRu)).toEqual([wool, "кусок обработанной кожи"]);
     expect(needs[0]?.spellNamesRu).toEqual(["Первое", "Второе"]);
-    // Заводят вещь той карточкой, которая назвала её первой: цену и судьбу она называет сама.
     expect(needs[0]?.spellId).toBe("первое");
   });
 
@@ -102,11 +93,9 @@ describe("кому нужна вещь", () => {
     const withFocus = materialNeeds([mageArmor, arcaneLock], createThorne());
     expect(withFocus.map((need) => need.coveredByFocus)).toEqual([true, false]);
 
-    // Фокусировку сняли — требование то же самое, и оно снова срочно.
     const bare = materialNeeds([mageArmor, arcaneLock], withoutSpellcastingFocus(createThorne()));
     expect(bare.map((need) => need.coveredByFocus)).toEqual([false, false]);
 
-    // Дешёвый компонент, названный ещё и тем, кто его сжигает, срочен у обоих: сжигаемое не закрыто.
     const alsoBurnt: Spell = {
       ...arcaneLock,
       components: { ...arcaneLock.components, materialText: "кусок обработанной кожи" },

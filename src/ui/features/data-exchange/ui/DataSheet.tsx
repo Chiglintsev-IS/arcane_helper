@@ -1,13 +1,3 @@
-/**
- * Импорт и экспорт данных.
- *
- * Приложение живёт в браузере телефона, а браузер вправе очистить хранилище: выгрузка — единственный
- * способ не потерять персонажа. Загрузка принимает и выбранный файл, и вставленный текст — по той же
- * причине, по которой копия отдаётся двумя способами.
- *
- * Компонент презентационный: разбор и проверка живут в движке правил, здесь только ввод и вывод.
- */
-
 "use client";
 
 import { RULE_MARK } from "@/ui/shared/ui/rule";
@@ -29,14 +19,10 @@ export function DataSheet({
 }: {
   exportText: string;
   fileName: string;
-  /** Причина отказа от прошлой попытки загрузки или возврата к встроенным карточкам, или `null`. */
   error: string | null;
-  /** Чем играют прямо сейчас: слово правил, а подпись к нему — дело экрана. */
   catalogSource: string;
   onImport: (raw: string) => void;
-  /** Заменить сохранённое чистым Торном сборки: другого способа очистить хранилище на телефоне нет. */
   onStartOver: () => void;
-  /** Вернуть карточки из сборки. Без обработчика кнопки нет: возвращать нечем. */
   onRestoreBuiltInCatalog?: () => void;
   onClose: () => void;
 }) {
@@ -62,10 +48,6 @@ export function DataSheet({
       <h3 className="text-sm font-semibold">Выгрузка</h3>
       <DataCopy text={exportText} fileName={fileName} />
 
-      {/*
- Чем играют сейчас — раньше кнопки загрузки: игрок должен видеть, что именно он собирается
- заменить, а не узнавать об этом после.
- */}
       <h3 className="text-sm font-semibold">Каталог заклинаний</h3>
       <p className="text-xs text-ink-quiet">
         {catalogSource === "imported"
@@ -105,7 +87,6 @@ export function DataSheet({
         />
       </label>
 
-      {/* Причина отказа называет поле: «ошибка импорта» без деталей заставляет править JSON вслепую. */}
       {error === null ? null : (
         <p role="alert" className={`${RULE_MARK.reaction} p-2 text-xs ${SURFACE_GROUP_BARE}`}>
           {error}

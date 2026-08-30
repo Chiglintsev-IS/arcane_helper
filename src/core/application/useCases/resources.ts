@@ -1,11 +1,3 @@
-/**
- * Ручные правки ресурсов.
- *
- * Мастер вправе вернуть реакцию посреди раунда, а эффект предмета — потратить руну без заклинания.
- * Приложение не знает всех правил стола и не спорит: правка записывается в лог и отменяется как
- * всё остальное.
- */
-
 import { Character } from "@/core/domain/assembly/character";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 
@@ -24,12 +16,6 @@ export function adjustRunes(session: Session, delta: number, occasion: Occasion)
   );
 }
 
-/**
- * Последняя подсказка: одно применение до долгого отдыха.
- *
- * Приложение не знает ни повода, ни броска — оно ведёт запас, и потому единственный способ его
- * тронуть тот же, что у руны: рукой игрока и записью в логе.
- */
 export function adjustLastHint(session: Session, delta: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(
@@ -43,7 +29,6 @@ export function adjustLastHint(session: Session, delta: number, occasion: Occasi
   );
 }
 
-/** Ручное списание ячейки: эффект предмета или чужое заклинание вне модели приложения. */
 export function spendSpellSlot(session: Session, slotLevel: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(
@@ -54,7 +39,6 @@ export function spendSpellSlot(session: Session, slotLevel: number, occasion: Oc
   );
 }
 
-/** Возврат ошибочно потраченной ячейки. */
 export function refundSpellSlot(session: Session, slotLevel: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
   return commit(

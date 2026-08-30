@@ -2,18 +2,6 @@
 
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
-/**
- * Поле высотой в свой текст: набранное стоит в нём целиком.
- *
- * Растёт оно подложенной копией набранного: `textarea` своей высоты не считает, а высота,
- * посчитанная скриптом, отстаёт от набранного на кадр. Копия и поле лежат в одной ячейке сетки,
- * поэтому поле выходит ровно той высоты, какую копия заняла.
- *
- * Подписи у поля нет, а имя есть: слышащий экран получает вопрос целиком там, где зрячему хватает
- * места, на котором поле стоит.
- */
-
-/** Копия и поле обязаны переносить строки одинаково, иначе высота разойдётся с набранным. */
 const TEXT_SHAPE = "col-start-1 row-start-1 w-full text-sm leading-snug break-words whitespace-pre-wrap";
 
 export function GrowingField({
@@ -25,13 +13,10 @@ export function GrowingField({
   onCancel,
 }: {
   value: string;
-  /** Произносимое имя поля. */
   labelRu: string;
   autoFocus?: boolean;
   onChange: (value: string) => void;
-  /** «Ввод». Пустое набранное владельцу не уходит: просить его не о чем. */
   onSubmit: (value: string) => void;
-  /** Escape. Нет вовсе — полю нечего закрывать. */
   onCancel?: () => void;
 }) {
   return (

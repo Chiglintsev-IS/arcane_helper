@@ -15,10 +15,6 @@ import {
   withoutSlots,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 
-/**
- * Состояния для прогонов проверяются сами: фикстура, обещающая одно и делающая другое, ломает не
- * себя, а тот прогон, который ей поверил, — и разбираться начинают не с неё.
- */
 describe("состояния Торна операциями", () => {
   it("истраченные ячейки уходят из остатка, а максимум остаётся", () => {
     const spent = withSpentSlots(createThorne(), 1, 3);
@@ -70,7 +66,6 @@ describe("состояния Торна операциями", () => {
     const exhausted = withoutArcaneRecovery(createThorne());
     expect(exhausted.arcaneRecovery.remaining).toBe(0);
     expect(exhausted.spellSlots[1]?.remaining).toBe(4);
-    // Уже исчерпанный бюджет второй раз тратить нечем.
     expect(withoutArcaneRecovery(exhausted).arcaneRecovery.remaining).toBe(0);
   });
 
@@ -79,8 +74,6 @@ describe("состояния Торна операциями", () => {
   });
 
   it("знание отложенного дописывает книгу, а знакомое второй записи не заводит", () => {
-    // Повтор в списке запрещён инвариантом книги, и фикстура не вправе его создать: «Щит» Торн
-    // знает, а «Волшебный замок» отложен столом.
     const known = knowing(createThorne(), "arcane-lock");
     expect(known.spellbookSpellIds).toContain("arcane-lock");
     expect(knowing(known, "arcane-lock")).toBe(known);

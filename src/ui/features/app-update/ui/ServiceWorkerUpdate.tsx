@@ -1,16 +1,3 @@
-/**
- * Регистрация service worker и предложение обновиться.
- *
- * Обновление не применяется молча: незапрошенная перезагрузка посреди мастера применения потеряет
- * черновик, а посреди боя — внимание игрока. Новая версия ждёт в стороне, пока её не позовут.
- *
- * Проверка обновлений никогда не блокирует запуск: без сети регистрация просто не удаётся, и
- * приложение продолжает работать на прежней версии.
- *
- * Места на экране полоса себе не берёт: где стоят полосы оболочки, решает оболочка. Прикреплённая
- * к нижнему краю экрана, она накрыла бы панель режимов, а другой навигации в приложении нет.
- */
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -29,7 +16,6 @@ export function ServiceWorkerUpdate() {
         const installing = candidate.installing;
         if (installing === null) return;
         installing.addEventListener("statechange", () => {
-          // Новая версия готова, а прежняя ещё управляет страницей — значит, есть что предложить.
           if (installing.state === "installed" && navigator.serviceWorker.controller !== null) {
             setWaiting(installing);
           }
@@ -38,8 +24,6 @@ export function ServiceWorkerUpdate() {
     };
 
     void navigator.serviceWorker.register("./sw.js").then(watch, () => {
-      // Регистрация не удалась — приложение работает как обычная страница. Это не ошибка,
-      // о которой стоит сообщать: офлайна просто не будет до следующего удачного запуска.
     });
   }, []);
 
@@ -63,8 +47,6 @@ export function ServiceWorkerUpdate() {
           type="button"
           onClick={() => {
             waiting.postMessage("SKIP_WAITING");
-            // Перезагрузка после смены управляющего работника: иначе часть страницы осталась бы от
-            // прежней версии.
             navigator.serviceWorker.addEventListener("controllerchange", () => {
               window.location.reload();
             });

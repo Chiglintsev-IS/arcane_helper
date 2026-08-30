@@ -1,11 +1,3 @@
-/**
- * Магические ресурсы: чем платят за сотворение.
- *
- * Объект-значение владеет ячейками, рунами, последней подсказкой, дневным бюджетом магического
- * восстановления и отметкой короткого отдыха, которая его открывает. Снаружи их не правят напрямую —
- * иначе проверка границ пришлось бы повторять у каждого вызывающего, и однажды её бы забыли.
- */
-
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ResourcePool } from "@/core/domain/shared/resourcePool";
@@ -23,7 +15,6 @@ import { runesMaximum } from "./runes";
 
 import type { ArcanaStateData } from "./schema";
 
-/** Состояние, которым владеет объект-значение. */
 type ArcanaState = Pick<
   ArcanaStateData,
   | "spellSlots"
@@ -34,16 +25,13 @@ type ArcanaState = Pick<
 >;
 
 const RUNES_RU = "Рун";
-/** Имя ресурса: его называет владелец, и оттуда же его читает экран. */
 export const LAST_HINT_RU = "Последняя подсказка";
-/** Имя особенности, которую руна и оплачивает: её называют и строкой списка, и записью лога. */
 export const WARDING_SIGIL_RU = "Знаки ограждения";
 const ARCANE_RECOVERY_RU = "Бюджет магического восстановления";
 
 export class Arcana {
   private constructor(private readonly state: ArcanaState) {}
 
-  /** Владеет только своими полями: иначе агрегат затирал бы правки соседа. */
   private static readonly KEYS = [
     "spellSlots",
     "runes",
@@ -64,7 +52,6 @@ export class Arcana {
     return ResourcePool.from(this.state.runes, RUNES_RU);
   }
 
-  /** Перерасход разрешает только мастер: тогда остаток уходит в минус и виден как долг. */
   spendSlot(slotLevel: number, options: { allowOverdraft?: boolean } = {}): Arcana {
     return this.with({ spellSlots: spendSlot(this.state.spellSlots, slotLevel, options) });
   }
@@ -88,21 +75,14 @@ export class Arcana {
     return ResourcePool.from(this.state.lastHint, LAST_HINT_RU);
   }
 
-  /** Подсказку тратит и возвращает игрок: повод и бросок ведёт стол, здесь считается запас. */
   shiftLastHint(delta: number): Arcana {
     return this.with({ lastHint: this.lastHint.shift(delta, LAST_HINT_RU).toState() });
   }
 
-  /** Короткий отдых был: отметка держится до долгого отдыха, который её и снимает. */
   markShortRest(): Arcana {
     return this.with({ shortRestSinceLongRest: true });
   }
 
-  /**
-   * Почему «Магическое восстановление» сейчас не берётся; `null` — берётся.
-   *
-   * Причина названа словами, потому что и отказ, и погашенная кнопка обязаны говорить одно и то же.
-   */
   arcaneRecoveryUnavailability(): string | null {
     if (this.state.arcaneRecovery.remaining <= 0) {
       return "Дневной бюджет восстановления исчерпан до следующего долгого отдыха";
@@ -111,10 +91,6 @@ export class Arcana {
     return null;
   }
 
-  /**
-   * Магическое восстановление. Бюджет — общий на весь день между долгими отдыхами: книга тратит его
-   * одним применением, этот стол — частями, пока остаток не кончится.
-   */
   useArcaneRecovery(plan: SlotRecoveryPlan): Arcana {
     const budget = ResourcePool.from(this.state.arcaneRecovery, ARCANE_RECOVERY_RU);
     const spellSlots = applyArcaneRecovery(this.state.spellSlots, plan, budget.remaining);
@@ -124,7 +100,6 @@ export class Arcana {
     });
   }
 
-  /** Смена уровня: ячейки по таблице, руны по бонусу мастерства, бюджет восстановления по формуле. */
   resizedForLevel(wizardLevel: number, proficiencyBonus: number): Arcana {
     return this.with({
       spellSlots: resizeSlots(this.state.spellSlots, wizardLevel),
@@ -135,10 +110,6 @@ export class Arcana {
     });
   }
 
-  /**
-   * Долгий отдых возвращает всё разом. Отметка короткого отдыха снимается: восстановление снова
-   * ждёт короткого.
-   */
   restoredByLongRest(): Arcana {
     return this.with({
       spellSlots: restoreAllSlots(this.state.spellSlots),

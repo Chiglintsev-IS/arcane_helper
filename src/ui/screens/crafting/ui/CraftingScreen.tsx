@@ -26,23 +26,10 @@ import { usePreview } from "@/ui/shared/model/usePreview";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/**
- * «Ремесло»: что игрок узнал об ингредиентах и что из этого выйдет.
- *
- * Список знания и есть выбор состава: второй такой же список с теми же названиями отнял бы место и
- * заставил бы читать одно и то же дважды. Отмеченные строки собираются на верстак, и там же ядро
- * называет сложность, партию и причину, по которой работа не идёт.
- */
-
-/** Пустой замысел: стандартную форму называют правила, состав и удалённое набирает игрок. */
 function emptyDraft(standard: ChoicesView["recipeForm"]["standard"]): RecipeDraft {
   return { ...standard, kinds: [], mainProperty: null, suppressed: [], limitations: [] };
 }
 
-/**
- * Счёт раскрытого. Знаменатель у него берётся только от отметки стола: сколько у вида свойств
- * всего, приложение не знает, и потолок правил фактом вида не является.
- */
 function revealedCountRu(ingredient: IngredientKnowledgeView): string {
   const count = ingredient.properties.length;
   return ingredient.propertiesExhausted
@@ -50,12 +37,6 @@ function revealedCountRu(ingredient: IngredientKnowledgeView): string {
     : `раскрыто ${count} · следующее не исследовано`;
 }
 
-/**
- * Отметка состава стоит в той же строке, что и счёт раскрытого.
- *
- * Словом, а не одной лишь ступенью подложки: разница ступеней на тёмной теме видна хуже, чем
- * кажется при свете, а второй строкой отметка отняла бы место у каждого вида разом.
- */
 function chosenMarkRu(chosen: boolean, ingredient: IngredientKnowledgeView): string {
   const revealed = revealedCountRu(ingredient);
   return chosen ? `в составе · ${revealed}` : revealed;
@@ -160,7 +141,6 @@ export function CraftingScreen() {
     });
   };
 
-  /** Отказ остаётся в той шторке, в которой набирали; удача её закрывает. */
   const send = (command: Command, close: () => void): void => {
     void applyEdit(sessionStore, command).then((reason) => {
       setRefusalRu(reason);
@@ -168,7 +148,6 @@ export function CraftingScreen() {
     });
   };
 
-  /** Открытый вид берётся из снимка заново: записанное в шторке видно ей самой сразу. */
   const openedIngredient = crafting.ingredients.find((one) => one.nameRu === opened);
 
   const kits = crafting.workshop.apparatus

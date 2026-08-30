@@ -1,16 +1,3 @@
-/**
- * Словарь величин и форма вклада в них.
- *
- * Знают его все контексты, он не знает никого — как словарь монет и по той же причине: имя, которым
- * контексты называют друг другу предмет разговора, не принадлежит ни одному из них. Снаряжение,
- * каталог и эффекты называют цель вклада, не заглядывая в лист; лист складывает принесённое, не
- * спрашивая, кто прислал.
- *
- * Отправителя в форме вклада нет вовсе: заклинание, зелье и слово мастера приходят неразличимыми, и
- * счёт от происхождения не зависит. Кто прислал — знает тот, кто показывает разбор, и узнаёт это не
- * из вклада, а из пары «источник и вклад».
- */
-
 import { z } from "zod";
 
 export const ABILITIES = [
@@ -47,7 +34,6 @@ export const SKILL_IDS = [
 
 export type SkillId = (typeof SKILL_IDS)[number];
 
-/** Величины, имя которых ничем не уточняется: их по одной штуке на персонажа. */
 const SINGULAR_STAT_IDS = [
   "armorClass",
   "spellSaveDc",
@@ -69,7 +55,6 @@ export type StatId =
   | SaveStatId
   | SkillStatId;
 
-/** Имя величины характеристики: само значение, а не её модификатор. */
 export function abilityStatId(ability: Ability): AbilityStatId {
   return `ability:${ability}`;
 }
@@ -82,19 +67,11 @@ export function skillStatId(skill: SkillId): SkillStatId {
   return `skill:${skill}`;
 }
 
-/** Чем величина является: сама по себе, характеристика, её спасбросок или навык. */
 type StatKind = "singular" | "ability" | "save" | "skill";
 
-/**
- * Величины вместе с разбором имени: чем каждая является и к чему относится.
- *
- * Разбор объявлен здесь, а не выводится из имени тем, кто имя получил: составляет имя этот модуль, и
- * второй разбор той же строки разошёлся бы с составителем при первой же правке формы имени.
- */
 export const STATS: readonly {
   readonly id: StatId;
   readonly kind: StatKind;
-  /** Характеристика или навык, к которым величина относится; нет вовсе — величина сама по себе. */
   readonly of?: Ability | SkillId;
 }[] = [
   ...SINGULAR_STAT_IDS.map((id) => ({ id, kind: "singular" as const })),
@@ -109,60 +86,33 @@ export function isStatId(value: string): value is StatId {
   return STAT_IDS.some((id) => id === value);
 }
 
-/**
- * Категории доспеха — слово, которым вещь называет свою природу.
- *
- * Стоит рядом с величинами, а не у формулы: предел Ловкости по категории считает владелец Класса
- * Доспеха, а кольчуга обязана уметь сказать, что она тяжёлая, не зная про этот предел ничего.
- */
 export const ARMOR_CATEGORIES = ["light", "medium", "heavy"] as const;
 
 export type ArmorCategory = (typeof ARMOR_CATEGORIES)[number];
 
-/**
- * Способ счёта, принесённый снаружи: род и факты, которыми владелец величины достраивает формулу.
- *
- * Род нужен для применимости: «Доспехи мага» действуют, пока не принесён способ от доспеха, и это
- * видно по составу принесённого, а не запросом чужого состояния.
- */
 export type StatMethod =
   | {
       readonly family: "armor";
       readonly base: number;
-      /** Не названа — предела нет: находка без опознанной категории Ловкость не режет. */
       readonly category?: ArmorCategory | undefined;
     }
   | { readonly family: "spell"; readonly base: number };
 
-/**
- * Три вида вклада, и других не бывает: способ счёта соперничает с другими способами, прибавка
- * складывается с прибавками, назначение побеждает всё.
- */
 export type StatContribution =
   | { readonly stat: StatId; readonly kind: "method"; readonly method: StatMethod }
   | { readonly stat: StatId; readonly kind: "bonus"; readonly value: number }
   | { readonly stat: StatId; readonly kind: "assignment"; readonly value: number };
 
-/**
- * Откуда вклад пришёл — то, что показывают в разборе.
- *
- * Стоит рядом со вкладом, а не внутри него: счёт источника не читает вовсе, а вопрос «почему число
- * такое» без него не отвечается. Родов два — надетое и действующее; заклинание и зелье среди
- * действующего неразличимы, потому что для счёта они и есть одно.
- * Название — то, чем игрок вещь или заклинание назвал; подпись из него строит отображение.
- */
 export type ContributionSource = {
   readonly origin: "item" | "effect";
   readonly nameRu: string;
 };
 
-/** Пара, которой контексты отвечают листу: чей вклад и какой. */
 export type SourcedContribution = {
   readonly source: ContributionSource;
   readonly contribution: StatContribution;
 };
 
-/** Прибавки вещи и персонажа: величина и число. Ноль не хранится — он ни на что не влияет. */
 export const statBonusesSchema = z.partialRecord(z.enum(STAT_IDS), z.number().int());
 
 const statId = z.enum(STAT_IDS, { error: "Такой величины не бывает" });

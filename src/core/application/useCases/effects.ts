@@ -1,7 +1,3 @@
-/**
- * Концентрация и активные эффекты: завершение вручную, по провалу проверки и по замене.
- */
-
 import { WARDING_SIGIL_RU } from "@/core/domain/arcana/arcana";
 import { Character } from "@/core/domain/assembly/character";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
@@ -13,16 +9,12 @@ import { commit, type Occasion, type Session } from "@/core/application/session"
 import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 import { ACTION_SPENT_MESSAGES } from "@/core/application/casting/availability";
 
-
-/** Условие окончания ручного эффекта: игрок снимает его сам, приложение сроков не считает. */
 const MANUAL_EFFECT_END_CONDITION_RU = "Снимается вручную.";
 
-/** Подпись поправки к КД в списке эффектов. Опознаётся поправка признаком, а не этой строкой. */
 const ARMOR_CLASS_ADJUSTMENT_NAME_RU = "Поправка к КД";
 
 type ManualEffectInput = {
   nameRu: string;
-  /** Прикрытие союзника и подобные вклады; статус без числа поправку к защите не несёт. */
   armorClassBonus?: number;
 };
 
@@ -33,7 +25,6 @@ const CONCENTRATION_REASONS: Record<ConcentrationEnd, string> = {
   long_rest: "долгий отдых",
 };
 
-/** Завершает концентрацию и связанный эффект одной операцией. */
 export function endConcentration(
   session: Session,
   reason: ConcentrationEnd,
@@ -53,10 +44,6 @@ export function endConcentration(
   );
 }
 
-/**
- * Можно ли спасти провал проверки концентрации руной.
- * Проверка концентрации — спасбросок Телосложения, значит «Знаки ограждения» применимы.
- */
 export function wardingSigilAvailable(session: Session): boolean {
   const { character } = session;
   return (
@@ -65,7 +52,6 @@ export function wardingSigilAvailable(session: Session): boolean {
   );
 }
 
-/** «Знаки ограждения»: реакция и руна превращают провал спасброска в успех. */
 export function spendRuneOnWardingSigil(session: Session, occasion: Occasion): Session {
   const { character } = session;
   if (!wardingSigilAvailable(session)) {
@@ -88,7 +74,6 @@ export function spendRuneOnWardingSigil(session: Session, occasion: Occasion): S
   );
 }
 
-/** Активный эффект без заклинания и уровня ячейки: общая форма для статуса и для поправки к КД. */
 function buildManualEffect(
   nameRu: string,
   contributions: readonly StatContribution[],
@@ -108,15 +93,10 @@ function buildManualEffect(
   };
 }
 
-/** Поправка к защите как вклад: прибавка к Классу Доспеха и ничего больше. */
 function armorClassBonus(value: number): StatContribution {
   return { stat: "armorClass", kind: "bonus", value };
 }
 
-/**
- * Заводит активный эффект без заклинания: статус, которого нет в каталоге, либо временный вклад в
- * Класс Доспеха от союзника. Снимается тем же путём, что и любой другой активный эффект.
- */
 export function startManualEffect(session: Session, input: ManualEffectInput, occasion: Occasion): Session {
   const nameRu = input.nameRu.trim();
   if (nameRu === "") {
@@ -143,10 +123,6 @@ export function startManualEffect(session: Session, input: ManualEffectInput, oc
   );
 }
 
-/**
- * Заводит, заменяет или снимает временную поправку к КД в шапке ресурсов — одним переходом, как и
- * замена концентрации: новое значение вытесняет прежнее, а ноль снимает поправку вовсе.
- */
 export function setArmorClassAdjustment(session: Session, value: number, occasion: Occasion): Session {
   if (!Number.isInteger(value)) {
     throw new DomainError("Поправка к КД должна быть целым числом");
@@ -175,7 +151,6 @@ export function setArmorClassAdjustment(session: Session, value: number, occasio
   );
 }
 
-/** Ручное завершение активного эффекта. */
 export function endEffect(session: Session, effectId: string, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const { board, ended } = root.effects.end(effectId);

@@ -8,13 +8,8 @@ import {
   type SpellbookState,
 } from "@/core/domain/spellbook/schema";
 
-/** Книга целиком: те же поля и тот же доводчик, что собирает в полную схему сборка состояния. */
 const book = z.object(SPELLBOOK_FIELDS).superRefine(refineSpellbook);
 
-/**
- * Инварианты книги проверяются на состоянии самой книги: собирать ради них целого персонажа значило
- * бы проверять заодно и его правила. Что сборка вызывает доводчик — отдельный прогон полной схемы.
- */
 const BOOK: SpellbookState = {
   cantripIds: ["ray-of-frost"],
   spellbookSpellIds: ["web", "magic-missile"],

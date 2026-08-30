@@ -1,10 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Шторка подтверждения: вопрос ей приходит от того, кто спрашивает, а имя она берёт со своего
- * заголовка — вторая копия того же вопроса расходилась бы с ним молча.
- */
-
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

@@ -9,19 +9,15 @@ import {
   resolutionBadge,
 } from "@/ui/shared/lib/spellLabels";
 
-/** Числа заклинателя в том объёме, в каком их читает подпись. */
 function numbers(known: Pick<CastingView, "spellSaveDc" | "spellAttackModifier">): CastingView {
   return { ...known, spellcastingModifier: 4, preparedLimit: 11, preparedCount: 0 };
 }
 
-/** Числа Торна: оба включают +1 от предмета, и книга их не знает. */
 const THORNE = numbers({ spellSaveDc: 16, spellAttackModifier: 8 });
 
 describe("resolutionBadge (FR-211)", () => {
   it("все три способа устроены одной схемой: название проверки и число", () => {
     expect(resolutionBadge({ type: "spell_attack" }, THORNE).label).toBe("Атака d20+8");
-    // В книге Торна спасбросковых заклинаний пока нет: значок проверяется на данных напрямую,
-    // иначе он появится в приложении непроверенным вместе с первой карточкой 2 уровня.
     expect(resolutionBadge({ type: "saving_throw", savingThrow: "DEX" }, THORNE).label).toBe(
       "Спасбросок Ловкости КС 16",
     );
@@ -43,8 +39,6 @@ describe("resolutionBadge (FR-211)", () => {
   });
 
   it("не выдумывает характеристику, когда спасбросок в карточке не указан", () => {
-    // Схема требует характеристику при спасброске; отсутствие — испорченное состояние, а не повод
-    // угадать «Телосложение».
     expect(resolutionBadge({ type: "saving_throw" }, THORNE).label).toBe("Спасбросок КС 16");
   });
 
@@ -98,8 +92,6 @@ describe("область в двух формах", () => {
   });
 
   it("фигура, которой словарь ещё не знает, доезжает до экрана своим словом", () => {
-    // Договор ручается за непустую строку, а не за перечень: стена — фигура правил, падежа которой
-    // словарь ещё не знает, и скрыть её значило бы показать размер без того, чего он размер.
     expect(areaLabel({ shape: "wall", sizeFeet: 60 })).toBe("wall, 60 футов");
   });
 });

@@ -17,7 +17,6 @@ import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext"
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/** Почему в бою нет ни одной кнопки подготовки: счёт без этой строки обещает то, чего на экране нет. */
 const PREPARATION_OUT_OF_FIGHT = "Подготовку меняют вне боя";
 
 export function BookScreen() {
@@ -32,10 +31,6 @@ export function BookScreen() {
   const [hintOpen, setHintOpen] = useState(false);
   const [preparationRefusal, setPreparationRefusal] = useState<string | null>(null);
 
-  /**
-   * Поиск — способ дойти до строки, а не отбор: закрываясь, он отпускает список целиком. Иначе
-   * набранное слово продолжало бы прятать книгу, а поля, которое это объясняет, на экране уже нет.
-   */
   const closeSearch = (): void => {
     setSearchOpen(false);
     setFilters((current) => ({ ...current, query: "" }));
@@ -50,13 +45,8 @@ export function BookScreen() {
   const turn = snapshot.turn;
   const { inFight } = turn;
   const { casting } = snapshot;
-  // Строка того заклинания, которое набирают в мастере: способы, цена и вердикт приезжают ею.
   const castRow = snapshot.spells.find((candidate) => candidate.id === draft?.spellId) ?? null;
 
-  /*
-   * Отказ подготовки читается у счётчика, а не общей полосой: полоса стоит у верхнего края, кнопка
-   * — в строке списка, и один отказ, названный в двух местах, читается как два разных.
-   */
   const togglePreparation = async (spellId: string): Promise<void> => {
     const failure = await execute({ kind: "toggle_preparation", spellId });
     setPreparationRefusal(failure);
@@ -162,7 +152,6 @@ export function BookScreen() {
           onClose={() => setHintOpen(false)}
         />
       )}
-
 
       <CastWizard
         row={castRow}

@@ -1,18 +1,9 @@
-/**
- * Подсхема книги заклинаний: что персонаж знает, что подготовил и чем помечены варианты отыгрыша.
- *
- * Пределы и инварианты контекста объявляются в нём самом. Три инварианта книги проверяются поверх
- * всех её полей сразу, поэтому вынесены в доводчик: сборка вызывает его в своём `superRefine`, и
- * проверка остаётся одна на состояние, где бы это состояние ни собирали.
- */
-
 import { z } from "zod";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 import { nonEmpty } from "@/core/domain/shared/schema";
 
-/** Поля контекста для сборки полной схемы состояния. */
 export const SPELLBOOK_FIELDS = {
   cantripIds: z.array(nonEmpty),
   spellbookSpellIds: z.array(nonEmpty),
@@ -20,24 +11,11 @@ export const SPELLBOOK_FIELDS = {
   spellNotes: z.record(nonEmpty, nonEmpty),
 };
 
-/**
- * Состояние книги само по себе: поля и три её инварианта.
- *
- * Полная схема состояния персонажа собирается не из этой схемы, а из `SPELLBOOK_FIELDS` и вызова
- * доводчика — обёртка проверки не даёт `ZodObject`, а сборке нужен именно он.
- */
 const spellbookStateSchema = z.object(SPELLBOOK_FIELDS).superRefine(refineSpellbook);
 
 export type SpellbookState = DeepReadonly<z.infer<typeof spellbookStateSchema>>;
 
-/**
- * Инварианты книги, которые видны только по нескольким полям сразу.
- *
- * Первая находка на каждый инвариант и прерывает обход: перечислять все повторы значило бы вывалить
- * игроку список там, где испорчено само состояние, а починить его всё равно нечем.
- */
 export function refineSpellbook(value: SpellbookState, context: z.core.$RefinementCtx): void {
-  // Идентификаторы не дублируются ни в одной коллекции.
   for (const field of ["cantripIds", "spellbookSpellIds", "preparedSpellIds"] as const) {
     const ids = value[field];
     if (new Set(ids).size !== ids.length) {
@@ -49,7 +27,6 @@ export function refineSpellbook(value: SpellbookState, context: z.core.$Refineme
     }
   }
 
-  // Заговоры и книга заклинаний не пересекаются: заговор не занимает места в книге.
   const cantrips = new Set(value.cantripIds);
   for (const id of value.spellbookSpellIds) {
     if (cantrips.has(id)) {
@@ -62,7 +39,6 @@ export function refineSpellbook(value: SpellbookState, context: z.core.$Refineme
     }
   }
 
-  // Подготовленные — подмножество книги.
   const spellbook = new Set(value.spellbookSpellIds);
   for (const id of value.preparedSpellIds) {
     if (!spellbook.has(id)) {

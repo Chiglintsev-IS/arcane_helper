@@ -9,14 +9,6 @@ import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-/**
- * Хиты правятся там, где их получают и теряют, — в «Игре» и в «Привале».
- *
- * Максимум стоит здесь же четвёртой вкладкой, а не на «Листе»: его двигают уровень, кровавое
- * колдовство и слово мастера — всё это случается за столом, а не при заполнении листа. Поэтому
- * шторка отвечает на вопрос «что случилось», и нажатие в ней подтверждает случившееся, а не
- * сохраняет запись.
- */
 type Kind = "damage" | "heal" | "temporary" | "maximum";
 
 const TABS: { kind: Kind; label: string }[] = [
@@ -26,14 +18,8 @@ const TABS: { kind: Kind; label: string }[] = [
   { kind: "maximum", label: "Максимум" },
 ];
 
-/** Вопрос, на который отвечает шторка: правкой случившееся за столом не зовётся. */
 const QUESTION = "Что случилось";
 
-/**
- * Чем плитка зовёт эту шторку: тем же вопросом и тем же выбором, что стоят внутри. Собирается из
- * самих вкладок — приписанный руками перечень отстаёт от них молча, и обещание двери расходится с
- * тем, что за нею.
- */
 export const HIT_POINTS_EVENTS = `${QUESTION}: ${TABS.map((tab) =>
   tab.label.toLowerCase(),
 ).join(", ")}`;
@@ -64,13 +50,11 @@ function NumberField({
   labelRu: string;
   value: string;
   min: number;
-  /** Почему набранное не ушло. Причина стоит у поля, в котором набирали, а не поверх экрана. */
   reasonRu: string | null;
   onChange: (value: string) => void;
 }) {
   const reasonId = useId();
   return (
-    // Причина стоит рядом с полем, но вне подписи: внутри неё она стала бы частью имени поля.
     <div className="flex flex-col gap-1 text-sm">
       <label className="flex flex-col gap-1">
         <span className="font-medium">{labelRu}</span>
@@ -107,7 +91,6 @@ export function HitPointsSheet({
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
   hitPoints: SheetView["hitPoints"];
   onDamage: (damage: number, fire: boolean) => void;
@@ -128,7 +111,6 @@ export function HitPointsSheet({
 
   const maximumBase = requiredFieldNumber(baseText);
   const masterReduction = requiredFieldNumber(masterText);
-  // Незаполненное поле не спрашивают: спрашивать не о чем, пока число не набрано.
   const filled = required.allTyped([maximumBase, masterReduction]);
   const preview = usePreview(
     kind === "maximum" && filled ? { kind: "health_preview", maximumBase, masterReduction } : null,
@@ -222,7 +204,6 @@ export function HitPointsSheet({
       <p className="text-xs text-ink-quiet">{HINTS[kind]}</p>
 
       {kind === "maximum" ? (
-        // Снижение кровью ведёт кровавое колдовство: правка руками разошлась бы с почасовым возвратом.
         <p className="text-xs text-ink-quiet">
           Снижение кровью — {hitPoints.bloodReduction}, возвращается по часу и здесь не правится.
           Действующий максимум станет {effective ?? "—"}.
@@ -230,7 +211,6 @@ export function HitPointsSheet({
       ) : null}
 
       {kind === "damage" ? (
-        // Нажимают строку целиком, а не квадрат: высоту зоны даёт метка, та же, что у кнопок.
         <label className="flex min-h-11 items-center gap-2 text-sm">
           <input
             type="checkbox"

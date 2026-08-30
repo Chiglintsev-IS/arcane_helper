@@ -16,7 +16,6 @@ import {
 
 const session = () => ({ character: createThorne(), log: [] });
 
-/** Детерминированные часы: чистые функции время не изобретают. */
 function testOccasion(commandId = "command-1"): Occasion {
   let tick = 0;
   return {
@@ -54,7 +53,6 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("дневной бюджет восстановления сдвигается вместе с ячейками", () => {
-    // Половина уровня вверх: 4 на седьмом, 5 на девятом.
     expect(previewLevelChange(createThorne(), 9).changes).toContainEqual({
       of: "arcaneRecovery",
       before: 4,
@@ -63,7 +61,6 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("перебитый лимит подготовки за уровнем не идёт, и сдвига ему не обещают", () => {
-    // Слово мастера, назначившее число, — эффект: у него есть окончание, и лист его не хранит.
     const overridden = {
       ...createThorne(),
       activeEffects: [
@@ -101,7 +98,6 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("прибавка хитов названа слагаемыми: среднее за кость и Телосложение", () => {
-    // У Торна d6 (среднее 4) и Телосложение 16 (+3).
     expect(previewLevelChange(createThorne(), 8).hitPoints).toEqual({
       perDie: 4,
       dieSize: 6,
@@ -136,7 +132,6 @@ describe("смена уровня", () => {
 
     const after = changeLevel(indebted, { level: 9, hitPointMaximumBase: 72 }, occasion);
 
-    // Максимум первого уровня не двигается — долг остаётся висеть; пятый приходит неистраченным.
     expect(after.character.spellSlots[1]).toEqual({ maximum: 4, remaining: -1 });
     expect(after.character.spellSlots[5]).toEqual({ maximum: 1, remaining: 1 });
   });
@@ -165,7 +160,6 @@ describe("смена уровня", () => {
 
   it("бюджет магического восстановления следует за уровнем", () => {
     const after = changeLevel(session(), { level: 9, hitPointMaximumBase: 72 }, occasion);
-    // ceil(9 / 2) = 5, а остаток был полным — двигается вместе с максимумом.
     expect(after.character.arcaneRecovery).toEqual({ maximum: 5, remaining: 5 });
   });
 
@@ -271,5 +265,4 @@ describe("правка листа", () => {
     ).toThrow();
     expect(before.character.abilities.strength).toBe(8);
   });
-
 });

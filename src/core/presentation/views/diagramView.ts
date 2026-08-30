@@ -1,14 +1,3 @@
-/**
- * Проекция схемы ритуала: описание слоёв — в начерченный рисунок.
- *
- * Наружу уходит то, что рисуется, а не то, из чего оно собрано: имена знаков, руны надписи и печати
- * остаются внутри, потому что словарь знаков закрыт и принадлежит контенту. Дай наружу имя — и у
- * рисующего заведётся вторая таблица тех же знаков, которая молча не нарисует заведённый завтра.
- *
- * Порядок слоёв — порядок рисования: обвод, деления, надпись, звезда, знаки, оси, квадрат, печать,
- * угловые знаки. Тот же, в каком их выводят рукой.
- */
-
 import type { DiagramFigure, DiagramView } from "@/contract/views";
 
 import {
@@ -30,20 +19,12 @@ import type { RitualDiagram } from "@/core/domain/catalog/spell";
 
 type Mark = DiagramView["marks"][number];
 
-/** Доли внешнего радиуса, которыми схема пользуется сама: размеры знаков и вынос за обвод. */
 const RUNE_SIZE = 0.06;
 const RADIAL_GLYPH_SIZE = 0.09;
 const CORNER_GLYPH_SIZE = 0.07;
 const CORNER_RADIUS = 1.06;
-/** Доля клетки, которой пишется число квадрата: цифра не упирается в линии. */
 const NUMBER_SIZE = 0.42;
 
-/**
- * Штрих справочника знаков — фигурой рисунка.
- *
- * Незамкнутая ломаная договором разрешена, но ни один знак справочника ею не нарисован, поэтому
- * через контент эта ветвь недостижима: отображение проверяется прогоном напрямую.
- */
 export function figureOf(stroke: Stroke): DiagramFigure {
   const dashed = stroke.dashed === true ? { dashed: true } : {};
   switch (stroke.kind) {
@@ -78,7 +59,6 @@ export function figureOf(stroke: Stroke): DiagramFigure {
   }
 }
 
-/** Знак, поставленный в точку: слой называется один раз на знак, а не на каждый его штрих. */
 function glyphMark(
   layer: string,
   strokes: readonly Stroke[],
@@ -90,10 +70,7 @@ function glyphMark(
   return { layer, figures: placedStrokes(strokes, placement).map(figureOf) };
 }
 
-/** Рунная надпись по кругу: знак, которого нет в футарке, не рисуется — выдумывать его нечем. */
 function inscriptionMarks(inscription: NonNullable<RitualDiagram["inscription"]>): Mark[] {
-  // Посимвольный перебор строки, а не split(""): руны лежат вне BMP лишь частично, но перебор
-  // честнее и от этого не зависит.
   const runes = [...inscription.runes].map((char) => RUNE_BY_CHAR.get(char));
 
   return inscriptionPlacements(runes.length, absolute(inscription.radius)).flatMap(
@@ -113,7 +90,6 @@ function inscriptionMarks(inscription: NonNullable<RitualDiagram["inscription"]>
   );
 }
 
-/** Числовой квадрат: сетка три на три и девять чисел по клеткам. */
 function magicSquareMark(square: NonNullable<RitualDiagram["magicSquare"]>): Mark {
   const side = squareSide(absolute(square.radius));
   const cell = side / 3;
@@ -205,7 +181,6 @@ export function toDiagramView(diagram: RitualDiagram): DiagramView {
           glyphMark(
             "corner-mark",
             GLYPHS[id],
-            // По углам листа, а не на осях: диагонали — это index * 2 + 1 из восьми направлений.
             pointAt(absolute(CORNER_RADIUS), index * 2 + 1, 8),
             absolute(CORNER_GLYPH_SIZE),
           ),

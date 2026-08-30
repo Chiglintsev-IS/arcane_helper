@@ -1,10 +1,3 @@
-/**
- * Сотворение заклинания: подтверждённое применение со всеми следствиями одной записью лога.
- *
- * Сценарий сквозной — задевает книгу, схватку, ресурсы, жизнеспособность и эффекты сразу, — поэтому
- * живёт здесь, а не в домене: ни один объект-значение не вправе знать про остальные.
- */
-
 import { Character } from "@/core/domain/assembly/character";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
@@ -36,43 +29,23 @@ import { materialOf } from "@/core/application/casting/material";
 import { commit, type Occasion, type Session } from "@/core/application/session";
 import { deriveTurnEconomy, inFight } from "./turn";
 
-/** Способ оплаты определён правилами — здесь только его применение к состоянию. */
 type Payment = PaymentChoice;
 
 type CastRequest = {
   spell: Spell;
   mode: CastMode;
   payment: Payment;
-  /** Руна применяется только к сотворению, у которого есть уровень. */
   rune?: Rune;
-  /** Кому досталась «Руна жизни»: остальные руны цели не выбирают. */
   runeTarget?: RuneTarget;
-  /** Мастер разрешил исключение — предупреждения, которые оно снимает, не блокируют. */
   allowAnyway?: boolean;
-  /**
-   * Игрок согласился прервать идущую концентрацию. Исключением мастера это согласие не заменяется:
-   * выбор между двумя эффектами принадлежит игроку и делается на своём шаге.
-   */
   replaceConcentration?: boolean;
-  /**
-   * Потраченные Кости хитов и выпавшее на них. Есть только у заклинания, которое их тратит.
-   * Выпавшее приходит от игрока: кубик бросает он, приложение принимает результат и складывает.
-   */
   hitDice?: { count: number; rolled: number };
 };
 
-/** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
 function actionUsedBy(spell: Spell): TurnResource | undefined {
   return turnResourceFor(spell.castingTime.type);
 }
 
-/**
- * Оплата и то, чем она названа в логе.
- *
- * Созданная кровью ячейка пула не касается: она появляется и тратится тем же мгновением, и в
- * состоянии от неё остаются только отданные хиты. Прибавить её к пулу, чтобы тут же вычесть,
- * значило бы завести ресурс, которого правило не даёт.
- */
 function applyPayment(root: Character, request: CastRequest): { root: Character; note: string } {
   const { spell, mode, payment, allowAnyway = false } = request;
 
@@ -98,7 +71,6 @@ function applyPayment(root: Character, request: CastRequest): { root: Character;
   throw new DomainError("Заклинание с ячейкой требует способа оплаты");
 }
 
-/** Состояние персонажа меняет только руна, выбравшая его самого: чужие числа живут в объявлении. */
 function grantsToCaster(request: CastRequest): boolean {
   return request.rune === "life" && request.runeTarget !== "other";
 }
@@ -114,13 +86,6 @@ function applyRune(root: Character, request: CastRequest): Character {
   return spent.withVitality(spent.vitality.grantTemporary(lifeRuneTemporaryHitPoints(level)));
 }
 
-/**
- * Расходуемый компонент сгорает применением, и лог называет сгоревшее: молча уменьшившийся запас
- * читался бы за столом как ошибка приложения.
- *
- * Пустой сумке гореть нечем. Мастер вправе разрешить сотворение без компонента — вещи из этого
- * разрешения не берётся, и отказывать после разрешения приложению не за что.
- */
 function burnMaterial(root: Character, spell: Spell): { root: Character; note: string } {
   const material = materialOf(spell.components);
   if (material === undefined || !material.consumed || !root.equipment.carries(material.id)) {
@@ -132,7 +97,6 @@ function burnMaterial(root: Character, spell: Spell): { root: Character; note: s
   };
 }
 
-/** Что руна добавит к строке лога: применённая руна не должна менять хиты молча. */
 function runeNote(request: CastRequest): string {
   const level = castLevelOf(request.payment);
   if (request.rune === undefined || level === undefined) return "";
@@ -143,17 +107,10 @@ function runeNote(request: CastRequest): string {
   return ` · ${name}: ${points} временных хитов`;
 }
 
-/** Уровень сотворения, а без него — собственный уровень заклинания: заговор и ритуал не растут. */
 function slotLevelUsed(request: CastRequest): number {
   return castLevelOf(request.payment) ?? request.spell.level;
 }
 
-/**
- * Чем и когда закончится эффект.
- *
- * Длительность называется числом, а не словом «истечение»: «до истечения длительности» не отвечает
- * на единственный вопрос, который задают за столом, — сколько ещё держится.
- */
 function endConditionRu(duration: ActiveEffect["duration"], concentration: boolean): string {
   if (duration.type === "until_spell_ends") {
     return concentration ? "До конца концентрации; длительность особая." : "Длительность особая.";
@@ -162,12 +119,10 @@ function endConditionRu(duration: ActiveEffect["duration"], concentration: boole
   return concentration ? `Держится ${held} или до конца концентрации.` : `Держится ${held}.`;
 }
 
-/** Создаёт активный эффект, если заклинание продолжается. Мгновенное — не создаёт. */
 function buildEffect(request: CastRequest, occasion: Occasion): ActiveEffect | null {
   const { spell } = request;
   if (spell.duration.type === "instant") return null;
 
-  // Карточка называет срок особым — значит отмеряет его само заклинание, а не часы.
   const duration: ActiveEffect["duration"] =
     spell.duration.type === "special"
       ? { type: "until_spell_ends" }
@@ -184,19 +139,12 @@ function buildEffect(request: CastRequest, occasion: Occasion): ActiveEffect | n
     duration,
     isConcentration: spell.concentration,
     slotLevelUsed: slotLevelUsed(request),
-    // Вклады копируются, чтобы итог считался из одного состояния, без каталога.
     contributions: spell.contributions,
     ...(spell.repeatableAction === undefined ? {} : { repeatableAction: spell.repeatableAction }),
     endConditionRu: endConditionRu(duration, spell.concentration),
   };
 }
 
-/**
- * След пробуждённой руны на доске: имя руны, её число и мгновение, которым срок кончится.
- *
- * Имя эффекта — имя самой руны: в списке действующего игрок ищет её тем же словом, каким
- * прикладывал. Уровня заклинания у следа нет — есть уровень сотворения, от которого руна считана.
- */
 function buildRuneEffect(request: CastRequest, occasion: Occasion): ActiveEffect | null {
   const level = castLevelOf(request.payment);
   if (request.rune === undefined || level === undefined) return null;
@@ -216,7 +164,6 @@ function buildRuneEffect(request: CastRequest, occasion: Occasion): ActiveEffect
   };
 }
 
-/** Подтверждённое применение: оплата, действие, руна, концентрация, эффект — одной записью. */
 export function castSpell(session: Session, request: CastRequest, occasion: Occasion): Session {
   const { spell } = request;
 
@@ -228,12 +175,6 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
     mode: request.mode,
     payment: request.payment,
   });
-  /*
-   * Запрет исполняется по объявлению предиката, а не по списку кодов: перечень «что здесь важно»
-   * расходился с тем, чем предупреждение объявлено, и одно согласие снимало даже то, которое им не
-   * снимается. Мастер применения спрашивает те же согласия до подтверждения — сюда они приходят
-   * ответом игрока, а не догадкой сценария.
-   */
   const consents: Consents = {
     gm_exception: request.allowAnyway === true,
     ending_concentration: request.replaceConcentration === true,
@@ -250,11 +191,6 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
   const burned = burnMaterial(root, spell);
   root = burned.root;
 
-  /*
- * Раундовый эффект вне схватки не успевает начаться: раундов нет, значит эффект истёк бы в тот же
- * миг, в который родился. Ячейка при этом уже потрачена — сотворить игрок выбрал сам, и молча
- * вернуть её значило бы решать за него, что он ошибся. Со следом руны то же и по той же причине.
- */
   const inCombat = inFight(session);
   let expiredNote = "";
 
@@ -267,11 +203,6 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
     root = root.withEffects(root.effects.start(effect, occasion.now()));
   }
 
-  /*
- * Кости хитов и лечение по ним — часть того же сотворения, а не отдельная операция: игрок должен
- * вернуть ячейку, кости и хиты одним нажатием. Обычное лечение здесь не годится — оно отказывает
- * при полных хитах, а заклинание на полных хитах обязано проходить, просто впустую.
- */
   let hitDiceNote = "";
   if (request.hitDice !== undefined && spell.hitDiceCost !== undefined) {
     const { count, rolled } = request.hitDice;
@@ -280,7 +211,6 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
     const { vitality, restored } = spentDice.healUpTo(healed);
     root = root.withVitality(vitality);
     const spentLabel = ` · ${count} ${count === 1 ? "кость" : "кости"} хитов`;
-    // Молчание про нулевое лечение читалось бы как ошибка приложения, а это выбор игрока.
     hitDiceNote = restored === 0 ? `${spentLabel}, хиты уже на максимуме` : `${spentLabel}, вылечено ${restored}`;
   }
 
@@ -297,8 +227,6 @@ export function castSpell(session: Session, request: CastRequest, occasion: Occa
       summaryRu: `${spell.nameRu} — ${how}${runeNote(request)}${burned.note}${hitDiceNote}${expiredNote}`,
       spellId: spell.id,
       slotLevel: level,
-      // Вне схватки ход не отслеживается, значит и тратить нечего: записанное действие
-      // предъявлялось бы игроку в бою, потому что до отметки о начале боя границы в логе нет.
       ...(used === undefined || !inCombat ? {} : { actionUsed: used }),
     },
     occasion,

@@ -1,7 +1,6 @@
 import type { ConcentrationCheckView } from "@/contract/views";
 import { CHECK_DIE_RU } from "@/shared/language";
 
-/** Подпись к проверке: вердикт приходит из правила, здесь остаётся выбор слов. */
 export function checkGuidanceRu(check: ConcentrationCheckView): string {
   switch (check.outcome) {
     case "any_roll":

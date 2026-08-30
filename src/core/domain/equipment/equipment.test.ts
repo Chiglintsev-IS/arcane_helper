@@ -8,7 +8,6 @@ import type { SourcedContribution, StatId } from "@/core/domain/shared/stats";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 
-/** Сколько принесённые вклады прибавляют к величине: снаряжение итога не считает, а прибавки видны. */
 function bonusFor(brought: readonly SourcedContribution[], stat: StatId): number {
   return brought.reduce(
     (sum, { contribution }) =>
@@ -17,7 +16,6 @@ function bonusFor(brought: readonly SourcedContribution[], stat: StatId): number
   );
 }
 
-/** Способы счёта, принесённые к Классу Доспеха: их спор разрешает свёртка, а не снаряжение. */
 function armorMethods(brought: readonly SourcedContribution[]) {
   return brought.flatMap(({ source, contribution }) =>
     contribution.kind === "method" && contribution.method.family === "armor"
@@ -58,7 +56,6 @@ const items = (...definitions: ItemDefinition[]) => Items.of({ itemDefinitions: 
 
 describe("снаряжение", () => {
   it("вклад приходит только от надетых вещей", () => {
-    // Вещи Торна: фокусировка +1 к КС и атаке, мантия +1 и плащ +1 к защите, плащ +1 к спасброскам.
     const thorne = createThorne();
     const brought = Equipment.of(thorne).contributions(Items.of(thorne));
 
@@ -220,7 +217,6 @@ describe("снаряжение", () => {
     const thorne = createThorne();
     expect(Equipment.of(thorne).replacesFreeComponents(Items.of(thorne))).toBe(true);
 
-    // Та же вещь, снятая в сумку: фокусировкой она быть не перестала, а проводить магию нечем.
     const stowed = withoutSpellcastingFocus(thorne);
     expect(Equipment.of(stowed).replacesFreeComponents(Items.of(stowed))).toBe(false);
   });

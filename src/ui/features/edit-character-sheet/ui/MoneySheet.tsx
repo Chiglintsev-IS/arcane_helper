@@ -7,21 +7,13 @@ import { currencyLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField } from "./EditSheetFrame";
 
-/**
- * Кошелёк: три монеты стола — золото, серебро, медь, — каждая своим полем.
- *
- * Правится итогом, а не приходом и расходом: за столом монеты пересчитывают («осталось 215 зм»),
- * а арифметику сделки делает игрок — приложение не знает курса сделки и торга.
- */
 export function MoneySheet({
   money,
   onSave,
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  /** Кошелёк в порядке достоинства: перечень монет стола называет владелец, а не шторка. */
   money: BagView["money"];
   onSave: (money: Record<string, number>) => void;
   onCancel: () => void;

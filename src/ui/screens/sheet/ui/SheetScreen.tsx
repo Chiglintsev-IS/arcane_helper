@@ -16,14 +16,6 @@ import { ProficienciesSheet } from "@/ui/features/edit-character-sheet/ui/Profic
 import { applyEdit } from "@/ui/shared/model/editing";
 import { SURFACE_CHOSEN, SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
-/**
- * Две вкладки листа: чем бросают и кто он.
- *
- * Вопроса у стола два, и заданы они в разные минуты. «Броски» спрашивают, когда мастер попросил
- * бросить, — и ответ обязан стоять целиком, без прокрутки. «Кто он» спрашивают раз за вечер, и
- * прокрутка там ничего не стоит. Одной колонкой оба ответа занимали три экрана, и первый из них
- * приходилось искать прокруткой в ту самую секунду, которой за столом нет.
- */
 const TABS = [
   { id: "rolls", labelRu: "Броски" },
   { id: "identity", labelRu: "Кто он" },
@@ -35,13 +27,11 @@ export function SheetScreen() {
   const { session: sessionStore } = useStores();
   const { sheet, choices } = useSession((state) => state.snapshot)!;
 
-  /** Начинают с бросков: за столом лист открывают, чтобы назвать число, а не чтобы вспомнить вид. */
   const [tab, setTab] = useState<Tab>("rolls");
   const [open, setOpen] = useState<SheetEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const panelId = useId();
 
-  /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
   const save = async (command: Command, close: () => void): Promise<void> => {
     const reason = await applyEdit(sessionStore, command);
     setRefusal(reason);
@@ -62,7 +52,6 @@ export function SheetScreen() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Обе вкладки видны всегда: показанная отмечена акцентом, вторая остаётся нажимаемой. */}
       <div role="tablist" className="flex shrink-0 gap-1 px-3 pt-1.5">
         {TABS.map((candidate) => (
           <button

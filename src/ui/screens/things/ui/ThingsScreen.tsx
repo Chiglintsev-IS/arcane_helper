@@ -13,10 +13,6 @@ import { applyEdit } from "@/ui/shared/model/editing";
 import { SURFACE_CHOSEN, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 
-/**
- * Части «Вещей»: с вещью делают одно из трёх — надевают, тратят счётом или покупают. Смешать их
- * нельзя, а трёх ярлыков в панели они не стоят.
- */
 const THINGS_PARTS = ["gear", "bag", "shopping"] as const;
 
 type ThingsPart = (typeof THINGS_PARTS)[number];
@@ -27,12 +23,10 @@ const PART_TITLES: Record<ThingsPart, string> = {
   shopping: "Покупки",
 };
 
-/** Первым — что на нём: за столом об этом спрашивают чаще, чем о запасах и лавке. */
 const DEFAULT_PART: ThingsPart = "gear";
 
 const STORAGE_KEY = "thingsPart";
 
-/** Что открыто поверх вещей. Вещь названа своим полем, а не приставкой в строке. */
 type ThingsEdit = { of: "money" } | { of: "item"; id: string };
 
 function PartSwitcher({
@@ -79,8 +73,6 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
   const [open, setOpen] = useState<ThingsEdit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  // Статическая сборка отдаёт разметку без хранилища: прочитанный до гидратации выбор разошёлся бы
-  // с отданным сервером.
   useEffect(() => {
     if (initialPart === undefined) {
       setPart(readRemembered(STORAGE_KEY, THINGS_PARTS, DEFAULT_PART));
@@ -89,7 +81,6 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
 
   const execute = sessionStore.getState().execute;
 
-  /** Правка уходит владельцу: прошла — шторка закрывается, отказал — причина остаётся в шторке. */
   const save = async (command: Command): Promise<void> => {
     const reason = await applyEdit(sessionStore, command);
     setRefusal(reason);

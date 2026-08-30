@@ -9,14 +9,6 @@ import { DIRECTION_LABELS, labelled } from "@/ui/entities/crafting/lib/labels";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-/**
- * Мастерская: чем алхимик оснащён по каждому направлению и каким из них обучен.
- *
- * Оба поля стоят в одной строке направления, потому что отвечают на один вопрос — что по нему
- * вообще возможно: набор задаёт предел работы, обучение — бонус её проверки. Разведённые по двум
- * спискам, они заставили бы читать про зельеварение дважды.
- */
-
 const NO_KIT_RU = "Набора нет";
 
 export function WorkshopSheet({
@@ -28,7 +20,6 @@ export function WorkshopSheet({
 }: {
   workshop: CraftingView["workshop"];
   choices: ChoicesView;
-  /** Почему записать не вышло; нет вовсе — отказа не было. */
   refusalRu: string | null;
   onConfirm: (next: CommandOf<"set_alchemy_workshop">) => void;
   onCancel: () => void;

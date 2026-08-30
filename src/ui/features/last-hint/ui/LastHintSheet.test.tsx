@@ -1,9 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * Чтение о последней подсказке и её расход: приложение ведёт запас, повод и бросок ведёт стол.
- */
-
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
@@ -18,7 +14,6 @@ afterEach(cleanup);
 
 const RESOURCES = testSnapshot().resources;
 
-/** Подсказка истрачена: состояние собрано операцией владельца, а не набранным числом. */
 const SPENT = testSnapshot(withoutLastHint(createThorne())).resources;
 
 describe("расход последней подсказки (FR-309)", () => {
@@ -36,7 +31,6 @@ describe("расход последней подсказки (FR-309)", () => {
     await user.click(screen.getByRole("button", { name: "Потратить: Последняя подсказка" }));
 
     expect(deltas).toEqual([-1]);
-    // Полный пул возвращать нечего: «+» отказывает пределом, а не молча уводит выше максимума.
     expect(
       screen.getByRole("button", { name: "Вернуть: Последняя подсказка" }).hasAttribute("disabled"),
     ).toBe(true);

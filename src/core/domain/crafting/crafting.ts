@@ -1,11 +1,3 @@
-/**
- * Ремесло: что игрок узнал про виды ингредиентов — и ничего о том, сколько их у него в сумке.
- *
- * Отдельно от снаряжения намеренно: снаряжение отвечает «сколько этого у меня», ремесло — «что я про
- * это знаю». Знание переживает и опустевший запас, и уничтоженный образец, а свести их может только
- * тот, кому нужны оба ответа сразу.
- */
-
 import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
 import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -29,7 +21,6 @@ type CraftingState = {
   knownRecipes: readonly KnownRecipe[];
 };
 
-/** Видов в составе — от двух до четырёх: меньше не даёт совпадения, больше справочник не берёт. */
 const FEWEST_KINDS = 2;
 const MOST_KINDS = 4;
 
@@ -41,12 +32,10 @@ function tooManyKindsRefusal(): string {
   return "Состав собирается не больше чем из четырёх разных видов ингредиентов";
 }
 
-/** Отказ выбрать за игрока, какая из двух записанных редкостей одного свойства настоящая. */
 function unevenRarityRefusal(name: string, sources: readonly string[]): string {
   return `Свойство «${name}» записано с разной редкостью у видов: ${sources.join(", ")}`;
 }
 
-/** Номера, по которым идёт целенаправленное исследование, — в порядке справочника. */
 const RESEARCH_NUMBERS = [1, 2, 3, 4];
 
 function nothingLeftRefusal(nameRu: string): string {
@@ -83,37 +72,22 @@ export class Crafting {
     return this.data;
   }
 
-  /** Чем алхимик работает: качество набора по каждому направлению, где он есть. */
   get apparatus(): Apparatus {
     return this.state.alchemyApparatus;
   }
 
-  /** Обучен ли алхимик направлению: от этого зависит бонус мастерства в его проверке. */
   studies(direction: AlchemyDirection): boolean {
     return this.state.studiedDirections.includes(direction);
   }
 
-  /** Записывает мастерскую целиком: оснащение и обучение — один и тот же факт об алхимике. */
   withWorkshop(workshop: unknown): Crafting {
     return new Crafting({ ...this.state, ...alchemyWorkshopOf(workshop) });
   }
 
-  /**
-   * Чем работа прибавляется к броску разработки.
-   *
-   * Числа приходят доводом с листа: своих у ремесла нет и быть не может — бонус мастерства и
-   * модификатор характеристики принадлежат листу, и второй их счёт разошёлся бы с ним молча.
-   */
   checkFor(directions: readonly AlchemyDirection[], numbers: CheckNumbers): DevelopmentCheck {
     return developmentCheck(directions, this.state.studiedDirections, numbers);
   }
 
-  /**
-   * Записан ли рецепт настолько, что его повторяют без броска.
-   *
-   * Рецепт с отдельным риском записан, но проверки не отменяет: справочник требует её для каждой
-   * его партии. Оснащение здесь не спрашивается — на него ответит сама работа, отказом с причиной.
-   */
   knows(formula: RecipeFormula): boolean {
     const signature = recipeSignature(formula);
     return this.state.knownRecipes.some(
@@ -121,7 +95,6 @@ export class Crafting {
     );
   }
 
-  /** Записывает разработанный рецепт. Записанный второй раз второй записи не заводит. */
   recordRecipe(formula: RecipeFormula, risky: boolean): Crafting {
     const signature = recipeSignature(formula);
     const others = this.state.knownRecipes.filter(
@@ -130,7 +103,6 @@ export class Crafting {
     return new Crafting({ ...this.state, knownRecipes: [...others, { formula, risky }] });
   }
 
-  /** Вид опознаётся своим названием: двух записей об одном виде не бывает. */
   find(nameRu: string): IngredientKnowledge | undefined {
     return this.data.find((ingredient) => ingredient.nameRu === nameRu);
   }
@@ -143,10 +115,6 @@ export class Crafting {
     return found;
   }
 
-  /**
-   * Записывает вид ингредиента. Второе такое же название вторую запись не заводит: игрок вернулся к
-   * тому же корню, а не завёл новый.
-   */
   noteIngredient(nameRu: string): Crafting {
     const noted = ingredientKnowledgeOf({ nameRu });
     if (this.find(noted.nameRu) !== undefined) return this;
@@ -157,12 +125,6 @@ export class Crafting {
     return this.with(this.data.map((one) => (one.nameRu === nameRu ? ingredient : one)));
   }
 
-  /**
-   * Раскрывает свойство под его номером.
-   *
-   * Занятый номер и повторное свойство отвергает объявление знания: инвариант у него один, и вторая
-   * проверка здесь разошлась бы с ним при первой же правке предела.
-   */
   revealProperty(nameRu: string, property: RevealedProperty): Crafting {
     const known = this.located(nameRu);
     return this.replacing(
@@ -171,13 +133,6 @@ export class Crafting {
     );
   }
 
-  /**
-   * Отмечает, что свойств у вида больше нет, — и снимает отметку тем же путём.
-   *
-   * Установить это приложению не из чего: справочник называет потолок глубины и молчит о том,
-   * сколько свойств у корня. Отметку кладёт стол, и снимается она так же, как ставится, — узнанное
-   * за столом бывает и ошибкой.
-   */
   markPropertiesExhausted(nameRu: string, exhausted: boolean): Crafting {
     const known = this.located(nameRu);
     return this.replacing(
@@ -186,13 +141,6 @@ export class Crafting {
     );
   }
 
-  /**
-   * Какое свойство вида исследуют следующим: наименьший нераскрытый номер.
-   *
-   * Целенаправленно исследуют по порядку, и через нераскрытое не перепрыгивают. Раскрытое глубже
-   * порядка этому не мешает: экспериментальное смешивание открывает и то, что лежит ниже, а
-   * пропуск в середине остаётся тем самым следующим номером.
-   */
   private nextResearchable(nameRu: string): number {
     const revealed = new Set(this.located(nameRu).properties.map((property) => property.number));
     const next = RESEARCH_NUMBERS.find((number) => !revealed.has(number));
@@ -200,12 +148,6 @@ export class Crafting {
     return next;
   }
 
-  /**
-   * Во что обойдётся раскрытие названного свойства вида.
-   *
-   * Оснащение берётся записанное, порядок стережёт сам вид: цену свойства, до которого ещё не
-   * добрались, называть незачем — за неё не возьмутся.
-   */
   researchPlanFor(
     nameRu: string,
     number: number,
@@ -217,21 +159,11 @@ export class Crafting {
     return researchPlan({ number, rarity, direction, apparatus: this.apparatus });
   }
 
-  /** Забывает вид целиком: записанное по ошибке иначе осталось бы навсегда. */
   forgetIngredient(nameRu: string): Crafting {
     this.located(nameRu);
     return this.with(this.data.filter((ingredient) => ingredient.nameRu !== nameRu));
   }
 
-  /**
-   * Свойства, совпавшие у выбранных видов, — все до одного.
-   *
-   * Все, а не то, ради которого состав задуман: пока состав не очищен, потребитель подвергается
-   * каждому совпавшему свойству, и умолчать о непрошенном значит соврать о том, что он выпьет.
-   *
-   * Источником считается вид, а не порция: две порции одного корня остаются одним источником и
-   * совпадения с самим собой не дают.
-   */
   matches(kinds: readonly string[]): readonly PropertyMatch[] {
     const distinct = [...new Set(kinds)];
     if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
@@ -265,32 +197,14 @@ export class Crafting {
       }));
   }
 
-  /**
-   * Сложность рецепта: справочник считает её от совпавшего в составе, а не от одного лишь замысла.
-   *
-   * Здесь, а не в двух местах: совпадения выясняются по записанному знанию, и второй вычислитель
-   * сложности разошёлся бы с этим знанием при первой же правке справочника.
-   */
   difficultyOf(formula: RecipeFormula, apparatus: Apparatus): RecipeDifficulty {
     return recipeDifficulty(this.matches(formula.kinds), formula, apparatus);
   }
 
-  /**
-   * Что выйдет из заложенной партии: время, расходники и число готовых единиц.
-   *
-   * Сложность выше предела оснащения — не «сложно», а невозможно, и отказ называет, чем именно
-   * набрано лишнее: погашенная кнопка на этот вопрос не отвечает.
-   */
   batchOf(formula: RecipeFormula, apparatus: Apparatus, portions: number): Batch {
     return batchFrom(this.difficultyOf(formula, apparatus), apparatus, portions);
   }
 
-  /**
-   * Направления, которых касается раскрытое у вида.
-   *
-   * Направление читается по названию свойства, а не хранится рядом с ним: записанное вторым местом,
-   * оно разошлось бы с перечнем при первой же правке справочника, и молча.
-   */
   directionsOf(nameRu: string): readonly AlchemyDirection[] {
     const known = this.located(nameRu);
     return [...new Set(known.properties.map((property) => alchemyDirectionOf(property.nameRu)))];

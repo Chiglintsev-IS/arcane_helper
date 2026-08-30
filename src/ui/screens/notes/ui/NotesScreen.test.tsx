@@ -1,12 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * «Заметки» на настоящем ядре и настоящем хранилище: моков нет.
- *
- * Экран проверяется сам по себе, без оболочки: шторок у него нет вовсе, а запись правится в своей
- * строке — там же, где стоит.
- */
-
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -17,7 +10,6 @@ import { NotesScreen } from "@/ui/screens/notes/ui/NotesScreen";
 
 const BARON = "Барон обещал мост";
 
-/** Запись длиной в три строки узкого экрана: на ней и видно, сколько поле показывает. */
 const LONG =
   "Барон обещал мост к весне, но мельник видел волка у брода и просит проводить его до города, покуда светло и дорога суха";
 
@@ -25,7 +17,6 @@ const EMPTY_RU = "Пока ничего не записано.";
 
 type User = ReturnType<typeof userEvent.setup>;
 
-/** Ввод новой записи: одно поле, отправка по «Ввод». */
 async function write(user: User, text: string): Promise<void> {
   await user.type(screen.getByRole("textbox", { name: "Заметка" }), `${text}{Enter}`);
 }
@@ -48,7 +39,6 @@ describe("режим «Заметки» (FR-321)", () => {
 
     expect(screen.getByRole("button", { name: `Правка: ${BARON}` })).toBeDefined();
 
-    // Ядро собирается заново над тем же хранилищем: так открывается приложение на следующий день.
     before.unmount();
     renderOn(await storesOver(storage), <NotesScreen />);
 
@@ -77,7 +67,6 @@ describe("режим «Заметки» (FR-321)", () => {
     const edited = "Правка: Барон обещал мост к весне";
     expect(screen.getByRole("button", { name: edited })).toBeDefined();
 
-    // Убрать можно только раскрытую запись: возврата у удаления нет.
     await user.click(screen.getByRole("button", { name: edited }));
     await user.click(screen.getByRole("button", { name: "Убрать: Барон обещал мост к весне" }));
 
@@ -91,11 +80,8 @@ describe("режим «Заметки» (FR-321)", () => {
 
     await user.click(screen.getByRole("button", { name: `Правка: ${LONG}` }));
 
-    // Раскрытая строка показывает запись целиком: уместившееся в одну строку — не вся запись, а её
-    // хвост, и опечатку в середине пришлось бы искать прокруткой вслепую.
     expect(rows()[0]?.textContent).toContain(LONG);
 
-    // Новая запись набирается таким же полем: у правки и у ввода способ один.
     await user.keyboard("{Escape}");
     await user.type(screen.getByRole("textbox", { name: "Заметка" }), LONG);
 
@@ -105,8 +91,6 @@ describe("режим «Заметки» (FR-321)", () => {
   it("имя поля и кнопки поиска остаётся произносимым, а места не занимает (FR-321)", async () => {
     await renderWithStores(<NotesScreen />);
 
-    // Имя режима, написанное внутри единственного поля экрана, — то же слово дважды: место оно
-    // отнимает у самой записи. Слышащий экран получает вопрос целиком и без подписи.
     expect(screen.getByRole("textbox", { name: "Заметка" })).toBeDefined();
     expect(screen.queryByText("Заметка")).toBeNull();
     expect(screen.getByRole("button", { name: "Поиск по слову" }).textContent).toBe("");

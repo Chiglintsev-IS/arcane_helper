@@ -5,21 +5,11 @@ import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
 import { ItemSection } from "@/ui/shared/ui/ItemSection";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-/** Категория надеваемого: остальные вещи считают, а не надевают, и живут они в сумке. */
 const GEAR = "gear";
 
-/** Заголовки разделов: они же — доступные имена списков, и по ним строка находится. */
 const WORN = "На мне";
 const SPARE = "Про запас";
 
-/**
- * Экипировка: защита, надетое и запас надеваемого.
- *
- * Компонент презентационный: состояние приходит параметрами, операции выбирает экран. Раздел
- * отвечает на вопрос «где вещь», строка — на вопрос «что с ней сделать»: глагол у строки один, и он
- * тот, которым в этом разделе пользуются. Вещь, надетая частью, стоит в обоих разделах — это два
- * разных числа одной вещи, и одна строка на оба заставляла бы гадать, о котором говорит глагол.
- */
 export function Gear({
   bag,
   stats,
@@ -28,7 +18,6 @@ export function Gear({
   onAdjustWornCount,
 }: {
   bag: BagView;
-  /** Величины с разбором: ими подписаны прибавки вещи. */
   stats: ChoicesView["stats"];
   onOpenItem: (id: string) => void;
   onAddItem: (kind: string, nameRu: string) => void;
@@ -37,8 +26,6 @@ export function Gear({
   const { items, armorClass } = bag;
   const gear = items.filter((item) => item.kind === GEAR);
   const worn = gear.filter((item) => item.wornCount > 0);
-  // Про запас — всё, что не на нём: и лежащее в сумке, и кончившееся нулём. Ноль — состояние: вещь,
-  // от которой не осталось ни одной, убирается из своей шторки, а не пропадает с экрана сама.
   const spare = gear.filter((item) => item.bagCount > 0 || item.wornCount === 0);
 
   return (
@@ -94,10 +81,6 @@ export function Gear({
                 countRu={`в сумке ${item.bagCount}`}
                 onOpen={() => onOpenItem(item.id)}
               >
-                {/*
-                 * Надеть нечего — глагола нет вовсе: причину погашенной кнопки на строке назвать
-                 * нечем, а число рядом уже говорит, что запаса не осталось.
-                 */}
                 {item.bagCount === 0 ? null : (
                   <button
                     type="button"

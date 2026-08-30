@@ -29,7 +29,6 @@ const RING_ID = Items.idFromName(ring.nameRu);
 const potions = { nameRu: "Зелье лечения", kind: "consumable" as const };
 const POTION_ID = Items.idFromName(potions.nameRu);
 
-/** Фокусировка Торна: её ищут по отметке вещи, а имя вещи игрок вправе переписать. */
 const FOCUS_ID =
   Items.of(createThorne()).all.filter((item) => item.spellcastingFocus === true)[0]?.id ?? "";
 
@@ -39,7 +38,6 @@ function spellCard(id: string): Spell {
   return found;
 }
 
-/** «Доспехи мага»: материальный компонент без стоимости — тот самый, который закрывает фокусировка. */
 const mageArmor = spellCard("mage-armor");
 
 describe("правка снаряжения", () => {
@@ -49,7 +47,6 @@ describe("правка снаряжения", () => {
     expect(Equipment.of(stacked.character).bagCount(POTION_ID)).toBe(2);
     expect(stacked.log[0]?.summaryRu).toBe("Добавлено: Зелье лечения (стало 1)");
     expect(stacked.log[1]?.summaryRu).toBe("Добавлено: Зелье лечения (стало 2)");
-    // Пополнение обратимо, как всякая правка: запас возвращается к прежнему числу.
     expect(Equipment.of(undoLast(stacked).character).bagCount(POTION_ID)).toBe(1);
   });
 
@@ -74,7 +71,6 @@ describe("правка снаряжения", () => {
     const after = adjustWornCount(carried, RING_ID, 1, occasion);
     const sheet = Character.of(after.character).sheet;
 
-    // Торн уже носит мантию и плащ защиты (по +1 к КД каждый): к их прибавке добавляется кольцо.
     expect(sheet.value("armorClass")).toBe(15);
     expect(sheet.value(saveStatId("constitution"))).toBe(5);
     expect(after.character.abilities.constitution).toBe(16);
@@ -90,7 +86,6 @@ describe("правка снаряжения", () => {
     const worn = adjustWornCount(editItem(addItem(session(), ring, occasion), bonusedRing, occasion), RING_ID, 1, occasion);
     const removedFromBody = adjustWornCount(worn, RING_ID, -1, occasion);
 
-    // Снятое кольцо перестаёт считаться: остаётся только прибавка уже надетой мантии и плаща.
     expect(Character.of(removedFromBody.character).sheet.value("armorClass")).toBe(14);
     expect(removedFromBody.log.at(-1)?.summaryRu).toBe("Снято: Кольцо защиты");
     expect(Character.of(undoLast(removedFromBody).character).sheet.value("armorClass")).toBe(15);
@@ -116,7 +111,6 @@ describe("правка снаряжения", () => {
   });
 
   it("запас вещи, которой нет среди заведённых, отказ называет её идентификатором", () => {
-    // Запас без вещи — след прежнего сохранения: имени у него нет, и выдумывать его нечем.
     const stocked = adjustBagCount(session(), "призрак", 1, occasion);
     expect(() => removeItem(stocked, "призрак", occasion)).toThrow(/«призрак»/);
   });
@@ -184,8 +178,6 @@ describe("правка снаряжения", () => {
     const worn = session();
     expect(componentReasons(worn.character)).toEqual([]);
 
-    // Вещь ушла в сумку — и вместе с ней вердикт «компонент закрыт»: второй записи о фокусировке
-    // нет, поэтому пережить снятие ему нечем.
     const stowed = adjustWornCount(worn, FOCUS_ID, -1, occasion);
     expect(componentReasons(stowed.character)[0]).toContain("кусок обработанной кожи");
 
@@ -201,7 +193,6 @@ describe("правка снаряжения", () => {
       occasion,
     );
     const worn = adjustWornCount(armored, chainmailId, 1, occasion);
-    // Кольчуга без категории Ловкость не режет: 16 + 2 + мантия 1 + плащ 1.
     expect(Character.of(worn.character).sheet.value("armorClass")).toBe(20);
 
     const takenOff = adjustWornCount(worn, chainmailId, -1, occasion);

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { spellSchema, type Spell } from "@/core/domain/catalog/spell";
 
-/** Заготовка «Паутины»: концентрация, куб, спасбросок Ловкости, повторяемое действие. */
 function web(): unknown {
   return {
     id: "web",
@@ -31,7 +30,6 @@ function web(): unknown {
   };
 }
 
-/** Заготовка «Луча холода»: заговор с масштабированием от уровня персонажа. */
 function rayOfFrost(): unknown {
   return {
     id: "ray-of-frost",
@@ -59,10 +57,6 @@ function mutate(base: unknown, change: (draft: Record<string, unknown>) => void)
   return draft;
 }
 
-/**
- * Правка вложенного слоя карточки: слой читается полями и возвращается на место целиком — правка
- * копии, оставленной без присваивания, до заклинания бы не дошла.
- */
 function mutateLayer(
   base: unknown,
   key: string,
@@ -78,7 +72,6 @@ function mutateLayer(
 const withDiagram = (change: (diagram: Record<string, unknown>) => void): unknown =>
   mutateLayer(ritualCard(), "ritualDiagram", change);
 
-/** Заготовка ритуального заклинания со схемой: минимальный набор слоёв. */
 function ritualCard(): unknown {
   return mutate(web(), (draft) => {
     draft.ritual = true;

@@ -6,14 +6,6 @@ import type { ChoicesView } from "@/contract/views";
 import { EditSheetFrame } from "./EditSheetFrame";
 import { SURFACE_CHOSEN, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-
-/**
- * Имя шторки: им зовётся и она сама, и каждая дверь в неё.
- *
- * Дверей у отметок две — значок в строке действующего и кнопка в шторке «Действует», — и обе
- * обещают одно и то же место. Слово у них поэтому одно: два синонима читались бы как две разные
- * шторки.
- */
 export const MARKS_LABEL = "Отметки мастера";
 
 export function MarksSheet({
@@ -23,11 +15,8 @@ export function MarksSheet({
   onCancel,
   error = null,
 }: {
-  /** Причина отказа от владельца: почему набранное не сохранилось. */
   error?: string | null;
-  /** Отметки мастера как они стоят сейчас: начальные значения полей. */
   marks: { exhaustion: number; inspiration: boolean };
-  /** Из чего выбирают: ступени истощения перечнем правил. */
   choices: ChoicesView;
   onSave: (marks: { exhaustion: number; inspiration: boolean }) => void;
   onCancel: () => void;

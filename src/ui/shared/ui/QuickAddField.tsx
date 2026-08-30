@@ -3,12 +3,6 @@
 import { useState, type FormEvent } from "react";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
-/**
- * Строка быстрого ввода: одно поле, отправка по «Ввод», без кнопки и без листа.
- *
- * Один компонент на статус, находку и заметку про мир: за столом всё это появляется в чужой ход, и
- * цена ввода у них одна — одна строка. Подробности дописываются нажатием на заведённое.
- */
 export function QuickAddField({
   labelRu,
   onAdd,

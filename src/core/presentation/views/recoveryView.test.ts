@@ -1,10 +1,3 @@
-/**
- * Проекция восстановления: обещание кнопки и отказ операции — одна и та же фраза.
- *
- * Проверяется не то, что причина «какая-то», а то, что она дословно совпадает с отказом самой
- * операции: разошедшись, они бы гасили кнопку одним поводом и объясняли другим.
- */
-
 import { describe, expect, it } from "vitest";
 
 import { createSession, type Occasion, type Session } from "@/core/application/session";
@@ -34,7 +27,6 @@ function inFight(character = createThorne()): Session {
   return startCombat(createSession(character), OCCASION);
 }
 
-/** Чем ответит операция, если её всё-таки вызвать. */
 function refusalOf(run: () => Session): string {
   try {
     run();

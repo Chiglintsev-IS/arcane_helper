@@ -1,13 +1,5 @@
 // @vitest-environment jsdom
 
-/**
- * «Ремесло» на настоящем состоянии и настоящих операциях: моков нет.
- *
- * Режим знания: записанные виды и раскрытое у каждого. Порции того же вида лежат в сумке и сюда не
- * приходят — на два вопроса отвечают два режима, и второе место для одного числа расходилось бы с
- * первым молча.
- */
-
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -21,7 +13,6 @@ import { CraftingScreen } from "@/ui/screens/crafting/ui/CraftingScreen";
 const MOON_HERB = "Лунная трава";
 const CRIMSON_ROOT = "Багровый корень";
 
-/** Запас вида так, как его знает сумка: он существует и принадлежит ей. */
 function stockOf(stores: AppStores, nameRu: string): number | undefined {
   return shown(stores).bag.items.find((item) => item.nameRu === nameRu)?.bagCount;
 }
@@ -39,7 +30,6 @@ describe("«Ремесло»", () => {
       ]),
     );
 
-    // Три порции того же вида — тем же путём, каким их заводят в «Вещах».
     for (const nameRu of [MOON_HERB, MOON_HERB, MOON_HERB]) {
       await stores.session.getState().execute({ kind: "add_item", nameRu, itemKind: "ingredient" });
     }
@@ -50,11 +40,9 @@ describe("«Ремесло»", () => {
     expect(known.getByText(MOON_HERB)).toBeDefined();
     expect(known.getByText("Лечение здоровья")).toBeDefined();
     expect(known.getByText("Взрыв")).toBeDefined();
-    // Номер говорит, насколько глубоко свойство было скрыто: третье раскрыто через нераскрытое второе.
     expect(known.getByText("3-е")).toBeDefined();
     expect(known.getByText("редкое")).toBeDefined();
 
-    // Запас никуда не делся — он просто отвечает не здесь: отметка вида на верстак его не трогает.
     expect(stockOf(stores, MOON_HERB)).toBe(3);
     expect(known.queryByText("3")).toBeNull();
     await userEvent.setup().click(known.getByRole("button", { name: new RegExp(`^${MOON_HERB}`) }));
@@ -71,7 +59,6 @@ describe("«Ремесло»", () => {
     );
 
     expect(knownList().getByText("раскрыто 2 · следующее не исследовано")).toBeDefined();
-    // Сколько у вида свойств всего, приложение не знает: потолок правил фактом вида не является.
     expect(screen.queryByText(/из \d/)).toBeNull();
   });
 
@@ -88,10 +75,8 @@ describe("«Ремесло»", () => {
     await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
     await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
 
-    // Знаменатель приходит только от стола: с его словом «два» становится «два из двух».
     expect(await knownList().findByText("раскрыто 2 из 2")).toBeDefined();
 
-    // Сказанное за столом бывает и ошибкой: снятая отметка возвращает счёт без знаменателя.
     await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
     expect(await knownList().findByText("раскрыто 2 · следующее не исследовано")).toBeDefined();
   });
@@ -104,7 +89,6 @@ describe("«Ремесло»", () => {
 
     const known = knownList();
     expect(known.getByText(CRIMSON_ROOT)).toBeDefined();
-    // Ноль — состояние: запись завели раньше, чем узнали хоть что-то, и исчезнуть она не вправе.
     expect(known.getByText("раскрыто 0 · следующее не исследовано")).toBeDefined();
   });
 
@@ -116,7 +100,6 @@ describe("«Ремесло»", () => {
   });
 });
 
-/** Оба вида записаны знанием и совпадают «Лечением здоровья»: с этого и начинается состав. */
 function twoKinds(): ReturnType<typeof createThorne> {
   return [MOON_HERB, CRIMSON_ROOT].reduce(
     (character, kind) =>
@@ -127,7 +110,6 @@ function twoKinds(): ReturnType<typeof createThorne> {
   );
 }
 
-/** Состав из обоих видов, собранный так же, как его собирает игрок: отметками в списке знания. */
 async function assembled(character = twoKinds()) {
   const user = userEvent.setup();
   const rendered = await renderWithStores(<CraftingScreen />, character);
@@ -143,7 +125,6 @@ describe("«Ремесло»: верстак", () => {
 
     const bench = within(await screen.findByRole("region", { name: "Верстак" }));
     expect(await bench.findByText("Лечение здоровья")).toBeDefined();
-    // Простой рецепт справочника стоит базовых десяти, и число названо целиком.
     expect(await bench.findByText("10")).toBeDefined();
   });
 
@@ -153,7 +134,6 @@ describe("«Ремесло»: верстак", () => {
     await screen.findByRole("region", { name: "Верстак" });
     await user.selectOptions(screen.getByLabelText("Длительность"), "24 часа");
 
-    // Не погашенная кнопка, а слова: 10 + 12 против предела надёжного походного комплекта.
     expect(await screen.findByText(/выше предела оснащения 20/)).toBeDefined();
     expect(screen.getByText(/Длительность \+12/)).toBeDefined();
   });
@@ -169,12 +149,10 @@ describe("«Ремесло»: верстак", () => {
     );
     const { user } = await assembled(poisonous);
 
-    // Пока основным стоит редкий яд, работа дороже предела: называем основным лечение.
     const bench = within(await screen.findByRole("region", { name: "Верстак" }));
     expect(await bench.findByText(/выше предела оснащения 20/)).toBeDefined();
     await user.click((await bench.findAllByRole("button", { name: "Основной эффект" }))[0]!);
 
-    // Бонус мастерства не достаётся синтезу ядов, и проверка падает с семи до четырёх.
     expect(await screen.findByText("d20 + 4")).toBeDefined();
     expect(screen.getByText(/синтез ядов/)).toBeDefined();
   });
@@ -221,8 +199,6 @@ describe("«Ремесло»: запись знания", () => {
     const door = `Раскрыть свойство: ${MOON_HERB}`;
     await user.click(screen.getByRole("button", { name: door }));
 
-    // Дверь названа делом и видом; за ней стоит то же имя — два имени одного дела читались бы
-    // как два разных дела. Заголовок при этом называет вид: слово дела уже прочитано на двери.
     const sheet = within(screen.getByRole("dialog", { name: door }));
     expect(sheet.getByRole("heading", { name: MOON_HERB })).toBeDefined();
   });
@@ -233,8 +209,6 @@ describe("«Ремесло»: запись знания", () => {
 
     await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
 
-    // Первое свойство обычной редкости надёжным походным комплектом: десять минут против пятёрки,
-    // порция теряется только при провале, а материалы этой глубины ещё не жгут.
     expect(await screen.findByText("5")).toBeDefined();
     expect(screen.getByText(/10 мин · 1 порция только при провале · без расходников/)).toBeDefined();
     expect(screen.getByText(/Сырая проба/)).toBeDefined();
@@ -253,8 +227,6 @@ describe("«Ремесло»: запись знания", () => {
     await user.selectOptions(screen.getByLabelText("Номер"), "2");
     await user.selectOptions(screen.getByLabelText("Редкость"), "rare");
 
-    // Второе свойство: час работы против двенадцати, редкость поднимает сложность на два, и со
-    // второй глубины горят материалы — комплект за каждый начатый час.
     expect(await screen.findByText("14")).toBeDefined();
     expect(
       screen.getByText(/1 ч · 1 порция при любом исходе · расходники обычные, 1 зм/),
@@ -266,7 +238,6 @@ describe("«Ремесло»: запись знания", () => {
     await renderWithStores(<CraftingScreen />, withIngredientKnowledge(createThorne(), MOON_HERB));
 
     await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
-    // Синтезу ядов Торн не обучен и набора по нему не держит: работать нечем, и это сказано словами.
     await user.selectOptions(screen.getByLabelText("Направление работы"), "poisons");
 
     expect(await screen.findByText(/без профильного оснащения не бывает/)).toBeDefined();
@@ -284,7 +255,6 @@ describe("«Ремесло»: запись знания", () => {
     );
 
     await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
-    // Порядок называет сам владелец: под первым номером уже раскрыто, и следующее — третье.
     expect(await screen.findByText(/свойство под номером 3/)).toBeDefined();
 
     await user.selectOptions(screen.getByLabelText("Номер"), "3");
@@ -296,7 +266,6 @@ describe("«Ремесло»: запись знания", () => {
     await renderWithStores(<CraftingScreen />, twoKinds());
 
     await user.click(screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }));
-    // Первый номер у вида уже занят: отказ приходит от объявления знания, а не от экрана.
     await user.selectOptions(screen.getByLabelText("Свойство"), "Пробуждение");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 

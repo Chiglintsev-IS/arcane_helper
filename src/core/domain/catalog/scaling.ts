@@ -1,32 +1,16 @@
-/**
- * Повышение уровня заклинания и масштабирование заговоров.
- *
- * Масштабирование хранится данными, а не кодом. Ключи `damage.scaling` трактуются по-разному
- * в зависимости от уровня заклинания.
- */
-
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 
 type DamageSpec = {
   dice: string;
   type: string;
-  /** `undefined` допустимо явно: поле карточки заклинания необязательно (exactOptionalPropertyTypes). */
   scaling?: Record<number, string> | undefined;
 };
 
-/**
- * Формула урона заклинания уровня 1 и выше при сотворении ячейкой `slotLevel`.
- * Ключи `scaling` — уровни ячейки; при отсутствии ключа берётся базовая формула.
- */
 function damageAtSlotLevel(damage: DamageSpec, slotLevel: number): string {
   return damage.scaling?.[slotLevel] ?? damage.dice;
 }
 
-/**
- * Формула урона заговора на указанном уровне персонажа.
- * Ключи `scaling` — пороги уровня персонажа (в 5e это 5, 11 и 17);
- * берётся наибольший ключ, не превышающий уровень персонажа.
- */
+/** Ключи `scaling` — пороги уровня персонажа: в 5e это 5, 11 и 17. */
 function cantripDamageAtCharacterLevel(damage: DamageSpec, characterLevel: number): string {
   let highestReached = Number.NEGATIVE_INFINITY;
   let formula: string | undefined;
@@ -42,10 +26,6 @@ function cantripDamageAtCharacterLevel(damage: DamageSpec, characterLevel: numbe
   return formula ?? damage.dice;
 }
 
-/**
- * Единая точка расчёта урона: сама выбирает ветку по уровню заклинания.
- * Для заговора `slotLevel` игнорируется, для остальных — игнорируется `characterLevel`.
- */
 export function effectiveDamage(
   damage: DamageSpec,
   context: { spellLevel: number; slotLevel: number; characterLevel: number },
@@ -55,12 +35,6 @@ export function effectiveDamage(
     : damageAtSlotLevel(damage, context.slotLevel);
 }
 
-/**
- * Даст ли ячейка выше уровня заклинания хоть что-нибудь.
- *
- * Обещать «ячейка от такого-то уровня» там, где повышать нечего, значит уговорить игрока потратить
- * ячейку третьего уровня на заклинание, которое сработает ровно как с первой.
- */
 export function benefitsFromHigherSlot(spell: {
   damage?: { scaling?: unknown } | undefined;
   higherLevelsRu?: string | undefined;

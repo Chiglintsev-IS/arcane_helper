@@ -55,7 +55,6 @@ describe("шторка «кто он»", () => {
     await userEvent.clear(screen.getByLabelText("Имя"));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    // Пустое имя отвергает персонаж — шторка о его правилах не знает.
     expect(onSave).not.toHaveBeenCalledWith(expect.objectContaining({ name: "Торн" }));
   });
 });

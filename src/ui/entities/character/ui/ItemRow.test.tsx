@@ -12,15 +12,12 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 
 import { ItemRow } from "./ItemRow";
 
-/** Карточки, по которым идёт игра: требование вещи называет карточка, а не вещь. */
 const spells = loadThorneSpells();
 
 afterEach(cleanup);
 
-/** Перечни строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
 const { stats } = toChoicesView();
 
-/** Вещь так, как её показывает список: проекцию строит настоящий презентер. */
 function viewOf(definition: ItemDefinition): ItemView {
   const state = createThorne();
   const found = toBagView({
@@ -31,7 +28,6 @@ function viewOf(definition: ItemDefinition): ItemView {
   return found;
 }
 
-/** Надетая вещь Торна: она и есть предмет разговора, а её копия рядом отвечала бы за себя. */
 function wornOf(id: string): ItemView {
   const found = toBagView(createThorne(), spells).items.find((item) => item.id === id);
   if (found === undefined) throw new Error(`нет вещи ${id}`);
@@ -51,7 +47,6 @@ function renderRow(item: ItemView, countRu?: string) {
   );
 }
 
-/** Плашка целиком: число ищется по нему самому, а вокруг него стоит всё, что оно двигает. */
 function factAt(valueRu: string): string {
   const value = screen.getByText(valueRu);
   return value.parentElement?.textContent ?? "";
@@ -69,7 +64,6 @@ describe("строка вещи", () => {
   it("число строки стоит при имени, а не отодвигает подробности (FR-250)", () => {
     renderRow(viewOf(staff), "надето 1");
 
-    // Число живёт в той же кнопке, что имя: подробностям под ними остаётся вся ширина строки.
     const open = screen.getByRole("button", { name: "Правка: Посох силы" });
     expect(within(open).getByText("надето 1")).toBeDefined();
   });
@@ -83,14 +77,10 @@ describe("строка вещи", () => {
       }),
     );
 
-    // Плашка целиком держит число и всё, что этим числом названо: неделимость — свойство элемента.
     expect(factAt("+2")).toBe("+2 КС спасброска, Атака заклинанием");
-    // Числа разные — плашки разные, и своё число каждая называет сама.
     expect(factAt("+1")).toBe("+1 Класс Доспеха");
-    // Цена устроена так же: число, а при нём монета.
     expect(factAt("3500")).toBe("3500 зм");
 
-    // Заметка — свободный текст после фактов, а не плашка.
     expect(screen.getByText("требует настройки")).toBeDefined();
   });
 
@@ -119,7 +109,6 @@ describe("строка вещи", () => {
   it("однородное стоит одним фактом: шесть спасбросков не режутся счётом (FR-250)", () => {
     renderRow(wornOf("cloak-of-protection"));
 
-    // Плащ двигает семь чисел, и все семь на строке названы: КД — своим именем, спасброски — целым.
     expect(factAt("+1")).toBe("+1 Класс Доспеха, Все спасброски");
     expect(screen.queryByText(/Спасбросок:/)).toBeNull();
   });
@@ -131,7 +120,6 @@ describe("строка вещи", () => {
 
     renderRow(viewOf(material));
 
-    // Требование стоит тем же перечнем подробностей, что и цена: отдельной строки под него нет.
     expect(screen.getByText("Требуется для: Волшебный замок")).toBeDefined();
     expect(factAt("25")).toBe("25 зм");
   });

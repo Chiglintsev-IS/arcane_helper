@@ -34,7 +34,6 @@ describe("заметки про мир", () => {
     expect(start.log).toEqual([]);
     expect(only(start.character)).toEqual({ id: "command-1-1", at: AT, text: BARON });
 
-    // Отмена возвращает потраченное, а записанное словами не трогает: его в снимке отмены нет.
     const spent = spendSpellSlot(start, 1, occasionOf("command-2"));
     const returned = undoLast(spent);
 

@@ -100,7 +100,6 @@ describe("порог регенерации", () => {
   });
 
   it("с первого же вернувшегося хита регенерация идёт снова", () => {
-    // Ноль выключает регенерацию, а не отменяет её: подняли до единицы — тролль снова затягивается.
     const down = healthy().takeDamage(60).vitality;
     expect(down.current).toBe(0);
     expect(down.regenerationDue(7)).toBe(0);
@@ -121,7 +120,6 @@ describe("порог регенерации", () => {
     });
 
     expect(() => sunlit.payWithBlood(6)).toThrow(/солнечным светом/);
-    // Разрешение мастера снимает и подавление, и нехватку хитов: цена уходит в долг здоровья.
     expect(sunlit.payWithBlood(6, { allowAnyway: true }).current).toBe(54);
 
     expect(() => healthy().payWithBlood(0)).toThrow(DomainError);

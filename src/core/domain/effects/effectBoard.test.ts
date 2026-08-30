@@ -10,7 +10,6 @@ function emptyBoard(): EffectBoard {
   return EffectBoard.of({ activeEffects: [], concentration: undefined });
 }
 
-/** Эффект без заклинания: то, что заводит игрок вручную. */
 function manualEffect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
   return {
     id: "manual-1",
@@ -27,7 +26,6 @@ function manualEffect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
 
 const shieldBonus: StatContribution = { stat: "armorClass", kind: "bonus", value: 5 };
 
-/** Заклинание в том объёме, в каком его читает доска: опознание, имя и вклады. */
 function spellLike(
   id: string,
   nameRu: string,
@@ -117,7 +115,6 @@ describe("вклады действующего", () => {
 
 describe("EffectBoard.afterLongRest", () => {
   it("долгий отдых уносит концентрацию вместе с её эффектом", () => {
-    // Особый срок концентрации сам по себе отдых пережил бы, но спящий не концентрируется.
     const held = manualEffect({
       id: "e-1",
       spellId: "web",

@@ -51,16 +51,13 @@ describe("подсхема вещи", () => {
     const armor = { base: 16, category: "heavy" };
     expect(withDefinition({ ...potion, bonuses }).success).toBe(false);
     expect(withDefinition({ ...potion, armor }).success).toBe(false);
-    // Та же запись экипировкой проходит: запрещено не поле, а его несовместимость с категорией.
     expect(withDefinition({ ...potion, kind: "gear", bonuses, armor }).success).toBe(true);
   });
 
   it("отметка фокусировки бывает только у экипировки (FR-260)", () => {
     const spellcastingFocus = true;
     expect(withDefinition({ ...potion, spellcastingFocus }).success).toBe(false);
-    // Та же отметка у экипировки проходит: магию проводят тем, что носят.
     expect(withDefinition({ ...potion, kind: "gear", spellcastingFocus }).success).toBe(true);
-    // Отметка утвердительная: хранимое «нет» было бы вторым способом сказать «не фокусировка».
     expect(withDefinition({ ...potion, kind: "gear", spellcastingFocus: false }).success).toBe(
       false,
     );
@@ -127,8 +124,6 @@ describe("assertItemDefinition и alignedItemDefinition", () => {
   });
 
   it("пустой перечень прибавок — не прибавки: расходнику за него не отказывают", () => {
-    // Шторка вещи отдаёт набранное как есть, и «ничего не набрано» приезжает пустым перечнем.
-    // Отказ на нём говорил бы про прибавки тому, кто их не набирал.
     const typed = itemDefinitionOf({ ...potion, kind: "other", bonuses: {} });
     expect("bonuses" in typed).toBe(false);
     expect(() => itemDefinitionOf({ ...potion, bonuses: { armorClass: 1 } })).toThrow(

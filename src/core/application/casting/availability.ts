@@ -13,15 +13,12 @@ import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
 import { materialCoveredByFocus, materialOf } from "@/core/application/casting/material";
 
-/** Что заклинание тратит внутри хода. Минуты и часы вне боевой экономии действий. */
 export type TurnResource = "action" | "bonus_action" | "reaction";
 
-/** Признаки хода приходят параметром: правило не вправе зависеть от того, что открыл игрок. */
 export type TurnResources = {
   actionAvailable: boolean;
   bonusActionAvailable: boolean;
   reactionAvailable: boolean;
-  /** Отмечен ли бой начатым. Он же признак того, что ведётся счёт ходов. */
   inFight: boolean;
 };
 
@@ -32,7 +29,6 @@ export const ALL_TURN_RESOURCES: TurnResources = {
   inFight: false,
 };
 
-/** Фразы целиком: род в русском не выводится из названия, «Реакция израсходовано» недопустимо. */
 export const ACTION_SPENT_MESSAGES: Record<TurnResource, string> = {
   action: "Действие уже израсходовано",
   bonus_action: "Бонусное действие уже израсходовано",
@@ -44,25 +40,12 @@ export type PaymentChoice =
   | { kind: "blood"; castLevel: number }
   | { kind: "none" };
 
-/**
- * Уровень, на котором творится заклинание: выбранная ячейка либо оплаченный очками уровень.
- *
- * Заговор и ритуал уровня сотворения не имеют, и `undefined` здесь — не «неизвестно», а «его нет»:
- * от него считают урон, длительность и эффект руны, и подставленный вместо него уровень заклинания
- * обещал бы рост там, где расти нечему.
- */
 export function castLevelOf(payment: PaymentChoice): number | undefined {
   if (payment.kind === "slot") return payment.slotLevel;
   if (payment.kind === "blood") return payment.castLevel;
   return undefined;
 }
 
-/**
- * Во что обойдётся ячейка этого уровня: цена в хитах и цена в единицах, по которой считают раны.
- *
- * Считает не сам: цену называют магические ресурсы, а здесь она только собирается с уровнем
- * персонажа, чей курс её и умножает.
- */
 export function bloodPrice(
   castLevel: number,
   character: CharacterState,
@@ -91,24 +74,13 @@ type AvailabilityCode =
   | "concentration_busy"
   | "no_component";
 
-/**
- * Что предупреждение делает с подтверждённым сотворением — объявляет сам предикат.
- *
- * `advisory` — предупреждает и не мешает: нарушение видно игроку, а расплатиться за него нечем.
- * Прочие значения — согласие, без которого сотворение отклоняется, и согласия эти не заменяют друг
- * друга: «Применить всё равно» разрешает мастер, а замену концентрации выбирает игрок. Одно
- * согласие на оба означало бы, что игрок, бросивший прежнее заклинание, заодно молча разрешил себе
- * перерасход ячейки.
- */
 type Enforcement = "advisory" | "gm_exception" | "ending_concentration";
 
-/** Согласие игрока или мастера, полученное до подтверждения. */
 type Consent = Exclude<Enforcement, "advisory">;
 
 type AvailabilityWarning = {
   code: AvailabilityCode;
   reasonRu: string;
-  /** Чем снимается. Список кодов у сценария не заводится: он расходится с объявлением. */
   enforcement: Enforcement;
 };
 
@@ -117,10 +89,8 @@ export type Availability = {
   warnings: AvailabilityWarning[];
 };
 
-/** Полученные согласия. Отсутствующее согласие оставляет предупреждение в силе. */
 export type Consents = Partial<Record<Consent, boolean>>;
 
-/** Первое предупреждение, на которое нужного согласия нет: оно и есть причина отказа. */
 export function withoutConsent(
   warnings: readonly AvailabilityWarning[],
   consents: Consents,
@@ -178,13 +148,6 @@ const SPENT_CODES: Record<TurnResource, AvailabilityCode> = {
   reaction: "reaction_spent",
 };
 
-/**
- * Закрывает ли причина не одно заклинание, а весь ход разом.
- *
- * Истраченное действие не спрашивает, какое заклинание выбрано: оно закрывает всё, что им платит.
- * Такая причина одна на весь список, и владелец кодов — единственный, кто вправе её так назвать:
- * перечень кодов, собранный на стороне, разойдётся с этим объявлением при первом же новом коде.
- */
 export function closesWholeTurn(warning: { code: string }): boolean {
   return Object.values<string>(SPENT_CODES).includes(warning.code);
 }
@@ -267,7 +230,6 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
       ];
     }
 
-    // Кровь повторяет ячейку, а не заводит новую: уровня, до которого персонаж не дорос, у неё нет.
     if (!hasSlotLevel(character.spellSlots, castLevel)) {
       return [{ code: "no_slot", reasonRu: noSlotLevelRu(castLevel), enforcement: "advisory" }];
     }
@@ -298,8 +260,6 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
 
   const { slotLevel } = payment;
   if (slotLevel < spell.level) {
-    // Ячейка ниже уровня заклинания сотворения не даёт: списать её значило бы потратить ресурс
-    // впустую и записать в лог заклинание, которого не было.
     return [
       {
         code: "slot_too_low",
@@ -331,10 +291,6 @@ function checkPayment(input: AvailabilityInput): AvailabilityWarning[] {
   return [];
 }
 
-/**
- * Единственное предупреждение, которое не снимается исключением мастера: цена ошибки — молча
- * потерянный эффект, и снять его вправе только осознанный выбор между двумя заклинаниями.
- */
 function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character } = input;
   const current = character.concentration;
@@ -353,12 +309,6 @@ function checkConcentration(input: AvailabilityInput): AvailabilityWarning[] {
   ];
 }
 
-/**
- * Материал спрашивают у сумки: он вещь, и наличие его — её запас.
- *
- * Без записи о снаряжении вердикта нет: состояние могло прийти из сборки, которая про компоненты не
- * знала.
- */
 function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
   const { spell, character } = input;
   const { equipment } = Character.of(character);
@@ -376,12 +326,6 @@ function checkComponents(input: AvailabilityInput): AvailabilityWarning[] {
   ];
 }
 
-/**
- * Перечень требований словами, а не вердикт: «В, С, М» за столом не читается.
- *
- * Закрытый компонент не называется вовсе: он ничего не требует, а строка о нём в момент действия
- * заняла бы место того, что делать всё-таки надо.
- */
 export function componentRequirements(
   components: Spell["components"],
   materialCovered: boolean,
@@ -405,7 +349,6 @@ export function componentRequirements(
   return requirements;
 }
 
-/** Все условия за один проход. Порядок предупреждений — от подготовки к оплате. */
 export function checkAvailability(input: AvailabilityInput): Availability {
   const resource = turnResourceFor(input.spell.castingTime.type);
 
@@ -416,7 +359,6 @@ export function checkAvailability(input: AvailabilityInput): Availability {
           {
             code: SPENT_CODES[resource],
             reasonRu: ACTION_SPENT_MESSAGES[resource],
-            // Экономию хода ведёт приложение: молча потраченное второе действие оно и предъявит.
             enforcement: "gm_exception" as const,
           },
         ]

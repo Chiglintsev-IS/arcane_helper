@@ -1,11 +1,3 @@
-/**
- * Помощники компонентных тестов: настоящее ядро на хранилище в памяти.
- *
- * Моков здесь нет намеренно. Компонент проверяется на том же ядре, что работает в приложении, и
- * через тот же провод — включая сериализацию сообщений. Иначе прогон подтверждает поведение мока, а
- * не приложения, и первым же несериализуемым полем расходится с сетью.
- */
-
 import { render, type RenderResult, cleanup } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach } from "vitest";
@@ -29,7 +21,6 @@ import { createCore } from "@/core/composition";
 import { connectStores, StoreProvider } from "@/ui/app/providers/stores";
 import type { AppStores } from "@/ui/shared/model/storeContext";
 
-// Автоматической очистки нет: тесты не пользуются глобалями vitest.
 afterEach(cleanup);
 afterEach(() => {
   if (typeof localStorage !== "undefined") localStorage.clear();
@@ -37,7 +28,6 @@ afterEach(() => {
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
 
-/** Карточка по идентификатору: тесты называют заклинания, а не индексы. */
 export function spell(id: string): Spell {
   const found = spells.get(id);
   if (found === undefined) throw new Error(`нет карточки ${id}`);
@@ -46,7 +36,6 @@ export function spell(id: string): Spell {
 
 export const testSpells = loadThorneSpells();
 
-/** Детерминированные часы: снимки и записи лога не должны зависеть от времени прогона. */
 export function testClock(): Clock {
   let tick = 0;
   return {
@@ -55,24 +44,8 @@ export function testClock(): Clock {
   };
 }
 
-/**
- * Обстановка прогона: идёт ли бой и какими карточками играют.
- *
- * Отметка боя ставится той же командой, что и кнопкой на экране: хранимого признака «бой идёт» нет,
- * и подделать его подстановкой в состояние нельзя. Каталог подменяется целиком — так проверяется
- * то, чего в книге Торна нет: у всех его карточек по одному варианту отыгрыша на категорию.
- */
 export type PlaySituation = { inFight?: boolean; catalog?: readonly Spell[] };
 
-/**
- * Снимок настоящего ядра без сторов и без ожидания.
- *
- * Нужен там, где проверяется не экран, а то, что он показывает: проекции строит тот же презентер,
- * что и в приложении, поэтому прогон не может разойтись с ним, оставшись зелёным.
- *
- * Обстановка набирается командами, а не подстановкой чисел: израсходованное действие и начатый бой
- * — следствия сыгранного, и словарь признаков рядом с ними разошёлся бы с правилами молча.
- */
 export function testSnapshot(
   character: CharacterState = createThorne(),
   commands: readonly Command[] = [],
@@ -95,10 +68,8 @@ export function testSnapshot(
   return toSnapshot(live, commands.length);
 }
 
-/** Начатый бой: та же команда, что и кнопкой на экране. */
 export const IN_FIGHT: readonly Command[] = [{ kind: "start_combat" }];
 
-/** Строки списка заклинаний из настоящего снимка: их спрашивают чаще всего остального. */
 export function testSpellRows(
   character: CharacterState = createThorne(),
   commands: readonly Command[] = [],
@@ -106,7 +77,6 @@ export function testSpellRows(
   return testSnapshot(character, commands).spells;
 }
 
-/** Строка одного заклинания: прогон называет заклинания, а не места в списке. */
 export function testSpellRow(
   id: string,
   character: CharacterState = createThorne(),
@@ -117,7 +87,6 @@ export function testSpellRow(
   return found;
 }
 
-/** Готовые сторы с открытой сессией: компонент рендерится сразу с данными. */
 export async function createTestStores(
   character: CharacterState = createThorne(),
   situation: PlaySituation = {},
@@ -137,32 +106,16 @@ export async function createTestStores(
   return stores;
 }
 
-/**
- * Что стор показывает сейчас: тот же снимок, по которому рисует экран.
- *
- * Прогон смотрит туда же, куда игрок: состояния у отображения нет, и «проверить по персонажу»
- * означало бы проверять не то, что он увидит.
- */
 export function shown(stores: AppStores): Snapshot {
   const { snapshot } = stores.session.getState();
   if (snapshot === null) throw new Error("сессия ещё не открыта");
   return snapshot;
 }
 
-/** Остаток ячеек уровня: их спрашивают чаще всего остального. */
 export function slotsLeft(stores: AppStores, level: number): number {
   return shown(stores).resources.slots.find((slot) => slot.level === level)?.remaining ?? 0;
 }
 
-/**
- * Сторы над готовым хранилищем.
- *
- * Ядро и провод настоящие: испорчено ровно то, что портится в жизни, — содержимое хранилища или
- * доступ к нему. Подделка статуса стора проверяла бы подделку.
- *
- * Тем же входом проверяется перезапуск: одно хранилище, две сборки ядра — так видно, дошло ли
- * записанное до хранилища или осталось в памяти открытой сессии.
- */
 export async function storesOver(repository: SessionRepository): Promise<AppStores> {
   const clock = testClock();
   const core = createCore({
@@ -176,17 +129,14 @@ export async function storesOver(repository: SessionRepository): Promise<AppStor
   return stores;
 }
 
-/** Рендер на готовых сторах: чем они собраны — обстановкой или отказом — выбирает сам прогон. */
 export function renderOn(stores: AppStores, ui: ReactElement): RenderWithStores {
   return { ...render(<StoreProvider stores={stores}>{ui}</StoreProvider>), stores };
 }
 
-/** Сохранение, которое разбор отвергает: снимок на месте, состояния в нём нет. */
 export async function createStoresOverUnreadableSave(): Promise<AppStores> {
   return storesOver(createMemoryRepository({ schemaVersion: 1, savedAt: "", character: {} }));
 }
 
-/** Хранилище, которое не отдало ничего: ни разобранного состояния, ни сырого содержимого. */
 export async function createStoresOverBrokenStorage(): Promise<AppStores> {
   const unavailable = async (): Promise<never> => {
     throw new Error("Хранилище недоступно");
@@ -201,7 +151,6 @@ export async function createStoresOverBrokenStorage(): Promise<AppStores> {
 
 export type RenderWithStores = RenderResult & { stores: AppStores };
 
-/** Рендер внутри провайдера сторов. */
 export async function renderWithStores(
   ui: ReactElement,
   character?: CharacterState,

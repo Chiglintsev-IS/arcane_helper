@@ -1,11 +1,3 @@
-/**
- * Правка листа персонажа.
- *
- * Что меняет число — идёт в лог и отменяется; справочное поле не идёт: лог возвращает
- * ресурсы, а не текст. Смена уровня — один сценарий, потому что тянет максимумы всех ресурсов, что
- * идут за уровнем, и разложенная на нажатие за ресурс оставила бы половину пересчитанной.
- */
-
 import { abilityModifier, proficiencyBonus } from "@/core/domain/character/abilities";
 import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
 import { Character } from "@/core/domain/assembly/character";
@@ -20,13 +12,6 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
 import { isPossibleCharacterLevel } from "@/core/domain/character/schema";
 
-/**
- * Справочные поля: имени и возраста лог не касается.
- *
- * Перечнем, а не одним лишь типом: тем же списком отбирается справочная часть правки, пришедшей
- * снаружи. Второе перечисление разошлось бы с первым, и поле, забытое в одном из двух мест, молча
- * перестало бы правиться.
- */
 const IDENTITY_FIELDS = [
   "name",
   "species",
@@ -40,10 +25,6 @@ const IDENTITY_FIELDS = [
 
 type Identity = Partial<Pick<CharacterState, (typeof IDENTITY_FIELDS)[number]>>;
 
-/**
- * Справочная часть присланной правки. Прочие поля состояния отбрасываются: правка листа не дверь к
- * ячейкам, и снаружи через неё меняют только то, чем она объявлена.
- */
 export function identityOf(patch: Partial<CharacterState>): Identity {
   const identity: Identity = {};
   for (const field of IDENTITY_FIELDS) {
@@ -56,27 +37,18 @@ export function editIdentity(session: Session, patch: Identity): Session {
   return withoutRecord(session, Character.of(session.character).withSheet(patch));
 }
 
-/**
- * Правка одной характеристики со всем, что к ней относится: значение, владение спасброском,
- * владения её навыками.
- *
- * Одной командой, а не тремя, потому что на листе это один блок: разложенная на три записи лога,
- * правка отменялась бы по частям и оставляла бы характеристику с чужими владениями.
- */
 export function editAbility(
   session: Session,
   change: {
     ability: Ability;
     score: number;
     saveProficient: boolean;
-    /** Только навыки этой характеристики: чужие остаются как были. */
     skills: Partial<Record<SkillId, SkillTraining>>;
   },
   occasion: Occasion,
 ): Session {
   const { character } = session;
   const owned = new Set(skillsOfAbility(change.ability));
-  // Владения правимой характеристики приходят правкой целиком, поэтому прежние здесь снимаются.
   const skills: Partial<Record<SkillId, SkillTraining>> = {};
   for (const id of SKILL_IDS) {
     const training = character.skills[id];
@@ -88,7 +60,6 @@ export function editAbility(
     session,
     Character.of(character).withSheet({
       abilities: { ...character.abilities, [change.ability]: change.score },
-      // Порядок листа, а не порядок нажатий: устойчивый порядок сравним между выгрузками.
       saveProficiencies: ABILITIES.filter((ability) =>
         ability === change.ability
           ? change.saveProficient
@@ -100,8 +71,6 @@ export function editAbility(
     occasion,
   );
 }
-
-
 
 export function editMarks(
   session: Session,
@@ -137,30 +106,17 @@ export function editHealth(
   );
 }
 
-/** Величина, которая идёт за уровнем одним числом: пул ресурса или производное число листа. */
 type LeveledValue = "runes" | "arcaneRecovery" | "hitDice" | "preparedLimit";
 
-/** Что сдвинется при смене уровня: величина, её прежнее и новое значение. */
 type LevelChange =
   | { of: "slots"; slotLevel: number; before: number; after: number }
   | { of: LeveledValue; before: number; after: number };
 
-/**
- * Предпросмотр смены уровня: то же состояние, что построит сама смена, названное сравнением с
- * нынешним. Считать последствия отдельным кодом значило бы обещать одно, а делать другое.
- *
- * Прибавка хитов названа слагаемыми: «среднее за кость плюс Телосложение» — то, что игрок иначе
- * считает в уме, глядя в книгу. Костей может не быть вовсе — тогда называть нечего.
- */
 type LevelPreview = {
   changes: LevelChange[];
   hitPoints: { perDie: number; dieSize: number; constitution: number; total: number } | null;
 };
 
-/**
- * Персонаж на взятом уровне: максимумы ячеек, рун, бюджета восстановления и Костей хитов идут за
- * уровнем. Базовый максимум хитов сюда не входит — кость бросает игрок, а не приложение.
- */
 function leveled(character: CharacterState, level: number): Character {
   const root = Character.of(character).withSheet({ level });
   return root
@@ -168,7 +124,6 @@ function leveled(character: CharacterState, level: number): Character {
     .withVitality(root.vitality.resizedHitDice(level));
 }
 
-/** Сдвиг называется только тогда, когда число другое: «11 → 11» игроку сказать нечего. */
 function shifted(of: LeveledValue, before: number, after: number): LevelChange[] {
   return before === after ? [] : [{ of, before, after }];
 }
@@ -187,7 +142,6 @@ function slotShifts(
   return changes;
 }
 
-/** Костей хитов может не быть вовсе: чужая выгрузка могла их не знать — тогда и сдвигать нечего. */
 function hitDiceShifts(
   before: CharacterState["hitDice"],
   after: CharacterState["hitDice"],
@@ -196,14 +150,12 @@ function hitDiceShifts(
   return shifted("hitDice", before.total, after.total);
 }
 
-/** Все сдвиги пулов и производных чисел разом: сравнение прежнего состояния с состоянием уровня. */
 function levelShifts(before: CharacterState, after: CharacterState): LevelChange[] {
   return [
     ...slotShifts(before.spellSlots, after.spellSlots),
     ...shifted("runes", before.runes.maximum, after.runes.maximum),
     ...shifted("arcaneRecovery", before.arcaneRecovery.maximum, after.arcaneRecovery.maximum),
     ...hitDiceShifts(before.hitDice, after.hitDice),
-    // Действующее число листа, а не формула класса: перебитое руками за уровнем не идёт.
     ...shifted(
       "preparedLimit",
       Character.of(before).sheet.value("preparedLimit"),
@@ -213,7 +165,6 @@ function levelShifts(before: CharacterState, after: CharacterState): LevelChange
 }
 
 export function previewLevelChange(character: CharacterState, level: number): LevelPreview {
-  // Такого уровня не бывает — считать нечего. Отвечает объявление уровня, а не проверка на месте.
   if (!isPossibleCharacterLevel(level)) return { changes: [], hitPoints: null };
 
   const changes = levelShifts(character, leveled(character, level).toState());

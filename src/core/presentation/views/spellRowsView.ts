@@ -1,14 +1,3 @@
-/**
- * Проекция списка заклинаний: карточка вместе с тем, чем она является для этого персонажа сейчас.
- *
- * Вердикт «доступно» и объяснение «почему нет» приходят отсюда оба и из одного способа сотворения:
- * пока их спрашивали порознь, строка списка и мастер применения называли разные причины одного
- * запрета, и приложению переставали верить.
- *
- * Обстановку проекция знает сама — по логу, а не по вопросу извне: «идёт ли бой» выводит
- * схватка, и второй ответ на тот же вопрос разошёлся бы с ним молча.
- */
-
 import type {
   CastOptionView,
   CastingView,
@@ -48,21 +37,10 @@ import { deriveTurnEconomy } from "@/core/application/useCases/turn";
 
 import { toDiagramView } from "./diagramView";
 
-/**
- * Способ для заклинания, которое сотворить нечем вовсе: уровень, до ячеек которого персонаж не
- * дорос и который не оплачивается очками. Объявление обязано называть уровень и тогда — иначе
- * карточка молчит о том, ради чего её открыли. Заговоров это не касается: у них способ есть всегда.
- */
 function fallbackOption(spell: Spell): CastOption {
   return { mode: "normal", payment: { kind: "slot", slotLevel: spell.level } };
 }
 
-/**
- * Способы сотворения этого заклинания и предложенный среди них.
- *
- * Пустым список не бывает: заклинание, которое сотворить нечем, называет тот способ, которым его
- * сотворяли бы, — иначе мастер применения открывается пустым и не объясняет, чего не хватает.
- */
 function plansFor(spell: Spell, character: CharacterState, turn: TurnEconomy): CastPlans {
   const found = castPlans(spell, character, turn);
   if (found !== null) return found;
@@ -75,24 +53,16 @@ function plansFor(spell: Spell, character: CharacterState, turn: TurnEconomy): C
   return { all: [only], suggested: only };
 }
 
-/**
- * Почему заклинание сейчас недоступно, одной фразой; ничего — доступно.
- *
- * Причина берётся у предложенного способа — того же, который откроет мастер применения: взять её у
- * произвольного значило бы соврать, и неподготовленный ритуал объяснялся бы подготовкой.
- */
 function unavailableReason(suggested: CastPlan): string | undefined {
   return suggested.availability.warnings[0]?.reasonRu;
 }
 
-/** Своя причина строки: общую называет список, и повторять её под каждой строкой нечем. */
 function ownUnavailableReason(suggested: CastPlan): string | undefined {
   const warning = suggested.availability.warnings[0];
   if (warning === undefined || closesWholeTurn(warning)) return undefined;
   return warning.reasonRu;
 }
 
-/** Уровень сотворения этим способом, а без него — собственный уровень заклинания. */
 function castLevel(spell: Spell, option: CastOption): number {
   return castLevelOf(option.payment) ?? spell.level;
 }
@@ -104,8 +74,6 @@ function castOptionView(
   character: CharacterState,
 ): CastOptionView {
   const { option } = plan;
-  // Цена ячейки считается её владельцем: второй такой счёт разошёлся бы с тем, которым спишет
-  // подтверждение.
   const price =
     option.payment.kind === "blood" ? bloodPrice(option.payment.castLevel, character) : null;
 
@@ -138,12 +106,6 @@ function castOptionView(
   };
 }
 
-/**
- * Карточка так, как её показывают: написанное о заклинании, без единого числа этого персонажа.
- *
- * Персонажа функция не принимает, и это не экономия параметра: карточка одна и та же у любого, кто
- * открыл книгу, а всё, что зависит от него, стоит в строке рядом.
- */
 function spellCardView(spell: Spell): SpellCardView {
   const { castingTime, components, resolution, targeting } = spell;
 
@@ -187,10 +149,6 @@ function spellCardView(spell: Spell): SpellCardView {
   };
 }
 
-/**
- * Урон по собственному уровню заклинания: строка называет цену, а не щедрость. Нет вовсе — карточка
- * урона не несёт.
- */
 function ownLevelDamage(spell: Spell, character: CharacterState): string | undefined {
   if (spell.damage === undefined) return undefined;
   return effectiveDamage(spell.damage, {
@@ -200,9 +158,6 @@ function ownLevelDamage(spell: Spell, character: CharacterState): string | undef
   });
 }
 
-/**
- * Строка списка с подставленным уроном: фраза контента называет место урона, число называет проекция.
- */
 function listCardView(card: ListCard, formula: string | undefined): NonNullable<SpellRowView["listCard"]> {
   const fill = (text: string): string =>
     formula === undefined ? text : text.replaceAll(DAMAGE_PLACEHOLDER, formula);
@@ -223,7 +178,6 @@ function listCardView(card: ListCard, formula: string | undefined): NonNullable<
   };
 }
 
-/** Каким станет Класс Доспеха, если сотворить: у заклинания без вклада в защиту — ничем. */
 function armorClassIfCast(spell: Spell, character: CharacterState): number | undefined {
   if (spell.contributions.length === 0) return undefined;
   return Character.of(character).sheetWith(spell).value("armorClass");
@@ -315,19 +269,10 @@ export function toCastingView(character: CharacterState): CastingView {
     spellcastingModifier: sheet.abilityModifier(SPELLCASTING_ABILITY),
     preparedLimit: sheet.value("preparedLimit"),
     preparedCount: character.preparedSpellIds.length,
-    // Незаведённое снаряжение вердикта не даёт: «нечем закрыть» было бы выдумкой про чужого
-    // персонажа, чьё состояние приехало из сборки, которая про компоненты не знала.
     ...(equipment.known ? { freeComponentsCovered: equipment.replacesFreeComponents(items) } : {}),
   };
 }
 
-/**
- * Карточки, которые персонаж знает: заговоры и записи книги.
- *
- * Каталог — пул всего, что в игре существует, и он шире книги: из него запись в книгу добавляют, а
- * не наоборот. Незнаемое приложения не касается — строка, которую нельзя применить никогда, заняла
- * бы место и обманула глаз.
- */
 export function knownSpells(live: LiveSession): Spell[] {
   const spellbook = Character.of(live.session.character).spellbook;
   return live.spellCatalog.filter((spell) => spellbook.knows(spell.id, spell.level));
@@ -339,13 +284,6 @@ export function toSpellRowViews(live: LiveSession): SpellRowView[] {
   return knownSpells(live).map((spell) => spellRowView(spell, character, turn));
 }
 
-/**
- * Причина, закрывшая список разом; ничего — общей причины нет.
- *
- * Берётся у первой же строки, которую закрыла экономия хода: причина эта не про заклинание, и у
- * всех закрытых ею строк она одна и та же. Строк, у которых своя причина, она не касается — те
- * называют себя сами.
- */
 export function toSpellsRefusal(live: LiveSession): string | undefined {
   const { character } = live.session;
   const turn = deriveTurnEconomy(live.session);

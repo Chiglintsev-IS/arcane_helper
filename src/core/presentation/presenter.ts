@@ -1,11 +1,3 @@
-/**
- * Презентер: состояние ядра — в снимок договора.
- *
- * Наружу уходит показанное, а не хранимое. Снимок отмены остаётся внутри: он состоит из полей
- * состояния, а устройство состояния — дело ядра; отменять умеет оно само, читающей стороне довольно
- * знать, что запись есть и как она называется.
- */
-
 import type { RawSave } from "@/contract/rawSave";
 import type { Snapshot } from "@/contract/snapshot";
 
@@ -35,7 +27,6 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
   return {
     version,
     sheet: toSheetView(live.session.character),
-    // Покупки считаются по книге, а не по пулу: компонент незнаемого заклинания игроку не нужен.
     bag: toBagView(live.session.character, knownSpells(live)),
     crafting: toCraftingView(live.session.character),
     resources: toResourcesView(live.session),
@@ -64,12 +55,6 @@ export function toSnapshot(live: LiveSession, version: number): Snapshot {
   };
 }
 
-/**
- * Содержимое хранилища — в копию, которую забирают файлом.
- *
- * Схемой оно не разбирается ни здесь, ни дальше: сюда попадает то, что разбор уже отверг. Текст
- * собирается на этой стороне, потому что имя файла несёт дату, а часы есть только у ядра.
- */
 export function toRawSave(stored: unknown, now: string): RawSave {
   if (stored === null || stored === undefined) return null;
   return { fileName: rawSaveFileName(now), text: JSON.stringify(stored, null, 2) };

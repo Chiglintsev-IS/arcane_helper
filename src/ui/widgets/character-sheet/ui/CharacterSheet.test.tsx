@@ -21,7 +21,6 @@ describe("вкладка «Кто он»", () => {
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
     expect(screen.getByText("Лунный тролль")).toBeDefined();
 
-    // Броски стоят гроссбухом на соседней вкладке, отметки мастера — в «Игре», вещи — в «Сумке».
     expect(screen.queryByRole("heading", { name: "Интеллект" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Отметки мастера" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Числа боя" })).toBeNull();
@@ -42,7 +41,6 @@ describe("вкладка «Кто он»", () => {
       />,
     );
 
-    // Ни блоков, ни кнопок правки: хиты правятся в «Игре», защита — надетым и заклинанием.
     expect(screen.queryByRole("heading", { name: "Здоровье" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Класс Доспеха" })).toBeNull();
     expect(screen.queryByText("24 из 34")).toBeNull();
@@ -71,7 +69,6 @@ describe("вкладка «Кто он»", () => {
     expect(screen.getByRole("heading", { name: "Особенности" })).toBeDefined();
     expect(screen.getByText("Рунный почерк")).toBeDefined();
     expect(screen.getByText(/Минута изучения записи/)).toBeDefined();
-    // Кнопки нет вовсе: погашенная обещала бы правку того, чего за столом не правят.
     expect(screen.queryByRole("button", { name: "Правка: Особенности" })).toBeNull();
   });
 
@@ -83,5 +80,4 @@ describe("вкладка «Кто он»", () => {
     expect(card?.textContent).toContain("—");
     expect(card?.textContent).not.toContain("Рунный почерк");
   });
-
 });

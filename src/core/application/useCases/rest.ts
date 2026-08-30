@@ -1,14 +1,3 @@
-/**
- * Отдых: короткий, долгий и магическое восстановление.
- *
- * Отдых задевает сразу несколько объектов-значений и потому живёт сценарием: ресурсы возвращаются, эффекты
- * короче отдыха закрываются, здоровье поднимается, снижённый максимум тает по часам.
- *
- * Ни одна из трёх операций не идёт во время боя: экран режима «Привал» доступен и в бою — переход
- * в него не спрашивает про схватку, — а отказ обязан жить в сценарии, а не только в кнопке, которую
- * можно и не увидеть.
- */
-
 import { Character } from "@/core/domain/assembly/character";
 import type { SlotRecoveryPlan } from "@/core/domain/arcana/slots";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -19,18 +8,10 @@ import { commit, type Occasion, type Session } from "@/core/application/session"
 import { regenerationNote } from "./health";
 import { expiryNotes, inFight } from "./turn";
 
-/** Заголовок отдыха с тем, что он попутно закрыл; без снятого — один заголовок. */
 function restSummary(title: string, notes: readonly string[]): string {
   return notes.length === 0 ? title : `${title} · ${notes.join(", ")}`;
 }
 
-/**
- * Долгий отдых. Восстанавливает всё, включая руны и здоровье, и снимает концентрацию.
- *
- * Снижённый кровавым колдовством максимум возвращается не махом, а восемью часами почасового
- * правила: остаток переходит на следующий день. Текущие хиты поднимаются уже до нового максимума —
- * иначе персонаж вышел бы из отдыха с недобором, не видным ни на одном экране.
- */
 export function longRest(session: Session, occasion: Occasion): Session {
   const unavailability = longRestUnavailability(session);
   if (unavailability !== null) {
@@ -48,7 +29,6 @@ export function longRest(session: Session, occasion: Occasion): Session {
     .restoredByLongRest(reduction)
     .dropTemporary()
     .clearFireSuppression()
-    // Половина костей, округляя вниз. Персонажу без костей отдых их не выдумывает.
     .restoreHitDice(dice === undefined ? 0 : hitDiceRegainedOnLongRest(dice.total));
 
   const { board, expired } = root.effects.afterLongRest();
@@ -65,17 +45,6 @@ export function longRest(session: Session, occasion: Occasion): Session {
   );
 }
 
-/**
- * Короткий отдых. Ячеек сам по себе не восстанавливает.
- *
- * Часом он не является, поэтому следствий часа за собой не ведёт: снижённый кровавым колдовством
- * максимум остаётся на месте, накопленные очки заклинаний доживают до отметки часа. Регенерация за
- * это время до половины доходит — вне схватки она идёт непрерывно и отдыха не ждёт.
- *
- * Срок подавления огнём кончается раньше, чем считается регенерация: он длится до конца следующего
- * хода, а отдых длиннее хода — держать её эти минуты огню уже нечем. Солнце же признак, а не срок,
- * и отдыхом оно не снимается: под ним регенерации не будет и за десять минут.
- */
 export function shortRest(session: Session, occasion: Occasion): Session {
   const unavailability = shortRestUnavailability(session);
   if (unavailability !== null) {
@@ -94,16 +63,6 @@ export function shortRest(session: Session, occasion: Occasion): Session {
   );
 }
 
-/**
- * Почему операция привала сейчас не идёт; `null` — идёт.
- *
- * Спрашивают их дважды: до нажатия — чтобы погасить кнопку и назвать причину, и при нажатии —
- * чтобы отказать. Ответ обязан быть один: две формулировки одного запрета расходятся на первой же
- * правке, и молча.
- *
- * Бой перекрывает собственные причины магического восстановления: пока он идёт, «берётся после
- * короткого отдыха» бессмысленно — короткого отдыха сейчас тоже нет.
- */
 export function shortRestUnavailability(session: Session): string | null {
   return inFight(session) ? IN_FIGHT_SHORT_REST_REASON : null;
 }
@@ -119,7 +78,6 @@ export function arcaneRecoveryUnavailability(session: Session): string | null {
   return Character.of(session.character).arcana.arcaneRecoveryUnavailability();
 }
 
-/** Магическое восстановление. Дневной бюджет уровней ячеек можно брать частями. */
 export function useArcaneRecovery(
   session: Session,
   plan: SlotRecoveryPlan,

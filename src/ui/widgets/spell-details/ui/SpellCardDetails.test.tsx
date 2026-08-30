@@ -11,7 +11,6 @@ import { SpellCardDetails } from "./SpellCardDetails";
 
 const CASTING = testSnapshot().casting;
 
-/** Блок механики: то же название материала стоит и в перечне действий, и в пересказе правил. */
 async function mechanicsOf(id: string) {
   await renderWithStores(
     <SpellCardDetails
@@ -31,7 +30,6 @@ describe("подробная карточка называет требуемы�
 
     const material = mechanics.getByText(/кусок шерсти и хрустальная палочка/);
     expect(material.textContent).toContain("заменяет фокусировка");
-    // Приглушён, а не спрятан: делать с ним нечего, но снятая фокусировка вернёт требование.
     expect(material.className).not.toBe("");
   });
 

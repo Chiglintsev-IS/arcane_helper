@@ -1,10 +1,3 @@
-/**
- * Подсхема эффектов: что действует и что держится вниманием.
- *
- * Уровень ячейки приходит из каталога: это его словарь. Итогов эффекты не считают — они несут
- * вклады данными, а складывает лист.
- */
-
 import { z } from "zod";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
@@ -16,7 +9,6 @@ import { statContributionSchema } from "@/core/domain/shared/stats";
 
 const activeEffectSchema = z.object({
   id: nonEmpty,
-  /** Отсутствует у эффекта, заведённого игроком вручную: статуса или чужого вклада в КД. */
   spellId: nonEmpty.optional(),
   nameRu: nonEmpty,
 
@@ -31,30 +23,18 @@ const activeEffectSchema = z.object({
     .object({ label: nonEmpty, description: nonEmpty })
     .optional(),
 
-  /**
-   * Копия вкладов действующего: итог считается из одного состояния, без каталога.
-   *
-   * Постоянного вклада среди эффектов не бывает: у эффекта есть окончание, и то, что не кончается,
-   * эффектом не является — оно свойство персонажа.
-   */
   contributions: z.array(statContributionSchema).default([]),
 
-  /**
-   * Роль ручного эффекта, когда она есть: поправка к КД опознаётся этим признаком, а не строкой
-   * имени — переименование подписи не имеет права ломать опознание.
-   */
   manualKind: z.literal("armorAdjustment").optional(),
 
   endConditionRu: nonEmpty,
   note: nonEmpty.optional(),
 });
 
-/** Что держится вниманием прямо сейчас. Отсутствие записи означает, что не держится ничего. */
 const concentrationSchema = z
   .object({ spellId: nonEmpty, startedAt: isoDateTime })
   .optional();
 
-/** Поля контекста для сборки полной схемы состояния. */
 export const EFFECTS_FIELDS = {
   activeEffects: z.array(activeEffectSchema),
   concentration: concentrationSchema,
@@ -68,14 +48,7 @@ export type EffectsState = DeepReadonly<{
   concentration?: Concentration;
 }>;
 
-/**
- * Инварианты доски: концентрация и эффекты согласованы между собой.
- *
- * Проверка живёт здесь, а не у того, кто собирает состояние: концентрация без своего эффекта и
- * второй концентрационный эффект — оба про эффекты, а не про персонажа.
- */
 export function refineEffects(value: EffectsState, context: z.core.$RefinementCtx): void {
-  // Концентрация всегда сопровождается активным эффектом.
   if (value.concentration !== undefined) {
     const matching = value.activeEffects.find(
       (effect) => effect.isConcentration && effect.spellId === value.concentration?.spellId,
@@ -89,7 +62,6 @@ export function refineEffects(value: EffectsState, context: z.core.$RefinementCt
     }
   }
 
-  // Не более одного концентрационного эффекта одновременно.
   const concentrationEffects = value.activeEffects.filter((effect) => effect.isConcentration);
   if (concentrationEffects.length > 1) {
     context.addIssue({

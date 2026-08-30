@@ -1,29 +1,10 @@
-/**
- * Свёртка вкладов в число — одна на все величины.
- *
- * Источника движок не знает: он принимает пары «источник и вклад» и возвращает разбор с тем же
- * источником, ни разу не заглянув внутрь. Поэтому кольцо, заклинание и слово мастера считаются
- * одинаково, а показать разницу между ними может тот, кто разбор читает.
- *
- * Цикл здесь невыразим: величина строится из объектов своих зависимостей, а не из их имён, и
- * назвать зависимостью себя значит использовать объявление до объявления — ошибка компиляции.
- */
-
 import { DomainError } from "@/core/domain/shared/errors";
 import type { StatContribution, StatId, StatMethod } from "@/core/domain/shared/stats";
 
-/** Допустимый диапазон величины: свойство самой величины, применяется в конце счёта. */
 type StatRange = { readonly minimum?: number; readonly maximum?: number };
 
-/** Значение уже посчитанной зависимости. */
 type StatReader = (stat: Stat) => number;
 
-/**
- * Посчитанный способ счёта и принесённый вклад, из которого он вырос.
- *
- * Собственный способ величины ни из чего не вырос и приносящего не имеет: «без доспехов» действует
- * и тогда, когда не принесли ничего.
- */
 type StatCandidate = {
   readonly value: number;
   readonly grownFrom: StatMethod | undefined;
@@ -32,11 +13,6 @@ type StatCandidate = {
 export type Stat = {
   readonly id: StatId;
   readonly range: StatRange | undefined;
-  /**
-   * Зависимости величины — объектами, и потому вычисленными раньше неё.
-   *
-   * Список читает движок: прочитать в формуле можно только то, что здесь названо.
-   */
   readonly from: readonly Stat[];
   readonly methods: (
     read: StatReader,
@@ -61,7 +37,6 @@ export function defineStat(definition: {
   };
 }
 
-/** Способ счёта, ни из чего не выросший: собственная формула величины. */
 export function ownCandidate(value: number): StatCandidate {
   return { value, grownFrom: undefined };
 }
@@ -71,12 +46,6 @@ type Sourced<TSource> = {
   readonly contribution: StatContribution;
 };
 
-/**
- * Вклад в разборе: тот же источник, тот же вклад и признак «вошёл в итог».
- *
- * Непринятый способ счёта из разбора не пропадает: «кольчуга спорит с „Доспехами мага“ и
- * побеждает» — это ответ на «почему число такое», а исчезнувший проигравший ответом не был бы.
- */
 type BreakdownPart<TSource> = Sourced<TSource> & { readonly applied: boolean };
 
 export type Breakdown<TSource> = {
@@ -90,13 +59,6 @@ function clamped(value: number, range: StatRange | undefined): number {
   return range.maximum === undefined ? atLeast : Math.min(atLeast, range.maximum);
 }
 
-/**
- * Итог величины и разбор: назначение, иначе наибольший применимый способ плюс прибавки; затем
- * диапазон.
- *
- * Порядок вкладов на итог не влияет: наибольшее и сумма его не замечают, а назначение единственно —
- * это инвариант того, кто вклады хранит, и второе назначение сюда не доходит.
- */
 function fold<TSource>(
   stat: Stat,
   read: StatReader,
@@ -139,19 +101,11 @@ function isApplied<TSource>(
   assignment: Sourced<TSource> | undefined,
   best: StatCandidate | undefined,
 ): boolean {
-  // Назначение здесь одно на всех: найдено — оно и решает, кто вошёл в итог, а не найдено — среди
-  // вкладов его нет вовсе, и остаются прибавка да способ счёта.
   if (assignment !== undefined) return sourced === assignment;
   if (sourced.contribution.kind === "method") return best?.grownFrom === sourced.contribution.method;
   return true;
 }
 
-/**
- * Разбор каждой величины по принесённым вкладам.
- *
- * Величины считаются в порядке зависимости: прочитать можно только то, что уже посчитано, и потому
- * названо в списке зависимостей. Прочитанное мимо списка — отказ, а не тихая единица.
- */
 export function resolveStats<TSource>(
   stats: readonly Stat[],
   brought: readonly Sourced<TSource>[],
@@ -181,12 +135,6 @@ export function resolveStats<TSource>(
   return resolved;
 }
 
-/**
- * Разбор одной величины среди посчитанных.
- *
- * Пропущенная сборщиком величина — отказ, а не тихий ноль: ноль объявили бы мастеру за настоящее
- * число, и пропуск в сборке остался бы незамеченным до самого стола.
- */
 export function breakdownOf<TSource>(
   resolved: ReadonlyMap<StatId, Breakdown<TSource>>,
   stat: StatId,
@@ -198,7 +146,6 @@ export function breakdownOf<TSource>(
   return known;
 }
 
-/** Величины в порядке зависимости: сначала то, из чего считают, потом то, что считают. */
 function ordered(stats: readonly Stat[]): readonly Stat[] {
   const placed = new Set<Stat>();
   const order: Stat[] = [];

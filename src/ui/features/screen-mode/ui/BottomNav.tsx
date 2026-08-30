@@ -6,12 +6,6 @@ import { SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
 import { RULE_BLOCK, RULE_ROW, RULE_SECTION } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP_BARE, SURFACE_PAGE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
-/**
- * Подсказки не содержат слова «заклинания»: список на экране назван им же, и доступное имя кнопки
- * совпадало бы с ним по подстроке — поиск по метке находил бы вместе со списком и каждую строку.
- *
- * Боя среди режимов нет: он состояние игры, и отмечают его кнопкой внутри «Игры».
- */
 const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   play: { title: "Игра", hint: "то, чем ходят" },
   book: { title: "Книга", hint: "весь состав целиком, для чтения и сверки" },
@@ -23,13 +17,10 @@ const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
   notes: { title: "Заметки", hint: "записанное о мире: места, имена, обещания" },
 };
 
-/** Имя дела панели: им зовётся и кнопка, и заголовок раскрытого списка. */
 const MODES = "Режимы";
 
-/** Отметка показанного: слово, а не одна линейка. Цвет и линия читаются, но не произносятся. */
 const NOW = "сейчас";
 
-/** Уход из списка без смены режима: то же нажатие, что и раскрыло его. */
 const CLOSE = "Закрыть";
 
 export function BottomNav({
@@ -59,10 +50,6 @@ export function BottomNav({
             {MODES}
           </h2>
 
-          {/*
-           Свободная высота делится между восемью строками поровну: строка во весь экран промаха не
-           знает, и на 320 × 568 восемь строк по 56 пикселей умещаются без прокрутки.
-           */}
           <div className="flex min-h-0 flex-1 flex-col">
             {SCREEN_MODES.map((value) => (
               <button

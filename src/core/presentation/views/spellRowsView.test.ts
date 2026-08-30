@@ -1,11 +1,3 @@
-/**
- * Проекция списка заклинаний.
- *
- * Проверяется то, чего в карточке нет: цена момента, применимость в обстановке, причина отказа и
- * урон, посчитанный под этого персонажа. Сами поля карточки не пересказываются — за них отвечает
- * контент и его собственный прогон.
- */
-
 import { describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
@@ -31,7 +23,6 @@ import {
 
 const CLOCK = { now: () => "2026-07-31T18:00:00.000Z", nextId: () => "id-1" };
 
-/** Обстановка набирается командами: признак боя выводит схватка, а не подстановка. */
 function played(
   character: CharacterState,
   commands: readonly Command[] = [],
@@ -92,7 +83,6 @@ describe("цена и обстановка", () => {
   });
 });
 
-/** Ни ячеек, ни крови: под прямым солнцем кровавое колдовство не действует. */
 function withoutAnyPayment(): CharacterState {
   return {
     ...withoutSlots(createThorne()),
@@ -117,9 +107,6 @@ describe("почему нельзя", () => {
   });
 
   it("заклинание, до уровня которого он не дорос, называет недостающую ячейку", () => {
-    // Карточка выше и ячеек, и таблицы кровавого колдовства: способов у него нет вовсе. Такой в
-    // книге Торна нет, поэтому она берётся из настоящей и поднимается уровнем. Мастер применения
-    // всё равно откроется — и обязан сказать, чем это заклинание сотворяли бы.
     const catalog = loadThorneSpells();
     const highest = catalog.find((spell) => spell.id === "storm-sphere");
     if (highest === undefined) throw new Error("нет карточки для подъёма уровня");
@@ -139,7 +126,6 @@ describe("почему нельзя", () => {
 
 describe("числа под этого персонажа", () => {
   it("урон заговора считается по уровню персонажа, а не по книге", () => {
-    // Торн седьмого уровня: «Луч холода» бросает две кости вместо одной.
     expect(row("ray-of-frost").damage).toEqual({ formula: "2d8", type: "холод" });
   });
 
@@ -157,7 +143,6 @@ describe("числа под этого персонажа", () => {
   });
 
   it("защита с этим заклинанием считается заранее, а без вклада её нет вовсе", () => {
-    // «Доспехи мага» назначают КД 13 + Ловкость; у Торна с надетым он не падает ниже своего.
     expect(row("mage-armor").armorClassIfCast).toBeGreaterThan(0);
     expect(row("ray-of-frost").armorClassIfCast).toBeUndefined();
   });
@@ -196,13 +181,10 @@ describe("карточка", () => {
 
   it("реакция приезжает фразой своего условия", () => {
     expect(row("shield").card.reaction?.textRu).toContain("попали атакой");
-    // Заклинание, которое реакцией не творится, о событии молчит, а не отвечает пустой строкой.
     expect(row("ray-of-frost").card.reaction).toBeUndefined();
   });
 
   it("несказанного не выдумывает: без совета его нет вовсе", () => {
-    // Поле необязательно, потому что та же схема читает пользовательский импорт: файл,
-    // выгруженный прежней сборкой, обязан открываться.
     const found = loadThorneSpells().find((spell) => spell.id === "shield");
     if (found === undefined) throw new Error("нет карточки реакции");
     const { tacticalAdviceRu: _advice, ...bare } = found;
@@ -220,9 +202,6 @@ describe("карточка", () => {
   });
 
   it("свой компонент назван словами, и строка знает, лежит ли он в сумке", () => {
-    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет. Само
-    // заклинание отложено столом, поэтому книга дописывается прогоном: проверяется строка, а не
-    // сегодняшний состав книги.
     const knows = knowing(createThorne(), "arcane-lock");
     expect(row("arcane-lock", knows).card.components.material?.textRu).toContain("золотая пыль");
     expect(row("arcane-lock", knows).ownComponentCarried).toBe(false);
@@ -231,7 +210,6 @@ describe("карточка", () => {
       { kind: "toggle_material", spellId: "arcane-lock" },
     ]);
     expect(bought.ownComponentCarried).toBe(true);
-    // Заклинание без материального компонента о нём молчит.
     expect(row("shield").card.components.material).toBeUndefined();
   });
 
@@ -268,7 +246,6 @@ describe("способы сотворения", () => {
   });
 
   it("урон едет по каждой ячейке, а не по уровню заклинания", () => {
-    // «Молния» третьего уровня: своей ячейкой 8d6, четвёртой — на кость больше.
     const damage = row("lightning-bolt").castOptions.map((option) => option.damage?.formula);
 
     expect(damage).toContain("8d6");
@@ -281,7 +258,6 @@ describe("способы сотворения", () => {
         (option) => option.payment.kind === "blood" && option.castLevel === castLevel,
       );
 
-    // Цена уровня — 2, 5 и 6 единиц, курс Торна — три хита за единицу.
     expect(byLevel("mage-armor", 1)).toMatchObject({ hitPointCost: 6 });
     expect(byLevel("lightning-bolt", 3)).toMatchObject({ hitPointCost: 15 });
     expect(byLevel("lightning-bolt", 4)).toMatchObject({ hitPointCost: 18 });
@@ -309,8 +285,6 @@ describe("способы сотворения", () => {
   it("шаги мастера решаются признаками строки, а не разбором карточки на экране", () => {
     expect(row("arcane-vigor").spendsHitDice).toBe(true);
     expect(row("mage-armor").spendsHitDice).toBe(false);
-    // Компонент «Волшебного замка» — золотая пыль за 25 зм: фокусировка их не заменяет; само
-    // заклинание отложено, и книга дописывается прогоном.
     const knows = knowing(createThorne(), "arcane-lock");
     expect(row("arcane-lock", knows).ownComponentRequired).toBe(true);
     expect(row("arcane-lock", knows).componentReminders.join(" ")).toContain("золотая пыль");
@@ -333,7 +307,6 @@ describe("экономия хода", () => {
 });
 
 describe("общая причина названа один раз (FR-305)", () => {
-  /** Ход, в котором действие уже истрачено: им закрыто всё, что действием платит. */
   function afterSpendingTheAction(): LiveSession {
     return played(createThorne(), [
       ...START,
@@ -350,7 +323,6 @@ describe("общая причина названа один раз (FR-305)", ()
     const rows = toSpellRowViews(live);
     const closed = rows.filter((candidate) => candidate.unavailable);
 
-    // Строк, закрытых ходом, много — фраза о нём одна.
     expect(closed.length).toBeGreaterThan(1);
     expect(toSpellsRefusal(live)).toBe("Действие уже израсходовано");
     expect(closed.map((candidate) => candidate.unavailableReason)).not.toContain(

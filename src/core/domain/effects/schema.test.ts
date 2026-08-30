@@ -9,15 +9,9 @@ import {
   type EffectsState,
 } from "@/core/domain/effects/schema";
 
-/** Доска целиком: те же поля и тот же доводчик, что собирает в полную схему сборка состояния. */
 const board = z.object(EFFECTS_FIELDS).superRefine(refineEffects);
-/** Одна запись доски: массив эффектов состоит из неё. */
 const entry = EFFECTS_FIELDS.activeEffects.element;
 
-/**
- * Инварианты доски проверяются на самой доске: собирать ради них целого персонажа значило бы
- * проверять заодно и его правила. Что сборка вызывает доводчик — отдельный прогон полной схемы.
- */
 function effect(overrides: Partial<ActiveEffect> = {}): ActiveEffect {
   return {
     id: "effect-1",

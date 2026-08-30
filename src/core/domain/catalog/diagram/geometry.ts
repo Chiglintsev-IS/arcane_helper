@@ -1,32 +1,19 @@
-/**
- * Геометрия схемы ритуала.
- *
- * Единицы: лист 1000×1000, центр (500, 500), внешний радиус 460 — остаток отдан знакам вне круга.
- * Отсчёт углов начинается сверху и идёт по часовой стрелке: так же, как рука ведёт круг по бумаге,
- * и поэтому порядок вершин в данных совпадает с порядком рисования.
- */
-
 import { BOX, BOX_CENTER, type Stroke } from "@/core/domain/catalog/diagram/strokes";
 
-/** Сторона листа: в её единицах и приходит начерченное. */
 export const SIDE = 1000;
 export const CENTER = SIDE / 2;
 const OUTER_RADIUS = 460;
 
 type Point = { x: number; y: number };
 
-/** Куда ставится знак: точка листа, сторона его бокса и поворот по часовой стрелке в градусах. */
 type Placement = { at: Point; size: number; rotation?: number };
 
-/** Дуга командой рисования: откуда, куда, каким радиусом и какая из четырёх подходящих дуг. */
 type Arc = { from: Point; to: Point; r: number; largeArc: boolean; sweep: boolean };
 
-/** Два знака после запятой: в разметке лишняя точность только мешает читать. */
 function round(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** Доля внешнего радиуса в единицы схемы. */
 export function absolute(fraction: number): number {
   return round(fraction * OUTER_RADIUS);
 }
@@ -37,10 +24,8 @@ export function pointAt(radius: number, index: number, count: number): Point {
 }
 
 /**
- * Обходы звёздчатого многоугольника {points}/{skip}.
- *
  * При НОД(points, skip) > 1 фигура составная: гексаграмма 6/2 — это два треугольника, а не один
- * обход. Возвращается список обходов, потому что рисуются они раздельно — и рукой тоже.
+ * обход.
  */
 export function starPolygons(points: number, skip: number, radius: number): Point[][] {
   const cycles: Point[][] = [];
@@ -61,7 +46,6 @@ export function starPolygons(points: number, skip: number, radius: number): Poin
   return cycles;
 }
 
-/** Деления по обводу: пара точек на каждое, от внешнего радиуса внутрь. */
 export function tickMarks(count: number, radius: number, length: number): [Point, Point][] {
   return Array.from({ length: count }, (_unused, index) => [
     pointAt(radius, index, count),
@@ -69,7 +53,6 @@ export function tickMarks(count: number, radius: number, length: number): [Point
   ]);
 }
 
-/** Место и поворот каждого знака надписи: верх знака смотрит из центра. */
 export function inscriptionPlacements(
   count: number,
   radius: number,
@@ -80,12 +63,10 @@ export function inscriptionPlacements(
   }));
 }
 
-/** Сторона квадрата, вписанного в окружность. */
 export function squareSide(radius: number): number {
   return round(radius * Math.SQRT2);
 }
 
-/** Дуга от угла к углу в градусах, отсчёт как у pointAt. */
 export function arcCommand(
   cx: number,
   cy: number,
@@ -102,17 +83,10 @@ export function arcCommand(
     to: at(toDegrees),
     r,
     largeArc: Math.abs(toDegrees - fromDegrees) > 180,
-    // Рука идёт в ту сторону, куда заказано: назад дуга ведётся против часовой.
     sweep: toDegrees > fromDegrees,
   };
 }
 
-/**
- * Штрихи знака в единицах листа: бокс 100×100 переносится, поворачивается и масштабируется.
- *
- * Знак не знает, куда его поставят, и рисуется в своём боксе; сюда он приходит вместе с местом.
- * Толщина линии от размера знака не зависит — её выбирает перо, а не масштаб.
- */
 export function placedStrokes(
   strokes: readonly Stroke[],
   { at, size, rotation = 0 }: Placement,
@@ -162,7 +136,6 @@ export function placedStrokes(
           cx: center.x,
           cy: center.y,
           r: round(stroke.r * scale),
-          // Поворот знака — тот же поворот отсчёта: у дуги он прибавляется к обоим углам.
           fromDegrees: stroke.fromDegrees + rotation,
           toDegrees: stroke.toDegrees + rotation,
           ...dashed,

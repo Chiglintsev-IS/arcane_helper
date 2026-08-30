@@ -60,7 +60,6 @@ describe("StoreProvider", () => {
 
   it("загружает состояние сам, если оно ещё не прочитано", async () => {
     const stores = await createTestStores();
-    // Возвращаем стор в исходное состояние: провайдер обязан вызвать загрузку сам.
     act(() => {
       stores.session.setState({ snapshot: null, status: "loading" });
     });
@@ -105,7 +104,6 @@ describe("сторы для браузера", () => {
   });
 
   it("играют встроенным каталогом, пока игрок не загрузил свой (FR-123)", async () => {
-    // Контент подставляет провайдер: стор его не импортирует и потому проверяется без сборки.
     const stores = createBrowserStores();
     await stores.session.getState().hydrate();
 
