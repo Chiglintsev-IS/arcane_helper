@@ -90,13 +90,17 @@ describe("состав экрана (FR-001, AC-14)", () => {
     expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
     expect(within(screen.getByLabelText("Ресурсы")).queryByText("Атака")).toBeNull();
 
-    const paying = screen.getByLabelText("Чем платить");
-    // Четыре уровня ячеек и два пула: вопрос у них один, и ряд поэтому один. Ячейки всех уровней
-    // ведут в одну правку и стоят в ряду одним нажимаемым местом.
-    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур.", "Руны", "Кости"]) {
-      expect(paying.textContent).toContain(named);
+    // Числа тела и его зарядов — первым рядом; ячейки всех четырёх уровней — вторым, во всю ширину
+    // и одним нажимаемым местом: правка у них одна на все уровни.
+    const header = screen.getByLabelText("Ресурсы");
+    for (const named of ["КД", "Хиты", "Руны", "Кости"]) {
+      expect(header.textContent).toContain(named);
     }
-    expect(within(paying).getAllByText("4/4").length).toBeGreaterThan(0);
+    const slots = screen.getByRole("button", { name: /Ячейки 1 уровня/ });
+    for (const named of ["1 ур.", "2 ур.", "3 ур.", "4 ур."]) {
+      expect(slots.textContent).toContain(named);
+    }
+    expect(within(slots).getAllByText("4/4").length).toBeGreaterThan(0);
   });
 
   it("вне боя не показывает экономию действий (FR-001, FR-143)", async () => {
@@ -214,7 +218,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    const paying = () => within(screen.getByLabelText("Чем платить"));
+    const paying = () => within(screen.getByLabelText("Ресурсы"));
     expect(paying().getByText("Кости d6")).toBeDefined();
 
     // Закреплённая часть с началом боя не меняется: плитке незачем прыгать.
@@ -226,12 +230,14 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    // Числа, которые за бой не меняются, стоят плитками закреплённой части.
+    // Числа, которые за бой не меняются, стоят в закреплённой части: чем платят — плитками, что
+    // называют мастеру и не тратят — тихой строкой под ними.
     const header = within(screen.getByLabelText("Ресурсы"));
     expect(header.getByText("Внимательность")).toBeDefined();
-    const paying = within(screen.getByLabelText("Чем платить"));
-    expect(paying.getByText("Кости d6")).toBeDefined();
-    expect(paying.getByText("Руны")).toBeDefined();
+    expect(header.getByText("Скорость")).toBeDefined();
+    expect(header.getByText("Размер")).toBeDefined();
+    expect(header.getByText("Кости d6")).toBeDefined();
+    expect(header.getByText("Руны")).toBeDefined();
     expect(screen.queryByText(/Инициатива/)).toBeNull();
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
@@ -253,7 +259,10 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     };
     await renderWithStores(<GameScreen />, marked);
 
-    expect(screen.getByLabelText("Истощение: ступень 3")).toBeDefined();
+    // Значок — дверь: истощение правится, не уводя с «Игры», где мастер его и назвал.
+    expect(
+      screen.getByRole("button", { name: "Истощение: ступень 3. Отметки мастера" }),
+    ).toBeDefined();
   });
 
   it("вдохновение видно, когда оно есть (FR-232)", async () => {
@@ -263,14 +272,14 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
     };
     await renderWithStores(<GameScreen />, marked);
 
-    expect(screen.getByLabelText("Вдохновение")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Вдохновение. Отметки мастера" })).toBeDefined();
   });
 
   it("отсутствующего шапка не показывает (FR-232)", async () => {
     await renderWithStores(<GameScreen />);
 
-    expect(screen.queryByLabelText(/Истощение/)).toBeNull();
-    expect(screen.queryByLabelText("Вдохновение")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Истощение/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Вдохновение/ })).toBeNull();
   });
 
   it("полоса фильтров стоит и в бою, и вне его: список есть всегда (FR-002)", async () => {
@@ -842,15 +851,13 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    const outOfFight = screen.getByLabelText("Чем платить");
-    expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
+    const outOfFight = screen.getByRole("region", { name: "Ресурсы" });
     expect(outOfFight.textContent).toContain("Руны");
     expect(outOfFight.textContent).toContain("3/3");
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
-    const inFight = screen.getByLabelText("Чем платить");
-    expect(screen.getByRole("region", { name: "Ресурсы" })).toBeDefined();
+    const inFight = screen.getByRole("region", { name: "Ресурсы" });
     expect(inFight.textContent).toContain("Руны");
     expect(inFight.textContent).toContain("3/3");
   });
@@ -865,7 +872,7 @@ describe("«Знаки ограждения» вне боя (FR-153)", () => {
     await user.click(screen.getByRole("button", { name: /Знаки ограждения/ }));
     await user.click(screen.getByRole("button", { name: "Потратить руну" }));
 
-    expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
+    expect(screen.getByLabelText("Ресурсы").textContent).toContain("2/3");
   });
 
 });

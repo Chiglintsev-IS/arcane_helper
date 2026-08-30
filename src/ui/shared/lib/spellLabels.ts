@@ -73,7 +73,13 @@ function shapeName(shape: string): string {
   return AREA_SHAPES[shape] ?? shape;
 }
 
-function feet(value: number): string {
+/**
+ * Расстояние в футах. Слово склоняется, а не приписывается: «1 футов» читается как ошибка.
+ *
+ * Отсюда его берут все, кто меряет длину, — дальность заклинания и скорость персонажа: мера у стола
+ * одна, и второе её написание разошлось бы с первым на первой же правке склонения.
+ */
+export function feet(value: number): string {
   return `${value} ${plural(value, ["фут", "фута", "футов"])}`;
 }
 

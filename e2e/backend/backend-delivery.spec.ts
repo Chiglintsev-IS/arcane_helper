@@ -19,7 +19,7 @@ async function startFreshParty(page: Page): Promise<void> {
   });
   await page.goto("/");
   await started;
-  await expect(page.getByLabel("Чем платить")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Ресурсы" })).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {

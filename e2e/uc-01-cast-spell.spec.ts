@@ -22,8 +22,8 @@ async function openFreshApp(page: Page): Promise<void> {
     });
   });
   await page.reload();
-  // Признак загрузки — ряд оплаты: заголовка с именем в шапке нет, а ячейки есть в «Игре» всегда.
-  await expect(page.getByLabel("Чем платить")).toBeVisible();
+  // Признак загрузки — шапка ресурсов: заголовка с именем в ней нет, а сама она в «Игре» всегда.
+  await expect(page.getByRole("region", { name: "Ресурсы" })).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -55,16 +55,20 @@ test("play-screen renders all resource blocks", async ({ page }) => {
   await expect(page.getByRole("button", { name: /^КД 14/ })).toBeVisible();
   await expect(resources.getByText("Атака", { exact: true })).toBeHidden();
 
-  // Ряд оплаты — один: четыре уровня ячеек и три пула отвечают на один вопрос. Нажимаемых мест в
-  // нём два: ячейки всех уровней ведут в одну правку, руны — в неё же, а кости и очки правки не
-  // имеют вовсе.
-  const paying = page.getByLabel("Чем платить");
-  await expect(paying.getByRole("button")).toHaveCount(2);
-  await expect(paying.getByText("4/4").first()).toBeVisible();
-  await expect(paying).toContainText("1 ур.");
-  await expect(paying).toContainText("4 ур.");
-  await expect(paying).toContainText("Руны");
-  await expect(paying).toContainText("Кости d6");
+  // Шапка — три ряда. Нажимаемых мест в ней четыре: КД, хиты и руны ведут каждое в свою шторку, а
+  // ячейки всех уровней — одним местом в свою; кости и тихая строка правки не имеют вовсе.
+  const resourceHeader = page.getByRole("region", { name: "Ресурсы" });
+  await expect(resourceHeader.getByRole("button")).toHaveCount(4);
+  await expect(resourceHeader).toContainText("Руны");
+  await expect(resourceHeader).toContainText("Кости d6");
+  // Тихая строка: то, что называют мастеру, но не тратят.
+  await expect(resourceHeader).toContainText("30 футов");
+  await expect(resourceHeader).toContainText("Средний");
+
+  const slots = page.getByRole("button", { name: /Ячейки 1 уровня/ });
+  await expect(slots.getByText("4/4").first()).toBeVisible();
+  await expect(slots).toContainText("1 ур.");
+  await expect(slots).toContainText("4 ур.");
 
   // Шапка не тратит ряды на отсутствующее: концентрации нет — карточки нет; ресурс хода, которым
   // ещё не ходили, значка не получает ни до боя, ни в бою.
@@ -88,15 +92,17 @@ test("key mechanics fit iPhone SE without scrolling", async ({ page }) => {
   expect(layout.horizontalOverflow).toBeLessThanOrEqual(0);
   await expect(page.getByLabel("Заклинания")).toBeVisible();
 
-  // Ряд оплаты умещается целиком: он не переносится и не прокручивается, поэтому плитка, начатая
+  // Шапка умещается целиком: её ряды не переносятся и не прокручиваются, поэтому плитка, начатая
   // за краем, за столом не существует, а страница о её выезде молчит — обрезает её предок.
-  const paying = await page.getByLabel("Чем платить").evaluate((node) => ({
-    over: node.scrollWidth - node.clientWidth,
-    beyondEdge: [...node.querySelectorAll("li")].filter(
-      (tile) => tile.getBoundingClientRect().right > window.innerWidth,
-    ).length,
-  }));
-  expect(paying.over, "ряд оплаты не шире своего места").toBeLessThanOrEqual(0);
+  const paying = await page
+    .getByRole("region", { name: "Ресурсы" })
+    .evaluate((node) => ({
+      over: node.scrollWidth - node.clientWidth,
+      beyondEdge: [...node.querySelectorAll("dd, span, dt")].filter(
+        (tile) => tile.getBoundingClientRect().right > window.innerWidth,
+      ).length,
+    }));
+  expect(paying.over, "шапка не шире своего места").toBeLessThanOrEqual(0);
   expect(paying.beyondEdge, "ни одна плитка не ушла за край").toBe(0);
 });
 
@@ -114,7 +120,7 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   const pinned = await page.evaluate((firstRow) => {
     const card = document.querySelector(firstRow);
     const hitPoints = document.querySelector('[aria-label^="Хиты"]');
-    const slots = document.querySelector('[aria-label="Чем платить"]');
+    const slots = document.querySelector('[aria-label="Ресурсы"]');
     if (card === null || hitPoints === null || slots === null) throw new Error("нет узлов");
     // Прокручиваемый предок: первый, чьё содержимое выше собственной высоты.
     let area = card.parentElement;
@@ -186,11 +192,12 @@ test("combat keeps the first card whole, the book keeps the first row", async ({
   expect(sheetLayout.documentHeight).toBeLessThanOrEqual(sheetLayout.viewportHeight);
   expect(sheetLayout.horizontalOverflow).toBeLessThanOrEqual(0);
 
-  // Лист открывается персонажем, и первый его блок — «Кто он».
-  const firstBlockBottom = await page
-    .getByRole("heading", { name: "Кто он" })
+  // Лист открывается бросками, и первая его группа обязана быть видна целиком: иначе экран
+  // открывается на середине первой же строки.
+  const firstGroupBottom = await page
+    .getByRole("button", { name: /^Сила / })
     .evaluate((node) => Math.round(node.closest("section")?.getBoundingClientRect().bottom ?? 0));
-  expect(firstBlockBottom, "первый блок «Листа» целиком").toBeLessThanOrEqual(viewport);
+  expect(firstGroupBottom, "первая группа «Бросков» целиком").toBeLessThanOrEqual(viewport);
 
   // «Привал»: шапка ресурсов и кнопки отдыха видны без прокрутки — больше в режиме ничего и нет.
   await switchMode(page, /^Привал/);
@@ -271,7 +278,7 @@ test("book mode shows only the book", async ({ page }) => {
   await switchMode(page, /^Книга/);
 
   await expect(page.getByRole("region", { name: "Ресурсы" })).toHaveCount(0);
-  await expect(page.getByLabel("Чем платить")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toHaveCount(0);
   await expect(page.getByLabel("Прочие ресурсы")).toHaveCount(0);
 
   // Остаётся то, ради чего книгу открывают: состав, подготовка со счётчиком и фильтры.
@@ -320,14 +327,14 @@ test("wizard steps order and cast spends the slot", async ({ page }) => {
 
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
-  const slots = page.getByLabel("Чем платить");
+  const slots = page.getByRole("button", { name: /Ячейки 1 уровня/ });
   await expect(slots.getByText("2/3")).toBeVisible();
   await expect(slots.getByText("4/4")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Действует: Доспехи мага/ })).toBeVisible();
 });
 
 test("undo returns the slot through the log screen", async ({ page }) => {
-  const slots = page.getByLabel("Чем платить");
+  const slots = page.getByRole("button", { name: /Ячейки 1 уровня/ });
 
   await page.getByRole("button", { name: /^Начать бой/ }).click();
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
@@ -365,7 +372,9 @@ test("state survives a reload", async ({ page }) => {
 
 test("the sheet mode survives a reload and feeds the header", async ({ page }) => {
   await switchToSheet(page);
-  // Лист — база персонажа одной колонкой, без вкладок.
+  // Лист открывается бросками: за столом его открывают, чтобы назвать число. Кто он — вторая вкладка.
+  await expect(page.getByRole("tab", { name: "Броски" })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Кто он" }).click();
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
 
   await page.getByRole("button", { name: "Правка: Уровень" }).click();
@@ -378,12 +387,14 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
 
   await page.reload();
   // Режим переживает перезапуск вместе с состоянием: приложение открывается там, где закрыто.
-  await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
+  // Вкладка — состояние экрана, а не режима: лист снова открывается бросками.
+  await expect(page.getByRole("tab", { name: "Броски" })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Кто он" }).click();
   await expect(page.getByText("Волшебник, 8")).toBeVisible();
 
   // Новый уровень дошёл до ячеек: смена уровня — не только строка листа.
   await switchMode(page, /^Игра/);
-  await expect(page.getByLabel("Чем платить")).toContainText("4/4");
+  await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("4/4");
 });
 
 test("reaction shows when it returns", async ({ page }) => {
@@ -493,10 +504,13 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("list", { name: "Лог событий" })).toBeVisible();
   await scan("экран лога");
 
-  // Лист — восьмой экран сверки: блоки персонажа, шторка правки и переключатели внутри неё.
+  // Лист — восьмой экран сверки: обе вкладки, шторка правки и переключатели внутри неё.
   await switchToSheet(page);
+  await expect(page.getByRole("tab", { name: "Броски" })).toBeVisible();
+  await scan("лист персонажа, броски");
+  await page.getByRole("tab", { name: "Кто он" }).click();
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
-  await scan("лист персонажа");
+  await scan("лист персонажа, кто он");
 
   // Вещи — экран сверки из трёх частей. Экипировка: защита, надетое со своим глаголом и запас
   // со своим вводом.
@@ -531,7 +545,8 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 
   await switchToSheet(page);
 
-  await page.getByRole("button", { name: "Правка: Интеллект" }).click();
+  // Нажимается вся шапка группы: своё имя кнопка забирает у чисел, которыми она и занята.
+  await page.getByRole("button", { name: /^Интеллект 18/ }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
   await scan("шторка правки листа");
   await page.getByRole("button", { name: "Отмена" }).click();
@@ -654,7 +669,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await page.getByRole("button", { name: /Доспехи мага/ }).click();
   await page.getByRole("button", { name: "Сотворить" }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  await expect(page.getByLabel("Чем платить")).toContainText("3/4");
+  await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("3/4");
 
   // Бой заканчивают кнопкой, а не вкладкой: вкладка на состояние игры не влияет.
   await page.getByRole("button", { name: "Окончить бой" }).click();
@@ -669,7 +684,7 @@ test("camp mode reaches rest and recovery", async ({ page }) => {
   await switchMode(page, /^Привал/);
   await page.getByRole("button", { name: /Долгий отдых/ }).click();
   await page.getByRole("button", { name: "Подтвердить" }).click();
-  await expect(page.getByLabel("Чем платить")).toContainText("4/4");
+  await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("4/4");
 });
 
 test("combat keeps camp mode reachable, but rest refuses with a reason", async ({ page }) => {
@@ -684,7 +699,7 @@ test("combat keeps camp mode reachable, but rest refuses with a reason", async (
   await expect(longRest).toBeDisabled();
 
   // Ячейки не тронуты: клик по выключенной кнопке в браузере не срабатывает вовсе.
-  await expect(page.getByLabel("Чем платить")).toContainText("4/4");
+  await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("4/4");
 });
 
 test("blood pays for a slot inside the cast wizard", async ({ page }) => {
@@ -698,7 +713,7 @@ test("blood pays for a slot inside the cast wizard", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   // Пул ячеек не тронут: заплачено здоровьем и максимумом, и оба числа названы.
-  await expect(page.getByLabel("Чем платить")).toContainText("1 ур.4/4");
+  await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("1 ур.4/4");
   await expect(page.getByRole("region", { name: "Ресурсы" })).toContainText("54/54");
   await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 6");
 });

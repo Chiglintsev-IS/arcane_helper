@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import type { ChoicesView, SheetView } from "@/contract/views";
-import { sizeLabel } from "@/ui/entities/character/lib/labels";
+import { SHEET_FIELD_LABELS, sizeLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 import { SURFACE_CHOSEN, SURFACE_GROUP } from "@/ui/shared/ui/surface";
@@ -78,7 +78,11 @@ export function IdentitySheet({
         reasonRu={required.reasonOf(age)}
       />
 
-      <div role="radiogroup" aria-label="Размер" className="flex flex-wrap gap-1">
+      <div
+        role="radiogroup"
+        aria-label={SHEET_FIELD_LABELS.size}
+        className="flex flex-wrap gap-1"
+      >
         {choices.creatureSizes.map((option) => (
           <button
             key={option}
@@ -99,7 +103,7 @@ export function IdentitySheet({
       </div>
 
       <NumberField
-        labelRu="Скорость"
+        labelRu={SHEET_FIELD_LABELS.speed}
         value={speedText}
         onChange={required.touching(setSpeedText)}
         min={0}

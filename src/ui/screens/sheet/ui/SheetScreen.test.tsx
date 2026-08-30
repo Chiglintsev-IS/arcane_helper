@@ -14,26 +14,53 @@ import { describe, expect, it } from "vitest";
 import { renderWithStores, shown } from "@/ui/app/testing/stores";
 import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
 
+/** Карточки «Кто он» лежат за второй вкладкой: до них доходят тем же нажатием, что и за столом. */
+async function openIdentity(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByRole("tab", { name: "Кто он" }));
+}
+
 describe("«Лист» (FR-230, FR-231, FR-227)", () => {
-  it("«Лист» показывает персонажа целиком и ничего из боя (FR-230)", async () => {
+  it("открывается бросками: за столом лист открывают, чтобы назвать число (FR-230)", async () => {
     await renderWithStores(<SheetScreen />);
 
-    // Лист — база персонажа одной колонкой: кто он и его отметки.
-    expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Отметки мастера" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Броски" }).getAttribute("aria-selected")).toBe("true");
+    // Гроссбух стоит целиком: бонус мастерства над числами и шесть характеристик под ним.
+    expect(screen.getByText("Бонус мастерства").textContent).toContain("+3");
+    expect(screen.getByRole("button", { name: /^Интеллект 18/ })).toBeDefined();
+
     // Ни шапки, ни списка, ни отметок схватки: лист отвечает, кто он, а не что он делает сейчас.
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
     expect(screen.queryByLabelText(/^Заклинания/)).toBeNull();
-    // Чисел боя на листе нет: они стоят в шапке «Игры», а перебивки — в отметках мастера.
     expect(screen.queryByRole("heading", { name: "Числа боя" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Здоровье" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Класс Доспеха" })).toBeNull();
   });
 
+  it("вторая вкладка отвечает, кто он, а не чем он бросает (FR-230)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<SheetScreen />);
+    await openIdentity(user);
+
+    expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
+    expect(screen.getByText("Лунный тролль")).toBeDefined();
+    // Броски ушли на соседнюю вкладку целиком: два вопроса не стоят одной колонкой.
+    expect(screen.queryByText("Бонус мастерства")).toBeNull();
+  });
+
+  it("отметок мастера на листе нет: их ставят в «Игре», где мастер их и называет (FR-232)", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<SheetScreen />);
+    await openIdentity(user);
+
+    expect(screen.queryByRole("heading", { name: "Отметки мастера" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Правка: Отметки мастера" })).toBeNull();
+  });
+
   it("«Лист»: правка характеристики доходит до состояния и в лог (FR-231)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
+    // Нажимается вся шапка группы: имя кнопки — её же числа, потому что кнопка ими и занята.
+    await user.click(screen.getByRole("button", { name: /^Интеллект 18/ }));
 
     const field = screen.getByLabelText("Значение");
     await user.clear(field);
@@ -58,12 +85,13 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     // Одна запись лога на весь блок, а не три.
     expect(shown(stores).log).toHaveLength(1);
     expect(screen.queryByRole("dialog", { name: "Правка: Интеллект" })).toBeNull();
-    expect(screen.getByText("20 (+5)")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Интеллект 20, \+5/ })).toBeDefined();
   });
 
   it("«Лист»: языки правятся своей шторкой, а владения — своей (FR-230)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
+    await openIdentity(user);
 
     await user.click(screen.getByRole("button", { name: "Правка: Владения" }));
     await user.type(screen.getByLabelText("Инструменты"), "Инструменты кузнеца");
@@ -83,6 +111,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист»: уровень пересчитывает ресурсы одной записью (FR-227)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
+    await openIdentity(user);
     await user.click(screen.getByRole("button", { name: "Правка: Уровень" }));
 
     const level = screen.getByLabelText("Уровень");
@@ -105,11 +134,14 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
   it("«Лист»: отмена шторки состояния не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
-    await user.click(screen.getByRole("button", { name: "Правка: Отметки мастера" }));
-    await user.click(screen.getByRole("radio", { name: "Ступень 3" }));
+    const before = shown(stores).sheet.abilities;
+
+    await user.click(screen.getByRole("button", { name: /^Мудрость 12/ }));
+    const medicine = within(screen.getByRole("radiogroup", { name: "Медицина" }));
+    await user.click(medicine.getByRole("radio", { name: "компетентность" }));
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
-    expect(shown(stores).sheet.exhaustion).toBe(0);
+    expect(shown(stores).sheet.abilities).toEqual(before);
     expect(shown(stores).log).toHaveLength(0);
   });
 
@@ -119,7 +151,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     const { stores } = await renderWithStores(<SheetScreen />);
     const before = shown(stores).sheet.abilities;
 
-    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
+    await user.click(screen.getByRole("button", { name: /^Интеллект 18/ }));
     const field = screen.getByLabelText("Значение");
     await user.clear(field);
     await user.type(field, "40");
@@ -136,7 +168,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     const { stores } = await renderWithStores(<SheetScreen />);
     const before = shown(stores).sheet.abilities;
 
-    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
+    await user.click(screen.getByRole("button", { name: /^Интеллект 18/ }));
     const field = screen.getByLabelText("Значение");
     await user.clear(field);
     await user.type(field, "12.5");

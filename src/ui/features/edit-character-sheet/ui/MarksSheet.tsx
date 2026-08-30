@@ -7,6 +7,15 @@ import { EditSheetFrame } from "./EditSheetFrame";
 import { SURFACE_CHOSEN, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 
+/**
+ * Имя шторки: им зовётся и она сама, и каждая дверь в неё.
+ *
+ * Дверей у отметок две — значок в строке действующего и кнопка в шторке «Действует», — и обе
+ * обещают одно и то же место. Слово у них поэтому одно: два синонима читались бы как две разные
+ * шторки.
+ */
+export const MARKS_LABEL = "Отметки мастера";
+
 export function MarksSheet({
   marks,
   choices,
@@ -28,7 +37,7 @@ export function MarksSheet({
 
   return (
     <EditSheetFrame
-      titleRu="Отметки мастера"
+      titleRu={MARKS_LABEL}
       error={error}
       onCancel={onCancel}
       onSave={() => onSave({ exhaustion, inspiration })}

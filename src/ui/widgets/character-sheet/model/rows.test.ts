@@ -3,24 +3,19 @@ import { describe, expect, it } from "vitest";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { toSheetView } from "@/core/presentation/views/sheetView";
-import { sheetBlocks } from "./rows";
+import { abilityLedger, sheetBlocks } from "./rows";
 
 /** Проекцию строит настоящий презентер: подделка рядом проверяла бы себя, а не приложение. */
 const blocksOf = (character: CharacterState) => sheetBlocks(toSheetView(character));
+const ledgerOf = (character: CharacterState) => abilityLedger(toSheetView(character));
 
 const blockById = (id: string) => blocksOf(createThorne()).find((block) => block.id === id);
+const abilityById = (id: string) => ledgerOf(createThorne()).find((ability) => ability.id === id);
 
-describe("блоки листа", () => {
-  it("лист — только база персонажа, порядком бумажного листа (FR-230)", () => {
+describe("«Кто он» — то, что спрашивают раз за вечер", () => {
+  it("карточки называют персонажа и его владения, а бросков среди них нет (FR-230)", () => {
     expect(blocksOf(createThorne()).map((block) => block.id)).toEqual([
       "identity",
-      "marks",
-      "ability:strength",
-      "ability:dexterity",
-      "ability:constitution",
-      "ability:intelligence",
-      "ability:wisdom",
-      "ability:charisma",
       "proficiencies",
       "languages",
       "features",
@@ -54,13 +49,17 @@ describe("блоки листа", () => {
     expect(blockById("identity")?.rows).toContainEqual({ labelRu: "Возраст", value: "—" });
   });
 
-  it("отметки мастера читаются словами", () => {
-    const state = createThorne();
-    const marked = { ...state, exhaustion: 3, inspiration: true };
-    const rows = blocksOf(marked).find((block) => block.id === "marks")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Истощение", value: "ступень 3" });
-    expect(rows).toContainEqual({ labelRu: "Вдохновение", value: "есть" });
-    expect(blockById("marks")?.rows).toContainEqual({ labelRu: "Истощение", value: "нет" });
+  it("размера и скорости здесь нет: их называют, пока ходят, и живут они в шапке «Игры»", () => {
+    const labels = (blockById("identity")?.rows ?? []).map((row) => row.labelRu);
+    expect(labels).toEqual(["Имя", "Вид", "Возраст", "Класс", "Подкласс"]);
+  });
+
+  it("отметок мастера на листе нет: их ставят там, где мастер их и называет (FR-232)", () => {
+    const marked = blocksOf({ ...createThorne(), exhaustion: 3, inspiration: true });
+    expect(marked.map((block) => block.id)).not.toContain("marks");
+    expect(marked.flatMap((block) => block.rows.map((row) => row.labelRu))).not.toContain(
+      "Истощение",
+    );
   });
 
   it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {
@@ -95,70 +94,6 @@ describe("блоки листа", () => {
     );
   });
 
-  it("характеристика держит значение, спасбросок и свои навыки — как на бумажном листе", () => {
-    expect(blockById("ability:intelligence")?.rows).toEqual([
-      { labelRu: "Значение", value: "18 (+4)" },
-      { labelRu: "Спасбросок", value: "+8", hint: "владение" },
-      { labelRu: "Аркана", value: "+7", hint: "владение" },
-      { labelRu: "История", value: "+4" },
-      { labelRu: "Анализ", value: "+7", hint: "владение" },
-      { labelRu: "Природа", value: "+7", hint: "владение" },
-      { labelRu: "Религия", value: "+4" },
-    ]);
-  });
-
-  it("характеристика без навыков — только значение и спасбросок", () => {
-    expect(blockById("ability:constitution")?.rows).toEqual([
-      { labelRu: "Значение", value: "16 (+3)" },
-      { labelRu: "Спасбросок", value: "+4" },
-    ]);
-  });
-
-  it("все восемнадцать навыков разложены по шести блокам и ни один не потерян", () => {
-    const skillRows = blocksOf(createThorne())
-      .filter((block) => block.id.startsWith("ability:"))
-      // Значение и спасбросок есть у каждой характеристики; остальное — её навыки.
-      .flatMap((block) => block.rows.slice(2));
-    expect(skillRows).toHaveLength(18);
-    expect(skillRows).toContainEqual({ labelRu: "Скрытность", value: "+2" });
-  });
-
-  it("владение и компетентность названы подсказкой", () => {
-    const state = createThorne();
-    const trained = { ...state, skills: { arcana: "expert" as const } };
-    const rows = blocksOf(trained).find((block) => block.id === "ability:intelligence")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Аркана", value: "+10", hint: "компетентность" });
-  });
-
-  it("спасбросок без владения подсказки не несёт", () => {
-    expect(blockById("ability:strength")?.rows).toContainEqual({
-      labelRu: "Спасбросок",
-      value: "+0",
-    });
-  });
-
-  it("отрицательный модификатор характеристики печатается тем же минусом, что в значке", () => {
-    // Сила Торна — 8: модификатор −1, и минус обязан быть типографским, а не дефисом.
-    expect(blockById("ability:strength")?.rows).toContainEqual({
-      labelRu: "Значение",
-      value: "8 (−1)",
-    });
-  });
-
-  it("каждый блок называет свою шторку, а уровень правится второй кнопкой", () => {
-    const wisdom = blockById("ability:wisdom")?.edit;
-    // Шторка получает саму характеристику: второго поиска той же записи по имени не заводится.
-    expect(wisdom?.block).toBe("ability");
-    expect(wisdom?.block === "ability" ? wisdom.ability.id : null).toBe("wisdom");
-    expect(blockById("identity")?.secondary).toEqual({
-      labelRu: "Уровень",
-      edit: { block: "level" },
-    });
-    // У владений и языков своя шторка: правят их порознь, потому что и спрашивают порознь.
-    expect(blockById("proficiencies")?.edit).toEqual({ block: "proficiencies" });
-    expect(blockById("languages")?.edit).toEqual({ block: "languages" });
-  });
-
   it("владения и языки стоят порознь, а снаряжения на листе нет вовсе (FR-230)", () => {
     const state = createThorne();
     const armed = {
@@ -185,5 +120,96 @@ describe("блоки листа", () => {
   it("пустой список владений называется прочерком", () => {
     expect(blockById("languages")?.rows).toContainEqual({ labelRu: "Знает", value: "—" });
     expect(blockById("proficiencies")?.rows).toContainEqual({ labelRu: "Доспехи", value: "—" });
+  });
+
+  it("каждая карточка называет свою шторку, а уровень правится второй кнопкой", () => {
+    expect(blockById("identity")?.secondary).toEqual({
+      labelRu: "Уровень",
+      edit: { block: "level" },
+    });
+    // У владений и языков своя шторка: правят их порознь, потому что и спрашивают порознь.
+    expect(blockById("proficiencies")?.edit).toEqual({ block: "proficiencies" });
+    expect(blockById("languages")?.edit).toEqual({ block: "languages" });
+  });
+});
+
+describe("«Броски» — гроссбух того, чем отвечают на просьбу бросить", () => {
+  it("шесть характеристик порядком бумажного листа, ни одной лишней", () => {
+    expect(ledgerOf(createThorne()).map((ability) => ability.id)).toEqual([
+      "strength",
+      "dexterity",
+      "constitution",
+      "intelligence",
+      "wisdom",
+      "charisma",
+    ]);
+  });
+
+  it("характеристика держит значение, модификатор, спасбросок и свои навыки", () => {
+    const intelligence = abilityById("intelligence");
+
+    expect(intelligence?.titleRu).toBe("Интеллект");
+    expect(intelligence?.score).toBe("18");
+    expect(intelligence?.modifier).toBe("+4");
+    expect(intelligence?.save).toBe("+8");
+    expect(intelligence?.skills).toEqual([
+      { id: "arcana", labelRu: "Аркана", value: "+7", training: { glyph: "●", labelRu: "владение" } },
+      { id: "history", labelRu: "История", value: "+4" },
+      { id: "investigation", labelRu: "Анализ", value: "+7", training: { glyph: "●", labelRu: "владение" } },
+      { id: "nature", labelRu: "Природа", value: "+7", training: { glyph: "●", labelRu: "владение" } },
+      { id: "religion", labelRu: "Религия", value: "+4" },
+    ]);
+  });
+
+  it("у Телосложения навыков нет — группа состоит из одной шапки", () => {
+    expect(abilityById("constitution")?.skills).toEqual([]);
+    expect(abilityById("constitution")?.modifier).toBe("+3");
+  });
+
+  it("все восемнадцать навыков разложены по шести группам и ни один не потерян", () => {
+    const skills = ledgerOf(createThorne()).flatMap((ability) => ability.skills);
+    expect(skills).toHaveLength(18);
+    expect(skills).toContainEqual({ id: "stealth", labelRu: "Скрытность", value: "+2" });
+  });
+
+  it("владение отмечено знаком, и знак назван словом — иначе точка ничего не значит", () => {
+    expect(abilityById("intelligence")?.saveTraining).toEqual({ glyph: "●", labelRu: "владение" });
+    // Спасбросок без владения отметки не несёт: точка при нём обещала бы лишнюю тройку.
+    expect(abilityById("strength")?.saveTraining).toBeUndefined();
+  });
+
+  it("компетентность носит свой знак: она входит в число дважды и читается иначе", () => {
+    const trained = ledgerOf({ ...createThorne(), skills: { arcana: "expert" as const } });
+    const arcana = trained
+      .flatMap((ability) => ability.skills)
+      .find((skill) => skill.id === "arcana");
+    expect(arcana).toEqual({
+      id: "arcana",
+      labelRu: "Аркана",
+      value: "+10",
+      training: { glyph: "◆", labelRu: "компетентность" },
+    });
+  });
+
+  it("отрицательный модификатор печатается тем же минусом, что и в значке", () => {
+    // Сила Торна — 8: модификатор −1, и минус обязан быть типографским, а не дефисом.
+    expect(abilityById("strength")?.modifier).toBe("−1");
+  });
+
+  it("шапка зовётся голосом целиком: числа столбцов подписаны словами, а не местом в сетке", () => {
+    // Имя кнопки забирает содержимое, и без слов модификатор со спасброском не читались бы вовсе.
+    expect(abilityById("intelligence")?.accessibleName).toBe(
+      "Интеллект 18, +4, Спасбросок +8, владение. Правка: Интеллект",
+    );
+    expect(abilityById("strength")?.accessibleName).toBe(
+      "Сила 8, −1, Спасбросок +0. Правка: Сила",
+    );
+  });
+
+  it("группа называет свою шторку и отдаёт ей саму характеристику", () => {
+    const wisdom = abilityById("wisdom")?.edit;
+    // Шторка получает саму характеристику: второго поиска той же записи по имени не заводится.
+    expect(wisdom?.block).toBe("ability");
+    expect(wisdom?.block === "ability" ? wisdom.ability.id : null).toBe("wisdom");
   });
 });

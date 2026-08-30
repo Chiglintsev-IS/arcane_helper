@@ -23,6 +23,7 @@ function show(effects: readonly ActiveEffectView[]): void {
       onDropConcentration={() => {}}
       onEndEffect={() => {}}
       onAddStatus={() => {}}
+      onOpenMarks={() => {}}
       onClose={() => {}}
     />,
   );

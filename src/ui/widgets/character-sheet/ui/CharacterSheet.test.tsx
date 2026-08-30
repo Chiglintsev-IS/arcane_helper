@@ -9,8 +9,8 @@ import { CharacterSheet } from "./CharacterSheet";
 
 afterEach(cleanup);
 
-describe("режим «Лист»", () => {
-  it("одна колонка базы: без вкладок, без чисел боя, без вещей (FR-230)", () => {
+describe("вкладка «Кто он»", () => {
+  it("карточки того, что спрашивают раз за вечер, и ничего из боя (FR-230)", () => {
     render(
       <CharacterSheet
         sheet={toSheetView(createThorne())}
@@ -19,12 +19,11 @@ describe("режим «Лист»", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Отметки мастера" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Интеллект" })).toBeDefined();
     expect(screen.getByText("Лунный тролль")).toBeDefined();
 
-    // Вкладок нет: лист перестал делиться, вещи ушли в «Сумку», числа боя — в шапку «Игры».
-    expect(screen.queryByRole("tab")).toBeNull();
+    // Броски стоят гроссбухом на соседней вкладке, отметки мастера — в «Игре», вещи — в «Сумке».
+    expect(screen.queryByRole("heading", { name: "Интеллект" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Отметки мастера" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Числа боя" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Вещи" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Навыки" })).toBeNull();
@@ -60,7 +59,6 @@ describe("режим «Лист»", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Правка: Интеллект" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Правка: Уровень" })).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Правка: Языки" }));
@@ -86,14 +84,4 @@ describe("режим «Лист»", () => {
     expect(card?.textContent).not.toContain("Рунный почерк");
   });
 
-  it("подсказка стоит рядом со значением, а не вместо него", () => {
-    const state = createThorne();
-    render(
-      <CharacterSheet
-        sheet={toSheetView({ ...state, skills: { arcana: "expert" } })}
-        onEdit={() => {}}
-      />,
-    );
-    expect(screen.getByText("(компетентность)")).toBeDefined();
-  });
 });

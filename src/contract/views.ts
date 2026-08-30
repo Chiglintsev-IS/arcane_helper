@@ -161,6 +161,13 @@ export const sheetViewSchema = z.object({
   exhaustion: whole,
   inspiration: z.boolean(),
 
+  /**
+   * Слагаемое, общее всем броскам листа: оно уже сложено в каждом спасброске и каждом навыке, а
+   * стоит отдельно потому, что за столом его называют вслух — им же меряют, владение перед тобой
+   * или голая характеристика.
+   */
+  proficiencyBonus: whole,
+
   abilities: z.array(abilityViewSchema),
 
   proficiencies: z.object({

@@ -21,6 +21,7 @@ import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { ConcentrationCheckCard } from "@/ui/features/concentration-check/ui/ConcentrationCheckCard";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
+import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { ResourceBadges, ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
@@ -32,7 +33,7 @@ import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { signed } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
-import { RULE_MARK } from "@/ui/shared/ui/rule";
+import { RULE_EDGE_BOTTOM, RULE_MARK } from "@/ui/shared/ui/rule";
 
 export function GameScreen() {
   const { draft: draftStore, session: sessionStore } = useStores();
@@ -51,6 +52,7 @@ export function GameScreen() {
   const [armorClassOpen, setArmorClassOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [checkOpen, setCheckOpen] = useState(false);
+  const [marksOpen, setMarksOpen] = useState(false);
 
   const execute = sessionStore.getState().execute;
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -171,15 +173,17 @@ export function GameScreen() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/*
-       * Одна область прокрутки на весь экран: закреплены только хиты и ячейки — они уезжать не
+       * Одна область прокрутки на весь экран: закреплена одна шапка ресурсов — её числа уезжать не
        * вправе. Всё остальное едет вместе со списком, иначе первая карточка не влезает целиком.
+       * Край закреплённого идёт во всю ширину, до самого края экрана: линия отмечает, что
+       * содержимое уходит под шапку, а обрезанная полями она читалась бы как край самой шапки.
        */}
       <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-3 pb-3">
         {/*
          * Фон у закреплённой полосы обязателен: без него уезжающие значки просвечивают сквозь неё.
          * `Canvas` — системный цвет страницы, один и тот же в светлой и в тёмной теме.
          */}
-        <div className="sticky top-0 z-10 bg-[Canvas] pb-1 pt-2">
+        <div className={`sticky top-0 z-10 -mx-3 bg-[Canvas] px-3 pb-1 pt-2 ${RULE_EDGE_BOTTOM}`}>
           <ResourceHeader
             sheet={snapshot.sheet}
             resources={snapshot.resources}
@@ -206,6 +210,7 @@ export function GameScreen() {
             sheet={snapshot.sheet}
             resources={snapshot.resources}
             turn={snapshot.turn}
+            onOpenMarks={() => setMarksOpen(true)}
           />
         </div>
 
@@ -321,7 +326,24 @@ export function GameScreen() {
           }}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
           onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
+          onOpenMarks={() => {
+            setActiveOpen(false);
+            setMarksOpen(true);
+          }}
           onClose={() => setActiveOpen(false)}
+        />
+      ) : null}
+
+      {marksOpen ? (
+        <MarksSheet
+          marks={snapshot.sheet}
+          choices={snapshot.choices}
+          error={refusal}
+          onCancel={() => {
+            setRefusal(null);
+            setMarksOpen(false);
+          }}
+          onSave={(marks) => void saveEdit({ kind: "edit_marks", ...marks }, () => setMarksOpen(false))}
         />
       ) : null}
 

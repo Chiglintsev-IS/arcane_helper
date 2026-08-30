@@ -179,7 +179,7 @@ describe("режим экрана переживает перезапуск (FR-
 
     // Тот, что прежде жил на втором этаже, стоит ровно столько же.
     await openSheet(user);
-    expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Броски" })).toBeDefined();
   });
 
   /**
@@ -494,7 +494,7 @@ describe("одно дело — одно слово (FR-264)", () => {
 
     // Характеристика — запись листа: повтор сохранения оставит её той же.
     await openSheet(user);
-    await user.click(screen.getByRole("button", { name: "Правка: Интеллект" }));
+    await user.click(screen.getByRole("button", { name: /^Интеллект 18/ }));
     const record = within(screen.getByRole("dialog", { name: "Правка: Интеллект" }));
     expect(record.getByRole("button", { name: "Сохранить" })).toBeDefined();
     expect(record.queryByRole("button", { name: "Подтвердить" })).toBeNull();
@@ -583,7 +583,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Потратить руну" }));
 
     expect(screen.getByRole("button", { name: /^Действует: Обнаружение магии/ })).toBeDefined();
-    expect(screen.getByLabelText("Чем платить").textContent).toContain("2/3");
+    expect(screen.getByLabelText("Ресурсы").textContent).toContain("2/3");
     // Значок траты реакции есть только в бою — он проверяется до ухода в лог.
     expect(screen.getByLabelText("Реакция израсходована")).toBeDefined();
 
@@ -742,7 +742,7 @@ describe("экран показывает только своё (FR-217, FR-220)
 
     // Ни ячеек, ни чисел боя, ни номера раунда: лог отвечает, что уже случилось.
     expect(screen.queryByRole("region", { name: "Ресурсы" })).toBeNull();
-    expect(screen.queryByLabelText("Чем платить")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ячейки 1 уровня/ })).toBeNull();
     expect(screen.queryByLabelText("Прочие ресурсы")).toBeNull();
     expect(screen.queryByText(/раунд/i)).toBeNull();
   });
@@ -766,14 +766,14 @@ describe("шапка ресурсов принадлежит «Игре», а н
     await renderWithStores(<PlayShell />);
 
     const inCombat = within(screen.getByLabelText("Ресурсы"));
-    expect(inCombat.getByLabelText("Чем платить")).toBeDefined();
+    expect(inCombat.getByRole("button", { name: /Ячейки 1 уровня/ })).toBeDefined();
     expect(inCombat.getByRole("button", { name: /^КД/ })).toBeDefined();
 
     await openMode(user, /^Книга/);
 
     // Книга отвечает, что персонаж знает, а не чем он за это заплатит: ни ячеек, ни чисел боя.
     expect(screen.queryByLabelText("Ресурсы")).toBeNull();
-    expect(screen.queryByLabelText("Чем платить")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ячейки 1 уровня/ })).toBeNull();
     expect(screen.queryByText("КД")).toBeNull();
   });
 });

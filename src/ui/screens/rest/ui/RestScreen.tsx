@@ -15,6 +15,7 @@ import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { HitPointsSheet } from "@/ui/features/edit-hit-points/ui/HitPointsSheet";
 import { HourMark } from "@/ui/features/rest/ui/HourMark";
+import { MarksSheet } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { ResourceBadges, ResourceHeader } from "@/ui/widgets/resource-header/ui/ResourceHeader";
 import { ResourcesSheet } from "@/ui/features/edit-resources/ui/ResourcesSheet";
 
@@ -29,6 +30,7 @@ export function RestScreen() {
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [activeOpen, setActiveOpen] = useState(false);
   const [checkOpen, setCheckOpen] = useState(false);
+  const [marksOpen, setMarksOpen] = useState(false);
 
   const execute = sessionStore.getState().execute;
 
@@ -73,6 +75,7 @@ export function RestScreen() {
             sheet={snapshot.sheet}
             resources={snapshot.resources}
             turn={snapshot.turn}
+            onOpenMarks={() => setMarksOpen(true)}
           />
         </div>
 
@@ -186,7 +189,22 @@ export function RestScreen() {
           }}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
           onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
+          onOpenMarks={() => {
+            setActiveOpen(false);
+            setMarksOpen(true);
+          }}
           onClose={() => setActiveOpen(false)}
+        />
+      ) : null}
+
+      {marksOpen ? (
+        <MarksSheet
+          marks={snapshot.sheet}
+          choices={snapshot.choices}
+          onCancel={() => setMarksOpen(false)}
+          onSave={async (marks) => {
+            if ((await execute({ kind: "edit_marks", ...marks })) === null) setMarksOpen(false);
+          }}
         />
       ) : null}
 

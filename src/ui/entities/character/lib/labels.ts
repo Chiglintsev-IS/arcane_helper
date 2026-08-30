@@ -52,13 +52,22 @@ export const DERIVED_LABELS: Record<(typeof DERIVED_STAT_IDS)[number], string> =
   passivePerception: "Пассивная внимательность",
 };
 
+/**
+ * Имена свойств персонажа, которые называют в двух местах сразу: правят их на «Листе», а читают в
+ * шапке «Игры». Слово у них одно на оба места, иначе одно и то же поле звалось бы двумя словами.
+ */
+export const SHEET_FIELD_LABELS = {
+  speed: "Скорость",
+  size: "Размер",
+} as const;
+
 /** Величины, у которых имя ничем не уточняется: подпись у каждой своя. */
 const SINGULAR_STAT_IDS = [...DERIVED_STAT_IDS, "armorClass", "speed"] as const;
 
 const SINGULAR_STAT_LABELS: Record<(typeof SINGULAR_STAT_IDS)[number], string> = {
   ...DERIVED_LABELS,
   armorClass: "Класс Доспеха",
-  speed: "Скорость",
+  speed: SHEET_FIELD_LABELS.speed,
 };
 
 /**
@@ -88,6 +97,16 @@ export function trainingLabel(training: string): string {
   return labelOf(TRAINING_LABELS, training);
 }
 
+/**
+ * Знак степени владения: он стоит при числе там, где слово не помещается.
+ *
+ * Знак без слова ничего не значит, поэтому оба приходят отсюда: тот, кто ставит знак при числе,
+ * обязан назвать слово легендой рядом.
+ */
+export function trainingGlyph(training: string): string {
+  return labelOf(TRAINING_GLYPHS, training);
+}
+
 export function currencyLabel(currency: string): string {
   return labelOf(CURRENCY_LABELS, currency);
 }
@@ -114,10 +133,19 @@ export function armorCategoryLabel(category: string): string {
 export function statLabel(stats: readonly StatChoiceView[], stat: string): string {
   const named = stats.find((candidate) => candidate.id === stat);
   if (named?.of === undefined) return labelOf(SINGULAR_STAT_LABELS, stat);
-  if (named.kind === "save") return `Спасбросок: ${abilityLabel(named.of)}`;
+  if (named.kind === "save") return `${SAVE_LABEL}: ${abilityLabel(named.of)}`;
   if (named.kind === "skill") return skillLabel(named.of);
   return abilityLabel(named.of);
 }
+
+/**
+ * Спасбросок: полное слово — для голоса, сокращение — для колонки, в которую слово не встаёт.
+ *
+ * Оба зовут одно и то же, и потому стоят рядом: сокращение, набранное отдельно от слова, рано или
+ * поздно окажется сокращением другого слова.
+ */
+export const SAVE_LABEL = "Спасбросок";
+export const SAVE_ABBR = "спас";
 
 /** Наборы величин, о которых правила говорят целиком; перечень их приезжает от того, кто их свёл. */
 const STAT_FAMILY_LABELS: Readonly<Record<string, string>> = {
@@ -149,6 +177,12 @@ const SIZE_LABELS: Readonly<Record<string, string>> = {
 const TRAINING_LABELS: Readonly<Record<string, string>> = {
   proficient: "владение",
   expert: "компетентность",
+};
+
+/** Знаки степеней: столько же точек, сколько раз бонус мастерства вошёл в число. */
+const TRAINING_GLYPHS: Readonly<Record<string, string>> = {
+  proficient: "●",
+  expert: "◆",
 };
 
 /** Род доспеха и род вещи словами: перечень приезжает от правил, слово к слову — здесь. */

@@ -51,6 +51,8 @@ export function toSheetView(character: CharacterState): SheetView {
     exhaustion: character.exhaustion,
     inspiration: character.inspiration,
 
+    proficiencyBonus: sheet.value("proficiencyBonus"),
+
     abilities: ABILITIES.map((ability) => ({
       id: ability,
       score: sheet.value(abilityStatId(ability)),

@@ -15,6 +15,7 @@ import { useState, type FormEvent } from "react";
 import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
+import { MARKS_LABEL } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 /** Имя шторки: кнопка, которая её открывает, обещает ровно это слово. */
@@ -46,7 +47,7 @@ function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
   };
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} className="min-w-0 flex-1">
       <label className={`flex min-h-11 items-center gap-2 px-2 text-xs ${SURFACE_CONTROL}`}>
         <span className="shrink-0 text-ink-quiet">Новый статус</span>
         <input
@@ -137,6 +138,7 @@ export function ActiveEffectsSheet({
   onDropConcentration,
   onEndEffect,
   onAddStatus,
+  onOpenMarks,
   onClose,
 }: {
   /** Что висит на персонаже: посчитано ядром, включая то, двигает ли эффект защиту. */
@@ -151,6 +153,12 @@ export function ActiveEffectsSheet({
   onEndEffect: (effectId: string) => void;
   /** Заводит статус без вклада в КД: поле стоит здесь же, под списком того, что уже действует. */
   onAddStatus: (nameRu: string) => void;
+  /**
+   * Дверь в отметки мастера. Стоит здесь, а не только значком: значка нет, пока истощения и
+   * вдохновения нет, а завести их надо ровно тогда — и путь к ним не вправе появляться и пропадать
+   * вместе с тем, что за ним заводят.
+   */
+  onOpenMarks: () => void;
   onClose: () => void;
 }) {
   const otherEffects = effects.filter((effect) => !effect.isConcentration);
@@ -221,7 +229,16 @@ export function ActiveEffectsSheet({
           <p className="text-ink-quiet">Сейчас ничего не действует.</p>
         ) : null}
 
-        <NewStatusField onAdd={onAddStatus} />
+        <div className="flex items-stretch gap-2">
+          <NewStatusField onAdd={onAddStatus} />
+          <button
+            type="button"
+            onClick={onOpenMarks}
+            className={`min-h-11 shrink-0 px-3 text-xs ${SURFACE_CONTROL}`}
+          >
+            {MARKS_LABEL}
+          </button>
+        </div>
       </div>
     </section>
   );
