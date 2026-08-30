@@ -7,7 +7,7 @@ describe("персонаж целиком", () => {
   it("знание переживает исчезновение запаса", () => {
     const stocked = Character.of(createThorne());
     const withHerb = stocked
-      .withItems(stocked.items.addDefinition({ nameRu: "Лунная трава", kind: "ingredient" }))
+      .withItems(stocked.items.addDefinition({ nameRu: "Лунная трава", kinds: ["ingredient"] }))
       .withCrafting(stocked.crafting.noteIngredient("Лунная трава"));
 
     const known = withHerb.withCrafting(

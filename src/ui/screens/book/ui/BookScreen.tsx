@@ -141,6 +141,7 @@ export function BookScreen() {
           casting={casting}
           onCast={() => draftStore.getState().start(openRow)}
           onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openRow.id, note })}
+          onToggleMaterial={() => void execute({ kind: "toggle_material", spellId: openRow.id })}
           onClose={() => setOpenSpellId(null)}
         />
       )}

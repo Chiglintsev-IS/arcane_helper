@@ -99,11 +99,6 @@ describe("вклад протекает по графу величин", () => {
 });
 
 describe("Класс Доспеха считается той же свёрткой", () => {
-  const chainMail: StatContribution = {
-    stat: "armorClass",
-    kind: "method",
-    method: { family: "armor", base: 16, category: "heavy" },
-  };
   const mageArmor: StatContribution = {
     stat: "armorClass",
     kind: "method",
@@ -111,45 +106,25 @@ describe("Класс Доспеха считается той же свёртк�
   };
   const shield: StatContribution = { stat: "armorClass", kind: "bonus", value: 5 };
 
-  it("«Доспехи мага» действуют, пока доспеха нет", () => {
+  it("без способа счёта защита считается от голого тела", () => {
+    expect(resolved(shield)("armorClass")).toBe(17);
+  });
+
+  it("«Доспехи мага» задают базу вместо голого тела", () => {
     expect(resolved(mageArmor)("armorClass")).toBe(15);
   });
 
-  it("в кольчуге «Доспехи мага» бесполезны, и складывать их не с чем", () => {
-    expect(resolved(chainMail)("armorClass")).toBe(16);
-    expect(resolved(chainMail, mageArmor)("armorClass")).toBe(16);
-  });
-
   it("«Щит» прибавляется поверх любого способа счёта", () => {
-    expect(resolved(shield)("armorClass")).toBe(17);
     expect(resolved(mageArmor, shield)("armorClass")).toBe(20);
-    expect(resolved(chainMail, mageArmor, shield)("armorClass")).toBe(21);
   });
 
-  it("предел Ловкости — свойство категории доспеха, а не вещи", () => {
-    const light: StatContribution = {
-      stat: "armorClass",
-      kind: "method",
-      method: { family: "armor", base: 11, category: "light" },
-    };
-    const medium: StatContribution = {
-      stat: "armorClass",
-      kind: "method",
-      method: { family: "armor", base: 14, category: "medium" },
-    };
-
-    expect(resolved(light)("armorClass")).toBe(13);
-    expect(resolved(medium)("armorClass")).toBe(16);
-    expect(resolved(chainMail)("armorClass")).toBe(16);
+  it("два одинаковых способа не удваивают защиту: они спорят, а не складываются", () => {
+    expect(resolved(mageArmor, mageArmor)("armorClass")).toBe(15);
   });
 
-  it("вторая кираса не удваивает защиту: способы счёта спорят, а не складываются", () => {
-    expect(resolved(chainMail, chainMail)("armorClass")).toBe(16);
-  });
-
-  it("назначение перекрывает и доспех, и заклинание", () => {
+  it("назначение перекрывает и заклинание, и прибавку", () => {
     const assigned: StatContribution = { stat: "armorClass", kind: "assignment", value: 19 };
 
-    expect(resolved(chainMail, mageArmor, shield, assigned)("armorClass")).toBe(19);
+    expect(resolved(mageArmor, shield, assigned)("armorClass")).toBe(19);
   });
 });

@@ -6,6 +6,9 @@ export const RULE_BLOCK = "border-l-[3px] border-l-accent-rule";
 
 export const RULE_ROW = "border-t border-rule";
 
+/** Волосяная линия между соседями списка: первого она не подчёркивает. */
+export const RULE_BETWEEN = "divide-y divide-rule";
+
 export const RULE_GROUP = "border border-rule-strong";
 
 export const RULE_EDGE_TOP = "border-t border-rule-strong";

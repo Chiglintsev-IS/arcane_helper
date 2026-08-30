@@ -448,7 +448,6 @@ describe("одно дело — одно слово (FR-264)", () => {
     await user.click(screen.getByRole("button", { name: "Отмена" }));
 
     await openMode(user, /^Вещи/);
-    await user.click(screen.getByRole("radio", { name: "Сумка" }));
     const money = screen.getByRole("button", { name: "Правка: Деньги" });
     expect(money.textContent).toBe("Правка");
     await user.click(money);

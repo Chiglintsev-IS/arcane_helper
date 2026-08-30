@@ -36,7 +36,7 @@ describe("шторка уровня", () => {
 
     expect(screen.getByText(/Ячейки 4 уровня: 1 → 2/)).toBeDefined();
     expect(screen.getByText(/Кости хитов: 7 → 8/)).toBeDefined();
-    expect(screen.getByText(/Лимит подготовки: 11 → 12/)).toBeDefined();
+    expect(screen.getByText(/Заклинаний в подготовке: 11 → 12/)).toBeDefined();
   });
 
   it("уровень: рост бонуса мастерства двигает руны", async () => {

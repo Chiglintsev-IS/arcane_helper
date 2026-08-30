@@ -18,7 +18,7 @@ function bonusFor(brought: readonly SourcedContribution[], stat: StatId): number
 
 function armorMethods(brought: readonly SourcedContribution[]) {
   return brought.flatMap(({ source, contribution }) =>
-    contribution.kind === "method" && contribution.method.family === "armor"
+    contribution.kind === "method"
       ? [{ nameRu: source.nameRu, base: contribution.method.base }]
       : [],
   );
@@ -27,28 +27,29 @@ function armorMethods(brought: readonly SourcedContribution[]) {
 const ring: ItemDefinition = {
   id: "ring",
   nameRu: "Кольцо защиты",
-  kind: "gear",
+  kinds: ["gear"],
   bonuses: { armorClass: 1, "save:wisdom": 1 },
 };
 
-const potion: ItemDefinition = { id: "healing-potion", nameRu: "Зелье лечения", kind: "consumable" };
+const potion: ItemDefinition = { id: "healing-potion", nameRu: "Зелье лечения", kinds: ["consumable"] };
 
-const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kind: "other" };
+const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [] };
 
-const helmet: ItemDefinition = { id: "helmet", nameRu: "Шлем", kind: "gear" };
+const helmet: ItemDefinition = { id: "helmet", nameRu: "Шлем", kinds: ["gear"] };
+
+const stone: ItemDefinition = {
+  id: "stone",
+  nameRu: "Камень удачи",
+  kinds: [],
+  bonuses: { initiative: 1 },
+  worksCarried: true,
+};
 
 const chainmail: ItemDefinition = {
   id: "chainmail",
   nameRu: "Кольчуга",
-  kind: "gear",
-  armor: { base: 16, category: "heavy" },
-};
-
-const leather: ItemDefinition = {
-  id: "leather",
-  nameRu: "Кожаный доспех",
-  kind: "gear",
-  armor: { base: 11, category: "light" },
+  kinds: ["gear"],
+  bonuses: { armorClass: 2 },
 };
 
 const gear = () => Equipment.of(createThorne());
@@ -87,6 +88,12 @@ describe("снаряжение", () => {
     expect(stocked.contributions(items(ring))).toEqual(gear().contributions(items(ring)));
   });
 
+  it("прибавка «при себе» приходит из сумки, а без запаса не приходит", () => {
+    const carried = gear().adjustBagCount("stone", 1);
+    expect(bonusFor(carried.contributions(items(stone)), "initiative")).toBe(1);
+    expect(bonusFor(gear().contributions(items(stone)), "initiative")).toBe(0);
+  });
+
   it("вещь без прибавки вклада не приносит", () => {
     const stocked = gear().adjustBagCount("helmet", 1).equip("helmet", 1, items(helmet));
     expect(stocked.contributions(items(helmet))).toEqual(gear().contributions(items(helmet)));
@@ -109,7 +116,7 @@ describe("снаряжение", () => {
     expect(unworn.wornCount("ring")).toBe(0);
   });
 
-  it("надевается только экипировка (FR-238)", () => {
+  it("надевается только экипировка", () => {
     const stocked = gear().adjustBagCount("healing-potion", 1);
     expect(() => stocked.equip("healing-potion", 1, items(potion))).toThrow(DomainError);
   });
@@ -164,40 +171,11 @@ describe("снаряжение", () => {
     expect(gear().money.gold).toBe(0);
   });
 
-  it("без доспеха способа «от доспеха» нет вовсе", () => {
-    expect(armorMethods(gear().contributions(items()))).toEqual([]);
-  });
-
-  it("надетый доспех приносит способ счёта со своей базой и категорией", () => {
+  it("вещь способов счёта не приносит: защиту вещи двигают прибавкой", () => {
     const armored = gear().adjustBagCount("chainmail", 1).equip("chainmail", 1, items(chainmail));
 
-    expect(armored.contributions(items(chainmail))).toContainEqual({
-      source: { origin: "item", nameRu: "Кольчуга" },
-      contribution: {
-        stat: "armorClass",
-        kind: "method",
-        method: { family: "armor", base: 16, category: "heavy" },
-      },
-    });
-  });
-
-  it("два надетых доспеха приносят по способу счёта: спорят они в свёртке, а не здесь", () => {
-    const both = items(chainmail, leather);
-    const wornBoth = gear()
-      .adjustBagCount("chainmail", 1)
-      .adjustBagCount("leather", 1)
-      .equip("chainmail", 1, both)
-      .equip("leather", 1, both);
-
-    expect(armorMethods(wornBoth.contributions(both))).toEqual([
-      { nameRu: "Кольчуга", base: 16 },
-      { nameRu: "Кожаный доспех", base: 11 },
-    ]);
-  });
-
-  it("доспех в сумке способа не приносит: кольчуга защищает надетой", () => {
-    const carried = gear().adjustBagCount("chainmail", 1);
-    expect(armorMethods(carried.contributions(items(chainmail)))).toEqual([]);
+    expect(armorMethods(armored.contributions(items(chainmail)))).toEqual([]);
+    expect(bonusFor(armored.contributions(items(chainmail)), "armorClass")).toBe(2);
   });
 
   it("отсутствие вещи в сумке или на теле отвергается с причиной", () => {
@@ -227,6 +205,14 @@ describe("снаряжение", () => {
     const pouch = Equipment.of({ ...stowed, equipment: { ...stowed.equipment, components } });
 
     expect(pouch.replacesFreeComponents(Items.of(stowed))).toBe(true);
+  });
+
+  it("желание купить ставится и снимается, а повтор ничего не меняет", () => {
+    const wishing = gear().withWanted("rope", true);
+    expect(wishing.wants("rope")).toBe(true);
+    expect(wishing.withWanted("rope", true)).toBe(wishing);
+    expect(wishing.withWanted("rope", false).wants("rope")).toBe(false);
+    expect(gear().wants("rope")).toBe(false);
   });
 
   it("вещь есть у того, у кого она в сумке: ноль — не наличие", () => {

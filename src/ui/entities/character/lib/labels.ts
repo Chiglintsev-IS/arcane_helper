@@ -42,12 +42,29 @@ export const DERIVED_STAT_IDS = [
 
 export const DERIVED_LABELS: Record<(typeof DERIVED_STAT_IDS)[number], string> = {
   proficiencyBonus: "Бонус мастерства",
-  spellSaveDc: "КС спасброска",
-  spellAttackModifier: "Атака заклинанием",
-  preparedLimit: "Лимит подготовки",
+  spellSaveDc: "Сложность спасброска врага",
+  spellAttackModifier: "Попадание заклинанием",
+  preparedLimit: "Заклинаний в подготовке",
   initiative: "Инициатива",
   passivePerception: "Пассивная внимательность",
 };
+
+/** Что величина значит за столом: имя правил само за себя не говорит. */
+const SINGULAR_STAT_HINTS: Record<(typeof SINGULAR_STAT_IDS)[number], string> = {
+  proficiencyBonus: "прибавка там, где есть владение",
+  spellSaveDc: "выше — врагу труднее спастись от вашего заклинания",
+  spellAttackModifier: "прибавка к броску попадания, урона не трогает",
+  preparedLimit: "сколько заклинаний готовите за день",
+  initiative: "бросок на порядок хода",
+  passivePerception: "замечаете без броска",
+  armorClass: "во что труднее попасть",
+  speed: "футов за ход",
+};
+
+export function statHint(stat: string): string | undefined {
+  const hints: Readonly<Record<string, string>> = SINGULAR_STAT_HINTS;
+  return hints[stat];
+}
 
 export const SHEET_FIELD_LABELS = {
   speed: "Скорость",
@@ -98,8 +115,8 @@ export function itemKindLabel(kind: string): string {
   return labelOf(ITEM_KIND_LABELS, kind);
 }
 
-export function armorCategoryLabel(category: string): string {
-  return labelOf(ARMOR_CATEGORY_LABELS, category);
+export function statKindLabel(kind: string): string {
+  return labelOf(STAT_KIND_LABELS, kind);
 }
 
 export function statLabel(stats: readonly StatChoiceView[], stat: string): string {
@@ -142,17 +159,17 @@ const TRAINING_GLYPHS: Readonly<Record<string, string>> = {
   expert: "◆",
 };
 
-const ARMOR_CATEGORY_LABELS: Readonly<Record<string, string>> = {
-  light: "Лёгкий",
-  medium: "Средний",
-  heavy: "Тяжёлый",
-};
-
 const ITEM_KIND_LABELS: Readonly<Record<string, string>> = {
   gear: "Экипировка",
   consumable: "Расходник",
   ingredient: "Ингредиент",
-  other: "Другое",
+};
+
+const STAT_KIND_LABELS: Readonly<Record<string, string>> = {
+  singular: "Числа листа",
+  ability: "Характеристики",
+  save: "Спасброски",
+  skill: "Навыки",
 };
 
 const CURRENCY_LABELS: Readonly<Record<string, string>> = {

@@ -40,10 +40,10 @@ export class Items {
     assertItemDefinition(withId);
     const found = this.find(id);
     if (found === undefined) return this.with([...this.data, withId]);
-    if (found.kind !== withId.kind) {
-      throw new DomainError(`«${found.nameRu}» уже заведена другой категорией`);
-    }
-    return this;
+
+    const added = withId.kinds.filter((kind) => !found.kinds.includes(kind));
+    if (added.length === 0) return this;
+    return this.replaceDefinition({ ...found, kinds: [...found.kinds, ...added] });
   }
 
   replaceDefinition(item: ItemDefinition): Items {

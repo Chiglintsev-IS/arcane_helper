@@ -13,7 +13,7 @@ import { SKILL_TRAINING } from "@/core/domain/character/skills";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { CURRENCIES } from "@/core/domain/shared/schema";
-import { ARMOR_CATEGORIES, STAT_IDS } from "@/core/domain/shared/stats";
+import { STAT_IDS } from "@/core/domain/shared/stats";
 
 import { toChoicesView } from "./choicesView";
 
@@ -24,7 +24,6 @@ describe("перечни выбора", () => {
     expect(choices.stats.map((stat) => stat.id)).toEqual([...STAT_IDS]);
     expect(choices.creatureSizes).toEqual([...CREATURE_SIZES]);
     expect(choices.itemKinds).toEqual([...ITEM_KINDS]);
-    expect(choices.armorCategories).toEqual([...ARMOR_CATEGORIES]);
     expect(choices.currencies).toEqual([...CURRENCIES]);
     expect(choices.skillTrainings).toEqual([...SKILL_TRAINING]);
     expect(choices.runeTargets).toEqual([...RUNE_TARGETS]);

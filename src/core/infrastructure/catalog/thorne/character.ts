@@ -109,20 +109,20 @@ const RAW: unknown = {
     {
       id: "spellcasting-focus",
       nameRu: "Магическая фокусировка +1",
-      kind: "gear",
+      kinds: ["gear"],
       spellcastingFocus: true,
       bonuses: { spellSaveDc: 1, spellAttackModifier: 1 },
     },
     {
       id: "robe",
       nameRu: "Мантия +1",
-      kind: "gear",
+      kinds: ["gear"],
       bonuses: { armorClass: 1 },
     },
     {
       id: "cloak-of-protection",
       nameRu: "Плащ защиты",
-      kind: "gear",
+      kinds: ["gear"],
       bonuses: {
         armorClass: 1,
         "save:strength": 1,
@@ -136,7 +136,7 @@ const RAW: unknown = {
     {
       id: "swamp-camouflage-kit",
       nameRu: "Комплект болотной маскировки",
-      kind: "other",
+      kinds: [],
       note: "1d4 к Скрытности в болотах",
     },
   ],

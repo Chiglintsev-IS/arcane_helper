@@ -27,6 +27,7 @@ const equipmentSchema = z
   .object({
     bag: z.array(stockEntrySchema).default([]),
     worn: z.array(stockEntrySchema).default([]),
+    wanted: z.array(nonEmpty).default([]),
 
     money: moneySchema.default(NO_MONEY),
 
@@ -35,6 +36,7 @@ const equipmentSchema = z
   .default({
     bag: [],
     worn: [],
+    wanted: [],
     money: NO_MONEY,
   });
 

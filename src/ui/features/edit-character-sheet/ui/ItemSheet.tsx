@@ -3,31 +3,110 @@
 import { useState } from "react";
 
 import type { ChoicesView, ItemView } from "@/contract/views";
-import {
-  armorCategoryLabel,
-  currencyAbbr,
-  itemKindLabel,
-  statLabel,
-} from "@/ui/entities/character/lib/labels";
+import { currencyAbbr, itemKindLabel, statLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
+import { StatPicker } from "./StatPicker";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 type ItemPatch = {
   id: string;
   nameRu: string;
-  kind: string;
+  kinds: string[];
   price?: { amount: number; currency: string };
   note?: string;
   bonuses: Record<string, number>;
-  armor?: { base: number; category?: string };
+  worksCarried?: true;
   spellcastingFocus?: true;
 };
+
+const GEAR = "gear";
+
+const WANTED_LABEL = "Хочу купить";
+
+const FOCUS_LABEL = "Фокусировка";
+
+const FOCUS_HINT = "Надетой ею проводят магию: компоненты без стоимости она закрывает";
+
+const NO_KINDS_HINT = "Другое: пока неизвестно, что это";
+
+function Chip({
+  labelRu,
+  pressed,
+  onPress,
+}: {
+  labelRu: string;
+  pressed: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onPress}
+      className={`min-h-11 px-2 text-xs ${
+        pressed ? `${SURFACE_CHOSEN} font-medium` : `text-ink-quiet ${SURFACE_CONTROL}`
+      }`}
+    >
+      {labelRu}
+    </button>
+  );
+}
+
+function Counter({
+  labelRu,
+  countRu,
+  count,
+  lessLabelRu,
+  moreLabelRu,
+  lessDisabled,
+  moreDisabled,
+  onAdjust,
+}: {
+  labelRu: string;
+  countRu: string;
+  count: number;
+  lessLabelRu: string;
+  moreLabelRu: string;
+  lessDisabled: boolean;
+  moreDisabled: boolean;
+  onAdjust: (delta: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 text-sm">
+      <span className="text-ink-quiet">{labelRu}</span>
+      <span className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={lessLabelRu}
+          disabled={lessDisabled}
+          onClick={() => onAdjust(-1)}
+          className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
+        >
+          −
+        </button>
+        <span aria-label={countRu} className="min-w-8 text-center tabular-nums">
+          {count}
+        </span>
+        <button
+          type="button"
+          aria-label={moreLabelRu}
+          disabled={moreDisabled}
+          onClick={() => onAdjust(1)}
+          className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
+        >
+          +
+        </button>
+      </span>
+    </div>
+  );
+}
 
 export function ItemSheet({
   item,
   choices,
   onSave,
+  onToggleWanted,
   onAdjustBagCount,
   onAdjustWornCount,
   onRemove,
@@ -38,183 +117,133 @@ export function ItemSheet({
   item: ItemView;
   choices: ChoicesView;
   onSave: (item: ItemPatch) => void;
+  onToggleWanted: () => void;
   onAdjustBagCount: (delta: number) => void;
   onAdjustWornCount: (delta: number) => void;
   onRemove: () => void;
   onCancel: () => void;
 }) {
   const required = useRequiredNumbers();
-  const [kind, setKind] = useState(item.kind);
+  const [kinds, setKinds] = useState<readonly string[]>(item.kinds);
+  const [carriedChoice, setCarriedChoice] = useState<boolean | null>(
+    item.worksCarried ? true : null,
+  );
   const [note, setNote] = useState(item.note ?? "");
   const [priceAmount, setPriceAmount] = useState(
     item.price === undefined ? "" : String(item.price.amount),
   );
-  const [currency, setCurrency] = useState(
-    item.price?.currency ?? choices.currencies[0] ?? "",
-  );
+  const [currency, setCurrency] = useState(item.price?.currency ?? choices.currencies[0] ?? "");
   const [bonuses, setBonuses] = useState<readonly (readonly [string, string])[]>(
     item.bonuses.map((bonus) => [bonus.stat, String(bonus.value)] as const),
   );
-  const [added, setAdded] = useState(choices.stats[0]?.id ?? "");
-  const [armorBase, setArmorBase] = useState(
-    item.armor === undefined ? "" : String(item.armor.base),
-  );
-  const [category, setCategory] = useState(item.armor?.category ?? "");
+  const [picking, setPicking] = useState(false);
   const [focus, setFocus] = useState(item.spellcastingFocus);
 
   const { bagCount, wornCount } = item;
+  const wearable = kinds.includes(GEAR);
+  const worksCarried = carriedChoice ?? !wearable;
 
   const typedBonuses = bonuses.map(([stat, text]) => ({
     stat,
     text,
     value: requiredFieldNumber(text),
   }));
-  const shownBonuses = kind === "gear" ? typedBonuses : [];
   const numbers: Record<string, number> = Object.fromEntries(
     typedBonuses
       .filter((bonus) => required.typed(bonus.value))
       .map((bonus) => [bonus.stat, bonus.value]),
   );
   const amount = priceAmount.trim() === "" ? undefined : Number(priceAmount);
-  const base = armorBase.trim() === "" ? undefined : Number(armorBase);
+
+  const addBonuses = (added: readonly string[]): void => {
+    setPicking(false);
+    setBonuses([
+      ...bonuses,
+      ...added
+        .filter((stat) => !bonuses.some((row) => row[0] === stat))
+        .map((stat) => [stat, "0"] as const),
+    ]);
+  };
+
+  const toggleKind = (kind: string): void => {
+    setKinds(kinds.includes(kind) ? kinds.filter((one) => one !== kind) : [...kinds, kind]);
+  };
 
   return (
-    <EditSheetFrame
-      titleRu={item.nameRu}
-      error={error}
-      onCancel={onCancel}
-      onSave={() =>
-        required.ask(
-          shownBonuses.map((bonus) => bonus.value),
-          () =>
-            onSave({
-              id: item.id,
-              nameRu: item.nameRu,
-              kind,
-              ...(amount === undefined ? {} : { price: { amount, currency } }),
-              ...(note.trim() === "" ? {} : { note: note.trim() }),
-              bonuses: numbers,
-              ...(base === undefined
-                ? {}
-                : { armor: { base, ...(category === "" ? {} : { category }) } }),
-              ...(focus ? { spellcastingFocus: focus } : {}),
-            }),
-        )
-      }
-    >
-      <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="text-ink-quiet">В сумке</span>
-        <span className="flex items-center gap-1">
-          <button
-            type="button"
-            aria-label={`Потратить один из сумки: ${item.nameRu}`}
-            disabled={bagCount === 0}
-            onClick={() => onAdjustBagCount(-1)}
-            className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
-          >
-            −
-          </button>
-          <span className="min-w-8 text-center tabular-nums">{bagCount}</span>
-          <button
-            type="button"
-            aria-label={`Добавить один в сумку: ${item.nameRu}`}
-            onClick={() => onAdjustBagCount(1)}
-            className={`min-h-11 min-w-11 text-base ${SURFACE_CONTROL}`}
-          >
-            +
-          </button>
-        </span>
-      </div>
+    <>
+      <EditSheetFrame
+        titleRu={item.nameRu}
+        error={error}
+        onCancel={onCancel}
+        onSave={() =>
+          required.ask(
+            typedBonuses.map((bonus) => bonus.value),
+            () =>
+              onSave({
+                id: item.id,
+                nameRu: item.nameRu,
+                kinds: [...kinds],
+                ...(amount === undefined ? {} : { price: { amount, currency } }),
+                ...(note.trim() === "" ? {} : { note: note.trim() }),
+                bonuses: numbers,
+                ...(worksCarried && bonuses.length > 0 ? { worksCarried: true } : {}),
+                ...(wearable && focus ? { spellcastingFocus: focus } : {}),
+              }),
+          )
+        }
+      >
+        <Counter
+          labelRu="В сумке"
+          countRu={`В сумке ${bagCount}`}
+          count={bagCount}
+          lessLabelRu={`Потратить один из сумки: ${item.nameRu}`}
+          moreLabelRu={`Добавить один в сумку: ${item.nameRu}`}
+          lessDisabled={bagCount === 0}
+          moreDisabled={false}
+          onAdjust={onAdjustBagCount}
+        />
 
-      {kind === "gear" ? (
-        <div className="flex items-center justify-between gap-2 text-sm">
-          <span className="text-ink-quiet">Надето</span>
-          <span className="flex items-center gap-1">
-            <button
-              type="button"
-              aria-label={`Снять один: ${item.nameRu}`}
-              disabled={wornCount === 0}
-              onClick={() => onAdjustWornCount(-1)}
-              className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
-            >
-              −
-            </button>
-            <span className="min-w-8 text-center tabular-nums">{wornCount}</span>
-            <button
-              type="button"
-              aria-label={`Надеть один: ${item.nameRu}`}
-              disabled={bagCount === 0}
-              onClick={() => onAdjustWornCount(1)}
-              className={`min-h-11 min-w-11 text-base disabled:opacity-40 ${SURFACE_CONTROL}`}
-            >
-              +
-            </button>
-          </span>
+        {!item.kinds.includes(GEAR) ? null : (
+          <Counter
+            labelRu="Надето"
+            countRu={`Надето ${wornCount}`}
+            count={wornCount}
+            lessLabelRu={`Снять один: ${item.nameRu}`}
+            moreLabelRu={`Надеть один: ${item.nameRu}`}
+            lessDisabled={wornCount === 0}
+            moreDisabled={bagCount === 0}
+            onAdjust={onAdjustWornCount}
+          />
+        )}
+
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-ink-quiet">Признаки</span>
+          <div aria-label="Признаки" className="flex flex-wrap gap-1">
+            {choices.itemKinds.map((choice) => (
+              <Chip
+                key={choice}
+                labelRu={itemKindLabel(choice)}
+                pressed={kinds.includes(choice)}
+                onPress={() => toggleKind(choice)}
+              />
+            ))}
+            <Chip
+              labelRu={FOCUS_LABEL}
+              pressed={focus}
+              onPress={() => {
+                setFocus(!focus);
+                if (!focus && !wearable) setKinds([...kinds, GEAR]);
+              }}
+            />
+            <Chip labelRu={WANTED_LABEL} pressed={item.wanted} onPress={onToggleWanted} />
+          </div>
+          {kinds.length === 0 ? <p className="text-xs text-ink-quiet">{NO_KINDS_HINT}</p> : null}
+          {focus ? <p className="text-xs text-ink-quiet">{FOCUS_HINT}</p> : null}
         </div>
-      ) : null}
 
-      <div role="radiogroup" aria-label="Категория" className="flex flex-wrap gap-1">
-        {choices.itemKinds.map((choice) => (
-          <button
-            key={choice}
-            type="button"
-            role="radio"
-            aria-checked={kind === choice}
-            onClick={() => setKind(choice)}
-            className={`min-h-11 px-2 text-xs ${
-              kind === choice
-              ? `${SURFACE_CHOSEN} font-medium`
-              : `text-ink-quiet ${SURFACE_CONTROL}`
-            }`}
-          >
-            {itemKindLabel(choice)}
-          </button>
-        ))}
-      </div>
-
-      <TextField labelRu="Заметка" value={note} onChange={setNote} />
-
-      <NumberField labelRu="Цена" value={priceAmount} onChange={setPriceAmount} min={0} />
-      <div role="radiogroup" aria-label="Монета цены" className="flex gap-1">
-        {choices.currencies.map((choice) => (
-          <button
-            key={choice}
-            type="button"
-            role="radio"
-            aria-checked={currency === choice}
-            aria-label={`Монета: ${currencyAbbr(choice)}`}
-            onClick={() => setCurrency(choice)}
-            className={`min-h-11 min-w-11 px-2 text-xs ${
-              currency === choice
-              ? `${SURFACE_CHOSEN} font-medium`
-              : `text-ink-quiet ${SURFACE_GROUP_BARE}`
-            }`}
-          >
-            {currencyAbbr(choice)}
-          </button>
-        ))}
-      </div>
-
-      {kind === "gear" ? (
-        <>
-          <button
-            type="button"
-            aria-pressed={focus}
-            onClick={() => setFocus(!focus)}
-            className={`min-h-11 px-2 text-xs ${
-              focus
-              ? `${SURFACE_CHOSEN} font-medium`
-              : `text-ink-quiet ${SURFACE_CONTROL}`
-            }`}
-          >
-            Магическая фокусировка
-          </button>
-          <p className="text-xs text-ink-quiet">
-            Надетая фокусировка закрывает материальные компоненты без указанной стоимости. Снимете —
-            компоненты снова понадобятся.
-          </p>
-
-          {shownBonuses.map((bonus) => (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-ink-quiet">Прибавки</span>
+          {typedBonuses.map((bonus) => (
             <NumberField
               key={bonus.stat}
               labelRu={statLabel(choices.stats, bonus.stat)}
@@ -225,74 +254,98 @@ export function ItemSheet({
               reasonRu={required.reasonOf(bonus.value)}
             />
           ))}
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className={`min-h-11 px-3 text-sm font-medium text-action ${SURFACE_CONTROL}`}
+          >
+            Добавить прибавку
+          </button>
+          <p className="text-xs text-ink-quiet">
+            Нулевая прибавка снимается. Всё, что зависит от обстановки или требует броска, — заметка:
+            в числа листа она не входит, бросаете и считаете сами.
+          </p>
+        </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-ink-quiet">Добавить прибавку</span>
-            <span className="flex gap-2">
-              <select
-                value={added}
-                onChange={(event) => setAdded(event.target.value)}
-                className={`min-h-11 flex-1 bg-transparent px-3 ${SURFACE_CONTROL}`}
-              >
-                {choices.stats.map((stat) => (
-                  <option key={stat.id} value={stat.id}>
-                    {statLabel(choices.stats, stat.id)}
-                  </option>
-                ))}
-              </select>
+        {bonuses.length === 0 ? null : (
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-ink-quiet">Прибавка действует</span>
+            <div role="radiogroup" aria-label="Прибавка действует" className="flex gap-1">
               <button
                 type="button"
-                onClick={() =>
-                  setBonuses(
-                    bonuses.some((row) => row[0] === added) ? bonuses : [...bonuses, [added, "0"]],
-                  )
-                }
-                className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
+                role="radio"
+                aria-checked={!worksCarried}
+                onClick={() => setCarriedChoice(false)}
+                className={`min-h-11 flex-1 px-2 text-xs ${
+                  worksCarried ? `text-ink-quiet ${SURFACE_CONTROL}` : `${SURFACE_CHOSEN} font-medium`
+                }`}
               >
-                Добавить
+                надетой
               </button>
-            </span>
-          </label>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={worksCarried}
+                onClick={() => setCarriedChoice(true)}
+                className={`min-h-11 flex-1 px-2 text-xs ${
+                  worksCarried ? `${SURFACE_CHOSEN} font-medium` : `text-ink-quiet ${SURFACE_CONTROL}`
+                }`}
+              >
+                при себе
+              </button>
+            </div>
+          </div>
+        )}
 
-          <NumberField labelRu="База КД доспеха" value={armorBase} onChange={setArmorBase} min={1} />
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-ink-quiet">Категория доспеха</span>
-            <select
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-              className={`min-h-11 bg-transparent px-3 ${SURFACE_CONTROL}`}
+        <TextField labelRu="Заметка" value={note} onChange={setNote} />
+
+        <NumberField labelRu="Цена" value={priceAmount} onChange={setPriceAmount} min={0} />
+        <div role="radiogroup" aria-label="Монета цены" className="flex gap-1">
+          {choices.currencies.map((choice) => (
+            <button
+              key={choice}
+              type="button"
+              role="radio"
+              aria-checked={currency === choice}
+              aria-label={`Монета: ${currencyAbbr(choice)}`}
+              onClick={() => setCurrency(choice)}
+              className={`min-h-11 min-w-11 px-2 text-xs ${
+                currency === choice
+                ? `${SURFACE_CHOSEN} font-medium`
+                : `text-ink-quiet ${SURFACE_GROUP_BARE}`
+              }`}
             >
-              <option value="">не названа</option>
-              {choices.armorCategories.map((option) => (
-                <option key={option} value={option}>
-                  {armorCategoryLabel(option)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="text-xs text-ink-quiet">
-            База — только у доспеха: у кольчуги 16, у кольца поля нет. Надетый доспех задаёт базу
-            КД сам; Ловкость и прибавки считаются сверху, а во что категория обходится Ловкости —
-            правило листа.
-          </p>
-        </>
-      ) : null}
+              {currencyAbbr(choice)}
+            </button>
+          ))}
+        </div>
 
-      <button
-        type="button"
-        aria-label={`Убрать: ${item.nameRu}`}
-        disabled={bagCount > 0 || wornCount > 0}
-        onClick={onRemove}
-        className={`min-h-11 px-2 text-xs font-medium text-reaction disabled:opacity-40 ${SURFACE_CONTROL}`}
-      >
-        Убрать вещь
-      </button>
-      {bagCount > 0 || wornCount > 0 ? (
-        <p className="text-xs text-ink-quiet">
-          Убрать можно, когда от вещи не остаётся ни следа: сперва потратьте запас в сумке и снимите
-          надетое.
-        </p>
-      ) : null}
-    </EditSheetFrame>
+        <button
+          type="button"
+          aria-label={`Убрать: ${item.nameRu}`}
+          disabled={bagCount > 0 || wornCount > 0}
+          onClick={onRemove}
+          className={`min-h-11 px-2 text-xs font-medium text-reaction disabled:opacity-40 ${SURFACE_CONTROL}`}
+        >
+          Убрать вещь
+        </button>
+        {bagCount > 0 || wornCount > 0 ? (
+          <p className="text-xs text-ink-quiet">
+            Убрать можно, когда от вещи не остаётся ни следа: сперва потратьте запас в сумке и снимите
+            надетое.
+          </p>
+        ) : null}
+      </EditSheetFrame>
+
+      {!picking ? null : (
+        <StatPicker
+          stats={choices.stats}
+          taken={bonuses.map((row) => row[0])}
+          onPick={(stat) => addBonuses([stat])}
+          onPickFamily={addBonuses}
+          onCancel={() => setPicking(false)}
+        />
+      )}
+    </>
   );
 }

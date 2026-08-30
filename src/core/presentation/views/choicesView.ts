@@ -19,7 +19,7 @@ import { SKILL_TRAINING } from "@/core/domain/character/skills";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { CURRENCIES } from "@/core/domain/shared/schema";
-import { ARMOR_CATEGORIES, STATS } from "@/core/domain/shared/stats";
+import { STATS } from "@/core/domain/shared/stats";
 
 export function toChoicesView(): ChoicesView {
   return {
@@ -30,7 +30,6 @@ export function toChoicesView(): ChoicesView {
     })),
     creatureSizes: [...CREATURE_SIZES],
     itemKinds: [...ITEM_KINDS],
-    armorCategories: [...ARMOR_CATEGORIES],
     currencies: [...CURRENCIES],
     skillTrainings: [...SKILL_TRAINING],
     runeTargets: [...RUNE_TARGETS],

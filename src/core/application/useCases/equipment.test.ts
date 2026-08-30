@@ -10,7 +10,16 @@ import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
-import { addItem, adjustBagCount, adjustWornCount, editItem, editMoney, removeItem } from "./equipment";
+import {
+  addItem,
+  adjustBagCount,
+  adjustWornCount,
+  editItem,
+  editMoney,
+  removeItem,
+  recordItem,
+  toggleWanted,
+} from "./equipment";
 
 const session = () => ({ character: createThorne(), log: [] });
 
@@ -24,9 +33,9 @@ function testOccasion(commandId = "command-1"): Occasion {
 }
 
 const occasion = testOccasion();
-const ring = { nameRu: "Кольцо защиты", kind: "gear" as const };
+const ring = { nameRu: "Кольцо защиты", kinds: ["gear"] as const };
 const RING_ID = Items.idFromName(ring.nameRu);
-const potions = { nameRu: "Зелье лечения", kind: "consumable" as const };
+const potions = { nameRu: "Зелье лечения", kinds: ["consumable"] as const };
 const POTION_ID = Items.idFromName(potions.nameRu);
 
 const FOCUS_ID =
@@ -52,7 +61,7 @@ describe("правка снаряжения", () => {
 
   it("правка вещи меняет её саму и обратима через лог (FR-235)", () => {
     const carried = addItem(session(), ring, occasion);
-    const noted = editItem(carried, { id: RING_ID, nameRu: ring.nameRu, kind: "gear", note: "фамильное" }, occasion);
+    const noted = editItem(carried, { id: RING_ID, nameRu: ring.nameRu, kinds: ["gear"], note: "фамильное" }, occasion);
 
     const item = Items.of(noted.character).find(RING_ID);
     expect(item?.note).toBe("фамильное");
@@ -64,7 +73,7 @@ describe("правка снаряжения", () => {
     const bonusedRing = {
       id: RING_ID,
       nameRu: ring.nameRu,
-      kind: "gear" as const,
+      kinds: ["gear"] as const,
       bonuses: { armorClass: 1, "save:constitution": 1 },
     };
     const carried = editItem(addItem(session(), ring, occasion), bonusedRing, occasion);
@@ -80,7 +89,7 @@ describe("правка снаряжения", () => {
     const bonusedRing = {
       id: RING_ID,
       nameRu: ring.nameRu,
-      kind: "gear" as const,
+      kinds: ["gear"] as const,
       bonuses: { armorClass: 1 },
     };
     const worn = adjustWornCount(editItem(addItem(session(), ring, occasion), bonusedRing, occasion), RING_ID, 1, occasion);
@@ -103,6 +112,45 @@ describe("правка снаряжения", () => {
 
     expect(Items.of(gone.character).find(RING_ID)).toBeUndefined();
     expect(gone.log.at(-1)?.summaryRu).toBe("Убрано: Кольцо защиты");
+  });
+
+  it("покупка заводит вещь без запаса, и желание снимается тем же переключателем", () => {
+    const wished = recordItem(session(), "Верёвка", true, occasion);
+    const id = Items.idFromName("Верёвка");
+
+    expect(Items.of(wished.character).find(id)?.kinds).toEqual([]);
+    expect(Equipment.of(wished.character).bagCount(id)).toBe(0);
+    expect(Equipment.of(wished.character).wants(id)).toBe(true);
+    expect(wished.log[0]?.summaryRu).toBe("В покупки: Верёвка");
+
+    const bought = toggleWanted(wished, id, occasion);
+    expect(Equipment.of(bought.character).wants(id)).toBe(false);
+    expect(bought.log[1]?.summaryRu).toBe("Из покупок: Верёвка");
+    expect(Equipment.of(undoLast(bought).character).wants(id)).toBe(true);
+  });
+
+  it("встреченную вещь записывают без запаса и без желания её купить", () => {
+    const noted = recordItem(session(), "Зелье невидимости", false, occasion);
+    const id = Items.idFromName("Зелье невидимости");
+
+    expect(Items.of(noted.character).find(id)?.nameRu).toBe("Зелье невидимости");
+    expect(Equipment.of(noted.character).bagCount(id)).toBe(0);
+    expect(Equipment.of(noted.character).wants(id)).toBe(false);
+    expect(noted.log[0]?.summaryRu).toBe("Записано: Зелье невидимости");
+  });
+
+  it("желание вещи, которой нет среди заведённых, лог называет её идентификатором", () => {
+    const wished = toggleWanted(session(), "неведомое", occasion);
+    expect(wished.log[0]?.summaryRu).toBe("В покупки: неведомое");
+  });
+
+  it("убранная вещь уходит и из покупок", () => {
+    const wished = recordItem(session(), "Верёвка", true, occasion);
+    const id = Items.idFromName("Верёвка");
+    const removed = removeItem(wished, id, occasion);
+
+    expect(Items.of(removed.character).find(id)).toBeUndefined();
+    expect(Equipment.of(removed.character).wants(id)).toBe(false);
   });
 
   it("вещь с непустым запасом не убирается, отказ называет причину", () => {
@@ -184,12 +232,12 @@ describe("правка снаряжения", () => {
     expect(componentReasons(undoLast(stowed).character)).toEqual([]);
   });
 
-  it("надетый доспех двигает базу КД сам, снятие возвращает базу без доспехов", () => {
-    const chainmail = { nameRu: "Кольчуга", kind: "gear" as const };
+  it("надетая вещь двигает КД прибавкой, снятие возвращает прежнее число", () => {
+    const chainmail = { nameRu: "Кольчуга", kinds: ["gear"] as const };
     const chainmailId = Items.idFromName(chainmail.nameRu);
     const armored = editItem(
       addItem(session(), chainmail, occasion),
-      { id: chainmailId, nameRu: chainmail.nameRu, kind: "gear", armor: { base: 16 } },
+      { id: chainmailId, nameRu: chainmail.nameRu, kinds: ["gear"], bonuses: { armorClass: 6 } },
       occasion,
     );
     const worn = adjustWornCount(armored, chainmailId, 1, occasion);

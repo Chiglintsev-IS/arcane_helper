@@ -31,7 +31,7 @@ describe("«Ремесло»", () => {
     );
 
     for (const nameRu of [MOON_HERB, MOON_HERB, MOON_HERB]) {
-      await stores.session.getState().execute({ kind: "add_item", nameRu, itemKind: "ingredient" });
+      await stores.session.getState().execute({ kind: "add_item", nameRu, itemKinds: ["ingredient"] });
     }
 
     renderOn(stores, <CraftingScreen />);

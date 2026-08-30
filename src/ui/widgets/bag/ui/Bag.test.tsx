@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ComponentProps } from "react";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { materialOf } from "@/core/application/casting/material";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 import { toBagView } from "@/core/presentation/views/bagView";
@@ -14,25 +14,24 @@ import { Bag } from "./Bag";
 
 const spells = loadThorneSpells();
 
-function spellOf(id: string) {
-  const found = spells.find((spell) => spell.id === id);
-  if (found === undefined) throw new Error(`нет карточки ${id}`);
-  return found;
-}
-
 afterEach(cleanup);
 
 const { stats } = toChoicesView();
 
-const NOOP = {
+const NOOP: Omit<ComponentProps<typeof Bag>, "bag"> = {
   stats,
+  filter: "all",
+  onChangeFilter: () => {},
   onEditMoney: () => {},
   onOpenItem: () => {},
   onAddItem: () => {},
   onAdjustBagCount: () => {},
+  onAdjustWornCount: () => {},
 };
 
-function withStock(entries: { definition: ItemDefinition; bag?: number }[]): CharacterState {
+function withStock(
+  entries: { definition: ItemDefinition; bag?: number; worn?: number; wanted?: boolean }[],
+): CharacterState {
   const state = createThorne();
   return {
     ...state,
@@ -41,10 +40,13 @@ function withStock(entries: { definition: ItemDefinition; bag?: number }[]): Cha
       ...state.equipment,
       bag: [
         ...state.equipment.bag,
-        ...entries
-          .filter((entry) => (entry.bag ?? 0) > 0)
-          .map((entry) => ({ itemId: entry.definition.id, count: entry.bag ?? 0 })),
+        ...entries.map((entry) => ({ itemId: entry.definition.id, count: entry.bag ?? 0 })),
       ],
+      worn: [
+        ...state.equipment.worn,
+        ...entries.map((entry) => ({ itemId: entry.definition.id, count: entry.worn ?? 0 })),
+      ],
+      wanted: entries.filter((entry) => entry.wanted === true).map((entry) => entry.definition.id),
     },
   };
 }
@@ -52,57 +54,57 @@ function withStock(entries: { definition: ItemDefinition; bag?: number }[]): Cha
 const potion: ItemDefinition = {
   id: "healing-potion",
   nameRu: "Зелье лечения",
-  kind: "consumable",
+  kinds: ["consumable"],
   price: { amount: 50, currency: "gold" },
 };
 
+const ring: ItemDefinition = {
+  id: "ring",
+  nameRu: "Кольцо защиты",
+  kinds: ["gear", "ingredient"],
+  bonuses: { armorClass: 1 },
+};
+
+const shard: ItemDefinition = { id: "shard", nameRu: "Черепок", kinds: [] };
+
+function shownNames(): string[] {
+  return screen
+    .getAllByRole("listitem")
+    .map((row) => row.textContent ?? "")
+    .filter((text) => text !== "");
+}
+
 describe("«Сумка» в «Вещах»", () => {
-  it("держит кошелёк и три счётных раздела (FR-242)", () => {
+  it("держит кошелёк, фильтры признаков и один список", () => {
     render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
+
+    const filters = within(screen.getByRole("radiogroup", { name: "Что в рюкзаке" }));
+    expect(filters.getAllByRole("radio").map((button) => button.textContent)).toEqual([
+      "Всё",
+      "Надето",
+      "Экипировка",
+      "Расходники",
+      "Ингредиенты",
+      "Другое",
+    ]);
 
     expect(screen.getByRole("heading", { name: "Деньги" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Расходники" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Ингредиенты" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Другое" })).toBeDefined();
-
-    expect(screen.queryByRole("heading", { name: "Экипировка" })).toBeNull();
+    expect(screen.getByRole("list", { name: "Всё" })).toBeDefined();
     expect(screen.queryByRole("heading", { name: "Защита" })).toBeNull();
-    expect(screen.queryByText(/без доспехов/)).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Прибавки без вещи" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Прочие прибавки" })).toBeNull();
   });
 
-  it("покупок в сумке нет: их показывают отдельно (FR-304)", () => {
-    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
+  it("в рюкзаке лежит только то, что при себе: кончившееся из него уходит", () => {
+    const carried = withStock([{ definition: potion, bag: 1 }]);
+    const empty = withStock([{ definition: potion, bag: 0, wanted: true }]);
 
-    const titles = screen.getAllByRole("heading").map((heading) => heading.textContent);
-    expect(titles).toEqual(["Деньги", "Расходники", "Ингредиенты", "Другое"]);
-    expect(screen.queryByRole("list", { name: "Купить" })).toBeNull();
+    const { rerender } = render(<Bag bag={toBagView(carried, spells)} {...NOOP} />);
+    expect(shownNames().join(" ")).toContain(potion.nameRu);
+
+    rerender(<Bag bag={toBagView(empty, spells)} {...NOOP} />);
+    expect(shownNames().join(" ")).not.toContain(potion.nameRu);
   });
 
-  it("истраченная до нуля вещь ушла из своей категории (FR-302)", () => {
-    const ashes = materialOf(spellOf("arcane-lock").components);
-    if (ashes === undefined) throw new Error("«Волшебный замок» материала не требует");
-
-    render(<Bag bag={toBagView(withStock([{ definition: ashes, bag: 0 }]), spells)} {...NOOP} />);
-
-    expect(screen.queryByRole("list", { name: "Расходники" })?.textContent ?? "").not.toContain(
-      ashes.nameRu,
-    );
-  });
-
-  it("пополненная вещь вернулась в свою категорию (FR-302)", () => {
-    const ashes = materialOf(spellOf("arcane-lock").components);
-    if (ashes === undefined) throw new Error("«Волшебный замок» материала не требует");
-
-    render(<Bag bag={toBagView(withStock([{ definition: ashes, bag: 1 }]), spells)} {...NOOP} />);
-
-    expect(
-      within(screen.getByRole("list", { name: "Расходники" })).getByText(ashes.nameRu),
-    ).toBeDefined();
-  });
-
-  it("кошелёк показывает все три монеты стола, включая нули (FR-242)", () => {
+  it("кошелёк показывает все три монеты стола, включая нули", () => {
     render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
     const purse = screen.getByRole("list", { name: "Кошелёк" });
     expect(within(purse).getAllByRole("listitem")).toHaveLength(3);
@@ -111,28 +113,62 @@ describe("«Сумка» в «Вещах»", () => {
     expect(purse.textContent).toContain("мм");
   });
 
-  it("вещь стоит в разделе своей категории, а не общим списком (FR-238)", () => {
-    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 3 }]), spells)} {...NOOP} />);
+  it("фильтр по признаку показывает вещь со всеми её признаками разом", () => {
+    const character = withStock([{ definition: ring, bag: 1 }, { definition: potion, bag: 2 }]);
 
-    const consumables = screen.getByRole("list", { name: "Расходники" });
-    expect(within(consumables).getByText("Зелье лечения")).toBeDefined();
-    expect(screen.queryByRole("list", { name: "Ингредиенты" })).toBeNull();
-    expect(screen.getByLabelText("Новый ингредиент")).toBeDefined();
+    const { rerender } = render(
+      <Bag bag={toBagView(character, spells)} {...NOOP} filter="gear" />,
+    );
+    expect(shownNames().join(" ")).toContain(ring.nameRu);
+    expect(shownNames().join(" ")).not.toContain(potion.nameRu);
+
+    rerender(<Bag bag={toBagView(character, spells)} {...NOOP} filter="ingredient" />);
+    expect(shownNames().join(" ")).toContain(ring.nameRu);
   });
 
-  it("счётный раздел меняет запас в сумке кнопками строки: минус и плюс (FR-239)", async () => {
+  it("«Другое» — вещь без признаков: находку не заставляют опознавать", () => {
+    const character = withStock([{ definition: shard, bag: 1 }, { definition: potion, bag: 1 }]);
+    render(<Bag bag={toBagView(character, spells)} {...NOOP} filter="other" />);
+
+    expect(shownNames().join(" ")).toContain(shard.nameRu);
+    expect(shownNames().join(" ")).not.toContain(potion.nameRu);
+  });
+
+  it("«Надето» показывает надетое и защиту, «Всё» защиту не показывает", () => {
+    const character = withStock([{ definition: ring, bag: 1, worn: 1 }]);
+
+    const { rerender } = render(
+      <Bag bag={toBagView(character, spells)} {...NOOP} filter="worn" />,
+    );
+    expect(screen.getByRole("heading", { name: "Защита" })).toBeDefined();
+    expect(shownNames().join(" ")).toContain(ring.nameRu);
+
+    rerender(<Bag bag={toBagView(character, spells)} {...NOOP} filter="all" />);
+    expect(screen.queryByRole("heading", { name: "Защита" })).toBeNull();
+  });
+
+  it("строка называет оба счёта: надетое и запас в сумке", () => {
+    const character = withStock([{ definition: ring, bag: 4, worn: 1 }]);
+    render(<Bag bag={toBagView(character, spells)} {...NOOP} filter="gear" />);
+
+    const row = within(screen.getByRole("list", { name: "Экипировка" }))
+      .getAllByRole("listitem")
+      .find((candidate) => (candidate.textContent ?? "").includes(ring.nameRu));
+    expect(row?.textContent).toContain("надето 1");
+    expect(row?.textContent).toContain("в сумке 4");
+  });
+
+  it("запас меняется кнопками строки: минус и плюс", async () => {
     const user = userEvent.setup();
     const onAdjustBagCount = vi.fn();
     render(
       <Bag
         bag={toBagView(withStock([{ definition: potion, bag: 3 }]), spells)}
         {...NOOP}
+        filter="consumable"
         onAdjustBagCount={onAdjustBagCount}
       />,
     );
-
-    const row = within(screen.getByRole("list", { name: "Расходники" })).getByRole("listitem");
-    expect(row.textContent).toContain("3");
 
     await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
     await user.click(screen.getByRole("button", { name: "Добавить один в сумку: Зелье лечения" }));
@@ -141,30 +177,53 @@ describe("«Сумка» в «Вещах»", () => {
     expect(onAdjustBagCount).toHaveBeenNthCalledWith(2, "healing-potion", 1);
   });
 
-  it("ноль — состояние: кончившийся расходник виден нулём, а минус выключен (FR-239)", () => {
-    render(<Bag bag={toBagView(withStock([{ definition: potion, bag: 0 }]), spells)} {...NOOP} />);
+  it("надевают и снимают со строки, и только экипировку", async () => {
+    const user = userEvent.setup();
+    const onAdjustWornCount = vi.fn();
+    const character = withStock([{ definition: ring, bag: 1 }, { definition: potion, bag: 1 }]);
+    render(
+      <Bag
+        bag={toBagView(character, spells)}
+        {...NOOP}
+        onAdjustWornCount={onAdjustWornCount}
+      />,
+    );
 
-    const row = within(screen.getByRole("list", { name: "Расходники" })).getByRole("listitem");
-    expect(row.textContent).toContain("Зелье лечения");
-    expect(row.textContent).toContain("0");
-    expect(
-      screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }),
-    ).toHaveProperty("disabled", true);
+    await user.click(screen.getByRole("button", { name: "Надеть один: Кольцо защиты" }));
+    expect(onAdjustWornCount).toHaveBeenCalledWith("ring", 1);
+    expect(screen.queryByRole("button", { name: "Надеть один: Зелье лечения" })).toBeNull();
   });
 
-  it("быстрый ввод заводит вещь сразу в категорию раздела (FR-241)", async () => {
+  it("быстрый ввод заводит вещь с признаком показанного фильтра", async () => {
     const user = userEvent.setup();
     const onAddItem = vi.fn();
-    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} onAddItem={onAddItem} />);
+    render(
+      <Bag
+        bag={toBagView(createThorne(), spells)}
+        {...NOOP}
+        filter="consumable"
+        onAddItem={onAddItem}
+      />,
+    );
 
     await user.type(screen.getByLabelText("Новый расходник"), "Свиток огненного шара{Enter}");
-    expect(onAddItem).toHaveBeenCalledWith("consumable", "Свиток огненного шара");
+    expect(onAddItem).toHaveBeenCalledWith(["consumable"], "Свиток огненного шара");
 
-    await user.type(screen.getByLabelText("Новая вещь"), "{Enter}");
+    await user.type(screen.getByLabelText("Новый расходник"), "{Enter}");
     expect(onAddItem).toHaveBeenCalledTimes(1);
   });
 
-  it("нажатие на вещь открывает её целиком (FR-241)", async () => {
+  it("надетое заводить нечем: его берут из того, что уже при себе", () => {
+    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} filter="worn" />);
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("пустой список говорит, чего в нём нет", () => {
+    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} filter="consumable" />);
+    expect(screen.getByText("Расходников при себе нет.")).toBeDefined();
+  });
+
+  it("нажатие на вещь открывает её целиком", async () => {
     const user = userEvent.setup();
     const onOpenItem = vi.fn();
     render(
@@ -177,6 +236,18 @@ describe("«Сумка» в «Вещах»", () => {
 
     await user.click(screen.getByRole("button", { name: "Правка: Зелье лечения" }));
     expect(onOpenItem).toHaveBeenCalledWith("healing-potion");
+  });
+
+  it("фильтр переключается нажатием и говорит, какой выбран", async () => {
+    const user = userEvent.setup();
+    const onChangeFilter = vi.fn();
+    render(
+      <Bag bag={toBagView(createThorne(), spells)} {...NOOP} onChangeFilter={onChangeFilter} />,
+    );
+
+    expect(screen.getByRole("radio", { name: "Всё" })).toHaveProperty("ariaChecked", "true");
+    await user.click(screen.getByRole("radio", { name: "Расходники" }));
+    expect(onChangeFilter).toHaveBeenCalledWith("consumable");
   });
 
   it("деньги правятся своей шторкой, и открывает её строка кошелька", async () => {

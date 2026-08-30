@@ -86,11 +86,16 @@ describe("разбор", () => {
       ...state,
       itemDefinitions: [
         ...state.itemDefinitions,
-        { id: "scale-mail", nameRu: "Чешуйчатый доспех", kind: "gear" as const, armor: { base: 14 } },
+        {
+          id: "bracers",
+          nameRu: "Наручи защиты",
+          kinds: ["gear"] as const,
+          bonuses: { armorClass: 4 },
+        },
       ],
       equipment: {
         ...state.equipment,
-        worn: [...state.equipment.worn, { itemId: "scale-mail", count: 1 }],
+        worn: [...state.equipment.worn, { itemId: "bracers", count: 1 }],
       },
     });
 

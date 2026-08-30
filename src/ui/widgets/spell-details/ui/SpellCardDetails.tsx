@@ -71,12 +71,14 @@ export function SpellCardDetails({
   casting,
   onCast,
   onNoteChange,
+  onToggleMaterial,
   onClose,
 }: {
   row: SpellRowView;
   casting: CastingView;
   onCast: () => void;
   onNoteChange: (note: string) => void;
+  onToggleMaterial: () => void;
   onClose: () => void;
 }) {
   const [diagramOpen, setDiagramOpen] = useState(false);
@@ -155,6 +157,16 @@ export function SpellCardDetails({
             <Row label="Повышение уровня">{card.higherLevelsRu}</Row>
           )}
         </dl>
+
+        {card.components.material === undefined || row.materialCoveredByFocus ? null : (
+          <button
+            type="button"
+            onClick={onToggleMaterial}
+            className={`min-h-11 px-3 text-sm font-medium text-action ${SURFACE_CONTROL}`}
+          >
+            {row.ownComponentCarried ? "Потратить компонент" : "Купить компонент"}
+          </button>
+        )}
 
         {card.tacticalAdviceRu === undefined ? null : (
           <details className={`p-2 ${SURFACE_GROUP}`}>

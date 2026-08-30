@@ -1,5 +1,6 @@
 import type { Items } from "@/core/domain/items/items";
-import { gearOnlyRefusal } from "@/core/domain/items/schema";
+import { countedCarried, notWearableRefusal, wearable } from "@/core/domain/items/schema";
+import type { ItemDefinition } from "@/core/domain/items/schema";
 import { STAT_IDS } from "@/core/domain/shared/stats";
 import type { ContributionSource, SourcedContribution } from "@/core/domain/shared/stats";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
@@ -14,6 +15,14 @@ function withStock(entries: readonly StockEntry[], itemId: string, count: number
   const found = entries.some((entry) => entry.itemId === itemId);
   if (!found) return [...entries, { itemId, count }];
   return entries.map((entry) => (entry.itemId === itemId ? { ...entry, count } : entry));
+}
+
+function contributionsOf(item: ItemDefinition): readonly SourcedContribution[] {
+  const source: ContributionSource = { origin: "item", nameRu: item.nameRu };
+  return STAT_IDS.flatMap((stat) => {
+    const value = item.bonuses?.[stat];
+    return value === undefined ? [] : [{ source, contribution: { stat, kind: "bonus", value } }];
+  });
 }
 
 export class Equipment {
@@ -46,33 +55,10 @@ export class Equipment {
   }
 
   contributions(items: Items): readonly SourcedContribution[] {
-    return this.data.worn.flatMap((entry) => {
-      if (entry.count <= 0) return [];
-      const item = items.find(entry.itemId);
-      if (item === undefined || item.kind !== "gear") return [];
-
-      const source: ContributionSource = { origin: "item", nameRu: item.nameRu };
-      const armor: SourcedContribution[] =
-        item.armor === undefined
-          ? []
-          : [
-              {
-                source,
-                contribution: {
-                  stat: "armorClass",
-                  kind: "method",
-                  method: { family: "armor", base: item.armor.base, category: item.armor.category },
-                },
-              },
-            ];
-      const bonuses: SourcedContribution[] = STAT_IDS.flatMap((stat) => {
-        const value = item.bonuses?.[stat];
-        return value === undefined
-          ? []
-          : [{ source, contribution: { stat, kind: "bonus", value } }];
-      });
-
-      return [...armor, ...bonuses];
+    return items.all.flatMap((item) => {
+      const onBody = this.wornCount(item.id) > 0;
+      if (!onBody && !(countedCarried(item) && this.bagCount(item.id) > 0)) return [];
+      return contributionsOf(item);
     });
   }
 
@@ -92,6 +78,19 @@ export class Equipment {
 
   carries(itemId: string): boolean {
     return this.bagCount(itemId) > 0;
+  }
+
+  wants(itemId: string): boolean {
+    return this.data.wanted.includes(itemId);
+  }
+
+  withWanted(itemId: string, wanted: boolean): Equipment {
+    if (this.wants(itemId) === wanted) return this;
+    return this.with({
+      wanted: wanted
+        ? [...this.data.wanted, itemId]
+        : this.data.wanted.filter((wish) => wish !== itemId),
+    });
   }
 
   adjustBagCount(itemId: string, delta: number): Equipment {
@@ -114,7 +113,7 @@ export class Equipment {
     }
     const item = items.find(itemId);
     if (item === undefined) throw new DomainError(`Вещи «${itemId}» нет среди заведённых`);
-    if (item.kind !== "gear") throw new DomainError(gearOnlyRefusal(item.nameRu));
+    if (!wearable(item)) throw new DomainError(notWearableRefusal(item.nameRu));
 
     const inBag = this.bagCount(itemId);
     if (count > inBag) {

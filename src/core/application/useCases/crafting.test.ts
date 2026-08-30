@@ -54,7 +54,7 @@ function stocked(portionsEach: number): Session {
   return [MOON_HERB, CRIMSON_ROOT].reduce<Session>(
     (session, kind) =>
       adjustBagCount(
-        addItem(session, { nameRu: kind, kind: "ingredient" }, occasion),
+        addItem(session, { nameRu: kind, kinds: ["ingredient"] }, occasion),
         Items.idFromName(kind),
         portionsEach - 1,
         occasion,
@@ -75,7 +75,7 @@ function poisonous(): Session {
   return [MOON_HERB, CRIMSON_ROOT].reduce<Session>(
     (session, kind) =>
       adjustBagCount(
-        addItem(session, { nameRu: kind, kind: "ingredient" }, occasion),
+        addItem(session, { nameRu: kind, kinds: ["ingredient"] }, occasion),
         Items.idFromName(kind),
         5,
         occasion,

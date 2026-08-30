@@ -12,10 +12,15 @@ export function itemMeta(
   stats: ChoicesView["stats"],
 ): {
   facts: { valueRu: string; labelsRu: string[] }[];
+  marksRu: string[];
   neededFor: string | undefined;
   note: string | undefined;
 } {
   return {
+    marksRu: [
+      ...(item.worksCarried ? ["действует при себе"] : []),
+      ...(item.wanted ? ["в покупках"] : []),
+    ],
     facts: [
       ...item.bonusFacts.map((fact) => ({
         valueRu: signed(fact.value),

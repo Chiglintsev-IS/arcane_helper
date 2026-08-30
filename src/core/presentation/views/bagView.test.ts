@@ -25,7 +25,7 @@ function withStock(definition: ItemDefinition, stock: { bag?: number; worn?: num
   };
 }
 
-const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kind: "other" };
+const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [] };
 
 function itemOf(character: CharacterState, id: string) {
   const found = toBagView(character, spells).items.find((item) => item.id === id);
@@ -48,7 +48,7 @@ describe("вещи", () => {
   it("вещь приезжает со своим запасом: в сумке и надетым", () => {
     expect(itemOf(withStock(rope, { bag: 3 }), "rope")).toMatchObject({
       nameRu: "Верёвка",
-      kind: "other",
+      kinds: [],
       bagCount: 3,
       wornCount: 0,
     });
@@ -58,7 +58,7 @@ describe("вещи", () => {
     const ring: ItemDefinition = {
       id: "ring",
       nameRu: "Кольцо",
-      kind: "gear",
+      kinds: ["gear"],
       note: "фамильное",
       price: { amount: 50, currency: "gold" },
       bonuses: { armorClass: 1 },
@@ -72,38 +72,20 @@ describe("вещи", () => {
     expect(itemOf(withStock(rope), "rope")).toMatchObject({ bonuses: [] });
   });
 
-  it("доспех едет базой и родом, а неопознанная находка — одной базой", () => {
-    const mail: ItemDefinition = {
-      id: "mail",
-      nameRu: "Кольчуга",
-      kind: "gear",
-      armor: { base: 16, category: "medium" },
-    };
-    const found: ItemDefinition = {
-      id: "found",
-      nameRu: "Находка",
-      kind: "gear",
-      armor: { base: 12 },
-    };
-
-    expect(itemOf(withStock(mail), "mail").armor).toEqual({ base: 16, category: "medium" });
-    expect(itemOf(withStock(found), "found").armor).toEqual({ base: 12 });
-    expect(itemOf(withStock(rope), "rope").armor).toBeUndefined();
-  });
 });
 
 describe("защита", () => {
-  it("без доспеха защита своего доспеха не называет", () => {
+  it("без способа счёта защита никого не называет", () => {
     expect(toBagView(createThorne(), spells).armorClass).toEqual({ value: 14 });
   });
 
-  it("надетый доспех назван тем именем, под которым он и считает", () => {
+  it("надетая вещь двигает защиту прибавкой, и защита стоит одним числом", () => {
     const armored = withStock(
-      { id: "scale-mail", nameRu: "Чешуйчатый доспех", kind: "gear", armor: { base: 14 } },
+      { id: "bracers", nameRu: "Наручи защиты", kinds: ["gear"], bonuses: { armorClass: 2 } },
       { worn: 1 },
     );
 
-    expect(toBagView(armored, spells).armorClass).toEqual({ value: 18, wornArmorNameRu: "Чешуйчатый доспех" });
+    expect(toBagView(armored, spells).armorClass).toEqual({ value: 16 });
   });
 });
 
@@ -119,8 +101,6 @@ function withComponentOf(spellId: string): CharacterState {
     .withEquipment(root.equipment.adjustBagCount(material.id, 1))
     .toState();
 }
-
-const charcoalId = "золотая-пыль-стоимостью-минимум-25-зм,-расходуемая-заклинанием";
 
 describe("чем вещь требуется", () => {
   it("вещь называет тех, кто её требует, а сама о них не знает (FR-295)", () => {
@@ -140,55 +120,25 @@ describe("чем вещь требуется", () => {
   });
 });
 
-describe("чего не хватает", () => {
-  it("в списке покупок стоит то, без чего не сотворить, и срочное идёт первым (FR-296)", () => {
-    const missing = toBagView(createThorne(), spells).missingMaterials;
+describe("покупки", () => {
+  it("вещь называет, хочет ли её игрок купить", () => {
+    const wanted = withStock(rope, { bag: 0 });
+    expect(itemOf(wanted, "rope").wanted).toBe(false);
 
-    expect(missing.filter((need) => !need.coveredByFocus).map((need) => need.spellId)).toEqual([
-      "arcane-lock",
-    ]);
-    expect(missing.slice(0, 1).every((need) => !need.coveredByFocus)).toBe(true);
-    expect(missing.slice(1).every((need) => need.coveredByFocus)).toBe(true);
-
-    expect(missing[0]).toMatchObject({
-      consumed: true,
-      price: { amount: 25, currency: "gold" },
-      neededForRu: ["Волшебный замок"],
-    });
+    const root = Character.of(wanted);
+    const wishing = root.withEquipment(root.equipment.withWanted("rope", true)).toState();
+    expect(itemOf(wishing, "rope").wanted).toBe(true);
   });
 
-  it("истраченная до нуля вещь стоит в списке покупок со всем, что у неё было (FR-302)", () => {
-    const bought = withComponentOf("arcane-lock");
-    expect(toBagView(bought, spells).missingMaterials.some((need) => need.itemId === charcoalId)).toBe(
-      false,
-    );
-
-    const root = Character.of(bought);
-    const emptied = root.withEquipment(root.equipment.adjustBagCount(charcoalId, -1)).toState();
-    const view = toBagView(emptied, spells);
-
-    expect(view.missingMaterials.find((need) => need.spellId === "arcane-lock")).toMatchObject({
-      itemId: charcoalId,
-      price: { amount: 25, currency: "gold" },
-      neededForRu: ["Волшебный замок"],
-    });
-    expect(view.items.find((item) => item.id === charcoalId)?.bagCount).toBe(0);
-
-    const stored = Character.of(emptied).items.find(charcoalId);
-    if (stored === undefined) throw new Error("золотая пыль не заведена");
-    const shop = "у ювелира в порту";
-    const noted = Character.of(emptied);
-    const withNote = noted.withItems(noted.items.replaceDefinition({ ...stored, note: shop }));
-    expect(
-      toBagView(withNote.toState(), spells).missingMaterials.find((need) => need.itemId === charcoalId)
-        ?.note,
-    ).toBe(shop);
-  });
-
-  it("вещь, которой не требует никто, с нулём в список покупок не едет (FR-302)", () => {
-    const view = toBagView(withStock(rope, { bag: 0 }), spells);
-
-    expect(view.items.find((item) => item.id === "rope")?.bagCount).toBe(0);
-    expect(view.missingMaterials.some((need) => need.nameRu === rope.nameRu)).toBe(false);
+  it("условие действия прибавки едет отметкой", () => {
+    const stone: ItemDefinition = {
+      id: "stone",
+      nameRu: "Камень удачи",
+      kinds: [],
+      bonuses: { initiative: 1 },
+      worksCarried: true,
+    };
+    expect(itemOf(withStock(stone, { bag: 1 }), "stone").worksCarried).toBe(true);
+    expect(itemOf(withStock(rope, { bag: 1 }), "rope").worksCarried).toBe(false);
   });
 });

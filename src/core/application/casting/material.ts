@@ -7,7 +7,7 @@ import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 type SpellMaterial = {
   id: string;
   nameRu: string;
-  kind: ItemKind;
+  kinds: readonly ItemKind[];
   price?: ItemDefinition["price"];
   consumed: boolean;
 };
@@ -21,7 +21,7 @@ export function materialOf(components: Spell["components"]): SpellMaterial | und
   return {
     id: Items.idFromName(materialText),
     nameRu: materialText,
-    kind: consumed === true ? "consumable" : "other",
+    kinds: consumed === true ? ["consumable"] : [],
     consumed: consumed === true,
     ...(price === undefined ? {} : { price }),
   };

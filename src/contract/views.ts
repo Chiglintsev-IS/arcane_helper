@@ -18,7 +18,6 @@ export const choicesViewSchema = z.object({
   stats: z.array(statChoiceSchema),
   creatureSizes: z.array(word),
   itemKinds: z.array(word),
-  armorCategories: z.array(word),
   currencies: z.array(word),
   skillTrainings: z.array(word),
   runeTargets: z.array(word),
@@ -112,9 +111,11 @@ export const sheetViewSchema = z.object({
 const itemViewSchema = z.object({
   id: word,
   nameRu: word,
-  kind: word,
+  kinds: z.array(word),
   bagCount: whole,
   wornCount: whole,
+  wanted: z.boolean(),
+  worksCarried: z.boolean(),
   price: z.object({ amount: whole, currency: word }).optional(),
   bonuses: z.array(z.object({ stat: word, value: whole })),
   bonusFacts: z.array(
@@ -128,30 +129,17 @@ const itemViewSchema = z.object({
       ),
     }),
   ),
-  armor: z.object({ base: whole, category: word.optional() }).optional(),
   spellcastingFocus: z.boolean(),
   note: text.optional(),
   neededForRu: z.array(word),
 });
 
-const missingMaterialViewSchema = z.object({
-  spellId: word,
-  nameRu: word,
-  price: z.object({ amount: whole, currency: word }).optional(),
-  consumed: z.boolean(),
-  neededForRu: z.array(word),
-  coveredByFocus: z.boolean(),
-  itemId: word.optional(),
-  note: text.optional(),
-});
-
 export const bagViewSchema = z.object({
   money: z.array(z.object({ currency: word, amount: whole })),
   items: z.array(itemViewSchema),
-  missingMaterials: z.array(missingMaterialViewSchema),
   armorClass: z.object({
     value: whole,
-    wornArmorNameRu: word.optional(),
+    baseNameRu: word.optional(),
   }),
 });
 
@@ -387,7 +375,6 @@ export type ListCardView = z.infer<typeof listCardViewSchema>;
 export type SpellRowView = z.infer<typeof spellRowViewSchema>;
 export type CastingView = z.infer<typeof castingViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
-export type MissingMaterialView = z.infer<typeof missingMaterialViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
 export type CraftingView = z.infer<typeof craftingViewSchema>;
 export type IngredientKnowledgeView = z.infer<typeof ingredientKnowledgeViewSchema>;

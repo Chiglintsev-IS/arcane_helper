@@ -59,9 +59,11 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("edit_world_note", { noteId: word, text: word }),
   command("remove_world_note", { noteId: word }),
 
-  command("add_item", { nameRu: word, itemKind: word }),
+  command("add_item", { nameRu: word, itemKinds: z.array(word) }),
   command("edit_item", { item: z.looseObject({ id: word, nameRu: word }) }),
   command("remove_item", { itemId: word }),
+  command("toggle_wanted", { itemId: word }),
+  command("record_item", { nameRu: word, wanted: z.boolean() }),
   command("adjust_bag_count", { itemId: word, delta: numeric }),
   command("adjust_worn_count", { itemId: word, delta: numeric }),
   command("edit_money", { money: z.record(word, numeric) }),

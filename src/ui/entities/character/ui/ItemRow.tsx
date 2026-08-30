@@ -21,25 +21,21 @@ export function ItemRow({
   onOpen: () => void;
   children?: ReactNode;
 }) {
-  const { facts, neededFor, note } = itemMeta(item, stats);
+  const { facts, marksRu, neededFor, note } = itemMeta(item, stats);
 
   return (
-    <li className="flex items-center gap-2">
+    <li className="flex flex-col py-1">
       <button
         type="button"
         onClick={onOpen}
         aria-label={editName(item.nameRu)}
-        className="min-h-11 min-w-0 flex-1 px-1 py-1.5 text-left"
+        className="min-h-11 w-full px-1 py-1.5 text-left"
       >
-        <span className="flex items-baseline justify-between gap-2">
-          <span className="min-w-0 text-sm font-medium">{item.nameRu}</span>
-          {countRu === undefined ? null : (
-            <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-ink-quiet">
-              {countRu}
-            </span>
-          )}
-        </span>
-        {facts.length === 0 && neededFor === undefined && note === undefined ? null : (
+        <span className="block text-sm font-medium">{item.nameRu}</span>
+        {facts.length === 0 &&
+        marksRu.length === 0 &&
+        neededFor === undefined &&
+        note === undefined ? null : (
           <span className="mt-1 flex flex-wrap items-center gap-1">
             {facts.map((fact) => (
               <span
@@ -59,6 +55,14 @@ export function ItemRow({
                 ))}
               </span>
             ))}
+            {marksRu.map((markRu) => (
+              <span
+                key={markRu}
+                className={`px-1.5 py-0.5 text-xs leading-tight text-ink-quiet ${RULE_MARK.muted}`}
+              >
+                {markRu}
+              </span>
+            ))}
             {neededFor === undefined ? null : (
               <span className="min-w-0 text-xs leading-snug text-ink-quiet">
                 {neededFor}
@@ -73,7 +77,14 @@ export function ItemRow({
         )}
       </button>
 
-      <span className="flex shrink-0 items-center gap-1">{children}</span>
+      <div className="flex items-center justify-between gap-2 pb-1 pl-1">
+        {countRu === undefined ? (
+          <span />
+        ) : (
+          <span className="min-w-0 text-xs tabular-nums text-ink-quiet">{countRu}</span>
+        )}
+        <span className="flex shrink-0 items-center gap-1">{children}</span>
+      </div>
     </li>
   );
 }

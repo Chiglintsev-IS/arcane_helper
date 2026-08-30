@@ -178,7 +178,7 @@ export function describeParsingContract(): void {
 
     const parsed = parsePersisted(stored);
     expect(parsed.log[0]?.undoPatch?.itemDefinitions?.[0]).toMatchObject({
-      kind: "consumable",
+      kinds: ["consumable"],
     });
     expect(parsed.log[0]?.undoPatch?.equipment?.bag?.[0]).toMatchObject({
       itemId: "potion",

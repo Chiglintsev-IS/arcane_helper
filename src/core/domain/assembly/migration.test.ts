@@ -206,18 +206,55 @@ describe("приведение состояния версии 1", () => {
     const base = createThorne();
     const legacy = {
       ...base,
-      itemDefinitions: [{ id: "cloak", nameRu: "Плащ", kind: "gear", armorBase: 12 }],
+      itemDefinitions: [
+        {
+          id: "cloak",
+          nameRu: "Плащ",
+          kind: "gear",
+          bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+        },
+      ],
     };
     const state = characterStateSchema.parse(migrateCharacterState(legacy));
 
-    expect(state.itemDefinitions[0]?.armor).toEqual({ base: 12 });
+    expect(state.itemDefinitions[0]).toEqual({
+      id: "cloak",
+      nameRu: "Плащ",
+      kinds: ["gear"],
+      bonuses: { armorClass: 1 },
+    });
+  });
+
+  it("прибавки прежних слов, равные нулю, вещи не достаются вовсе", () => {
+    const base = createThorne();
+    const legacy = {
+      ...base,
+      itemDefinitions: [
+        {
+          id: "cloak",
+          nameRu: "Плащ",
+          kind: "gear",
+          bonuses: { spellcasting: 0, armorClass: 0, savingThrows: 0 },
+        },
+      ],
+    };
+    const state = characterStateSchema.parse(migrateCharacterState(legacy));
+
+    expect(state.itemDefinitions[0]).toEqual({ id: "cloak", nameRu: "Плащ", kinds: ["gear"] });
   });
 
   it("вещь в снаряжении прежней формы приводится до разведения по местам", () => {
     const base = createThorne();
     const legacy = {
       ...base,
-      itemDefinitions: [{ id: "cloak", nameRu: "Плащ", kind: "gear", armorBase: 12 }],
+      itemDefinitions: [
+        {
+          id: "cloak",
+          nameRu: "Плащ",
+          kind: "gear",
+          bonuses: { spellcasting: 0, armorClass: 1, savingThrows: 0 },
+        },
+      ],
       equipment: {
         ...base.equipment,
         items: [
@@ -232,7 +269,7 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(legacy));
 
-    expect(state.itemDefinitions[0]?.armor).toEqual({ base: 12 });
+    expect(state.itemDefinitions[0]?.bonuses).toEqual({ armorClass: 1 });
     expect(state.itemDefinitions[1]?.bonuses).toEqual({
       spellSaveDc: 1,
       spellAttackModifier: 1,
@@ -324,10 +361,10 @@ describe("приведение состояния версии 1", () => {
           { id: "dust", nameRu: "Пыль", kind: "ingredient" },
         ]),
       );
-      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
-        "consumable",
-        "other",
-        "ingredient",
+      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kinds)).toEqual([
+        ["consumable"],
+        [],
+        ["ingredient"],
       ]);
     });
 
@@ -339,24 +376,24 @@ describe("приведение состояния версии 1", () => {
           { id: "rope", nameRu: "Верёвка" },
         ]),
       );
-      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kind)).toEqual([
-        "gear",
-        "gear",
-        "other",
+      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kinds)).toEqual([
+        ["gear"],
+        ["gear"],
+        [],
       ]);
-      expect(fieldsOf(definitionsOf(migrated)[1]).armor).toEqual({ base: 14 });
+      expect(fieldsOf(definitionsOf(migrated)[1]).armor).toBeUndefined();
     });
 
     it("надетость вне экипировки снимается: запас надетого зелья идёт в сумку, не в надетое", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
       );
-      expect(fieldsOf(definitionsOf(migrated)[0]).kind).toBe("consumable");
+      expect(fieldsOf(definitionsOf(migrated)[0]).kinds).toEqual(["consumable"]);
       expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["potion"]);
       expect(wornOf(migrated)).toEqual([]);
     });
 
-    it("прибавка и база доспеха вне экипировки снимаются, а сохранение читается (FR-238)", () => {
+    it("доспех вне экипировки снимается, прибавка действует при себе, сохранение читается", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([
           {
@@ -368,7 +405,13 @@ describe("приведение состояния версии 1", () => {
           },
         ]),
       );
-      expect(definitionsOf(migrated)[0]).toEqual({ id: "potion", nameRu: "Зелье", kind: "consumable" });
+      expect(definitionsOf(migrated)[0]).toEqual({
+        id: "potion",
+        nameRu: "Зелье",
+        kinds: ["consumable"],
+        bonuses: { armorClass: 1 },
+        worksCarried: true,
+      });
       expect(characterStateSchema.safeParse(migrated).success).toBe(true);
     });
 
@@ -394,7 +437,7 @@ describe("приведение состояния версии 1", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
       );
-      expect(definitionsOf(migrated)[0]).toEqual({ id: "dust", nameRu: "Пыль", kind: "ingredient" });
+      expect(definitionsOf(migrated)[0]).toEqual({ id: "dust", nameRu: "Пыль", kinds: ["ingredient"] });
       expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["dust"]);
       expect(wornOf(migrated)).toEqual([]);
     });
@@ -415,7 +458,11 @@ describe("приведение состояния версии 1", () => {
         },
       };
       const migrated = migrateUndoPatch(patch);
-      expect(definitionsOf(migrated)[0]).toEqual({ id: "potion", nameRu: "Зелье", kind: "consumable" });
+      expect(definitionsOf(migrated)[0]).toEqual({
+        id: "potion",
+        nameRu: "Зелье",
+        kinds: ["consumable"],
+      });
       expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["potion"]);
       expect(wornOf(migrated)).toEqual([]);
       const bare = { hitPoints: { current: 1 } };
@@ -473,68 +520,23 @@ describe("приведение состояния версии 1", () => {
     });
   });
 
-  describe("хранимая база защиты переезжает на надетый доспех", () => {
-    const withStoredBase = (base: unknown, items: unknown[]) => {
+  describe("хранимая база защиты уходит из снаряжения", () => {
+    it("база не переезжает никуда: доспехом вещь больше не бывает", () => {
       const state = createThorne();
-      return {
+      const migrated = migrateCharacterState({
         ...state,
         itemDefinitions: [],
-        equipment: { ...state.equipment, armorClassBase: base, items },
-      };
-    };
-    const definitionsOf = (migrated: unknown): unknown[] =>
-      listOf(fieldsOf(migrated).itemDefinitions);
-    const armorOf = (migrated: unknown): unknown =>
-      fieldsOf(definitionsOf(migrated)[0]).armor;
-
-    it("надет ровно один — база достаётся ему", () => {
-      const migrated = migrateCharacterState(
-        withStoredBase(16, [{ id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true }]),
-      );
-      expect(armorOf(migrated)).toEqual({ base: 16 });
-    });
-
-    it("база без доспехов не переезжает: это умолчание, а не выбор игрока", () => {
-      const migrated = migrateCharacterState(
-        withStoredBase(10, [{ id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true }]),
-      );
-      expect(armorOf(migrated)).toBeUndefined();
-    });
-
-    it("база не числом не переезжает: приведение читает числа, а не что попало", () => {
-      const migrated = migrateCharacterState(
-        withStoredBase("шестнадцать", [
-          { id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true },
-        ]),
-      );
-      expect(armorOf(migrated)).toBeUndefined();
-    });
-
-    it("надето не одно — база не переезжает: угаданный доспех врал бы числом", () => {
-      const migrated = migrateCharacterState(
-        withStoredBase(16, [
-          { id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true },
-          { id: "cloak", nameRu: "Плащ", kind: "gear", worn: true },
-        ]),
-      );
-      expect(armorOf(migrated)).toBeUndefined();
-    });
-
-    it("надетому доспеху база не приписывается второй раз", () => {
-      const migrated = migrateCharacterState(
-        withStoredBase(16, [
-          { id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true, armorBase: 14 },
-        ]),
-      );
-      expect(armorOf(migrated)).toEqual({ base: 14 });
-    });
-
-    it("вещей нет вовсе — базе некуда переезжать, и снаряжение её теряет", () => {
-      const migrated = migrateCharacterState({
-        ...createThorne(),
-        equipment: { ...createThorne().equipment, armorClassBase: 16 },
+        equipment: {
+          ...state.equipment,
+          armorClassBase: 16,
+          items: [{ id: "mail", nameRu: "Кольчуга", kind: "gear", worn: true }],
+        },
       });
-      expect("armorClassBase" in fieldsOf(fieldsOf(migrated).equipment)).toBe(false);
+
+      const equipment = fieldsOf(fieldsOf(migrated).equipment);
+      expect("armorClassBase" in equipment).toBe(false);
+      expect(fieldsOf(listOf(fieldsOf(migrated).itemDefinitions)[0]).armor).toBeUndefined();
+      expect(characterStateSchema.safeParse(migrated).success).toBe(true);
     });
   });
 
@@ -735,7 +737,7 @@ describe("сохранение каждой версии открывается 
     ["1", VERSION_ONE, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
     ["2", VERSION_TWO, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
     ["3", VERSION_THREE, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
-    ["4", VERSION_FOUR, { current: 51, maximumBase: 60, armorClass: 18, saveDc: 15 }],
+    ["4", VERSION_FOUR, { current: 51, maximumBase: 60, armorClass: 12, saveDc: 15 }],
     ["5", VERSION_FIVE, { current: 60, maximumBase: 60, armorClass: 14, saveDc: 16 }],
     ["6", VERSION_SIX, { current: 60, maximumBase: 60, armorClass: 14, saveDc: 16 }],
   ])("версия %s", (_version, save, expected) => {
@@ -749,13 +751,13 @@ describe("сохранение каждой версии открывается 
     expect(sheet.value("armorClass")).toBe(expected.armorClass);
   });
 
-  it("рода вещей версии 3 становятся категориями, надетость вне экипировки снимается", () => {
+  it("рода вещей версии 3 становятся признаками, надетость вне экипировки снимается", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_THREE));
-    expect(state.itemDefinitions.map((item) => item.kind)).toEqual([
-      "consumable",
-      "other",
-      "gear",
-      "other",
+    expect(state.itemDefinitions.map((item) => item.kinds)).toEqual([
+      ["consumable"],
+      [],
+      ["gear"],
+      [],
     ]);
     expect(state.equipment.bag.map((entry) => entry.itemId)).toEqual([
       "healing-potion",
@@ -875,7 +877,7 @@ describe("отметка купленного компонента станов�
     const state = characterStateSchema.parse(migrateCharacterState(withBought(["identify"])));
     const pearl = state.itemDefinitions.find((item) => item.nameRu.startsWith("жемчужина"));
 
-    expect(pearl).toMatchObject({ kind: "other", price: { amount: 100, currency: "gold" } });
+    expect(pearl).toMatchObject({ kinds: [], price: { amount: 100, currency: "gold" } });
     expect(state.equipment.bag).toContainEqual({ itemId: pearl?.id, count: 1 });
     expect(componentsOf(withBought(["identify"]))).not.toHaveProperty(LIST);
   });

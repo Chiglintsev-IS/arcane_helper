@@ -23,7 +23,7 @@ describe("материал заклинания", () => {
     expect(materialOf(arcaneLock.components)).toEqual({
       id: "золотая-пыль-стоимостью-минимум-25-зм,-расходуемая-заклинанием",
       nameRu: "золотая пыль стоимостью минимум 25 зм, расходуемая заклинанием",
-      kind: "consumable",
+      kinds: ["consumable"],
       consumed: true,
       price: { amount: 25, currency: "gold" },
     });
@@ -33,7 +33,7 @@ describe("материал заклинания", () => {
     expect(materialOf(mageArmor.components)).toEqual({
       id: "кусок-обработанной-кожи",
       nameRu: "кусок обработанной кожи",
-      kind: "other",
+      kinds: [],
       consumed: false,
     });
   });

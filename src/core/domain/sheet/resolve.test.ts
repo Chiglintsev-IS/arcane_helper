@@ -126,7 +126,7 @@ describe("разбор", () => {
     const stronger: StatContribution = {
       stat: "speed",
       kind: "method",
-      method: { family: "armor", base: 16, category: "heavy" },
+      method: { family: "spell", base: 16 },
     };
     const resolved = resolveStats([brought], [
       { source: "Доспехи мага", contribution: weaker },

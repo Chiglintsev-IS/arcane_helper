@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { cleanup, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
@@ -11,16 +12,21 @@ import { SpellCardDetails } from "./SpellCardDetails";
 
 const CASTING = testSnapshot().casting;
 
-async function mechanicsOf(id: string) {
-  await renderWithStores(
+async function cardOf(id: string, onToggleMaterial: () => void = () => {}) {
+  return await renderWithStores(
     <SpellCardDetails
       row={testSpellRow(id, knowing(createThorne(), "arcane-lock"))}
       casting={CASTING}
       onCast={() => {}}
       onNoteChange={() => {}}
+      onToggleMaterial={onToggleMaterial}
       onClose={() => {}}
     />,
   );
+}
+
+async function mechanicsOf(id: string) {
+  await cardOf(id);
   return within(screen.getByLabelText("Механика"));
 }
 
@@ -58,5 +64,18 @@ describe("подробная карточка называет требуемы�
     const mechanics = await mechanicsOf("thunder-step");
 
     expect(mechanics.getByText("голос")).toBeDefined();
+  });
+
+  it("свой компонент покупают и тратят с карточки, закрытый фокусировкой — не покупают", async () => {
+    const user = userEvent.setup();
+    const bought = vi.fn();
+    await cardOf("arcane-lock", bought);
+
+    await user.click(screen.getByRole("button", { name: "Купить компонент" }));
+    expect(bought).toHaveBeenCalled();
+
+    cleanup();
+    await cardOf("lightning-bolt");
+    expect(screen.queryByRole("button", { name: /компонент/ })).toBeNull();
   });
 });

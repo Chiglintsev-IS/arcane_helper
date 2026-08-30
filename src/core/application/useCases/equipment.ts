@@ -21,7 +21,7 @@ function applied(
 
 export function addItem(
   session: Session,
-  item: { nameRu: string; kind: ItemKind; price?: ItemDefinition["price"] },
+  item: { nameRu: string; kinds: readonly ItemKind[]; price?: ItemDefinition["price"] },
   occasion: Occasion,
 ): Session {
   const id = Items.idFromName(item.nameRu);
@@ -54,8 +54,41 @@ export function removeItem(session: Session, id: string, occasion: Occasion): Se
   }
   return applied(
     session,
-    (root) => root.withItems(root.items.removeDefinition(id)),
+    (root) =>
+      root
+        .withItems(root.items.removeDefinition(id))
+        .withEquipment(root.equipment.withWanted(id, false)),
     `Убрано: ${item?.nameRu ?? id}`,
+    occasion,
+  );
+}
+
+export function recordItem(
+  session: Session,
+  nameRu: string,
+  wanted: boolean,
+  occasion: Occasion,
+): Session {
+  const id = Items.idFromName(nameRu);
+  return applied(
+    session,
+    (root) =>
+      root
+        .withItems(root.items.addDefinition({ nameRu, kinds: [] }))
+        .withEquipment(root.equipment.withWanted(id, wanted)),
+    wanted ? `В покупки: ${nameRu}` : `Записано: ${nameRu}`,
+    occasion,
+  );
+}
+
+export function toggleWanted(session: Session, id: string, occasion: Occasion): Session {
+  const { equipment, items } = Character.of(session.character);
+  const nameRu = items.find(id)?.nameRu ?? id;
+  const wanted = !equipment.wants(id);
+  return applied(
+    session,
+    (root) => root.withEquipment(root.equipment.withWanted(id, wanted)),
+    wanted ? `В покупки: ${nameRu}` : `Из покупок: ${nameRu}`,
     occasion,
   );
 }

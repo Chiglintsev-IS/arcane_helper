@@ -55,17 +55,18 @@ function factAt(valueRu: string): string {
 const staff: ItemDefinition = {
   id: "staff-of-power",
   nameRu: "Посох силы",
-  kind: "gear",
+  kinds: ["gear"],
   note: "требует настройки",
   bonuses: { spellSaveDc: 2, spellAttackModifier: 2 },
 };
 
 describe("строка вещи", () => {
-  it("число строки стоит при имени, а не отодвигает подробности (FR-250)", () => {
+  it("счёт стоит внизу строки, рядом с кнопками, а имени оставлена вся ширина", () => {
     renderRow(viewOf(staff), "надето 1");
 
     const open = screen.getByRole("button", { name: "Правка: Посох силы" });
-    expect(within(open).getByText("надето 1")).toBeDefined();
+    expect(within(open).queryByText("надето 1")).toBeNull();
+    expect(screen.getByText("надето 1")).toBeDefined();
   });
 
   it("факт — своя плашка: число один раз и всё, что оно двигает (FR-250)", () => {
@@ -77,7 +78,7 @@ describe("строка вещи", () => {
       }),
     );
 
-    expect(factAt("+2")).toBe("+2 КС спасброска, Атака заклинанием");
+    expect(factAt("+2")).toBe("+2 Сложность спасброска врага, Попадание заклинанием");
     expect(factAt("+1")).toBe("+1 Класс Доспеха");
     expect(factAt("3500")).toBe("3500 зм");
 
@@ -89,7 +90,7 @@ describe("строка вещи", () => {
       viewOf({
         id: "circlet-of-everything",
         nameRu: "Венец всего",
-        kind: "gear",
+        kinds: ["gear"],
         bonuses: {
           armorClass: 1,
           spellSaveDc: 1,
@@ -101,7 +102,7 @@ describe("строка вещи", () => {
     );
 
     expect(factAt("+1")).toBe(
-      "+1 Класс Доспеха, КС спасброска, Атака заклинанием, Инициатива, Пассивная внимательность",
+      "+1 Класс Доспеха, Сложность спасброска врага, Попадание заклинанием, Инициатива, Пассивная внимательность",
     );
     expect(screen.queryByText(/ещё/)).toBeNull();
   });
@@ -125,7 +126,7 @@ describe("строка вещи", () => {
   });
 
   it("у вещи без подробностей второй строки нет вовсе (FR-250)", () => {
-    renderRow(viewOf({ id: "rope", nameRu: "Верёвка", kind: "other" }));
+    renderRow(viewOf({ id: "rope", nameRu: "Верёвка", kinds: [] }));
 
     const open = screen.getByRole("button", { name: "Правка: Верёвка" });
     expect(open.textContent).toBe("Верёвка");

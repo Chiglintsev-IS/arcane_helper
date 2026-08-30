@@ -217,8 +217,8 @@ describe("книга", () => {
 });
 
 describe("снаряжение", () => {
-  const rope: Command = { kind: "add_item", nameRu: "Верёвка", itemKind: "other" };
-  const cloak: Command = { kind: "add_item", nameRu: "Плащ", itemKind: "gear" };
+  const rope: Command = { kind: "add_item", nameRu: "Верёвка", itemKinds: [] };
+  const cloak: Command = { kind: "add_item", nameRu: "Плащ", itemKinds: ["gear"] };
 
   function idOf(live: LiveSession, nameRu: string): string {
     const found = live.session.character.itemDefinitions.find((item) => item.nameRu === nameRu);
@@ -256,7 +256,7 @@ describe("снаряжение", () => {
     const added = run([rope]);
     const id = idOf(added, "Верёвка");
 
-    const edited = run([{ kind: "edit_item", item: { id, nameRu: "Верёвка", kind: "other", note: "в сумке" } }], added);
+    const edited = run([{ kind: "edit_item", item: { id, nameRu: "Верёвка", kinds: [], note: "в сумке" } }], added);
 
     expect(edited.session.character.itemDefinitions.find((item) => item.id === id)?.note).toBe(
       "в сумке",
@@ -269,15 +269,15 @@ describe("снаряжение", () => {
 
     expect(() =>
       run(
-        [{ kind: "edit_item", item: { id, nameRu: "Верёвка", kind: "other", bonuses: { armorClass: 1 } } }],
+        [{ kind: "edit_item", item: { id, nameRu: "Верёвка", kinds: [], bonuses: { armorClass: 1 } } }],
         added,
       ),
     ).toThrow(/не экипировка/);
   });
 
-  it("категория вещи не из списка отвергается", () => {
-    expect(refusal([{ kind: "add_item", nameRu: "Нечто", itemKind: "артефакт" }])).toMatch(
-      /категория вещи/,
+  it("признак вещи не из списка отвергается", () => {
+    expect(refusal([{ kind: "add_item", nameRu: "Нечто", itemKinds: ["артефакт"] }])).toMatch(
+      /признак вещи/,
     );
   });
 
@@ -457,8 +457,8 @@ describe("ремесло", () => {
   };
 
   const stock: readonly Command[] = [
-    { kind: "add_item", nameRu: MOON_HERB, itemKind: "ingredient" },
-    { kind: "add_item", nameRu: CRIMSON_ROOT, itemKind: "ingredient" },
+    { kind: "add_item", nameRu: MOON_HERB, itemKinds: ["ingredient"] },
+    { kind: "add_item", nameRu: CRIMSON_ROOT, itemKinds: ["ingredient"] },
   ];
 
   it("замысел, собранный из слов справочника, доходит до изготовления", () => {

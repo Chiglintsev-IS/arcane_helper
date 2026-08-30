@@ -414,19 +414,27 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("лист персонажа, кто он");
 
   await switchMode(page, /^Вещи/);
-  await expect(page.getByRole("heading", { name: "Защита" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Снять один: Плащ защиты" })).toBeVisible();
-  await scan("экипировка");
-
-  await page.getByRole("radio", { name: "Сумка" }).click();
   await expect(page.getByRole("heading", { name: "Деньги" })).toBeVisible();
   await scan("сумка");
 
+  await page.getByRole("radio", { name: "Надето" }).click();
+  await expect(page.getByRole("heading", { name: "Защита" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Снять один: Плащ защиты" })).toBeVisible();
+  await scan("надетое");
+
+  await page.getByRole("radio", { name: "Расходники" }).click();
   await page.getByRole("textbox", { name: "Новый расходник" }).fill("Зелье лечения");
   await page.getByRole("textbox", { name: "Новый расходник" }).press("Enter");
   await page.getByRole("button", { name: "Правка: Зелье лечения" }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Зелье лечения" })).toBeVisible();
   await scan("шторка вещи");
+  await page.getByRole("button", { name: "Добавить прибавку" }).click();
+  await expect(page.getByRole("dialog", { name: "К чему прибавка" })).toBeVisible();
+  await scan("выбор величины прибавки");
+  await page
+    .getByRole("dialog", { name: "К чему прибавка" })
+    .getByRole("button", { name: "Отмена" })
+    .click();
   await page.getByRole("button", { name: "Отмена" }).click();
 
   await page.getByRole("button", { name: "Правка: Деньги" }).click();
@@ -434,8 +442,12 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("шторка денег");
   await page.getByRole("button", { name: "Отмена" }).click();
 
+  await page.getByRole("radio", { name: "Все вещи" }).click();
+  await expect(page.getByLabel("Поиск")).toBeVisible();
   await page.getByRole("radio", { name: "Покупки" }).click();
-  await expect(page.getByText(/Закрывает фокусировка/)).toBeVisible();
+  await page.getByRole("textbox", { name: "Что купить" }).fill("Верёвка");
+  await page.getByRole("textbox", { name: "Что купить" }).press("Enter");
+  await expect(page.getByRole("button", { name: "Правка: Верёвка" })).toBeVisible();
   await scan("покупки");
 
   await switchToSheet(page);

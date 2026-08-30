@@ -5,7 +5,7 @@ import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { Items } from "@/core/domain/items/items";
-import { filledGearOnlyFields, withoutGearOnlyFields } from "@/core/domain/items/schema";
+import { filledWearableOnlyFields, withoutWearableOnlyFields } from "@/core/domain/items/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { ABILITIES, isStatId, saveStatId, type StatId } from "@/core/domain/shared/stats";
@@ -73,32 +73,57 @@ function migrateArcaneRecovery(state: unknown): unknown {
   return { ...rest, arcaneRecovery: { maximum, remaining: arcaneRecoveryAvailable ? maximum : 0 } };
 }
 
-const LEGACY_ITEM_KINDS: Record<string, string> = { potion: "consumable", junk: "other" };
+const LEGACY_ITEM_KINDS: Record<string, readonly string[]> = {
+  gear: ["gear"],
+  consumable: ["consumable"],
+  ingredient: ["ingredient"],
+  other: [],
+  potion: ["consumable"],
+  junk: [],
+};
+
+function legacyKinds(fields: Readonly<Record<string, unknown>>): readonly string[] {
+  const { kind } = fields;
+  const known = typeof kind === "string" ? LEGACY_ITEM_KINDS[kind] : undefined;
+  if (known !== undefined) return known;
+  const wornSigns =
+    filledWearableOnlyFields(fields).length > 0 ||
+    fields.armor !== undefined ||
+    fields.armorBase !== undefined;
+  return wornSigns || fields.bonuses !== undefined ? ["gear"] : [];
+}
 
 function migrateItem(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
   const fields = fieldsOf(item);
-  const { kind, count } = fields;
-  const gearOnly = filledGearOnlyFields(fields);
+  const { kinds, count } = fields;
+  if (Array.isArray(kinds)) return item;
 
-  const migratedKind =
-    kind === "gear" || kind === "consumable" || kind === "ingredient" || kind === "other"
-      ? kind
-      : typeof kind === "string" && kind in LEGACY_ITEM_KINDS
-        ? LEGACY_ITEM_KINDS[kind]
-        : gearOnly.length > 0
-          ? "gear"
-          : "other";
-
-  const gearOnlyOff = migratedKind !== "gear" && gearOnly.length > 0;
   const capped = typeof count === "number" && count > MAXIMUM_ITEM_COUNT;
-  if (migratedKind === kind && !gearOnlyOff && !capped) return item;
-
+  const migrated = legacyKinds(fields);
+  const { kind: _legacy, armor: _armor, armorBase: _armorBase, ...rest } = fields;
+  const wearable = migrated.includes("gear");
   return {
-    ...(gearOnlyOff ? withoutGearOnlyFields(fields) : fields),
-    kind: migratedKind,
+    ...(wearable ? rest : withoutWearableOnlyFields(rest)),
+    kinds: migrated,
+    ...(!wearable && rest.bonuses !== undefined ? { worksCarried: true } : {}),
     ...(capped ? { count: MAXIMUM_ITEM_COUNT } : {}),
   };
+}
+
+function wearableItem(definition: Readonly<Record<string, unknown>>): boolean {
+  const { kinds } = definition;
+  return Array.isArray(kinds) && kinds.includes("gear");
+}
+
+function migrateItemKinds(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(migrateItem);
+  if (items.every((item, index) => item === stored[index])) return state;
+  return { ...fields, itemDefinitions: items };
 }
 
 function migrateItemCategories(state: unknown): unknown {
@@ -115,40 +140,14 @@ function migrateItemCategories(state: unknown): unknown {
 function migrateArmorBase(state: unknown): unknown {
   const split = splitArmorBase(state);
   if (split === null) return state;
-
-  const fields = fieldsOf(state);
-  const { equipment, base } = split;
-  const items = Array.isArray(equipment.items) ? equipment.items : [];
-  const worn = items.flatMap((item, index) => (isBareWornItem(item) ? [index] : []));
-  const only = worn.length === 1 ? worn[0] : undefined;
-
-  if (only === undefined || typeof base !== "number" || base === UNARMORED_ARMOR_CLASS_BASE) {
-    return { ...fields, equipment };
-  }
-
-  const armored = [...items];
-  armored[only] = { ...fieldsOf(items[only]), armor: { base } };
-  return { ...fields, equipment: { ...equipment, items: armored } };
+  return { ...fieldsOf(state), equipment: split.equipment };
 }
 
-function isBareWornItem(item: unknown): boolean {
-  const fields = fieldsOf(item);
-  return fields.worn === true && fields.armor === undefined;
-}
-
-function migrateArmorBasePatch(patch: unknown): unknown {
-  const split = splitArmorBase(patch);
-  if (split === null) return patch;
-  return { ...fieldsOf(patch), equipment: split.equipment };
-}
-
-function splitArmorBase(
-  state: unknown,
-): { equipment: Record<string, unknown>; base: unknown } | null {
+function splitArmorBase(state: unknown): { equipment: Record<string, unknown> } | null {
   const equipment = fieldsOf(fieldsOf(state).equipment);
   if (!("armorClassBase" in equipment)) return null;
-  const { armorClassBase, ...bare } = equipment;
-  return { equipment: bare, base: armorClassBase };
+  const { armorClassBase: _dropped, ...bare } = equipment;
+  return { equipment: bare };
 }
 
 function migrateItemsSplit(state: unknown): unknown {
@@ -169,7 +168,7 @@ function migrateItemsSplit(state: unknown): unknown {
     const { worn: isWorn, count, ...definition } = item;
     itemDefinitions.push(definition);
     const entry = { itemId: definition.id, count: typeof count === "number" ? count : 1 };
-    (isWorn === true && definition.kind === "gear" ? worn : bag).push(entry);
+    (isWorn === true && wearableItem(definition) ? worn : bag).push(entry);
   }
 
   const { items: _dropped, ...restEquipment } = equipment;
@@ -348,15 +347,11 @@ function dropHandEnteredNumbers(state: unknown): unknown {
 function migrateItemShape(item: unknown): unknown {
   if (item === null || typeof item !== "object") return item;
   const fields = fieldsOf(item);
-  const { bonuses, armorBase, ...rest } = fields;
-  if (!namedByLegacyWords(bonuses) && armorBase === undefined) return item;
+  const { bonuses, ...rest } = fields;
+  if (!namedByLegacyWords(bonuses)) return item;
 
   const stats = bonusesToStats(bonuses);
-  return {
-    ...rest,
-    ...(Object.keys(stats).length === 0 ? {} : { bonuses: stats }),
-    ...(typeof armorBase === "number" ? { armor: { base: armorBase } } : {}),
-  };
+  return { ...rest, ...(Object.keys(stats).length === 0 ? {} : { bonuses: stats }) };
 }
 
 function migratedList(stored: unknown): unknown[] | null {
@@ -444,54 +439,47 @@ function migrateEffectShapes(state: unknown): unknown {
   return { ...fields, activeEffects: effects };
 }
 
+function migrated(state: unknown, steps: readonly ((state: unknown) => unknown)[]): unknown {
+  return steps.reduce((carried, step) => step(carried), state);
+}
+
 export function migrateUndoPatch(patch: unknown): unknown {
-  return withoutForgottenFields(
-    migrateFocusItems(
-      migrateEffectShapes(
-        migrateAdjustmentMarker(
-          dropHandEnteredNumbers(
-            migrateItemShapes(
-              migrateItemsSplit(
-                migrateArmorBasePatch(
-                  migrateMiscBonuses(
-                    migrateItemCategories(migrateItemShapes(migrateFireSuppression(patch))),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
+  return migrated(patch, [
+    migrateFireSuppression,
+    migrateItemShapes,
+    migrateItemCategories,
+    migrateMiscBonuses,
+    migrateArmorBase,
+    migrateItemsSplit,
+    migrateItemShapes,
+    dropHandEnteredNumbers,
+    migrateAdjustmentMarker,
+    migrateEffectShapes,
+    migrateFocusItems,
+    migrateItemKinds,
+    withoutForgottenFields,
+  ]);
 }
 
 export function migrateCharacterState(raw: unknown): unknown {
-  return migrateFocusItems(
-    migrateBoughtMaterials(
-      migrateSpellcastingFocus(
-        migrateEffectShapes(
-          migrateAdjustmentMarker(
-            dropHandEnteredNumbers(
-              migrateItemShapes(
-                migrateItemsSplit(
-                  migrateArmorBase(
-                    migrateMiscBonuses(
-                      migrateItemCategories(
-                        migrateItemShapes(
-                          migrateArcaneRecovery(migrateFireSuppression(migrateShape(raw))),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
+  return migrated(raw, [
+    migrateShape,
+    migrateFireSuppression,
+    migrateArcaneRecovery,
+    migrateItemShapes,
+    migrateItemCategories,
+    migrateMiscBonuses,
+    migrateArmorBase,
+    migrateItemsSplit,
+    migrateItemShapes,
+    dropHandEnteredNumbers,
+    migrateAdjustmentMarker,
+    migrateEffectShapes,
+    migrateSpellcastingFocus,
+    migrateBoughtMaterials,
+    migrateFocusItems,
+    migrateItemKinds,
+  ]);
 }
 
 function migrateShape(raw: unknown): unknown {

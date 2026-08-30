@@ -46,6 +46,8 @@ import {
   editItem,
   editMoney,
   removeItem,
+  recordItem,
+  toggleWanted,
 } from "@/core/application/useCases/equipment";
 import {
   grantTemporaryHitPoints,
@@ -232,7 +234,10 @@ export function applyCommand(
       return changed(
         addItem(
           session,
-          { nameRu: command.nameRu, kind: oneOf(ITEM_KINDS, command.itemKind, "категория вещи") },
+          {
+            nameRu: command.nameRu,
+            kinds: command.itemKinds.map((kind) => oneOf(ITEM_KINDS, kind, "признак вещи")),
+          },
           occasion,
         ),
       );
@@ -240,6 +245,10 @@ export function applyCommand(
       return changed(editItem(session, itemDefinitionOf(command.item), occasion));
     case "remove_item":
       return changed(removeItem(session, command.itemId, occasion));
+    case "toggle_wanted":
+      return changed(toggleWanted(session, command.itemId, occasion));
+    case "record_item":
+      return changed(recordItem(session, command.nameRu, command.wanted, occasion));
     case "adjust_bag_count":
       return changed(adjustBagCount(session, command.itemId, command.delta, occasion));
     case "adjust_worn_count":

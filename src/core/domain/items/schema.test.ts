@@ -5,19 +5,20 @@ import {
   ITEMS_FIELDS,
   alignedItemDefinition,
   assertItemDefinition,
-  filledGearOnlyFields,
-  gearOnlyRefusal,
+  countedCarried,
+  filledWearableOnlyFields,
   itemDefinitionOf,
-  withoutGearOnlyFields,
+  wearable,
+  withoutWearableOnlyFields,
 } from "@/core/domain/items/schema";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 
-const potion: ItemDefinition = { id: "potion", nameRu: "Зелье", kind: "consumable" };
+const potion: ItemDefinition = { id: "potion", nameRu: "Зелье", kinds: ["consumable"] };
 const armored: ItemDefinition = {
   id: "chainmail",
   nameRu: "Кольчуга",
-  kind: "gear",
-  armor: { base: 16, category: "heavy" },
+  kinds: ["gear"],
+  spellcastingFocus: true,
   bonuses: { armorClass: 0 },
 };
 
@@ -26,16 +27,24 @@ function withDefinition(item: unknown) {
 }
 
 describe("подсхема вещи", () => {
-  it("вещь без категории считается «другим»: находку не заставляют классифицировать", () => {
+  it("вещь без признаков заводится: находку не заставляют опознавать", () => {
     const parsed = ITEMS_FIELDS.itemDefinitions.parse([{ id: "rope", nameRu: "Верёвка" }]);
-    expect(parsed[0]?.kind).toBe("other");
+    expect(parsed[0]?.kinds).toEqual([]);
   });
 
-  it("категория вещи ограничена четырьмя: экипировка, расходник, ингредиент, другое", () => {
-    for (const kind of ["gear", "consumable", "ingredient", "other"]) {
-      expect(withDefinition({ id: "thing", nameRu: "Штука", kind }).success, kind).toBe(true);
-    }
-    expect(withDefinition({ id: "thing", nameRu: "Штука", kind: "potion" }).success).toBe(false);
+  it("признаки бывают втроём разом, и выдуманного признака не бывает", () => {
+    const all = ["gear", "consumable", "ingredient"];
+    expect(withDefinition({ id: "thing", nameRu: "Штука", kinds: all }).success).toBe(true);
+    expect(withDefinition({ id: "thing", nameRu: "Штука", kinds: ["potion"] }).success).toBe(false);
+  });
+
+  it("порядок и повторы признаков приводятся: набор один, как ни набирай", () => {
+    const messy = itemDefinitionOf({
+      id: "thing",
+      nameRu: "Штука",
+      kinds: ["ingredient", "gear", "ingredient"],
+    });
+    expect(messy.kinds).toEqual(["gear", "ingredient"]);
   });
 
   it("цена вещи необязательна, а заданная проверяется монетой и целым числом", () => {
@@ -46,54 +55,55 @@ describe("подсхема вещи", () => {
     expect(priced({ amount: 50, currency: "рубль" }).success).toBe(false);
   });
 
-  it("прибавки и база доспеха бывают только у экипировки (FR-238)", () => {
-    const bonuses = { armorClass: 1 };
-    const armor = { base: 16, category: "heavy" };
-    expect(withDefinition({ ...potion, bonuses }).success).toBe(false);
-    expect(withDefinition({ ...potion, armor }).success).toBe(false);
-    expect(withDefinition({ ...potion, kind: "gear", bonuses, armor }).success).toBe(true);
-  });
-
-  it("отметка фокусировки бывает только у экипировки (FR-260)", () => {
+  it("фокусировка бывает только у экипировки", () => {
     const spellcastingFocus = true;
     expect(withDefinition({ ...potion, spellcastingFocus }).success).toBe(false);
-    expect(withDefinition({ ...potion, kind: "gear", spellcastingFocus }).success).toBe(true);
-    expect(withDefinition({ ...potion, kind: "gear", spellcastingFocus: false }).success).toBe(
+    expect(withDefinition({ ...potion, kinds: ["gear"], spellcastingFocus }).success).toBe(true);
+    expect(withDefinition({ ...potion, kinds: ["gear"], spellcastingFocus: false }).success).toBe(
       false,
     );
   });
 
-  it("прибавка называет величину словаря, и выдуманной величины не бывает (FR-247)", () => {
-    const gear = { id: "ring", nameRu: "Кольцо", kind: "gear" };
+  it("прибавка не-экипировки действует при себе, иначе отказ", () => {
+    const bonuses = { armorClass: 1 };
+    expect(withDefinition({ ...potion, bonuses }).success).toBe(false);
+    expect(withDefinition({ ...potion, bonuses, worksCarried: true }).success).toBe(true);
+    expect(withDefinition({ ...potion, kinds: ["gear"], bonuses }).success).toBe(true);
+  });
+
+  it("условие действия без прибавок не хранится", () => {
+    expect("worksCarried" in itemDefinitionOf({ ...potion, worksCarried: true })).toBe(false);
+  });
+
+  it("прибавка называет величину словаря, и выдуманной величины не бывает", () => {
+    const gear = { id: "ring", nameRu: "Кольцо", kinds: ["gear"] };
     expect(withDefinition({ ...gear, bonuses: { "save:wisdom": 1 } }).success).toBe(true);
     expect(withDefinition({ ...gear, bonuses: { savingThrows: 1 } }).success).toBe(false);
     expect(withDefinition({ ...gear, bonuses: { armorClass: 1.5 } }).success).toBe(false);
   });
 
-  it("категория доспеха необязательна и ограничена тремя (FR-247)", () => {
-    const gear = { id: "mail", nameRu: "Кольчуга", kind: "gear" };
-    expect(withDefinition({ ...gear, armor: { base: 16 } }).success).toBe(true);
-    expect(withDefinition({ ...gear, armor: { base: 16, category: "light" } }).success).toBe(true);
-    expect(withDefinition({ ...gear, armor: { base: 16, category: "plate" } }).success).toBe(false);
-    expect(withDefinition({ ...gear, armor: { base: 0 } }).success).toBe(false);
-  });
-
-  it("отказ называет вещь по имени", () => {
-    expect(gearOnlyRefusal("Зелье")).toContain("Зелье");
-    expect(gearOnlyRefusal("Зелье")).toContain("не экипировка");
+  it("отказ называет вещь по имени и говорит, чего ей не хватает", () => {
+    expect(() => itemDefinitionOf({ ...potion, spellcastingFocus: true })).toThrow(/Зелье/);
+    expect(() => itemDefinitionOf({ ...potion, bonuses: { armorClass: 1 } })).toThrow(/при себе/);
   });
 });
 
 describe("свойства экипировки: перечисление, снятие", () => {
   it("заполненные свойства экипировки перечисляются", () => {
-    expect(filledGearOnlyFields(armored)).toEqual(["bonuses", "armor"]);
-    expect(filledGearOnlyFields(potion)).toEqual([]);
+    expect(filledWearableOnlyFields(armored)).toEqual(["spellcastingFocus"]);
+    expect(filledWearableOnlyFields(potion)).toEqual([]);
   });
 
   it("снятые свойства экипировки отсутствуют полем, а не занулены", () => {
-    const stripped = withoutGearOnlyFields(armored);
-    expect("bonuses" in stripped).toBe(false);
-    expect("armor" in stripped).toBe(false);
+    const stripped = withoutWearableOnlyFields(armored);
+    expect("spellcastingFocus" in stripped).toBe(false);
+  });
+
+  it("экипировку и условие действия вещь называет сама", () => {
+    expect(wearable(armored)).toBe(true);
+    expect(wearable(potion)).toBe(false);
+    expect(countedCarried({ ...potion, bonuses: { speed: 5 }, worksCarried: true })).toBe(true);
+    expect(countedCarried(armored)).toBe(false);
   });
 });
 
@@ -102,15 +112,25 @@ describe("assertItemDefinition и alignedItemDefinition", () => {
     expect(() => assertItemDefinition(potion)).not.toThrow();
   });
 
-  it("«надетое зелье с прибавкой» отвергается, и отказ называет вещь (FR-238)", () => {
-    expect(() => assertItemDefinition({ ...potion, bonuses: { armorClass: 1 } })).toThrow(
-      DomainError,
-    );
+  it("«зелье-фокусировка» отвергается, и отказ называет вещь", () => {
+    expect(() => assertItemDefinition({ ...potion, spellcastingFocus: true })).toThrow(DomainError);
   });
 
-  it("правка со сменой категории на не-экипировку снимает свойства экипировки, а не отвергает", () => {
-    const moved = alignedItemDefinition({ ...potion, kind: "other" });
-    expect(moved).toEqual({ id: "potion", nameRu: "Зелье", kind: "other" });
+  it("правка прочь от экипировки снимает фокусировку и оставляет прибавку при себе", () => {
+    const moved = alignedItemDefinition({
+      id: "ring",
+      nameRu: "Кольцо защиты",
+      kinds: [],
+      spellcastingFocus: true,
+      bonuses: { armorClass: 1 },
+    });
+    expect(moved).toEqual({
+      id: "ring",
+      nameRu: "Кольцо защиты",
+      kinds: [],
+      bonuses: { armorClass: 1 },
+      worksCarried: true,
+    });
   });
 
   it("прибавка из одних нулей не хранится: верёвка не участвует в счёте Класса Доспеха", () => {
@@ -124,10 +144,10 @@ describe("assertItemDefinition и alignedItemDefinition", () => {
   });
 
   it("пустой перечень прибавок — не прибавки: расходнику за него не отказывают", () => {
-    const typed = itemDefinitionOf({ ...potion, kind: "other", bonuses: {} });
+    const typed = itemDefinitionOf({ ...potion, bonuses: {} });
     expect("bonuses" in typed).toBe(false);
     expect(() => itemDefinitionOf({ ...potion, bonuses: { armorClass: 1 } })).toThrow(
-      /не экипировка/,
+      /при себе/,
     );
   });
 });

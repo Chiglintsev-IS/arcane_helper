@@ -86,17 +86,7 @@ export function isStatId(value: string): value is StatId {
   return STAT_IDS.some((id) => id === value);
 }
 
-export const ARMOR_CATEGORIES = ["light", "medium", "heavy"] as const;
-
-export type ArmorCategory = (typeof ARMOR_CATEGORIES)[number];
-
-export type StatMethod =
-  | {
-      readonly family: "armor";
-      readonly base: number;
-      readonly category?: ArmorCategory | undefined;
-    }
-  | { readonly family: "spell"; readonly base: number };
+export type StatMethod = { readonly family: "spell"; readonly base: number };
 
 export type StatContribution =
   | { readonly stat: StatId; readonly kind: "method"; readonly method: StatMethod }
@@ -117,14 +107,10 @@ export const statBonusesSchema = z.partialRecord(z.enum(STAT_IDS), z.number().in
 
 const statId = z.enum(STAT_IDS, { error: "Такой величины не бывает" });
 
-const statMethodSchema = z.discriminatedUnion("family", [
-  z.object({
-    family: z.literal("armor"),
-    base: z.number().int().positive(),
-    category: z.enum(ARMOR_CATEGORIES).optional(),
-  }),
-  z.object({ family: z.literal("spell"), base: z.number().int().positive() }),
-]);
+const statMethodSchema = z.object({
+  family: z.literal("spell"),
+  base: z.number().int().positive(),
+});
 
 export const statContributionSchema = z.discriminatedUnion("kind", [
   z.object({ stat: statId, kind: z.literal("method"), method: statMethodSchema }),
