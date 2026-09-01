@@ -1,9 +1,8 @@
-import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
+import type { AlchemicalRarity, AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { apparatusOf } from "./apparatus";
 import type { Apparatus } from "./apparatus";
 import { consumablesOf, startedHours } from "./consumables";
-import type { RevealedProperty } from "./schema";
 
 const RESEARCH_STEPS = [
   { minutes: 10, difficulty: 5, laboratory: false, portionsOnSuccess: 0, portionsOnFailure: 1 },
@@ -18,7 +17,7 @@ const RARITY_RESEARCH_DIFFICULTY = {
   rare: 2,
   veryRare: 4,
   legendary: 7,
-} as const satisfies Record<RevealedProperty["rarity"], number>;
+} as const satisfies Record<AlchemicalRarity, number>;
 
 const CONSUMABLES_FROM_NUMBER = 2;
 
@@ -54,9 +53,13 @@ export type ResearchPlan = {
   readonly rawSampleRu: string | null;
 };
 
+/** Редкость приходит от стола: пока мастер её не назвал, цену исследования назвать нечем. */
+export const RARITY_NOT_NAMED_RU =
+  "Редкость свойства не названа: без неё цену исследования не посчитать";
+
 export function researchPlan(input: {
   readonly number: number;
-  readonly rarity: RevealedProperty["rarity"];
+  readonly rarity: AlchemicalRarity;
   readonly direction: AlchemyDirection;
   readonly apparatus: Apparatus;
 }): ResearchPlan {

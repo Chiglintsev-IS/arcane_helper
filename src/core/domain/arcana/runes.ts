@@ -17,6 +17,19 @@ export const RUNE_LABEL: Record<Rune, string> = {
   wind: "Руна ветра",
 };
 
+export const ANIMAL_SPEECH_RU = "Руна «Мяу»";
+
+export const ANIMAL_SPEECH_DURATION = { type: "minutes", value: 10 } as const;
+
+export const ANIMAL_SPEECH_WHERE_RU = "на себя";
+
+export const ANIMAL_SPEECH_EFFECT_RU = "Понимаете зверей и говорите с ними";
+
+export const ANIMAL_SPEECH_NOTE_RU =
+  "Знание и сознание зверя ограничены его интеллектом, но о ближайших местах и чудовищах он " +
+  "расскажет — включая тех, кого видел за последний день. Небольшую помощь зверь может оказать " +
+  "на усмотрение мастера.";
+
 export function runesMaximum(proficiencyBonus: number): number {
   return proficiencyBonus;
 }
@@ -94,8 +107,11 @@ export function runeTrace(rune: Rune, castLevel: number): RuneTrace | null {
   };
 }
 
+export function runesUnavailability(runesRemaining: number): string | null {
+  return runesRemaining <= 0 ? "Рун не осталось, вернутся долгим отдыхом" : null;
+}
+
 export function runeUnavailability(castLevel: number | undefined, runesRemaining: number): string | null {
   if (castLevel === undefined) return "У заговора и ритуала нет уровня сотворения — руну не приложить";
-  if (runesRemaining <= 0) return "Рун не осталось, вернутся долгим отдыхом";
-  return null;
+  return runesUnavailability(runesRemaining);
 }

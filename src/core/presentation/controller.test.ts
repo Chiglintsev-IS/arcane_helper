@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
 
+import { Items } from "@/core/domain/items/items";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { createSession, type LiveSession, type Occasion } from "@/core/application/session";
@@ -12,11 +13,14 @@ import { applyCommand } from "./controller";
 const CATALOG = loadThorneSpells();
 const PARTS = { builtInCatalog: CATALOG, createInitialCharacter: createThorne };
 
+// Идентичность в бою даёт случайный ключ: в прогоне её заменяет счётчик, общий на весь прогон, —
+// иначе две команды выдали бы одну и ту же идентичность записи.
+let ticks = 0;
+
 function occasion(commandId: string): Occasion {
-  let tick = 0;
   return {
-    now: () => new Date(Date.UTC(2026, 7, 9, 12, 0, tick)).toISOString(),
-    nextId: () => `id-${++tick}`,
+    now: () => new Date(Date.UTC(2026, 7, 9, 12, 0, ticks)).toISOString(),
+    nextId: () => `id-${++ticks}`,
     commandId,
   };
 }
@@ -191,6 +195,13 @@ describe("эффекты и концентрация", () => {
 
     expect(live.session.character.runes.remaining).toBe(2);
   });
+
+  it("руна тратится на разговор со зверями", () => {
+    const live = run([{ kind: "spend_rune_on_animal_speech" }]);
+
+    expect(live.session.character.runes.remaining).toBe(2);
+    expect(live.session.character.activeEffects.at(-1)?.nameRu).toBe("Руна «Мяу»");
+  });
 });
 
 describe("книга", () => {
@@ -239,6 +250,12 @@ describe("снаряжение", () => {
     );
     expect(counted.session.character.equipment.bag.find((entry) => entry.itemId === id)?.count).toBe(2);
     expect(counted.session.character.equipment.worn.find((entry) => entry.itemId === id)?.count).toBe(1);
+
+    const stocked = run([{ kind: "set_bag_count", itemId: id, count: 32 }], added);
+    expect(stocked.session.character.equipment.bag.find((entry) => entry.itemId === id)?.count).toBe(
+      32,
+    );
+    expect(stocked.session.log.at(-1)?.summaryRu).toBe("Запас: Плащ (в сумке 32)");
 
     const removed = run(
       [
@@ -442,8 +459,11 @@ describe("ремесло", () => {
   const MOON_HERB = "Лунная трава";
   const CRIMSON_ROOT = "Багровый корень";
 
+  const MOON_HERB_ID = Items.idFromName(MOON_HERB);
+  const CRIMSON_ROOT_ID = Items.idFromName(CRIMSON_ROOT);
+
   const formula = {
-    kinds: [MOON_HERB, CRIMSON_ROOT],
+    kinds: [MOON_HERB_ID, CRIMSON_ROOT_ID],
     mainProperty: "Лечение здоровья",
     duration: null,
     onset: "Немедленно",
@@ -463,15 +483,19 @@ describe("ремесло", () => {
 
   it("замысел, собранный из слов справочника, доходит до изготовления", () => {
     const known = Character.of(createThorne());
-    const withKnowledge = [MOON_HERB, CRIMSON_ROOT].reduce(
-      (crafting, kind) =>
-        crafting
-          .noteIngredient(kind)
-          .revealProperty(kind, { number: 1, nameRu: "Лечение здоровья", rarity: "common" }),
-      known.crafting,
+    const withKnowledge = [MOON_HERB_ID, CRIMSON_ROOT_ID].reduce(
+      (items, itemId) =>
+        items.revealProperty(itemId, { number: 1, nameRu: "Лечение здоровья" }),
+      [MOON_HERB, CRIMSON_ROOT].reduce(
+        (items, nameRu) => items.addDefinition({ nameRu, kinds: ["ingredient"] }),
+        known.items,
+      ),
     );
+    const rated = known.withItems(withKnowledge);
     const live = run([...stock, { kind: "craft_batch", formula, portions: 1, rolled: 15 }], {
-      session: createSession(known.withCrafting(withKnowledge).toState()),
+      session: createSession(
+        rated.withCrafting(rated.crafting.nameRarity("Лечение здоровья", "common")).toState(),
+      ),
       spellCatalog: CATALOG,
       spellCatalogSource: "built_in",
     });
@@ -479,21 +503,73 @@ describe("ремесло", () => {
     expect(live.session.log.at(-1)?.kind).toBe("batch_crafted");
   });
 
-  it("вид записывается, свойство раскрывается, вид забывается", () => {
+  it("вид записывается вещью, свойство встаёт у неё, а редкость — у алхимика", () => {
     const noted = run([
       { kind: "note_ingredient", nameRu: MOON_HERB },
       {
         kind: "reveal_property",
-        nameRu: MOON_HERB,
+        itemId: MOON_HERB_ID,
         number: 1,
         propertyRu: "Лечение здоровья",
         rarity: "common",
       },
     ]);
 
-    expect(noted.session.character.ingredientKnowledge[0]?.properties).toHaveLength(1);
-    expect(run([{ kind: "forget_ingredient", nameRu: MOON_HERB }], noted).session.character
-      .ingredientKnowledge).toEqual([]);
+    const root = Character.of(noted.session.character);
+
+    expect(root.items.alchemyOf(MOON_HERB_ID).properties).toHaveLength(1);
+    expect(root.crafting.rarityOf("Лечение здоровья")).toBe("common");
+  });
+
+  it("редкость называется и позже, одна на свойство у всех видов сразу", () => {
+    const unnamed = run([
+      { kind: "note_ingredient", nameRu: MOON_HERB },
+      { kind: "reveal_property", itemId: MOON_HERB_ID, number: 1, propertyRu: "Лечение здоровья" },
+    ]);
+    const named = run(
+      [{ kind: "name_rarity", propertyRu: "Лечение здоровья", rarity: "rare" }],
+      unnamed,
+    );
+
+    expect(Character.of(unnamed.session.character).crafting.rarityOf("Лечение здоровья")).toBeUndefined();
+    expect(Character.of(named.session.character).crafting.rarityOf("Лечение здоровья")).toBe("rare");
+  });
+
+  it("редкость называют только известному свойству: отказ называет слово", () => {
+    expect(() => run([{ kind: "name_rarity", propertyRu: "Кисель", rarity: "rare" }])).toThrow(
+      /«Кисель»/,
+    );
+  });
+
+  it("наблюдения о виде пишутся, правятся, убираются и в лог не идут", () => {
+    const seen = run([
+      { kind: "note_ingredient", nameRu: MOON_HERB },
+      { kind: "note_observation", itemId: MOON_HERB_ID, textRu: "Пахнет тиной" },
+      { kind: "note_observation", itemId: MOON_HERB_ID, textRu: "Растёт у брода" },
+    ]);
+    const observationsOf = (live: LiveSession) =>
+      Character.of(live.session.character).items.alchemyOf(MOON_HERB_ID).observations;
+
+    expect(observationsOf(seen).map((one) => one.textRu)).toEqual([
+      "Пахнет тиной",
+      "Растёт у брода",
+    ]);
+    expect(seen.session.log.at(-1)?.summaryRu).not.toContain("тиной");
+
+    const first = observationsOf(seen)[0]!.id;
+    const fixed = run(
+      [
+        { kind: "rewrite_observation", itemId: MOON_HERB_ID, observationId: first, textRu: "Тиной" },
+      ],
+      seen,
+    );
+    expect(observationsOf(fixed)[0]?.textRu).toBe("Тиной");
+
+    const dropped = run(
+      [{ kind: "drop_observation", itemId: MOON_HERB_ID, observationId: first }],
+      fixed,
+    );
+    expect(observationsOf(dropped).map((one) => one.textRu)).toEqual(["Растёт у брода"]);
   });
 
   it("мастерская записывается командой и правит пределы работы", () => {

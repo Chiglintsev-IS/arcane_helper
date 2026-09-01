@@ -8,7 +8,7 @@ import { BottomNav } from "./BottomNav";
 
 afterEach(cleanup);
 
-async function openModes(mode: "crafting" | "play"): Promise<HTMLElement> {
+async function openModes(mode: "alchemy" | "play"): Promise<HTMLElement> {
   const user = userEvent.setup();
   render(<BottomNav mode={mode} onChange={() => undefined} />);
   await user.click(screen.getByRole("button", { name: /Режимы$/ }));
@@ -17,8 +17,8 @@ async function openModes(mode: "crafting" | "play"): Promise<HTMLElement> {
 
 describe("панель режимов отмечает показанное (FR-200)", () => {
   it("раскрытый список отмечает показанный режим", async () => {
-    const list = within(await openModes("crafting"));
-    const shown = list.getByRole("button", { name: /^Ремесло/ });
+    const list = within(await openModes("alchemy"));
+    const shown = list.getByRole("button", { name: /^Алхимия/ });
     const other = list.getByRole("button", { name: /^Лист/ });
 
     expect(shown.getAttribute("aria-current")).toBe("page");
@@ -28,10 +28,21 @@ describe("панель режимов отмечает показанное (FR-
     expect(other.textContent).not.toContain("сейчас");
   });
 
-  it("панель называет показанный режим и раскрывается восемью строками (FR-204)", async () => {
+  it("панель называет показанный режим и раскрывается десятью строками (FR-204)", async () => {
     const list = within(await openModes("play"));
 
-    const titles = ["Игра", "Заметки", "Книга", "Лист", "Вещи", "Ремесло", "Привал", "Лог"];
+    const titles = [
+      "Игра",
+      "Заметки",
+      "Книга",
+      "Лист",
+      "Вещи",
+      "Алхимия",
+      "Кузнечное дело",
+      "Фамильяр",
+      "Привал",
+      "Лог",
+    ];
     const rows = list.getAllByRole("button").filter((row) => row.textContent !== "Закрыть");
 
     expect(rows).toHaveLength(titles.length);

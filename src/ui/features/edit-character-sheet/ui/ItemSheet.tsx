@@ -6,6 +6,7 @@ import type { ChoicesView, ItemView } from "@/contract/views";
 import { currencyAbbr, itemKindLabel, statLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
+import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { StatPicker } from "./StatPicker";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
@@ -21,6 +22,10 @@ type ItemPatch = {
 };
 
 const GEAR = "gear";
+
+const NAME_LABEL = "Название";
+
+const NOTE_LABEL = "Заметка";
 
 const WANTED_LABEL = "Хочу купить";
 
@@ -62,6 +67,7 @@ function Counter({
   lessDisabled,
   moreDisabled,
   onAdjust,
+  onSet,
 }: {
   labelRu: string;
   countRu: string;
@@ -71,7 +77,18 @@ function Counter({
   lessDisabled: boolean;
   moreDisabled: boolean;
   onAdjust: (delta: number) => void;
+  /** Счёт, который бывает большим, набирают числом: тридцать две штуки по одной не нажимают. */
+  onSet?: (count: number) => void;
 }) {
+  const [typed, setTyped] = useState<string | null>(null);
+
+  const commit = (): void => {
+    if (typed === null || onSet === undefined) return;
+    const value = requiredFieldNumber(typed);
+    setTyped(null);
+    if (!Number.isNaN(value) && value !== count) onSet(value);
+  };
+
   return (
     <div className="flex items-center justify-between gap-2 text-sm">
       <span className="text-ink-quiet">{labelRu}</span>
@@ -85,9 +102,24 @@ function Counter({
         >
           −
         </button>
-        <span aria-label={countRu} className="min-w-8 text-center tabular-nums">
-          {count}
-        </span>
+        {onSet === undefined ? (
+          <span aria-label={countRu} className="min-w-8 text-center tabular-nums">
+            {count}
+          </span>
+        ) : (
+          <input
+            type="number"
+            inputMode="numeric"
+            aria-label={labelRu}
+            value={typed ?? String(count)}
+            onChange={(event) => setTyped(event.target.value)}
+            onBlur={commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") commit();
+            }}
+            className={`min-h-11 w-16 px-2 text-center text-base tabular-nums ${SURFACE_CONTROL}`}
+          />
+        )}
         <button
           type="button"
           aria-label={moreLabelRu}
@@ -108,6 +140,7 @@ export function ItemSheet({
   onSave,
   onToggleWanted,
   onAdjustBagCount,
+  onSetBagCount,
   onAdjustWornCount,
   onRemove,
   onCancel,
@@ -119,11 +152,13 @@ export function ItemSheet({
   onSave: (item: ItemPatch) => void;
   onToggleWanted: () => void;
   onAdjustBagCount: (delta: number) => void;
+  onSetBagCount: (count: number) => void;
   onAdjustWornCount: (delta: number) => void;
   onRemove: () => void;
   onCancel: () => void;
 }) {
   const required = useRequiredNumbers();
+  const [nameRu, setNameRu] = useState(item.nameRu);
   const [kinds, setKinds] = useState<readonly string[]>(item.kinds);
   const [carriedChoice, setCarriedChoice] = useState<boolean | null>(
     item.worksCarried ? true : null,
@@ -181,7 +216,7 @@ export function ItemSheet({
             () =>
               onSave({
                 id: item.id,
-                nameRu: item.nameRu,
+                nameRu,
                 kinds: [...kinds],
                 ...(amount === undefined ? {} : { price: { amount, currency } }),
                 ...(note.trim() === "" ? {} : { note: note.trim() }),
@@ -192,6 +227,8 @@ export function ItemSheet({
           )
         }
       >
+        <TextField labelRu={NAME_LABEL} value={nameRu} onChange={setNameRu} wide />
+
         <Counter
           labelRu="В сумке"
           countRu={`В сумке ${bagCount}`}
@@ -201,6 +238,7 @@ export function ItemSheet({
           lessDisabled={bagCount === 0}
           moreDisabled={false}
           onAdjust={onAdjustBagCount}
+          onSet={onSetBagCount}
         />
 
         {!item.kinds.includes(GEAR) ? null : (
@@ -297,7 +335,15 @@ export function ItemSheet({
           </div>
         )}
 
-        <TextField labelRu="Заметка" value={note} onChange={setNote} />
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-ink-quiet">{NOTE_LABEL}</span>
+          <GrowingField
+            labelRu={NOTE_LABEL}
+            value={note}
+            onChange={setNote}
+            onSubmit={setNote}
+          />
+        </div>
 
         <NumberField labelRu="Цена" value={priceAmount} onChange={setPriceAmount} min={0} />
         <div role="radiogroup" aria-label="Монета цены" className="flex gap-1">

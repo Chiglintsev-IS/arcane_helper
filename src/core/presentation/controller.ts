@@ -7,7 +7,7 @@ import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
 import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
-import { revealedPropertyOf } from "@/core/domain/crafting/schema";
+import { revealedPropertyOf } from "@/core/domain/items/ingredient";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { ABILITIES, SKILL_IDS, type SkillId } from "@/core/domain/shared/stats";
 import { SKILL_TRAINING, type SkillTraining } from "@/core/domain/character/skills";
@@ -26,16 +26,20 @@ import {
 import { castSpell } from "@/core/application/useCases/casting";
 import {
   craftBatch,
-  forgetIngredient,
+  dropObservation,
+  nameRarity,
   markPropertiesExhausted,
   noteIngredient,
+  noteObservation,
   revealProperty,
+  rewriteObservation,
   setWorkshop,
 } from "@/core/application/useCases/crafting";
 import {
   endConcentration,
   endEffect,
   setArmorClassAdjustment,
+  spendRuneOnAnimalSpeech,
   spendRuneOnWardingSigil,
   startManualEffect,
 } from "@/core/application/useCases/effects";
@@ -47,6 +51,7 @@ import {
   editMoney,
   removeItem,
   recordItem,
+  setBagCount,
   toggleWanted,
 } from "@/core/application/useCases/equipment";
 import {
@@ -75,7 +80,7 @@ import {
 } from "@/core/application/useCases/sheet";
 import { beginTurn, endCombat, startCombat } from "@/core/application/useCases/turn";
 
-import { castModeOf, oneOf, runeOf, spellOf } from "./words";
+import { castModeOf, oneOf, rarityOf, runeOf, spellOf } from "./words";
 
 type ControllerParts = {
   builtInCatalog: readonly Spell[];
@@ -164,6 +169,8 @@ export function applyCommand(
       );
     case "spend_rune_on_warding_sigil":
       return changed(spendRuneOnWardingSigil(session, occasion));
+    case "spend_rune_on_animal_speech":
+      return changed(spendRuneOnAnimalSpeech(session, occasion));
     case "start_manual_effect":
       return changed(
         startManualEffect(
@@ -251,6 +258,8 @@ export function applyCommand(
       return changed(recordItem(session, command.nameRu, command.wanted, occasion));
     case "adjust_bag_count":
       return changed(adjustBagCount(session, command.itemId, command.delta, occasion));
+    case "set_bag_count":
+      return changed(setBagCount(session, command.itemId, command.count, occasion));
     case "adjust_worn_count":
       return changed(adjustWornCount(session, command.itemId, command.delta, occasion));
     case "edit_money":
@@ -273,13 +282,11 @@ export function applyCommand(
 
     case "note_ingredient":
       return changed(noteIngredient(session, command.nameRu, occasion));
-    case "forget_ingredient":
-      return changed(forgetIngredient(session, command.nameRu, occasion));
     case "mark_properties_exhausted":
       return changed(
         markPropertiesExhausted(
           session,
-          { nameRu: command.nameRu, exhausted: command.exhausted },
+          { itemId: command.itemId, exhausted: command.exhausted },
           occasion,
         ),
       );
@@ -288,16 +295,33 @@ export function applyCommand(
         revealProperty(
           session,
           {
-            nameRu: command.nameRu,
+            itemId: command.itemId,
             property: revealedPropertyOf({
               number: command.number,
               nameRu: command.propertyRu,
-              rarity: command.rarity,
             }),
+            ...(command.rarity === undefined ? {} : { rarity: rarityOf(command.rarity) }),
           },
           occasion,
         ),
       );
+    case "name_rarity":
+      return changed(
+        nameRarity(
+          session,
+          { propertyRu: command.propertyRu, rarity: rarityOf(command.rarity) },
+          occasion,
+        ),
+      );
+
+    case "note_observation":
+      return changed(noteObservation(session, command.itemId, command.textRu, occasion));
+    case "rewrite_observation":
+      return changed(
+        rewriteObservation(session, command.itemId, command.observationId, command.textRu),
+      );
+    case "drop_observation":
+      return changed(dropObservation(session, command.itemId, command.observationId));
 
     case "set_alchemy_workshop":
       return changed(

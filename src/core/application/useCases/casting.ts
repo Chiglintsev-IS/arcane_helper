@@ -14,7 +14,7 @@ import {
 } from "@/core/domain/arcana/runes";
 
 import { hitDiceHealing } from "@/core/domain/vitality/hitDice";
-import { durationWithRoundsRu } from "@/core/domain/effects/concentration";
+import { effectEndConditionRu } from "@/core/domain/effects/concentration";
 import {
   bloodPrice,
   castLevelOf,
@@ -111,14 +111,6 @@ function slotLevelUsed(request: CastRequest): number {
   return castLevelOf(request.payment) ?? request.spell.level;
 }
 
-function endConditionRu(duration: ActiveEffect["duration"], concentration: boolean): string {
-  if (duration.type === "until_spell_ends") {
-    return concentration ? "До конца концентрации; длительность особая." : "Длительность особая.";
-  }
-  const held = durationWithRoundsRu(duration);
-  return concentration ? `Держится ${held} или до конца концентрации.` : `Держится ${held}.`;
-}
-
 function buildEffect(request: CastRequest, occasion: Occasion): ActiveEffect | null {
   const { spell } = request;
   if (spell.duration.type === "instant") return null;
@@ -141,7 +133,7 @@ function buildEffect(request: CastRequest, occasion: Occasion): ActiveEffect | n
     slotLevelUsed: slotLevelUsed(request),
     contributions: spell.contributions,
     ...(spell.repeatableAction === undefined ? {} : { repeatableAction: spell.repeatableAction }),
-    endConditionRu: endConditionRu(duration, spell.concentration),
+    endConditionRu: effectEndConditionRu(duration, spell.concentration),
   };
 }
 

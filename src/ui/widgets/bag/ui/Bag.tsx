@@ -9,13 +9,12 @@ import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { RULE_BETWEEN } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
-export const BAG_FILTERS = ["all", "worn", "gear", "consumable", "ingredient", "other"] as const;
+export const BAG_FILTERS = ["all", "gear", "consumable", "ingredient", "other"] as const;
 
 export type BagFilter = (typeof BAG_FILTERS)[number];
 
 const FILTER_TITLES: Record<BagFilter, string> = {
   all: "Всё",
-  worn: "Надето",
   gear: "Экипировка",
   consumable: "Расходники",
   ingredient: "Ингредиенты",
@@ -24,7 +23,6 @@ const FILTER_TITLES: Record<BagFilter, string> = {
 
 const ADD_LABELS: Record<BagFilter, string | null> = {
   all: "Новая вещь",
-  worn: null,
   gear: "Новая экипировка",
   consumable: "Новый расходник",
   ingredient: "Новый ингредиент",
@@ -33,7 +31,6 @@ const ADD_LABELS: Record<BagFilter, string | null> = {
 
 const ADDED_KINDS: Record<BagFilter, readonly string[]> = {
   all: [],
-  worn: [],
   gear: ["gear"],
   consumable: ["consumable"],
   ingredient: ["ingredient"],
@@ -42,7 +39,6 @@ const ADDED_KINDS: Record<BagFilter, readonly string[]> = {
 
 const EMPTY_LIST: Record<BagFilter, string> = {
   all: "При себе ничего нет.",
-  worn: "На Торне ничего не надето.",
   gear: "Экипировки при себе нет.",
   consumable: "Расходников при себе нет.",
   ingredient: "Ингредиентов при себе нет.",
@@ -56,7 +52,6 @@ function atHand(item: ItemView): boolean {
 function suits(item: ItemView, filter: BagFilter): boolean {
   if (!atHand(item)) return false;
   if (filter === "all") return true;
-  if (filter === "worn") return item.wornCount > 0;
   if (filter === "other") return item.kinds.length === 0;
   return item.kinds.includes(filter);
 }
@@ -89,7 +84,7 @@ export function Bag({
 }) {
   const { money, items, armorClass } = bag;
   const shown = items.filter((item) => suits(item, filter));
-  const wears = filter === "worn" || filter === "gear";
+  const wears = filter === "gear";
   const addLabelRu = ADD_LABELS[filter];
 
   return (

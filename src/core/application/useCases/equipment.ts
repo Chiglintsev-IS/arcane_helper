@@ -104,6 +104,16 @@ export function adjustBagCount(session: Session, id: string, delta: number, occa
   );
 }
 
+export function setBagCount(session: Session, id: string, count: number, occasion: Occasion): Session {
+  const item = Character.of(session.character).items.find(id);
+  return applied(
+    session,
+    (root) => root.withEquipment(root.equipment.setBagCount(id, count)),
+    `Запас: ${item?.nameRu ?? id} (в сумке ${count})`,
+    occasion,
+  );
+}
+
 export function adjustWornCount(session: Session, id: string, delta: number, occasion: Occasion): Session {
   const character = Character.of(session.character);
   const item = character.items.find(id);

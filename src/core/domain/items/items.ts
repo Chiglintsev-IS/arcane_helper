@@ -1,6 +1,14 @@
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
-import { alignedItemDefinition, assertItemDefinition } from "./schema";
+import {
+  NO_ALCHEMY,
+  withObservation,
+  withRevealedProperty,
+  withRewrittenObservation,
+  withoutObservation,
+} from "./ingredient";
+import type { IngredientAlchemy, Observation, RevealedProperty } from "./ingredient";
+import { alignedItemDefinition, assertItemDefinition, ingredient, nameTakenRefusal } from "./schema";
 import type { ItemDefinition } from "./schema";
 
 type ItemsState = { itemDefinitions: readonly ItemDefinition[] };
@@ -51,7 +59,69 @@ export class Items {
     if (!this.data.some((existing) => existing.id === item.id)) {
       throw new DomainError(`Вещи «${item.id}» нет среди заведённых`);
     }
+    const sameName = Items.idFromName(stored.nameRu);
+    if (
+      this.data.some(
+        (existing) =>
+          existing.id !== item.id && Items.idFromName(existing.nameRu) === sameName,
+      )
+    ) {
+      throw new DomainError(nameTakenRefusal(stored.nameRu));
+    }
     return this.with(this.data.map((existing) => (existing.id === item.id ? stored : existing)));
+  }
+
+  get ingredients(): readonly ItemDefinition[] {
+    return this.data.filter((item) => ingredient(item));
+  }
+
+  private locatedIngredient(id: string): ItemDefinition {
+    const found = this.find(id);
+    if (found === undefined) throw new DomainError(`Вещи «${id}» нет среди заведённых`);
+    if (!ingredient(found)) {
+      throw new DomainError(`«${found.nameRu}» не ингредиент: алхимии у неё не спрашивают`);
+    }
+    return found;
+  }
+
+  ingredientNameRu(id: string): string {
+    return this.locatedIngredient(id).nameRu;
+  }
+
+  alchemyOf(id: string): IngredientAlchemy {
+    return this.locatedIngredient(id).alchemy ?? NO_ALCHEMY;
+  }
+
+  private replacingAlchemy(id: string, alchemy: IngredientAlchemy): Items {
+    return this.replaceDefinition({ ...this.locatedIngredient(id), alchemy });
+  }
+
+  revealProperty(id: string, property: RevealedProperty): Items {
+    return this.replacingAlchemy(id, withRevealedProperty(this.alchemyOf(id), property));
+  }
+
+  markPropertiesExhausted(id: string, propertiesExhausted: boolean): Items {
+    return this.replacingAlchemy(id, { ...this.alchemyOf(id), propertiesExhausted });
+  }
+
+  noteObservation(id: string, observation: Observation): Items {
+    return this.replacingAlchemy(id, withObservation(this.alchemyOf(id), observation));
+  }
+
+  rewriteObservation(id: string, observationId: string, textRu: string): Items {
+    const found = this.locatedIngredient(id);
+    return this.replacingAlchemy(
+      id,
+      withRewrittenObservation(found.nameRu, this.alchemyOf(id), observationId, textRu),
+    );
+  }
+
+  dropObservation(id: string, observationId: string): Items {
+    const found = this.locatedIngredient(id);
+    return this.replacingAlchemy(
+      id,
+      withoutObservation(found.nameRu, this.alchemyOf(id), observationId),
+    );
   }
 
   removeDefinition(id: string): Items {

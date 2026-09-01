@@ -73,9 +73,11 @@ export const SHEET_FIELD_LABELS = {
 
 const SINGULAR_STAT_IDS = [...DERIVED_STAT_IDS, "armorClass", "speed"] as const;
 
+export const ARMOR_CLASS_LABEL = "Класс Доспеха";
+
 const SINGULAR_STAT_LABELS: Record<(typeof SINGULAR_STAT_IDS)[number], string> = {
   ...DERIVED_LABELS,
-  armorClass: "Класс Доспеха",
+  armorClass: ARMOR_CLASS_LABEL,
   speed: SHEET_FIELD_LABELS.speed,
 };
 

@@ -1,159 +1,68 @@
 import { describe, expect, it } from "vitest";
 
 import type { Apparatus } from "./apparatus";
-import { Crafting } from "./crafting";
+import { Crafting, type MixtureKind } from "./crafting";
 import type { RecipeFormula } from "./recipe";
-import type { RevealedProperty } from "./schema";
 
 const EMPTY = {
-  ingredientKnowledge: [],
   alchemyApparatus: {},
   studiedDirections: [],
+  propertyRarities: [],
   knownRecipes: [],
 };
 
-function withMoonHerb(): Crafting {
-  return Crafting.of(EMPTY).noteIngredient("Лунная трава");
-}
+/** Редкость называет стол один раз на свойство: у алхимика она и записана. */
+const NAMED_RARITIES = [
+  { nameRu: "Лечение здоровья", rarity: "common" },
+  { nameRu: "Пробуждение", rarity: "common" },
+  { nameRu: "Храбрость", rarity: "common" },
+  { nameRu: "Взрыв", rarity: "rare" },
+  { nameRu: "Ядовитый урон", rarity: "rare" },
+] as const;
+
+const ALCHEMIST = NAMED_RARITIES.reduce(
+  (crafting, named) => crafting.nameRarity(named.nameRu, named.rarity),
+  Crafting.of(EMPTY),
+);
+
+type Property = MixtureKind["properties"][number];
 
 describe("ремесло", () => {
-  it("вид записывается один раз", () => {
-    const twice = withMoonHerb().noteIngredient("Лунная трава");
-
-    expect(twice.all).toHaveLength(1);
-    expect(twice.find("Лунная трава")?.nameRu).toBe("Лунная трава");
-  });
-
-  it("незаписанного вида среди записанных нет", () => {
-    expect(Crafting.of(EMPTY).find("Лунная трава")).toBeUndefined();
-  });
-
-  it("свойство раскрывается только у записанного вида", () => {
-    expect(() =>
-      Crafting.of(EMPTY).revealProperty("Лунная трава", {
-        number: 1,
-        nameRu: "Лечение здоровья",
-        rarity: "common",
-      }),
-    ).toThrow(/Лунная трава/);
-  });
-
-  it("раскрытое свойство встаёт под своим номером", () => {
-    const known = withMoonHerb()
-      .revealProperty("Лунная трава", { number: 1, nameRu: "Лечение здоровья", rarity: "common" })
-      .find("Лунная трава");
-
-    expect(known?.properties).toEqual([
-      { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-    ]);
-  });
-
-  it("раскрытое у одного вида не трогает соседний", () => {
-    const both = withMoonHerb().noteIngredient("Багровый корень");
-    const revealed = both.revealProperty("Лунная трава", {
-      number: 1,
-      nameRu: "Лечение здоровья",
-      rarity: "common",
-    });
-
-    expect(revealed.find("Багровый корень")?.properties).toEqual([]);
-    expect(revealed.all.map((ingredient) => ingredient.nameRu)).toEqual([
-      "Лунная трава",
-      "Багровый корень",
-    ]);
-  });
-
-  it("номер раскрывается через нераскрытый предыдущий", () => {
-    const known = withMoonHerb()
-      .revealProperty("Лунная трава", { number: 3, nameRu: "Взрыв", rarity: "rare" })
-      .find("Лунная трава");
-
-    expect(known?.properties.map((property) => property.number)).toEqual([3]);
-  });
-
-  it("занятый номер второй раз не раскрывается", () => {
-    const once = withMoonHerb().revealProperty("Лунная трава", {
-      number: 1,
-      nameRu: "Лечение здоровья",
-      rarity: "common",
-    });
-
-    expect(() =>
-      once.revealProperty("Лунная трава", { number: 1, nameRu: "Взрыв", rarity: "rare" }),
-    ).toThrow(/номером 1/);
-  });
-
-  it("раскрытое у вида называет свои направления по одному разу", () => {
-    const known = withMoonHerb()
-      .revealProperty("Лунная трава", { number: 1, nameRu: "Лечение здоровья", rarity: "common" })
-      .revealProperty("Лунная трава", { number: 2, nameRu: "Пробуждение", rarity: "common" })
-      .revealProperty("Лунная трава", { number: 3, nameRu: "Взрыв", rarity: "rare" });
-
-    expect(known.directionsOf("Лунная трава")).toEqual(["potions", "transmutation"]);
-  });
-
-  it("направления незаписанного вида не называются", () => {
-    expect(() => Crafting.of(EMPTY).directionsOf("Лунная трава")).toThrow(/Лунная трава/);
-  });
-
-  it("отметка «свойств больше нет» ставится и снимается", () => {
-    const revealed = withMoonHerb().revealProperty("Лунная трава", {
-      number: 1,
-      nameRu: "Лечение здоровья",
-      rarity: "common",
-    });
-
-    expect(revealed.find("Лунная трава")?.propertiesExhausted).toBe(false);
-
-    const exhausted = revealed.markPropertiesExhausted("Лунная трава", true);
-    expect(exhausted.find("Лунная трава")?.propertiesExhausted).toBe(true);
-    expect(exhausted.find("Лунная трава")?.properties).toHaveLength(1);
-
-    expect(
-      exhausted.markPropertiesExhausted("Лунная трава", false).find("Лунная трава")
-        ?.propertiesExhausted,
-    ).toBe(false);
-  });
-
-  it("отметка о незаписанном виде не ставится", () => {
-    expect(() => Crafting.of(EMPTY).markPropertiesExhausted("Лунная трава", true)).toThrow(
-      /Лунная трава/,
-    );
-  });
-
-  it("записанное по ошибке забывается", () => {
-    expect(withMoonHerb().forgetIngredient("Лунная трава").all).toEqual([]);
-    expect(() => Crafting.of(EMPTY).forgetIngredient("Лунная трава")).toThrow(/Лунная трава/);
-  });
-
-  it("ремесло владеет только своим полем состояния", () => {
+  it("ремесло владеет только своими полями состояния", () => {
     expect(Crafting.of(EMPTY).toState()).toEqual(EMPTY);
+  });
+
+  it("названная редкость свойства достаётся всякому виду, у которого оно раскрыто", () => {
+    expect(ALCHEMIST.rarityOf("Лечение здоровья")).toBe("common");
+    expect(ALCHEMIST.rarityOf("Ясность ума")).toBeUndefined();
+  });
+
+  it("названная заново редкость заменяет прежнюю, а не добавляется второй", () => {
+    const corrected = ALCHEMIST.nameRarity("Лечение здоровья", "legendary");
+
+    expect(corrected.rarityOf("Лечение здоровья")).toBe("legendary");
+    expect(corrected.toState().propertyRarities).toHaveLength(NAMED_RARITIES.length);
   });
 });
 
-function noting(known: Crafting, nameRu: string, property: RevealedProperty): Crafting {
-  return known.noteIngredient(nameRu).revealProperty(nameRu, property);
+function kindOf(nameRu: string, ...properties: readonly Property[]): MixtureKind {
+  return { id: nameRu, nameRu, properties };
 }
 
-const HEALING = { number: 1, nameRu: "Лечение здоровья", rarity: "common" } as const;
+const HEALING = { number: 1, nameRu: "Лечение здоровья" } as const;
 
-function twoKinds(): Crafting {
-  const moonHerb = noting(Crafting.of(EMPTY), "Лунная трава", HEALING).revealProperty(
-    "Лунная трава",
-    { number: 2, nameRu: "Пробуждение", rarity: "common" },
-  );
-  return noting(moonHerb, "Багровый корень", HEALING).revealProperty("Багровый корень", {
-    number: 2,
-    nameRu: "Взрыв",
-    rarity: "rare",
-  });
+function twoKinds(): readonly MixtureKind[] {
+  return [
+    kindOf("Лунная трава", HEALING, { number: 2, nameRu: "Пробуждение" }),
+    kindOf("Багровый корень", HEALING, { number: 2, nameRu: "Взрыв" }),
+  ];
 }
 
-function sharing(kinds: readonly string[], property: RevealedProperty): Crafting {
-  return kinds.reduce((known, kind) => noting(known, kind, property), Crafting.of(EMPTY));
+function sharing(kinds: readonly string[], property: Property): readonly MixtureKind[] {
+  return kinds.map((nameRu) => kindOf(nameRu, property));
 }
 
-function sharingHealing(kinds: readonly string[]): Crafting {
+function sharingHealing(kinds: readonly string[]): readonly MixtureKind[] {
   return sharing(kinds, HEALING);
 }
 
@@ -161,7 +70,7 @@ const FOUR_KINDS = ["Лунная трава", "Багровый корень", 
 
 describe("совпадения", () => {
   it("совпавшим считается свойство от двух и более разных источников", () => {
-    expect(twoKinds().matches(["Лунная трава", "Багровый корень"])).toEqual([
+    expect(ALCHEMIST.matches(twoKinds())).toEqual([
       {
         nameRu: "Лечение здоровья",
         rarity: "common",
@@ -172,27 +81,28 @@ describe("совпадения", () => {
   });
 
   it("несколько порций одного вида совпадения не создают", () => {
-    expect(() => twoKinds().matches(["Лунная трава", "Лунная трава"])).toThrow(/двух разных видов/);
+    expect(() => ALCHEMIST.matches([twoKinds()[0]!, twoKinds()[0]!])).toThrow(
+      /двух разных видов/,
+    );
   });
 
   it("в составе действуют все совпавшие свойства, а не только желаемое", () => {
-    const unwanted = noting(twoKinds(), "Пепельный гриб", HEALING).revealProperty(
-      "Пепельный гриб",
-      { number: 2, nameRu: "Взрыв", rarity: "rare" },
-    );
+    const unwanted = [
+      ...twoKinds(),
+      kindOf("Пепельный гриб", HEALING, { number: 2, nameRu: "Взрыв" }),
+    ];
 
-    expect(
-      unwanted
-        .matches(["Лунная трава", "Багровый корень", "Пепельный гриб"])
-        .map((match) => match.nameRu),
-    ).toEqual(["Лечение здоровья", "Взрыв"]);
+    expect(ALCHEMIST.matches(unwanted).map((match) => match.nameRu)).toEqual([
+      "Лечение здоровья",
+      "Взрыв",
+    ]);
   });
 
   it("три источника дают усиленную ступень, четыре — концентрированную", () => {
     const three = sharingHealing(FOUR_KINDS.slice(0, 3));
 
-    expect(three.matches(FOUR_KINDS.slice(0, 3)).map((match) => match.tier)).toEqual(["amplified"]);
-    expect(sharingHealing(FOUR_KINDS).matches(FOUR_KINDS).map((match) => match.tier)).toEqual([
+    expect(ALCHEMIST.matches(three).map((match) => match.tier)).toEqual(["amplified"]);
+    expect(ALCHEMIST.matches(sharingHealing(FOUR_KINDS)).map((match) => match.tier)).toEqual([
       "concentrated",
     ]);
   });
@@ -200,24 +110,21 @@ describe("совпадения", () => {
   it("рецепт не собирается больше чем из четырёх видов", () => {
     const five = [...FOUR_KINDS, "Ледяной мох"];
 
-    expect(() => sharingHealing(five).matches(five)).toThrow(/четырёх/);
+    expect(() => ALCHEMIST.matches(sharingHealing(five))).toThrow(/четырёх/);
   });
 
-  it("разная редкость одного свойства у двух видов отклоняется с причиной", () => {
-    const uneven = noting(sharingHealing(["Лунная трава"]), "Багровый корень", {
-      ...HEALING,
-      rarity: "rare",
-    });
+  it("у свойства без названной редкости совпадение остаётся, а редкости нет", () => {
+    const unnamed = sharing(TWO_KINDS, { number: 1, nameRu: "Ясность ума" });
 
-    expect(() => uneven.matches(["Лунная трава", "Багровый корень"])).toThrow(
-      /Лечение здоровья.*Лунная трава, Багровый корень/,
-    );
+    expect(Crafting.of(EMPTY).matches(unnamed)).toEqual([
+      { nameRu: "Ясность ума", rarity: undefined, sources: TWO_KINDS, tier: "plain" },
+    ]);
   });
 });
 
 const TWO_KINDS = FOUR_KINDS.slice(0, 2);
 const THREE_KINDS = FOUR_KINDS.slice(0, 3);
-const POISON = { number: 2, nameRu: "Ядовитый урон", rarity: "rare" } as const;
+const POISON = { number: 2, nameRu: "Ядовитый урон" } as const;
 
 const STANDARD: RecipeFormula = {
   kinds: TWO_KINDS,
@@ -244,15 +151,12 @@ const TORN_KITS: Apparatus = {
   transmutation: "Надёжный походный комплект",
 };
 
-function grand(known: Crafting, changes: Partial<RecipeFormula>) {
-  return known.difficultyOf({ ...STANDARD, ...changes }, GRAND_KITS);
+function grand(kinds: readonly MixtureKind[], changes: Partial<RecipeFormula>) {
+  return ALCHEMIST.difficultyOf(kinds, { ...STANDARD, ...changes }, GRAND_KITS);
 }
 
-function healingAndPoison(): Crafting {
-  return TWO_KINDS.reduce(
-    (known, kind) => noting(known, kind, HEALING).revealProperty(kind, POISON),
-    Crafting.of(EMPTY),
-  );
+function healingAndPoison(): readonly MixtureKind[] {
+  return TWO_KINDS.map((nameRu) => kindOf(nameRu, HEALING, POISON));
 }
 
 describe("сложность рецепта", () => {
@@ -394,54 +298,54 @@ describe("сложность рецепта", () => {
 });
 
 describe("порядок исследования", () => {
-  const equipped = (known: Crafting): Crafting =>
-    Crafting.of({ ...known.toState(), alchemyApparatus: TORN_KITS });
+  const equipped = Crafting.of({ ...EMPTY, alchemyApparatus: TORN_KITS });
+  const moonHerb = (...properties: readonly Property[]): MixtureKind =>
+    kindOf("Лунная трава", ...properties);
 
   it("следующим исследуют наименьший нераскрытый номер, и через него не перепрыгивают", () => {
-    const known = equipped(withMoonHerb());
+    const bare = moonHerb();
 
-    expect(known.researchPlanFor("Лунная трава", 1, "common", "potions").minutes).toBe(10);
-    expect(() => known.researchPlanFor("Лунная трава", 2, "common", "potions")).toThrow(
+    expect(equipped.researchPlanFor(bare, 1, "common", "potions").minutes).toBe(10);
+    expect(() => equipped.researchPlanFor(bare, 2, "common", "potions")).toThrow(
       /сейчас это свойство под номером 1/,
     );
   });
 
   it("раскрытое глубже порядка не отменяет: следующим остаётся пропуск в середине", () => {
-    const skipped = equipped(
-      withMoonHerb().revealProperty("Лунная трава", {
-        number: 3,
-        nameRu: "Взрыв",
-        rarity: "rare",
-      }),
-    );
+    const skipped = moonHerb({ number: 3, nameRu: "Взрыв" });
 
-    expect(skipped.researchPlanFor("Лунная трава", 1, "common", "potions").number).toBe(1);
-    expect(() => skipped.researchPlanFor("Лунная трава", 3, "common", "potions")).toThrow(
+    expect(equipped.researchPlanFor(skipped, 1, "common", "potions").number).toBe(1);
+    expect(() => equipped.researchPlanFor(skipped, 3, "common", "potions")).toThrow(
       /сейчас это свойство под номером 1/,
     );
   });
 
   it("у вида со всеми четырьмя свойствами исследовать нечего", () => {
-    const full = equipped(
-      ([
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-        { number: 2, nameRu: "Пробуждение", rarity: "common" },
-        { number: 3, nameRu: "Взрыв", rarity: "rare" },
-        { number: 4, nameRu: "Храбрость", rarity: "common" },
-      ] as const).reduce<Crafting>(
-        (known, property) => known.revealProperty("Лунная трава", property),
-        withMoonHerb(),
-      ),
+    const full = moonHerb(
+      { number: 1, nameRu: "Лечение здоровья" },
+      { number: 2, nameRu: "Пробуждение" },
+      { number: 3, nameRu: "Взрыв" },
+      { number: 4, nameRu: "Храбрость" },
     );
 
-    expect(() => full.researchPlanFor("Лунная трава", 1, "common", "potions")).toThrow(
+    expect(() => equipped.researchPlanFor(full, 1, "common", "potions")).toThrow(
       /раскрыты все свойства/,
     );
+  });
+
+  it("раскрытое у вида называет свои направления по одному разу", () => {
+    const known = moonHerb(
+      { number: 1, nameRu: "Лечение здоровья" },
+      { number: 2, nameRu: "Пробуждение" },
+      { number: 3, nameRu: "Взрыв" },
+    );
+
+    expect(equipped.directionsOf(known)).toEqual(["potions", "transmutation"]);
   });
 });
 
 describe("записанный рецепт", () => {
-  const known = sharingHealing(TWO_KINDS);
+  const known = ALCHEMIST;
 
   it("замена даже одного вида даёт другую формулу и новую разработку", () => {
     const developed = known.recordRecipe(STANDARD, false);
@@ -473,7 +377,7 @@ describe("партия и предел оснащения", () => {
   });
 
   it("предел оснащения Торна даёт из шести порций семь единиц", () => {
-    const batch = sharingHealing(TWO_KINDS).batchOf(STANDARD, TORN_KITS, 6);
+    const batch = ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, TORN_KITS, 6);
 
     expect(batch.difficulty.total).toBe(10);
     expect(batch.minutes).toBe(30);
@@ -484,26 +388,26 @@ describe("партия и предел оснащения", () => {
 
   it("сложность выше предела набора отклоняется с причиной, называющей лишнее", () => {
     expect(() =>
-      healingAndPoison().batchOf({ ...STANDARD, mainProperty: "Ядовитый урон" }, TORN_KITS, 1),
+      ALCHEMIST.batchOf(healingAndPoison(), { ...STANDARD, mainProperty: "Ядовитый урон" }, TORN_KITS, 1),
     ).toThrow(/Сложность 22 выше предела оснащения 20.*Редкость эффектов \+7, Оснащение \+5/);
   });
 
   it("работа без профильного набора добавляет пять и делит партию вдвое", () => {
-    const risky = healingAndPoison().batchOf(STANDARD, TORN_KITS, 3);
+    const risky = ALCHEMIST.batchOf(healingAndPoison(), STANDARD, TORN_KITS, 3);
 
     expect(risky.difficulty.parts).toContainEqual({ nameRu: "Оснащение", modifier: 5 });
     expect(risky.difficulty.total).toBe(20);
     expect(risky.units).toBe(3);
-    expect(() => healingAndPoison().batchOf(STANDARD, TORN_KITS, 4)).toThrow(/предел партии/);
+    expect(() => ALCHEMIST.batchOf(healingAndPoison(), STANDARD, TORN_KITS, 4)).toThrow(/предел партии/);
   });
 
   it("время партии и класс расходников растут полосами сложности", () => {
-    const hour = sharing(TWO_KINDS, POISON).batchOf(
+    const hour = ALCHEMIST.batchOf(sharing(TWO_KINDS, POISON), 
       { ...STANDARD, mainProperty: "Ядовитый урон", duration: "1 час" },
       GRAND_KITS,
       1,
     );
-    const sprayed = sharing(THREE_KINDS, POISON).batchOf(
+    const sprayed = ALCHEMIST.batchOf(sharing(THREE_KINDS, POISON), 
       {
         ...STANDARD,
         kinds: THREE_KINDS,
@@ -516,7 +420,8 @@ describe("партия и предел оснащения", () => {
       GRAND_KITS,
       1,
     );
-    const forever = sharing(TWO_KINDS, { ...HEALING, rarity: "legendary" }).batchOf(
+    const forever = ALCHEMIST.nameRarity("Лечение здоровья", "legendary").batchOf(
+      sharingHealing(TWO_KINDS),
       { ...STANDARD, duration: "Постоянно" },
       GRAND_KITS,
       1,
@@ -542,20 +447,22 @@ describe("партия и предел оснащения", () => {
   it("рецептурных порций закладывают целое положительное число", () => {
     const known = sharingHealing(TWO_KINDS);
 
-    expect(() => known.batchOf(STANDARD, TORN_KITS, 0)).toThrow(/целое положительное/);
-    expect(() => known.batchOf(STANDARD, TORN_KITS, 2.5)).toThrow(/целое положительное/);
+    expect(() => ALCHEMIST.batchOf(known, STANDARD, TORN_KITS, 0)).toThrow(/целое положительное/);
+    expect(() => ALCHEMIST.batchOf(known, STANDARD, TORN_KITS, 2.5)).toThrow(
+      /целое положительное/,
+    );
   });
 
   it("без единого набора работают импровизированными сосудами", () => {
-    const bare = sharingHealing(TWO_KINDS).batchOf(STANDARD, {}, 1);
+    const bare = ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, {}, 1);
 
     expect(bare.difficulty.total).toBe(15);
     expect(bare.units).toBe(1);
-    expect(() => sharingHealing(TWO_KINDS).batchOf(STANDARD, {}, 2)).toThrow(/предел партии/);
+    expect(() => ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, {}, 2)).toThrow(/предел партии/);
   });
 
   it("рецепт называет задействованные направления", () => {
-    const hybrid = healingAndPoison().batchOf(STANDARD, TORN_KITS, 1);
+    const hybrid = ALCHEMIST.batchOf(healingAndPoison(), STANDARD, TORN_KITS, 1);
 
     expect(hybrid.difficulty.directions).toEqual(["potions", "poisons"]);
   });

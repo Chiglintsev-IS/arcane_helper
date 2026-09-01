@@ -101,6 +101,17 @@ export class Equipment {
     if (count < 0) {
       throw new DomainError(`В сумке ${this.bagCount(itemId)}, столько не потратить`);
     }
+    return this.storedBag(itemId, count);
+  }
+
+  setBagCount(itemId: string, count: number): Equipment {
+    if (!Number.isInteger(count) || count < 0) {
+      throw new DomainError(`Запас в сумке — целое от нуля, получено: ${count}`);
+    }
+    return this.storedBag(itemId, count);
+  }
+
+  private storedBag(itemId: string, count: number): Equipment {
     if (count > MAXIMUM_ITEM_COUNT) {
       throw new DomainError(`Больше ${MAXIMUM_ITEM_COUNT} не хранится`);
     }

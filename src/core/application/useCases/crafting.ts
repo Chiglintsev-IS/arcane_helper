@@ -1,13 +1,17 @@
 import { Character } from "@/core/domain/assembly/character";
+import { closedRefusal } from "@/core/domain/crafting/forbidden";
 import { Items } from "@/core/domain/items/items";
 import type { Batch } from "@/core/domain/crafting/batch";
 import { ALCHEMY_ABILITY, developmentOutcome } from "@/core/domain/crafting/development";
 import type { DevelopmentOutcome } from "@/core/domain/crafting/development";
 import type { RecipeFormula } from "@/core/domain/crafting/recipe";
-import type { RevealedProperty } from "@/core/domain/crafting/schema";
+import type { MixtureKind } from "@/core/domain/crafting/crafting";
+import type { AlchemicalRarity } from "@/core/domain/catalog/alchemy";
+import type { RevealedProperty } from "@/core/domain/items/ingredient";
+import { ingredient } from "@/core/domain/items/schema";
 import { DomainError } from "@/core/domain/shared/errors";
 import { withPlural } from "@/shared/language";
-import { commit, type Occasion, type Session } from "@/core/application/session";
+import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
 
 type CraftOrder = {
   readonly formula: RecipeFormula;
@@ -17,8 +21,17 @@ type CraftOrder = {
   readonly risky?: boolean | undefined;
 };
 
-function distinctKinds(formula: RecipeFormula): readonly string[] {
-  return [...new Set(formula.kinds)];
+function unknownKindRefusal(itemId: string): string {
+  return `Ингредиента «${itemId}» нет среди заведённых вещей`;
+}
+
+/** Виды состава приходят к ремеслу вещами: свойства принадлежат им, а не отдельной записи. */
+export function mixtureKinds(items: Items, kinds: readonly string[]): readonly MixtureKind[] {
+  return [...new Set(kinds)].map((itemId) => {
+    const found = items.find(itemId);
+    if (found === undefined || !ingredient(found)) throw new DomainError(unknownKindRefusal(itemId));
+    return { id: found.id, nameRu: found.nameRu, properties: items.alchemyOf(itemId).properties };
+  });
 }
 
 function missingCheckRefusal(): string {
@@ -29,15 +42,15 @@ function unitsRu(batch: Batch): string {
   return withPlural(batch.units, ["единица", "единицы", "единиц"]);
 }
 
-function spentRu(order: CraftOrder, kinds: readonly string[]): string {
+function spentRu(order: CraftOrder, kinds: readonly MixtureKind[]): string {
   const portions = withPlural(order.portions, ["порции", "порции", "порций"]);
-  return `Истрачено по ${portions}: ${kinds.join(", ")}`;
+  return `Истрачено по ${portions}: ${kinds.map((kind) => kind.nameRu).join(", ")}`;
 }
 
 function craftedSummary(
   order: CraftOrder,
   batch: Batch,
-  kinds: readonly string[],
+  kinds: readonly MixtureKind[],
   outcome: DevelopmentOutcome | null,
 ): string {
   const spent = spentRu(order, kinds);
@@ -52,10 +65,41 @@ function craftedSummary(
   return `Изготовлено: ${named}, ${unitsRu(batch)}. ${check}.${reward} ${spent}`;
 }
 
+export function noteObservation(
+  session: Session,
+  itemId: string,
+  textRu: string,
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  return withoutRecord(
+    session,
+    root.withItems(root.items.noteObservation(itemId, { id: occasion.nextId(), textRu })),
+  );
+}
+
+export function rewriteObservation(
+  session: Session,
+  itemId: string,
+  id: string,
+  textRu: string,
+): Session {
+  const root = Character.of(session.character);
+  return withoutRecord(session, root.withItems(root.items.rewriteObservation(itemId, id, textRu)));
+}
+
+export function dropObservation(session: Session, itemId: string, id: string): Session {
+  const root = Character.of(session.character);
+  return withoutRecord(session, root.withItems(root.items.dropObservation(itemId, id)));
+}
+
 export function craftBatch(session: Session, order: CraftOrder, occasion: Occasion): Session {
   const root = Character.of(session.character);
   const crafting = root.crafting;
-  const batch = crafting.batchOf(order.formula, crafting.apparatus, order.portions);
+  const kinds = mixtureKinds(root.items, order.formula.kinds);
+  const batch = crafting.batchOf(kinds, order.formula, crafting.apparatus, order.portions);
+  const closed = closedRefusal(batch.difficulty.directions);
+  if (closed !== undefined) throw new DomainError(closed);
   if (!crafting.knows(order.formula) && order.rolled === undefined) {
     throw new DomainError(missingCheckRefusal());
   }
@@ -73,9 +117,8 @@ export function craftBatch(session: Session, order: CraftOrder, occasion: Occasi
           difficulty: batch.difficulty.total,
         });
 
-  const kinds = distinctKinds(order.formula);
   const spent = kinds.reduce(
-    (equipment, kind) => equipment.adjustBagCount(Items.idFromName(kind), -order.portions),
+    (equipment, kind) => equipment.adjustBagCount(kind.id, -order.portions),
     root.equipment,
   );
   const worked = root.withEquipment(spent);
@@ -104,7 +147,7 @@ export function noteIngredient(session: Session, nameRu: string, occasion: Occas
   const root = Character.of(session.character);
   return commit(
     session,
-    root.withCrafting(root.crafting.noteIngredient(nameRu)),
+    root.withItems(root.items.addDefinition({ nameRu, kinds: ["ingredient"] })),
     { kind: "sheet_edited", summaryRu: `Записан ингредиент: ${nameRu}` },
     occasion,
   );
@@ -112,42 +155,49 @@ export function noteIngredient(session: Session, nameRu: string, occasion: Occas
 
 export function revealProperty(
   session: Session,
-  reveal: { nameRu: string; property: RevealedProperty },
+  reveal: { itemId: string; property: RevealedProperty; rarity?: AlchemicalRarity | undefined },
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  const known = root.withItems(root.items.revealProperty(reveal.itemId, reveal.property));
+  return commit(
+    session,
+    reveal.rarity === undefined
+      ? known
+      : known.withCrafting(known.crafting.nameRarity(reveal.property.nameRu, reveal.rarity)),
+    {
+      kind: "sheet_edited",
+      summaryRu: `Раскрыто: ${root.items.ingredientNameRu(reveal.itemId)} — ${reveal.property.nameRu}`,
+    },
+    occasion,
+  );
+}
+
+export function nameRarity(
+  session: Session,
+  named: { propertyRu: string; rarity: AlchemicalRarity },
   occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
   return commit(
     session,
-    root.withCrafting(root.crafting.revealProperty(reveal.nameRu, reveal.property)),
-    {
-      kind: "sheet_edited",
-      summaryRu: `Раскрыто: ${reveal.nameRu} — ${reveal.property.nameRu}`,
-    },
+    root.withCrafting(root.crafting.nameRarity(named.propertyRu, named.rarity)),
+    { kind: "sheet_edited", summaryRu: `Названа редкость: ${named.propertyRu}` },
     occasion,
   );
 }
 
 export function markPropertiesExhausted(
   session: Session,
-  mark: { nameRu: string; exhausted: boolean },
+  mark: { itemId: string; exhausted: boolean },
   occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
   const named = mark.exhausted ? "У вида больше нет свойств" : "У вида могут быть ещё свойства";
   return commit(
     session,
-    root.withCrafting(root.crafting.markPropertiesExhausted(mark.nameRu, mark.exhausted)),
-    { kind: "sheet_edited", summaryRu: `${named}: ${mark.nameRu}` },
-    occasion,
-  );
-}
-
-export function forgetIngredient(session: Session, nameRu: string, occasion: Occasion): Session {
-  const root = Character.of(session.character);
-  return commit(
-    session,
-    root.withCrafting(root.crafting.forgetIngredient(nameRu)),
-    { kind: "sheet_edited", summaryRu: `Забыт ингредиент: ${nameRu}` },
+    root.withItems(root.items.markPropertiesExhausted(mark.itemId, mark.exhausted)),
+    { kind: "sheet_edited", summaryRu: `${named}: ${root.items.ingredientNameRu(mark.itemId)}` },
     occasion,
   );
 }

@@ -16,6 +16,8 @@ export const ALCHEMICAL_RARITIES = [
   "legendary",
 ] as const;
 
+export type AlchemicalRarity = (typeof ALCHEMICAL_RARITIES)[number];
+
 const DIRECTION_BY_PROPERTY = {
   "Лечение здоровья": "potions",
   "Регенерация здоровья": "potions",
@@ -244,7 +246,7 @@ const DIRECTION_BY_PROPERTY = {
   "Хаотическая мутация материи": "transmutation",
 } as const satisfies Record<string, AlchemyDirection>;
 
-type AlchemicalPropertyName = keyof typeof DIRECTION_BY_PROPERTY;
+export type AlchemicalPropertyName = keyof typeof DIRECTION_BY_PROPERTY;
 
 export const ALCHEMICAL_PROPERTIES: readonly { nameRu: string; direction: AlchemyDirection }[] =
   Object.entries(DIRECTION_BY_PROPERTY).map(([nameRu, direction]) => ({ nameRu, direction }));

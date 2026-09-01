@@ -8,6 +8,10 @@ const text = z.string();
 
 const whole = z.number().int();
 
+const durationViewSchema = z.object({ type: word, value: whole.optional() });
+
+const pricedChoiceSchema = z.object({ value: word, modifier: whole });
+
 const statChoiceSchema = z.object({
   id: word,
   kind: word,
@@ -39,13 +43,13 @@ export const choicesViewSchema = z.object({
       resistance: word,
       purification: word.nullable(),
     }),
-    durations: z.array(word),
-    onsets: z.array(word),
-    reaches: z.array(word),
-    applications: z.array(word),
-    resistances: z.array(word),
-    limitations: z.array(word),
-    purifications: z.array(word),
+    durations: z.array(pricedChoiceSchema),
+    onsets: z.array(pricedChoiceSchema),
+    reaches: z.array(pricedChoiceSchema),
+    applications: z.array(pricedChoiceSchema),
+    resistances: z.array(pricedChoiceSchema),
+    limitations: z.array(pricedChoiceSchema),
+    purifications: z.array(pricedChoiceSchema),
   }),
 });
 
@@ -108,6 +112,12 @@ export const sheetViewSchema = z.object({
   features: z.array(characterFeatureViewSchema),
 });
 
+const revealedPropertyViewSchema = z.object({
+  number: whole,
+  nameRu: word,
+  rarity: word.optional(),
+});
+
 const itemViewSchema = z.object({
   id: word,
   nameRu: word,
@@ -131,6 +141,7 @@ const itemViewSchema = z.object({
   ),
   spellcastingFocus: z.boolean(),
   note: text.optional(),
+  alchemicalProperties: z.array(revealedPropertyViewSchema),
   neededForRu: z.array(word),
 });
 
@@ -143,15 +154,13 @@ export const bagViewSchema = z.object({
   }),
 });
 
-const revealedPropertyViewSchema = z.object({
-  number: whole,
-  nameRu: word,
-  rarity: word,
-});
 
 const ingredientKnowledgeViewSchema = z.object({
+  itemId: word,
   nameRu: word,
+  inBag: whole,
   properties: z.array(revealedPropertyViewSchema),
+  observations: z.array(z.object({ id: word, textRu: word })),
   propertiesExhausted: z.boolean(),
 });
 
@@ -160,7 +169,9 @@ export const craftingViewSchema = z.object({
   workshop: z.object({
     apparatus: z.array(z.object({ direction: word, gradeRu: word })),
     studiedDirections: z.array(word),
+    closedDirections: z.array(z.object({ direction: word, reasonRu: word })),
   }),
+  smithing: z.object({ nameRu: word, noteRu: word }),
 });
 
 export const resourcesViewSchema = z.object({
@@ -171,6 +182,14 @@ export const resourcesViewSchema = z.object({
   passivePerception: whole,
   initiative: whole,
   wardingSigilAvailable: z.boolean(),
+  animalSpeech: z.object({
+    nameRu: word,
+    duration: durationViewSchema,
+    whereRu: word,
+    effectRu: word,
+    noteRu: word,
+    unavailabilityRu: word.optional(),
+  }),
   suppression: z.object({ firedUpon: z.boolean(), underDirectSunlight: z.boolean() }),
 });
 
@@ -300,7 +319,7 @@ export const spellRowViewSchema = z.object({
   castingTime: z.object({ type: word, value: whole.optional() }),
   range: z.object({ type: word, distanceFeet: whole.optional() }),
   area: z.object({ shape: word, sizeFeet: whole }).optional(),
-  duration: z.object({ type: word, value: whole.optional() }),
+  duration: durationViewSchema,
   resolution: z.object({ type: word, savingThrow: word.optional() }),
   concentration: z.boolean(),
   ritual: z.boolean(),
@@ -352,6 +371,41 @@ export const concentrationViewSchema = z.object({
   checkAfterDamage: concentrationCheckViewSchema.optional(),
 });
 
+const familiarCheckViewSchema = z.object({
+  nameRu: word,
+  ability: word,
+  value: whole,
+  advantageRu: word,
+});
+
+const familiarScoreViewSchema = z.object({
+  ability: word,
+  score: whole,
+  modifier: whole,
+});
+
+const familiarTraitViewSchema = z.object({
+  nameRu: word,
+  textRu: word,
+});
+
+export const familiarViewSchema = z.object({
+  nameRu: word,
+  kindRu: word,
+  armorClass: whole,
+  hitPointsRu: word,
+  speedsRu: z.array(word),
+  sensesRu: z.array(word),
+  languagesRu: word,
+  dangerRu: word,
+  proficiencyRu: word,
+  passivePerception: whole,
+  checks: z.array(familiarCheckViewSchema),
+  scores: z.array(familiarScoreViewSchema),
+  traits: z.array(familiarTraitViewSchema),
+  obligationsRu: z.array(word),
+});
+
 export const castingViewSchema = z.object({
   spellAttackModifier: whole,
   spellSaveDc: whole,
@@ -382,3 +436,4 @@ export type StatChoiceView = z.infer<typeof statChoiceSchema>;
 export type ChoicesView = z.infer<typeof choicesViewSchema>;
 export type AbilityView = z.infer<typeof abilityViewSchema>;
 export type SheetView = z.infer<typeof sheetViewSchema>;
+export type FamiliarView = z.infer<typeof familiarViewSchema>;

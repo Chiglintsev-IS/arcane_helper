@@ -17,6 +17,7 @@ import {
   editItem,
   editMoney,
   removeItem,
+  setBagCount,
   recordItem,
   toggleWanted,
 } from "./equipment";
@@ -161,6 +162,9 @@ describe("правка снаряжения", () => {
   it("запас вещи, которой нет среди заведённых, отказ называет её идентификатором", () => {
     const stocked = adjustBagCount(session(), "призрак", 1, occasion);
     expect(() => removeItem(stocked, "призрак", occasion)).toThrow(/«призрак»/);
+
+    const counted = setBagCount(session(), "призрак", 4, occasion);
+    expect(counted.log.at(-1)?.summaryRu).toBe("Запас: призрак (в сумке 4)");
   });
 
   it("неизвестная вещь отвергается доменом", () => {

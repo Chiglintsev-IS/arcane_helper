@@ -13,7 +13,7 @@ import {
 } from "@/core/domain/catalog/alchemy";
 import { CREATURE_SIZES } from "@/core/domain/character/schema";
 import { APPARATUS_GRADES } from "@/core/domain/crafting/apparatus";
-import { PROPERTY_NUMBERS } from "@/core/domain/crafting/schema";
+import { PROPERTY_NUMBERS } from "@/core/domain/items/ingredient";
 import { RECIPE_CHOICES } from "@/core/domain/crafting/recipe";
 import { SKILL_TRAINING } from "@/core/domain/character/skills";
 import { ITEM_KINDS } from "@/core/domain/items/schema";

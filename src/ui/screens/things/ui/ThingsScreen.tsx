@@ -92,6 +92,9 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
   const adjustBagCount = (id: string, delta: number): void => {
     void execute({ kind: "adjust_bag_count", itemId: id, delta });
   };
+  const setBagCount = (id: string, count: number): void => {
+    void execute({ kind: "set_bag_count", itemId: id, count });
+  };
   const adjustWornCount = (id: string, delta: number): void => {
     void execute({ kind: "adjust_worn_count", itemId: id, delta });
   };
@@ -157,6 +160,7 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
           onSave={(item) => void save({ kind: "edit_item", item })}
           onToggleWanted={() => void execute({ kind: "toggle_wanted", itemId: openedItem.id })}
           onAdjustBagCount={(delta) => adjustBagCount(openedItem.id, delta)}
+          onSetBagCount={(count) => setBagCount(openedItem.id, count)}
           onAdjustWornCount={(delta) => adjustWornCount(openedItem.id, delta)}
           onRemove={async () => {
             if ((await execute({ kind: "remove_item", itemId: openedItem.id })) === null) {

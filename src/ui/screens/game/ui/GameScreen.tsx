@@ -2,7 +2,11 @@
 
 import { useState, useMemo } from "react";
 
-import { lastHintTraits, wardingSigilTraits } from "@/ui/shared/model/actionTraits";
+import {
+  animalSpeechTraits,
+  lastHintTraits,
+  wardingSigilTraits,
+} from "@/ui/shared/model/actionTraits";
 import { positionInList, spellsForScreen } from "@/ui/shared/model/spellList";
 import { NO_FILTERS, dividingCategories, filterSpells, matchesActionRow } from "@/ui/features/filter-spells/model/filters";
 import type { Command } from "@/contract/commands";
@@ -10,6 +14,8 @@ import type { SpellRowView } from "@/contract/views";
 import { toCastCommand, type CastDraft } from "@/ui/features/cast-spell/model/castDraftStore";
 
 import { ActiveEffects } from "@/ui/widgets/active-effects/ui/ActiveEffects";
+import { AnimalSpeechRow } from "@/ui/features/animal-speech/ui/AnimalSpeechRow";
+import { AnimalSpeechSheet } from "@/ui/features/animal-speech/ui/AnimalSpeechSheet";
 import { ActiveEffectsSheet } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
 import { ArmorClassSheet } from "@/ui/features/edit-armor-class/ui/ArmorClassSheet";
 import { LastHintRow } from "@/ui/features/last-hint/ui/LastHintRow";
@@ -49,6 +55,7 @@ export function GameScreen() {
   const [damageOpen, setDamageOpen] = useState(false);
   const [fightOverOpen, setFightOverOpen] = useState(false);
   const [sigilOpen, setSigilOpen] = useState(false);
+  const [speechOpen, setSpeechOpen] = useState(false);
   const [armorClassOpen, setArmorClassOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const [checkOpen, setCheckOpen] = useState(false);
@@ -94,6 +101,8 @@ export function GameScreen() {
   const hintShown = matchesActionRow(hintTraits, filters);
   const sigilTraits = wardingSigilTraits(snapshot.resources.runes.nameRu);
   const sigilShown = matchesActionRow(sigilTraits, filters);
+  const speechTraits = animalSpeechTraits(snapshot.resources.animalSpeech.nameRu);
+  const speechShown = matchesActionRow(speechTraits, filters);
   const openRow = snapshot.spells.find((candidate) => candidate.id === openSpellId) ?? null;
 
   const card = (spell: SpellRowView) => (
@@ -133,7 +142,21 @@ export function GameScreen() {
     ));
   }
 
-  const listLabel = spellListLabel(hintShown || sigilShown);
+  if (speechShown) {
+    rows.splice(positionInList(shown, speechTraits, "play"), 0, (
+      <AnimalSpeechRow
+        key="animal-speech"
+        resources={snapshot.resources}
+        onOpen={() => {
+          closeSearch();
+          setRefusal(null);
+          setSpeechOpen(true);
+        }}
+      />
+    ));
+  }
+
+  const listLabel = spellListLabel(hintShown || sigilShown || speechShown);
 
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
     if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
@@ -368,6 +391,20 @@ export function GameScreen() {
           onClose={() => {
             setRefusal(null);
             setSigilOpen(false);
+          }}
+        />
+      ) : null}
+
+      {speechOpen ? (
+        <AnimalSpeechSheet
+          resources={snapshot.resources}
+          refusalRu={refusal}
+          onActivate={() =>
+            void saveEdit({ kind: "spend_rune_on_animal_speech" }, () => setSpeechOpen(false))
+          }
+          onClose={() => {
+            setRefusal(null);
+            setSpeechOpen(false);
           }}
         />
       ) : null}

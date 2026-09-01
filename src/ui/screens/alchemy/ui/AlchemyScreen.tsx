@@ -7,12 +7,8 @@ import type { PreviewOf, Question } from "@/contract/questions";
 import type { ChoicesView, IngredientKnowledgeView } from "@/contract/views";
 
 import { CHECK_DIE_RU, MISHAP_DIE_RU } from "@/shared/language";
-import {
-  DIRECTION_LABELS,
-  RARITY_LABELS,
-  labelled,
-  propertyNumberRu,
-} from "@/ui/entities/crafting/lib/labels";
+import { DIRECTION_LABELS } from "@/ui/entities/crafting/lib/labels";
+import { labelled, propertyNumberRu, rarityLabel } from "@/ui/shared/lib/alchemyLabels";
 import { WorkshopSheet } from "@/ui/features/edit-workshop/ui/WorkshopSheet";
 import {
   RevealPropertySheet,
@@ -25,6 +21,14 @@ import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+
+const WORKSHOP_TITLE = "Мастерская";
+
+const NOTHING_OPEN = "Все направления закрыты";
+
+const NO_KIT = "набора нет, работа импровизацией";
+
+const STUDIED = "изучено";
 
 function emptyDraft(standard: ChoicesView["recipeForm"]["standard"]): RecipeDraft {
   return { ...standard, kinds: [], mainProperty: null, suppressed: [], limitations: [] };
@@ -39,7 +43,8 @@ function revealedCountRu(ingredient: IngredientKnowledgeView): string {
 
 function chosenMarkRu(chosen: boolean, ingredient: IngredientKnowledgeView): string {
   const revealed = revealedCountRu(ingredient);
-  return chosen ? `в составе · ${revealed}` : revealed;
+  const stock = `в сумке ${ingredient.inBag}`;
+  return chosen ? `в составе · ${stock} · ${revealed}` : `${stock} · ${revealed}`;
 }
 
 function KnownIngredient({
@@ -79,8 +84,18 @@ function KnownIngredient({
                 </span>
                 <span className="min-w-0 flex-1 text-sm leading-tight">{property.nameRu}</span>
                 <span className="shrink-0 text-xs text-ink-quiet">
-                  {labelled(RARITY_LABELS, property.rarity)}
+                  {rarityLabel(property.rarity)}
                 </span>
+              </span>
+            ))}
+          </span>
+        )}
+
+        {ingredient.observations.length === 0 ? null : (
+          <span className="flex flex-col gap-0.5">
+            {ingredient.observations.map((seen) => (
+              <span key={seen.id} className="text-xs leading-snug text-ink-soft">
+                {seen.textRu}
               </span>
             ))}
           </span>
@@ -98,7 +113,7 @@ function KnownIngredient({
   );
 }
 
-export function CraftingScreen() {
+export function AlchemyScreen() {
   const { session: sessionStore } = useStores();
   const snapshot = useSession((state) => state.snapshot)!;
   const { crafting, choices } = snapshot;
@@ -118,17 +133,22 @@ export function CraftingScreen() {
   const question: Question | null =
     draft.kinds.length === 0
       ? null
-      : { kind: "recipe_preview", formula: { ...draft }, portions };
+      : {
+          kind: "recipe_preview",
+          formula: { ...draft },
+          portions,
+          ...(Number.isNaN(rolled) ? {} : { rolled }),
+        };
   const answer = usePreview(question);
   const preview: PreviewOf<"recipe_preview"> | null =
     answer?.kind === "recipe_preview" ? answer : null;
 
-  const choose = (nameRu: string): void =>
+  const choose = (itemId: string): void =>
     setDraft({
       ...draft,
-      kinds: draft.kinds.includes(nameRu)
-        ? draft.kinds.filter((kind) => kind !== nameRu)
-        : [...draft.kinds, nameRu],
+      kinds: draft.kinds.includes(itemId)
+        ? draft.kinds.filter((kind) => kind !== itemId)
+        : [...draft.kinds, itemId],
     });
 
   const craft = (): void => {
@@ -148,11 +168,24 @@ export function CraftingScreen() {
     });
   };
 
-  const openedIngredient = crafting.ingredients.find((one) => one.nameRu === opened);
+  const nameRarity = (propertyRu: string, rarity: string): void => {
+    if (rarity === "") return;
+    send({ kind: "name_rarity", propertyRu, rarity }, () => undefined);
+  };
 
-  const kits = crafting.workshop.apparatus
-    .map((kit) => `${labelled(DIRECTION_LABELS, kit.direction)} — ${kit.gradeRu}`)
-    .join("; ");
+  const openedIngredient = crafting.ingredients.find((one) => one.itemId === opened);
+
+  const { apparatus, studiedDirections, closedDirections } = crafting.workshop;
+
+  const openDirections = choices.alchemyDirections
+    .filter((direction) => !closedDirections.some((closed) => closed.direction === direction))
+    .map((direction) => ({
+      nameRu: labelled(DIRECTION_LABELS, direction),
+      toolRu: [
+        apparatus.find((kit) => kit.direction === direction)?.gradeRu ?? NO_KIT,
+        ...(studiedDirections.includes(direction) ? [STUDIED] : []),
+      ].join(" · "),
+    }));
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
@@ -163,13 +196,20 @@ export function CraftingScreen() {
             setRefusalRu(null);
             setWorkshopOpen(true);
           }}
-          className={`flex min-h-11 flex-col gap-0.5 p-3 text-left ${SURFACE_GROUP}`}
+          className={`flex flex-col gap-1 p-3 text-left ${SURFACE_GROUP}`}
         >
-          <span className="text-sm font-semibold leading-tight">Мастерская</span>
-          <span className="text-xs text-ink-quiet">
-            {kits === ""
-              ? "Наборов не записано: работа идёт импровизированными сосудами"
-              : kits}
+          <span className="text-sm font-semibold leading-tight">{WORKSHOP_TITLE}</span>
+
+          <span className="flex flex-col text-xs">
+            {openDirections.length === 0 ? (
+              <span className="text-ink-quiet">{NOTHING_OPEN}</span>
+            ) : (
+              openDirections.map((direction) => (
+                <span key={direction.nameRu} className="leading-snug text-ink-quiet">
+                  {direction.nameRu} — {direction.toolRu}
+                </span>
+              ))
+            )}
           </span>
         </button>
 
@@ -187,13 +227,13 @@ export function CraftingScreen() {
           <ul aria-label="Знание об ингредиентах" className="flex flex-col gap-2">
             {crafting.ingredients.map((ingredient) => (
               <KnownIngredient
-                key={ingredient.nameRu}
+                key={ingredient.itemId}
                 ingredient={ingredient}
-                chosen={draft.kinds.includes(ingredient.nameRu)}
-                onChoose={() => choose(ingredient.nameRu)}
+                chosen={draft.kinds.includes(ingredient.itemId)}
+                onChoose={() => choose(ingredient.itemId)}
                 onOpen={() => {
                   setRefusalRu(null);
-                  setOpened(ingredient.nameRu);
+                  setOpened(ingredient.itemId);
                 }}
               />
             ))}
@@ -203,6 +243,7 @@ export function CraftingScreen() {
         {crafting.ingredients.length === 0 ? null : (
           <RecipeBench
             choices={choices.recipeForm}
+            rarities={choices.alchemicalRarities}
             preview={preview}
             draft={draft}
             portions={portionsText}
@@ -213,6 +254,7 @@ export function CraftingScreen() {
             onPortions={setPortionsText}
             onRolled={setRolledText}
             onMishap={setMishapText}
+            onNameRarity={nameRarity}
             onCraft={craft}
           />
         )}
@@ -237,15 +279,33 @@ export function CraftingScreen() {
           choices={choices}
           refusalRu={refusalRu}
           onConfirm={(command) => send(command, () => setOpened(null))}
+          onNameRarity={nameRarity}
           onExhausted={(exhausted) =>
             send(
-              { kind: "mark_properties_exhausted", nameRu: openedIngredient.nameRu, exhausted },
+              { kind: "mark_properties_exhausted", itemId: openedIngredient.itemId, exhausted },
               () => undefined,
             )
           }
-          onForget={() =>
-            send({ kind: "forget_ingredient", nameRu: openedIngredient.nameRu }, () =>
-              setOpened(null),
+          onNoteObservation={(textRu) =>
+            send({ kind: "note_observation", itemId: openedIngredient.itemId, textRu }, () =>
+              undefined,
+            )
+          }
+          onRewriteObservation={(observationId, textRu) =>
+            send(
+              {
+                kind: "rewrite_observation",
+                itemId: openedIngredient.itemId,
+                observationId,
+                textRu,
+              },
+              () => undefined,
+            )
+          }
+          onDropObservation={(observationId) =>
+            send(
+              { kind: "drop_observation", itemId: openedIngredient.itemId, observationId },
+              () => undefined,
             )
           }
           onCancel={() => {

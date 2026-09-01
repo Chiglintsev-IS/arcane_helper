@@ -1,7 +1,9 @@
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { bloodSlotCost, slotsInOrder } from "@/core/domain/arcana/slots";
-import type { RevealedProperty } from "@/core/domain/crafting/schema";
+import { Items } from "@/core/domain/items/items";
+import type { AlchemicalRarity } from "@/core/domain/catalog/alchemy";
+import type { RevealedProperty } from "@/core/domain/items/ingredient";
 
 export function withSpentSlots(
   character: CharacterState,
@@ -23,34 +25,76 @@ export function withoutSlots(character: CharacterState): CharacterState {
   );
 }
 
-export function withSlotDebt(character: CharacterState, level: number): CharacterState {
+export function withSlotDebt(
+  character: CharacterState,
+  level: number,
+): CharacterState {
   const drained = Character.of(withoutSlots(character));
-  return drained.withArcana(drained.arcana.spendSlot(level, { allowOverdraft: true })).toState();
+  return drained
+    .withArcana(drained.arcana.spendSlot(level, { allowOverdraft: true }))
+    .toState();
 }
 
-export function withDamage(character: CharacterState, damage: number): CharacterState {
+export function withDamage(
+  character: CharacterState,
+  damage: number,
+): CharacterState {
   const root = Character.of(character);
   return root.withVitality(root.vitality.takeDamage(damage).vitality).toState();
 }
 
-export function withBloodPaid(character: CharacterState, castLevel: number): CharacterState {
+export function withBloodPaid(
+  character: CharacterState,
+  castLevel: number,
+): CharacterState {
   const root = Character.of(character);
   return root
-    .withVitality(root.vitality.payWithBlood(bloodSlotCost(castLevel, root.base.level)))
+    .withVitality(
+      root.vitality.payWithBlood(bloodSlotCost(castLevel, root.base.level)),
+    )
+    .toState();
+}
+
+export function withoutIngredientKnowledge(character: CharacterState): CharacterState {
+  const root = Character.of(character);
+  return root
+    .withItems(
+      root.items.ingredients.reduce(
+        (items, item) => items.removeDefinition(item.id),
+        root.items,
+      ),
+    )
+    .withEquipment(
+      root.items.ingredients.reduce(
+        (equipment, item) => equipment.setBagCount(item.id, 0),
+        root.equipment,
+      ),
+    )
     .toState();
 }
 
 export function withIngredientKnowledge(
   character: CharacterState,
   nameRu: string,
-  properties: readonly RevealedProperty[] = [],
+  properties: readonly (RevealedProperty & { rarity?: AlchemicalRarity })[] = [],
 ): CharacterState {
   const root = Character.of(character);
+  const itemId = Items.idFromName(nameRu);
+  const noted = root.items.addDefinition({ nameRu, kinds: ["ingredient"] });
   return root
+    .withItems(
+      properties.reduce(
+        (items, { rarity: _named, ...property }) => items.revealProperty(itemId, property),
+        noted,
+      ),
+    )
     .withCrafting(
       properties.reduce(
-        (crafting, property) => crafting.revealProperty(nameRu, property),
-        root.crafting.noteIngredient(nameRu),
+        (crafting, property) =>
+          property.rarity === undefined
+            ? crafting
+            : crafting.nameRarity(property.nameRu, property.rarity),
+        root.crafting,
       ),
     )
     .toState();
@@ -67,15 +111,23 @@ export function withoutRunes(character: CharacterState): CharacterState {
 
 export function withoutLastHint(character: CharacterState): CharacterState {
   const root = Character.of(character);
-  return root.withArcana(root.arcana.shiftLastHint(-character.lastHint.remaining)).toState();
+  return root
+    .withArcana(root.arcana.shiftLastHint(-character.lastHint.remaining))
+    .toState();
 }
 
-export function withMasterReduction(character: CharacterState, amount: number): CharacterState {
+export function withMasterReduction(
+  character: CharacterState,
+  amount: number,
+): CharacterState {
   const root = Character.of(character);
   return root.withVitality(root.vitality.withMasterReduction(amount)).toState();
 }
 
-export function withSpentHitDice(character: CharacterState, count: number): CharacterState {
+export function withSpentHitDice(
+  character: CharacterState,
+  count: number,
+): CharacterState {
   const root = Character.of(character);
   return root.withVitality(root.vitality.spendHitDice(count)).toState();
 }
@@ -93,12 +145,16 @@ export function withForeignSlots(
   return { ...character, spellSlots: slots };
 }
 
-export function withoutComponentRecord(character: CharacterState): CharacterState {
+export function withoutComponentRecord(
+  character: CharacterState,
+): CharacterState {
   const { components: _unknown, ...equipment } = character.equipment;
   return { ...character, equipment };
 }
 
-export function withoutSpellcastingFocus(character: CharacterState): CharacterState {
+export function withoutSpellcastingFocus(
+  character: CharacterState,
+): CharacterState {
   return Character.of(character)
     .items.all.filter((item) => item.spellcastingFocus === true)
     .reduce((state, focus) => {
@@ -107,14 +163,24 @@ export function withoutSpellcastingFocus(character: CharacterState): CharacterSt
     }, character);
 }
 
-export function withoutArcaneRecovery(character: CharacterState): CharacterState {
+export function withoutArcaneRecovery(
+  character: CharacterState,
+): CharacterState {
   const budget = character.arcaneRecovery.remaining;
   if (budget === 0) return character;
   const root = Character.of(withSpentSlots(character, 1, budget));
-  return root.withArcana(root.arcana.useArcaneRecovery({ 1: budget })).toState();
+  return root
+    .withArcana(root.arcana.useArcaneRecovery({ 1: budget }))
+    .toState();
 }
 
-export function knowing(character: CharacterState, spellId: string): CharacterState {
+export function knowing(
+  character: CharacterState,
+  spellId: string,
+): CharacterState {
   if (character.spellbookSpellIds.includes(spellId)) return character;
-  return { ...character, spellbookSpellIds: [...character.spellbookSpellIds, spellId] };
+  return {
+    ...character,
+    spellbookSpellIds: [...character.spellbookSpellIds, spellId],
+  };
 }

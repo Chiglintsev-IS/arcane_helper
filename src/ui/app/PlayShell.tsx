@@ -12,7 +12,9 @@ import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 import { SheetScreen } from "@/ui/screens/sheet/ui/SheetScreen";
 import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
-import { CraftingScreen } from "@/ui/screens/crafting/ui/CraftingScreen";
+import { AlchemyScreen } from "@/ui/screens/alchemy/ui/AlchemyScreen";
+import { SmithingScreen } from "@/ui/screens/smithing/ui/SmithingScreen";
+import { FamiliarScreen } from "@/ui/screens/familiar/ui/FamiliarScreen";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 import { LogScreen } from "@/ui/screens/log/ui/LogScreen";
 import { NotesScreen } from "@/ui/screens/notes/ui/NotesScreen";
@@ -30,8 +32,12 @@ function ScreenContent({ mode }: { mode: ScreenMode }) {
       return <SheetScreen />;
     case "things":
       return <ThingsScreen />;
-    case "crafting":
-      return <CraftingScreen />;
+    case "alchemy":
+      return <AlchemyScreen />;
+    case "smithing":
+      return <SmithingScreen />;
+    case "familiar":
+      return <FamiliarScreen />;
     case "rest":
       return <RestScreen />;
     case "log":

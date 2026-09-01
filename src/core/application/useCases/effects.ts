@@ -1,7 +1,14 @@
 import { WARDING_SIGIL_RU } from "@/core/domain/arcana/arcana";
+import {
+  ANIMAL_SPEECH_DURATION,
+  ANIMAL_SPEECH_EFFECT_RU,
+  ANIMAL_SPEECH_RU,
+  runesUnavailability,
+} from "@/core/domain/arcana/runes";
 import { Character } from "@/core/domain/assembly/character";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
 import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
+import { effectEndConditionRu } from "@/core/domain/effects/concentration";
 import type { StatContribution } from "@/core/domain/shared/stats";
 import { DomainError } from "@/core/domain/shared/errors";
 import { signed } from "@/shared/language";
@@ -70,6 +77,32 @@ export function spendRuneOnWardingSigil(session: Session, occasion: Occasion): S
       summaryRu: `${WARDING_SIGIL_RU}: провал спасброска считается успехом`,
       actionUsed: "reaction",
     },
+    occasion,
+  );
+}
+
+export function animalSpeechUnavailability(session: Session): string | null {
+  return runesUnavailability(Character.of(session.character).arcana.runes.remaining);
+}
+
+export function spendRuneOnAnimalSpeech(session: Session, occasion: Occasion): Session {
+  const root = Character.of(session.character);
+  const spent = root.withArcana(root.arcana.spendRune());
+  const effect: ActiveEffect = {
+    id: occasion.nextId(),
+    nameRu: ANIMAL_SPEECH_RU,
+    startedAt: occasion.now(),
+    duration: ANIMAL_SPEECH_DURATION,
+    isConcentration: false,
+    slotLevelUsed: 0,
+    contributions: [],
+    endConditionRu: effectEndConditionRu(ANIMAL_SPEECH_DURATION, false),
+    note: ANIMAL_SPEECH_EFFECT_RU,
+  };
+  return commit(
+    session,
+    spent.withEffects(spent.effects.start(effect, occasion.now())),
+    { kind: "rune_spent", summaryRu: `${ANIMAL_SPEECH_RU} — ${ANIMAL_SPEECH_EFFECT_RU}` },
     occasion,
   );
 }

@@ -9,4 +9,5 @@ export const BUTTON_LABELS = {
   confirm: "Подтвердить",
   dismiss: "Отмена",
   undo: "Вернуть",
+  remove: "Убрать",
 } as const;

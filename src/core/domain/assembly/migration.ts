@@ -126,6 +126,84 @@ function migrateItemKinds(state: unknown): unknown {
   return { ...fields, itemDefinitions: items };
 }
 
+/**
+ * Знание об ингредиенте жило отдельным списком и опознавалось названием; теперь свойства
+ * принадлежат самой вещи. Прежние записи переносятся к вещи с тем же выведенным идентификатором,
+ * а вещь, которой ещё не было, заводится ингредиентом.
+ */
+function migrateIngredientKnowledge(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.ingredientKnowledge;
+  if (!Array.isArray(stored)) return state;
+
+  const definitions = Array.isArray(fields.itemDefinitions) ? [...fields.itemDefinitions] : [];
+  for (const record of stored) {
+    const known = fieldsOf(record);
+    const nameRu = typeof known.nameRu === "string" ? known.nameRu.trim() : "";
+    if (nameRu === "") continue;
+
+    const id = Items.idFromName(nameRu);
+    const alchemy = {
+      properties: known.properties ?? [],
+      observations: known.observations ?? [],
+      propertiesExhausted: known.propertiesExhausted === true,
+    };
+    const at = definitions.findIndex((item) => fieldsOf(item).id === id);
+    if (at < 0) {
+      definitions.push({ id, nameRu, kinds: ["ingredient"], alchemy });
+      continue;
+    }
+    const item = fieldsOf(definitions[at]);
+    const kinds = Array.isArray(item.kinds) ? item.kinds : [];
+    definitions[at] = {
+      ...item,
+      kinds: kinds.includes("ingredient") ? kinds : [...kinds, "ingredient"],
+      alchemy,
+    };
+  }
+
+  const { ingredientKnowledge: _moved, ...rest } = fields;
+  return { ...rest, itemDefinitions: definitions };
+}
+
+/**
+ * Редкость жила записью у каждого вида, и один и тот же эффект приходилось называть заново у
+ * каждого ингредиента. Она принадлежит свойству: названные редкости собираются в знание алхимика,
+ * у видов остаются номер и название.
+ */
+function migratePropertyRarities(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const named: { nameRu: unknown; rarity: unknown }[] = Array.isArray(fields.propertyRarities)
+    ? [...fields.propertyRarities]
+    : [];
+  let moved = false;
+
+  const definitions = stored.map((raw) => {
+    const item = fieldsOf(raw);
+    const alchemy = fieldsOf(item.alchemy);
+    const properties = alchemy.properties;
+    if (!Array.isArray(properties)) return raw;
+
+    const bare = properties.map((entry) => {
+      const { rarity, ...rest } = fieldsOf(entry);
+      if (rarity === undefined) return entry;
+      if (!named.some((one) => fieldsOf(one).nameRu === rest.nameRu)) {
+        named.push({ nameRu: rest.nameRu, rarity });
+      }
+      return rest;
+    });
+    if (bare.every((entry, index) => entry === properties[index])) return raw;
+    moved = true;
+    return { ...item, alchemy: { ...alchemy, properties: bare } };
+  });
+
+  if (!moved) return state;
+  return { ...fields, itemDefinitions: definitions, propertyRarities: named };
+}
+
 function migrateItemCategories(state: unknown): unknown {
   const fields = fieldsOf(state);
   const equipment = fieldsOf(fields.equipment);
@@ -456,6 +534,8 @@ export function migrateUndoPatch(patch: unknown): unknown {
     migrateAdjustmentMarker,
     migrateEffectShapes,
     migrateFocusItems,
+    migrateIngredientKnowledge,
+    migratePropertyRarities,
     migrateItemKinds,
     withoutForgottenFields,
   ]);
@@ -478,6 +558,8 @@ export function migrateCharacterState(raw: unknown): unknown {
     migrateSpellcastingFocus,
     migrateBoughtMaterials,
     migrateFocusItems,
+    migrateIngredientKnowledge,
+    migratePropertyRarities,
     migrateItemKinds,
   ]);
 }

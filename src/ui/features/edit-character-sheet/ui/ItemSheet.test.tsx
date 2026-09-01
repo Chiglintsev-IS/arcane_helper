@@ -13,6 +13,7 @@ type Handlers = {
   onSave?: (item: unknown) => void;
   onToggleWanted?: () => void;
   onAdjustBagCount?: (delta: number) => void;
+  onSetBagCount?: (count: number) => void;
   onAdjustWornCount?: (delta: number) => void;
   onRemove?: () => void;
 };
@@ -25,7 +26,8 @@ function itemOf(item: Partial<ItemView> & Pick<ItemView, "id" | "nameRu">): Item
     wanted: false,
     worksCarried: false,
     spellcastingFocus: false,
-    neededForRu: [],
+    alchemicalProperties: [],
+  neededForRu: [],
     bonuses: [],
     bonusFacts: [],
     ...item,
@@ -40,6 +42,7 @@ function open(item: ItemView, handlers: Handlers = {}) {
       onSave={handlers.onSave ?? (() => {})}
       onToggleWanted={handlers.onToggleWanted ?? (() => {})}
       onAdjustBagCount={handlers.onAdjustBagCount ?? (() => {})}
+      onSetBagCount={handlers.onSetBagCount ?? (() => {})}
       onAdjustWornCount={handlers.onAdjustWornCount ?? (() => {})}
       onRemove={handlers.onRemove ?? (() => {})}
       onCancel={() => {}}
@@ -71,6 +74,34 @@ const ring = itemOf({
 });
 
 describe("шторка вещи", () => {
+  it("запас набирается числом: тридцать две штуки не нажимают по одной", async () => {
+    const user = userEvent.setup();
+    const onSetBagCount = vi.fn();
+    open(itemOf({ id: "гольпера", nameRu: "Гольпера Большая", bagCount: 1 }), { onSetBagCount });
+
+    const field = screen.getByLabelText("В сумке");
+    await user.clear(field);
+    await user.type(field, "32");
+    await user.tab();
+
+    expect(onSetBagCount).toHaveBeenCalledWith(32);
+  });
+
+  it("название правится на месте: опечатка чинится, личность вещи не двигается", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    open(itemOf({ id: "свиток", nameRu: "Свиток огненого шара" }), { onSave });
+
+    const field = screen.getByLabelText("Название");
+    await user.clear(field);
+    await user.type(field, "Свиток огненного шара");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "свиток", nameRu: "Свиток огненного шара" }),
+    );
+  });
+
   it("признаки ставятся вместе: одна вещь бывает и расходником, и ингредиентом", async () => {
     const onSave = vi.fn();
     open(scroll, { onSave });

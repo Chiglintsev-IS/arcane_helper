@@ -97,6 +97,32 @@ describe("руна ограждения", () => {
   });
 });
 
+describe("руна разговора со зверями", () => {
+  it("названа, объяснена и доступна, пока руны есть", () => {
+    const { animalSpeech } = toResourcesView(fresh(createThorne()));
+
+    expect(animalSpeech.nameRu).toBe("Руна «Мяу»");
+    expect(animalSpeech.duration).toEqual({ type: "minutes", value: 10 });
+    expect(animalSpeech.effectRu).toContain("Понимаете зверей");
+    expect(animalSpeech.unavailabilityRu).toBeUndefined();
+  });
+
+  it("без рун называет причину", () => {
+    const { animalSpeech } = toResourcesView(fresh(withoutRunes(createThorne())));
+
+    expect(animalSpeech.unavailabilityRu).toMatch(/Рун не осталось/);
+  });
+
+  it("потраченная реакция ей не мешает: действия она не требует", () => {
+    const spent = played(createThorne(), [
+      { kind: "start_combat" },
+      { kind: "spend_rune_on_warding_sigil" },
+    ]);
+
+    expect(toResourcesView(spent).animalSpeech.unavailabilityRu).toBeUndefined();
+  });
+});
+
 describe("подавление", () => {
   it("едет признаками: приложение показывает, а решает мастер", () => {
     const burned = played(createThorne(), [{ kind: "take_damage", damage: 4, fire: true }]);

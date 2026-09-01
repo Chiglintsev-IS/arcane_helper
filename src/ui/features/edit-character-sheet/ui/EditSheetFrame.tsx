@@ -104,19 +104,22 @@ export function TextField({
   labelRu,
   value,
   onChange,
+  wide = false,
 }: {
   labelRu: string;
   value: string;
   onChange: (value: string) => void;
+  /** Поле, которое и есть предмет правки, берёт всю свободную ширину: длинное имя надо видеть. */
+  wide?: boolean;
 }) {
   return (
     <label className="flex items-center justify-between gap-2 text-sm">
-      <span>{labelRu}</span>
+      <span className="shrink-0">{labelRu}</span>
       <input
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`min-h-11 w-40 px-3 text-base ${SURFACE_CONTROL}`}
+        className={`min-h-11 px-3 text-base ${wide ? "min-w-0 flex-1" : "w-40"} ${SURFACE_CONTROL}`}
       />
     </label>
   );

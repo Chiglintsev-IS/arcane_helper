@@ -12,6 +12,10 @@ export function lastHintTraits(nameRu: string): ActionTraits {
   return { nameRu, castingTime: "special", level: 0, concentration: false, role: "other" };
 }
 
+export function animalSpeechTraits(nameRu: string): ActionTraits {
+  return { nameRu, castingTime: "special", level: 0, concentration: false, role: "other" };
+}
+
 export function wardingSigilTraits(nameRu: string): ActionTraits {
   return { nameRu, castingTime: "reaction", level: 0, concentration: false, role: "defense" };
 }

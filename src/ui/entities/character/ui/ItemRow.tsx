@@ -6,6 +6,8 @@ import type { ChoicesView, ItemView } from "@/contract/views";
 import { editName } from "@/ui/shared/ui/buttonLabels";
 import { RULE_MARK } from "@/ui/shared/ui/rule";
 
+import { propertyNumberRu, rarityLabel } from "@/ui/shared/lib/alchemyLabels";
+
 import { itemMeta } from "../lib/itemMeta";
 
 export function ItemRow({
@@ -76,6 +78,20 @@ export function ItemRow({
           </span>
         )}
       </button>
+
+      {item.alchemicalProperties.length === 0 ? null : (
+        <ul className="flex flex-col gap-0.5 px-1 pb-1">
+          {item.alchemicalProperties.map((property) => (
+            <li key={property.number} className="flex items-baseline gap-2 text-xs">
+              <span className="shrink-0 font-semibold tabular-nums text-ink-quiet">
+                {propertyNumberRu(property.number)}
+              </span>
+              <span className="min-w-0 flex-1 leading-snug">{property.nameRu}</span>
+              <span className="shrink-0 text-ink-quiet">{rarityLabel(property.rarity)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="flex items-center justify-between gap-2 pb-1 pl-1">
         {countRu === undefined ? (

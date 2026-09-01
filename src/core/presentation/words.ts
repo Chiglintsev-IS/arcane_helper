@@ -4,9 +4,9 @@ import { RUNES, type Rune } from "@/core/domain/arcana/runes";
 import {
   ALCHEMICAL_RARITIES,
   ALCHEMY_DIRECTIONS,
+  type AlchemicalRarity,
   type AlchemyDirection,
 } from "@/core/domain/catalog/alchemy";
-import type { RevealedProperty } from "@/core/domain/crafting/schema";
 import type { Spell } from "@/core/domain/catalog/spell";
 
 export function oneOf<TWord extends string>(
@@ -33,7 +33,7 @@ export function directionOf(value: string): AlchemyDirection {
   return oneOf(ALCHEMY_DIRECTIONS, value, "направление алхимии");
 }
 
-export function rarityOf(value: string): RevealedProperty["rarity"] {
+export function rarityOf(value: string): AlchemicalRarity {
   return oneOf(ALCHEMICAL_RARITIES, value, "редкость свойства");
 }
 

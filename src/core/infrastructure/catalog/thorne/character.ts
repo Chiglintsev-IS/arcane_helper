@@ -3,6 +3,65 @@ import { arcaneRecoveryBudget, spellSlotsForLevel } from "@/core/domain/arcana/s
 import { runesMaximum } from "@/core/domain/arcana/runes";
 import { proficiencyBonus } from "@/core/domain/character/abilities";
 import { RELIABLE_FIELD_KIT } from "@/core/domain/crafting/apparatus";
+import { Items } from "@/core/domain/items/items";
+
+/**
+ * Ингредиент опознаётся слугом своего названия: партия списывает порции по названию вида, и другой
+ * идентификатор разорвал бы связь знания об ингредиенте с запасом в сумке.
+ *
+ * Найденное за столом стоит заметкой, а не раскрытым свойством: свойство перечня неотделимо от
+ * своего направления, и записать его, не назвав направления, нельзя.
+ */
+type Revealed = { number: number; nameRu: string };
+
+const INGREDIENTS: readonly {
+  nameRu: string;
+  count: number;
+  revealed?: readonly Revealed[];
+  seen?: readonly string[];
+}[] = [
+  {
+    nameRu: "Гольпера Большая",
+    count: 32,
+    revealed: [
+      { number: 1, nameRu: "Снижение потребности в пище и воде" },
+      { number: 2, nameRu: "Усиление характеристики" },
+    ],
+  },
+  {
+    nameRu: "Пыльца Гольперы Большой",
+    count: 22,
+    revealed: [
+      { number: 1, nameRu: "Ускорение роста растений" },
+      { number: 2, nameRu: "Усиление характеристики" },
+    ],
+  },
+  {
+    nameRu: "Пучок Дварской Хвори",
+    count: 1,
+    revealed: [{ number: 2, nameRu: "Ослабление характеристики" }],
+    seen: ["Отвращение к пиву — действует всегда при использовании. В перечне такого свойства нет"],
+  },
+  {
+    nameRu: "Подорожник",
+    count: 9,
+    revealed: [
+      { number: 1, nameRu: "Лечение здоровья" },
+      { number: 2, nameRu: "Остановка кровотечения" },
+    ],
+  },
+  { nameRu: "Болотный гриб [Я]", count: 1 },
+  {
+    nameRu: "Гриб неожиданность Зинаиды",
+    count: 3,
+    seen: [
+      "Не исследован",
+      "Говорят: сильное слабительное",
+      "Говорят: галлюцинации",
+      "При простом поедании — рвота",
+    ],
+  },
+];
 
 const SLOTS = spellSlotsForLevel(7);
 const ARCANE_RECOVERY_BUDGET = arcaneRecoveryBudget(7);
@@ -139,9 +198,31 @@ const RAW: unknown = {
       kinds: [],
       note: "1d4 к Скрытности в болотах",
     },
+    {
+      id: "gormongol",
+      nameRu: "Кузнечный Молот Гормонголь",
+      kinds: ["gear"],
+      note: "Мифриловый. Растущий: меняется вместе с владельцем, но чисел под это мастер пока не назвал.",
+    },
+    ...INGREDIENTS.map(({ nameRu, revealed, seen }) => ({
+      id: Items.idFromName(nameRu),
+      nameRu,
+      kinds: ["ingredient"],
+      alchemy: {
+        properties: revealed ?? [],
+        observations: (seen ?? []).map((textRu, index) => ({
+          id: `${Items.idFromName(nameRu)}-${index + 1}`,
+          textRu,
+        })),
+      },
+    })),
   ],
   equipment: {
-    bag: [{ itemId: "swamp-camouflage-kit", count: 1 }],
+    bag: [
+      { itemId: "swamp-camouflage-kit", count: 1 },
+      { itemId: "gormongol", count: 1 },
+      ...INGREDIENTS.map(({ nameRu, count }) => ({ itemId: Items.idFromName(nameRu), count })),
+    ],
     worn: [
       { itemId: "spellcasting-focus", count: 1 },
       { itemId: "robe", count: 1 },

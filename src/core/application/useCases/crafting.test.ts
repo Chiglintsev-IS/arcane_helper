@@ -7,7 +7,11 @@ import { undoLast, type Occasion, type Session } from "@/core/application/sessio
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { withIngredientKnowledge } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { addItem, adjustBagCount } from "./equipment";
-import { craftBatch, markPropertiesExhausted } from "./crafting";
+import {
+  craftBatch,
+  markPropertiesExhausted,
+  mixtureKinds,
+} from "./crafting";
 
 function testOccasion(commandId = "command-1"): Occasion {
   let tick = 0;
@@ -22,10 +26,14 @@ const occasion = testOccasion();
 
 const MOON_HERB = "Лунная трава";
 const CRIMSON_ROOT = "Багровый корень";
+
+/** Виды состава называются вещами: формула ссылается на них так же, как сумка. */
+const MOON_HERB_ID = Items.idFromName(MOON_HERB);
+const CRIMSON_ROOT_ID = Items.idFromName(CRIMSON_ROOT);
 const HEALING = { number: 1, nameRu: "Лечение здоровья", rarity: "common" } as const;
 
 const STANDARD: RecipeFormula = {
-  kinds: [MOON_HERB, CRIMSON_ROOT],
+  kinds: [MOON_HERB_ID, CRIMSON_ROOT_ID],
   mainProperty: HEALING.nameRu,
   duration: null,
   onset: "Немедленно",
@@ -42,8 +50,9 @@ function bagCount(session: Session, nameRu: string): number {
   return Character.of(session.character).equipment.bagCount(Items.idFromName(nameRu));
 }
 
-function exhaustedOf(session: Session, nameRu: string): boolean | undefined {
-  return Character.of(session.character).crafting.find(nameRu)?.propertiesExhausted;
+function exhaustedOf(session: Session, nameRu: string): boolean {
+  const root = Character.of(session.character);
+  return root.items.alchemyOf(Items.idFromName(nameRu)).propertiesExhausted;
 }
 
 function stocked(portionsEach: number): Session {
@@ -83,6 +92,15 @@ function poisonous(): Session {
     { character: known, log: [] },
   );
 }
+
+describe("виды состава", () => {
+  it("вид, которого нет среди вещей или который не ингредиент, отвергается с причиной", () => {
+    const root = Character.of(createThorne());
+
+    expect(() => mixtureKinds(root.items, ["нет-такого"])).toThrow(/нет среди заведённых вещей/);
+    expect(() => mixtureKinds(root.items, ["robe"])).toThrow(/нет среди заведённых вещей/);
+  });
+});
 
 describe("изготовление состава", () => {
   it("изготовление списывает все виды одной записью лога", () => {
@@ -137,7 +155,7 @@ describe("проверка разработки", () => {
 
     const developed = craftBatch(first, { formula: STANDARD, portions: 1, rolled: 15 }, occasion);
 
-    const reordered = { ...STANDARD, kinds: [CRIMSON_ROOT, MOON_HERB] };
+    const reordered = { ...STANDARD, kinds: [CRIMSON_ROOT_ID, MOON_HERB_ID] };
     const repeated = craftBatch(developed, { formula: reordered, portions: 1 }, occasion);
     expect(repeated.log.at(-1)?.summaryRu).toBe(
       "Изготовлено: Лечение здоровья, 1 единица. Истрачено по 1 порции: Багровый корень, Лунная трава",
@@ -161,11 +179,12 @@ describe("проверка разработки", () => {
     );
   });
 
-  it("гибрид с ядовитым свойством роняет проверку до наименьшего бонуса", () => {
+  it("состав с оставшимся ядовитым свойством партией не выходит: направление закрыто", () => {
     const hybrid = poisonous();
-    const failed = craftBatch(hybrid, { formula: HYBRID, portions: 1, rolled: 11 }, occasion);
 
-    expect(failed.log.at(-1)?.summaryRu).toContain("Не вышло: Лечение здоровья. Проверка 15");
+    expect(() =>
+      craftBatch(hybrid, { formula: HYBRID, portions: 1, rolled: 11 }, occasion),
+    ).toThrow(/ядов не варят/);
   });
 
   it("провал тратит заложенное и рецепта не записывает", () => {
@@ -211,7 +230,11 @@ describe("полнота знания о виде", () => {
       log: [],
     };
 
-    const marked = markPropertiesExhausted(before, { nameRu: MOON_HERB, exhausted: true }, occasion);
+    const marked = markPropertiesExhausted(
+      before,
+      { itemId: Items.idFromName(MOON_HERB), exhausted: true },
+      occasion,
+    );
 
     expect(exhaustedOf(marked, MOON_HERB)).toBe(true);
     expect(marked.log.at(-1)?.summaryRu).toBe(`У вида больше нет свойств: ${MOON_HERB}`);

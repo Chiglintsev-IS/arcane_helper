@@ -1,6 +1,8 @@
 import type { Preview, PreviewOf, Question } from "@/contract/questions";
 
 import { Character } from "@/core/domain/assembly/character";
+import { closedRefusal } from "@/core/domain/crafting/forbidden";
+import { RARITY_NOT_NAMED_RU } from "@/core/domain/crafting/research";
 import { arcaneRecoveryPlanCost, validateArcaneRecovery } from "@/core/domain/arcana/slots";
 import {
   RUNES,
@@ -18,9 +20,10 @@ import {
 } from "@/core/domain/vitality/hitDice";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import type { Batch } from "@/core/domain/crafting/batch";
-import { ALCHEMY_ABILITY } from "@/core/domain/crafting/development";
+import { ALCHEMY_ABILITY, mishapAwaited } from "@/core/domain/crafting/development";
 import type { DevelopmentCheck } from "@/core/domain/crafting/development";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
+import { mixtureKinds } from "@/core/application/useCases/crafting";
 import type { PropertyMatch, RecipeDifficulty } from "@/core/domain/crafting/recipe";
 import { refusalOf } from "@/core/domain/shared/errors";
 import { castLevelOf, type PaymentChoice } from "@/core/application/casting/availability";
@@ -116,14 +119,18 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
 
   try {
     const formula = recipeFormulaOf(question.formula);
-    matches = crafting.matches(formula.kinds);
+    const kinds = mixtureKinds(root.items, formula.kinds);
+    matches = crafting.matches(kinds);
     known = crafting.knows(formula);
-    difficulty = crafting.difficultyOf(formula, crafting.apparatus);
+    difficulty = crafting.difficultyOf(kinds, formula, crafting.apparatus);
     check = crafting.checkFor(difficulty.directions, {
       proficiencyBonus: root.sheet.value("proficiencyBonus"),
       abilityModifier: root.sheet.abilityModifier(ALCHEMY_ABILITY),
     });
-    batch = crafting.batchOf(formula, crafting.apparatus, question.portions);
+    refusalRu = closedRefusal(difficulty.directions);
+    if (refusalRu === undefined) {
+      batch = crafting.batchOf(kinds, formula, crafting.apparatus, question.portions);
+    }
   } catch (error: unknown) {
     refusalRu = refusalOf(error);
   }
@@ -132,7 +139,7 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
     kind: "recipe_preview",
     matches: matches.map((match) => ({
       nameRu: match.nameRu,
-      rarity: match.rarity,
+      ...(match.rarity === undefined ? {} : { rarity: match.rarity }),
       sources: [...match.sources],
       tier: match.tier,
     })),
@@ -153,7 +160,14 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
             consumablesGold: batch.consumablesGold,
             units: batch.units,
           },
-    check: check === null ? null : { bonus: check.bonus, unstudied: [...check.unstudied] },
+    check:
+      check === null
+        ? null
+        : {
+            bonus: check.bonus,
+            unstudied: [...check.unstudied],
+            mishapAwaited: mishapAwaited(question.rolled),
+          },
     known,
     ...(refusalRu === undefined ? {} : { refusalRu }),
   };
@@ -162,11 +176,16 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
 type ResearchQuestion = Extract<Question, { kind: "research_preview" }>;
 
 function researchPreview(live: LiveSession, question: ResearchQuestion): Preview {
-  const crafting = Character.of(live.session.character).crafting;
+  const root = Character.of(live.session.character);
+  const crafting = root.crafting;
 
   try {
+    if (question.rarity === undefined) {
+      return { kind: "research_preview", plan: null, refusalRu: RARITY_NOT_NAMED_RU };
+    }
+    const [kind] = mixtureKinds(root.items, [question.itemId]);
     const plan = crafting.researchPlanFor(
-      question.nameRu,
+      kind!,
       question.number,
       rarityOf(question.rarity),
       directionOf(question.direction),

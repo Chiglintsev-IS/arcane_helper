@@ -49,6 +49,17 @@ export function durationWithRoundsRu(duration: ActiveEffect["duration"]): string
   }
 }
 
+export function effectEndConditionRu(
+  duration: ActiveEffect["duration"],
+  concentration: boolean,
+): string {
+  if (duration.type === "until_spell_ends") {
+    return concentration ? "До конца концентрации; длительность особая." : "Длительность особая.";
+  }
+  const held = durationWithRoundsRu(duration);
+  return concentration ? `Держится ${held} или до конца концентрации.` : `Держится ${held}.`;
+}
+
 function concentrationCheckDc(damage: number): number {
   if (!Number.isInteger(damage) || damage < 0) {
     throw new DomainError(`Полученный урон должен быть целым неотрицательным, получено: ${damage}`);

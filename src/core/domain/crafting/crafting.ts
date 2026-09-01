@@ -1,5 +1,9 @@
 import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
-import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
+import type {
+  AlchemicalPropertyName,
+  AlchemicalRarity,
+  AlchemyDirection,
+} from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import type { Apparatus } from "./apparatus";
@@ -7,17 +11,31 @@ import { batchFrom } from "./batch";
 import type { Batch } from "./batch";
 import { developmentCheck } from "./development";
 import type { CheckNumbers, DevelopmentCheck } from "./development";
+import { namedRarityOf, rarityAmong, withRarityNamed } from "./rarities";
+import type { NamedRarity } from "./rarities";
 import { recipeDifficulty, recipeSignature, tierOf } from "./recipe";
 import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { researchPlan } from "./research";
 import type { ResearchPlan } from "./research";
-import { alchemyWorkshopOf, ingredientKnowledgeOf } from "./schema";
-import type { IngredientKnowledge, RevealedProperty } from "./schema";
+import { alchemyWorkshopOf } from "./schema";
+
+/**
+ * Вид в составе: ремесло получает его параметром и не хранит. Свойства принадлежат самой вещи, а
+ * ремесло только считает по ним цену замысла.
+ */
+export type MixtureKind = {
+  readonly id: string;
+  readonly nameRu: string;
+  readonly properties: readonly {
+    readonly number: number;
+    readonly nameRu: AlchemicalPropertyName;
+  }[];
+};
 
 type CraftingState = {
-  ingredientKnowledge: readonly IngredientKnowledge[];
   alchemyApparatus: Apparatus;
   studiedDirections: readonly AlchemyDirection[];
+  propertyRarities: readonly NamedRarity[];
   knownRecipes: readonly KnownRecipe[];
 };
 
@@ -32,10 +50,6 @@ function tooManyKindsRefusal(): string {
   return "Состав собирается не больше чем из четырёх разных видов ингредиентов";
 }
 
-function unevenRarityRefusal(name: string, sources: readonly string[]): string {
-  return `Свойство «${name}» записано с разной редкостью у видов: ${sources.join(", ")}`;
-}
-
 const RESEARCH_NUMBERS = [1, 2, 3, 4];
 
 function nothingLeftRefusal(nameRu: string): string {
@@ -48,9 +62,9 @@ function outOfOrderRefusal(next: number): string {
 
 export class Crafting {
   private static readonly KEYS = [
-    "ingredientKnowledge",
     "alchemyApparatus",
     "studiedDirections",
+    "propertyRarities",
     "knownRecipes",
   ] as const satisfies readonly (keyof CraftingState)[];
 
@@ -60,24 +74,24 @@ export class Crafting {
     return new Crafting(ownedFields(state, Crafting.KEYS));
   }
 
-  private get data(): readonly IngredientKnowledge[] {
-    return this.state.ingredientKnowledge;
-  }
-
-  private with(ingredientKnowledge: readonly IngredientKnowledge[]): Crafting {
-    return new Crafting({ ...this.state, ingredientKnowledge });
-  }
-
-  get all(): readonly IngredientKnowledge[] {
-    return this.data;
-  }
-
   get apparatus(): Apparatus {
     return this.state.alchemyApparatus;
   }
 
   studies(direction: AlchemyDirection): boolean {
     return this.state.studiedDirections.includes(direction);
+  }
+
+  rarityOf(nameRu: AlchemicalPropertyName): AlchemicalRarity | undefined {
+    return rarityAmong(this.state.propertyRarities, nameRu);
+  }
+
+  nameRarity(nameRu: string, rarity: string): Crafting {
+    const named = namedRarityOf({ nameRu, rarity });
+    return new Crafting({
+      ...this.state,
+      propertyRarities: withRarityNamed(this.state.propertyRarities, named.nameRu, named.rarity),
+    });
   }
 
   withWorkshop(workshop: unknown): Crafting {
@@ -103,111 +117,67 @@ export class Crafting {
     return new Crafting({ ...this.state, knownRecipes: [...others, { formula, risky }] });
   }
 
-  find(nameRu: string): IngredientKnowledge | undefined {
-    return this.data.find((ingredient) => ingredient.nameRu === nameRu);
-  }
-
-  private located(nameRu: string): IngredientKnowledge {
-    const found = this.find(nameRu);
-    if (found === undefined) {
-      throw new DomainError(`Ингредиента «${nameRu}» нет среди записанных`);
-    }
-    return found;
-  }
-
-  noteIngredient(nameRu: string): Crafting {
-    const noted = ingredientKnowledgeOf({ nameRu });
-    if (this.find(noted.nameRu) !== undefined) return this;
-    return this.with([...this.data, noted]);
-  }
-
-  private replacing(nameRu: string, ingredient: IngredientKnowledge): Crafting {
-    return this.with(this.data.map((one) => (one.nameRu === nameRu ? ingredient : one)));
-  }
-
-  revealProperty(nameRu: string, property: RevealedProperty): Crafting {
-    const known = this.located(nameRu);
-    return this.replacing(
-      nameRu,
-      ingredientKnowledgeOf({ ...known, properties: [...known.properties, property] }),
-    );
-  }
-
-  markPropertiesExhausted(nameRu: string, exhausted: boolean): Crafting {
-    const known = this.located(nameRu);
-    return this.replacing(
-      nameRu,
-      ingredientKnowledgeOf({ ...known, propertiesExhausted: exhausted }),
-    );
-  }
-
-  private nextResearchable(nameRu: string): number {
-    const revealed = new Set(this.located(nameRu).properties.map((property) => property.number));
+  nextResearchable(kind: MixtureKind): number {
+    const revealed = new Set(kind.properties.map((property) => property.number));
     const next = RESEARCH_NUMBERS.find((number) => !revealed.has(number));
-    if (next === undefined) throw new DomainError(nothingLeftRefusal(nameRu));
+    if (next === undefined) throw new DomainError(nothingLeftRefusal(kind.nameRu));
     return next;
   }
 
   researchPlanFor(
-    nameRu: string,
+    kind: MixtureKind,
     number: number,
-    rarity: RevealedProperty["rarity"],
+    rarity: AlchemicalRarity,
     direction: AlchemyDirection,
   ): ResearchPlan {
-    const next = this.nextResearchable(nameRu);
+    const next = this.nextResearchable(kind);
     if (number !== next) throw new DomainError(outOfOrderRefusal(next));
     return researchPlan({ number, rarity, direction, apparatus: this.apparatus });
   }
 
-  forgetIngredient(nameRu: string): Crafting {
-    this.located(nameRu);
-    return this.with(this.data.filter((ingredient) => ingredient.nameRu !== nameRu));
-  }
-
-  matches(kinds: readonly string[]): readonly PropertyMatch[] {
-    const distinct = [...new Set(kinds)];
+  matches(kinds: readonly MixtureKind[]): readonly PropertyMatch[] {
+    const distinct = [...new Map(kinds.map((kind) => [kind.id, kind])).values()];
     if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
     if (distinct.length > MOST_KINDS) throw new DomainError(tooManyKindsRefusal());
 
-    const gathered = new Map<
-      RevealedProperty["nameRu"],
-      { rarity: RevealedProperty["rarity"]; sources: string[] }
-    >();
-    for (const ingredient of distinct.map((kind) => this.located(kind))) {
-      for (const property of ingredient.properties) {
-        const found = gathered.get(property.nameRu);
-        if (found === undefined) {
-          gathered.set(property.nameRu, { rarity: property.rarity, sources: [ingredient.nameRu] });
-          continue;
-        }
-        found.sources.push(ingredient.nameRu);
-        if (found.rarity !== property.rarity) {
-          throw new DomainError(unevenRarityRefusal(property.nameRu, found.sources));
-        }
+    const gathered = new Map<AlchemicalPropertyName, string[]>();
+    for (const kind of distinct) {
+      for (const property of kind.properties) {
+        const sources = gathered.get(property.nameRu);
+        if (sources === undefined) gathered.set(property.nameRu, [kind.nameRu]);
+        else sources.push(kind.nameRu);
       }
     }
 
     return [...gathered]
-      .filter(([, found]) => found.sources.length >= FEWEST_KINDS)
-      .map(([nameRu, found]) => ({
+      .filter(([, sources]) => sources.length >= FEWEST_KINDS)
+      .map(([nameRu, sources]) => ({
         nameRu,
-        rarity: found.rarity,
-        sources: found.sources,
-        tier: tierOf(found.sources.length),
+        rarity: this.rarityOf(nameRu),
+        sources,
+        tier: tierOf(sources.length),
       }));
   }
 
-  difficultyOf(formula: RecipeFormula, apparatus: Apparatus): RecipeDifficulty {
-    return recipeDifficulty(this.matches(formula.kinds), formula, apparatus);
+  difficultyOf(
+    kinds: readonly MixtureKind[],
+    formula: RecipeFormula,
+    apparatus: Apparatus,
+  ): RecipeDifficulty {
+    return recipeDifficulty(this.matches(kinds), formula, apparatus);
   }
 
-  batchOf(formula: RecipeFormula, apparatus: Apparatus, portions: number): Batch {
-    return batchFrom(this.difficultyOf(formula, apparatus), apparatus, portions);
+  batchOf(
+    kinds: readonly MixtureKind[],
+    formula: RecipeFormula,
+    apparatus: Apparatus,
+    portions: number,
+  ): Batch {
+    return batchFrom(this.difficultyOf(kinds, formula, apparatus), apparatus, portions);
   }
 
-  directionsOf(nameRu: string): readonly AlchemyDirection[] {
-    const known = this.located(nameRu);
-    return [...new Set(known.properties.map((property) => alchemyDirectionOf(property.nameRu)))];
+  directionsOf(kind: MixtureKind): readonly AlchemyDirection[] {
+    return [...new Set(kind.properties.map((property) => alchemyDirectionOf(property.nameRu)))];
   }
 
   toState(): CraftingState {

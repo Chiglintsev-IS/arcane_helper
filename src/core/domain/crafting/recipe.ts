@@ -1,18 +1,21 @@
 import { z } from "zod";
 
 import { ALCHEMICAL_RARITIES, alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
-import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
+import type {
+  AlchemicalPropertyName,
+  AlchemicalRarity,
+  AlchemyDirection,
+} from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { apparatusLimits, IMPROVISED_DIFFICULTY } from "./apparatus";
 import type { Apparatus } from "./apparatus";
-import type { RevealedProperty } from "./schema";
 
 type MatchTier = "plain" | "amplified" | "concentrated";
 
 export type PropertyMatch = {
-  readonly nameRu: RevealedProperty["nameRu"];
-  readonly rarity: RevealedProperty["rarity"];
+  readonly nameRu: AlchemicalPropertyName;
+  readonly rarity: AlchemicalRarity | undefined;
   readonly sources: readonly string[];
   readonly tier: MatchTier;
 };
@@ -35,7 +38,7 @@ const EFFECT_DIFFICULTY = {
   rare: { main: 5, additional: 5 },
   veryRare: { main: 8, additional: 7 },
   legendary: { main: 12, additional: 10 },
-} as const satisfies Record<RevealedProperty["rarity"], { main: number; additional: number }>;
+} as const satisfies Record<AlchemicalRarity, { main: number; additional: number }>;
 
 const TIER_DIFFICULTY = {
   plain: 0,
@@ -104,7 +107,7 @@ const SUPPRESSION_DIFFICULTY = {
   rare: 4,
   veryRare: 6,
   legendary: 8,
-} as const satisfies Record<RevealedProperty["rarity"], number>;
+} as const satisfies Record<AlchemicalRarity, number>;
 
 const LIMITATION_DIFFICULTY = {
   "Только конкретный биологический вид или узкая группа материалов": -2,
@@ -165,6 +168,12 @@ const recipeFormulaSchema = z.object({
   limitations: z.array(fromTable(LIMITATION_DIFFICULTY, "ограничение")),
 });
 
+type PricedChoice = { value: string; modifier: number };
+
+function priced(table: Readonly<Record<string, number>>): PricedChoice[] {
+  return Object.entries(table).map(([value, modifier]) => ({ value, modifier }));
+}
+
 export const RECIPE_CHOICES = {
   standard: {
     duration: null,
@@ -175,13 +184,16 @@ export const RECIPE_CHOICES = {
     resistance: "Положительное воздействие на добровольную цель",
     purification: null,
   },
-  durations: Object.keys(DURATION_DIFFICULTY),
-  onsets: Object.keys(ONSET_DIFFICULTY),
-  reaches: Object.keys(REACH_DIFFICULTY),
-  applications: Object.keys(APPLICATION_DIFFICULTY),
-  resistances: Object.keys(RESISTANCE_DIFFICULTY),
-  limitations: Object.keys(LIMITATION_DIFFICULTY),
-  purifications: Object.keys(OPPOSITE_POLARITY),
+  durations: priced(DURATION_DIFFICULTY),
+  onsets: priced(ONSET_DIFFICULTY),
+  reaches: priced(REACH_DIFFICULTY),
+  applications: priced(APPLICATION_DIFFICULTY),
+  resistances: priced(RESISTANCE_DIFFICULTY),
+  limitations: priced(LIMITATION_DIFFICULTY),
+  purifications: Object.keys(OPPOSITE_POLARITY).map((value) => ({
+    value,
+    modifier: PURIFICATION_DIFFICULTY,
+  })),
 };
 
 export function recipeFormulaOf(value: unknown): RecipeFormula {
@@ -240,10 +252,20 @@ function mainOf(kept: readonly PropertyMatch[], named: string | null): PropertyM
   return found;
 }
 
+function unnamedRarityRefusal(name: string): string {
+  return `У свойства «${name}» не названа редкость: без неё сложность не считается`;
+}
+
+/** Редкость приходит от стола: её называет мастер, и без неё считать нечем. */
+function rarityOf(match: PropertyMatch): AlchemicalRarity {
+  if (match.rarity === undefined) throw new DomainError(unnamedRarityRefusal(match.nameRu));
+  return match.rarity;
+}
+
 function rarestOf(kept: readonly PropertyMatch[]): PropertyMatch {
   const rarest = kept.toSorted(
     (one, other) =>
-      ALCHEMICAL_RARITIES.indexOf(other.rarity) - ALCHEMICAL_RARITIES.indexOf(one.rarity),
+      ALCHEMICAL_RARITIES.indexOf(rarityOf(other)) - ALCHEMICAL_RARITIES.indexOf(rarityOf(one)),
   )[0];
   if (rarest === undefined) throw new DomainError(emptyMixtureRefusal());
   return rarest;
@@ -302,7 +324,7 @@ function afterSuppression(
   });
   return {
     kept: kept.filter((match) => !removed.includes(match)),
-    difficulty: sum(removed.map((match) => SUPPRESSION_DIFFICULTY[match.rarity])),
+    difficulty: sum(removed.map((match) => SUPPRESSION_DIFFICULTY[rarityOf(match)])),
   };
 }
 
@@ -310,8 +332,8 @@ function rarityDifficulty(kept: readonly PropertyMatch[], main: PropertyMatch): 
   return sum(
     kept.map((match) =>
       match === main
-        ? EFFECT_DIFFICULTY[match.rarity].main
-        : EFFECT_DIFFICULTY[match.rarity].additional,
+        ? EFFECT_DIFFICULTY[rarityOf(match)].main
+        : EFFECT_DIFFICULTY[rarityOf(match)].additional,
     ),
   );
 }

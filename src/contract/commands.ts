@@ -32,6 +32,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
 
   command("end_concentration", { reason: word }),
   command("spend_rune_on_warding_sigil", {}),
+  command("spend_rune_on_animal_speech", {}),
   command("start_manual_effect", { nameRu: word, armorClassBonus: numeric.optional() }),
   command("set_armor_class_adjustment", { value: numeric }),
   command("end_effect", { effectId: word }),
@@ -65,6 +66,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("toggle_wanted", { itemId: word }),
   command("record_item", { nameRu: word, wanted: z.boolean() }),
   command("adjust_bag_count", { itemId: word, delta: numeric }),
+  command("set_bag_count", { itemId: word, count: numeric }),
   command("adjust_worn_count", { itemId: word, delta: numeric }),
   command("edit_money", { money: z.record(word, numeric) }),
 
@@ -77,14 +79,18 @@ export const commandSchema = z.discriminatedUnion("kind", [
   }),
 
   command("note_ingredient", { nameRu: word }),
-  command("forget_ingredient", { nameRu: word }),
-  command("mark_properties_exhausted", { nameRu: word, exhausted: z.boolean() }),
+  command("mark_properties_exhausted", { itemId: word, exhausted: z.boolean() }),
   command("reveal_property", {
-    nameRu: word,
+    itemId: word,
     number: numeric,
     propertyRu: word,
-    rarity: word,
+    rarity: word.optional(),
   }),
+  command("name_rarity", { propertyRu: word, rarity: word }),
+
+  command("note_observation", { itemId: word, textRu: word }),
+  command("rewrite_observation", { itemId: word, observationId: word, textRu: word }),
+  command("drop_observation", { itemId: word, observationId: word }),
 
   command("set_alchemy_workshop", {
     apparatus: z.record(word, word),

@@ -39,7 +39,7 @@ describe("«Вещи»", () => {
 
     await user.click(within(screen.getByRole("radiogroup", { name: "Что в рюкзаке" })).getByRole(
       "radio",
-      { name: "Надето" },
+      { name: "Экипировка" },
     ));
     expect(screen.getByRole("heading", { name: "Защита" })).toBeDefined();
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { DIRECTION_LABELS, RARITY_LABELS, labelled } from "@/ui/entities/crafting/lib/labels";
+import { DIRECTION_LABELS } from "@/ui/entities/crafting/lib/labels";
+import { RARITY_LABELS, labelled } from "@/ui/shared/lib/alchemyLabels";
 
 describe("слово ремесла и подпись к нему", () => {
   it("известный код читается своей подписью", () => {

@@ -148,7 +148,9 @@ ALLOWED_CONTEXT_EDGES = {
     ("sheet", "catalog"),
     ("sheet", "items"),
     ("equipment", "items"),
+    ("items", "catalog"),
     ("crafting", "catalog"),
+    ("familiar", "character"),
 }
 
 # Общее ядро доменной логики: его читают все контексты.

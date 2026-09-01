@@ -42,6 +42,11 @@ export function developmentCheck(
   };
 }
 
+/** Второй кубик нужен только аварии: её вызывает натуральная единица, и ничто больше. */
+export function mishapAwaited(rolled: number | undefined): boolean {
+  return rolled === NATURAL_ONE;
+}
+
 function impossibleRollRefusal(dieRu: string, rolled: number): string {
   return `На ${dieRu} столько не выпадает: ${rolled}`;
 }

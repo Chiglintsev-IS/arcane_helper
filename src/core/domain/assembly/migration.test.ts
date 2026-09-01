@@ -927,3 +927,122 @@ describe("отметка купленного компонента станов�
     expect(() => characterStateSchema.parse(migrateCharacterState(brokenBag))).toThrow();
   });
 });
+
+describe("знание об ингредиенте переезжает к вещи", () => {
+  /** Отдельный список знания существовал уже в нынешней форме: приводится она, а не версия 1. */
+  const modern = (): Record<string, unknown> =>
+    fieldsOf(characterStateSchema.parse(migrateCharacterState(VERSION_ONE)));
+
+  const KNOWLEDGE = [
+    {
+      nameRu: "Лунная трава",
+      properties: [{ number: 1, nameRu: "Лечение здоровья", rarity: "common" }],
+      observations: [{ id: "one", textRu: "Пахнет тиной" }],
+      propertiesExhausted: true,
+    },
+    { nameRu: "" },
+    { nameRu: 5 },
+  ];
+
+  it("прежняя запись становится алхимией вещи, а безымянная пропускается", () => {
+    const state = characterStateSchema.parse(
+      migrateCharacterState({ ...modern(), ingredientKnowledge: KNOWLEDGE }),
+    );
+    const herb = state.itemDefinitions.find((item) => item.nameRu === "Лунная трава");
+
+    expect(herb?.kinds).toContain("ingredient");
+    expect(herb?.alchemy?.properties).toEqual([{ number: 1, nameRu: "Лечение здоровья" }]);
+    expect(state.propertyRarities).toEqual([{ nameRu: "Лечение здоровья", rarity: "common" }]);
+    expect(herb?.alchemy?.observations).toEqual([{ id: "one", textRu: "Пахнет тиной" }]);
+    expect(herb?.alchemy?.propertiesExhausted).toBe(true);
+    expect(state.itemDefinitions.filter((item) => item.nameRu === "")).toEqual([]);
+  });
+
+  it("редкость съезжает к свойству, и второй вид её не задваивает", () => {
+    const shared = (nameRu: string) => ({
+      id: Items.idFromName(nameRu),
+      nameRu,
+      kinds: ["ingredient"],
+      alchemy: { properties: [{ number: 1, nameRu: "Лечение здоровья", rarity: "rare" }] },
+    });
+    const state = characterStateSchema.parse(
+      migrateCharacterState({
+        ...modern(),
+        itemDefinitions: [shared("Лунная трава"), shared("Багровый корень")],
+      }),
+    );
+
+    expect(state.propertyRarities).toEqual([{ nameRu: "Лечение здоровья", rarity: "rare" }]);
+    expect(state.itemDefinitions.map((item) => item.alchemy?.properties)).toEqual([
+      [{ number: 1, nameRu: "Лечение здоровья" }],
+      [{ number: 1, nameRu: "Лечение здоровья" }],
+    ]);
+  });
+
+  it("уже заведённой вещи дописывается признак и алхимия, а прочее остаётся", () => {
+    const state = characterStateSchema.parse(
+      migrateCharacterState({
+        ...modern(),
+        itemDefinitions: [
+          { id: "лунная-трава", nameRu: "Лунная трава", kinds: ["consumable"], note: "склянка" },
+        ],
+        ingredientKnowledge: KNOWLEDGE,
+      }),
+    );
+    const herb = state.itemDefinitions.find((item) => item.id === "лунная-трава");
+
+    expect(herb?.kinds).toEqual(["consumable", "ingredient"]);
+    expect(herb?.note).toBe("склянка");
+    expect(herb?.alchemy?.properties).toHaveLength(1);
+  });
+
+  it("запись без раскрытого и без наблюдений переезжает пустой, а признак не двоится", () => {
+    const state = characterStateSchema.parse(
+      migrateCharacterState({
+        ...modern(),
+        itemDefinitions: [{ id: "лунная-трава", nameRu: "Лунная трава", kinds: ["ingredient"] }],
+        ingredientKnowledge: [{ nameRu: "Лунная трава" }],
+      }),
+    );
+    const herb = state.itemDefinitions.find((item) => item.id === "лунная-трава");
+
+    expect(herb?.kinds).toEqual(["ingredient"]);
+    expect(herb?.alchemy).toEqual({
+      properties: [],
+      observations: [],
+      propertiesExhausted: false,
+    });
+  });
+
+  it("вещей ещё нет и признаков у записи нет: и то и другое заводится", () => {
+    const moved = fieldsOf(
+      migrateUndoPatch({ ingredientKnowledge: [{ nameRu: "Лунная трава" }] }),
+    );
+
+    expect(moved.itemDefinitions).toEqual([
+      {
+        id: "лунная-трава",
+        nameRu: "Лунная трава",
+        kinds: ["ingredient"],
+        alchemy: { properties: [], observations: [], propertiesExhausted: false },
+      },
+    ]);
+  });
+
+  it("у прежней вещи без признаков появляется ингредиент", () => {
+    const moved = fieldsOf(
+      migrateUndoPatch({
+        itemDefinitions: [{ id: "лунная-трава", nameRu: "Лунная трава", kinds: "не массив" }],
+        ingredientKnowledge: [{ nameRu: "Лунная трава" }],
+      }),
+    );
+
+    expect(moved.itemDefinitions).toEqual([
+      expect.objectContaining({ id: "лунная-трава", kinds: ["ingredient"] }),
+    ]);
+  });
+
+  it("сохранение без прежнего списка не трогается", () => {
+    expect(fieldsOf(migrateCharacterState(modern())).ingredientKnowledge).toBeUndefined();
+  });
+});

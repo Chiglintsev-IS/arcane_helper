@@ -13,6 +13,8 @@ import {
   endConcentration,
   endEffect,
   setArmorClassAdjustment,
+  animalSpeechUnavailability,
+  spendRuneOnAnimalSpeech,
   spendRuneOnWardingSigil,
   startManualEffect,
   wardingSigilAvailable,
@@ -455,6 +457,42 @@ describe("концентрация (FR-080, FR-081)", () => {
 
   it("завершать нечего, если концентрации нет", () => {
     expect(() => endConcentration(session, "manual", occasion)).toThrow(DomainError);
+  });
+});
+
+describe("руна разговора со зверями", () => {
+  it("тратит руну, действия не требует и кладёт эффект на доску", () => {
+    const after = spendRuneOnAnimalSpeech(withTurnTracking(session), occasion);
+
+    expect(after.character.runes.remaining).toBe(2);
+    expect(deriveTurnEconomy(after).reactionAvailable).toBe(true);
+    expect(deriveTurnEconomy(after).actionAvailable).toBe(true);
+    expect(after.character.activeEffects.at(-1)?.nameRu).toBe("Руна «Мяу»");
+    expect(after.character.activeEffects.at(-1)?.duration).toEqual({ type: "minutes", value: 10 });
+    expect(after.character.activeEffects.at(-1)?.isConcentration).toBe(false);
+    expect(after.log.at(-1)?.kind).toBe("rune_spent");
+  });
+
+  it("без рун отказывает причиной и доску не трогает", () => {
+    const drained = spendRuneOnAnimalSpeech(
+      spendRuneOnAnimalSpeech(spendRuneOnAnimalSpeech(session, occasion), occasion),
+      occasion,
+    );
+
+    expect(animalSpeechUnavailability(drained)).toMatch(/Рун не осталось/);
+    expect(() => spendRuneOnAnimalSpeech(drained, occasion)).toThrow(/Рун не осталось/);
+    expect(drained.character.activeEffects).toHaveLength(3);
+  });
+
+  it("пока руны есть, причины отказа нет", () => {
+    expect(animalSpeechUnavailability(session)).toBeNull();
+  });
+
+  it("долгий отдых снимает разговор и возвращает руну", () => {
+    const rested = longRest(spendRuneOnAnimalSpeech(session, occasion), occasion);
+
+    expect(rested.character.runes.remaining).toBe(3);
+    expect(rested.character.activeEffects).toHaveLength(0);
   });
 });
 

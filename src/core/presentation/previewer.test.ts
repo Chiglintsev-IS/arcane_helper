@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSession, type LiveSession } from "@/core/application/session";
+import { Items } from "@/core/domain/items/items";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import {
@@ -284,7 +285,7 @@ describe("цена исследования", () => {
   ) {
     const preview = answerQuestion(alive(character), {
       kind: "research_preview",
-      nameRu: MOON_HERB,
+      itemId: Items.idFromName(MOON_HERB),
       number,
       rarity,
       direction,
@@ -334,5 +335,81 @@ describe("цена исследования", () => {
       { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
     ]);
     expect(cost(3, "common", "potions", deep)?.refusalRu).toContain("стационарной лаборатории");
+  });
+});
+
+describe("верстак", () => {
+  type Revealed = Parameters<typeof withIngredientKnowledge>[2];
+
+  const HEALING: Revealed = [{ number: 1, nameRu: "Лечение здоровья", rarity: "common" }];
+  const POISONED: Revealed = [
+    { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+    { number: 2, nameRu: "Ослабление характеристики", rarity: "uncommon" },
+  ];
+  const KINDS = ["Лунная трава", "Багровый корень"];
+  const KIND_IDS = KINDS.map((nameRu) => Items.idFromName(nameRu));
+
+  const FORMULA = {
+    kinds: KIND_IDS,
+    mainProperty: "Лечение здоровья",
+    duration: null,
+    onset: "Немедленно",
+    fullRepeats: 0,
+    reach: "Одна цель, предмет или участок",
+    application: "Выпить, накормить или нанести на неподвижную цель",
+    resistance: "Положительное воздействие на добровольную цель",
+    purification: null,
+    suppressed: [],
+    limitations: [],
+  };
+
+  function knowing(properties: Revealed): LiveSession {
+    return alive(
+      KINDS.reduce(
+        (character, kind) => withIngredientKnowledge(character, kind, properties),
+        createThorne(),
+      ),
+    );
+  }
+
+  it("оставшееся ядовитое свойство закрывает работу словами, а не числом", () => {
+    const preview = answerQuestion(
+      knowing(POISONED),
+      { kind: "recipe_preview", formula: FORMULA, portions: 1 },
+      NOW,
+    );
+
+    expect(preview.kind).toBe("recipe_preview");
+    if (preview.kind !== "recipe_preview") return;
+    expect(preview.refusalRu).toMatch(/ядов не варят/);
+    expect(preview.batch).toBeNull();
+  });
+
+  it("свойство без названной редкости едет без неё, а сложность отказывает причиной", () => {
+    const unnamed: Revealed = [{ number: 1, nameRu: "Лечение здоровья" }];
+    const preview = answerQuestion(
+      knowing(unnamed),
+      { kind: "recipe_preview", formula: FORMULA, portions: 1 },
+      NOW,
+    );
+
+    expect(preview.kind).toBe("recipe_preview");
+    if (preview.kind !== "recipe_preview") return;
+    expect(preview.matches[0]?.rarity).toBeUndefined();
+    expect(preview.difficulty).toBeNull();
+    expect(preview.refusalRu).toMatch(/не названа редкость/);
+  });
+
+  it("состав без ядовитого свойства считается целиком", () => {
+    const preview = answerQuestion(
+      knowing(HEALING),
+      { kind: "recipe_preview", formula: FORMULA, portions: 1 },
+      NOW,
+    );
+
+    expect(preview.kind).toBe("recipe_preview");
+    if (preview.kind !== "recipe_preview") return;
+    expect(preview.refusalRu).toBeUndefined();
+    expect(preview.batch).not.toBeNull();
   });
 });

@@ -2,14 +2,6 @@ import type { PreviewOf } from "@/contract/questions";
 
 import { CURRENCY_ABBREVIATIONS, withPlural } from "@/shared/language";
 
-export const RARITY_LABELS: Readonly<Record<string, string>> = {
-  common: "обычное",
-  uncommon: "необычное",
-  rare: "редкое",
-  veryRare: "очень редкое",
-  legendary: "легендарное",
-};
-
 export const TIER_LABELS: Readonly<Record<string, string>> = {
   plain: "обычная",
   amplified: "усиленная",
@@ -21,14 +13,6 @@ export const DIRECTION_LABELS: Readonly<Record<string, string>> = {
   poisons: "синтез ядов",
   transmutation: "трансмутация",
 };
-
-export function propertyNumberRu(number: number): string {
-  return `${number}-е`;
-}
-
-export function labelled(labels: Readonly<Record<string, string>>, code: string): string {
-  return labels[code] ?? code;
-}
 
 const MINUTES_PER_HOUR = 60;
 

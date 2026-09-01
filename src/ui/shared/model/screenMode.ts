@@ -4,7 +4,9 @@ export const SCREEN_MODES = [
   "book",
   "sheet",
   "things",
-  "crafting",
+  "alchemy",
+  "smithing",
+  "familiar",
   "rest",
   "log",
 ] as const;

@@ -13,6 +13,7 @@ import {
   withBloodPaid,
   withDamage,
   withSpentSlots,
+  withoutRunes,
   withoutSlots,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 
@@ -759,6 +760,33 @@ describe("«Книга» говорит только о книге (FR-217)", ()
     const inFight = screen.getByRole("region", { name: "Ресурсы" });
     expect(inFight.textContent).toContain("Руны");
     expect(inFight.textContent).toContain("3/3");
+  });
+});
+
+describe("руна разговора со зверями", () => {
+  it("строка стоит среди бесплатного и активация тратит только руну", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+
+    const list = within(screen.getByLabelText(/^Заклинания/));
+    expect(list.getByText("Руна «Мяу»")).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: /Руна «Мяу»/ }));
+    await user.click(screen.getByRole("button", { name: "Активировать" }));
+
+    expect(shown(stores).resources.runes.remaining).toBe(2);
+    expect(shown(stores).turn.actionAvailable).toBe(true);
+    expect(screen.getByLabelText("Действует").textContent).toContain("Руна «Мяу»");
+  });
+
+  it("руны кончились — строка остаётся, а отказ называет причину", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<GameScreen />, withoutRunes(createThorne()));
+
+    await user.click(screen.getByRole("button", { name: /Руна «Мяу»/ }));
+    await user.click(screen.getByRole("button", { name: "Активировать" }));
+
+    expect(screen.getByRole("alert").textContent).toContain("Рун не осталось");
   });
 });
 

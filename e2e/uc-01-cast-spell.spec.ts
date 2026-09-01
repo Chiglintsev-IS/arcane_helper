@@ -417,10 +417,10 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Деньги" })).toBeVisible();
   await scan("сумка");
 
-  await page.getByRole("radio", { name: "Надето" }).click();
+  await page.getByRole("radio", { name: "Экипировка" }).click();
   await expect(page.getByRole("heading", { name: "Защита" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Снять один: Плащ защиты" })).toBeVisible();
-  await scan("надетое");
+  await scan("экипировка");
 
   await page.getByRole("radio", { name: "Расходники" }).click();
   await page.getByRole("textbox", { name: "Новый расходник" }).fill("Зелье лечения");
@@ -481,7 +481,17 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
     await switchMode(page, /^Игра/);
     await scan(`${scheme}: игра`);
 
-    for (const mode of ["Книга", "Лог", "Вещи", "Привал", "Лист", "Ремесло", "Заметки"]) {
+    for (const mode of [
+      "Книга",
+      "Лог",
+      "Вещи",
+      "Привал",
+      "Лист",
+      "Алхимия",
+      "Кузнечное дело",
+      "Фамильяр",
+      "Заметки",
+    ]) {
       await switchMode(page, new RegExp(`^${mode}`));
       await scan(`${scheme}: ${mode.toLowerCase()}`);
     }
@@ -602,5 +612,5 @@ test("search reaches a row without scrolling", async ({ page }) => {
   await lightning.click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await expect(page.getByRole("searchbox", { name: "Поиск по названию" })).toBeHidden();
-  await expect(list.getByRole("listitem")).toHaveCount(19);
+  await expect(list.getByRole("listitem")).toHaveCount(20);
 });

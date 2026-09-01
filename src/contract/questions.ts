@@ -28,12 +28,13 @@ export const questionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("recipe_preview"),
     formula: z.looseObject({}),
     portions: numeric,
+    rolled: numeric.optional(),
   }),
   z.object({
     kind: z.literal("research_preview"),
-    nameRu: word,
+    itemId: word,
     number: numeric,
-    rarity: word,
+    rarity: word.optional(),
     direction: word,
   }),
   z.object({ kind: z.literal("export_preview") }),
@@ -103,7 +104,7 @@ export const previewSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("recipe_preview"),
     matches: z.array(
-      z.object({ nameRu: word, rarity: word, sources: z.array(word), tier: word }),
+      z.object({ nameRu: word, rarity: word.optional(), sources: z.array(word), tier: word }),
     ),
     difficulty: z
       .object({
@@ -115,7 +116,7 @@ export const previewSchema = z.discriminatedUnion("kind", [
     batch: z
       .object({ minutes: whole, consumablesRu: word, consumablesGold: whole, units: whole })
       .nullable(),
-    check: z.object({ bonus: whole, unstudied: z.array(word) }).nullable(),
+    check: z.object({ bonus: whole, unstudied: z.array(word), mishapAwaited: z.boolean() }).nullable(),
     known: z.boolean(),
     refusalRu: word.optional(),
   }),

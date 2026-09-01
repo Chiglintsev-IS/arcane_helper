@@ -81,7 +81,6 @@ describe("«Сумка» в «Вещах»", () => {
     const filters = within(screen.getByRole("radiogroup", { name: "Что в рюкзаке" }));
     expect(filters.getAllByRole("radio").map((button) => button.textContent)).toEqual([
       "Всё",
-      "Надето",
       "Экипировка",
       "Расходники",
       "Ингредиенты",
@@ -134,11 +133,11 @@ describe("«Сумка» в «Вещах»", () => {
     expect(shownNames().join(" ")).not.toContain(potion.nameRu);
   });
 
-  it("«Надето» показывает надетое и защиту, «Всё» защиту не показывает", () => {
+  it("«Экипировка» показывает надетое и защиту, «Всё» защиту не показывает", () => {
     const character = withStock([{ definition: ring, bag: 1, worn: 1 }]);
 
     const { rerender } = render(
-      <Bag bag={toBagView(character, spells)} {...NOOP} filter="worn" />,
+      <Bag bag={toBagView(character, spells)} {...NOOP} filter="gear" />,
     );
     expect(screen.getByRole("heading", { name: "Защита" })).toBeDefined();
     expect(shownNames().join(" ")).toContain(ring.nameRu);
@@ -211,11 +210,6 @@ describe("«Сумка» в «Вещах»", () => {
 
     await user.type(screen.getByLabelText("Новый расходник"), "{Enter}");
     expect(onAddItem).toHaveBeenCalledTimes(1);
-  });
-
-  it("надетое заводить нечем: его берут из того, что уже при себе", () => {
-    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} filter="worn" />);
-    expect(screen.queryByRole("textbox")).toBeNull();
   });
 
   it("пустой список говорит, чего в нём нет", () => {

@@ -83,6 +83,18 @@ describe("снаряжение", () => {
     expect(bonusFor(taken.contributions(items(ring)), "armorClass")).toBe(0);
   });
 
+  it("запас ставится числом сразу, а не по одной штуке", () => {
+    const counted = gear().setBagCount("ring", 32);
+    expect(counted.bagCount("ring")).toBe(32);
+    expect(counted.setBagCount("ring", 0).bagCount("ring")).toBe(0);
+  });
+
+  it("запас числом не бывает отрицательным, дробным и запредельным", () => {
+    expect(() => gear().setBagCount("ring", -1)).toThrow(DomainError);
+    expect(() => gear().setBagCount("ring", 1.5)).toThrow(/целое от нуля/);
+    expect(() => gear().setBagCount("ring", 1_000_000)).toThrow(/не хранится/);
+  });
+
   it("лежащее в сумке вклада не приносит", () => {
     const stocked = gear().adjustBagCount("ring", 1);
     expect(stocked.contributions(items(ring))).toEqual(gear().contributions(items(ring)));
