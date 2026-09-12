@@ -18,6 +18,7 @@ import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { RULE_BETWEEN } from "@/ui/shared/ui/rule";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function ingredientPropertiesName(nameRu: string): string {
@@ -72,7 +73,7 @@ function PortionSize({
           onKeyDown={(event) => {
             if (event.key === "Enter") commit();
           }}
-          className={`min-h-11 w-20 px-2 text-center text-base tabular-nums ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-20 px-2 text-center ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
         />
       </div>
       <p className="text-xs leading-snug text-ink-quiet">
@@ -273,7 +274,7 @@ export function RevealPropertySheet({
             <select
               value={String(number)}
               onChange={(event) => setChosenNumber(Number(event.target.value))}
-              className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
+              className={`min-h-11 w-full px-2 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
             >
               {ingredient.researchNumbers.map((option) => (
                 <option key={option} value={String(option)}>

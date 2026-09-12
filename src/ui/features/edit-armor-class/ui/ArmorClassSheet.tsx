@@ -4,6 +4,7 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, useState } from "react";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export const ARMOR_CLASS_ADJUSTMENT = "Поправка";
@@ -41,7 +42,7 @@ export function ArmorClassSheet({
           inputMode="numeric"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          className={`min-h-11 px-3 text-base tabular-nums ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
         />
       </label>
 

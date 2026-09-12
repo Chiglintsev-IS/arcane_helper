@@ -8,6 +8,7 @@ import { timeRu } from "@/ui/shared/lib/timeRu";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 type WorldNote = Snapshot["notes"][number];
@@ -122,7 +123,7 @@ export function WorldNotes({
               onKeyDown={(event) => {
                 if (event.key === "Escape") setQuery(null);
               }}
-              className={`min-h-11 w-full px-3 text-sm outline-none ${SURFACE_CONTROL}`}
+              className={`min-h-11 w-full px-3 ${FIELD_TEXT} outline-none ${SURFACE_CONTROL}`}
             />
           )}
         </div>

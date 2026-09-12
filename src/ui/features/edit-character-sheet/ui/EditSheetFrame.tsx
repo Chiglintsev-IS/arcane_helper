@@ -4,6 +4,7 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, type ReactNode } from "react";
 
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function EditSheetFrame({
@@ -82,7 +83,7 @@ export function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
-          className={`min-h-11 w-20 px-3 text-base tabular-nums ${
+          className={`min-h-11 w-20 px-3 ${FIELD_TEXT} tabular-nums ${
           reasonRu === null ? SURFACE_GROUP : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`
           }`}
         />
@@ -119,7 +120,7 @@ export function TextField({
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`min-h-11 px-3 text-base ${wide ? "min-w-0 flex-1" : "w-40"} ${SURFACE_CONTROL}`}
+        className={`min-h-11 px-3 ${FIELD_TEXT} ${wide ? "min-w-0 flex-1" : "w-40"} ${SURFACE_CONTROL}`}
       />
     </label>
   );

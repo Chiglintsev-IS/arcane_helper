@@ -10,6 +10,7 @@ import {
   statLabel,
 } from "@/ui/entities/character/lib/labels";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 const SAVES_FAMILY = "saves";
@@ -56,7 +57,7 @@ export function StatPicker({
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className={`min-h-11 px-3 ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
         />
       </label>
 

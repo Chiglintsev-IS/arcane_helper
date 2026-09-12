@@ -9,6 +9,7 @@ import { StockControls } from "@/ui/entities/character/ui/StockControls";
 import { Choices } from "@/ui/shared/ui/Choices";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { RULE_BETWEEN } from "@/ui/shared/ui/rule";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export const BASE_FILTERS = [
@@ -106,7 +107,7 @@ export function ItemBase({
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className={`min-h-11 px-3 ${SURFACE_CONTROL}`}
+          className={`min-h-11 px-3 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
         />
       </label>
 

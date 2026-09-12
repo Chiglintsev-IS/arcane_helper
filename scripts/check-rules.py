@@ -27,7 +27,10 @@
   6. Линейка держит структуру и приходит от своего владельца; ступень подложки — от владельца
      ступеней. Линейка притягивает взгляд, и набранная на месте расходится с соседним экраном
      толщиной, стилем и оттенком — молча и по одной правке за раз.
-  7. Отображение не обрезает дробный ввод сам: ни `Number.parseInt`/`Number.parseFloat`, ни голые
+  7. Размер текста в поле приходит от владельца полей: Safari на iPhone приближает страницу при
+     фокусе в поле мельче 16 px и обратно её не отпускает, а набранный на месте размер расходится
+     с этим правилом молча — и ловится не прогоном, а руками игрока за столом.
+  8. Отображение не обрезает дробный ввод сам: ни `Number.parseInt`/`Number.parseFloat`, ни голые
      `parseInt`/`parseFloat` не встречаются в `src/ui/**`. Дробное доходит до владельца как есть —
      обрезать его до целого молча вправе только тот, кто отвечает за инвариант целости.
 
@@ -78,6 +81,13 @@ LANGUAGE_OWNER = "src/shared/language.ts"
 # Владелец слов на кнопках: одно дело зовётся одним словом на всех экранах сразу.
 BUTTON_LABELS_OWNER = "src/ui/shared/ui/buttonLabels.ts"
 BUTTON_LABELS = ("Сохранить", "Подтвердить", "Отмена", "Вернуть", "Убрать")
+
+# Владелец размера текста в поле: поле мельче 16 px приближает страницу на iPhone.
+FIELD_TEXT_OWNER = "src/ui/shared/ui/field.ts"
+# Поля, которым размер текста нужен: набирают в них с клавиатуры.
+TYPED_CONTROL = re.compile(r"<(input|select|textarea)\b")
+# Поля без клавиатуры: у отметки и выбора файла размер текста ничего не приближает.
+UNTYPED_CONTROL = re.compile(r'type=\"(checkbox|radio|file)\"')
 
 # Владелец линеек: их толщину, стиль и цвет называет один модуль, остальные читают.
 RULE_OWNER = "src/ui/shared/ui/rule.ts"
@@ -320,6 +330,34 @@ def check_surface_owner(paths: list[pathlib.Path]) -> None:
                     errors.append(f"{path}:{number}: ступень мимо владельца — «{token}»")
 
 
+def tag_attributes(text: str, start: int) -> str:
+    """Свойства тега целиком: стрелка в обработчике — не конец тега, и скобки это знают."""
+    depth = 0
+    for position in range(start, len(text)):
+        symbol = text[position]
+        if symbol == "{":
+            depth += 1
+        elif symbol == "}":
+            depth -= 1
+        elif symbol == ">" and depth == 0:
+            return text[start:position]
+    return text[start:]
+
+
+def check_field_text_owner(paths: list[pathlib.Path]) -> None:
+    """Размер текста в поле приходит от владельца полей, а не от соседнего текста."""
+    for path in paths:
+        if not str(path).startswith("src/ui/") or str(path) == FIELD_TEXT_OWNER:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for control in TYPED_CONTROL.finditer(text):
+            attributes = tag_attributes(text, control.end())
+            if UNTYPED_CONTROL.search(attributes) or "FIELD_TEXT" in attributes:
+                continue
+            number = text.count("\n", 0, control.start()) + 1
+            errors.append(f"{path}:{number}: размер текста поля мимо владельца — <{control.group(1)}>")
+
+
 def check_owned_literals(paths: list[pathlib.Path]) -> None:
     """Сокращение монеты, размер кости и слово кнопки приходят от владельца, а не набираются."""
     for path in paths:
@@ -344,6 +382,7 @@ def main() -> int:
     check_owned_literals(paths)
     check_rule_owner(paths)
     check_surface_owner(paths)
+    check_field_text_owner(paths)
     check_invariants_not_in_ui(paths)
     check_no_parse_to_integer_in_ui(paths)
     check_state_by_operations(all_paths())

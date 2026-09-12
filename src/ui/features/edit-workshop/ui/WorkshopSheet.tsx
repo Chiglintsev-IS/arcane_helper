@@ -6,6 +6,7 @@ import type { CommandOf } from "@/contract/commands";
 import type { ChoicesView, CraftingView } from "@/contract/views";
 
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 const NO_KIT_RU = "Набора нет";
@@ -50,7 +51,7 @@ export function WorkshopSheet({
         <select
           value={apparatus}
           onChange={(event) => setApparatus(event.target.value)}
-          className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-full px-2 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
         >
           <option value="">{NO_KIT_RU}</option>
           {choices.apparatusGrades.map((grade) => (

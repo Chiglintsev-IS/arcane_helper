@@ -15,6 +15,7 @@ import {
 } from "@/ui/entities/spell/lib/format";
 import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PAGE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 const MUTED = "text-ink-quiet";
@@ -187,7 +188,7 @@ export function SpellCardDetails({
             onChange={(event) => onNoteChange(event.target.value)}
             rows={2}
             placeholder="Домашнее правило или напоминание"
-            className={`p-2 text-sm ${SURFACE_CONTROL}`}
+            className={`p-2 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
           />
         </label>
       </div>

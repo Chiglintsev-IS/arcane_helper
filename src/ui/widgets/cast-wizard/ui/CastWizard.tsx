@@ -17,6 +17,7 @@ import {
 import { useDraft, useStores } from "@/ui/shared/model/storeContext";
 import { withPlural } from "@/shared/language";
 import { usePreview } from "@/ui/shared/model/usePreview";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 type CastPreview = PreviewOf<"cast_preview">;
@@ -287,7 +288,7 @@ function HitDiceStep({
             onChange={(event) =>
               onRolled(event.target.value === "" ? null : Number(event.target.value))
             }
-            className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
+            className={`min-h-11 px-3 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
           />
           {hitDice.rollPossible === false ? (
             <span id="hit-dice-rolled-hint" className="text-xs text-danger">

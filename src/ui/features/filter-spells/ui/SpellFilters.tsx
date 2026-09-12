@@ -4,6 +4,7 @@ import { castingTimeBadge, combatRole, levelChipLabel } from "@/ui/entities/spel
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
 import { type SpellFilters as Filters, type DividingCategories } from "@/ui/features/filter-spells/model/filters";
 import { toggleValue } from "@/ui/features/filter-spells/model/filters";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 import { RULE_MARK } from "@/ui/shared/ui/rule";
 
@@ -87,7 +88,7 @@ export function SpellFilters({
             onKeyDown={(event) => {
               if (event.key === "Escape") onSearchToggle();
             }}
-            className={`min-h-11 min-w-0 grow bg-transparent px-3 text-sm outline-none ${SURFACE_CONTROL}`}
+            className={`min-h-11 min-w-0 grow bg-transparent px-3 ${FIELD_TEXT} outline-none ${SURFACE_CONTROL}`}
           />
         )}
         {searchOpen ? null : (

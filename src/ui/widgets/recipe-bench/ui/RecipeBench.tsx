@@ -7,6 +7,7 @@ import { durationPhrase } from "@/ui/entities/spell/lib/format";
 import { TIER_LABELS, minutesRu } from "@/ui/entities/crafting/lib/labels";
 import { labelled } from "@/ui/shared/lib/alchemyLabels";
 import { signed, withPlural } from "@/shared/language";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export type RecipeDraft = {
@@ -52,7 +53,7 @@ function Field({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
+        className={`min-h-11 w-full px-2 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
       >
         {empty === undefined ? null : <option value="">{empty}</option>}
         {options.map((option) => (
@@ -278,7 +279,7 @@ export function RecipeBench({
           inputMode="numeric"
           value={portions}
           onChange={(event) => onPortions(event.target.value)}
-          className={`min-h-11 w-20 px-2 text-right text-sm tabular-nums ${SURFACE_CONTROL}`}
+          className={`min-h-11 w-20 px-2 text-right ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
         />
       </label>
 
@@ -310,7 +311,7 @@ export function RecipeBench({
             inputMode="numeric"
             value={rolledText}
             onChange={(event) => onRolled(event.target.value)}
-            className={`min-h-11 w-full px-2 text-sm tabular-nums ${SURFACE_CONTROL}`}
+            className={`min-h-11 w-full px-2 ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
           />
         </label>
         {preview?.check?.mishapAwaited !== true ? null : (
@@ -321,7 +322,7 @@ export function RecipeBench({
               inputMode="numeric"
               value={mishapText}
               onChange={(event) => onMishap(event.target.value)}
-              className={`min-h-11 w-full px-2 text-sm tabular-nums ${SURFACE_CONTROL}`}
+              className={`min-h-11 w-full px-2 ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
             />
           </label>
         )}

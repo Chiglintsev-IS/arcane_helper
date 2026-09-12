@@ -9,6 +9,7 @@ import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { NOTHING_REVEALED, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { StatPicker } from "./StatPicker";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
 type ItemPatch = {
@@ -122,7 +123,7 @@ function Counter({
             onKeyDown={(event) => {
               if (event.key === "Enter") commit();
             }}
-            className={`min-h-11 w-16 px-2 text-center text-base tabular-nums ${SURFACE_CONTROL}`}
+            className={`min-h-11 w-16 px-2 text-center ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
           />
         )}
         <button

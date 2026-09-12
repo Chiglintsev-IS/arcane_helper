@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 export function QuickAddField({
@@ -28,7 +29,7 @@ export function QuickAddField({
           type="text"
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
+          className={`min-w-0 flex-1 bg-transparent py-2 ${FIELD_TEXT} outline-none`}
         />
       </label>
     </form>

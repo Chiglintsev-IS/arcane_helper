@@ -7,6 +7,7 @@ import type { SheetView } from "@/contract/views";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 type Kind = "damage" | "heal" | "temporary" | "maximum";
@@ -37,7 +38,7 @@ const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
   temporary: "Временные хиты",
 };
 
-const fieldClass = `min-h-11 px-3 text-base tabular-nums ${SURFACE_CONTROL}`;
+const fieldClass = `min-h-11 px-3 tabular-nums ${SURFACE_CONTROL}`;
 const quietBorder = SURFACE_GROUP;
 
 function NumberField({
@@ -66,7 +67,7 @@ function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
-          className={`${fieldClass} ${reasonRu === null ? quietBorder : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`}`}
+          className={`${FIELD_TEXT} ${fieldClass} ${reasonRu === null ? quietBorder : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`}`}
         />
       </label>
       {reasonRu === null ? null : (

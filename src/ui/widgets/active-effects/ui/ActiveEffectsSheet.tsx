@@ -6,6 +6,7 @@ import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 import { MARKS_LABEL } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export const ACTIVE_SHEET_LABEL = "Действует";
@@ -33,7 +34,7 @@ function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
           type="text"
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none"
+          className={`min-w-0 flex-1 bg-transparent py-2 ${FIELD_TEXT} outline-none`}
         />
       </label>
     </form>

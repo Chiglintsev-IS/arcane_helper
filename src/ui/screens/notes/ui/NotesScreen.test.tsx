@@ -73,6 +73,21 @@ describe("режим «Заметки» (FR-321)", () => {
     expect(screen.getByText(EMPTY_RU)).toBeDefined();
   });
 
+  it("из правки выходят кнопкой: клавиши отмены на телефоне нет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<NotesScreen />);
+    await write(user, BARON);
+
+    await user.click(screen.getByRole("button", { name: `Правка: ${BARON}` }));
+    await user.type(
+      screen.getByRole("textbox", { name: `Правка: ${BARON}` }),
+      " и не сдержал",
+    );
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+
+    expect(screen.getByRole("button", { name: `Правка: ${BARON}` })).toBeDefined();
+  });
+
   it("поле правки заметки высотой в текст", async () => {
     const user = userEvent.setup();
     await renderWithStores(<NotesScreen />);

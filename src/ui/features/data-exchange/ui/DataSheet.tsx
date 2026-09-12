@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 
 import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
 import { StartOver } from "@/ui/features/data-exchange/ui/StartOver";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function DataSheet({
@@ -83,7 +84,7 @@ export function DataSheet({
           onChange={(event) => setRaw(event.target.value)}
           rows={4}
           aria-label="Данные для загрузки"
-          className={`p-2 font-mono text-xs ${SURFACE_CONTROL}`}
+          className={`p-2 font-mono ${FIELD_TEXT} ${SURFACE_CONTROL}`}
         />
       </label>
 
