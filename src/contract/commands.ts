@@ -82,6 +82,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("mark_properties_exhausted", { itemId: word, exhausted: z.boolean() }),
   command("reveal_property", { itemId: word, number: numeric, propertyRu: word }),
   command("drop_property", { itemId: word, number: numeric }),
+  command("set_portion_size", { itemId: word, pieces: numeric }),
 
   command("note_observation", { itemId: word, textRu: word }),
   command("rewrite_observation", { itemId: word, observationId: word, textRu: word }),

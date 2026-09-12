@@ -507,6 +507,14 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
       await switchMode(page, new RegExp(`^${mode}`));
       await scan(`${scheme}: ${mode.toLowerCase()}`);
     }
+
+    // Вкладки алхимии показывают разное: таблицы справочника панель режимов сама не откроет.
+    await switchMode(page, /^Алхимия/);
+    for (const tab of ["Верстак", "Справочник"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
+      await scan(`${scheme}: алхимия — ${tab.toLowerCase()}`);
+    }
   }
 });
 

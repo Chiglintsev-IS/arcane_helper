@@ -93,15 +93,23 @@ export class Equipment {
     });
   }
 
+  /**
+   * Слова отказа, не совершая траты: спросивший до траты и потративший слышат от сумки одно и то
+   * же — иначе предупреждение экрана разошлось бы с настоящим пределом запаса.
+   */
+  shortageRu(itemId: string, spend: number): string | null {
+    return this.bagCount(itemId) < spend
+      ? `В сумке ${this.bagCount(itemId)}, столько не потратить`
+      : null;
+  }
+
   adjustBagCount(itemId: string, delta: number): Equipment {
     if (!Number.isInteger(delta) || delta === 0) {
       throw new DomainError(`Приращение запаса должно быть целым и ненулевым, получено: ${delta}`);
     }
-    const count = this.bagCount(itemId) + delta;
-    if (count < 0) {
-      throw new DomainError(`В сумке ${this.bagCount(itemId)}, столько не потратить`);
-    }
-    return this.storedBag(itemId, count);
+    const shortage = delta < 0 ? this.shortageRu(itemId, -delta) : null;
+    if (shortage !== null) throw new DomainError(shortage);
+    return this.storedBag(itemId, this.bagCount(itemId) + delta);
   }
 
   setBagCount(itemId: string, count: number): Equipment {

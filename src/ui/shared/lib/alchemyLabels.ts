@@ -11,3 +11,6 @@ export function propertyNumberRu(number: number): string {
 }
 
 export const NOTHING_REVEALED = "Ничего не раскрыто";
+
+/** Слова отметки стола: их произносит и переключатель в шторке, и запись вида в списке. */
+export const PROPERTIES_EXHAUSTED = "Свойств у вида больше нет";

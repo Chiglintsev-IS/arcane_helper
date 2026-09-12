@@ -33,6 +33,30 @@ function tooHardResearchRefusal(difficulty: number, hardest: number): string {
   return `Сложность исследования ${difficulty} выше предела оснащения ${hardest}`;
 }
 
+export type ResearchStep = {
+  readonly number: number;
+  readonly minutes: number;
+  readonly difficulty: number;
+  readonly laboratory: boolean;
+  readonly portionsOnSuccess: number;
+  readonly portionsOnFailure: number;
+  readonly consumables: boolean;
+  readonly rawSample: boolean;
+};
+
+/** Глубина исследования перечнем: та же таблица, по которой считается цена очередного номера. */
+export function researchSteps(): readonly ResearchStep[] {
+  return RESEARCH_STEPS.map((step, index) => {
+    const number = index + RAW_SAMPLE_NUMBER;
+    return {
+      ...step,
+      number,
+      consumables: number >= CONSUMABLES_FROM_NUMBER,
+      rawSample: number === RAW_SAMPLE_NUMBER,
+    };
+  });
+}
+
 export type ResearchPlan = {
   readonly number: number;
   readonly minutes: number;

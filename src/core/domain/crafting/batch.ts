@@ -37,6 +37,30 @@ function oversizedBatchRefusal(portions: number, batch: number): string {
   return `Заложено порций: ${portions}, а предел партии этого оснащения — ${batch}`;
 }
 
+export type BatchTimeBand = {
+  readonly fromDifficulty: number;
+  readonly toDifficulty: number;
+  readonly minutes: number;
+};
+
+/** Полосы времени: пятёрка сложности — вдвое дольше, и выше предела оснащения полос не бывает. */
+export function batchTimeBands(hardest: number): readonly BatchTimeBand[] {
+  const bands: BatchTimeBand[] = [];
+  for (let from = LOWEST_DIFFICULTY; from <= hardest; from += DIFFICULTY_BAND) {
+    bands.push({
+      fromDifficulty: from,
+      toDifficulty: Math.min(from + DIFFICULTY_BAND - 1, hardest),
+      minutes: batchMinutes(from),
+    });
+  }
+  return bands;
+}
+
+export const BATCH_TARIFFS = {
+  portionsPerBonusUnit: PORTIONS_PER_BONUS_UNIT,
+  portionsPerConsumableKit: PORTIONS_PER_CONSUMABLE_KIT,
+} as const;
+
 export type Batch = {
   readonly difficulty: RecipeDifficulty;
   readonly minutes: number;

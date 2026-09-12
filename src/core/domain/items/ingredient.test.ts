@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PROPERTY_NUMBERS, revealedPropertyOf } from "./ingredient";
+import { NO_ALCHEMY, revealedPropertyOf, unrevealedNumbers } from "./ingredient";
 import { itemDefinitionOf } from "./schema";
 
 function ingredientWith(properties: readonly unknown[]): unknown {
@@ -83,7 +83,7 @@ describe("алхимия ингредиента", () => {
   });
 
   it("глубина спрятанного считается от первого до четвёртого номера", () => {
-    expect(PROPERTY_NUMBERS).toEqual([1, 2, 3, 4]);
+    expect(unrevealedNumbers(NO_ALCHEMY)).toEqual([1, 2, 3, 4]);
   });
 
   it("раскрытое свойство приходит разобранным, а имя ему даёт стол", () => {

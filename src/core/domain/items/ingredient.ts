@@ -6,7 +6,10 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 const DEEPEST_PROPERTY_NUMBER = 4;
 
-export const PROPERTY_NUMBERS: readonly number[] = Array.from(
+/** Порция вида — одна штука, пока стол не назвал другую меру: у большинства ингредиентов так. */
+const SMALLEST_PORTION_PIECES = 1;
+
+const PROPERTY_NUMBERS: readonly number[] = Array.from(
   { length: DEEPEST_PROPERTY_NUMBER },
   (_unused, index) => index + 1,
 );
@@ -21,6 +24,10 @@ function repeatedPropertyRefusal(name: string): string {
 
 function unrevealedNumberRefusal(nameRu: string, number: number): string {
   return `у вида «${nameRu}» под номером ${number} ничего не раскрыто`;
+}
+
+function portionSizeRefusal(pieces: number): string {
+  return `Штук в порции — целое от одного, получено: ${pieces}`;
 }
 
 function observationTakenRefusal(id: string): string {
@@ -47,6 +54,7 @@ type AlchemyFields = {
   properties: readonly z.infer<typeof revealedPropertyFields>[];
   observations: readonly z.infer<typeof observationFields>[];
   propertiesExhausted: boolean;
+  piecesPerPortion: number;
 };
 
 function inNumberOrder(alchemy: AlchemyFields): AlchemyFields {
@@ -61,6 +69,11 @@ export const ingredientAlchemySchema = z
     properties: z.array(revealedPropertyFields).default([]),
     observations: z.array(observationFields).default([]),
     propertiesExhausted: z.boolean().default(false),
+    piecesPerPortion: z
+      .number()
+      .int()
+      .min(SMALLEST_PORTION_PIECES)
+      .default(SMALLEST_PORTION_PIECES),
   })
   .transform(inNumberOrder)
   .superRefine((alchemy, context) => {
@@ -98,7 +111,33 @@ export const NO_ALCHEMY: IngredientAlchemy = {
   properties: [],
   observations: [],
   propertiesExhausted: false,
+  piecesPerPortion: SMALLEST_PORTION_PIECES,
 };
+
+/** Номера, под которыми у вида ещё ничего не записано: первый из них и есть следующий по порядку. */
+export function unrevealedNumbers(alchemy: IngredientAlchemy): readonly number[] {
+  const revealed = new Set(alchemy.properties.map((property) => property.number));
+  return PROPERTY_NUMBERS.filter((number) => !revealed.has(number));
+}
+
+/** Сколько штук сумки составляют одну порцию вида: меру называет стол, и у каждого вида свою. */
+export function withPortionSize(
+  alchemy: IngredientAlchemy,
+  piecesPerPortion: number,
+): IngredientAlchemy {
+  if (!Number.isInteger(piecesPerPortion) || piecesPerPortion < SMALLEST_PORTION_PIECES) {
+    throw new DomainError(portionSizeRefusal(piecesPerPortion));
+  }
+  return { ...alchemy, piecesPerPortion };
+}
+
+export function piecesForPortions(alchemy: IngredientAlchemy, portions: number): number {
+  return alchemy.piecesPerPortion * portions;
+}
+
+export function portionsFromPieces(alchemy: IngredientAlchemy, pieces: number): number {
+  return Math.floor(pieces / alchemy.piecesPerPortion);
+}
 
 export function withRevealedProperty(
   alchemy: IngredientAlchemy,

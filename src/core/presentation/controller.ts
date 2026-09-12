@@ -32,6 +32,7 @@ import {
   noteIngredient,
   noteObservation,
   revealProperty,
+  setPortionSize,
   rewriteObservation,
   setWorkshop,
 } from "@/core/application/useCases/crafting";
@@ -303,6 +304,10 @@ export function applyCommand(
           },
           occasion,
         ),
+      );
+    case "set_portion_size":
+      return changed(
+        setPortionSize(session, { itemId: command.itemId, pieces: command.pieces }, occasion),
       );
     case "drop_property":
       return changed(

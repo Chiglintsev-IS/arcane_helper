@@ -134,6 +134,28 @@ const recipeFormulaSchema = z.object({
   limitations: z.array(fromTable(LIMITATION_DIFFICULTY, "ограничение")),
 });
 
+export type TierStep = {
+  readonly sources: number;
+  readonly tier: MatchTier;
+  readonly modifier: number;
+};
+
+/** Ступень усиления перечнем: число видов-источников свойства и чего оно стоит. */
+export function tierSteps(fewest: number, most: number): readonly TierStep[] {
+  return Array.from({ length: most - fewest + 1 }, (_unused, index) => {
+    const sources = fewest + index;
+    return { sources, tier: tierOf(sources), modifier: TIER_DIFFICULTY[tierOf(sources)] };
+  });
+}
+
+export const RECIPE_TARIFFS = {
+  base: BASE_DIFFICULTY,
+  lowest: LOWEST_DIFFICULTY,
+  additionalEffect: ADDITIONAL_EFFECT_DIFFICULTY,
+  suppression: SUPPRESSION_DIFFICULTY,
+  mostLimitationRelief: MOST_LIMITATION_RELIEF,
+} as const;
+
 type PricedChoice = { value: string; modifier: number };
 
 function priced(table: Readonly<Record<string, number>>): PricedChoice[] {

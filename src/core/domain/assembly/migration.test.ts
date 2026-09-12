@@ -1011,6 +1011,7 @@ describe("знание об ингредиенте переезжает к ве�
       properties: [],
       observations: [],
       propertiesExhausted: false,
+      piecesPerPortion: 1,
     });
   });
 

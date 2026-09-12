@@ -2,7 +2,11 @@ import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import {
   NO_ALCHEMY,
+  piecesForPortions,
+  portionsFromPieces,
+  unrevealedNumbers,
   withObservation,
+  withPortionSize,
   withRevealedProperty,
   withoutProperty,
   withRewrittenObservation,
@@ -112,6 +116,23 @@ export class Items {
   dropProperty(id: string, number: number): Items {
     const found = this.locatedIngredient(id);
     return this.replacingAlchemy(id, withoutProperty(found.nameRu, this.alchemyOf(id), number));
+  }
+
+  unrevealedNumbers(id: string): readonly number[] {
+    return unrevealedNumbers(this.alchemyOf(id));
+  }
+
+  setPortionSize(id: string, piecesPerPortion: number): Items {
+    return this.replacingAlchemy(id, withPortionSize(this.alchemyOf(id), piecesPerPortion));
+  }
+
+  /** Сумка считает штуки, верстак — порции: перевод между ними знает сам вид. */
+  piecesForPortions(id: string, portions: number): number {
+    return piecesForPortions(this.alchemyOf(id), portions);
+  }
+
+  portionsFromPieces(id: string, pieces: number): number {
+    return portionsFromPieces(this.alchemyOf(id), pieces);
   }
 
   markPropertiesExhausted(id: string, propertiesExhausted: boolean): Items {

@@ -16,6 +16,17 @@ export function minutesRu(minutes: number): string {
 
 const PORTION_FORMS: [string, string, string] = ["порция", "порции", "порций"];
 
+/**
+ * Запас вида: штуки сумки и порции верстака. Совпали числа — мера у вида штучная, и второй раз одно
+ * и то же не называют.
+ */
+export function stockRu(stock: { inBag: number; portionsInBag: number }): string {
+  const inBag = `в сумке ${stock.inBag}`;
+  return stock.inBag === stock.portionsInBag
+    ? inBag
+    : `${inBag} · ${withPlural(stock.portionsInBag, PORTION_FORMS)}`;
+}
+
 export function researchCostRu(plan: NonNullable<PreviewOf<"research_preview">["plan"]>): string {
   const portions =
     plan.portionsOnSuccess === plan.portionsOnFailure

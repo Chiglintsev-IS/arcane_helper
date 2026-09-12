@@ -29,7 +29,6 @@ export const choicesViewSchema = z.object({
   characterLevel: z.object({ minimum: whole, maximum: whole }),
   abilityScore: z.object({ minimum: whole, maximum: whole }),
   apparatusGrades: z.array(word),
-  propertyNumbers: z.array(whole),
   recipeForm: z.object({
     standard: z.object({
       duration: word.nullable(),
@@ -150,15 +149,68 @@ const ingredientKnowledgeViewSchema = z.object({
   itemId: word,
   nameRu: word,
   inBag: whole,
+  piecesPerPortion: whole,
+  portionsInBag: whole,
+  shortageRu: word.nullable(),
+  researchNumbers: z.array(whole),
   properties: z.array(revealedPropertyViewSchema),
   observations: z.array(z.object({ id: word, textRu: word })),
   propertiesExhausted: z.boolean(),
+});
+
+const alchemyHandbookViewSchema = z.object({
+  apparatus: z.array(
+    z.object({
+      nameRu: word,
+      hardest: whole,
+      batch: whole,
+      stationary: z.boolean(),
+      surcharge: whole,
+    }),
+  ),
+  research: z.array(
+    z.object({
+      number: whole,
+      minutes: whole,
+      difficulty: whole,
+      laboratory: z.boolean(),
+      portionsOnSuccess: whole,
+      portionsOnFailure: whole,
+      consumables: z.boolean(),
+      rawSample: z.boolean(),
+    }),
+  ),
+  consumables: z.array(
+    z.object({
+      nameRu: word,
+      fromDifficulty: whole,
+      toDifficulty: whole.nullable(),
+      goldPerStartedHour: whole,
+    }),
+  ),
+  batchTimes: z.array(
+    z.object({ fromDifficulty: whole, toDifficulty: whole, minutes: whole }),
+  ),
+  tiers: z.array(z.object({ sources: whole, tier: word, modifier: whole })),
+  mishaps: z.array(z.object({ fromRolled: whole, toRolled: whole, textRu: word })),
+  tariffs: z.object({
+    fewestKinds: whole,
+    mostKinds: whole,
+    base: whole,
+    lowest: whole,
+    additionalEffect: whole,
+    suppression: whole,
+    mostLimitationRelief: whole,
+    portionsPerBonusUnit: whole,
+    portionsPerConsumableKit: whole,
+  }),
 });
 
 export const craftingViewSchema = z.object({
   ingredients: z.array(ingredientKnowledgeViewSchema),
   workshop: z.object({ apparatusRu: word.nullable() }),
   smithing: z.object({ nameRu: word, noteRu: word }),
+  handbook: alchemyHandbookViewSchema,
 });
 
 export const resourcesViewSchema = z.object({
@@ -419,6 +471,7 @@ export type ItemView = z.infer<typeof itemViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
 export type CraftingView = z.infer<typeof craftingViewSchema>;
 export type IngredientKnowledgeView = z.infer<typeof ingredientKnowledgeViewSchema>;
+export type AlchemyHandbookView = z.infer<typeof alchemyHandbookViewSchema>;
 export type StatChoiceView = z.infer<typeof statChoiceSchema>;
 export type ChoicesView = z.infer<typeof choicesViewSchema>;
 export type AbilityView = z.infer<typeof abilityViewSchema>;

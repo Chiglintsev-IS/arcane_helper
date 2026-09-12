@@ -101,6 +101,7 @@ export const previewSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("recipe_preview"),
+    shortagesRu: z.array(word),
     matches: z.array(
       z.object({ nameRu: word, sources: z.array(word), tier: word }),
     ),

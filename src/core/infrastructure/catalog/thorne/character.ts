@@ -18,6 +18,7 @@ const INGREDIENTS: readonly {
   nameRu: string;
   count: number;
   note?: string;
+  piecesPerPortion?: number;
   revealed?: readonly Revealed[];
   seen?: readonly string[];
 }[] = [
@@ -49,7 +50,7 @@ const INGREDIENTS: readonly {
   {
     nameRu: "Подорожник",
     count: 63,
-    note: "На алхимию тратится 10 штук на 1 порцию",
+    piecesPerPortion: 10,
     revealed: [
       { number: 1, nameRu: "Лечение здоровья" },
       { number: 2, nameRu: "Остановка кровотечения" },
@@ -276,13 +277,14 @@ const RAW: unknown = {
       kinds,
       ...(note === undefined ? {} : { note }),
     })),
-    ...INGREDIENTS.map(({ nameRu, note, revealed, seen }) => ({
+    ...INGREDIENTS.map(({ nameRu, note, piecesPerPortion, revealed, seen }) => ({
       id: Items.idFromName(nameRu),
       nameRu,
       kinds: ["ingredient"],
       ...(note === undefined ? {} : { note }),
       alchemy: {
         properties: revealed ?? [],
+        ...(piecesPerPortion === undefined ? {} : { piecesPerPortion }),
         observations: (seen ?? []).map((textRu, index) => ({
           id: `${Items.idFromName(nameRu)}-${index + 1}`,
           textRu,

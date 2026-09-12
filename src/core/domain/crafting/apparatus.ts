@@ -35,9 +35,32 @@ const APPARATUS_LIMITS = {
 /** Набор один на всю алхимию: направления делят его, как делят стол алхимика. */
 export type Apparatus = ApparatusGrade | undefined;
 
+const IMPROVISED_RU = "Импровизированные сосуды";
+
 const IMPROVISED_LIMITS = { hardest: 15, batch: 1, stationary: false } as const;
 
 const IMPROVISED_DIFFICULTY = 5;
+
+export type ApparatusEntry = ApparatusLimits & {
+  readonly nameRu: string;
+  readonly surcharge: number;
+};
+
+/** Оснащение перечнем: работа без набора — такая же его строка, со своей надбавкой к сложности. */
+export function apparatusEntries(): readonly ApparatusEntry[] {
+  return [
+    ...APPARATUS_GRADES.map((grade) => ({
+      nameRu: grade,
+      ...APPARATUS_LIMITS[grade],
+      surcharge: improvisedDifficulty(grade),
+    })),
+    { nameRu: IMPROVISED_RU, ...IMPROVISED_LIMITS, surcharge: improvisedDifficulty(undefined) },
+  ];
+}
+
+export function hardestPossible(): number {
+  return apparatusEntries().reduce((hardest, one) => Math.max(hardest, one.hardest), 0);
+}
 
 export function apparatusOf(apparatus: Apparatus): ApparatusLimits | undefined {
   return apparatus === undefined ? undefined : APPARATUS_LIMITS[apparatus];

@@ -8,7 +8,6 @@ import {
 } from "@/core/domain/character/abilities";
 import { CREATURE_SIZES } from "@/core/domain/character/schema";
 import { APPARATUS_GRADES } from "@/core/domain/crafting/apparatus";
-import { PROPERTY_NUMBERS } from "@/core/domain/items/ingredient";
 import { RECIPE_CHOICES } from "@/core/domain/crafting/recipe";
 import { SKILL_TRAINING } from "@/core/domain/character/skills";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
@@ -32,7 +31,6 @@ export function toChoicesView(): ChoicesView {
     characterLevel: { minimum: MINIMUM_CHARACTER_LEVEL, maximum: MAXIMUM_CHARACTER_LEVEL },
     abilityScore: { minimum: MINIMUM_ABILITY_SCORE, maximum: MAXIMUM_ABILITY_SCORE },
     apparatusGrades: [...APPARATUS_GRADES],
-    propertyNumbers: [...PROPERTY_NUMBERS],
     recipeForm: RECIPE_CHOICES,
   };
 }

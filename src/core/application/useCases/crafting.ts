@@ -1,4 +1,5 @@
 import { Character } from "@/core/domain/assembly/character";
+import type { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
 import type { Batch } from "@/core/domain/crafting/batch";
 import { ALCHEMY_ABILITY, developmentOutcome } from "@/core/domain/crafting/development";
@@ -29,6 +30,38 @@ export function mixtureKinds(items: Items, kinds: readonly string[]): readonly M
     const found = items.find(itemId);
     if (found === undefined || !ingredient(found)) throw new DomainError(unknownKindRefusal(itemId));
     return { id: found.id, nameRu: found.nameRu, properties: items.alchemyOf(itemId).properties };
+  });
+}
+
+/**
+ * Одна трата на все виды: партия списывает по порции каждого, а сколько в порции штук, знает сам
+ * вид. Спросивший цену и заложивший партию идут этим же путём — вторая такая же трата разошлась бы
+ * с настоящей при первой правке меры.
+ */
+function spentOnBatch(
+  root: Character,
+  kinds: readonly MixtureKind[],
+  portions: number,
+): Equipment {
+  return kinds.reduce(
+    (equipment, kind) =>
+      equipment.adjustBagCount(kind.id, -root.items.piecesForPortions(kind.id, portions)),
+    root.equipment,
+  );
+}
+
+/** Кому из видов не хватает запаса на такую партию: слова о нехватке приходят от самой сумки. */
+export function batchShortagesRu(
+  root: Character,
+  kinds: readonly MixtureKind[],
+  portions: number,
+): readonly string[] {
+  return kinds.flatMap((kind) => {
+    const shortage = root.equipment.shortageRu(
+      kind.id,
+      root.items.piecesForPortions(kind.id, portions),
+    );
+    return shortage === null ? [] : [`${kind.nameRu}: ${shortage}`];
   });
 }
 
@@ -113,11 +146,7 @@ export function craftBatch(session: Session, order: CraftOrder, occasion: Occasi
           difficulty: batch.difficulty.total,
         });
 
-  const spent = kinds.reduce(
-    (equipment, kind) => equipment.adjustBagCount(kind.id, -order.portions),
-    root.equipment,
-  );
-  const worked = root.withEquipment(spent);
+  const worked = root.withEquipment(spentOnBatch(root, kinds, order.portions));
 
   return commit(
     session,
@@ -177,6 +206,21 @@ export function dropProperty(
     session,
     root.withItems(root.items.dropProperty(dropped.itemId, dropped.number)),
     { kind: "sheet_edited", summaryRu: `Убрано раскрытое: ${nameRu}, номер ${dropped.number}` },
+    occasion,
+  );
+}
+
+export function setPortionSize(
+  session: Session,
+  portion: { itemId: string; pieces: number },
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  const nameRu = root.items.ingredientNameRu(portion.itemId);
+  return commit(
+    session,
+    root.withItems(root.items.setPortionSize(portion.itemId, portion.pieces)),
+    { kind: "sheet_edited", summaryRu: `Штук в порции: ${nameRu} — ${portion.pieces}` },
     occasion,
   );
 }

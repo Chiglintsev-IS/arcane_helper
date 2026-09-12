@@ -21,7 +21,7 @@ import type { Batch } from "@/core/domain/crafting/batch";
 import { ALCHEMY_ABILITY, mishapAwaited } from "@/core/domain/crafting/development";
 import type { DevelopmentCheck } from "@/core/domain/crafting/development";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
-import { mixtureKinds } from "@/core/application/useCases/crafting";
+import { batchShortagesRu, mixtureKinds } from "@/core/application/useCases/crafting";
 import type { PropertyMatch, RecipeDifficulty } from "@/core/domain/crafting/recipe";
 import { refusalOf } from "@/core/domain/shared/errors";
 import { castLevelOf, type PaymentChoice } from "@/core/application/casting/availability";
@@ -113,11 +113,13 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
   let check: DevelopmentCheck | null = null;
   let batch: Batch | null = null;
   let known = false;
+  let shortagesRu: readonly string[] = [];
   let refusalRu: string | undefined;
 
   try {
     const formula = recipeFormulaOf(question.formula);
     const kinds = mixtureKinds(root.items, formula.kinds);
+    shortagesRu = batchShortagesRu(root, kinds, question.portions);
     matches = crafting.matches(kinds);
     known = crafting.knows(formula);
     difficulty = crafting.difficultyOf(kinds, formula, crafting.apparatus);
@@ -132,6 +134,7 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
 
   return {
     kind: "recipe_preview",
+    shortagesRu: [...shortagesRu],
     matches: matches.map((match) => ({
       nameRu: match.nameRu,
       sources: [...match.sources],

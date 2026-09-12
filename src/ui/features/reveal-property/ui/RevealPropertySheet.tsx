@@ -4,10 +4,15 @@ import { useState } from "react";
 
 import type { Command } from "@/contract/commands";
 import type { PreviewOf, Question } from "@/contract/questions";
-import type { ChoicesView, IngredientKnowledgeView } from "@/contract/views";
+import type { IngredientKnowledgeView } from "@/contract/views";
 
-import { researchCostRu } from "@/ui/entities/crafting/lib/labels";
-import { NOTHING_REVEALED, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
+import { researchCostRu, stockRu } from "@/ui/entities/crafting/lib/labels";
+import {
+  NOTHING_REVEALED,
+  PROPERTIES_EXHAUSTED,
+  propertyNumberRu,
+} from "@/ui/shared/lib/alchemyLabels";
+import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
@@ -26,6 +31,57 @@ const REVEAL_TITLE = "Раскрыть следующее";
 /** Свойство приходит словами стола: перечня, из которого его выбирать, у приложения нет. */
 const PROPERTY_FIELD = "Свойство";
 
+const PROPERTY_HINT =
+  "Свойство — то, что вещество делает в составе: совпав с таким же у другого вида, оно входит в смесь.";
+
+const PORTION_FIELD = "Штук в порции";
+
+const PORTION_HINT = "Столько штук из сумки уходит на одну рецептурную порцию.";
+
+/**
+ * Мера вида правится отдельной командой, не дожидаясь «Сохранить»: свойство и порция — разные
+ * записи об одной вещи, и одна не отменяет другую.
+ */
+function PortionSize({
+  ingredient,
+  onSet,
+}: {
+  ingredient: IngredientKnowledgeView;
+  onSet: (pieces: number) => void;
+}) {
+  const [typed, setTyped] = useState<string | null>(null);
+
+  const commit = (): void => {
+    if (typed === null) return;
+    const pieces = requiredFieldNumber(typed);
+    setTyped(null);
+    if (!Number.isNaN(pieces) && pieces !== ingredient.piecesPerPortion) onSet(pieces);
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-ink-quiet">{PORTION_FIELD}</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          aria-label={PORTION_FIELD}
+          value={typed ?? String(ingredient.piecesPerPortion)}
+          onChange={(event) => setTyped(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") commit();
+          }}
+          className={`min-h-11 w-20 px-2 text-center text-base tabular-nums ${SURFACE_CONTROL}`}
+        />
+      </div>
+      <p className="text-xs leading-snug text-ink-quiet">
+        {PORTION_HINT} Сейчас {stockRu(ingredient)}.
+      </p>
+    </div>
+  );
+}
+
 function ResearchCost({ plan }: { plan: NonNullable<PreviewOf<"research_preview">["plan"]> }) {
   return (
     <div className="flex flex-col gap-1">
@@ -42,6 +98,9 @@ function ResearchCost({ plan }: { plan: NonNullable<PreviewOf<"research_preview"
 }
 
 const OBSERVATIONS_TITLE = "Наблюдения";
+
+const OBSERVATIONS_HINT =
+  "Слова стола, которых свойством не записать: в совпадения, сложность и партию они не входят.";
 
 const OBSERVATION_FIELD = "Наблюдение";
 
@@ -73,6 +132,8 @@ function Observations({
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-ink-quiet">{OBSERVATIONS_TITLE}</span>
+
+      <p className="text-xs leading-snug text-ink-quiet">{OBSERVATIONS_HINT}</p>
 
       {observations.length === 0 ? (
         <p className="text-xs text-ink-quiet">{OBSERVATIONS_EMPTY}</p>
@@ -130,13 +191,11 @@ function Observations({
  */
 export function RevealPropertySheet({
   ingredient,
-  choices,
   refusalRu,
   onSend,
   onCancel,
 }: {
   ingredient: IngredientKnowledgeView;
-  choices: ChoicesView;
   refusalRu: string | null;
   onSend: (command: Command, whenDone?: () => void) => void;
   onCancel: () => void;
@@ -147,6 +206,8 @@ export function RevealPropertySheet({
     onSend({ kind: "mark_properties_exhausted", itemId, exhausted });
   const onDropProperty = (number: number): void =>
     onSend({ kind: "drop_property", itemId, number });
+  const onPortionSize = (pieces: number): void =>
+    onSend({ kind: "set_portion_size", itemId, pieces });
   const onNoteObservation = (textRu: string): void =>
     onSend({ kind: "note_observation", itemId, textRu });
   const onRewriteObservation = (observationId: string, textRu: string): void =>
@@ -154,9 +215,11 @@ export function RevealPropertySheet({
   const onDropObservation = (observationId: string): void =>
     onSend({ kind: "drop_observation", itemId, observationId });
   const [propertyRu, setPropertyRu] = useState("");
-  const [number, setNumber] = useState(choices.propertyNumbers[0] ?? 1);
+  const [chosenNumber, setChosenNumber] = useState<number | null>(null);
+  const number = chosenNumber ?? ingredient.researchNumbers[0] ?? null;
 
-  const question: Question = { kind: "research_preview", itemId, number };
+  const question: Question | null =
+    number === null ? null : { kind: "research_preview", itemId, number };
   const answer = usePreview(question);
   const research: PreviewOf<"research_preview"> | null =
     answer?.kind === "research_preview" ? answer : null;
@@ -166,7 +229,7 @@ export function RevealPropertySheet({
       role="dialog"
       aria-modal="true"
       aria-label={ingredientPropertiesName(nameRu)}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
+      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-3 ${SURFACE_PANEL}`}
     >
       <h2 className="text-base font-semibold leading-tight">
         {ingredientPropertiesName(nameRu)}
@@ -199,38 +262,45 @@ export function RevealPropertySheet({
         )}
       </div>
 
-      <span className="text-xs text-ink-quiet">{REVEAL_TITLE}</span>
+      <PortionSize ingredient={ingredient} onSet={onPortionSize} />
 
-      <label className="flex min-w-0 flex-col gap-1">
-        <span className="text-xs text-ink-quiet">Номер</span>
-        <select
-          value={String(number)}
-          onChange={(event) => setNumber(Number(event.target.value))}
-          className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
-        >
-          {choices.propertyNumbers.map((option) => (
-            <option key={option} value={String(option)}>
-              {propertyNumberRu(option)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {number === null ? null : (
+        <>
+          <span className="text-xs text-ink-quiet">{REVEAL_TITLE}</span>
 
-      {research?.plan == null ? null : <ResearchCost plan={research.plan} />}
+          <label className="flex min-w-0 flex-col gap-1">
+            <span className="text-xs text-ink-quiet">Номер</span>
+            <select
+              value={String(number)}
+              onChange={(event) => setChosenNumber(Number(event.target.value))}
+              className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
+            >
+              {ingredient.researchNumbers.map((option) => (
+                <option key={option} value={String(option)}>
+                  {propertyNumberRu(option)}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      {research?.refusalRu === undefined ? null : (
-        <p className="text-xs text-ink-soft">{research.refusalRu}</p>
+          {research?.plan == null ? null : <ResearchCost plan={research.plan} />}
+
+          {research?.refusalRu === undefined ? null : (
+            <p className="text-xs text-ink-soft">{research.refusalRu}</p>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-ink-quiet">{PROPERTY_FIELD}</span>
+            <p className="text-xs leading-snug text-ink-quiet">{PROPERTY_HINT}</p>
+            <GrowingField
+              labelRu={PROPERTY_FIELD}
+              value={propertyRu}
+              onChange={setPropertyRu}
+              onSubmit={setPropertyRu}
+            />
+          </div>
+        </>
       )}
-
-      <div className="flex flex-col gap-1">
-        <span className="text-xs text-ink-quiet">{PROPERTY_FIELD}</span>
-        <GrowingField
-          labelRu={PROPERTY_FIELD}
-          value={propertyRu}
-          onChange={setPropertyRu}
-          onSubmit={setPropertyRu}
-        />
-      </div>
 
       <button
         type="button"
@@ -243,7 +313,7 @@ export function RevealPropertySheet({
           : `text-ink-quiet ${SURFACE_CONTROL}`
         }`}
       >
-        Свойств у вида больше нет
+        {PROPERTIES_EXHAUSTED}
       </button>
 
       <Observations
@@ -258,27 +328,29 @@ export function RevealPropertySheet({
       )}
 
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            onSend(
-              {
-                kind: "reveal_property",
-                itemId,
-                number,
-                propertyRu,
-              },
-              onCancel,
-            )
-          }
-          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
-        >
-          {BUTTON_LABELS.save}
-        </button>
+        {number === null ? null : (
+          <button
+            type="button"
+            onClick={() =>
+              onSend(
+                {
+                  kind: "reveal_property",
+                  itemId,
+                  number,
+                  propertyRu,
+                },
+                onCancel,
+              )
+            }
+            className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
+          >
+            {BUTTON_LABELS.save}
+          </button>
+        )}
         <button
           type="button"
           onClick={onCancel}
-          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
+          className={`min-h-11 flex-1 px-3 text-sm ${SURFACE_CONTROL}`}
         >
           {BUTTON_LABELS.dismiss}
         </button>

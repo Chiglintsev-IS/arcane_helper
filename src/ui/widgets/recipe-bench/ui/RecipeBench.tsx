@@ -1,7 +1,5 @@
 "use client";
 
-import { useId } from "react";
-
 import type { ChoicesView } from "@/contract/views";
 import type { PreviewOf } from "@/contract/questions";
 
@@ -170,27 +168,20 @@ export function RecipeBench({
   onMishap: (next: string) => void;
   onCraft: () => void;
 }) {
-  const benchId = useId();
   const refused = preview?.refusalRu !== undefined;
   const change = (patch: Partial<RecipeDraft>): void => onDraft({ ...draft, ...patch });
   const toggle = (list: readonly string[], value: string): readonly string[] =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
   return (
-    <section
-      aria-labelledby={benchId}
-      className={`flex flex-col gap-3 p-3 ${SURFACE_GROUP}`}
-    >
-      <h2 id={benchId} className="text-base font-semibold leading-tight">
-        Верстак
-      </h2>
-
+    <section aria-label="Верстак" className={`flex flex-col gap-3 p-3 ${SURFACE_GROUP}`}>
       {preview === null || preview.matches.length === 0 ? (
-        <p className="text-sm text-ink-quiet">
-          Отметьте выше от двух до четырёх видов: состав держится на свойстве, раскрытом хотя бы у
-          двоих из них. Верстак назовёт цену замысла — сложность с разбором, время, расходники и
-          партию; что состав делает, остаётся за мастером.
-        </p>
+        refused ? null : (
+          <p className="text-sm leading-snug text-ink-quiet">
+            Совпавших свойств пока нет: состав держится на свойстве, раскрытом хотя бы у двух видов.
+            Что состав делает, остаётся за мастером — верстак называет только цену замысла.
+          </p>
+        )
       ) : (
         <Matches
           matches={preview.matches}
@@ -335,6 +326,12 @@ export function RecipeBench({
           </label>
         )}
       </div>
+
+      {preview?.shortagesRu.map((shortage) => (
+        <p key={shortage} className="text-sm leading-snug text-reaction">
+          {shortage}
+        </p>
+      ))}
 
       <button
         type="button"

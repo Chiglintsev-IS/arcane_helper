@@ -29,8 +29,8 @@ type CraftingState = {
   knownRecipes: readonly KnownRecipe[];
 };
 
-const FEWEST_KINDS = 2;
-const MOST_KINDS = 4;
+export const FEWEST_KINDS = 2;
+export const MOST_KINDS = 4;
 
 function tooFewKindsRefusal(): string {
   return "Состав собирается не меньше чем из двух разных видов ингредиентов";
