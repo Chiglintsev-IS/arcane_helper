@@ -208,13 +208,16 @@ describe("filterSpells: «доступно сейчас» (FR-002)", () => {
 });
 
 describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
-  it("«Защита» оставляет защитные, включая несущее урон «Поглощение стихий»", () => {
-    const shown = ids(filterSpells(book(), filters({ roles: ["defense"] })));
+  it("«Поддержка» оставляет работу на своих, включая несущее урон «Поглощение стихий»", () => {
+    const shown = ids(filterSpells(book(), filters({ roles: ["support"] })));
 
     expect(shown).toContain("absorb-elements");
     expect(shown).toContain("shield");
     expect(shown).toContain("counterspell");
+    expect(shown).toContain("haste");
+    expect(shown).toContain("polymorph");
     expect(shown).not.toContain("lightning-bolt");
+    expect(shown).not.toContain("slow");
   });
 
   it("«Урон» оставляет несущее урон; ослабление и усиление под него не подходят", () => {
@@ -241,34 +244,24 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
   it("роль сравнивается с любой из перечня: «Громовой шаг» видно и под «Движением», и под «Уроном»", () => {
     expect(ids(filterSpells(book(), filters({ roles: ["movement"] })))).toContain("thunder-step");
     expect(ids(filterSpells(book(), filters({ roles: ["damage"] })))).toContain("thunder-step");
-    expect(ids(filterSpells(book(), filters({ roles: ["defense"] })))).not.toContain("thunder-step");
   });
 
-  it("побочный эффект ролью не считается: «Ускорение» под «Защитой» не стоит", () => {
-    expect(ids(filterSpells(book(), filters({ roles: ["defense"] })))).not.toContain("haste");
-    expect(ids(filterSpells(book(), filters({ roles: ["buff"] })))).toContain("haste");
+  it("побочный эффект ролью не считается: «Громовой шаг» уводит из-под удара, но не поддержка", () => {
+    expect(ids(filterSpells(book(), filters({ roles: ["support"] })))).not.toContain("thunder-step");
+    expect(ids(filterSpells(book(), filters({ roles: ["movement"] })))).toContain("thunder-step");
   });
 });
 
 describe("filterSpells: роли в бою", () => {
-  it("«Усиление» оставляет то, что делает союзника сильнее", () => {
-    const shown = ids(filterSpells(book(), filters({ roles: ["buff"] })));
-
-    expect(shown).toContain("haste");
-    expect(shown).toContain("polymorph");
-    expect(shown).not.toContain("shield");
-    expect(shown).not.toContain("slow");
-  });
-
   it("две роли соединяются «или», как и любые значения одной категории (FR-003)", () => {
-    const shown = ids(filterSpells(book(), filters({ roles: ["damage", "defense"] })));
+    const shown = ids(filterSpells(book(), filters({ roles: ["damage", "support"] })));
     expect(shown).toContain("ray-of-frost");
     expect(shown).toContain("shield");
     expect(shown).not.toContain("message");
   });
 
   it("роль соединяется с временем накладывания через «и»", () => {
-    const both = filters({ roles: ["defense"], castingTimes: ["reaction"] });
+    const both = filters({ roles: ["support"], castingTimes: ["reaction"] });
     expect(ids(filterSpells(book(), both))).toEqual([
       "shield",
       "absorb-elements",
@@ -286,7 +279,7 @@ describe("matchesTraits: строка, не являющаяся заклина�
     expect(matchesTraits(LAST_HINT_TRAITS, filters({ castingTimes: ["reaction"] }))).toBe(false);
   });
 
-  it("её роль — «другое»: под «Урон» и «Защиту» она не подходит", () => {
+  it("её роль — «другое»: под «Урон» и «Поддержку» она не подходит", () => {
     expect(matchesTraits(LAST_HINT_TRAITS, filters({ roles: ["damage"] }))).toBe(false);
     expect(matchesTraits(LAST_HINT_TRAITS, filters({ roles: ["other"] }))).toBe(true);
   });

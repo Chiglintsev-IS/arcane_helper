@@ -19,12 +19,11 @@ type RoleBadge = { label: string; tone: Tone; icon: string };
 
 const OTHER_ROLE: RoleBadge = { label: "Прочее", tone: "muted", icon: TONE_GLYPH.muted };
 
-/** Цвет несут четыре боевые роли; остальные идут чернильным тоном и различаются знаком. */
+/** Цвет несут три боевые роли; остальные идут чернильным тоном и различаются знаком. */
 const COMBAT_ROLE: Record<string, RoleBadge> = {
   damage: { label: "Урон", tone: "damage", icon: TONE_GLYPH.damage },
   hindrance: { label: "Контроль", tone: "hindrance", icon: TONE_GLYPH.hindrance },
-  defense: { label: "Защита", tone: "defense", icon: TONE_GLYPH.defense },
-  buff: { label: "Усиление", tone: "buff", icon: TONE_GLYPH.buff },
+  support: { label: "Поддержка", tone: "support", icon: TONE_GLYPH.support },
   movement: { label: "Движение", tone: "muted", icon: "↗" },
   healing: { label: "Лечение", tone: "muted", icon: "♡" },
   scouting: { label: "Разведка", tone: "muted", icon: "◎" },

@@ -3,7 +3,7 @@ import type { SpellRowView } from "@/contract/views";
 import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
 
-const ROLE_ORDER = ["other", "scouting", "movement", "healing", "damage", "hindrance", "buff", "defense"];
+const ROLE_ORDER = ["other", "scouting", "movement", "healing", "damage", "hindrance", "support"];
 
 export function primaryRole(roles: readonly string[]): string {
   return roles[0] ?? "other";

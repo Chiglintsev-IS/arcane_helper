@@ -250,7 +250,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />, preparedForPlay(createWizard()));
 
-    await user.click(screen.getByRole("button", { name: "Защита" }));
+    await user.click(screen.getByRole("button", { name: "Поддержка" }));
 
     const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).getAllByRole("listitem")).toHaveLength(6);
@@ -262,7 +262,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Защита" }));
+    await user.click(screen.getByRole("button", { name: "Поддержка" }));
     await user.click(screen.getByRole("button", { name: "Урон" }));
 
     const list = screen.getByLabelText(/^Заклинания/);
@@ -391,8 +391,8 @@ describe("реакции (FR-060, FR-062)", () => {
     const rows = [...container.querySelectorAll("[aria-label^='Заклинания'] > li > button")];
     expect(rows).toHaveLength(4);
     for (const row of rows) {
-      expect(row.className, row.textContent ?? "").toContain("border-l-defense");
-      expect(row.textContent, row.textContent ?? "").toContain("Защита");
+      expect(row.className, row.textContent ?? "").toContain("border-l-support");
+      expect(row.textContent, row.textContent ?? "").toContain("Поддержка");
     }
   });
 

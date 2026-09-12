@@ -52,17 +52,17 @@ describe("книга заклинаний Торна", () => {
 
   it("роли расставлены по смыслу, а не по наличию урона; первая — главная", () => {
     const byId = new Map(spells.map((spell) => [spell.id, spell.combatRoles]));
-    expect(byId.get("absorb-elements")).toEqual(["defense"]);
-    expect(byId.get("shield")).toEqual(["defense"]);
-    expect(byId.get("dispel-magic")).toEqual(["defense"]);
+    expect(byId.get("absorb-elements")).toEqual(["support"]);
+    expect(byId.get("shield")).toEqual(["support"]);
+    expect(byId.get("dispel-magic")).toEqual(["support"]);
     expect(byId.get("ray-of-frost")).toEqual(["damage", "hindrance"]);
     expect(byId.get("lightning-bolt")).toEqual(["damage"]);
     expect(byId.get("tashas-mind-whip")).toEqual(["hindrance", "damage"]);
     expect(byId.get("web")).toEqual(["hindrance"]);
-    expect(byId.get("haste")).toEqual(["buff", "movement"]);
+    expect(byId.get("haste")).toEqual(["support", "movement"]);
     expect(byId.get("thunder-step")).toEqual(["movement", "damage"]);
     expect(byId.get("spider-climb")).toEqual(["movement"]);
-    expect(byId.get("polymorph")).toEqual(["buff", "hindrance"]);
+    expect(byId.get("polymorph")).toEqual(["support", "hindrance"]);
     expect(byId.get("arcane-vigor")).toEqual(["healing"]);
     expect(byId.get("detect-magic")).toEqual(["scouting"]);
     expect(spells.filter((spell) => spell.combatRoles?.includes("other"))).toHaveLength(3);

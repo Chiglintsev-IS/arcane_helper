@@ -6,7 +6,7 @@
   "school": "Ограждение",
   "source": "Tasha's Cauldron of Everything",
   "combatRoles": [
-    "defense"
+    "support"
   ],
   "castingTime": {
     "type": "action"

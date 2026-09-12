@@ -5,8 +5,7 @@ import type { Spell } from "@/core/domain/catalog/spell";
 const COMBAT_ROLES = [
   "damage",
   "hindrance",
-  "defense",
-  "buff",
+  "support",
   "movement",
   "healing",
   "scouting",
@@ -17,9 +16,19 @@ type CombatRole = (typeof COMBAT_ROLES)[number];
 
 const OTHER_ROLE: CombatRole = "other";
 
-const RETIRED_OFFENSE_ROLE = z.literal("offense").transform((): CombatRole => "damage");
+/**
+ * Имена ролей прежних выгрузок. «Боевое» звалось одним словом там, где теперь стоит урон, а
+ * защита и усиление были двумя ролями там, где вопрос игрока один: чем помочь своим.
+ */
+const retired = (name: string, role: CombatRole) =>
+  z.literal(name).transform((): CombatRole => role);
 
-const combatRoleSchema = z.union([z.enum(COMBAT_ROLES), RETIRED_OFFENSE_ROLE]);
+const combatRoleSchema = z.union([
+  z.enum(COMBAT_ROLES),
+  retired("offense", "damage"),
+  retired("defense", "support"),
+  retired("buff", "support"),
+]);
 
 function withoutRepeats(roles: readonly CombatRole[]): boolean {
   return new Set(roles).size === roles.length;

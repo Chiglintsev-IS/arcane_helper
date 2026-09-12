@@ -17,25 +17,25 @@ describe("combatRolesOf", () => {
   it.each([
     ["lightning-bolt", ["damage"]],
     ["web", ["hindrance"]],
-    ["haste", ["buff", "movement"]],
+    ["haste", ["support", "movement"]],
     ["thunder-step", ["movement", "damage"]],
-    ["absorb-elements", ["defense"]],
+    ["absorb-elements", ["support"]],
     ["message", ["other"]],
   ])("«%s» — %j", (id, expected) => {
     expect(combatRolesOf(byId(id))).toEqual(expected);
   });
 
-  it("роль не выводится из урона: «Поглощение стихий» несёт урон, но творится ради защиты", () => {
+  it("роль не выводится из урона: «Поглощение стихий» несёт урон, но творится ради прикрытия", () => {
     const spell = byId("absorb-elements");
     expect(spell.damage).toBeDefined();
-    expect(combatRolesOf(spell)).toEqual(["defense"]);
+    expect(combatRolesOf(spell)).toEqual(["support"]);
   });
 
-  it("контроль и усиление урона не несут, но «прочим» не считаются", () => {
+  it("контроль и поддержка урона не несут, но «прочим» не считаются", () => {
     expect(byId("slow").damage).toBeUndefined();
     expect(byId("haste").damage).toBeUndefined();
     expect(combatRolesOf(byId("slow"))).toEqual(["hindrance"]);
-    expect(combatRolesOf(byId("haste"))).toContain("buff");
+    expect(combatRolesOf(byId("haste"))).toContain("support");
   });
 
   it("молчание данных читается как «прочее», а не как «урон»", () => {
@@ -69,6 +69,11 @@ describe("combatRolesSchema", () => {
     expect(combatRolesSchema.parse(["offense"])).toEqual(["damage"]);
   });
 
+  it("защита и усиление прежней выгрузки читаются поддержкой", () => {
+    expect(combatRolesSchema.parse(["defense"])).toEqual(["support"]);
+    expect(combatRolesSchema.parse(["buff", "movement"])).toEqual(["support", "movement"]);
+  });
+
   it("незнакомую роль отвергает", () => {
     expect(combatRolesSchema.safeParse(["attack"]).success).toBe(false);
   });
@@ -76,11 +81,11 @@ describe("combatRolesSchema", () => {
 
 describe("карточка прежней выгрузки с одиночной ролью", () => {
   it("одиночная роль сворачивается в перечень из одной", () => {
-    expect(foldRetiredSingleRole({ id: "x", combatRole: "defense" })).toEqual({ id: "x", combatRoles: ["defense"] });
+    expect(foldRetiredSingleRole({ id: "x", combatRole: "hindrance" })).toEqual({ id: "x", combatRoles: ["hindrance"] });
   });
 
   it("перечень, если он уже есть, одиночной ролью не подменяется", () => {
-    const card = { combatRole: "defense", combatRoles: ["damage"] };
+    const card = { combatRole: "hindrance", combatRoles: ["damage"] };
     expect(foldRetiredSingleRole(card)).toBe(card);
   });
 

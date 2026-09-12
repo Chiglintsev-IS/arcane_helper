@@ -6,7 +6,7 @@
   "school": "Преобразование",
   "source": "Player's Handbook (2014)",
   "combatRoles": [
-    "buff",
+    "support",
     "hindrance"
   ],
   "castingTime": {

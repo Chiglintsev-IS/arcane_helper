@@ -111,12 +111,11 @@ describe("порядок: сначала бесплатное, потом по �
     expect(orderKey({ ...action, roles: ["movement"] })).toEqual([0, 2]);
     expect(orderKey({ ...action, roles: ["healing"] })).toEqual([0, 3]);
     expect(orderKey({ ...action, roles: ["hindrance"] })).toEqual([0, 5]);
-    expect(orderKey({ ...action, roles: ["buff"] })).toEqual([0, 6]);
-    expect(orderKey({ ...action, roles: ["defense"] })).toEqual([0, 7]);
+    expect(orderKey({ ...action, roles: ["support"] })).toEqual([0, 6]);
   });
 
   it("главная роль — первая в перечне; пустой перечень стоит как «другое»", () => {
-    expect(primaryRole(["defense", "damage"])).toBe("defense");
+    expect(primaryRole(["support", "damage"])).toBe("support");
     expect(primaryRole([])).toBe("other");
   });
 

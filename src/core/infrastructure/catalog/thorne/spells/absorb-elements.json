@@ -6,7 +6,7 @@
   "school": "Ограждение",
   "source": "Xanathar's Guide to Everything",
   "combatRoles": [
-    "defense"
+    "support"
   ],
   "castingTime": {
     "type": "reaction",

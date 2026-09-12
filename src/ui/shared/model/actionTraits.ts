@@ -17,7 +17,7 @@ export function animalSpeechTraits(nameRu: string): ActionTraits {
 }
 
 export function wardingSigilTraits(nameRu: string): ActionTraits {
-  return { nameRu, castingTime: "reaction", level: 0, concentration: false, roles: ["defense"] };
+  return { nameRu, castingTime: "reaction", level: 0, concentration: false, roles: ["support"] };
 }
 
 export function traitsOf(spell: SpellRowView): ActionTraits {

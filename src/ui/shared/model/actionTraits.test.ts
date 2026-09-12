@@ -10,7 +10,7 @@ describe("traitsOf", () => {
       castingTime: "reaction",
       level: 1,
       concentration: false,
-      roles: ["defense"],
+      roles: ["support"],
     });
   });
 });

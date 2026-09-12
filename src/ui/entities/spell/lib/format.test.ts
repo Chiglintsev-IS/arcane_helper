@@ -21,7 +21,7 @@ import {
 describe("combatRoleBadge", () => {
   it("линейку красит первая роль, словом названы все — вторая со строчной", () => {
     expect(combatRoleBadge(["damage", "hindrance"])).toEqual({ label: "Урон, контроль", tone: "damage", icon: "✚" });
-    expect(combatRoleBadge(["defense"])).toEqual(combatRole("defense"));
+    expect(combatRoleBadge(["support"])).toEqual(combatRole("support"));
   });
 
   it("пустой перечень читается как «другое», а не падает", () => {

@@ -23,8 +23,7 @@ export const RULE_ROLE: Record<Tone, string> = {
   ritual: "border-l-[3px] border-l-ritual",
   damage: "border-l-[3px] border-l-damage",
   hindrance: "border-l-[3px] border-l-hindrance",
-  buff: "border-l-[3px] border-l-buff",
-  defense: "border-l-[3px] border-l-defense",
+  support: "border-l-[3px] border-l-support",
   roll: "border-l-[3px] border-l-roll",
   muted: "border-l-[3px] border-l-rule-strong",
 };
@@ -39,8 +38,7 @@ export const RULE_MARK: Record<Tone, string> = {
   ritual: "border border-ritual",
   damage: "border border-damage",
   hindrance: "border border-hindrance",
-  buff: "border border-buff",
-  defense: "border border-defense",
+  support: "border border-support",
   roll: "border border-roll",
   muted: "border border-off",
 };

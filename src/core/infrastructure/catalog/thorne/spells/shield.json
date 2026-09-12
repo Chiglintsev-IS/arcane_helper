@@ -6,7 +6,7 @@
   "school": "Ограждение",
   "source": "Player's Handbook (2014)",
   "combatRoles": [
-    "defense"
+    "support"
   ],
   "castingTime": {
     "type": "reaction",

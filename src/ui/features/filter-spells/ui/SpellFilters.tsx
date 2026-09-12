@@ -9,7 +9,7 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 
 const CASTING_TIME_FILTERS = ["action", "bonus_action", "reaction"];
 
-const ROLE_FILTERS = ["damage", "hindrance", "defense", "buff", "movement", "healing", "other"];
+const ROLE_FILTERS = ["damage", "hindrance", "support", "movement", "healing", "other"];
 
 const SEARCH_LABEL = "Поиск по названию";
 
