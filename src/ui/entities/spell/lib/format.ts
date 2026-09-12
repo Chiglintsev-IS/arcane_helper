@@ -15,18 +15,32 @@ import { signed } from "@/shared/language";
 
 const CANTRIP_LEVEL = 0;
 
-type RoleBadge = { label: string; tone: Tone };
+type RoleBadge = { label: string; tone: Tone; icon: string };
 
-const OTHER_ROLE: RoleBadge = { label: "Другое", tone: "muted" };
+const OTHER_ROLE: RoleBadge = { label: "Прочее", tone: "muted", icon: TONE_GLYPH.muted };
 
+/** Цвет несут четыре боевые роли; остальные идут чернильным тоном и различаются знаком. */
 const COMBAT_ROLE: Record<string, RoleBadge> = {
-  offense: { label: "Боевое", tone: "offense" },
-  defense: { label: "Защита", tone: "defense" },
+  damage: { label: "Урон", tone: "damage", icon: TONE_GLYPH.damage },
+  hindrance: { label: "Контроль", tone: "hindrance", icon: TONE_GLYPH.hindrance },
+  defense: { label: "Защита", tone: "defense", icon: TONE_GLYPH.defense },
+  buff: { label: "Усиление", tone: "buff", icon: TONE_GLYPH.buff },
+  movement: { label: "Движение", tone: "muted", icon: "↗" },
+  healing: { label: "Лечение", tone: "muted", icon: "♡" },
+  scouting: { label: "Разведка", tone: "muted", icon: "◎" },
   other: OTHER_ROLE,
 };
 
 export function combatRole(role: string): RoleBadge {
   return COMBAT_ROLE[role] ?? OTHER_ROLE;
+}
+
+/** Линейку красит главная роль — первая в перечне; словом называются все. */
+export function combatRoleBadge(roles: readonly string[]): RoleBadge {
+  const [first, ...rest] = roles.map(combatRole);
+  if (first === undefined) return OTHER_ROLE;
+  const tail = rest.map((badge) => badge.label.toLocaleLowerCase("ru"));
+  return { ...first, label: [first.label, ...tail].join(", ") };
 }
 
 type CastingTimeBadge = { label: string; icon: string; tone: Tone };

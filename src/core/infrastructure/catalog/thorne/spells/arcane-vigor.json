@@ -5,7 +5,9 @@
   "level": 2,
   "school": "Ограждение",
   "source": "Player's Handbook (2024)",
-  "combatRole": "defense",
+  "combatRoles": [
+    "healing"
+  ],
   "castingTime": {
     "type": "bonus_action"
   },

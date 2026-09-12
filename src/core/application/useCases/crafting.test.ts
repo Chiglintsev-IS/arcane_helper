@@ -30,7 +30,7 @@ const CRIMSON_ROOT = "Багровый корень";
 /** Виды состава называются вещами: формула ссылается на них так же, как сумка. */
 const MOON_HERB_ID = Items.idFromName(MOON_HERB);
 const CRIMSON_ROOT_ID = Items.idFromName(CRIMSON_ROOT);
-const HEALING = { number: 1, nameRu: "Лечение здоровья", rarity: "common" } as const;
+const HEALING = { number: 1, nameRu: "Лечение здоровья" } as const;
 
 const STANDARD: RecipeFormula = {
   kinds: [MOON_HERB_ID, CRIMSON_ROOT_ID],
@@ -41,7 +41,6 @@ const STANDARD: RecipeFormula = {
   reach: "Одна цель, предмет или участок",
   application: "Выпить, накормить или нанести на неподвижную цель",
   resistance: "Положительное воздействие на добровольную цель",
-  purification: null,
   suppressed: [],
   limitations: [],
 };
@@ -66,27 +65,6 @@ function stocked(portionsEach: number): Session {
         addItem(session, { nameRu: kind, kinds: ["ingredient"] }, occasion),
         Items.idFromName(kind),
         portionsEach - 1,
-        occasion,
-      ),
-    { character: known, log: [] },
-  );
-}
-
-const POISON = { number: 2, nameRu: "Ядовитый урон", rarity: "rare" } as const;
-
-const HYBRID: RecipeFormula = { ...STANDARD };
-
-function poisonous(): Session {
-  const known = [MOON_HERB, CRIMSON_ROOT].reduce(
-    (character, kind) => withIngredientKnowledge(character, kind, [HEALING, POISON]),
-    createThorne(),
-  );
-  return [MOON_HERB, CRIMSON_ROOT].reduce<Session>(
-    (session, kind) =>
-      adjustBagCount(
-        addItem(session, { nameRu: kind, kinds: ["ingredient"] }, occasion),
-        Items.idFromName(kind),
-        5,
         occasion,
       ),
     { character: known, log: [] },
@@ -177,14 +155,6 @@ describe("проверка разработки", () => {
     expect(() => craftBatch(risky, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
       /назовите выпавшее/,
     );
-  });
-
-  it("состав с оставшимся ядовитым свойством партией не выходит: направление закрыто", () => {
-    const hybrid = poisonous();
-
-    expect(() =>
-      craftBatch(hybrid, { formula: HYBRID, portions: 1, rolled: 11 }, occasion),
-    ).toThrow(/ядов не варят/);
   });
 
   it("провал тратит заложенное и рецепта не записывает", () => {

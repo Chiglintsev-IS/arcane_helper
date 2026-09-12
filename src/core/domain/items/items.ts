@@ -4,6 +4,7 @@ import {
   NO_ALCHEMY,
   withObservation,
   withRevealedProperty,
+  withoutProperty,
   withRewrittenObservation,
   withoutObservation,
 } from "./ingredient";
@@ -54,8 +55,16 @@ export class Items {
     return this.replaceDefinition({ ...found, kinds: [...found.kinds, ...added] });
   }
 
+  /**
+   * Правка заменяет объявленное: название, признаки, цену, заметку, прибавки, фокусировку. Алхимию
+   * правка не называет, и потому не теряет — её ведут свои операции, а снимает только утрата
+   * признака ингредиента.
+   */
   replaceDefinition(item: ItemDefinition): Items {
-    const stored = alignedItemDefinition(item);
+    const kept = this.find(item.id)?.alchemy;
+    const stored = alignedItemDefinition(
+      item.alchemy === undefined && kept !== undefined ? { ...item, alchemy: kept } : item,
+    );
     if (!this.data.some((existing) => existing.id === item.id)) {
       throw new DomainError(`Вещи «${item.id}» нет среди заведённых`);
     }
@@ -98,6 +107,11 @@ export class Items {
 
   revealProperty(id: string, property: RevealedProperty): Items {
     return this.replacingAlchemy(id, withRevealedProperty(this.alchemyOf(id), property));
+  }
+
+  dropProperty(id: string, number: number): Items {
+    const found = this.locatedIngredient(id);
+    return this.replacingAlchemy(id, withoutProperty(found.nameRu, this.alchemyOf(id), number));
   }
 
   markPropertiesExhausted(id: string, propertiesExhausted: boolean): Items {

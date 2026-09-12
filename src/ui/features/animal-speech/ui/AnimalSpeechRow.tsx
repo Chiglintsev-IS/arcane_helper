@@ -1,5 +1,5 @@
 import type { ResourcesView } from "@/contract/views";
-import { combatRole, durationLabel } from "@/ui/entities/spell/lib/format";
+import { combatRoleBadge, durationLabel } from "@/ui/entities/spell/lib/format";
 import { animalSpeechTraits } from "@/ui/shared/model/actionTraits";
 import { ActionRow } from "@/ui/shared/ui/ActionRow";
 
@@ -15,7 +15,7 @@ export function AnimalSpeechRow({
   return (
     <ActionRow
       nameRu={animalSpeech.nameRu}
-      role={combatRole(animalSpeechTraits(animalSpeech.nameRu).role)}
+      role={combatRoleBadge(animalSpeechTraits(animalSpeech.nameRu).roles)}
       onOpen={onOpen}
     >
       <span className="flex w-full items-baseline justify-between gap-3 text-[0.84375rem]">

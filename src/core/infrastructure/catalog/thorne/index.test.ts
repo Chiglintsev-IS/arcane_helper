@@ -24,11 +24,11 @@ function paragraphs(text: string): string[] {
 }
 
 describe("книга заклинаний Торна", () => {
-  it("состоит из 33 карточек: 4 заговора и 29 заклинаний по уровням", () => {
-    expect(spells).toHaveLength(33);
+  it("состоит из 34 карточек: 4 заговора и 30 заклинаний по уровням", () => {
+    expect(spells).toHaveLength(34);
     const byLevel = (level: number) => spells.filter((spell) => spell.level === level).length;
     expect(byLevel(CANTRIP_LEVEL)).toBe(4);
-    expect(byLevel(1)).toBe(8);
+    expect(byLevel(1)).toBe(9);
     expect(byLevel(2)).toBe(8);
     expect(byLevel(3)).toBe(9);
     expect(byLevel(4)).toBe(4);
@@ -44,23 +44,28 @@ describe("книга заклинаний Торна", () => {
     expect(new Set(spells.map((spell) => spell.id)).size).toBe(spells.length);
   });
 
-  it("у каждой карточки указана роль в бою (FR-213)", () => {
+  it("у каждой карточки перечислены роли в бою", () => {
     for (const spell of spells) {
-      expect(spell.combatRole, `${spell.nameRu} без роли в бою`).toBeDefined();
+      expect(spell.combatRoles, `${spell.nameRu} без роли в бою`).toBeDefined();
     }
   });
 
-  it("роли расставлены по смыслу, а не по наличию урона (FR-213)", () => {
-    const byId = new Map(spells.map((spell) => [spell.id, spell.combatRole]));
-    expect(byId.get("absorb-elements")).toBe("defense");
-    expect(byId.get("shield")).toBe("defense");
-    expect(byId.get("mage-armor")).toBe("defense");
-    expect(byId.get("ray-of-frost")).toBe("offense");
-    expect(byId.get("shocking-grasp")).toBe("offense");
-    expect(byId.get("web")).toBe("offense");
-    expect(byId.get("slow")).toBe("offense");
-    expect(byId.get("counterspell")).toBe("defense");
-    expect(spells.filter((spell) => spell.combatRole === "other")).toHaveLength(8);
+  it("роли расставлены по смыслу, а не по наличию урона; первая — главная", () => {
+    const byId = new Map(spells.map((spell) => [spell.id, spell.combatRoles]));
+    expect(byId.get("absorb-elements")).toEqual(["defense"]);
+    expect(byId.get("shield")).toEqual(["defense"]);
+    expect(byId.get("dispel-magic")).toEqual(["defense"]);
+    expect(byId.get("ray-of-frost")).toEqual(["damage", "hindrance"]);
+    expect(byId.get("lightning-bolt")).toEqual(["damage"]);
+    expect(byId.get("tashas-mind-whip")).toEqual(["hindrance", "damage"]);
+    expect(byId.get("web")).toEqual(["hindrance"]);
+    expect(byId.get("haste")).toEqual(["buff", "movement"]);
+    expect(byId.get("thunder-step")).toEqual(["movement", "damage"]);
+    expect(byId.get("spider-climb")).toEqual(["movement"]);
+    expect(byId.get("polymorph")).toEqual(["buff", "hindrance"]);
+    expect(byId.get("arcane-vigor")).toEqual(["healing"]);
+    expect(byId.get("detect-magic")).toEqual(["scouting"]);
+    expect(spells.filter((spell) => spell.combatRoles?.includes("other"))).toHaveLength(3);
   });
 });
 

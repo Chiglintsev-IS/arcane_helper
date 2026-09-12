@@ -50,7 +50,7 @@ export function batchFrom(
   apparatus: Apparatus,
   portions: number,
 ): Batch {
-  const limits = apparatusLimits(difficulty.directions, apparatus);
+  const limits = apparatusLimits(apparatus);
   if (difficulty.total > limits.hardest) {
     throw new DomainError(tooHardRefusal(difficulty, limits.hardest));
   }

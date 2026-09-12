@@ -1,9 +1,3 @@
-import { alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
-import type {
-  AlchemicalPropertyName,
-  AlchemicalRarity,
-  AlchemyDirection,
-} from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import type { Apparatus } from "./apparatus";
@@ -11,8 +5,6 @@ import { batchFrom } from "./batch";
 import type { Batch } from "./batch";
 import { developmentCheck } from "./development";
 import type { CheckNumbers, DevelopmentCheck } from "./development";
-import { namedRarityOf, rarityAmong, withRarityNamed } from "./rarities";
-import type { NamedRarity } from "./rarities";
 import { recipeDifficulty, recipeSignature, tierOf } from "./recipe";
 import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { researchPlan } from "./research";
@@ -28,14 +20,12 @@ export type MixtureKind = {
   readonly nameRu: string;
   readonly properties: readonly {
     readonly number: number;
-    readonly nameRu: AlchemicalPropertyName;
+    readonly nameRu: string;
   }[];
 };
 
 type CraftingState = {
-  alchemyApparatus: Apparatus;
-  studiedDirections: readonly AlchemyDirection[];
-  propertyRarities: readonly NamedRarity[];
+  alchemyApparatus?: Apparatus;
   knownRecipes: readonly KnownRecipe[];
 };
 
@@ -63,8 +53,6 @@ function outOfOrderRefusal(next: number): string {
 export class Crafting {
   private static readonly KEYS = [
     "alchemyApparatus",
-    "studiedDirections",
-    "propertyRarities",
     "knownRecipes",
   ] as const satisfies readonly (keyof CraftingState)[];
 
@@ -78,28 +66,12 @@ export class Crafting {
     return this.state.alchemyApparatus;
   }
 
-  studies(direction: AlchemyDirection): boolean {
-    return this.state.studiedDirections.includes(direction);
-  }
-
-  rarityOf(nameRu: AlchemicalPropertyName): AlchemicalRarity | undefined {
-    return rarityAmong(this.state.propertyRarities, nameRu);
-  }
-
-  nameRarity(nameRu: string, rarity: string): Crafting {
-    const named = namedRarityOf({ nameRu, rarity });
-    return new Crafting({
-      ...this.state,
-      propertyRarities: withRarityNamed(this.state.propertyRarities, named.nameRu, named.rarity),
-    });
-  }
-
   withWorkshop(workshop: unknown): Crafting {
     return new Crafting({ ...this.state, ...alchemyWorkshopOf(workshop) });
   }
 
-  checkFor(directions: readonly AlchemyDirection[], numbers: CheckNumbers): DevelopmentCheck {
-    return developmentCheck(directions, this.state.studiedDirections, numbers);
+  checkFor(numbers: CheckNumbers): DevelopmentCheck {
+    return developmentCheck(numbers);
   }
 
   knows(formula: RecipeFormula): boolean {
@@ -124,15 +96,10 @@ export class Crafting {
     return next;
   }
 
-  researchPlanFor(
-    kind: MixtureKind,
-    number: number,
-    rarity: AlchemicalRarity,
-    direction: AlchemyDirection,
-  ): ResearchPlan {
+  researchPlanFor(kind: MixtureKind, number: number): ResearchPlan {
     const next = this.nextResearchable(kind);
     if (number !== next) throw new DomainError(outOfOrderRefusal(next));
-    return researchPlan({ number, rarity, direction, apparatus: this.apparatus });
+    return researchPlan({ number, apparatus: this.apparatus });
   }
 
   matches(kinds: readonly MixtureKind[]): readonly PropertyMatch[] {
@@ -140,7 +107,7 @@ export class Crafting {
     if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
     if (distinct.length > MOST_KINDS) throw new DomainError(tooManyKindsRefusal());
 
-    const gathered = new Map<AlchemicalPropertyName, string[]>();
+    const gathered = new Map<string, string[]>();
     for (const kind of distinct) {
       for (const property of kind.properties) {
         const sources = gathered.get(property.nameRu);
@@ -151,12 +118,7 @@ export class Crafting {
 
     return [...gathered]
       .filter(([, sources]) => sources.length >= FEWEST_KINDS)
-      .map(([nameRu, sources]) => ({
-        nameRu,
-        rarity: this.rarityOf(nameRu),
-        sources,
-        tier: tierOf(sources.length),
-      }));
+      .map(([nameRu, sources]) => ({ nameRu, sources, tier: tierOf(sources.length) }));
   }
 
   difficultyOf(
@@ -174,10 +136,6 @@ export class Crafting {
     portions: number,
   ): Batch {
     return batchFrom(this.difficultyOf(kinds, formula, apparatus), apparatus, portions);
-  }
-
-  directionsOf(kind: MixtureKind): readonly AlchemyDirection[] {
-    return [...new Set(kind.properties.map((property) => alchemyDirectionOf(property.nameRu)))];
   }
 
   toState(): CraftingState {

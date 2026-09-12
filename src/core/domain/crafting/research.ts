@@ -1,4 +1,3 @@
-import type { AlchemicalRarity, AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { apparatusOf } from "./apparatus";
 import type { Apparatus } from "./apparatus";
@@ -10,14 +9,6 @@ const RESEARCH_STEPS = [
   { minutes: 480, difficulty: 18, laboratory: true, portionsOnSuccess: 2, portionsOnFailure: 2 },
   { minutes: 1440, difficulty: 25, laboratory: true, portionsOnSuccess: 3, portionsOnFailure: 3 },
 ] as const;
-
-const RARITY_RESEARCH_DIFFICULTY = {
-  common: 0,
-  uncommon: 1,
-  rare: 2,
-  veryRare: 4,
-  legendary: 7,
-} as const satisfies Record<AlchemicalRarity, number>;
 
 const CONSUMABLES_FROM_NUMBER = 2;
 
@@ -31,11 +22,11 @@ function unknownNumberRefusal(number: number): string {
 }
 
 function withoutKitRefusal(): string {
-  return "Точного исследования без профильного оснащения не бывает: непрофильные инструменты называют только чужое направление";
+  return "Точного исследования без набора не бывает: импровизированными сосудами свойство не раскрыть";
 }
 
 function laboratoryRefusal(number: number): string {
-  return `Свойство под номером ${number} исследуют только в профильной стационарной лаборатории`;
+  return `Свойство под номером ${number} исследуют только в стационарной лаборатории`;
 }
 
 function tooHardResearchRefusal(difficulty: number, hardest: number): string {
@@ -53,34 +44,27 @@ export type ResearchPlan = {
   readonly rawSampleRu: string | null;
 };
 
-/** Редкость приходит от стола: пока мастер её не назвал, цену исследования назвать нечем. */
-export const RARITY_NOT_NAMED_RU =
-  "Редкость свойства не названа: без неё цену исследования не посчитать";
-
 export function researchPlan(input: {
   readonly number: number;
-  readonly rarity: AlchemicalRarity;
-  readonly direction: AlchemyDirection;
   readonly apparatus: Apparatus;
 }): ResearchPlan {
   const step = RESEARCH_STEPS[input.number - RAW_SAMPLE_NUMBER];
   if (step === undefined) throw new DomainError(unknownNumberRefusal(input.number));
 
-  const kit = apparatusOf(input.direction, input.apparatus);
+  const kit = apparatusOf(input.apparatus);
   if (kit === undefined) throw new DomainError(withoutKitRefusal());
   if (step.laboratory && !kit.stationary) throw new DomainError(laboratoryRefusal(input.number));
 
-  const difficulty = step.difficulty + RARITY_RESEARCH_DIFFICULTY[input.rarity];
-  if (difficulty > kit.hardest) {
-    throw new DomainError(tooHardResearchRefusal(difficulty, kit.hardest));
+  if (step.difficulty > kit.hardest) {
+    throw new DomainError(tooHardResearchRefusal(step.difficulty, kit.hardest));
   }
 
   const burns = input.number >= CONSUMABLES_FROM_NUMBER;
-  const consumables = consumablesOf(difficulty);
+  const consumables = consumablesOf(step.difficulty);
   return {
     number: input.number,
     minutes: step.minutes,
-    difficulty,
+    difficulty: step.difficulty,
     portionsOnSuccess: step.portionsOnSuccess,
     portionsOnFailure: step.portionsOnFailure,
     consumablesRu: burns ? consumables.nameRu : null,

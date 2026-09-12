@@ -26,7 +26,7 @@ describe("exportSnapshot (FR-120)", () => {
     const file = exportSnapshot(createThorne(), SPELLS, NOW);
 
     expect(file.schemaVersion).toBe(EXPORT_SCHEMA_VERSION);
-    expect(file.spells).toHaveLength(33);
+    expect(file.spells).toHaveLength(34);
     expect(file.character.preparedSpellIds).toHaveLength(11);
   });
 
@@ -55,7 +55,7 @@ describe("parseImport (FR-121)", () => {
     const outcome = parseImport(snapshotText());
 
     expect(outcome.ok).toBe(true);
-    if (outcome.ok) expect(outcome.file.spells).toHaveLength(33);
+    if (outcome.ok) expect(outcome.file.spells).toHaveLength(34);
   });
 
   it("не-JSON отклоняется словами, а не исключением", () => {
@@ -175,6 +175,6 @@ describe("applyImport (FR-122)", () => {
 
     const applied = applyImport(spent, outcome.file, "spells_only");
     expect(applied.character.spellSlots[1]?.remaining).toBe(0);
-    expect(applied.spells).toHaveLength(33);
+    expect(applied.spells).toHaveLength(34);
   });
 });

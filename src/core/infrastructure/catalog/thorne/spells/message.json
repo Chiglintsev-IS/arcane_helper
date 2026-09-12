@@ -5,7 +5,9 @@
   "level": 0,
   "school": "Преобразование",
   "source": "Player's Handbook (2024)",
-  "combatRole": "other",
+  "combatRoles": [
+    "other"
+  ],
   "castingTime": {
     "type": "action"
   },

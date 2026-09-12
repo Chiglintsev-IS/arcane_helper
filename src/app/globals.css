@@ -28,7 +28,9 @@
   --color-reaction: var(--theme-reaction);
   --color-concentration: var(--theme-concentration);
   --color-ritual: var(--theme-ritual);
-  --color-offense: var(--theme-offense);
+  --color-damage: var(--theme-damage);
+  --color-hindrance: var(--theme-hindrance);
+  --color-buff: var(--theme-buff);
   --color-defense: var(--theme-defense);
   --color-roll: var(--theme-roll);
 }
@@ -62,7 +64,9 @@
   --theme-reaction: #a24425;
   --theme-concentration: #0c6558;
   --theme-ritual: #39651e;
-  --theme-offense: #a32338;
+  --theme-damage: #a32338;
+  --theme-hindrance: #8a2e78;
+  --theme-buff: #4f6410;
   --theme-defense: #125f70;
   /* Бросок — янтарь: то, что произносят мастеру, стоит отдельно от экономии хода. */
   --theme-roll: #7d5a12;
@@ -94,7 +98,9 @@
     --theme-reaction: #e79079;
     --theme-concentration: #4fbca8;
     --theme-ritual: #8dc46e;
-    --theme-offense: #e4707f;
+    --theme-damage: #e4707f;
+    --theme-hindrance: #d68acb;
+    --theme-buff: #c4d05e;
     --theme-defense: #63bdd0;
     --theme-roll: #d9a441;
   }

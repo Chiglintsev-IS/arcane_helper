@@ -7,6 +7,7 @@ import { currencyAbbr, itemKindLabel, statLabel } from "@/ui/entities/character/
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
+import { NOTHING_REVEALED, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { StatPicker } from "./StatPicker";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
@@ -22,6 +23,10 @@ type ItemPatch = {
 };
 
 const GEAR = "gear";
+
+const INGREDIENT = "ingredient";
+
+const PROPERTIES_LABEL = "Алхимические свойства";
 
 const NAME_LABEL = "Название";
 
@@ -143,6 +148,7 @@ export function ItemSheet({
   onSetBagCount,
   onAdjustWornCount,
   onRemove,
+  onOpenProperties,
   onCancel,
   error = null,
 }: {
@@ -155,6 +161,7 @@ export function ItemSheet({
   onSetBagCount: (count: number) => void;
   onAdjustWornCount: (delta: number) => void;
   onRemove: () => void;
+  onOpenProperties: () => void;
   onCancel: () => void;
 }) {
   const required = useRequiredNumbers();
@@ -278,6 +285,33 @@ export function ItemSheet({
           {kinds.length === 0 ? <p className="text-xs text-ink-quiet">{NO_KINDS_HINT}</p> : null}
           {focus ? <p className="text-xs text-ink-quiet">{FOCUS_HINT}</p> : null}
         </div>
+
+        {!item.kinds.includes(INGREDIENT) ? null : (
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-ink-quiet">{PROPERTIES_LABEL}</span>
+            {item.alchemicalProperties.length === 0 ? (
+              <p className="text-xs text-ink-quiet">{NOTHING_REVEALED}</p>
+            ) : (
+              <ul className="flex flex-col gap-0.5">
+                {item.alchemicalProperties.map((property) => (
+                  <li key={property.number} className="flex items-baseline gap-2 text-xs">
+                    <span className="shrink-0 font-semibold tabular-nums text-ink-quiet">
+                      {propertyNumberRu(property.number)}
+                    </span>
+                    <span className="min-w-0 flex-1 leading-snug">{property.nameRu}</span>
+                        </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={onOpenProperties}
+              className={`min-h-11 px-3 text-sm font-medium text-action ${SURFACE_CONTROL}`}
+            >
+              Раскрыть и править свойства
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-col gap-1">
           <span className="text-sm text-ink-quiet">Прибавки</span>

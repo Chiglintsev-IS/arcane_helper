@@ -5,7 +5,9 @@
   "level": 1,
   "school": "Ограждение",
   "source": "Xanathar's Guide to Everything",
-  "combatRole": "defense",
+  "combatRoles": [
+    "defense"
+  ],
   "castingTime": {
     "type": "reaction",
     "reactionTrigger": "вы получаете урон кислотой, холодом, огнём, электричеством или звуком"

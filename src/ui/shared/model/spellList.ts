@@ -3,10 +3,14 @@ import type { SpellRowView } from "@/contract/views";
 import { traitsOf, type ActionTraits } from "@/ui/shared/model/actionTraits";
 import type { ScreenMode } from "@/ui/shared/model/screenMode";
 
-const ROLE_ORDER = ["other", "offense", "defense"];
+const ROLE_ORDER = ["other", "scouting", "movement", "healing", "damage", "hindrance", "buff", "defense"];
+
+export function primaryRole(roles: readonly string[]): string {
+  return roles[0] ?? "other";
+}
 
 export function orderKey(traits: ActionTraits): [number, number] {
-  return [traits.level, ROLE_ORDER.indexOf(traits.role)];
+  return [traits.level, ROLE_ORDER.indexOf(primaryRole(traits.roles))];
 }
 
 export function compareTraits(left: ActionTraits, right: ActionTraits): number {

@@ -44,7 +44,7 @@ const INGREDIENTS: readonly {
   },
   {
     nameRu: "Подорожник",
-    count: 9,
+    count: 11,
     revealed: [
       { number: 1, nameRu: "Лечение здоровья" },
       { number: 2, nameRu: "Остановка кровотечения" },
@@ -61,6 +61,46 @@ const INGREDIENTS: readonly {
       "При простом поедании — рвота",
     ],
   },
+  { nameRu: "Листочки с дерева", count: 10, seen: ["Не исследованы"] },
+  {
+    nameRu: "Лунная роза",
+    count: 0,
+    seen: ["Свойств раскрыть не удалось", "Кончилась — найти ещё"],
+  },
+];
+
+/**
+ * Природа вещи и запас в сумке стоят одной строкой: разойдясь, они дали бы вещь без запаса или
+ * запас без вещи. Пустой набор признаков — это «другое»: находку не заставляют опознаваться.
+ */
+const CARRIED: readonly {
+  nameRu: string;
+  count: number;
+  kinds: readonly string[];
+  note?: string;
+}[] = [
+  { nameRu: "Сухпаёк", count: 7, kinds: ["consumable"] },
+  { nameRu: "Брошь фракции лоялистов", count: 1, kinds: ["gear"] },
+  { nameRu: "Свиток заклинания «Катапульта»", count: 5, kinds: ["consumable"] },
+  {
+    nameRu: "Рисунок древней руны с наковальни великана",
+    count: 1,
+    kinds: [],
+    note: "Срисована с наковальни великана. Что она делает, мастер не называл.",
+  },
+  {
+    nameRu: "Рисунок древней руны с факела",
+    count: 1,
+    kinds: [],
+    note: "Срисована с факела. Похоже на руну освещения — стол этого не подтверждал.",
+  },
+  {
+    nameRu: "Рисунок древней руны высасывания жидкости",
+    count: 1,
+    kinds: [],
+    note: "Вода стекалась к этой руне.",
+  },
+  { nameRu: "Фреска из древнего храма", count: 1, kinds: [] },
 ];
 
 const SLOTS = spellSlotsForLevel(7);
@@ -120,6 +160,7 @@ const RAW: unknown = {
     "mage-armor",
     "magic-missile",
     "catapult",
+    "chromatic-orb",
     "alarm",
     "detect-magic",
 
@@ -141,6 +182,7 @@ const RAW: unknown = {
 
     "polymorph",
     "storm-sphere",
+    "ice-storm",
     "vitriolic-sphere",
   ],
   preparedSpellIds: [
@@ -204,6 +246,12 @@ const RAW: unknown = {
       kinds: ["gear"],
       note: "Мифриловый. Растущий: меняется вместе с владельцем, но чисел под это мастер пока не назвал.",
     },
+    ...CARRIED.map(({ nameRu, kinds, note }) => ({
+      id: Items.idFromName(nameRu),
+      nameRu,
+      kinds,
+      ...(note === undefined ? {} : { note }),
+    })),
     ...INGREDIENTS.map(({ nameRu, revealed, seen }) => ({
       id: Items.idFromName(nameRu),
       nameRu,
@@ -221,6 +269,7 @@ const RAW: unknown = {
     bag: [
       { itemId: "swamp-camouflage-kit", count: 1 },
       { itemId: "gormongol", count: 1 },
+      ...CARRIED.map(({ nameRu, count }) => ({ itemId: Items.idFromName(nameRu), count })),
       ...INGREDIENTS.map(({ nameRu, count }) => ({ itemId: Items.idFromName(nameRu), count })),
     ],
     worn: [
@@ -234,7 +283,7 @@ const RAW: unknown = {
   runes: { maximum: RUNES_MAXIMUM, remaining: RUNES_MAXIMUM },
   suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
 
-  alchemyApparatus: { potions: RELIABLE_FIELD_KIT, transmutation: RELIABLE_FIELD_KIT },
+  alchemyApparatus: RELIABLE_FIELD_KIT,
   studiedDirections: ["potions", "transmutation"],
 
   spellNotes: {},

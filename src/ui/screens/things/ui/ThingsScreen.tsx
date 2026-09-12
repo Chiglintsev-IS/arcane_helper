@@ -7,6 +7,7 @@ import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { Bag, BAG_FILTERS, type BagFilter } from "@/ui/widgets/bag/ui/Bag";
 import { ItemBase, BASE_FILTERS, type BaseFilter } from "@/ui/widgets/item-base/ui/ItemBase";
 import { ItemSheet } from "@/ui/features/edit-character-sheet/ui/ItemSheet";
+import { RevealPropertySheet } from "@/ui/features/reveal-property/ui/RevealPropertySheet";
 import { MoneySheet } from "@/ui/features/edit-character-sheet/ui/MoneySheet";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { Choices } from "@/ui/shared/ui/Choices";
@@ -37,12 +38,13 @@ type ThingsEdit = { of: "money" } | { of: "item"; id: string };
 
 export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {}) {
   const { session: sessionStore } = useStores();
-  const { bag, choices } = useSession((state) => state.snapshot)!;
+  const { bag, choices, crafting } = useSession((state) => state.snapshot)!;
 
   const [part, setPart] = useState<ThingsPart>(() => initialPart ?? DEFAULT_PART);
   const [bagFilter, setBagFilter] = useState<BagFilter>(DEFAULT_BAG_FILTER);
   const [baseFilter, setBaseFilter] = useState<BaseFilter>(DEFAULT_BASE_FILTER);
   const [open, setOpen] = useState<ThingsEdit | null>(null);
+  const [propertiesOf, setPropertiesOf] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,6 +70,15 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
     setRefusal(null);
     setOpen(null);
   };
+
+  const send = (command: Command, whenDone?: () => void): void => {
+    void applyEdit(sessionStore, command).then((reason) => {
+      setRefusal(reason);
+      if (reason === null) whenDone?.();
+    });
+  };
+
+  const openedIngredient = crafting.ingredients.find((one) => one.itemId === propertiesOf);
 
   const changePart = (next: ThingsPart): void => {
     setPart(next);
@@ -162,10 +173,27 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
           onAdjustBagCount={(delta) => adjustBagCount(openedItem.id, delta)}
           onSetBagCount={(count) => setBagCount(openedItem.id, count)}
           onAdjustWornCount={(delta) => adjustWornCount(openedItem.id, delta)}
+          onOpenProperties={() => {
+            setRefusal(null);
+            setPropertiesOf(openedItem.id);
+          }}
           onRemove={async () => {
             if ((await execute({ kind: "remove_item", itemId: openedItem.id })) === null) {
               setOpen(null);
             }
+          }}
+        />
+      )}
+
+      {openedIngredient === undefined ? null : (
+        <RevealPropertySheet
+          ingredient={openedIngredient}
+          choices={choices}
+          refusalRu={refusal}
+          onSend={send}
+          onCancel={() => {
+            setRefusal(null);
+            setPropertiesOf(null);
           }}
         />
       )}

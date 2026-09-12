@@ -3,20 +3,17 @@ import { describe, expect, it } from "vitest";
 import type { Apparatus } from "./apparatus";
 import { researchPlan } from "./research";
 
-const TORN_KITS: Apparatus = {
-  potions: "Надёжный походный комплект",
-  transmutation: "Надёжный походный комплект",
-};
+const TORN_KIT: Apparatus = "Надёжный походный комплект";
 
-const LABORATORY: Apparatus = { potions: "Профессиональный лабораторный модуль" };
+const LABORATORY: Apparatus = "Профессиональный лабораторный модуль";
 
-const plan = (number: number, apparatus: Apparatus = TORN_KITS, rarity = "common" as const) =>
-  researchPlan({ number, rarity, direction: "potions", apparatus });
+const plan = (number: number, apparatus: Apparatus = TORN_KIT) =>
+  researchPlan({ number, apparatus });
 
 describe("исследование ингредиента", () => {
   it("третье свойство требует стационарной лаборатории", () => {
-    expect(() => plan(3)).toThrow(/под номером 3 исследуют только в профильной стационарной/);
-    expect(() => plan(4)).toThrow(/под номером 4 исследуют только в профильной стационарной/);
+    expect(() => plan(3)).toThrow(/под номером 3 исследуют только в стационарной/);
+    expect(() => plan(4)).toThrow(/под номером 4 исследуют только в стационарной/);
 
     const deep = plan(3, LABORATORY);
     expect([deep.minutes, deep.difficulty, deep.portionsOnFailure]).toEqual([480, 18, 2]);
@@ -44,25 +41,17 @@ describe("исследование ингредиента", () => {
     expect([fourth.consumablesRu, fourth.consumablesGold]).toEqual(["Очищенные", 72]);
   });
 
-  it("редкость исследуемого свойства поднимает сложность", () => {
-    expect(researchPlan({ number: 2, rarity: "legendary", direction: "potions", apparatus: TORN_KITS }).difficulty).toBe(19);
-    expect(researchPlan({ number: 2, rarity: "veryRare", direction: "potions", apparatus: TORN_KITS }).difficulty).toBe(16);
-  });
+  it("сложность растёт с глубиной и меряется пределом оснащения", () => {
+    expect(researchPlan({ number: 2, apparatus: TORN_KIT }).difficulty).toBe(12);
 
-  it("сложность выше предела оснащения делает исследование невозможным", () => {
     expect(() =>
-      researchPlan({
-        number: 4,
-        rarity: "legendary",
-        direction: "potions",
-        apparatus: { potions: "Базовый лабораторный модуль" },
-      }),
-    ).toThrow(/Сложность исследования 32 выше предела оснащения 20/);
+      researchPlan({ number: 4, apparatus: "Базовый лабораторный модуль" }),
+    ).toThrow(/Сложность исследования 25 выше предела оснащения 20/);
   });
 
-  it("без профильного набора точного исследования не бывает", () => {
-    expect(() => researchPlan({ number: 1, rarity: "common", direction: "poisons", apparatus: TORN_KITS })).toThrow(
-      /без профильного оснащения/,
+  it("без набора точного исследования не бывает", () => {
+    expect(() => researchPlan({ number: 1, apparatus: undefined })).toThrow(
+      /без набора/,
     );
   });
 

@@ -9,7 +9,7 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 
 const CASTING_TIME_FILTERS = ["action", "bonus_action", "reaction"];
 
-const ROLE_FILTERS = ["offense", "defense", "other"];
+const ROLE_FILTERS = ["damage", "hindrance", "defense", "buff", "movement", "healing", "other"];
 
 const SEARCH_LABEL = "Поиск по названию";
 
@@ -92,6 +92,17 @@ export function SpellFilters({
         )}
         {searchOpen ? null : (
           <>
+        {roles.map((value) => (
+          <Toggle
+            key={value}
+            pressed={filters.roles.includes(value)}
+            tone={combatRole(value).tone}
+            icon={combatRole(value).icon}
+            onClick={() => onChange({ ...filters, roles: toggleValue(filters.roles, value) })}
+          >
+            {combatRole(value).label}
+          </Toggle>
+        ))}
         {castingTimes.map((value) => (
           <Toggle
             key={value}
@@ -103,16 +114,6 @@ export function SpellFilters({
             }
           >
             {castingTimeBadge(value).label}
-          </Toggle>
-        ))}
-        {roles.map((value) => (
-          <Toggle
-            key={value}
-            pressed={filters.roles.includes(value)}
-            tone={combatRole(value).tone}
-            onClick={() => onChange({ ...filters, roles: toggleValue(filters.roles, value) })}
-          >
-            {combatRole(value).label}
           </Toggle>
         ))}
         {dividing.concentration ? (

@@ -134,6 +134,34 @@ describe("«Вещи»", () => {
     expect(shown(stores).resources.initiative).toBe(before + 1);
   });
 
+  it("свойства ингредиента правятся там же, где заметка: своей вещью", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<ThingsScreen />);
+
+    const herb = "Гольпера Большая";
+    const alchemyOf = () => itemOf(stores, "гольпера-большая")?.alchemicalProperties ?? [];
+
+    expect(alchemyOf()).toHaveLength(2);
+
+    await user.click(screen.getByRole("button", { name: `Правка: ${herb}` }));
+    await user.click(screen.getByRole("button", { name: "Раскрыть и править свойства" }));
+
+    const sheet = within(screen.getByRole("dialog", { name: `Свойства: ${herb}` }));
+    await user.click(sheet.getByRole("button", { name: /^Убрать: Усиление характеристики/ }));
+
+    expect(alchemyOf().map((property) => property.number)).toEqual([1]);
+  });
+
+  it("правка вещи раскрытого не теряет", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<ThingsScreen />);
+
+    await user.click(screen.getByRole("button", { name: "Правка: Гольпера Большая" }));
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(itemOf(stores, "гольпера-большая")?.alchemicalProperties).toHaveLength(2);
+  });
+
   it("кончившийся расходник уходит из рюкзака, оставаясь среди всех вещей", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<ThingsScreen />);

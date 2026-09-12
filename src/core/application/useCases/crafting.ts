@@ -1,12 +1,10 @@
 import { Character } from "@/core/domain/assembly/character";
-import { closedRefusal } from "@/core/domain/crafting/forbidden";
 import { Items } from "@/core/domain/items/items";
 import type { Batch } from "@/core/domain/crafting/batch";
 import { ALCHEMY_ABILITY, developmentOutcome } from "@/core/domain/crafting/development";
 import type { DevelopmentOutcome } from "@/core/domain/crafting/development";
 import type { RecipeFormula } from "@/core/domain/crafting/recipe";
 import type { MixtureKind } from "@/core/domain/crafting/crafting";
-import type { AlchemicalRarity } from "@/core/domain/catalog/alchemy";
 import type { RevealedProperty } from "@/core/domain/items/ingredient";
 import { ingredient } from "@/core/domain/items/schema";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -98,8 +96,6 @@ export function craftBatch(session: Session, order: CraftOrder, occasion: Occasi
   const crafting = root.crafting;
   const kinds = mixtureKinds(root.items, order.formula.kinds);
   const batch = crafting.batchOf(kinds, order.formula, crafting.apparatus, order.portions);
-  const closed = closedRefusal(batch.difficulty.directions);
-  if (closed !== undefined) throw new DomainError(closed);
   if (!crafting.knows(order.formula) && order.rolled === undefined) {
     throw new DomainError(missingCheckRefusal());
   }
@@ -110,7 +106,7 @@ export function craftBatch(session: Session, order: CraftOrder, occasion: Occasi
       : developmentOutcome({
           rolled: order.rolled,
           mishapRolled: order.mishapRolled,
-          check: crafting.checkFor(batch.difficulty.directions, {
+          check: crafting.checkFor({
             proficiencyBonus: root.sheet.value("proficiencyBonus"),
             abilityModifier: root.sheet.abilityModifier(ALCHEMY_ABILITY),
           }),
@@ -155,16 +151,13 @@ export function noteIngredient(session: Session, nameRu: string, occasion: Occas
 
 export function revealProperty(
   session: Session,
-  reveal: { itemId: string; property: RevealedProperty; rarity?: AlchemicalRarity | undefined },
+  reveal: { itemId: string; property: RevealedProperty },
   occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
-  const known = root.withItems(root.items.revealProperty(reveal.itemId, reveal.property));
   return commit(
     session,
-    reveal.rarity === undefined
-      ? known
-      : known.withCrafting(known.crafting.nameRarity(reveal.property.nameRu, reveal.rarity)),
+    root.withItems(root.items.revealProperty(reveal.itemId, reveal.property)),
     {
       kind: "sheet_edited",
       summaryRu: `Раскрыто: ${root.items.ingredientNameRu(reveal.itemId)} — ${reveal.property.nameRu}`,
@@ -173,16 +166,17 @@ export function revealProperty(
   );
 }
 
-export function nameRarity(
+export function dropProperty(
   session: Session,
-  named: { propertyRu: string; rarity: AlchemicalRarity },
+  dropped: { itemId: string; number: number },
   occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
+  const nameRu = root.items.ingredientNameRu(dropped.itemId);
   return commit(
     session,
-    root.withCrafting(root.crafting.nameRarity(named.propertyRu, named.rarity)),
-    { kind: "sheet_edited", summaryRu: `Названа редкость: ${named.propertyRu}` },
+    root.withItems(root.items.dropProperty(dropped.itemId, dropped.number)),
+    { kind: "sheet_edited", summaryRu: `Убрано раскрытое: ${nameRu}, номер ${dropped.number}` },
     occasion,
   );
 }

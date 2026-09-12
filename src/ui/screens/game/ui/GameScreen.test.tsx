@@ -252,7 +252,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     await user.click(screen.getByRole("button", { name: "Защита" }));
 
     const list = screen.getByLabelText(/^Заклинания/);
-    expect(within(list).getAllByRole("listitem")).toHaveLength(7);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(6);
     expect(within(list).getByText("Щит")).toBeDefined();
     expect(within(list).getByText("Контрзаклинание")).toBeDefined();
   });
@@ -262,7 +262,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     await renderWithStores(<GameScreen />);
 
     await user.click(screen.getByRole("button", { name: "Защита" }));
-    await user.click(screen.getByRole("button", { name: "Боевое" }));
+    await user.click(screen.getByRole("button", { name: "Урон" }));
 
     const list = screen.getByLabelText(/^Заклинания/);
     expect(within(list).getAllByRole("listitem").length).toBeGreaterThan(2);
@@ -274,7 +274,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
     const user = userEvent.setup();
     await renderWithStores(<GameScreen />);
 
-    await user.click(screen.getByRole("button", { name: "Боевое" }));
+    await user.click(screen.getByRole("button", { name: "Контроль" }));
     await user.click(screen.getByRole("button", { name: "Реакция" }));
 
     expect(screen.getByText(/не подходит ни одно заклинание/)).toBeDefined();

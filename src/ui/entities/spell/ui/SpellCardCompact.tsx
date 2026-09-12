@@ -3,7 +3,7 @@ import {
   castCostPhrase,
   castTypePhrase,
   castingTimeBadge,
-  combatRole,
+  combatRoleBadge,
   componentLetters,
   holdsPhrase,
   rollPhrase,
@@ -56,7 +56,7 @@ export function SpellCardCompact({
   const holds = holdsPhrase(spell);
   const roll = rollPhrase(spell, casting);
   const letters = componentLetters(spell);
-  const role = combatRole(spell.role);
+  const role = combatRoleBadge(spell.roles);
   const dimmed = unavailable || active;
 
   const effectLines = [

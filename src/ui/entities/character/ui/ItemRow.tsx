@@ -6,7 +6,7 @@ import type { ChoicesView, ItemView } from "@/contract/views";
 import { editName } from "@/ui/shared/ui/buttonLabels";
 import { RULE_MARK } from "@/ui/shared/ui/rule";
 
-import { propertyNumberRu, rarityLabel } from "@/ui/shared/lib/alchemyLabels";
+import { propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 
 import { itemMeta } from "../lib/itemMeta";
 
@@ -87,7 +87,6 @@ export function ItemRow({
                 {propertyNumberRu(property.number)}
               </span>
               <span className="min-w-0 flex-1 leading-snug">{property.nameRu}</span>
-              <span className="shrink-0 text-ink-quiet">{rarityLabel(property.rarity)}</span>
             </li>
           ))}
         </ul>

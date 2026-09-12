@@ -16,6 +16,7 @@ type Handlers = {
   onSetBagCount?: (count: number) => void;
   onAdjustWornCount?: (delta: number) => void;
   onRemove?: () => void;
+  onOpenProperties?: () => void;
 };
 
 function itemOf(item: Partial<ItemView> & Pick<ItemView, "id" | "nameRu">): ItemView {
@@ -45,6 +46,7 @@ function open(item: ItemView, handlers: Handlers = {}) {
       onSetBagCount={handlers.onSetBagCount ?? (() => {})}
       onAdjustWornCount={handlers.onAdjustWornCount ?? (() => {})}
       onRemove={handlers.onRemove ?? (() => {})}
+      onOpenProperties={handlers.onOpenProperties ?? (() => {})}
       onCancel={() => {}}
     />,
   );

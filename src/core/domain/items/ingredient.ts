@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { isAlchemicalPropertyName } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
@@ -12,16 +11,16 @@ export const PROPERTY_NUMBERS: readonly number[] = Array.from(
   (_unused, index) => index + 1,
 );
 
-function unknownPropertyRefusal(name: string): string {
-  return `свойства «${name}» нет в справочнике`;
-}
-
 function occupiedNumberRefusal(number: number): string {
   return `свойство под номером ${number} уже раскрыто`;
 }
 
 function repeatedPropertyRefusal(name: string): string {
   return `свойство «${name}» у этого ингредиента уже раскрыто`;
+}
+
+function unrevealedNumberRefusal(nameRu: string, number: number): string {
+  return `у вида «${nameRu}» под номером ${number} ничего не раскрыто`;
 }
 
 function observationTakenRefusal(id: string): string {
@@ -32,17 +31,16 @@ function observationMissingRefusal(nameRu: string, id: string): string {
   return `у вида «${nameRu}» нет наблюдения «${id}»`;
 }
 
-/** Сказанное столом о виде, чего перечень свойств выразить не может: слова, а не механика. */
+/** Сказанное столом о виде, чего свойства выразить не могут: слова, а не механика. */
 const observationFields = z.object({
   id: nonEmpty,
   textRu: nonEmpty,
 });
 
+/** Свойство называет стол своими словами: перечня, по которому его сверять, у ремесла нет. */
 const revealedPropertyFields = z.object({
   number: z.number().int().min(1).max(DEEPEST_PROPERTY_NUMBER),
-  nameRu: z.string().refine(isAlchemicalPropertyName, {
-    error: (issue) => unknownPropertyRefusal(String(issue.input)),
-  }),
+  nameRu: nonEmpty,
 });
 
 type AlchemyFields = {
@@ -107,6 +105,20 @@ export function withRevealedProperty(
   property: RevealedProperty,
 ): IngredientAlchemy {
   return { ...alchemy, properties: [...alchemy.properties, property] };
+}
+
+export function withoutProperty(
+  nameRu: string,
+  alchemy: IngredientAlchemy,
+  number: number,
+): IngredientAlchemy {
+  if (!alchemy.properties.some((property) => property.number === number)) {
+    throw new DomainError(unrevealedNumberRefusal(nameRu, number));
+  }
+  return {
+    ...alchemy,
+    properties: alchemy.properties.filter((property) => property.number !== number),
+  };
 }
 
 export function withObservation(

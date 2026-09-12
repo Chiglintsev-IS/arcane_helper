@@ -5,6 +5,7 @@ import type { ComponentProps } from "react";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { withoutItems } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
@@ -213,7 +214,7 @@ describe("«Сумка» в «Вещах»", () => {
   });
 
   it("пустой список говорит, чего в нём нет", () => {
-    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} filter="consumable" />);
+    render(<Bag bag={toBagView(withoutItems(createThorne()), spells)} {...NOOP} filter="consumable" />);
     expect(screen.getByText("Расходников при себе нет.")).toBeDefined();
   });
 

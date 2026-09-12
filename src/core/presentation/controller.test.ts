@@ -493,9 +493,7 @@ describe("ремесло", () => {
     );
     const rated = known.withItems(withKnowledge);
     const live = run([...stock, { kind: "craft_batch", formula, portions: 1, rolled: 15 }], {
-      session: createSession(
-        rated.withCrafting(rated.crafting.nameRarity("Лечение здоровья", "common")).toState(),
-      ),
+      session: createSession(rated.toState()),
       spellCatalog: CATALOG,
       spellCatalogSource: "built_in",
     });
@@ -503,42 +501,39 @@ describe("ремесло", () => {
     expect(live.session.log.at(-1)?.kind).toBe("batch_crafted");
   });
 
-  it("вид записывается вещью, свойство встаёт у неё, а редкость — у алхимика", () => {
+  it("вид записывается вещью, а свойство встаёт у неё словом стола", () => {
     const noted = run([
       { kind: "note_ingredient", nameRu: MOON_HERB },
       {
         kind: "reveal_property",
         itemId: MOON_HERB_ID,
         number: 1,
-        propertyRu: "Лечение здоровья",
-        rarity: "common",
+        propertyRu: "Отвращение к пиву",
       },
     ]);
 
-    const root = Character.of(noted.session.character);
-
-    expect(root.items.alchemyOf(MOON_HERB_ID).properties).toHaveLength(1);
-    expect(root.crafting.rarityOf("Лечение здоровья")).toBe("common");
+    expect(Character.of(noted.session.character).items.alchemyOf(MOON_HERB_ID).properties).toEqual([
+      { number: 1, nameRu: "Отвращение к пиву" },
+    ]);
   });
 
-  it("редкость называется и позже, одна на свойство у всех видов сразу", () => {
-    const unnamed = run([
+  it("раскрытое убирается, и правка вещи его не теряет", () => {
+    const known = run([
       { kind: "note_ingredient", nameRu: MOON_HERB },
       { kind: "reveal_property", itemId: MOON_HERB_ID, number: 1, propertyRu: "Лечение здоровья" },
+      { kind: "reveal_property", itemId: MOON_HERB_ID, number: 2, propertyRu: "Пробуждение" },
     ]);
-    const named = run(
-      [{ kind: "name_rarity", propertyRu: "Лечение здоровья", rarity: "rare" }],
-      unnamed,
+    const edited = run(
+      [{ kind: "edit_item", item: { id: MOON_HERB_ID, nameRu: MOON_HERB, kinds: ["ingredient"] } }],
+      known,
     );
+    const dropped = run([{ kind: "drop_property", itemId: MOON_HERB_ID, number: 1 }], edited);
 
-    expect(Character.of(unnamed.session.character).crafting.rarityOf("Лечение здоровья")).toBeUndefined();
-    expect(Character.of(named.session.character).crafting.rarityOf("Лечение здоровья")).toBe("rare");
-  });
+    const propertiesOf = (live: LiveSession) =>
+      Character.of(live.session.character).items.alchemyOf(MOON_HERB_ID).properties;
 
-  it("редкость называют только известному свойству: отказ называет слово", () => {
-    expect(() => run([{ kind: "name_rarity", propertyRu: "Кисель", rarity: "rare" }])).toThrow(
-      /«Кисель»/,
-    );
+    expect(propertiesOf(edited)).toHaveLength(2);
+    expect(propertiesOf(dropped)).toEqual([{ number: 2, nameRu: "Пробуждение" }]);
   });
 
   it("наблюдения о виде пишутся, правятся, убираются и в лог не идут", () => {
@@ -574,17 +569,10 @@ describe("ремесло", () => {
 
   it("мастерская записывается командой и правит пределы работы", () => {
     const equipped = run([
-      {
-        kind: "set_alchemy_workshop",
-        apparatus: { poisons: "Базовый лабораторный модуль" },
-        studiedDirections: ["poisons"],
-      },
+      { kind: "set_alchemy_workshop", apparatus: "Базовый лабораторный модуль" },
     ]);
 
-    expect(equipped.session.character.alchemyApparatus).toEqual({
-      poisons: "Базовый лабораторный модуль",
-    });
-    expect(equipped.session.character.studiedDirections).toEqual(["poisons"]);
+    expect(equipped.session.character.alchemyApparatus).toBe("Базовый лабораторный модуль");
   });
 
   it("слово, которого нет в таблице справочника, отвергается с причиной", () => {

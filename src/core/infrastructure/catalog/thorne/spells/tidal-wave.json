@@ -5,7 +5,10 @@
   "level": 3,
   "school": "Вызов",
   "source": "Xanathar's Guide to Everything",
-  "combatRole": "offense",
+  "combatRoles": [
+    "damage",
+    "hindrance"
+  ],
   "castingTime": {
     "type": "action"
   },

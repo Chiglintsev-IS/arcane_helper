@@ -8,12 +8,6 @@ export const TIER_LABELS: Readonly<Record<string, string>> = {
   concentrated: "концентрированная",
 };
 
-export const DIRECTION_LABELS: Readonly<Record<string, string>> = {
-  potions: "зельеварение",
-  poisons: "синтез ядов",
-  transmutation: "трансмутация",
-};
-
 const MINUTES_PER_HOUR = 60;
 
 export function minutesRu(minutes: number): string {

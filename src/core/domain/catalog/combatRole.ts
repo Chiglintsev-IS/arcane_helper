@@ -1,9 +1,54 @@
+import { z } from "zod";
+
 import type { Spell } from "@/core/domain/catalog/spell";
 
-export const COMBAT_ROLES = ["offense", "defense", "other"] as const;
+const COMBAT_ROLES = [
+  "damage",
+  "hindrance",
+  "defense",
+  "buff",
+  "movement",
+  "healing",
+  "scouting",
+  "other",
+] as const;
 
 type CombatRole = (typeof COMBAT_ROLES)[number];
 
-export function combatRoleOf(spell: Spell): CombatRole {
-  return spell.combatRole ?? "other";
+const OTHER_ROLE: CombatRole = "other";
+
+const RETIRED_OFFENSE_ROLE = z.literal("offense").transform((): CombatRole => "damage");
+
+const combatRoleSchema = z.union([z.enum(COMBAT_ROLES), RETIRED_OFFENSE_ROLE]);
+
+function withoutRepeats(roles: readonly CombatRole[]): boolean {
+  return new Set(roles).size === roles.length;
+}
+
+function otherStandsAlone(roles: readonly CombatRole[]): boolean {
+  return !roles.includes(OTHER_ROLE) || roles.length === 1;
+}
+
+export const combatRolesSchema = z
+  .array(combatRoleSchema)
+  .min(1, { message: "Перечень ролей в бою не бывает пустым" })
+  .refine(withoutRepeats, { message: "Роль в перечне не повторяется" })
+  .refine(otherStandsAlone, {
+    message: "«Прочее» стоит одно: заклинание с боевой ролью прочим не бывает",
+  });
+
+type RetiredSingleRoleCard = { combatRole: unknown; combatRoles?: unknown };
+
+function carriesRetiredSingleRole(raw: unknown): raw is RetiredSingleRoleCard {
+  return typeof raw === "object" && raw !== null && "combatRole" in raw && !("combatRoles" in raw);
+}
+
+export function foldRetiredSingleRole(raw: unknown): unknown {
+  if (!carriesRetiredSingleRole(raw)) return raw;
+  const { combatRole, ...rest } = raw;
+  return { ...rest, combatRoles: [combatRole] };
+}
+
+export function combatRolesOf(spell: Spell): readonly CombatRole[] {
+  return spell.combatRoles ?? [OTHER_ROLE];
 }

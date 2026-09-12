@@ -3,26 +3,14 @@ import { describe, expect, it } from "vitest";
 import { developmentCheck, developmentOutcome } from "./development";
 
 const THORNE = { proficiencyBonus: 3, abilityModifier: 4 };
-const STUDIED = ["potions", "transmutation"] as const;
 
 describe("проверка разработки", () => {
-  it("изученное направление прибавляет бонус мастерства, неизученное — нет", () => {
-    expect(developmentCheck(["potions"], STUDIED, THORNE)).toEqual({ bonus: 7, unstudied: [] });
-    expect(developmentCheck(["poisons"], STUDIED, THORNE)).toEqual({
-      bonus: 4,
-      unstudied: ["poisons"],
-    });
-  });
-
-  it("гибрид идёт одной проверкой с наименьшим бонусом и называет виноватое направление", () => {
-    expect(developmentCheck(["potions", "poisons"], STUDIED, THORNE)).toEqual({
-      bonus: 4,
-      unstudied: ["poisons"],
-    });
+  it("к модификатору характеристики прибавляется бонус мастерства", () => {
+    expect(developmentCheck(THORNE)).toEqual({ bonus: 7 });
   });
 
   it("выпавшее сравнивается со сложностью, а невозможное отвергается с причиной", () => {
-    const check = developmentCheck(["potions"], STUDIED, THORNE);
+    const check = developmentCheck(THORNE);
 
     expect(developmentOutcome({ rolled: 8, mishapRolled: undefined, check, difficulty: 15 })).toEqual(
       { rolled: 8, bonus: 7, total: 15, success: true, rewarded: false },
@@ -39,7 +27,7 @@ describe("проверка разработки", () => {
   });
 
   it("натуральная двадцать награждает только успешный результат", () => {
-    const check = developmentCheck(["potions"], STUDIED, THORNE);
+    const check = developmentCheck(THORNE);
 
     expect(
       developmentOutcome({ rolled: 20, mishapRolled: undefined, check, difficulty: 20 }).rewarded,
@@ -50,7 +38,7 @@ describe("проверка разработки", () => {
   });
 
   it("натуральная единица требует кости последствий и называет его таблицей", () => {
-    const check = developmentCheck(["potions"], STUDIED, THORNE);
+    const check = developmentCheck(THORNE);
 
     expect(() =>
       developmentOutcome({ rolled: 1, mishapRolled: undefined, check, difficulty: 5 }),

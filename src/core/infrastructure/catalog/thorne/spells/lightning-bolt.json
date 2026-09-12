@@ -5,7 +5,9 @@
   "level": 3,
   "school": "Воплощение",
   "source": "Player's Handbook (2014)",
-  "combatRole": "offense",
+  "combatRoles": [
+    "damage"
+  ],
   "castingTime": {
     "type": "action"
   },

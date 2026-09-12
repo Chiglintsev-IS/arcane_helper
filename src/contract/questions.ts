@@ -34,8 +34,6 @@ export const questionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("research_preview"),
     itemId: word,
     number: numeric,
-    rarity: word.optional(),
-    direction: word,
   }),
   z.object({ kind: z.literal("export_preview") }),
   z.object({
@@ -104,7 +102,7 @@ export const previewSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("recipe_preview"),
     matches: z.array(
-      z.object({ nameRu: word, rarity: word.optional(), sources: z.array(word), tier: word }),
+      z.object({ nameRu: word, sources: z.array(word), tier: word }),
     ),
     difficulty: z
       .object({
@@ -116,7 +114,7 @@ export const previewSchema = z.discriminatedUnion("kind", [
     batch: z
       .object({ minutes: whole, consumablesRu: word, consumablesGold: whole, units: whole })
       .nullable(),
-    check: z.object({ bonus: whole, unstudied: z.array(word), mishapAwaited: z.boolean() }).nullable(),
+    check: z.object({ bonus: whole, mishapAwaited: z.boolean() }).nullable(),
     known: z.boolean(),
     refusalRu: word.optional(),
   }),

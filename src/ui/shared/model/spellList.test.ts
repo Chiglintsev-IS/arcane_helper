@@ -9,6 +9,7 @@ import {
   orderForPlay,
   orderKey,
   positionInList,
+  primaryRole,
   spellsForScreen,
 } from "@/ui/shared/model/spellList";
 
@@ -70,10 +71,10 @@ describe("порядок: сначала бесплатное, потом по �
       "absorb-elements",
       "mage-armor",
       "web",
+      "thunder-step",
       "lightning-bolt",
       "slow",
       "counterspell",
-      "thunder-step",
       "intellect-fortress",
       "storm-sphere",
     ]);
@@ -89,22 +90,33 @@ describe("порядок: сначала бесплатное, потом по �
       "absorb-elements",
       "mage-armor",
       "web",
+      "thunder-step",
       "lightning-bolt",
       "slow",
       "counterspell",
-      "thunder-step",
       "intellect-fortress",
       "storm-sphere",
     ]);
   });
 
-  it("ключ: цена, затем роль — «другое» впереди боевого", () => {
-    const reaction = { nameRu: "Дорогая реакция", castingTime: "reaction", level: 4, concentration: false, role: "other" } as const;
-    const action = { nameRu: "Бесплатное действие", castingTime: "action", level: 0, concentration: false, role: "offense" } as const;
+  it("ключ: цена, затем роль — «другое» впереди урона, защита позади усиления", () => {
+    const reaction = { nameRu: "Дорогая реакция", castingTime: "reaction", level: 4, concentration: false, roles: ["other"] } as const;
+    const action = { nameRu: "Бесплатное действие", castingTime: "action", level: 0, concentration: false, roles: ["damage"] } as const;
 
     expect(compareTraits(reaction, action)).toBeGreaterThan(0);
-    expect(orderKey(action)).toEqual([0, 1]);
-    expect(orderKey({ ...action, role: "other" })).toEqual([0, 0]);
+    expect(orderKey(action)).toEqual([0, 4]);
+    expect(orderKey({ ...action, roles: ["other"] })).toEqual([0, 0]);
+    expect(orderKey({ ...action, roles: ["scouting"] })).toEqual([0, 1]);
+    expect(orderKey({ ...action, roles: ["movement"] })).toEqual([0, 2]);
+    expect(orderKey({ ...action, roles: ["healing"] })).toEqual([0, 3]);
+    expect(orderKey({ ...action, roles: ["hindrance"] })).toEqual([0, 5]);
+    expect(orderKey({ ...action, roles: ["buff"] })).toEqual([0, 6]);
+    expect(orderKey({ ...action, roles: ["defense"] })).toEqual([0, 7]);
+  });
+
+  it("главная роль — первая в перечне; пустой перечень стоит как «другое»", () => {
+    expect(primaryRole(["defense", "damage"])).toBe("defense");
+    expect(primaryRole([])).toBe("other");
   });
 
   it("сортировка не меняет исходный список", () => {
@@ -132,11 +144,11 @@ describe("строка-действие встаёт среди того, что
     ]);
   });
 
-  it("вне боя — за ритуалами: они тоже ничего не стоят и тоже «другое»", () => {
+  it("вне боя — за прочим и перед разведкой: бесплатные ритуалы стоят следом", () => {
     const shown = spellsForScreen(testSpellRows(), "play");
     const at = positionInList(shown, LAST_HINT_TRAITS, "play");
-    expect(shown[at - 1]?.id).toBe("detect-magic");
-    expect(shown[at]?.id).toBe("shocking-grasp");
+    expect(shown[at - 1]?.id).toBe("mending");
+    expect(shown[at]?.id).toBe("alarm");
   });
 
   it("в «Книге» место ищется уровнем: там смотрят состав, а не цену момента", () => {
@@ -184,7 +196,7 @@ describe("состав строки: цена считается тем же п�
       castingTime: "action",
       level: 0,
       concentration: true,
-      role: "other",
+      roles: ["scouting"],
     });
     expect(traitsOf(testSpellRow("detect-magic", undefined, IN_FIGHT)).level).toBe(1);
   });

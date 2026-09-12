@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 
-import type { CommandOf } from "@/contract/commands";
+import type { Command } from "@/contract/commands";
 import type { PreviewOf, Question } from "@/contract/questions";
 import type { ChoicesView, IngredientKnowledgeView } from "@/contract/views";
 
-import { DIRECTION_LABELS, researchCostRu } from "@/ui/entities/crafting/lib/labels";
-import { RARITY_LABELS, RARITY_UNNAMED, labelled, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
+import { researchCostRu } from "@/ui/entities/crafting/lib/labels";
+import { NOTHING_REVEALED, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
@@ -15,9 +15,16 @@ import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
 import { RULE_BETWEEN } from "@/ui/shared/ui/rule";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-export function revealPropertyName(nameRu: string): string {
-  return `Раскрыть свойство: ${nameRu}`;
+export function ingredientPropertiesName(nameRu: string): string {
+  return `Свойства: ${nameRu}`;
 }
+
+const PROPERTIES_TITLE = "Раскрытые свойства";
+
+const REVEAL_TITLE = "Раскрыть следующее";
+
+/** Свойство приходит словами стола: перечня, из которого его выбирать, у приложения нет. */
+const PROPERTY_FIELD = "Свойство";
 
 function ResearchCost({ plan }: { plan: NonNullable<PreviewOf<"research_preview">["plan"]> }) {
   return (
@@ -117,43 +124,39 @@ function Observations({
   );
 }
 
+/**
+ * Шторка ведёт запись вещи целиком, и обе двери к ней — «Алхимия» и «Вещи» — приносят только свой
+ * способ отправить команду и закрыться.
+ */
 export function RevealPropertySheet({
   ingredient,
   choices,
   refusalRu,
-  onConfirm,
-  onExhausted,
-  onNameRarity,
-  onNoteObservation,
-  onRewriteObservation,
-  onDropObservation,
+  onSend,
   onCancel,
 }: {
   ingredient: IngredientKnowledgeView;
   choices: ChoicesView;
   refusalRu: string | null;
-  onConfirm: (command: CommandOf<"reveal_property">) => void;
-  onExhausted: (exhausted: boolean) => void;
-  onNameRarity: (propertyRu: string, rarity: string) => void;
-  onNoteObservation: (textRu: string) => void;
-  onRewriteObservation: (observationId: string, textRu: string) => void;
-  onDropObservation: (observationId: string) => void;
+  onSend: (command: Command, whenDone?: () => void) => void;
   onCancel: () => void;
 }) {
   const nameRu = ingredient.nameRu;
   const itemId = ingredient.itemId;
+  const onExhausted = (exhausted: boolean): void =>
+    onSend({ kind: "mark_properties_exhausted", itemId, exhausted });
+  const onDropProperty = (number: number): void =>
+    onSend({ kind: "drop_property", itemId, number });
+  const onNoteObservation = (textRu: string): void =>
+    onSend({ kind: "note_observation", itemId, textRu });
+  const onRewriteObservation = (observationId: string, textRu: string): void =>
+    onSend({ kind: "rewrite_observation", itemId, observationId, textRu });
+  const onDropObservation = (observationId: string): void =>
+    onSend({ kind: "drop_observation", itemId, observationId });
   const [propertyRu, setPropertyRu] = useState("");
   const [number, setNumber] = useState(choices.propertyNumbers[0] ?? 1);
-  const [rarity, setRarity] = useState("");
-  const [direction, setDirection] = useState(choices.alchemyDirections[0] ?? "");
 
-  const question: Question = {
-    kind: "research_preview",
-    itemId,
-    number,
-    ...(rarity === "" ? {} : { rarity }),
-    direction,
-  };
+  const question: Question = { kind: "research_preview", itemId, number };
   const answer = usePreview(question);
   const research: PreviewOf<"research_preview"> | null =
     answer?.kind === "research_preview" ? answer : null;
@@ -162,79 +165,52 @@ export function RevealPropertySheet({
     <section
       role="dialog"
       aria-modal="true"
-      aria-label={revealPropertyName(nameRu)}
+      aria-label={ingredientPropertiesName(nameRu)}
       className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
     >
-      <h2 className="text-base font-semibold leading-tight">{nameRu}</h2>
+      <h2 className="text-base font-semibold leading-tight">
+        {ingredientPropertiesName(nameRu)}
+      </h2>
 
-      {ingredient.properties.length === 0 ? null : (
-        <ul className="flex flex-col gap-1">
-          {ingredient.properties.map((property) => (
-            <li key={property.number} className="flex items-center gap-2">
-              <span className="shrink-0 text-xs font-semibold tabular-nums text-ink-quiet">
-                {propertyNumberRu(property.number)}
-              </span>
-              <span className="min-w-0 flex-1 text-sm leading-tight">{property.nameRu}</span>
-              <select
-                value={property.rarity ?? ""}
-                aria-label={`Редкость: ${property.nameRu}`}
-                onChange={(event) => onNameRarity(property.nameRu, event.target.value)}
-                className={`min-h-11 shrink-0 px-2 text-xs ${SURFACE_CONTROL}`}
-              >
-                <option value="">{RARITY_UNNAMED}</option>
-                {choices.alchemicalRarities.map((option) => (
-                  <option key={option} value={option}>
-                    {labelled(RARITY_LABELS, option)}
-                  </option>
-                ))}
-              </select>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-ink-quiet">{PROPERTIES_TITLE}</span>
 
-      <div className="grid grid-cols-2 gap-2">
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-xs text-ink-quiet">Номер</span>
-          <select
-            value={String(number)}
-            onChange={(event) => setNumber(Number(event.target.value))}
-            className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
-          >
-            {choices.propertyNumbers.map((option) => (
-              <option key={option} value={String(option)}>
-                {propertyNumberRu(option)}
-              </option>
+        {ingredient.properties.length === 0 ? (
+          <p className="text-xs text-ink-quiet">{NOTHING_REVEALED}</p>
+        ) : (
+          <ul aria-label={PROPERTIES_TITLE} className={`flex flex-col ${RULE_BETWEEN}`}>
+            {ingredient.properties.map((property) => (
+              <li key={property.number} className="flex items-center gap-2 py-1.5">
+                <span className="shrink-0 text-xs font-semibold tabular-nums text-ink-quiet">
+                  {propertyNumberRu(property.number)}
+                </span>
+                <span className="min-w-0 flex-1 text-sm leading-tight">{property.nameRu}</span>
+                <button
+                  type="button"
+                  aria-label={`${BUTTON_LABELS.remove}: ${property.nameRu}`}
+                  onClick={() => onDropProperty(property.number)}
+                  className={`min-h-11 shrink-0 px-3 text-xs font-medium text-reaction ${SURFACE_CONTROL}`}
+                >
+                  {BUTTON_LABELS.remove}
+                </button>
+              </li>
             ))}
-          </select>
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-xs text-ink-quiet">Редкость</span>
-          <select
-            value={rarity}
-            onChange={(event) => setRarity(event.target.value)}
-            className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
-          >
-            <option value="">{RARITY_UNNAMED}</option>
-            {choices.alchemicalRarities.map((option) => (
-              <option key={option} value={option}>
-                {labelled(RARITY_LABELS, option)}
-              </option>
-            ))}
-          </select>
-        </label>
+          </ul>
+        )}
       </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-ink-quiet">Направление работы</span>
+      <span className="text-xs text-ink-quiet">{REVEAL_TITLE}</span>
+
+      <label className="flex min-w-0 flex-col gap-1">
+        <span className="text-xs text-ink-quiet">Номер</span>
         <select
-          value={direction}
-          onChange={(event) => setDirection(event.target.value)}
+          value={String(number)}
+          onChange={(event) => setNumber(Number(event.target.value))}
           className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
         >
-          {choices.alchemyDirections.map((option) => (
-            <option key={option} value={option}>
-              {labelled(DIRECTION_LABELS, option)}
+          {choices.propertyNumbers.map((option) => (
+            <option key={option} value={String(option)}>
+              {propertyNumberRu(option)}
             </option>
           ))}
         </select>
@@ -246,27 +222,15 @@ export function RevealPropertySheet({
         <p className="text-xs text-ink-soft">{research.refusalRu}</p>
       )}
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-ink-quiet">Свойство</span>
-        <select
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-ink-quiet">{PROPERTY_FIELD}</span>
+        <GrowingField
+          labelRu={PROPERTY_FIELD}
           value={propertyRu}
-          onChange={(event) => setPropertyRu(event.target.value)}
-          className={`min-h-11 w-full px-2 text-sm ${SURFACE_CONTROL}`}
-        >
-          <option value="">Не выбрано</option>
-          {choices.alchemyDirections.map((option) => (
-            <optgroup key={option} label={labelled(DIRECTION_LABELS, option)}>
-              {choices.alchemicalProperties
-                .filter((property) => property.direction === option)
-                .map((property) => (
-                  <option key={property.nameRu} value={property.nameRu}>
-                    {property.nameRu}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
+          onChange={setPropertyRu}
+          onSubmit={setPropertyRu}
+        />
+      </div>
 
       <button
         type="button"
@@ -297,13 +261,15 @@ export function RevealPropertySheet({
         <button
           type="button"
           onClick={() =>
-            onConfirm({
-              kind: "reveal_property",
-              itemId,
-              number,
-              propertyRu,
-              ...(rarity === "" ? {} : { rarity }),
-            })
+            onSend(
+              {
+                kind: "reveal_property",
+                itemId,
+                number,
+                propertyRu,
+              },
+              onCancel,
+            )
           }
           className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
         >

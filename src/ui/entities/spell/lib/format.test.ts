@@ -8,6 +8,7 @@ import {
   castingTimeLabel,
   castingTimePhrase,
   combatRole,
+  combatRoleBadge,
   durationPhrase,
   ritualOnlyBadge,
   targetingLabel,
@@ -16,6 +17,17 @@ import {
   castCostPhrase,
   rollPhrase,
 } from "./format";
+
+describe("combatRoleBadge", () => {
+  it("линейку красит первая роль, словом названы все — вторая со строчной", () => {
+    expect(combatRoleBadge(["damage", "hindrance"])).toEqual({ label: "Урон, контроль", tone: "damage", icon: "✚" });
+    expect(combatRoleBadge(["defense"])).toEqual(combatRole("defense"));
+  });
+
+  it("пустой перечень читается как «другое», а не падает", () => {
+    expect(combatRoleBadge([])).toEqual(combatRole("other"));
+  });
+});
 
 describe("castingTimeLabel (FR-033)", () => {
   it("действие, бонусное действие и реакция называются словом", () => {
@@ -99,7 +111,7 @@ describe("слово вне словаря значков", () => {
   });
 
   it("роль, которой словарь ещё не знает, читается как «ни то, ни другое»", () => {
-    expect(combatRole("control")).toEqual(combatRole("other"));
+    expect(combatRole("offense")).toEqual(combatRole("other"));
   });
 });
 

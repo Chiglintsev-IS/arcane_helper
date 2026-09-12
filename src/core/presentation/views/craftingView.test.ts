@@ -11,15 +11,10 @@ import {
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 describe("проекция знания об ингредиентах", () => {
-  it("закрытое направление едет с причиной, а изученные — своим списком", () => {
-    const view = toCraftingView(createThorne());
-
-    expect(view.workshop.closedDirections).toEqual([
-      {
-        direction: "poisons",
-        reasonRu: expect.stringMatching(/ядов не варят/),
-      },
-    ]);
+  it("мастерская едет одним набором на всю алхимию", () => {
+    expect(toCraftingView(createThorne()).workshop).toEqual({
+      apparatusRu: "Надёжный походный комплект",
+    });
   });
 
   it("знание едет проекцией видами и раскрытым у них", () => {
@@ -27,8 +22,8 @@ describe("проекция знания об ингредиентах", () => {
       withoutIngredientKnowledge(createThorne()),
       "Лунная трава",
       [
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-        { number: 3, nameRu: "Взрыв", rarity: "rare" },
+        { number: 1, nameRu: "Лечение здоровья" },
+        { number: 3, nameRu: "Взрыв" },
       ],
     );
 
@@ -38,8 +33,8 @@ describe("проекция знания об ингредиентах", () => {
         nameRu: "Лунная трава",
         inBag: 0,
         properties: [
-          { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-          { number: 3, nameRu: "Взрыв", rarity: "rare" },
+          { number: 1, nameRu: "Лечение здоровья" },
+          { number: 3, nameRu: "Взрыв" },
         ],
         observations: [],
         propertiesExhausted: false,

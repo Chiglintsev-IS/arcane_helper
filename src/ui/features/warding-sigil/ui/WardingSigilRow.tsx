@@ -1,5 +1,5 @@
 import type { ResourcesView } from "@/contract/views";
-import { castingTimeBadge, combatRole } from "@/ui/entities/spell/lib/format";
+import { castingTimeBadge, combatRoleBadge } from "@/ui/entities/spell/lib/format";
 import { wardingSigilTraits } from "@/ui/shared/model/actionTraits";
 import { ActionRow } from "@/ui/shared/ui/ActionRow";
 import { TONE_TEXT } from "@/ui/shared/ui/tone";
@@ -21,7 +21,7 @@ export function WardingSigilRow({
   const castingTime = castingTimeBadge(traits.castingTime);
 
   return (
-    <ActionRow nameRu={runes.nameRu} role={combatRole(traits.role)} onOpen={onOpen}>
+    <ActionRow nameRu={runes.nameRu} role={combatRoleBadge(traits.roles)} onOpen={onOpen}>
       <span className="flex w-full items-baseline justify-between gap-3 text-[0.84375rem]">
         <span className="whitespace-nowrap">
           <span className={`font-semibold ${TONE_TEXT[castingTime.tone]}`}>

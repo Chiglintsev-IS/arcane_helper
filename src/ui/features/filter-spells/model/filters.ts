@@ -38,7 +38,9 @@ export function matchesTraits(traits: ActionTraits, filters: SpellFilters): bool
   if (filters.castingTimes.length > 0 && !filters.castingTimes.some((v) => v === traits.castingTime)) {
     return false;
   }
-  if (filters.roles.length > 0 && !filters.roles.includes(traits.role)) return false;
+  if (filters.roles.length > 0 && !filters.roles.some((role) => traits.roles.includes(role))) {
+    return false;
+  }
   if (filters.concentration && !traits.concentration) return false;
   if (filters.prices.length > 0 && !filters.prices.includes(traits.level)) return false;
   return true;
@@ -62,7 +64,11 @@ export function dividingCategories(spells: readonly SpellRowView[]): DividingCat
   return {
     castingTimes: valuesDividing((spell) => spell.castingTime.type),
     prices: [...valuesDividing((spell) => spell.slotPrice)].sort((a, b) => a - b),
-    roles: valuesDividing((spell) => spell.role),
+    roles: new Set(
+      [...new Set(spells.flatMap((spell) => spell.roles))].filter((role) =>
+        divides(countOf((spell) => spell.roles.includes(role))),
+      ),
+    ),
     concentration: divides(countOf((spell) => spell.concentration)),
     ritual: divides(countOf((spell) => spell.ritualAvailable)),
   };

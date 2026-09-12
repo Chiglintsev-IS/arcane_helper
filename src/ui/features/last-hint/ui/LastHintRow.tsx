@@ -1,5 +1,5 @@
 import type { ResourcesView } from "@/contract/views";
-import { combatRole } from "@/ui/entities/spell/lib/format";
+import { combatRoleBadge } from "@/ui/entities/spell/lib/format";
 import { lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { ActionRow } from "@/ui/shared/ui/ActionRow";
 
@@ -22,7 +22,7 @@ export function LastHintRow({
   return (
     <ActionRow
       nameRu={lastHint.nameRu}
-      role={combatRole(lastHintTraits(lastHint.nameRu).role)}
+      role={combatRoleBadge(lastHintTraits(lastHint.nameRu).roles)}
       onOpen={onOpen}
     >
       <span className="text-[0.84375rem] text-ink-quiet">

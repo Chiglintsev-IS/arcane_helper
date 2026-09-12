@@ -9,7 +9,7 @@ import type {
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { Character } from "@/core/domain/assembly/character";
 import { RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
-import { combatRoleOf } from "@/core/domain/catalog/combatRole";
+import { combatRolesOf } from "@/core/domain/catalog/combatRole";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
 import { CANTRIP_LEVEL, DAMAGE_PLACEHOLDER, needsOwnComponent, type ListCard, type Spell } from "@/core/domain/catalog/spell";
@@ -228,7 +228,7 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     ownComponentCarried:
       material !== undefined && Character.of(character).equipment.carries(material.id),
     materialCoveredByFocus: materialCovered,
-    role: combatRoleOf(spell),
+    roles: [...combatRolesOf(spell)],
 
     slotPrice: slotPriceOf(spell, turn.inFight),
     benefitsFromHigherSlot: benefitsFromHigherSlot(spell),

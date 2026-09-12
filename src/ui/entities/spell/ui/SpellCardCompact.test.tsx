@@ -102,8 +102,15 @@ describe("компоненты и роль", () => {
     const { container } = renderRow("lightning-bolt");
 
     const row = container.querySelector("button");
-    expect(row?.className).toContain("border-l-offense");
-    expect(screen.getByText(/Боевое/).className).toContain("sr-only");
+    expect(row?.className).toContain("border-l-damage");
+    expect(screen.getByText("Урон").className).toContain("sr-only");
+  });
+
+  it("линейку красит главная роль, а словом названы все", () => {
+    const { container } = renderRow("ray-of-frost");
+
+    expect(container.querySelector("button")?.className).toContain("border-l-damage");
+    expect(screen.getByText("Урон, контроль").className).toContain("sr-only");
   });
 
   it("«ни то, ни другое» линейку получает нейтральную, а не пустую", () => {

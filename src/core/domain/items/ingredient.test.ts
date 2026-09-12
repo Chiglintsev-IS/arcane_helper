@@ -13,10 +13,12 @@ function ingredientWith(properties: readonly unknown[]): unknown {
 }
 
 describe("алхимия ингредиента", () => {
-  it("свойство называется словом перечня, и выдуманное отвергается с причиной", () => {
-    expect(() => ingredientWith([{ number: 1, nameRu: "лечит" }])).toThrow(
-      /лечит/,
-    );
+  it("свойство называется словами стола, а пустое имя отвергается", () => {
+    expect(revealedPropertyOf({ number: 1, nameRu: "лечит, но тошнит" })).toEqual({
+      number: 1,
+      nameRu: "лечит, но тошнит",
+    });
+    expect(() => ingredientWith([{ number: 1, nameRu: "" }])).toThrow();
   });
 
   it("свойство встаёт под своим номером", () => {
@@ -84,12 +86,12 @@ describe("алхимия ингредиента", () => {
     expect(PROPERTY_NUMBERS).toEqual([1, 2, 3, 4]);
   });
 
-  it("раскрытое свойство приходит разобранным и отвергает выдуманное имя", () => {
-    expect(revealedPropertyOf({ number: 1, nameRu: "Лечение здоровья" })).toEqual({
+  it("раскрытое свойство приходит разобранным, а имя ему даёт стол", () => {
+    expect(revealedPropertyOf({ number: 1, nameRu: "Отвращение к пиву" })).toEqual({
       number: 1,
-      nameRu: "Лечение здоровья",
+      nameRu: "Отвращение к пиву",
     });
-    expect(() => revealedPropertyOf({ number: 1, nameRu: "лечит" })).toThrow(/лечит/);
+    expect(() => revealedPropertyOf({ number: 1, nameRu: "  " })).toThrow();
   });
 
   it("вещь, которая не ингредиент, алхимии не несёт: отказ называет вещь", () => {

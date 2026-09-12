@@ -184,13 +184,13 @@ async function holdConcentrationAfterSeveralCasts(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^Новый ход/ }).click();
 }
 
-test("the first spell row is whole on screen at 320, 375 and 390", async ({ page }) => {
+test("the filter strip and the first spell row stay on screen at 320, 375 and 390", async ({ page }) => {
   await holdConcentrationAfterSeveralCasts(page);
 
   for (const size of [
-    { width: 320, height: 568 },
-    { width: 375, height: 667 },
-    { width: 390, height: 844 },
+    { width: 320, height: 568, wholeRow: false },
+    { width: 375, height: 667, wholeRow: true },
+    { width: 390, height: 844, wholeRow: true },
   ]) {
     await page.setViewportSize(size);
 
@@ -201,7 +201,11 @@ test("the first spell row is whole on screen at 320, 375 and 390", async ({ page
       while (area !== null && area.scrollHeight <= area.clientHeight) area = area.parentElement;
       if (area === null) throw new Error("нет области прокрутки");
       area.scrollTop = 0;
+      const filters = document.querySelector('[aria-label="Фильтры"]');
+      if (filters === null) throw new Error("нет полосы фильтров");
       return {
+        filtersBottom: Math.round(filters.getBoundingClientRect().bottom),
+        top: Math.round(first.getBoundingClientRect().top),
         bottom: Math.round(first.getBoundingClientRect().bottom),
         visibleBottom: Math.round(area.getBoundingClientRect().bottom),
         pageOverflow: document.documentElement.scrollHeight - window.innerHeight,
@@ -209,9 +213,17 @@ test("the first spell row is whole on screen at 320, 375 and 390", async ({ page
       };
     }, FIRST_ROW);
 
-    expect(shown.bottom, `первая строка целиком на ${size.width}`).toBeLessThanOrEqual(
+    expect(shown.filtersBottom, `полоса фильтров целиком на ${size.width}`).toBeLessThanOrEqual(
       shown.visibleBottom,
     );
+    expect(shown.top, `первая строка начинается на экране на ${size.width}`).toBeLessThan(
+      shown.visibleBottom,
+    );
+    if (size.wholeRow) {
+      expect(shown.bottom, `первая строка целиком на ${size.width}`).toBeLessThanOrEqual(
+        shown.visibleBottom,
+      );
+    }
     expect(shown.pageOverflow, `страница не прокручивается на ${size.width}`).toBeLessThanOrEqual(0);
     expect(shown.sideways, `нет бокового выезда на ${size.width}`).toBeLessThanOrEqual(0);
   }
@@ -237,7 +249,7 @@ test("filter by casting time", async ({ page }) => {
   await expect(list.getByText("Щит", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
-  await expect(list.getByRole("listitem")).toHaveCount(30);
+  await expect(list.getByRole("listitem")).toHaveCount(32);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {

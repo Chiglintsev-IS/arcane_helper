@@ -7,12 +7,11 @@ import type { PreviewOf, Question } from "@/contract/questions";
 import type { ChoicesView, IngredientKnowledgeView } from "@/contract/views";
 
 import { CHECK_DIE_RU, MISHAP_DIE_RU } from "@/shared/language";
-import { DIRECTION_LABELS } from "@/ui/entities/crafting/lib/labels";
-import { labelled, propertyNumberRu, rarityLabel } from "@/ui/shared/lib/alchemyLabels";
+import { propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { WorkshopSheet } from "@/ui/features/edit-workshop/ui/WorkshopSheet";
 import {
   RevealPropertySheet,
-  revealPropertyName,
+  ingredientPropertiesName,
 } from "@/ui/features/reveal-property/ui/RevealPropertySheet";
 import { RecipeBench, type RecipeDraft } from "@/ui/widgets/recipe-bench/ui/RecipeBench";
 import { applyEdit } from "@/ui/shared/model/editing";
@@ -24,11 +23,9 @@ import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 const WORKSHOP_TITLE = "Мастерская";
 
-const NOTHING_OPEN = "Все направления закрыты";
+const PROPERTIES_BUTTON = "Свойства";
 
-const NO_KIT = "набора нет, работа импровизацией";
-
-const STUDIED = "изучено";
+const NO_KIT = "Набора нет, работа импровизацией";
 
 function emptyDraft(standard: ChoicesView["recipeForm"]["standard"]): RecipeDraft {
   return { ...standard, kinds: [], mainProperty: null, suppressed: [], limitations: [] };
@@ -59,14 +56,12 @@ function KnownIngredient({
   onOpen: () => void;
 }) {
   return (
-    <li className="flex items-start gap-2">
+    <li className={`flex flex-col ${chosen ? SURFACE_CONTROL : SURFACE_GROUP}`}>
       <button
         type="button"
         aria-pressed={chosen}
         onClick={onChoose}
-        className={`flex min-w-0 flex-1 flex-col gap-2 p-3 text-left ${
-          chosen ? SURFACE_CONTROL : SURFACE_GROUP
-        }`}
+        className="flex w-full flex-col gap-2 p-3 text-left"
       >
         <span className="flex flex-col gap-0.5">
           <span className="text-base font-semibold leading-tight">{ingredient.nameRu}</span>
@@ -83,9 +78,6 @@ function KnownIngredient({
                   {propertyNumberRu(property.number)}
                 </span>
                 <span className="min-w-0 flex-1 text-sm leading-tight">{property.nameRu}</span>
-                <span className="shrink-0 text-xs text-ink-quiet">
-                  {rarityLabel(property.rarity)}
-                </span>
               </span>
             ))}
           </span>
@@ -101,14 +93,17 @@ function KnownIngredient({
           </span>
         )}
       </button>
-      <button
-        type="button"
-        onClick={onOpen}
-        aria-label={revealPropertyName(ingredient.nameRu)}
-        className={`min-h-11 min-w-11 shrink-0 text-lg ${SURFACE_GROUP}`}
-      >
-        <span aria-hidden="true">+</span>
-      </button>
+
+      <span className="flex justify-end px-3 pb-2">
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={ingredientPropertiesName(ingredient.nameRu)}
+          className={`min-h-11 px-3 text-xs font-medium text-action ${SURFACE_CONTROL}`}
+        >
+          {PROPERTIES_BUTTON}
+        </button>
+      </span>
     </li>
   );
 }
@@ -168,24 +163,7 @@ export function AlchemyScreen() {
     });
   };
 
-  const nameRarity = (propertyRu: string, rarity: string): void => {
-    if (rarity === "") return;
-    send({ kind: "name_rarity", propertyRu, rarity }, () => undefined);
-  };
-
   const openedIngredient = crafting.ingredients.find((one) => one.itemId === opened);
-
-  const { apparatus, studiedDirections, closedDirections } = crafting.workshop;
-
-  const openDirections = choices.alchemyDirections
-    .filter((direction) => !closedDirections.some((closed) => closed.direction === direction))
-    .map((direction) => ({
-      nameRu: labelled(DIRECTION_LABELS, direction),
-      toolRu: [
-        apparatus.find((kit) => kit.direction === direction)?.gradeRu ?? NO_KIT,
-        ...(studiedDirections.includes(direction) ? [STUDIED] : []),
-      ].join(" · "),
-    }));
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
@@ -200,16 +178,8 @@ export function AlchemyScreen() {
         >
           <span className="text-sm font-semibold leading-tight">{WORKSHOP_TITLE}</span>
 
-          <span className="flex flex-col text-xs">
-            {openDirections.length === 0 ? (
-              <span className="text-ink-quiet">{NOTHING_OPEN}</span>
-            ) : (
-              openDirections.map((direction) => (
-                <span key={direction.nameRu} className="leading-snug text-ink-quiet">
-                  {direction.nameRu} — {direction.toolRu}
-                </span>
-              ))
-            )}
+          <span className="text-xs leading-snug text-ink-quiet">
+            {crafting.workshop.apparatusRu ?? NO_KIT}
           </span>
         </button>
 
@@ -243,7 +213,6 @@ export function AlchemyScreen() {
         {crafting.ingredients.length === 0 ? null : (
           <RecipeBench
             choices={choices.recipeForm}
-            rarities={choices.alchemicalRarities}
             preview={preview}
             draft={draft}
             portions={portionsText}
@@ -254,7 +223,6 @@ export function AlchemyScreen() {
             onPortions={setPortionsText}
             onRolled={setRolledText}
             onMishap={setMishapText}
-            onNameRarity={nameRarity}
             onCraft={craft}
           />
         )}
@@ -278,36 +246,7 @@ export function AlchemyScreen() {
           ingredient={openedIngredient}
           choices={choices}
           refusalRu={refusalRu}
-          onConfirm={(command) => send(command, () => setOpened(null))}
-          onNameRarity={nameRarity}
-          onExhausted={(exhausted) =>
-            send(
-              { kind: "mark_properties_exhausted", itemId: openedIngredient.itemId, exhausted },
-              () => undefined,
-            )
-          }
-          onNoteObservation={(textRu) =>
-            send({ kind: "note_observation", itemId: openedIngredient.itemId, textRu }, () =>
-              undefined,
-            )
-          }
-          onRewriteObservation={(observationId, textRu) =>
-            send(
-              {
-                kind: "rewrite_observation",
-                itemId: openedIngredient.itemId,
-                observationId,
-                textRu,
-              },
-              () => undefined,
-            )
-          }
-          onDropObservation={(observationId) =>
-            send(
-              { kind: "drop_observation", itemId: openedIngredient.itemId, observationId },
-              () => undefined,
-            )
-          }
+          onSend={(command, whenDone) => send(command, whenDone ?? (() => undefined))}
           onCancel={() => {
             setRefusalRu(null);
             setOpened(null);

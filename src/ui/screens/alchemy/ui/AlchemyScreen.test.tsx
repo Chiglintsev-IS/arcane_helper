@@ -39,8 +39,8 @@ describe("«Алхимия»", () => {
   it("«Алхимия» показывает раскрытое знание, а не запас", async () => {
     const stores = await createTestStores(
       withIngredientKnowledge(blank(), MOON_HERB, [
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-        { number: 3, nameRu: "Взрыв", rarity: "rare" },
+        { number: 1, nameRu: "Лечение здоровья" },
+        { number: 3, nameRu: "Взрыв" },
       ]),
     );
 
@@ -57,7 +57,6 @@ describe("«Алхимия»", () => {
     expect(known.getByText("Лечение здоровья")).toBeDefined();
     expect(known.getByText("Взрыв")).toBeDefined();
     expect(known.getByText("3-е")).toBeDefined();
-    expect(known.getByText("редкое")).toBeDefined();
 
     expect(stockOf(stores, MOON_HERB)).toBe(3);
     expect(known.queryByText("3")).toBeNull();
@@ -71,8 +70,8 @@ describe("«Алхимия»", () => {
     await renderWithStores(
       <AlchemyScreen />,
       withIngredientKnowledge(blank(), MOON_HERB, [
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-        { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
+        { number: 1, nameRu: "Лечение здоровья" },
+        { number: 2, nameRu: "Временное здоровье" },
       ]),
     );
 
@@ -87,13 +86,13 @@ describe("«Алхимия»", () => {
     await renderWithStores(
       <AlchemyScreen />,
       withIngredientKnowledge(blank(), MOON_HERB, [
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-        { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
+        { number: 1, nameRu: "Лечение здоровья" },
+        { number: 2, nameRu: "Временное здоровье" },
       ]),
     );
 
     await user.click(
-      screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }),
+      screen.getByRole("button", { name: `Свойства: ${MOON_HERB}` }),
     );
     await user.click(
       screen.getByRole("switch", { name: "Свойств у вида больше нет" }),
@@ -122,18 +121,12 @@ describe("«Алхимия»", () => {
     ).toHaveLength(1);
   });
 
-  it("«Алхимия»: направления названы вместе со своими наборами, закрытое не показано", async () => {
+  it("«Алхимия»: набор назван один на всю алхимию", async () => {
     await renderWithStores(<AlchemyScreen />);
 
     const workshop = within(screen.getByRole("button", { name: /Мастерская/ }));
 
-    expect(
-      workshop.getByText(/зельеварение — Надёжный походный комплект · изучено/),
-    ).toBeDefined();
-    expect(
-      workshop.getByText(/трансмутация — Надёжный походный комплект · изучено/),
-    ).toBeDefined();
-    expect(workshop.queryByText(/синтез ядов/)).toBeNull();
+    expect(workshop.getByText("Надёжный походный комплект")).toBeDefined();
     expect(workshop.queryByText(/Кузнечное дело/)).toBeNull();
   });
 
@@ -153,7 +146,7 @@ function twoKinds(): ReturnType<typeof createThorne> {
   return [MOON_HERB, CRIMSON_ROOT].reduce(
     (character, kind) =>
       withIngredientKnowledge(character, kind, [
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+        { number: 1, nameRu: "Лечение здоровья" },
       ]),
     blank(),
   );
@@ -183,24 +176,17 @@ describe("«Алхимия»: верстак", () => {
     expect(await bench.findByText("10")).toBeDefined();
   });
 
-  it("«Алхимия»: без названной редкости сложности нет, и называют её тут же", async () => {
-    const unnamed = [MOON_HERB, CRIMSON_ROOT].reduce(
+  it("«Алхимия»: свойство своим словом считается наравне с прочими", async () => {
+    const own = [MOON_HERB, CRIMSON_ROOT].reduce(
       (character, kind) =>
-        withIngredientKnowledge(character, kind, [{ number: 1, nameRu: "Лечение здоровья" }]),
+        withIngredientKnowledge(character, kind, [{ number: 1, nameRu: "Отвращение к пиву" }]),
       blank(),
     );
-    const { user } = await assembled(unnamed);
+    await assembled(own);
 
     const bench = within(await screen.findByRole("region", { name: "Верстак" }));
-    expect(await bench.findByText(/не названа редкость/)).toBeDefined();
-    expect(bench.queryByText("Сложность")).toBeNull();
-
-    await user.selectOptions(
-      bench.getByLabelText("Редкость: Лечение здоровья"),
-      "common",
-    );
-
-    expect(await bench.findByText("Сложность")).toBeDefined();
+    expect(await bench.findByText("Отвращение к пиву")).toBeDefined();
+    expect(bench.getByText("Сложность")).toBeDefined();
     expect(bench.getByText("10")).toBeDefined();
   });
 
@@ -217,11 +203,6 @@ describe("«Алхимия»: верстак", () => {
         name: "−2 · Спасбросок с преимуществом",
       }),
     ).toBeDefined();
-    expect(
-      within(screen.getByLabelText("Очистка")).getByRole("option", {
-        name: "+5 · оставить вредные",
-      }),
-    ).toBeDefined();
   });
 
   it("«Алхимия»: отказ по пределу оснащения называет, чем набрано лишнее", async () => {
@@ -234,55 +215,25 @@ describe("«Алхимия»: верстак", () => {
     expect(screen.getByText(/Длительность \+12/)).toBeDefined();
   });
 
-  it("«Алхимия»: оставшийся яд закрывает работу словами контракта, а не числом", async () => {
-    const poisonous = [MOON_HERB, CRIMSON_ROOT].reduce(
-      (character, kind) =>
-        withIngredientKnowledge(character, kind, [
-          { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-          { number: 2, nameRu: "Ядовитый урон", rarity: "rare" },
-        ]),
-      blank(),
-    );
-    await assembled(poisonous);
-
-    const bench = within(
-      await screen.findByRole("region", { name: "Верстак" }),
-    );
-    expect(await bench.findByText(/ядов не варят/)).toBeDefined();
-    expect(bench.queryByText(/Проверка разработки/)).toBeNull();
-  });
-
   it("«Алхимия»: мастерская правится там же, где объясняет предел", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<AlchemyScreen />, twoKinds());
 
     await user.click(screen.getByRole("button", { name: /Мастерская/ }));
     await user.selectOptions(
-      screen.getByLabelText("зельеварение"),
+      screen.getByLabelText("Набор"),
       "Профессиональный лабораторный модуль",
     );
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     const workshop = shown(stores).crafting.workshop;
-    expect(workshop.apparatus.map((kit) => kit.direction)).toContain("potions");
+    expect(workshop.apparatusRu).toBe("Профессиональный лабораторный модуль");
   });
 
-  it("«Алхимия»: закрытое направление стоит причиной, а не набором и отметкой", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<AlchemyScreen />, twoKinds());
-
-    await user.click(screen.getByRole("button", { name: /Мастерская/ }));
-
-    expect(screen.queryByLabelText("синтез ядов")).toBeNull();
-    expect(screen.getByText(/ядов не варят/)).toBeDefined();
-    expect(
-      screen.getAllByRole("button", { name: "Направление изучено" }),
-    ).toHaveLength(2);
-  });
 });
 
 describe("«Алхимия»: запись знания", () => {
-  it("«Алхимия»: вид записывается одной строкой, свойство раскрывается номером и редкостью", async () => {
+  it("«Алхимия»: вид записывается одной строкой, свойство — номером и словом стола", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<AlchemyScreen />);
 
@@ -293,35 +244,31 @@ describe("«Алхимия»: запись знания", () => {
     expect(await knownList().findByText(MOON_HERB)).toBeDefined();
 
     await user.click(
-      screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }),
+      screen.getByRole("button", { name: `Свойства: ${MOON_HERB}` }),
     );
-    await user.selectOptions(
-      screen.getByLabelText("Свойство"),
-      "Лечение здоровья",
-    );
-    await user.selectOptions(screen.getByLabelText("Редкость"), "uncommon");
+    await user.type(screen.getByLabelText("Свойство"), "Лечение здоровья");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     const known = shown(stores).crafting.ingredients.find(
       (kind) => kind.nameRu === MOON_HERB,
     );
     expect(known?.properties).toEqual([
-      { number: 1, nameRu: "Лечение здоровья", rarity: "uncommon" },
+      { number: 1, nameRu: "Лечение здоровья" },
     ]);
   });
 
-  it("шторка раскрытия названа тем же делом, что и дверь", async () => {
+  it("шторка свойств названа тем же делом, что и дверь", async () => {
     const user = userEvent.setup();
     await renderWithStores(
       <AlchemyScreen />,
       withIngredientKnowledge(blank(), MOON_HERB),
     );
 
-    const door = `Раскрыть свойство: ${MOON_HERB}`;
+    const door = `Свойства: ${MOON_HERB}`;
     await user.click(screen.getByRole("button", { name: door }));
 
     const sheet = within(screen.getByRole("dialog", { name: door }));
-    expect(sheet.getByRole("heading", { name: MOON_HERB })).toBeDefined();
+    expect(sheet.getByRole("heading", { name: door })).toBeDefined();
   });
 
   it("«Алхимия»: цена исследования названа прежде, чем за него взялись", async () => {
@@ -332,10 +279,8 @@ describe("«Алхимия»: запись знания", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }),
+      screen.getByRole("button", { name: `Свойства: ${MOON_HERB}` }),
     );
-    await user.selectOptions(screen.getByLabelText("Редкость"), "common");
-
     expect(await screen.findByText("5")).toBeDefined();
     expect(
       screen.getByText(
@@ -345,22 +290,21 @@ describe("«Алхимия»: запись знания", () => {
     expect(screen.getByText(/Сырая проба/)).toBeDefined();
   });
 
-  it("«Алхимия»: цена исследования растёт с редкостью и глубиной", async () => {
+  it("«Алхимия»: цена исследования растёт с глубиной", async () => {
     const user = userEvent.setup();
     await renderWithStores(
       <AlchemyScreen />,
       withIngredientKnowledge(blank(), MOON_HERB, [
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
+        { number: 1, nameRu: "Лечение здоровья" },
       ]),
     );
 
     await user.click(
-      screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }),
+      screen.getByRole("button", { name: `Свойства: ${MOON_HERB}` }),
     );
     await user.selectOptions(screen.getByLabelText("Номер"), "2");
-    await user.selectOptions(screen.getByLabelText("Редкость"), "rare");
 
-    expect(await screen.findByText("14")).toBeDefined();
+    expect(await screen.findByText("12")).toBeDefined();
     expect(
       screen.getByText(
         /1 ч · 1 порция при любом исходе · расходники обычные, 1 зм/,
@@ -375,18 +319,15 @@ describe("«Алхимия»: запись знания", () => {
       withIngredientKnowledge(blank(), MOON_HERB),
     );
 
+    await user.click(screen.getByRole("button", { name: /Мастерская/ }));
+    await user.selectOptions(screen.getByLabelText("Набор"), "");
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
     await user.click(
-      screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }),
-    );
-    await user.selectOptions(screen.getByLabelText("Редкость"), "common");
-    await user.selectOptions(
-      screen.getByLabelText("Направление работы"),
-      "poisons",
+      screen.getByRole("button", { name: `Свойства: ${MOON_HERB}` }),
     );
 
-    expect(
-      await screen.findByText(/без профильного оснащения не бывает/),
-    ).toBeDefined();
+    expect(await screen.findByText(/без набора/)).toBeDefined();
     expect(screen.queryByText("5")).toBeNull();
   });
 
@@ -395,15 +336,14 @@ describe("«Алхимия»: запись знания", () => {
     await renderWithStores(
       <AlchemyScreen />,
       withIngredientKnowledge(blank(), MOON_HERB, [
-        { number: 1, nameRu: "Лечение здоровья", rarity: "common" },
-        { number: 2, nameRu: "Временное здоровье", rarity: "uncommon" },
+        { number: 1, nameRu: "Лечение здоровья" },
+        { number: 2, nameRu: "Временное здоровье" },
       ]),
     );
 
     await user.click(
-      screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }),
+      screen.getByRole("button", { name: `Свойства: ${MOON_HERB}` }),
     );
-    await user.selectOptions(screen.getByLabelText("Редкость"), "common");
     expect(await screen.findByText(/свойство под номером 3/)).toBeDefined();
 
     await user.selectOptions(screen.getByLabelText("Номер"), "3");
@@ -415,9 +355,9 @@ describe("«Алхимия»: запись знания", () => {
     await renderWithStores(<AlchemyScreen />, twoKinds());
 
     await user.click(
-      screen.getByRole("button", { name: `Раскрыть свойство: ${MOON_HERB}` }),
+      screen.getByRole("button", { name: `Свойства: ${MOON_HERB}` }),
     );
-    await user.selectOptions(screen.getByLabelText("Свойство"), "Пробуждение");
+    await user.type(screen.getByLabelText("Свойство"), "Пробуждение");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(await screen.findByText(/номером 1 уже раскрыто/)).toBeDefined();

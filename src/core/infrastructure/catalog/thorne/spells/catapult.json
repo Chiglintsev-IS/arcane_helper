@@ -5,7 +5,9 @@
   "level": 1,
   "school": "Преобразование",
   "source": "Xanathar's Guide to Everything",
-  "combatRole": "offense",
+  "combatRoles": [
+    "damage"
+  ],
   "castingTime": {
     "type": "action"
   },

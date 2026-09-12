@@ -5,7 +5,10 @@
   "level": 3,
   "school": "Вызов",
   "source": "Xanathar's Guide to Everything",
-  "combatRole": "defense",
+  "combatRoles": [
+    "movement",
+    "damage"
+  ],
   "castingTime": {
     "type": "action"
   },

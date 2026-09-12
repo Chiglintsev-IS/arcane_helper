@@ -1,4 +1,3 @@
-import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { Ability } from "@/core/domain/shared/stats";
 import { CHECK_DIE_RU, MISHAP_DIE_RU } from "@/shared/language";
@@ -24,22 +23,11 @@ export type CheckNumbers = {
 
 export type DevelopmentCheck = {
   readonly bonus: number;
-  readonly unstudied: readonly AlchemyDirection[];
 };
 
-export function developmentCheck(
-  directions: readonly AlchemyDirection[],
-  studied: readonly AlchemyDirection[],
-  numbers: CheckNumbers,
-): DevelopmentCheck {
-  const bonuses = directions.map(
-    (direction) =>
-      numbers.abilityModifier + (studied.includes(direction) ? numbers.proficiencyBonus : 0),
-  );
-  return {
-    bonus: Math.min(...bonuses),
-    unstudied: directions.filter((direction) => !studied.includes(direction)),
-  };
+/** Алхимией Торн владеет: бонус мастерства идёт к каждой проверке разработки. */
+export function developmentCheck(numbers: CheckNumbers): DevelopmentCheck {
+  return { bonus: numbers.abilityModifier + numbers.proficiencyBonus };
 }
 
 /** Второй кубик нужен только аварии: её вызывает натуральная единица, и ничто больше. */

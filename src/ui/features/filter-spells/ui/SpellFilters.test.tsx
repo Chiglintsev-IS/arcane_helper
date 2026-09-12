@@ -41,7 +41,7 @@ function renderFilters(
 const EVERYTHING: Dividing = {
   castingTimes: ["action", "bonus_action", "reaction"],
   prices: [0, 1, 2],
-  roles: ["offense", "defense", "other"],
+  roles: ["damage", "hindrance", "defense", "buff", "movement", "healing", "scouting", "other"],
   concentration: true,
   ritual: true,
 };
@@ -50,11 +50,17 @@ describe("состав фильтров идёт от списка (FR-002)", ()
   it("показывает переключатель на каждую делящую категорию", () => {
     renderFilters(EVERYTHING, { mode: "book" });
 
-    for (const name of ["Действие", "Бонусное", "Реакция", "Боевое", "Защита", "Концентрация", "Ритуал", "Подготовлено"]) {
+    for (const name of ["Действие", "Бонусное", "Реакция", "Урон", "Контроль", "Защита", "Усиление", "Движение", "Лечение", "Концентрация", "Ритуал", "Подготовлено"]) {
       expect(screen.getByRole("button", { name }), name).toBeDefined();
     }
     expect(screen.getByRole("button", { name: "Без ячейки" })).toBeDefined();
     expect(screen.getByRole("button", { name: "2 ур." })).toBeDefined();
+  });
+
+  it("«Разведка» переключателя не получает, даже когда делит список", () => {
+    renderFilters(EVERYTHING, { mode: "book" });
+
+    expect(screen.queryByRole("button", { name: "Разведка" })).toBeNull();
   });
 
   it("в «Игре» цена не отбирает: список уже упорядочен ценой (FR-212)", () => {
@@ -70,7 +76,7 @@ describe("состав фильтров идёт от списка (FR-002)", ()
       {
         castingTimes: ["action", "reaction", "minute", "hour"],
         prices: [0, 1],
-        roles: ["offense", "defense", "other"],
+        roles: ["damage", "hindrance", "defense", "buff", "movement", "healing", "scouting", "other"],
         concentration: true,
         ritual: true,
       },
@@ -93,7 +99,8 @@ describe("состав фильтров идёт от списка (FR-002)", ()
     renderFilters({ ...EVERYTHING, roles: ["defense"] }, { mode: "book" });
 
     expect(screen.getByRole("button", { name: "Защита" })).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Боевое" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Урон" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Усиление" })).toBeNull();
   });
 });
 
@@ -101,7 +108,7 @@ describe("роль отбирает и в «Игре» (FR-212)", () => {
   it("в «Игре» стоят время накладывания, роль вместе с «другим» и концентрация; ритуала нет", () => {
     renderFilters(EVERYTHING);
 
-    for (const name of ["Действие", "Бонусное", "Реакция", "Боевое", "Защита", "Другое", "Концентрация"]) {
+    for (const name of ["Действие", "Бонусное", "Реакция", "Урон", "Контроль", "Защита", "Усиление", "Движение", "Лечение", "Прочее", "Концентрация"]) {
       expect(screen.getByRole("button", { name }), name).toBeDefined();
     }
     expect(screen.queryByRole("button", { name: "Ритуал" })).toBeNull();
@@ -111,14 +118,17 @@ describe("роль отбирает и в «Игре» (FR-212)", () => {
   it("в «Книге» рядом стоят и роль, и время накладывания", () => {
     renderFilters(EVERYTHING, { mode: "book" });
 
-    expect(screen.getByRole("button", { name: "Боевое" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Урон" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Действие" })).toBeDefined();
   });
 
   it("знак переключателя приходит от тона, а не набирается в полосе", () => {
     renderFilters(EVERYTHING, { mode: "book" });
 
-    expect(screen.getByRole("button", { name: "Боевое" }).textContent).toBe("✚Боевое");
+    expect(screen.getByRole("button", { name: "Урон" }).textContent).toBe("✚Урон");
+    expect(screen.getByRole("button", { name: "Контроль" }).textContent).toBe("▼Контроль");
+    expect(screen.getByRole("button", { name: "Движение" }).textContent).toBe("↗Движение");
+    expect(screen.getByRole("button", { name: "Усиление" }).textContent).toBe("▲Усиление");
     expect(screen.getByRole("button", { name: "Защита" }).textContent).toBe("◇Защита");
     expect(screen.getByRole("button", { name: "Концентрация" }).textContent).toBe("◉Концентрация");
     expect(screen.getByRole("button", { name: "Ритуал" }).textContent).toBe("◈Ритуал");
@@ -189,7 +199,7 @@ describe("поиск стоит в полосе всегда (FR-303)", () => {
   it("поле встаёт на место переключателей, а не рядом с ними", () => {
     renderFilters(EVERYTHING, { mode: "book", searchOpen: true });
 
-    for (const name of ["Действие", "Реакция", "Боевое", "Концентрация", "Ритуал", "Подготовлено"]) {
+    for (const name of ["Действие", "Реакция", "Урон", "Концентрация", "Ритуал", "Подготовлено"]) {
       expect(screen.queryByRole("button", { name }), name).toBeNull();
     }
     expect(screen.queryByRole("group", { name: "Цена" })).toBeNull();

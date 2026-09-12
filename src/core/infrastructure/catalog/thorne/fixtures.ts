@@ -2,7 +2,6 @@ import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { bloodSlotCost, slotsInOrder } from "@/core/domain/arcana/slots";
 import { Items } from "@/core/domain/items/items";
-import type { AlchemicalRarity } from "@/core/domain/catalog/alchemy";
 import type { RevealedProperty } from "@/core/domain/items/ingredient";
 
 export function withSpentSlots(
@@ -73,29 +72,30 @@ export function withoutIngredientKnowledge(character: CharacterState): Character
     .toState();
 }
 
+export function withoutItems(character: CharacterState): CharacterState {
+  const root = Character.of(character);
+  const emptied = root.items.all.reduce((equipment, item) => {
+    const worn = equipment.wornCount(item.id);
+    return (worn === 0 ? equipment : equipment.unequip(item.id, worn)).setBagCount(item.id, 0);
+  }, root.equipment);
+
+  return root
+    .withItems(root.items.all.reduce((items, item) => items.removeDefinition(item.id), root.items))
+    .withEquipment(emptied)
+    .toState();
+}
+
 export function withIngredientKnowledge(
   character: CharacterState,
   nameRu: string,
-  properties: readonly (RevealedProperty & { rarity?: AlchemicalRarity })[] = [],
+  properties: readonly RevealedProperty[] = [],
 ): CharacterState {
   const root = Character.of(character);
   const itemId = Items.idFromName(nameRu);
   const noted = root.items.addDefinition({ nameRu, kinds: ["ingredient"] });
   return root
     .withItems(
-      properties.reduce(
-        (items, { rarity: _named, ...property }) => items.revealProperty(itemId, property),
-        noted,
-      ),
-    )
-    .withCrafting(
-      properties.reduce(
-        (crafting, property) =>
-          property.rarity === undefined
-            ? crafting
-            : crafting.nameRarity(property.nameRu, property.rarity),
-        root.crafting,
-      ),
+      properties.reduce((items, property) => items.revealProperty(itemId, property), noted),
     )
     .toState();
 }

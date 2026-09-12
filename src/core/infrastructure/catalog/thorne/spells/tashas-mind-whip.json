@@ -5,7 +5,10 @@
   "level": 2,
   "school": "Очарование",
   "source": "Tasha's Cauldron of Everything",
-  "combatRole": "offense",
+  "combatRoles": [
+    "hindrance",
+    "damage"
+  ],
   "castingTime": {
     "type": "action"
   },

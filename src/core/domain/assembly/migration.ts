@@ -3,6 +3,7 @@ import { z } from "zod";
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
+import { strongestApparatus } from "@/core/domain/crafting/apparatus";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { Items } from "@/core/domain/items/items";
 import { filledWearableOnlyFields, withoutWearableOnlyFields } from "@/core/domain/items/schema";
@@ -167,41 +168,17 @@ function migrateIngredientKnowledge(state: unknown): unknown {
 }
 
 /**
- * Редкость жила записью у каждого вида, и один и тот же эффект приходилось называть заново у
- * каждого ингредиента. Она принадлежит свойству: названные редкости собираются в знание алхимика,
- * у видов остаются номер и название.
+ * Набор держали по каждому направлению отдельно; теперь он один на всю алхимию — из записанных
+ * остаётся сильнейший.
  */
-function migratePropertyRarities(state: unknown): unknown {
+function migrateAlchemyApparatus(state: unknown): unknown {
   const fields = fieldsOf(state);
-  const stored = fields.itemDefinitions;
-  if (!Array.isArray(stored)) return state;
+  const stored = fields.alchemyApparatus;
+  if (stored === null || typeof stored !== "object") return state;
 
-  const named: { nameRu: unknown; rarity: unknown }[] = Array.isArray(fields.propertyRarities)
-    ? [...fields.propertyRarities]
-    : [];
-  let moved = false;
-
-  const definitions = stored.map((raw) => {
-    const item = fieldsOf(raw);
-    const alchemy = fieldsOf(item.alchemy);
-    const properties = alchemy.properties;
-    if (!Array.isArray(properties)) return raw;
-
-    const bare = properties.map((entry) => {
-      const { rarity, ...rest } = fieldsOf(entry);
-      if (rarity === undefined) return entry;
-      if (!named.some((one) => fieldsOf(one).nameRu === rest.nameRu)) {
-        named.push({ nameRu: rest.nameRu, rarity });
-      }
-      return rest;
-    });
-    if (bare.every((entry, index) => entry === properties[index])) return raw;
-    moved = true;
-    return { ...item, alchemy: { ...alchemy, properties: bare } };
-  });
-
-  if (!moved) return state;
-  return { ...fields, itemDefinitions: definitions, propertyRarities: named };
+  const strongest = strongestApparatus(Object.values(fieldsOf(stored)));
+  const { alchemyApparatus: _byDirection, ...rest } = fields;
+  return strongest === undefined ? rest : { ...rest, alchemyApparatus: strongest };
 }
 
 function migrateItemCategories(state: unknown): unknown {
@@ -535,8 +512,8 @@ export function migrateUndoPatch(patch: unknown): unknown {
     migrateEffectShapes,
     migrateFocusItems,
     migrateIngredientKnowledge,
-    migratePropertyRarities,
     migrateItemKinds,
+    migrateAlchemyApparatus,
     withoutForgottenFields,
   ]);
 }
@@ -559,8 +536,8 @@ export function migrateCharacterState(raw: unknown): unknown {
     migrateBoughtMaterials,
     migrateFocusItems,
     migrateIngredientKnowledge,
-    migratePropertyRarities,
     migrateItemKinds,
+    migrateAlchemyApparatus,
   ]);
 }
 

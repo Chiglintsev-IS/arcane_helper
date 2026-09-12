@@ -80,22 +80,14 @@ export const commandSchema = z.discriminatedUnion("kind", [
 
   command("note_ingredient", { nameRu: word }),
   command("mark_properties_exhausted", { itemId: word, exhausted: z.boolean() }),
-  command("reveal_property", {
-    itemId: word,
-    number: numeric,
-    propertyRu: word,
-    rarity: word.optional(),
-  }),
-  command("name_rarity", { propertyRu: word, rarity: word }),
+  command("reveal_property", { itemId: word, number: numeric, propertyRu: word }),
+  command("drop_property", { itemId: word, number: numeric }),
 
   command("note_observation", { itemId: word, textRu: word }),
   command("rewrite_observation", { itemId: word, observationId: word, textRu: word }),
   command("drop_observation", { itemId: word, observationId: word }),
 
-  command("set_alchemy_workshop", {
-    apparatus: z.record(word, word),
-    studiedDirections: z.array(word),
-  }),
+  command("set_alchemy_workshop", { apparatus: word.optional() }),
 
   command("edit_identity", { patch: z.looseObject({}) }),
   command("edit_ability", {

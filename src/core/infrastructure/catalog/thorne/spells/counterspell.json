@@ -5,7 +5,9 @@
   "level": 3,
   "school": "Ограждение",
   "source": "Player's Handbook (2014)",
-  "combatRole": "defense",
+  "combatRoles": [
+    "defense"
+  ],
   "castingTime": {
     "type": "reaction",
     "reactionTrigger": "вы видите, как существо в пределах 60 футов от вас накладывает заклинание"

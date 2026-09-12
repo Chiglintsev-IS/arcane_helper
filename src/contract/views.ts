@@ -28,10 +28,7 @@ export const choicesViewSchema = z.object({
   exhaustionSteps: z.array(whole),
   characterLevel: z.object({ minimum: whole, maximum: whole }),
   abilityScore: z.object({ minimum: whole, maximum: whole }),
-  alchemyDirections: z.array(word),
   apparatusGrades: z.array(word),
-  alchemicalProperties: z.array(z.object({ nameRu: word, direction: word })),
-  alchemicalRarities: z.array(word),
   propertyNumbers: z.array(whole),
   recipeForm: z.object({
     standard: z.object({
@@ -41,7 +38,6 @@ export const choicesViewSchema = z.object({
       reach: word,
       application: word,
       resistance: word,
-      purification: word.nullable(),
     }),
     durations: z.array(pricedChoiceSchema),
     onsets: z.array(pricedChoiceSchema),
@@ -49,7 +45,6 @@ export const choicesViewSchema = z.object({
     applications: z.array(pricedChoiceSchema),
     resistances: z.array(pricedChoiceSchema),
     limitations: z.array(pricedChoiceSchema),
-    purifications: z.array(pricedChoiceSchema),
   }),
 });
 
@@ -112,11 +107,7 @@ export const sheetViewSchema = z.object({
   features: z.array(characterFeatureViewSchema),
 });
 
-const revealedPropertyViewSchema = z.object({
-  number: whole,
-  nameRu: word,
-  rarity: word.optional(),
-});
+const revealedPropertyViewSchema = z.object({ number: whole, nameRu: word });
 
 const itemViewSchema = z.object({
   id: word,
@@ -166,11 +157,7 @@ const ingredientKnowledgeViewSchema = z.object({
 
 export const craftingViewSchema = z.object({
   ingredients: z.array(ingredientKnowledgeViewSchema),
-  workshop: z.object({
-    apparatus: z.array(z.object({ direction: word, gradeRu: word })),
-    studiedDirections: z.array(word),
-    closedDirections: z.array(z.object({ direction: word, reasonRu: word })),
-  }),
+  workshop: z.object({ apparatusRu: word.nullable() }),
   smithing: z.object({ nameRu: word, noteRu: word }),
 });
 
@@ -328,7 +315,7 @@ export const spellRowViewSchema = z.object({
   ownComponentRequired: z.boolean(),
   ownComponentCarried: z.boolean(),
   materialCoveredByFocus: z.boolean(),
-  role: word,
+  roles: z.array(word).min(1),
 
   slotPrice: whole,
   benefitsFromHigherSlot: z.boolean(),

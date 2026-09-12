@@ -5,19 +5,19 @@ export type ActionTraits = {
   castingTime: string;
   level: number;
   concentration: boolean;
-  role: string;
+  roles: readonly string[];
 };
 
 export function lastHintTraits(nameRu: string): ActionTraits {
-  return { nameRu, castingTime: "special", level: 0, concentration: false, role: "other" };
+  return { nameRu, castingTime: "special", level: 0, concentration: false, roles: ["other"] };
 }
 
 export function animalSpeechTraits(nameRu: string): ActionTraits {
-  return { nameRu, castingTime: "special", level: 0, concentration: false, role: "other" };
+  return { nameRu, castingTime: "special", level: 0, concentration: false, roles: ["other"] };
 }
 
 export function wardingSigilTraits(nameRu: string): ActionTraits {
-  return { nameRu, castingTime: "reaction", level: 0, concentration: false, role: "defense" };
+  return { nameRu, castingTime: "reaction", level: 0, concentration: false, roles: ["defense"] };
 }
 
 export function traitsOf(spell: SpellRowView): ActionTraits {
@@ -26,6 +26,6 @@ export function traitsOf(spell: SpellRowView): ActionTraits {
     castingTime: spell.castingTime.type,
     level: spell.slotPrice,
     concentration: spell.concentration,
-    role: spell.role,
+    roles: spell.roles,
   };
 }

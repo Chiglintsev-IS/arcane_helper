@@ -4,26 +4,9 @@ import type { Apparatus } from "./apparatus";
 import { Crafting, type MixtureKind } from "./crafting";
 import type { RecipeFormula } from "./recipe";
 
-const EMPTY = {
-  alchemyApparatus: {},
-  studiedDirections: [],
-  propertyRarities: [],
-  knownRecipes: [],
-};
+const EMPTY = { knownRecipes: [] };
 
-/** Редкость называет стол один раз на свойство: у алхимика она и записана. */
-const NAMED_RARITIES = [
-  { nameRu: "Лечение здоровья", rarity: "common" },
-  { nameRu: "Пробуждение", rarity: "common" },
-  { nameRu: "Храбрость", rarity: "common" },
-  { nameRu: "Взрыв", rarity: "rare" },
-  { nameRu: "Ядовитый урон", rarity: "rare" },
-] as const;
-
-const ALCHEMIST = NAMED_RARITIES.reduce(
-  (crafting, named) => crafting.nameRarity(named.nameRu, named.rarity),
-  Crafting.of(EMPTY),
-);
+const ALCHEMIST = Crafting.of(EMPTY);
 
 type Property = MixtureKind["properties"][number];
 
@@ -32,17 +15,6 @@ describe("ремесло", () => {
     expect(Crafting.of(EMPTY).toState()).toEqual(EMPTY);
   });
 
-  it("названная редкость свойства достаётся всякому виду, у которого оно раскрыто", () => {
-    expect(ALCHEMIST.rarityOf("Лечение здоровья")).toBe("common");
-    expect(ALCHEMIST.rarityOf("Ясность ума")).toBeUndefined();
-  });
-
-  it("названная заново редкость заменяет прежнюю, а не добавляется второй", () => {
-    const corrected = ALCHEMIST.nameRarity("Лечение здоровья", "legendary");
-
-    expect(corrected.rarityOf("Лечение здоровья")).toBe("legendary");
-    expect(corrected.toState().propertyRarities).toHaveLength(NAMED_RARITIES.length);
-  });
 });
 
 function kindOf(nameRu: string, ...properties: readonly Property[]): MixtureKind {
@@ -73,7 +45,6 @@ describe("совпадения", () => {
     expect(ALCHEMIST.matches(twoKinds())).toEqual([
       {
         nameRu: "Лечение здоровья",
-        rarity: "common",
         sources: ["Лунная трава", "Багровый корень"],
         tier: "plain",
       },
@@ -113,11 +84,11 @@ describe("совпадения", () => {
     expect(() => ALCHEMIST.matches(sharingHealing(five))).toThrow(/четырёх/);
   });
 
-  it("у свойства без названной редкости совпадение остаётся, а редкости нет", () => {
-    const unnamed = sharing(TWO_KINDS, { number: 1, nameRu: "Ясность ума" });
+  it("свойство берётся словом стола, каким бы оно ни было", () => {
+    const own = sharing(TWO_KINDS, { number: 1, nameRu: "Отвращение к пиву" });
 
-    expect(Crafting.of(EMPTY).matches(unnamed)).toEqual([
-      { nameRu: "Ясность ума", rarity: undefined, sources: TWO_KINDS, tier: "plain" },
+    expect(ALCHEMIST.matches(own)).toEqual([
+      { nameRu: "Отвращение к пиву", sources: TWO_KINDS, tier: "plain" },
     ]);
   });
 });
@@ -135,24 +106,16 @@ const STANDARD: RecipeFormula = {
   reach: "Одна цель, предмет или участок",
   application: "Выпить, накормить или нанести на неподвижную цель",
   resistance: "Положительное воздействие на добровольную цель",
-  purification: null,
   suppressed: [],
   limitations: [],
 };
 
-const GRAND_KITS: Apparatus = {
-  potions: "Великий лабораторный модуль",
-  poisons: "Великий лабораторный модуль",
-  transmutation: "Великий лабораторный модуль",
-};
+const GRAND_KIT: Apparatus = "Великий лабораторный модуль";
 
-const TORN_KITS: Apparatus = {
-  potions: "Надёжный походный комплект",
-  transmutation: "Надёжный походный комплект",
-};
+const TORN_KIT: Apparatus = "Надёжный походный комплект";
 
 function grand(kinds: readonly MixtureKind[], changes: Partial<RecipeFormula>) {
-  return ALCHEMIST.difficultyOf(kinds, { ...STANDARD, ...changes }, GRAND_KITS);
+  return ALCHEMIST.difficultyOf(kinds, { ...STANDARD, ...changes }, GRAND_KIT);
 }
 
 function healingAndPoison(): readonly MixtureKind[] {
@@ -175,7 +138,7 @@ describe("сложность рецепта", () => {
     });
 
     expect(sprayed.parts).toEqual([
-      { nameRu: "Редкость эффектов", modifier: 5 },
+      { nameRu: "Дополнительные эффекты", modifier: 0 },
       { nameRu: "Ступень усиления", modifier: 3 },
       { nameRu: "Длительность", modifier: 2 },
       { nameRu: "Начало действия", modifier: 0 },
@@ -183,11 +146,11 @@ describe("сложность рецепта", () => {
       { nameRu: "Цели и область", modifier: 5 },
       { nameRu: "Способ применения", modifier: 3 },
       { nameRu: "Сопротивление", modifier: 2 },
-      { nameRu: "Очистка и подавление", modifier: 0 },
+      { nameRu: "Подавление", modifier: 0 },
       { nameRu: "Ограничения и последствия", modifier: 0 },
       { nameRu: "Оснащение", modifier: 0 },
     ]);
-    expect(sprayed.total).toBe(30);
+    expect(sprayed.total).toBe(25);
 
     const crippled = grand(sharingHealing(TWO_KINDS), {
       duration: "1 раунд",
@@ -201,10 +164,11 @@ describe("сложность рецепта", () => {
   it("ограничения снижают сложность не больше чем на шесть", () => {
     const limited = grand(sharing(TWO_KINDS, POISON), {
       mainProperty: "Ядовитый урон",
+      duration: "1 час",
       limitations: ["Неизбежное опасное последствие", "Неизбежный серьёзный побочный эффект"],
     });
 
-    expect(limited.total).toBe(9);
+    expect(limited.total).toBe(10);
   });
 
   it("мгновенный эффект таблицей длительности не пользуется", () => {
@@ -228,38 +192,20 @@ describe("сложность рецепта", () => {
     expect(() => grand(known, { fullRepeats: -1 })).toThrow(/срабатыван/);
   });
 
-  it("дополнительный эффект оплачивается своей редкостью", () => {
-    const healing = grand(healingAndPoison(), {});
-    const poisonous = grand(healingAndPoison(), { mainProperty: "Ядовитый урон" });
+  it("основной эффект цены не имеет, каждый оставшийся сверх него стоит двух", () => {
+    const alone = grand(sharingHealing(TWO_KINDS), {});
+    const paired = grand(healingAndPoison(), {});
 
-    expect(healing.total).toBe(15);
-    expect(poisonous.total).toBe(17);
+    expect(alone.total).toBe(10);
+    expect(paired.total).toBe(12);
   });
 
-  it("очистка стоит пяти и снимает свойства противоположной направленности", () => {
-    const purified = grand(healingAndPoison(), { purification: "beneficial" });
-
-    expect(purified.parts).toContainEqual({ nameRu: "Очистка и подавление", modifier: 5 });
-    expect(purified.total).toBe(15);
-  });
-
-  it("подавление стоит по редкости подавляемого свойства", () => {
+  it("подавленное свойство уходит из состава и стоит двух", () => {
     const suppressed = grand(healingAndPoison(), { suppressed: ["Ядовитый урон"] });
 
-    expect(suppressed.total).toBe(14);
-  });
-
-  it("очищать нечего, когда в составе нет обеих направленностей", () => {
-    const known = sharingHealing(TWO_KINDS);
-
-    expect(() => grand(known, { purification: "beneficial" })).toThrow(/очистк/i);
-    expect(() => grand(known, { purification: "harmful" })).toThrow(/очистк/i);
-  });
-
-  it("удалённое очисткой второй раз не подавляется", () => {
-    expect(() =>
-      grand(healingAndPoison(), { purification: "beneficial", suppressed: ["Ядовитый урон"] }),
-    ).toThrow(/Ядовитый урон/);
+    expect(suppressed.parts).toContainEqual({ nameRu: "Подавление", modifier: 2 });
+    expect(suppressed.parts).toContainEqual({ nameRu: "Дополнительные эффекты", modifier: 0 });
+    expect(suppressed.total).toBe(12);
   });
 
   it("подавить можно только совпавшее свойство", () => {
@@ -268,11 +214,11 @@ describe("сложность рецепта", () => {
     ).toThrow(/Взрыв/);
   });
 
-  it("неназванным основным становится самый редкий из оставшихся", () => {
-    const rarest = grand(healingAndPoison(), { mainProperty: null });
+  it("неназванным основным становится первое оставшееся, и цены это не меняет", () => {
+    const unnamed = grand(healingAndPoison(), { mainProperty: null });
 
-    expect(rarest.mainRu).toBe("Ядовитый урон");
-    expect(rarest.total).toBe(17);
+    expect(unnamed.mainRu).toBe("Лечение здоровья");
+    expect(unnamed.total).toBe(12);
   });
 
   it("подавление, снявшее всё, оставляет состав без единого свойства", () => {
@@ -284,29 +230,26 @@ describe("сложность рецепта", () => {
     ).toThrow(/не осталось ни одного свойства/);
   });
 
-  it("названное основным, но снятое очисткой, отвергается своим именем", () => {
+  it("названное основным, но подавленное, отвергается своим именем", () => {
     expect(() =>
-      grand(healingAndPoison(), { mainProperty: "Ядовитый урон", purification: "beneficial" }),
+      grand(healingAndPoison(), {
+        mainProperty: "Ядовитый урон",
+        suppressed: ["Ядовитый урон"],
+      }),
     ).toThrow(/«Ядовитый урон» в нём нет/);
-  });
-
-  it("основным бывает только оставшееся в составе свойство", () => {
-    expect(() =>
-      grand(healingAndPoison(), { purification: "harmful" }),
-    ).toThrow(/Лечение здоровья/);
   });
 });
 
 describe("порядок исследования", () => {
-  const equipped = Crafting.of({ ...EMPTY, alchemyApparatus: TORN_KITS });
+  const equipped = Crafting.of({ ...EMPTY, alchemyApparatus: TORN_KIT });
   const moonHerb = (...properties: readonly Property[]): MixtureKind =>
     kindOf("Лунная трава", ...properties);
 
   it("следующим исследуют наименьший нераскрытый номер, и через него не перепрыгивают", () => {
     const bare = moonHerb();
 
-    expect(equipped.researchPlanFor(bare, 1, "common", "potions").minutes).toBe(10);
-    expect(() => equipped.researchPlanFor(bare, 2, "common", "potions")).toThrow(
+    expect(equipped.researchPlanFor(bare, 1).minutes).toBe(10);
+    expect(() => equipped.researchPlanFor(bare, 2)).toThrow(
       /сейчас это свойство под номером 1/,
     );
   });
@@ -314,8 +257,8 @@ describe("порядок исследования", () => {
   it("раскрытое глубже порядка не отменяет: следующим остаётся пропуск в середине", () => {
     const skipped = moonHerb({ number: 3, nameRu: "Взрыв" });
 
-    expect(equipped.researchPlanFor(skipped, 1, "common", "potions").number).toBe(1);
-    expect(() => equipped.researchPlanFor(skipped, 3, "common", "potions")).toThrow(
+    expect(equipped.researchPlanFor(skipped, 1).number).toBe(1);
+    expect(() => equipped.researchPlanFor(skipped, 3)).toThrow(
       /сейчас это свойство под номером 1/,
     );
   });
@@ -328,20 +271,11 @@ describe("порядок исследования", () => {
       { number: 4, nameRu: "Храбрость" },
     );
 
-    expect(() => equipped.researchPlanFor(full, 1, "common", "potions")).toThrow(
+    expect(() => equipped.researchPlanFor(full, 1)).toThrow(
       /раскрыты все свойства/,
     );
   });
 
-  it("раскрытое у вида называет свои направления по одному разу", () => {
-    const known = moonHerb(
-      { number: 1, nameRu: "Лечение здоровья" },
-      { number: 2, nameRu: "Пробуждение" },
-      { number: 3, nameRu: "Взрыв" },
-    );
-
-    expect(equipped.directionsOf(known)).toEqual(["potions", "transmutation"]);
-  });
 });
 
 describe("записанный рецепт", () => {
@@ -370,14 +304,14 @@ describe("записанный рецепт", () => {
 
 describe("партия и предел оснащения", () => {
   it("оснащение записано у алхимика и достаётся работе", () => {
-    const equipped = Crafting.of({ ...EMPTY, alchemyApparatus: TORN_KITS });
+    const equipped = Crafting.of({ ...EMPTY, alchemyApparatus: TORN_KIT });
 
-    expect(equipped.apparatus).toEqual(TORN_KITS);
-    expect(Crafting.of(EMPTY).apparatus).toEqual({});
+    expect(equipped.apparatus).toBe(TORN_KIT);
+    expect(Crafting.of(EMPTY).apparatus).toBeUndefined();
   });
 
   it("предел оснащения Торна даёт из шести порций семь единиц", () => {
-    const batch = ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, TORN_KITS, 6);
+    const batch = ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, TORN_KIT, 6);
 
     expect(batch.difficulty.total).toBe(10);
     expect(batch.minutes).toBe(30);
@@ -388,23 +322,19 @@ describe("партия и предел оснащения", () => {
 
   it("сложность выше предела набора отклоняется с причиной, называющей лишнее", () => {
     expect(() =>
-      ALCHEMIST.batchOf(healingAndPoison(), { ...STANDARD, mainProperty: "Ядовитый урон" }, TORN_KITS, 1),
-    ).toThrow(/Сложность 22 выше предела оснащения 20.*Редкость эффектов \+7, Оснащение \+5/);
-  });
-
-  it("работа без профильного набора добавляет пять и делит партию вдвое", () => {
-    const risky = ALCHEMIST.batchOf(healingAndPoison(), STANDARD, TORN_KITS, 3);
-
-    expect(risky.difficulty.parts).toContainEqual({ nameRu: "Оснащение", modifier: 5 });
-    expect(risky.difficulty.total).toBe(20);
-    expect(risky.units).toBe(3);
-    expect(() => ALCHEMIST.batchOf(healingAndPoison(), STANDARD, TORN_KITS, 4)).toThrow(/предел партии/);
+      ALCHEMIST.batchOf(
+        healingAndPoison(),
+        { ...STANDARD, duration: "1 час", reach: "Радиус 4 м" },
+        TORN_KIT,
+        1,
+      ),
+    ).toThrow(/Сложность 26 выше предела оснащения 20.*Цели и область \+8, Длительность \+6/);
   });
 
   it("время партии и класс расходников растут полосами сложности", () => {
     const hour = ALCHEMIST.batchOf(sharing(TWO_KINDS, POISON), 
       { ...STANDARD, mainProperty: "Ядовитый урон", duration: "1 час" },
-      GRAND_KITS,
+      GRAND_KIT,
       1,
     );
     const sprayed = ALCHEMIST.batchOf(sharing(THREE_KINDS, POISON), 
@@ -413,24 +343,25 @@ describe("партия и предел оснащения", () => {
         kinds: THREE_KINDS,
         mainProperty: "Ядовитый урон",
         duration: "1 минута",
+        onset: "Активация при заданном событии",
         reach: "Радиус 2 м",
         application: "Вдохнуть или распылить",
         resistance: "Успех уменьшает эффект вдвое",
       },
-      GRAND_KITS,
+      GRAND_KIT,
       1,
     );
-    const forever = ALCHEMIST.nameRarity("Лечение здоровья", "legendary").batchOf(
+    const forever = ALCHEMIST.batchOf(
       sharingHealing(TWO_KINDS),
-      { ...STANDARD, duration: "Постоянно" },
-      GRAND_KITS,
+      { ...STANDARD, duration: "Постоянно", reach: "Радиус 8 м" },
+      GRAND_KIT,
       1,
     );
 
     expect([hour.difficulty.total, hour.minutes, hour.consumables.nameRu]).toEqual([
-      21,
-      120,
-      "Очищенные",
+      16,
+      60,
+      "Обычные",
     ]);
     expect([sprayed.difficulty.total, sprayed.minutes, sprayed.consumables.nameRu]).toEqual([
       30,
@@ -447,23 +378,21 @@ describe("партия и предел оснащения", () => {
   it("рецептурных порций закладывают целое положительное число", () => {
     const known = sharingHealing(TWO_KINDS);
 
-    expect(() => ALCHEMIST.batchOf(known, STANDARD, TORN_KITS, 0)).toThrow(/целое положительное/);
-    expect(() => ALCHEMIST.batchOf(known, STANDARD, TORN_KITS, 2.5)).toThrow(
+    expect(() => ALCHEMIST.batchOf(known, STANDARD, TORN_KIT, 0)).toThrow(/целое положительное/);
+    expect(() => ALCHEMIST.batchOf(known, STANDARD, TORN_KIT, 2.5)).toThrow(
       /целое положительное/,
     );
   });
 
-  it("без единого набора работают импровизированными сосудами", () => {
-    const bare = ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, {}, 1);
+  it("без набора работают импровизированными сосудами: пять сверху и одна порция", () => {
+    const bare = ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, undefined, 1);
 
+    expect(bare.difficulty.parts).toContainEqual({ nameRu: "Оснащение", modifier: 5 });
     expect(bare.difficulty.total).toBe(15);
     expect(bare.units).toBe(1);
-    expect(() => ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, {}, 2)).toThrow(/предел партии/);
+    expect(() => ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, undefined, 2)).toThrow(
+      /предел партии/,
+    );
   });
 
-  it("рецепт называет задействованные направления", () => {
-    const hybrid = ALCHEMIST.batchOf(healingAndPoison(), STANDARD, TORN_KITS, 1);
-
-    expect(hybrid.difficulty.directions).toEqual(["potions", "poisons"]);
-  });
 });

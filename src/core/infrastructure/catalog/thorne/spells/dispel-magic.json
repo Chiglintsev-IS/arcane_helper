@@ -5,7 +5,9 @@
   "level": 3,
   "school": "Ограждение",
   "source": "Player's Handbook (2014)",
-  "combatRole": "other",
+  "combatRoles": [
+    "defense"
+  ],
   "castingTime": {
     "type": "action"
   },

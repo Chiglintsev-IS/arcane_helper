@@ -3,7 +3,6 @@ import type { BagView, ItemView } from "@/contract/views";
 import { materialNeeds, type MaterialNeed } from "@/core/application/casting/material";
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import type { AlchemicalPropertyName, AlchemicalRarity } from "@/core/domain/catalog/alchemy";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
@@ -15,7 +14,6 @@ import { STAT_IDS } from "@/core/domain/shared/stats";
 function itemView(
   item: ItemDefinition,
   equipment: Equipment,
-  rarityOf: (nameRu: AlchemicalPropertyName) => AlchemicalRarity | undefined,
   need: MaterialNeed | undefined,
 ): ItemView {
   const bonuses = STAT_IDS.flatMap((stat) => {
@@ -39,14 +37,7 @@ function itemView(
     })),
     spellcastingFocus: item.spellcastingFocus === true,
     ...(item.note === undefined ? {} : { note: item.note }),
-    alchemicalProperties: (item.alchemy?.properties ?? []).map((property) => {
-      const rarity = rarityOf(property.nameRu);
-      return {
-        number: property.number,
-        nameRu: property.nameRu,
-        ...(rarity === undefined ? {} : { rarity }),
-      };
-    }),
+    alchemicalProperties: (item.alchemy?.properties ?? []).map((property) => ({ ...property })),
     neededForRu: need?.spellNamesRu ?? [],
   };
 }
@@ -68,7 +59,7 @@ export function toBagView(character: CharacterState, spells: readonly Spell[]): 
   return {
     money: CURRENCIES.map((currency) => ({ currency, amount: money[currency] })),
     items: items.all.map((item) =>
-      itemView(item, equipment, (nameRu) => root.crafting.rarityOf(nameRu), needs.get(item.id)),
+      itemView(item, equipment, needs.get(item.id)),
     ),
     armorClass: {
       value: armorClass.value,

@@ -114,6 +114,46 @@ describe("алхимия ингредиента у вещи", () => {
     expect(known.alchemyOf("herb").propertiesExhausted).toBe(false);
   });
 
+  it("раскрытое убирается по номеру, а соседнее остаётся", () => {
+    const known = bench()
+      .revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" })
+      .revealProperty("herb", { number: 2, nameRu: "Пробуждение" });
+
+    expect(known.dropProperty("herb", 1).alchemyOf("herb").properties).toEqual([
+      { number: 2, nameRu: "Пробуждение" },
+    ]);
+  });
+
+  it("под пустым номером убирать нечего: отказ называет вид и номер", () => {
+    expect(() => bench().dropProperty("herb", 3)).toThrow(/Лунная трава.*3/);
+  });
+
+  it("правка вещи не называет алхимию и потому её не теряет", () => {
+    const known = bench().revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" });
+    const renamed = known.replaceDefinition({
+      id: "herb",
+      nameRu: "Лунная травка",
+      kinds: ["ingredient"],
+      note: "склянка",
+    });
+
+    expect(renamed.alchemyOf("herb").properties).toEqual([
+      { number: 1, nameRu: "Лечение здоровья" },
+    ]);
+    expect(renamed.find("herb")?.note).toBe("склянка");
+  });
+
+  it("утрата признака ингредиента уносит алхимию с собой", () => {
+    const known = bench().revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" });
+    const demoted = known.replaceDefinition({
+      id: "herb",
+      nameRu: "Лунная трава",
+      kinds: ["consumable"],
+    });
+
+    expect(demoted.find("herb")?.alchemy).toBeUndefined();
+  });
+
   it("отметка «свойств больше нет» ставится и снимается", () => {
     const marked = bench().markPropertiesExhausted("herb", true);
 

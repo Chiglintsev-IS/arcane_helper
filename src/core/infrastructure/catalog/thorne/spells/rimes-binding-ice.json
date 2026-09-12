@@ -5,7 +5,10 @@
   "level": 2,
   "school": "Воплощение",
   "source": "Fizban's Treasury of Dragons",
-  "combatRole": "offense",
+  "combatRoles": [
+    "damage",
+    "hindrance"
+  ],
   "castingTime": {
     "type": "action"
   },

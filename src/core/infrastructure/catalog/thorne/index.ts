@@ -7,6 +7,7 @@ import alarm from "./spells/alarm.json";
 import arcaneLock from "./spells/arcane-lock.json";
 import arcaneVigor from "./spells/arcane-vigor.json";
 import catapult from "./spells/catapult.json";
+import chromaticOrb from "./spells/chromatic-orb.json";
 import counterspell from "./spells/counterspell.json";
 import detectMagic from "./spells/detect-magic.json";
 import dispelMagic from "./spells/dispel-magic.json";
@@ -48,6 +49,7 @@ const RAW_SPELLS: readonly unknown[] = [
   mageArmor,
   magicMissile,
   catapult,
+  chromaticOrb,
   alarm,
   detectMagic,
 

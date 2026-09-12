@@ -1,21 +1,14 @@
 import { z } from "zod";
 
-import { ALCHEMICAL_RARITIES, alchemyDirectionOf } from "@/core/domain/catalog/alchemy";
-import type {
-  AlchemicalPropertyName,
-  AlchemicalRarity,
-  AlchemyDirection,
-} from "@/core/domain/catalog/alchemy";
 import { DomainError } from "@/core/domain/shared/errors";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
-import { apparatusLimits, IMPROVISED_DIFFICULTY } from "./apparatus";
+import { improvisedDifficulty } from "./apparatus";
 import type { Apparatus } from "./apparatus";
 
 type MatchTier = "plain" | "amplified" | "concentrated";
 
 export type PropertyMatch = {
-  readonly nameRu: AlchemicalPropertyName;
-  readonly rarity: AlchemicalRarity | undefined;
+  readonly nameRu: string;
   readonly sources: readonly string[];
   readonly tier: MatchTier;
 };
@@ -32,13 +25,8 @@ export function tierOf(sources: number): MatchTier {
 const BASE_DIFFICULTY = 10;
 export const LOWEST_DIFFICULTY = 5;
 
-const EFFECT_DIFFICULTY = {
-  common: { main: 0, additional: 2 },
-  uncommon: { main: 2, additional: 3 },
-  rare: { main: 5, additional: 5 },
-  veryRare: { main: 8, additional: 7 },
-  legendary: { main: 12, additional: 10 },
-} as const satisfies Record<AlchemicalRarity, { main: number; additional: number }>;
+/** Основной эффект — то, ради чего состав задуман: он в цену не входит, платят за остальные. */
+const ADDITIONAL_EFFECT_DIFFICULTY = 2;
 
 const TIER_DIFFICULTY = {
   plain: 0,
@@ -99,15 +87,7 @@ const RESISTANCE_DIFFICULTY = {
   "Эффект не допускает спасброска": 8,
 } as const;
 
-const PURIFICATION_DIFFICULTY = 5;
-
-const SUPPRESSION_DIFFICULTY = {
-  common: 2,
-  uncommon: 3,
-  rare: 4,
-  veryRare: 6,
-  legendary: 8,
-} as const satisfies Record<AlchemicalRarity, number>;
+const SUPPRESSION_DIFFICULTY = 2;
 
 const LIMITATION_DIFFICULTY = {
   "Только конкретный биологический вид или узкая группа материалов": -2,
@@ -122,18 +102,6 @@ const LIMITATION_DIFFICULTY = {
 
 const MOST_LIMITATION_RELIEF = -6;
 
-type PropertyPolarity = "beneficial" | "harmful" | "neutral";
-
-const POLARITY_BY_DIRECTION = {
-  potions: "beneficial",
-  poisons: "harmful",
-  transmutation: "neutral",
-} as const satisfies Record<AlchemyDirection, PropertyPolarity>;
-
-const OPPOSITE_POLARITY = { beneficial: "harmful", harmful: "beneficial" } as const;
-
-type KeptPolarity = keyof typeof OPPOSITE_POLARITY;
-
 export type RecipeFormula = {
   readonly kinds: readonly string[];
   readonly mainProperty: string | null;
@@ -143,7 +111,6 @@ export type RecipeFormula = {
   readonly reach: keyof typeof REACH_DIFFICULTY;
   readonly application: keyof typeof APPLICATION_DIFFICULTY;
   readonly resistance: keyof typeof RESISTANCE_DIFFICULTY;
-  readonly purification: KeptPolarity | null;
   readonly suppressed: readonly string[];
   readonly limitations: readonly (keyof typeof LIMITATION_DIFFICULTY)[];
 };
@@ -163,7 +130,6 @@ const recipeFormulaSchema = z.object({
   reach: fromTable(REACH_DIFFICULTY, "цели и область"),
   application: fromTable(APPLICATION_DIFFICULTY, "способ применения"),
   resistance: fromTable(RESISTANCE_DIFFICULTY, "сопротивление"),
-  purification: fromTable(OPPOSITE_POLARITY, "очистка").nullable(),
   suppressed: z.array(nonEmpty),
   limitations: z.array(fromTable(LIMITATION_DIFFICULTY, "ограничение")),
 });
@@ -182,7 +148,6 @@ export const RECIPE_CHOICES = {
     reach: "Одна цель, предмет или участок",
     application: "Выпить, накормить или нанести на неподвижную цель",
     resistance: "Положительное воздействие на добровольную цель",
-    purification: null,
   },
   durations: priced(DURATION_DIFFICULTY),
   onsets: priced(ONSET_DIFFICULTY),
@@ -190,10 +155,6 @@ export const RECIPE_CHOICES = {
   applications: priced(APPLICATION_DIFFICULTY),
   resistances: priced(RESISTANCE_DIFFICULTY),
   limitations: priced(LIMITATION_DIFFICULTY),
-  purifications: Object.keys(OPPOSITE_POLARITY).map((value) => ({
-    value,
-    modifier: PURIFICATION_DIFFICULTY,
-  })),
 };
 
 export function recipeFormulaOf(value: unknown): RecipeFormula {
@@ -229,7 +190,6 @@ type DifficultyPart = { readonly nameRu: string; readonly modifier: number };
 export type RecipeDifficulty = {
   readonly parts: readonly DifficultyPart[];
   readonly total: number;
-  readonly directions: readonly AlchemyDirection[];
   readonly mainRu: string;
 };
 
@@ -245,97 +205,38 @@ function emptyMixtureRefusal(): string {
   return "В составе не осталось ни одного свойства: оценивать нечего";
 }
 
+/** Не назван — основным становится первое оставшееся: цену состава этот выбор не меняет. */
 function mainOf(kept: readonly PropertyMatch[], named: string | null): PropertyMatch {
-  if (named === null) return rarestOf(kept);
-  const found = kept.find((match) => match.nameRu === named);
-  if (found === undefined) throw new DomainError(missingMainRefusal(named));
+  const found = named === null ? kept[0] : kept.find((match) => match.nameRu === named);
+  if (found === undefined) {
+    throw new DomainError(named === null ? emptyMixtureRefusal() : missingMainRefusal(named));
+  }
   return found;
-}
-
-function unnamedRarityRefusal(name: string): string {
-  return `У свойства «${name}» не названа редкость: без неё сложность не считается`;
-}
-
-/** Редкость приходит от стола: её называет мастер, и без неё считать нечем. */
-function rarityOf(match: PropertyMatch): AlchemicalRarity {
-  if (match.rarity === undefined) throw new DomainError(unnamedRarityRefusal(match.nameRu));
-  return match.rarity;
-}
-
-function rarestOf(kept: readonly PropertyMatch[]): PropertyMatch {
-  const rarest = kept.toSorted(
-    (one, other) =>
-      ALCHEMICAL_RARITIES.indexOf(rarityOf(other)) - ALCHEMICAL_RARITIES.indexOf(rarityOf(one)),
-  )[0];
-  if (rarest === undefined) throw new DomainError(emptyMixtureRefusal());
-  return rarest;
-}
-
-function nothingToPurifyRefusal(): string {
-  return "Очистка возможна, когда в составе есть и полезные, и вредные свойства";
 }
 
 function unmatchedSuppressionRefusal(name: string): string {
   return `Подавить можно только совпавшее свойство, а «${name}» в составе нет`;
 }
 
-function doubleRemovalRefusal(name: string): string {
-  return `Свойство «${name}» удаляется один раз: очисткой или подавлением`;
-}
-
 function sum(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
-function polarityOf(match: PropertyMatch): PropertyPolarity {
-  return POLARITY_BY_DIRECTION[alchemyDirectionOf(match.nameRu)];
-}
-
 type Removal = { readonly kept: readonly PropertyMatch[]; readonly difficulty: number };
 
-function afterPurification(
-  matches: readonly PropertyMatch[],
-  purification: RecipeFormula["purification"],
-): Removal {
-  if (purification === null) return { kept: matches, difficulty: 0 };
-
-  const opposite = OPPOSITE_POLARITY[purification];
-  const wanted = matches.filter((match) => polarityOf(match) === purification);
-  const opposed = matches.filter((match) => polarityOf(match) === opposite);
-  if (wanted.length === 0 || opposed.length === 0) {
-    throw new DomainError(nothingToPurifyRefusal());
-  }
-  return {
-    kept: matches.filter((match) => polarityOf(match) !== opposite),
-    difficulty: PURIFICATION_DIFFICULTY,
-  };
-}
-
 function afterSuppression(
-  kept: readonly PropertyMatch[],
   matches: readonly PropertyMatch[],
   suppressed: readonly string[],
 ): Removal {
   const removed = [...new Set(suppressed)].map((name) => {
     const target = matches.find((match) => match.nameRu === name);
     if (target === undefined) throw new DomainError(unmatchedSuppressionRefusal(name));
-    if (!kept.includes(target)) throw new DomainError(doubleRemovalRefusal(name));
     return target;
   });
   return {
-    kept: kept.filter((match) => !removed.includes(match)),
-    difficulty: sum(removed.map((match) => SUPPRESSION_DIFFICULTY[rarityOf(match)])),
+    kept: matches.filter((match) => !removed.includes(match)),
+    difficulty: removed.length * SUPPRESSION_DIFFICULTY,
   };
-}
-
-function rarityDifficulty(kept: readonly PropertyMatch[], main: PropertyMatch): number {
-  return sum(
-    kept.map((match) =>
-      match === main
-        ? EFFECT_DIFFICULTY[rarityOf(match)].main
-        : EFFECT_DIFFICULTY[rarityOf(match)].additional,
-    ),
-  );
 }
 
 export function recipeDifficulty(
@@ -347,15 +248,14 @@ export function recipeDifficulty(
     throw new DomainError(repeatsRefusal());
   }
 
-  const purified = afterPurification(matches, formula.purification);
-  const cleansed = afterSuppression(purified.kept, matches, formula.suppressed);
+  const cleansed = afterSuppression(matches, formula.suppressed);
   const main = mainOf(cleansed.kept, formula.mainProperty);
 
-  const directions = [
-    ...new Set(cleansed.kept.map((match) => alchemyDirectionOf(match.nameRu))),
-  ];
   const parts: readonly DifficultyPart[] = [
-    { nameRu: "Редкость эффектов", modifier: rarityDifficulty(cleansed.kept, main) },
+    {
+      nameRu: "Дополнительные эффекты",
+      modifier: (cleansed.kept.length - 1) * ADDITIONAL_EFFECT_DIFFICULTY,
+    },
     {
       nameRu: "Ступень усиления",
       modifier: sum(cleansed.kept.map((match) => TIER_DIFFICULTY[match.tier])),
@@ -372,7 +272,7 @@ export function recipeDifficulty(
     { nameRu: "Цели и область", modifier: REACH_DIFFICULTY[formula.reach] },
     { nameRu: "Способ применения", modifier: APPLICATION_DIFFICULTY[formula.application] },
     { nameRu: "Сопротивление", modifier: RESISTANCE_DIFFICULTY[formula.resistance] },
-    { nameRu: "Очистка и подавление", modifier: purified.difficulty + cleansed.difficulty },
+    { nameRu: "Подавление", modifier: cleansed.difficulty },
     {
       nameRu: "Ограничения и последствия",
       modifier: Math.max(
@@ -380,16 +280,12 @@ export function recipeDifficulty(
         MOST_LIMITATION_RELIEF,
       ),
     },
-    {
-      nameRu: "Оснащение",
-      modifier: IMPROVISED_DIFFICULTY * apparatusLimits(directions, apparatus).improvised,
-    },
+    { nameRu: "Оснащение", modifier: improvisedDifficulty(apparatus) },
   ];
 
   return {
     parts,
     total: Math.max(BASE_DIFFICULTY + sum(parts.map((part) => part.modifier)), LOWEST_DIFFICULTY),
-    directions,
     mainRu: main.nameRu,
   };
 }

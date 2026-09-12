@@ -936,7 +936,7 @@ describe("знание об ингредиенте переезжает к ве�
   const KNOWLEDGE = [
     {
       nameRu: "Лунная трава",
-      properties: [{ number: 1, nameRu: "Лечение здоровья", rarity: "common" }],
+      properties: [{ number: 1, nameRu: "Лечение здоровья" }],
       observations: [{ id: "one", textRu: "Пахнет тиной" }],
       propertiesExhausted: true,
     },
@@ -952,29 +952,29 @@ describe("знание об ингредиенте переезжает к ве�
 
     expect(herb?.kinds).toContain("ingredient");
     expect(herb?.alchemy?.properties).toEqual([{ number: 1, nameRu: "Лечение здоровья" }]);
-    expect(state.propertyRarities).toEqual([{ nameRu: "Лечение здоровья", rarity: "common" }]);
     expect(herb?.alchemy?.observations).toEqual([{ id: "one", textRu: "Пахнет тиной" }]);
     expect(herb?.alchemy?.propertiesExhausted).toBe(true);
     expect(state.itemDefinitions.filter((item) => item.nameRu === "")).toEqual([]);
   });
 
-  it("редкость съезжает к свойству, и второй вид её не задваивает", () => {
-    const shared = (nameRu: string) => ({
-      id: Items.idFromName(nameRu),
-      nameRu,
-      kinds: ["ingredient"],
-      alchemy: { properties: [{ number: 1, nameRu: "Лечение здоровья", rarity: "rare" }] },
-    });
+  it("названная столом редкость свойства из сохранения уходит: её больше не считают", () => {
     const state = characterStateSchema.parse(
       migrateCharacterState({
         ...modern(),
-        itemDefinitions: [shared("Лунная трава"), shared("Багровый корень")],
+        propertyRarities: [{ nameRu: "Лечение здоровья", rarity: "rare" }],
+        itemDefinitions: [
+          {
+            id: Items.idFromName("Лунная трава"),
+            nameRu: "Лунная трава",
+            kinds: ["ingredient"],
+            alchemy: { properties: [{ number: 1, nameRu: "Лечение здоровья", rarity: "rare" }] },
+          },
+        ],
       }),
     );
 
-    expect(state.propertyRarities).toEqual([{ nameRu: "Лечение здоровья", rarity: "rare" }]);
+    expect(state).not.toHaveProperty("propertyRarities");
     expect(state.itemDefinitions.map((item) => item.alchemy?.properties)).toEqual([
-      [{ number: 1, nameRu: "Лечение здоровья" }],
       [{ number: 1, nameRu: "Лечение здоровья" }],
     ]);
   });
@@ -1044,5 +1044,46 @@ describe("знание об ингредиенте переезжает к ве�
 
   it("сохранение без прежнего списка не трогается", () => {
     expect(fieldsOf(migrateCharacterState(modern())).ingredientKnowledge).toBeUndefined();
+  });
+});
+
+describe("набор по каждому направлению становится одним набором алхимика", () => {
+  it("из записанных остаётся сильнейший, а при равном пределе сложности — вместительнейший", () => {
+    const stronger = fieldsOf(
+      migrateCharacterState({
+        ...createThorne(),
+        alchemyApparatus: {
+          potions: "Обычный походный комплект",
+          poisons: "Мастерский походный комплект",
+          transmutation: "Обычный походный комплект",
+        },
+      }),
+    );
+    expect(stronger.alchemyApparatus).toBe("Мастерский походный комплект");
+
+    const roomier = fieldsOf(
+      migrateUndoPatch({
+        alchemyApparatus: {
+          potions: "Надёжный походный комплект",
+          poisons: "Базовый лабораторный модуль",
+        },
+      }),
+    );
+    expect(roomier.alchemyApparatus).toBe("Базовый лабораторный модуль");
+  });
+
+  it("мастерская без единого набора остаётся без него", () => {
+    const bare = fieldsOf(migrateCharacterState({ ...createThorne(), alchemyApparatus: {} }));
+
+    expect(bare).not.toHaveProperty("alchemyApparatus");
+    expect(characterStateSchema.safeParse(bare).success).toBe(true);
+  });
+
+  it("записанный одним словом набор не трогается", () => {
+    const modern = createThorne();
+
+    expect(fieldsOf(migrateCharacterState(modern)).alchemyApparatus).toBe(
+      modern.alchemyApparatus,
+    );
   });
 });

@@ -6,8 +6,8 @@ import type { ChoicesView } from "@/contract/views";
 import type { PreviewOf } from "@/contract/questions";
 
 import { durationPhrase } from "@/ui/entities/spell/lib/format";
-import { DIRECTION_LABELS, TIER_LABELS, minutesRu } from "@/ui/entities/crafting/lib/labels";
-import { RARITY_LABELS, RARITY_UNNAMED, labelled } from "@/ui/shared/lib/alchemyLabels";
+import { TIER_LABELS, minutesRu } from "@/ui/entities/crafting/lib/labels";
+import { labelled } from "@/ui/shared/lib/alchemyLabels";
 import { signed, withPlural } from "@/shared/language";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
@@ -20,18 +20,12 @@ export type RecipeDraft = {
   readonly reach: string;
   readonly application: string;
   readonly resistance: string;
-  readonly purification: string | null;
   readonly suppressed: readonly string[];
   readonly limitations: readonly string[];
 };
 
-const NO_PURIFICATION_RU = "Без очистки";
 const NOTHING_ADDED_RU = "Ничего";
 const NO_MODIFIERS_RU = "стандартная форма, поправок нет";
-const PURIFICATION_LABELS: Readonly<Record<string, string>> = {
-  beneficial: "оставить полезные",
-  harmful: "оставить вредные",
-};
 
 type PricedChoice = ChoicesView["recipeForm"]["durations"][number];
 
@@ -77,18 +71,14 @@ function Matches({
   matches,
   draft,
   mainRu,
-  rarities,
   onMain,
   onSuppress,
-  onNameRarity,
 }: {
   matches: PreviewOf<"recipe_preview">["matches"];
   draft: RecipeDraft;
   mainRu: string | null;
-  rarities: ChoicesView["alchemicalRarities"];
   onMain: (nameRu: string) => void;
   onSuppress: (nameRu: string) => void;
-  onNameRarity: (nameRu: string, rarity: string) => void;
 }) {
   return (
     <ul className="flex flex-col gap-2">
@@ -97,23 +87,8 @@ function Matches({
         const off = draft.suppressed.includes(match.nameRu);
         return (
           <li key={match.nameRu} className="flex flex-col gap-1">
-            <span className="flex items-center gap-2">
-              <span className={`min-w-0 flex-1 text-sm leading-tight ${main ? "font-semibold" : ""}`}>
-                {match.nameRu}
-              </span>
-              <select
-                value={match.rarity ?? ""}
-                aria-label={`Редкость: ${match.nameRu}`}
-                onChange={(event) => onNameRarity(match.nameRu, event.target.value)}
-                className={`min-h-11 shrink-0 px-2 text-xs ${SURFACE_CONTROL}`}
-              >
-                <option value="">{RARITY_UNNAMED}</option>
-                {rarities.map((option) => (
-                  <option key={option} value={option}>
-                    {labelled(RARITY_LABELS, option)}
-                  </option>
-                ))}
-              </select>
+            <span className={`text-sm leading-tight ${main ? "font-semibold" : ""}`}>
+              {match.nameRu}
             </span>
             <span className="text-xs text-ink-quiet">
               ступень {labelled(TIER_LABELS, match.tier)} · {match.sources.join(", ")}
@@ -170,7 +145,6 @@ function Tally({ difficulty }: { difficulty: PreviewOf<"recipe_preview">["diffic
 
 export function RecipeBench({
   choices,
-  rarities,
   preview,
   draft,
   portions,
@@ -181,11 +155,9 @@ export function RecipeBench({
   onPortions,
   onRolled,
   onMishap,
-  onNameRarity,
   onCraft,
 }: {
   choices: ChoicesView["recipeForm"];
-  rarities: ChoicesView["alchemicalRarities"];
   preview: PreviewOf<"recipe_preview"> | null;
   draft: RecipeDraft;
   portions: string;
@@ -196,7 +168,6 @@ export function RecipeBench({
   onPortions: (next: string) => void;
   onRolled: (next: string) => void;
   onMishap: (next: string) => void;
-  onNameRarity: (nameRu: string, rarity: string) => void;
   onCraft: () => void;
 }) {
   const benchId = useId();
@@ -225,12 +196,10 @@ export function RecipeBench({
           matches={preview.matches}
           draft={draft}
           mainRu={preview.difficulty?.mainRu ?? null}
-          rarities={rarities}
           onMain={(nameRu) =>
             change({ mainProperty: draft.mainProperty === nameRu ? null : nameRu })
           }
           onSuppress={(nameRu) => change({ suppressed: toggle(draft.suppressed, nameRu) })}
-          onNameRarity={onNameRarity}
         />
       )}
 
@@ -247,14 +216,6 @@ export function RecipeBench({
           value={draft.onset}
           options={choices.onsets}
           onChange={(next) => change({ onset: next })}
-        />
-        <Field
-          label="Очистка"
-          value={draft.purification ?? ""}
-          empty={NO_PURIFICATION_RU}
-          options={choices.purifications}
-          named={(kept) => labelled(PURIFICATION_LABELS, kept)}
-          onChange={(next) => change({ purification: next === "" ? null : next })}
         />
       </div>
 
@@ -341,24 +302,13 @@ export function RecipeBench({
       )}
 
       {refused || preview?.check == null ? null : (
-        <div className="flex flex-col gap-1">
-          <p className="text-sm">
-            Проверка разработки:{" "}
-            <span className="font-semibold tabular-nums">
-              {`${rollLabels.check} + ${preview.check.bonus}`}
-            </span>
-            {preview.known ? " — рецепт записан, бросок не нужен" : ""}
-          </p>
-          {preview.check.unstudied.length === 0 ? null : (
-            <p className="text-xs text-ink-quiet">
-              Бонус мастерства не достаётся:{" "}
-              {preview.check.unstudied
-                .map((direction) => labelled(DIRECTION_LABELS, direction))
-                .join(", ")}{" "}
-              — этому направлению алхимик не обучен, и гибрид идёт по самому слабому.
-            </p>
-          )}
-        </div>
+        <p className="text-sm">
+          Проверка разработки:{" "}
+          <span className="font-semibold tabular-nums">
+            {`${rollLabels.check} + ${preview.check.bonus}`}
+          </span>
+          {preview.known ? " — рецепт записан, бросок не нужен" : ""}
+        </p>
       )}
 
       <div className="flex gap-2">

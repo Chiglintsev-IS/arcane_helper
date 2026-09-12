@@ -329,12 +329,12 @@ describe("краткая карточка (FR-010)", () => {
     await renderWithStores(<PlayShell />);
 
     const inFight = within(screen.getByRole("button", { name: /Луч холода/ }));
-    expect(inFight.getByText(/Боевое/)).toBeDefined();
+    expect(inFight.getByText(/Урон/)).toBeDefined();
 
     await openMode(user, /^Книга/);
 
     const inBook = within(screen.getByRole("button", { name: /Луч холода/ }));
-    expect(inBook.getByText(/Боевое/)).toBeDefined();
+    expect(inBook.getByText(/Урон/)).toBeDefined();
   });
 });
 

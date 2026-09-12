@@ -27,7 +27,7 @@ import { castSpell } from "@/core/application/useCases/casting";
 import {
   craftBatch,
   dropObservation,
-  nameRarity,
+  dropProperty,
   markPropertiesExhausted,
   noteIngredient,
   noteObservation,
@@ -80,7 +80,7 @@ import {
 } from "@/core/application/useCases/sheet";
 import { beginTurn, endCombat, startCombat } from "@/core/application/useCases/turn";
 
-import { castModeOf, oneOf, rarityOf, runeOf, spellOf } from "./words";
+import { castModeOf, oneOf, runeOf, spellOf } from "./words";
 
 type ControllerParts = {
   builtInCatalog: readonly Spell[];
@@ -300,20 +300,14 @@ export function applyCommand(
               number: command.number,
               nameRu: command.propertyRu,
             }),
-            ...(command.rarity === undefined ? {} : { rarity: rarityOf(command.rarity) }),
           },
           occasion,
         ),
       );
-    case "name_rarity":
+    case "drop_property":
       return changed(
-        nameRarity(
-          session,
-          { propertyRu: command.propertyRu, rarity: rarityOf(command.rarity) },
-          occasion,
-        ),
+        dropProperty(session, { itemId: command.itemId, number: command.number }, occasion),
       );
-
     case "note_observation":
       return changed(noteObservation(session, command.itemId, command.textRu, occasion));
     case "rewrite_observation":
@@ -325,14 +319,7 @@ export function applyCommand(
 
     case "set_alchemy_workshop":
       return changed(
-        setWorkshop(
-          session,
-          {
-            alchemyApparatus: command.apparatus,
-            studiedDirections: command.studiedDirections,
-          },
-          occasion,
-        ),
+        setWorkshop(session, { alchemyApparatus: command.apparatus }, occasion),
       );
 
     case "edit_identity":

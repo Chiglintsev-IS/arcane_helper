@@ -1,5 +1,3 @@
-import type { AlchemyDirection } from "@/core/domain/catalog/alchemy";
-
 export const RELIABLE_FIELD_KIT = "Надёжный походный комплект";
 
 export const APPARATUS_GRADES = [
@@ -16,6 +14,12 @@ export const APPARATUS_GRADES = [
 
 type ApparatusGrade = (typeof APPARATUS_GRADES)[number];
 
+type ApparatusLimits = {
+  readonly hardest: number;
+  readonly batch: number;
+  readonly stationary: boolean;
+};
+
 const APPARATUS_LIMITS = {
   "Обычный походный комплект": { hardest: 15, batch: 3, stationary: false },
   [RELIABLE_FIELD_KIT]: { hardest: 20, batch: 6, stationary: false },
@@ -26,49 +30,42 @@ const APPARATUS_LIMITS = {
   "Профессиональный лабораторный модуль": { hardest: 30, batch: 40, stationary: true },
   "Мастерский лабораторный модуль": { hardest: 35, batch: 80, stationary: true },
   "Великий лабораторный модуль": { hardest: 45, batch: 150, stationary: true },
-} as const satisfies Record<
-  ApparatusGrade,
-  { hardest: number; batch: number; stationary: boolean }
->;
+} as const satisfies Record<ApparatusGrade, ApparatusLimits>;
 
-export function apparatusOf(
-  direction: AlchemyDirection,
-  apparatus: Apparatus,
-): { readonly hardest: number; readonly batch: number; readonly stationary: boolean } | undefined {
-  const grade = apparatus[direction];
-  return grade === undefined ? undefined : APPARATUS_LIMITS[grade];
+/** Набор один на всю алхимию: направления делят его, как делят стол алхимика. */
+export type Apparatus = ApparatusGrade | undefined;
+
+const IMPROVISED_LIMITS = { hardest: 15, batch: 1, stationary: false } as const;
+
+const IMPROVISED_DIFFICULTY = 5;
+
+export function apparatusOf(apparatus: Apparatus): ApparatusLimits | undefined {
+  return apparatus === undefined ? undefined : APPARATUS_LIMITS[apparatus];
 }
 
-export type Apparatus = {
-  readonly [direction in AlchemyDirection]?: ApparatusGrade | undefined;
-};
+export function apparatusLimits(apparatus: Apparatus): ApparatusLimits {
+  return apparatusOf(apparatus) ?? IMPROVISED_LIMITS;
+}
 
-const IMPROVISED_LIMITS = { hardest: 15, batch: 1 };
+export function improvisedDifficulty(apparatus: Apparatus): number {
+  return apparatus === undefined ? IMPROVISED_DIFFICULTY : 0;
+}
 
-export const IMPROVISED_DIFFICULTY = 5;
+function stronger(grade: ApparatusGrade, than: ApparatusGrade): boolean {
+  const one = APPARATUS_LIMITS[grade];
+  const other = APPARATUS_LIMITS[than];
+  return one.hardest === other.hardest ? one.batch > other.batch : one.hardest > other.hardest;
+}
 
-const HALVED = 2;
+function isApparatusGrade(grade: unknown): grade is ApparatusGrade {
+  return APPARATUS_GRADES.some((known) => known === grade);
+}
 
-type ApparatusLimits = {
-  readonly hardest: number;
-  readonly batch: number;
-  readonly improvised: number;
-};
-
-export function apparatusLimits(
-  directions: readonly AlchemyDirection[],
-  apparatus: Apparatus,
-): ApparatusLimits {
-  const kits = directions
-    .map((direction) => apparatus[direction])
-    .filter((grade) => grade !== undefined)
-    .map((grade) => APPARATUS_LIMITS[grade]);
-  const improvised = directions.length - kits.length;
-  if (kits.length === 0) return { ...IMPROVISED_LIMITS, improvised };
-
-  return {
-    hardest: Math.min(...kits.map((limits) => limits.hardest)),
-    batch: Math.floor(Math.min(...kits.map((limits) => limits.batch)) / HALVED ** improvised),
-    improvised,
-  };
+export function strongestApparatus(grades: readonly unknown[]): Apparatus {
+  return grades
+    .filter(isApparatusGrade)
+    .reduce<Apparatus>(
+      (best, grade) => (best === undefined || stronger(grade, best) ? grade : best),
+      undefined,
+    );
 }

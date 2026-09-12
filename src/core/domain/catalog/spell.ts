@@ -4,7 +4,7 @@ import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 import { GLYPH_IDS, SEAL_KINDS } from "@/core/domain/catalog/diagram/glyphs";
 import { isRune } from "@/core/domain/catalog/diagram/futhark";
-import { COMBAT_ROLES } from "@/core/domain/catalog/combatRole";
+import { combatRolesSchema, foldRetiredSingleRole } from "@/core/domain/catalog/combatRole";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { nonEmpty } from "@/core/domain/shared/schema";
 import { statContributionSchema } from "@/core/domain/shared/stats";
@@ -259,7 +259,7 @@ const spellShape = z.object({
   school: nonEmpty,
   source: nonEmpty.optional(),
 
-  combatRole: z.enum(COMBAT_ROLES).optional(),
+  combatRoles: combatRolesSchema.optional(),
 
   castingTime: castingTimeSchema,
   range: rangeSchema,
@@ -322,7 +322,7 @@ function listCardIssues(spell: z.infer<typeof spellShape>): ListCardIssue[] {
   return issues;
 }
 
-export const spellSchema = spellShape.superRefine((spell, context) => {
+export const spellSchema = z.preprocess(foldRetiredSingleRole, spellShape).superRefine((spell, context) => {
   for (const issue of listCardIssues(spell)) {
     context.addIssue({ code: "custom", path: ["listCard", ...issue.path], message: issue.message });
   }

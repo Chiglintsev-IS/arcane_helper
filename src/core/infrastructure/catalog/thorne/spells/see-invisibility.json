@@ -5,7 +5,9 @@
   "level": 2,
   "school": "Прорицание",
   "source": "Player's Handbook (2014)",
-  "combatRole": "other",
+  "combatRoles": [
+    "scouting"
+  ],
   "castingTime": {
     "type": "action"
   },

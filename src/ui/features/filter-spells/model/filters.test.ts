@@ -121,7 +121,7 @@ describe("filterSpells: значения одной категории соед�
     const both = ids(filterSpells(book(), filters({ prices: [0, 1] })));
 
     expect(onlyCantrips).toEqual(["shocking-grasp", "ray-of-frost", "message", "mending"]);
-    expect(both).toHaveLength(12);
+    expect(both).toHaveLength(13);
   });
 });
 
@@ -218,17 +218,51 @@ describe("filterSpells: роль в бою (FR-212, FR-213)", () => {
     expect(shown).not.toContain("lightning-bolt");
   });
 
-  it("«Боевое» оставляет боевые", () => {
-    const shown = ids(filterSpells(book(), filters({ roles: ["offense"] })));
+  it("«Урон» оставляет несущее урон; ослабление и усиление под него не подходят", () => {
+    const shown = ids(filterSpells(book(), filters({ roles: ["damage"] })));
 
     expect(shown).toContain("ray-of-frost");
-    expect(shown).toContain("web");
-    expect(shown).toContain("polymorph");
+    expect(shown).toContain("lightning-bolt");
+    expect(shown).not.toContain("web");
+    expect(shown).not.toContain("haste");
     expect(shown).not.toContain("mage-armor");
   });
 
+  it("«Контроль» оставляет всё, что творят ради помехи врагу, — и чистый контроль, и урон с помехой", () => {
+    const shown = ids(filterSpells(book(), filters({ roles: ["hindrance"] })));
+
+    expect(shown).toContain("web");
+    expect(shown).toContain("slow");
+    expect(shown).toContain("tashas-mind-whip");
+    expect(shown).toContain("ray-of-frost");
+    expect(shown).not.toContain("lightning-bolt");
+    expect(shown).not.toContain("haste");
+  });
+
+  it("роль сравнивается с любой из перечня: «Громовой шаг» видно и под «Движением», и под «Уроном»", () => {
+    expect(ids(filterSpells(book(), filters({ roles: ["movement"] })))).toContain("thunder-step");
+    expect(ids(filterSpells(book(), filters({ roles: ["damage"] })))).toContain("thunder-step");
+    expect(ids(filterSpells(book(), filters({ roles: ["defense"] })))).not.toContain("thunder-step");
+  });
+
+  it("побочный эффект ролью не считается: «Ускорение» под «Защитой» не стоит", () => {
+    expect(ids(filterSpells(book(), filters({ roles: ["defense"] })))).not.toContain("haste");
+    expect(ids(filterSpells(book(), filters({ roles: ["buff"] })))).toContain("haste");
+  });
+});
+
+describe("filterSpells: роли в бою", () => {
+  it("«Усиление» оставляет то, что делает союзника сильнее", () => {
+    const shown = ids(filterSpells(book(), filters({ roles: ["buff"] })));
+
+    expect(shown).toContain("haste");
+    expect(shown).toContain("polymorph");
+    expect(shown).not.toContain("shield");
+    expect(shown).not.toContain("slow");
+  });
+
   it("две роли соединяются «или», как и любые значения одной категории (FR-003)", () => {
-    const shown = ids(filterSpells(book(), filters({ roles: ["offense", "defense"] })));
+    const shown = ids(filterSpells(book(), filters({ roles: ["damage", "defense"] })));
     expect(shown).toContain("ray-of-frost");
     expect(shown).toContain("shield");
     expect(shown).not.toContain("message");
@@ -253,8 +287,8 @@ describe("matchesTraits: строка, не являющаяся заклина�
     expect(matchesTraits(LAST_HINT_TRAITS, filters({ castingTimes: ["reaction"] }))).toBe(false);
   });
 
-  it("её роль — «другое»: под «Боевое» и «Защиту» она не подходит", () => {
-    expect(matchesTraits(LAST_HINT_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
+  it("её роль — «другое»: под «Урон» и «Защиту» она не подходит", () => {
+    expect(matchesTraits(LAST_HINT_TRAITS, filters({ roles: ["damage"] }))).toBe(false);
     expect(matchesTraits(LAST_HINT_TRAITS, filters({ roles: ["other"] }))).toBe(true);
   });
 
@@ -283,7 +317,7 @@ describe("matchesActionRow: книжные фильтры для строки-д
 
   it("общие фильтры работают так же, как раньше", () => {
     expect(matchesActionRow(LAST_HINT_TRAITS, filters({ castingTimes: ["action"] }))).toBe(false);
-    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ roles: ["offense"] }))).toBe(false);
+    expect(matchesActionRow(LAST_HINT_TRAITS, filters({ roles: ["damage"] }))).toBe(false);
     expect(matchesActionRow(LAST_HINT_TRAITS, NO_FILTERS)).toBe(true);
   });
 });

@@ -5,7 +5,9 @@
   "level": 3,
   "school": "Ограждение",
   "source": "Tasha's Cauldron of Everything",
-  "combatRole": "defense",
+  "combatRoles": [
+    "defense"
+  ],
   "castingTime": {
     "type": "action"
   },
