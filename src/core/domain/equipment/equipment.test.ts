@@ -5,8 +5,7 @@ import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 import type { SourcedContribution, StatId } from "@/core/domain/shared/stats";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withoutSpellcastingFocus } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 function bonusFor(brought: readonly SourcedContribution[], stat: StatId): number {
   return brought.reduce(
@@ -52,12 +51,12 @@ const chainmail: ItemDefinition = {
   bonuses: { armorClass: 2 },
 };
 
-const gear = () => Equipment.of(createThorne());
+const gear = () => Equipment.of(createWizard());
 const items = (...definitions: ItemDefinition[]) => Items.of({ itemDefinitions: definitions });
 
 describe("снаряжение", () => {
   it("вклад приходит только от надетых вещей", () => {
-    const thorne = createThorne();
+    const thorne = createWizard();
     const brought = Equipment.of(thorne).contributions(Items.of(thorne));
 
     expect(bonusFor(brought, "armorClass")).toBe(2);
@@ -196,7 +195,7 @@ describe("снаряжение", () => {
   });
 
   it("отсутствие записи о компонентах — не пустая сумка, а незнание", () => {
-    const base = createThorne();
+    const base = createWizard();
     const { components: _none, ...withoutComponents } = base.equipment;
 
     expect(gear().known).toBe(true);
@@ -204,7 +203,7 @@ describe("снаряжение", () => {
   });
 
   it("надетая фокусировка закрывает компоненты без стоимости, лежащая в сумке — нет", () => {
-    const thorne = createThorne();
+    const thorne = createWizard();
     expect(Equipment.of(thorne).replacesFreeComponents(Items.of(thorne))).toBe(true);
 
     const stowed = withoutSpellcastingFocus(thorne);
@@ -212,7 +211,7 @@ describe("снаряжение", () => {
   });
 
   it("мешочек закрывает компоненты и без фокусировки", () => {
-    const stowed = withoutSpellcastingFocus(createThorne());
+    const stowed = withoutSpellcastingFocus(createWizard());
     const components = { componentPouch: true };
     const pouch = Equipment.of({ ...stowed, equipment: { ...stowed.equipment, components } });
 

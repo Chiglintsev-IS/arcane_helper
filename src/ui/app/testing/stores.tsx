@@ -5,7 +5,7 @@ import { afterEach } from "vitest";
 import { createClient } from "@/contract/client";
 import type { Snapshot } from "@/contract/snapshot";
 import type { SpellRowView } from "@/contract/views";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
@@ -47,7 +47,7 @@ export function testClock(): Clock {
 export type PlaySituation = { inFight?: boolean; catalog?: readonly Spell[] };
 
 export function testSnapshot(
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   commands: readonly Command[] = [],
 ): Snapshot {
   const clock = testClock();
@@ -71,7 +71,7 @@ export function testSnapshot(
 export const IN_FIGHT: readonly Command[] = [{ kind: "start_combat" }];
 
 export function testSpellRows(
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   commands: readonly Command[] = [],
 ): SpellRowView[] {
   return testSnapshot(character, commands).spells;
@@ -79,7 +79,7 @@ export function testSpellRows(
 
 export function testSpellRow(
   id: string,
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   commands: readonly Command[] = [],
 ): SpellRowView {
   const found = testSpellRows(character, commands).find((row) => row.id === id);
@@ -88,7 +88,7 @@ export function testSpellRow(
 }
 
 export async function createTestStores(
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   situation: PlaySituation = {},
 ): Promise<AppStores> {
   const clock = testClock();
@@ -121,7 +121,7 @@ export async function storesOver(repository: SessionRepository): Promise<AppStor
   const core = createCore({
     repository,
     clock,
-    createInitialCharacter: createThorne,
+    createInitialCharacter: createWizard,
     loadBuiltInCatalog: loadThorneSpells,
   });
   const stores = connectStores(createClient(createLocalTransport(core)), clock.nextId);
@@ -156,5 +156,5 @@ export async function renderWithStores(
   character?: CharacterState,
   situation: PlaySituation = {},
 ): Promise<RenderWithStores> {
-  return renderOn(await createTestStores(character ?? createThorne(), situation), ui);
+  return renderOn(await createTestStores(character ?? createWizard(), situation), ui);
 }

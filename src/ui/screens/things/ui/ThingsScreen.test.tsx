@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { ItemView } from "@/contract/views";
 import type { AppStores } from "@/ui/shared/model/storeContext";
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { renderWithStores, shown, testSnapshot } from "@/ui/app/testing/stores";
 import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
 
@@ -26,7 +27,7 @@ afterEach(() => {
 describe("«Вещи»", () => {
   it("рюкзак и база вещей — две части с разными фильтрами", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<ThingsScreen />);
+    await renderWithStores(<ThingsScreen />, createThorne());
 
     const parts = within(screen.getByRole("radiogroup", { name: "Что показать" }));
     expect(parts.getAllByRole("radio").map((button) => button.textContent)).toEqual([
@@ -51,7 +52,7 @@ describe("«Вещи»", () => {
 
   it("выбранное переживает перезапуск, а чепуха в памяти — нет", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<ThingsScreen />);
+    await renderWithStores(<ThingsScreen />, createThorne());
 
     await user.click(screen.getByRole("radio", { name: "Расходники" }));
     await user.click(screen.getByRole("radio", { name: "Все вещи" }));
@@ -63,7 +64,7 @@ describe("«Вещи»", () => {
 
     localStorage.setItem(PART_KEY, "чепуха");
     localStorage.setItem(BAG_FILTER_KEY, "чепуха");
-    const { container } = await renderWithStores(<ThingsScreen />);
+    const { container } = await renderWithStores(<ThingsScreen />, createThorne());
     expect(within(container).getByRole("radio", { name: "Рюкзак" })).toHaveProperty(
       "ariaChecked",
       "true",
@@ -76,7 +77,7 @@ describe("«Вещи»", () => {
 
   it("надетая вещь двигает КД, снятая — возвращает", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />);
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     const before = shown(stores).bag.armorClass.value;
 
@@ -102,7 +103,7 @@ describe("«Вещи»", () => {
 
     expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ wornCount: 1, bagCount: 0 });
     expect(shown(stores).bag.armorClass.value).toBe(before + 1);
-    expect(shown(stores).sheet.abilities).toEqual(testSnapshot().sheet.abilities);
+    expect(shown(stores).sheet.abilities).toEqual(testSnapshot(createThorne()).sheet.abilities);
 
     await user.click(screen.getByRole("button", { name: "Снять один: Кольцо защиты" }));
 
@@ -112,7 +113,7 @@ describe("«Вещи»", () => {
 
   it("прибавка «при себе» считается из сумки, не требуя надеть", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />);
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     const before = shown(stores).resources.initiative;
 
@@ -136,7 +137,7 @@ describe("«Вещи»", () => {
 
   it("свойства ингредиента правятся там же, где заметка: своей вещью", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />);
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     const herb = "Гольпера Большая";
     const alchemyOf = () => itemOf(stores, "гольпера-большая")?.alchemicalProperties ?? [];
@@ -147,14 +148,14 @@ describe("«Вещи»", () => {
     await user.click(screen.getByRole("button", { name: "Раскрыть и править свойства" }));
 
     const sheet = within(screen.getByRole("dialog", { name: `Свойства: ${herb}` }));
-    await user.click(sheet.getByRole("button", { name: /^Убрать: Усиление характеристики/ }));
+    await user.click(sheet.getByRole("button", { name: /^Убрать: Усиление выносливости/ }));
 
     expect(alchemyOf().map((property) => property.number)).toEqual([1]);
   });
 
   it("правка вещи раскрытого не теряет", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />);
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     await user.click(screen.getByRole("button", { name: "Правка: Гольпера Большая" }));
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -164,7 +165,7 @@ describe("«Вещи»", () => {
 
   it("кончившийся расходник уходит из рюкзака, оставаясь среди всех вещей", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />);
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     await user.click(screen.getByRole("radio", { name: "Расходники" }));
     await user.type(screen.getByLabelText("Новый расходник"), "Зелье лечения{Enter}");
@@ -182,7 +183,7 @@ describe("«Вещи»", () => {
 
   it("деньги правятся своей шторкой", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />);
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     await user.click(screen.getByRole("button", { name: "Правка: Деньги" }));
     const gold = screen.getByLabelText("Золото");
@@ -191,12 +192,12 @@ describe("«Вещи»", () => {
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(shown(stores).bag.money.find((coin) => coin.currency === "gold")?.amount).toBe(215);
-    expect(shown(stores).log.at(-1)?.summaryRu).toBe("Деньги: зм 0 → 215");
+    expect(shown(stores).log.at(-1)?.summaryRu).toBe("Деньги: зм 7800 → 215");
   });
 
   it("признаки вещи правятся в её шторке, и вещь остаётся собой без единого признака", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />);
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     await user.click(screen.getByRole("radio", { name: "Ингредиенты" }));
     await user.type(screen.getByLabelText("Новый ингредиент"), "Пыль{Enter}");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 
 import {
@@ -86,7 +86,7 @@ describe("castingTimeDetail и durationDetail (FR-014)", () => {
 });
 
 describe("castCostPhrase и rollPhrase (FR-010, FR-211)", () => {
-  const snapshot = testSnapshot(createThorne());
+  const snapshot = testSnapshot(createWizard());
   const rowOf = (id: string) => {
     const found = snapshot.spells.find((row) => row.id === id);
     if (found === undefined) throw new Error(`нет строки ${id}`);
@@ -153,7 +153,7 @@ describe("durationPhrase (FR-014)", () => {
 
 describe("ritualOnlyBadge (FR-219)", () => {
   const row = (id: string, ...prepared: string[]) =>
-    testSpellRow(id, { ...createThorne(), preparedSpellIds: prepared });
+    testSpellRow(id, { ...createWizard(), preparedSpellIds: prepared });
 
   it("подготовленное значка не получает: рядом нажатая кнопка подготовки", () => {
     expect(ritualOnlyBadge(row("mage-armor", "mage-armor"))).toBeNull();

@@ -1,7 +1,7 @@
 import { lastHintTraits, traitsOf } from "@/ui/shared/model/actionTraits";
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard, preparedForPlay } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { IN_FIGHT, testSpellRow, testSpellRows } from "@/ui/app/testing/stores";
 
 import {
@@ -14,9 +14,10 @@ import {
 } from "@/ui/shared/model/spellList";
 
 function playList(inFight: boolean): string[] {
-  return spellsForScreen(testSpellRows(undefined, inFight ? IN_FIGHT : []), "play").map(
-    (spell) => spell.id,
-  );
+  return spellsForScreen(
+    testSpellRows(preparedForPlay(createWizard()), inFight ? IN_FIGHT : []),
+    "play",
+  ).map((spell) => spell.id);
 }
 
 describe("вне боя: заговоры, подготовленные и ритуальные из книги (FR-209)", () => {
@@ -131,7 +132,7 @@ const LAST_HINT_TRAITS = lastHintTraits("Последняя подсказка")
 
 describe("строка-действие встаёт среди того, что ячейки не стоит (FR-329, FR-210)", () => {
   it("в бою — среди бесплатного «другого», перед боевыми заговорами", () => {
-    const shown = spellsForScreen(testSpellRows(undefined, IN_FIGHT), "play");
+    const shown = spellsForScreen(testSpellRows(preparedForPlay(createWizard()), IN_FIGHT), "play");
     const rows = shown.map((spell) => spell.id);
     rows.splice(positionInList(shown, LAST_HINT_TRAITS, "play"), 0, "последняя-подсказка");
 
@@ -145,7 +146,7 @@ describe("строка-действие встаёт среди того, что
   });
 
   it("вне боя — за прочим и перед разведкой: бесплатные ритуалы стоят следом", () => {
-    const shown = spellsForScreen(testSpellRows(), "play");
+    const shown = spellsForScreen(testSpellRows(preparedForPlay(createWizard())), "play");
     const at = positionInList(shown, LAST_HINT_TRAITS, "play");
     expect(shown[at - 1]?.id).toBe("mending");
     expect(shown[at]?.id).toBe("alarm");
@@ -202,7 +203,7 @@ describe("состав строки: цена считается тем же п�
   });
 
   it("подготовка меняет состав, а не порядок", () => {
-    const character = createThorne();
+    const character = createWizard();
     const withRitual = {
       ...character,
       preparedSpellIds: [...character.preparedSpellIds, "detect-magic"],

@@ -4,11 +4,11 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import { RestScreen } from "@/ui/screens/rest/ui/RestScreen";
 import {
+  createWizard,
   withBloodPaid,
   withDamage,
   withSpentSlots,
@@ -17,7 +17,7 @@ import {
 
 function concentrating(): CharacterState {
   return {
-    ...createThorne(),
+    ...createWizard(),
     concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [
       {
@@ -119,7 +119,7 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
 });
 
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
-  async function atCamp(character: CharacterState = createThorne()) {
+  async function atCamp(character: CharacterState = createWizard()) {
     return renderWithStores(<RestScreen />, withSpentSlots(character, 1, 2));
   }
   it("показывает ресурсы и активные эффекты, но не список заклинаний (FR-237)", async () => {
@@ -179,7 +179,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
   it("набранное сверх бюджета названо причиной, а не отменено молча (FR-131)", async () => {
     const user = userEvent.setup();
-    const spent = withSpentSlots(withSpentSlots(createThorne(), 4, 1), 1, 1);
+    const spent = withSpentSlots(withSpentSlots(createWizard(), 4, 1), 1, 1);
     await atCamp(spent);
 
     await user.click(screen.getByRole("button", { name: /Короткий отдых/ }));
@@ -197,7 +197,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
   it("исчерпанный бюджет гаснет, но остаётся с причиной (FR-131)", async () => {
-    await atCamp(withoutArcaneRecovery(createThorne()));
+    await atCamp(withoutArcaneRecovery(createWizard()));
     const button = screen.getByRole("button", {
       name: "Магическое восстановление · осталось 0 уровней Дневной бюджет восстановления исчерпан до следующего долгого отдыха",
     });
@@ -206,7 +206,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
   it("без короткого отдыха восстановление недоступно, но остаток бюджета виден заранее (FR-131)", async () => {
     const user = userEvent.setup();
-    await atCamp(withSpentSlots(createThorne(), 1, 1));
+    await atCamp(withSpentSlots(createWizard(), 1, 1));
 
     const blocked = screen.getByRole("button", {
       name: "Магическое восстановление · осталось 4 уровня Берётся после короткого отдыха",
@@ -219,7 +219,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
   it("причина недоступности видна без наведения (FR-131)", async () => {
-    await atCamp(withSpentSlots(createThorne(), 1, 1));
+    await atCamp(withSpentSlots(createWizard(), 1, 1));
 
     const blocked = screen.getByRole("button", { name: /^Магическое восстановление/ });
     expect(within(blocked).getByText("Берётся после короткого отдыха")).toBeDefined();
@@ -247,21 +247,21 @@ describe("режим «Привал» и операции отдыха (FR-215, 
   });
 
     it("только снижение максимума — называет только его", async () => {
-      const reduced = withBloodPaid(createThorne(), 2);
+      const reduced = withBloodPaid(createWizard(), 2);
       await renderWithStores(<RestScreen />, reduced);
 
       expect(screen.getByRole("button", { name: "Прошёл час · максимум +3" })).toBeDefined();
     });
 
     it("одна регенерация тоже называется: кнопка обещает всё, что случится", async () => {
-      const wounded = withDamage(createThorne(), 40);
+      const wounded = withDamage(createWizard(), 40);
       await renderWithStores(<RestScreen />, wounded);
 
       expect(screen.getByRole("button", { name: "Прошёл час · регенерация +10" })).toBeDefined();
     });
 
     it("снижение и регенерация вместе — называет оба факта", async () => {
-      const both = withDamage(withBloodPaid(createThorne(), 2), 31);
+      const both = withDamage(withBloodPaid(createWizard(), 2), 31);
       await renderWithStores(<RestScreen />, both);
 
       expect(

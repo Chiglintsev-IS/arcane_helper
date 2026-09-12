@@ -17,6 +17,7 @@ type Revealed = { number: number; nameRu: string };
 const INGREDIENTS: readonly {
   nameRu: string;
   count: number;
+  note?: string;
   revealed?: readonly Revealed[];
   seen?: readonly string[];
 }[] = [
@@ -25,7 +26,7 @@ const INGREDIENTS: readonly {
     count: 32,
     revealed: [
       { number: 1, nameRu: "Снижение потребности в пище и воде" },
-      { number: 2, nameRu: "Усиление характеристики" },
+      { number: 2, nameRu: "Усиление выносливости" },
     ],
   },
   {
@@ -33,18 +34,22 @@ const INGREDIENTS: readonly {
     count: 22,
     revealed: [
       { number: 1, nameRu: "Ускорение роста растений" },
-      { number: 2, nameRu: "Усиление характеристики" },
+      { number: 2, nameRu: "Усиление силы" },
     ],
   },
   {
     nameRu: "Пучок Дварской Хвори",
     count: 1,
-    revealed: [{ number: 2, nameRu: "Ослабление характеристики" }],
+    revealed: [
+      { number: 1, nameRu: "Отвращение к пиву" },
+      { number: 2, nameRu: "Ослабление выносливости" },
+    ],
     seen: ["Отвращение к пиву — действует всегда при использовании. В перечне такого свойства нет"],
   },
   {
     nameRu: "Подорожник",
-    count: 11,
+    count: 63,
+    note: "На алхимию тратится 10 штук на 1 порцию",
     revealed: [
       { number: 1, nameRu: "Лечение здоровья" },
       { number: 2, nameRu: "Остановка кровотечения" },
@@ -66,6 +71,16 @@ const INGREDIENTS: readonly {
     nameRu: "Лунная роза",
     count: 0,
     seen: ["Свойств раскрыть не удалось", "Кончилась — найти ещё"],
+  },
+  {
+    nameRu: "Корень какой-то",
+    count: 2,
+    note: "Когда съели то давало рандомом какие-то характеристики",
+  },
+  {
+    nameRu: "Грибы карлика",
+    count: 5,
+    note: "Говорят что при поедании люди начинают видеть карликов",
   },
 ];
 
@@ -100,18 +115,20 @@ const CARRIED: readonly {
     kinds: [],
     note: "Вода стекалась к этой руне.",
   },
-  { nameRu: "Фреска из древнего храма", count: 1, kinds: [] },
+  { nameRu: "Фреска из древнего храма", count: 0, kinds: [] },
 ];
 
-const SLOTS = spellSlotsForLevel(7);
-const ARCANE_RECOVERY_BUDGET = arcaneRecoveryBudget(7);
-const RUNES_MAXIMUM = runesMaximum(proficiencyBonus(7));
+const LEVEL = 8;
+
+const SLOTS = spellSlotsForLevel(LEVEL);
+const ARCANE_RECOVERY_BUDGET = arcaneRecoveryBudget(LEVEL);
+const RUNES_MAXIMUM = runesMaximum(proficiencyBonus(LEVEL));
 
 const RAW: unknown = {
   id: "thorne",
   name: "Торн",
   className: "Волшебник",
-  level: 7,
+  level: LEVEL,
 
   species: "Лунный тролль",
   subclass: "Создатель рун",
@@ -123,7 +140,7 @@ const RAW: unknown = {
     strength: 8,
     dexterity: 14,
     constitution: 16,
-    intelligence: 18,
+    intelligence: 20,
     wisdom: 12,
     charisma: 8,
   },
@@ -187,16 +204,21 @@ const RAW: unknown = {
   ],
   preparedSpellIds: [
     "shield",
-    "absorb-elements",
     "mage-armor",
     "magic-missile",
-    "intellect-fortress",
+
     "web",
-    "thunder-step",
-    "counterspell",
-    "slow",
+    "rimes-binding-ice",
+    "enlarge-reduce",
+    "see-invisibility",
+
     "lightning-bolt",
-    "storm-sphere",
+    "slow",
+    "thunder-step",
+    "intellect-fortress",
+
+    "ice-storm",
+    "vitriolic-sphere",
   ],
 
   spellSlots: SLOTS,
@@ -205,7 +227,7 @@ const RAW: unknown = {
 
   arcaneRecovery: { maximum: ARCANE_RECOVERY_BUDGET, remaining: ARCANE_RECOVERY_BUDGET },
 
-  hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
+  hitPoints: { current: 60, maximumBase: 69, bloodReduction: 0, masterReduction: 0 },
   itemDefinitions: [
     {
       id: "spellcasting-focus",
@@ -237,7 +259,7 @@ const RAW: unknown = {
     {
       id: "swamp-camouflage-kit",
       nameRu: "Комплект болотной маскировки",
-      kinds: [],
+      kinds: ["gear"],
       note: "1d4 к Скрытности в болотах",
     },
     {
@@ -252,10 +274,11 @@ const RAW: unknown = {
       kinds,
       ...(note === undefined ? {} : { note }),
     })),
-    ...INGREDIENTS.map(({ nameRu, revealed, seen }) => ({
+    ...INGREDIENTS.map(({ nameRu, note, revealed, seen }) => ({
       id: Items.idFromName(nameRu),
       nameRu,
       kinds: ["ingredient"],
+      ...(note === undefined ? {} : { note }),
       alchemy: {
         properties: revealed ?? [],
         observations: (seen ?? []).map((textRu, index) => ({
@@ -277,14 +300,14 @@ const RAW: unknown = {
       { itemId: "robe", count: 1 },
       { itemId: "cloak-of-protection", count: 1 },
     ],
+    money: { gold: 7800, silver: 110, copper: 0 },
     components: { componentPouch: false },
   },
-  hitDice: { total: 7, size: 6, remaining: 7 },
+  hitDice: { total: LEVEL, size: 6, remaining: LEVEL },
   runes: { maximum: RUNES_MAXIMUM, remaining: RUNES_MAXIMUM },
   suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
 
   alchemyApparatus: RELIABLE_FIELD_KIT,
-  studiedDirections: ["potions", "transmutation"],
 
   spellNotes: {},
 };

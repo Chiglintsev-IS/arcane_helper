@@ -5,7 +5,7 @@ import type { ComponentProps } from "react";
 import userEvent from "@testing-library/user-event";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withoutItems } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withoutItems } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
@@ -33,7 +33,7 @@ const NOOP: Omit<ComponentProps<typeof Bag>, "bag"> = {
 function withStock(
   entries: { definition: ItemDefinition; bag?: number; worn?: number; wanted?: boolean }[],
 ): CharacterState {
-  const state = createThorne();
+  const state = createWizard();
   return {
     ...state,
     itemDefinitions: [...state.itemDefinitions, ...entries.map((entry) => entry.definition)],
@@ -77,7 +77,7 @@ function shownNames(): string[] {
 
 describe("«Сумка» в «Вещах»", () => {
   it("держит кошелёк, фильтры признаков и один список", () => {
-    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
+    render(<Bag bag={toBagView(createWizard(), spells)} {...NOOP} />);
 
     const filters = within(screen.getByRole("radiogroup", { name: "Что в рюкзаке" }));
     expect(filters.getAllByRole("radio").map((button) => button.textContent)).toEqual([
@@ -105,7 +105,7 @@ describe("«Сумка» в «Вещах»", () => {
   });
 
   it("кошелёк показывает все три монеты стола, включая нули", () => {
-    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} />);
+    render(<Bag bag={toBagView(createWizard(), spells)} {...NOOP} />);
     const purse = screen.getByRole("list", { name: "Кошелёк" });
     expect(within(purse).getAllByRole("listitem")).toHaveLength(3);
     expect(purse.textContent).toContain("зм");
@@ -199,7 +199,7 @@ describe("«Сумка» в «Вещах»", () => {
     const onAddItem = vi.fn();
     render(
       <Bag
-        bag={toBagView(createThorne(), spells)}
+        bag={toBagView(createWizard(), spells)}
         {...NOOP}
         filter="consumable"
         onAddItem={onAddItem}
@@ -237,7 +237,7 @@ describe("«Сумка» в «Вещах»", () => {
     const user = userEvent.setup();
     const onChangeFilter = vi.fn();
     render(
-      <Bag bag={toBagView(createThorne(), spells)} {...NOOP} onChangeFilter={onChangeFilter} />,
+      <Bag bag={toBagView(createWizard(), spells)} {...NOOP} onChangeFilter={onChangeFilter} />,
     );
 
     expect(screen.getByRole("radio", { name: "Всё" })).toHaveProperty("ariaChecked", "true");
@@ -248,7 +248,7 @@ describe("«Сумка» в «Вещах»", () => {
   it("деньги правятся своей шторкой, и открывает её строка кошелька", async () => {
     const user = userEvent.setup();
     const onEditMoney = vi.fn();
-    render(<Bag bag={toBagView(createThorne(), spells)} {...NOOP} onEditMoney={onEditMoney} />);
+    render(<Bag bag={toBagView(createWizard(), spells)} {...NOOP} onEditMoney={onEditMoney} />);
 
     await user.click(screen.getByRole("button", { name: "Правка: Деньги" }));
     expect(onEditMoney).toHaveBeenCalled();

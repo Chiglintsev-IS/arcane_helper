@@ -32,7 +32,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await openIdentity(user);
 
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
-    expect(screen.getByText("Лунный тролль")).toBeDefined();
+    expect(screen.getByText("Тролль")).toBeDefined();
     expect(screen.queryByText("Бонус мастерства")).toBeNull();
   });
 

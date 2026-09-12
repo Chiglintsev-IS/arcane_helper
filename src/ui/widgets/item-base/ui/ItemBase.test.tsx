@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { ItemDefinition } from "@/core/domain/items/schema";
@@ -32,7 +32,7 @@ const NOOP: Omit<ComponentProps<typeof ItemBase>, "bag"> = {
 function withStock(
   entries: { definition: ItemDefinition; bag?: number; wanted?: boolean }[],
 ): CharacterState {
-  const state = createThorne();
+  const state = createWizard();
   return {
     ...state,
     itemDefinitions: [...state.itemDefinitions, ...entries.map((entry) => entry.definition)],
@@ -65,7 +65,7 @@ function shownNames(): string {
 
 describe("«Все вещи»", () => {
   it("держит кошелёк, поиск и фильтры, среди которых покупки", () => {
-    render(<ItemBase bag={toBagView(createThorne(), spells)} {...NOOP} />);
+    render(<ItemBase bag={toBagView(createWizard(), spells)} {...NOOP} />);
 
     expect(screen.getByRole("heading", { name: "Деньги" })).toBeDefined();
     expect(screen.getByLabelText("Поиск")).toBeDefined();
@@ -136,7 +136,7 @@ describe("«Все вещи»", () => {
     const onRecordItem = vi.fn();
     const { rerender } = render(
       <ItemBase
-        bag={toBagView(createThorne(), spells)}
+        bag={toBagView(createWizard(), spells)}
         {...NOOP}
         onRecordItem={onRecordItem}
       />,
@@ -147,7 +147,7 @@ describe("«Все вещи»", () => {
 
     rerender(
       <ItemBase
-        bag={toBagView(createThorne(), spells)}
+        bag={toBagView(createWizard(), spells)}
         {...NOOP}
         filter="wanted"
         onRecordItem={onRecordItem}
@@ -193,7 +193,7 @@ describe("«Все вещи»", () => {
     const onChangeFilter = vi.fn();
     render(
       <ItemBase
-        bag={toBagView(createThorne(), spells)}
+        bag={toBagView(createWizard(), spells)}
         {...NOOP}
         onChangeFilter={onChangeFilter}
       />,
@@ -208,7 +208,7 @@ describe("«Все вещи»", () => {
     const user = userEvent.setup();
     const onEditMoney = vi.fn();
     render(
-      <ItemBase bag={toBagView(createThorne(), spells)} {...NOOP} onEditMoney={onEditMoney} />,
+      <ItemBase bag={toBagView(createWizard(), spells)} {...NOOP} onEditMoney={onEditMoney} />,
     );
 
     await user.click(screen.getByRole("button", { name: "Правка: Деньги" }));
@@ -216,7 +216,7 @@ describe("«Все вещи»", () => {
   });
 
   it("пустой список говорит, чего в нём нет", () => {
-    render(<ItemBase bag={toBagView(createThorne(), spells)} {...NOOP} filter="wanted" />);
+    render(<ItemBase bag={toBagView(createWizard(), spells)} {...NOOP} filter="wanted" />);
     expect(screen.getByText("Купить пока нечего.")).toBeDefined();
   });
 });

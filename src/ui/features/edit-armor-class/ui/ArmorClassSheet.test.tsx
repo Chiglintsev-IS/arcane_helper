@@ -3,12 +3,12 @@
 import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
 import { ArmorClassSheet } from "./ArmorClassSheet";
 
 async function openArmorClass(): Promise<void> {
-  const character = createThorne();
+  const character = createWizard();
   const { resources } = testSnapshot(character);
   await renderWithStores(
     <ArmorClassSheet

@@ -7,7 +7,7 @@ import type { ItemDefinition } from "@/core/domain/items/schema";
 import { materialOf } from "@/core/application/casting/material";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 
 import { ItemRow } from "./ItemRow";
@@ -19,7 +19,7 @@ afterEach(cleanup);
 const { stats } = toChoicesView();
 
 function viewOf(definition: ItemDefinition): ItemView {
-  const state = createThorne();
+  const state = createWizard();
   const found = toBagView({
     ...state,
     itemDefinitions: [...state.itemDefinitions, definition],
@@ -29,7 +29,7 @@ function viewOf(definition: ItemDefinition): ItemView {
 }
 
 function wornOf(id: string): ItemView {
-  const found = toBagView(createThorne(), spells).items.find((item) => item.id === id);
+  const found = toBagView(createWizard(), spells).items.find((item) => item.id === id);
   if (found === undefined) throw new Error(`нет вещи ${id}`);
   return found;
 }

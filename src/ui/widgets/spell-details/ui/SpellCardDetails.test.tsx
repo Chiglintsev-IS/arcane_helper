@@ -4,8 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 
 import { SpellCardDetails } from "./SpellCardDetails";
@@ -15,7 +14,7 @@ const CASTING = testSnapshot().casting;
 async function cardOf(id: string, onToggleMaterial: () => void = () => {}) {
   return await renderWithStores(
     <SpellCardDetails
-      row={testSpellRow(id, knowing(createThorne(), "arcane-lock"))}
+      row={testSpellRow(id, knowing(createWizard(), "arcane-lock"))}
       casting={CASTING}
       onCast={() => {}}
       onNoteChange={() => {}}

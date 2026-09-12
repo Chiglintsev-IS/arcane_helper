@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { abilityLedger, sheetBlocks } from "./rows";
@@ -8,12 +8,12 @@ import { abilityLedger, sheetBlocks } from "./rows";
 const blocksOf = (character: CharacterState) => sheetBlocks(toSheetView(character));
 const ledgerOf = (character: CharacterState) => abilityLedger(toSheetView(character));
 
-const blockById = (id: string) => blocksOf(createThorne()).find((block) => block.id === id);
-const abilityById = (id: string) => ledgerOf(createThorne()).find((ability) => ability.id === id);
+const blockById = (id: string) => blocksOf(createWizard()).find((block) => block.id === id);
+const abilityById = (id: string) => ledgerOf(createWizard()).find((ability) => ability.id === id);
 
 describe("«Кто он» — то, что спрашивают раз за вечер", () => {
   it("карточки называют персонажа и его владения, а бросков среди них нет (FR-230)", () => {
-    expect(blocksOf(createThorne()).map((block) => block.id)).toEqual([
+    expect(blocksOf(createWizard()).map((block) => block.id)).toEqual([
       "identity",
       "proficiencies",
       "languages",
@@ -24,22 +24,22 @@ describe("«Кто он» — то, что спрашивают раз за ве
   it("особенности стоят своей карточкой и читаются фразой (FR-230)", () => {
     const block = blockById("features");
 
-    expect(block?.features?.map((feature) => feature.nameRu)).toEqual(["Рунный почерк"]);
-    expect(block?.features?.[0]?.summaryRu).toContain("Минута изучения записи");
+    expect(block?.features?.map((feature) => feature.nameRu)).toEqual(["Почерк рун"]);
+    expect(block?.features?.[0]?.summaryRu).toContain("Минута над записью");
     expect(block?.rows).toEqual([]);
     expect(block?.edit).toBeUndefined();
   });
 
   it("особенностей нет ни одной — карточка остаётся пустым списком", () => {
-    const featureless = blocksOf({ ...createThorne(), features: [] });
+    const featureless = blocksOf({ ...createWizard(), features: [] });
     expect(featureless.find((block) => block.id === "features")?.features).toEqual([]);
   });
 
   it("кто он — вид, возраст и класс с уровнем", () => {
     const rows = blockById("identity")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Вид", value: "Лунный тролль" });
+    expect(rows).toContainEqual({ labelRu: "Вид", value: "Тролль" });
     expect(rows).toContainEqual({ labelRu: "Класс", value: "Волшебник, 7" });
-    expect(rows).toContainEqual({ labelRu: "Подкласс", value: "Создатель рун" });
+    expect(rows).toContainEqual({ labelRu: "Подкласс", value: "Рунист" });
   });
 
   it("незаполненное справочное поле называется прочерком, а не нулём", () => {
@@ -52,7 +52,7 @@ describe("«Кто он» — то, что спрашивают раз за ве
   });
 
   it("отметок мастера на листе нет: их ставят там, где мастер их и называет (FR-232)", () => {
-    const marked = blocksOf({ ...createThorne(), exhaustion: 3, inspiration: true });
+    const marked = blocksOf({ ...createWizard(), exhaustion: 3, inspiration: true });
     expect(marked.map((block) => block.id)).not.toContain("marks");
     expect(marked.flatMap((block) => block.rows.map((row) => row.labelRu))).not.toContain(
       "Истощение",
@@ -60,18 +60,18 @@ describe("«Кто он» — то, что спрашивают раз за ве
   });
 
   it("чисел боя и вещей на листе нет: их дом — шапка «Игры» и «Сумка» (FR-230)", () => {
-    const ids = blocksOf(createThorne()).map((block) => block.id);
+    const ids = blocksOf(createWizard()).map((block) => block.id);
     expect(ids).not.toContain("combatNumbers");
     expect(ids).not.toContain("inventory");
     expect(ids).not.toContain("armorClassBase");
     expect(ids).not.toContain("itemBonuses");
     expect(ids).not.toContain("health");
-    expect(blocksOf(createThorne()).flatMap((block) => block.rows.map((row) => row.labelRu))).not
+    expect(blocksOf(createWizard()).flatMap((block) => block.rows.map((row) => row.labelRu))).not
       .toContain("Кости хитов");
   });
 
   it("Класса Доспеха на листе нет: надетое и заклинания двигают его в «Игре» (FR-230)", () => {
-    const state = createThorne();
+    const state = createWizard();
     const withArmor = {
       ...state,
       itemDefinitions: [
@@ -90,7 +90,7 @@ describe("«Кто он» — то, что спрашивают раз за ве
   });
 
   it("владения и языки стоят порознь, а снаряжения на листе нет вовсе (FR-230)", () => {
-    const state = createThorne();
+    const state = createWizard();
     const armed = {
       ...state,
       proficiencies: {
@@ -128,7 +128,7 @@ describe("«Кто он» — то, что спрашивают раз за ве
 
 describe("«Броски» — гроссбух того, чем отвечают на просьбу бросить", () => {
   it("шесть характеристик порядком бумажного листа, ни одной лишней", () => {
-    expect(ledgerOf(createThorne()).map((ability) => ability.id)).toEqual([
+    expect(ledgerOf(createWizard()).map((ability) => ability.id)).toEqual([
       "strength",
       "dexterity",
       "constitution",
@@ -160,7 +160,7 @@ describe("«Броски» — гроссбух того, чем отвечаю�
   });
 
   it("все восемнадцать навыков разложены по шести группам и ни один не потерян", () => {
-    const skills = ledgerOf(createThorne()).flatMap((ability) => ability.skills);
+    const skills = ledgerOf(createWizard()).flatMap((ability) => ability.skills);
     expect(skills).toHaveLength(18);
     expect(skills).toContainEqual({ id: "stealth", labelRu: "Скрытность", value: "+2" });
   });
@@ -171,7 +171,7 @@ describe("«Броски» — гроссбух того, чем отвечаю�
   });
 
   it("компетентность носит свой знак: она входит в число дважды и читается иначе", () => {
-    const trained = ledgerOf({ ...createThorne(), skills: { arcana: "expert" as const } });
+    const trained = ledgerOf({ ...createWizard(), skills: { arcana: "expert" as const } });
     const arcana = trained
       .flatMap((ability) => ability.skills)
       .find((skill) => skill.id === "arcana");

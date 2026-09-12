@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { createSession, type LiveSession } from "@/core/application/session";
 import { Items } from "@/core/domain/items/items";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import {
+  createWizard,
   withIngredientKnowledge,
   withSpentSlots,
   withoutHitDice,
@@ -15,7 +15,7 @@ import { answerQuestion } from "./previewer";
 
 const NOW = "2026-07-31T18:00:00.000Z";
 
-function alive(character: CharacterState = createThorne()): LiveSession {
+function alive(character: CharacterState = createWizard()): LiveSession {
   return {
     session: createSession(character),
     spellCatalog: loadThorneSpells(),
@@ -205,7 +205,7 @@ describe("сотворение", () => {
   });
 
   it("истраченные кости бросать нечем, но сотворить всё равно можно", () => {
-    const spent = answerQuestion(alive(withoutHitDice(createThorne())), {
+    const spent = answerQuestion(alive(withoutHitDice(createWizard())), {
       kind: "cast_preview",
       spellId: "arcane-vigor",
       mode: "normal",
@@ -216,7 +216,7 @@ describe("сотворение", () => {
   });
 
   it("без записи о костях хитов отвечать нечем даже про максимум", () => {
-    const { hitDice: _none, ...withoutPool } = createThorne();
+    const { hitDice: _none, ...withoutPool } = createWizard();
     const preview = answerQuestion(alive(withoutPool), {
       kind: "cast_preview",
       spellId: "arcane-vigor",
@@ -245,7 +245,7 @@ describe("сотворение", () => {
 });
 
 describe("магическое восстановление", () => {
-  function plan(spent: Record<string, number>, character: CharacterState = createThorne()) {
+  function plan(spent: Record<string, number>, character: CharacterState = createWizard()) {
     const preview = answerQuestion(alive(character), {
       kind: "arcane_recovery_preview",
       plan: spent,
@@ -254,13 +254,13 @@ describe("магическое восстановление", () => {
   }
 
   it("считает суммарный уровень набранного: им и меряется дневной бюджет", () => {
-    const spent = withSpentSlots(withSpentSlots(createThorne(), 1, 2), 3, 1);
+    const spent = withSpentSlots(withSpentSlots(createWizard(), 1, 2), 3, 1);
 
     expect(plan({ 1: 2, 3: 1 }, spent)?.levelsSpent).toBe(5);
   });
 
   it("набранное сверх бюджета отвечает причиной словами владельца, а не молчанием", () => {
-    const spent = withSpentSlots(withSpentSlots(createThorne(), 4, 1), 1, 1);
+    const spent = withSpentSlots(withSpentSlots(createWizard(), 4, 1), 1, 1);
     const answer = plan({ 4: 1, 1: 1 }, spent);
 
     expect(answer?.levelsSpent).toBe(5);
@@ -268,7 +268,7 @@ describe("магическое восстановление", () => {
   });
 
   it("годному плану причины не называет вовсе", () => {
-    const spent = withSpentSlots(createThorne(), 1, 1);
+    const spent = withSpentSlots(createWizard(), 1, 1);
 
     expect(plan({ 1: 1 }, spent)?.unavailabilityRu).toBeUndefined();
   });
@@ -279,7 +279,7 @@ describe("цена исследования", () => {
 
   function cost(
     number: number,
-    character: CharacterState = withIngredientKnowledge(createThorne(), MOON_HERB),
+    character: CharacterState = withIngredientKnowledge(createWizard(), MOON_HERB),
   ) {
     const preview = answerQuestion(alive(character), {
       kind: "research_preview",
@@ -290,7 +290,7 @@ describe("цена исследования", () => {
   }
 
   it("цена исследования приходит вопросом и состояния не трогает", () => {
-    const character = withIngredientKnowledge(createThorne(), MOON_HERB);
+    const character = withIngredientKnowledge(createWizard(), MOON_HERB);
     const live = alive(character);
     const before = JSON.stringify(live.session.character);
 
@@ -312,7 +312,7 @@ describe("цена исследования", () => {
   });
 
   it("глубина поднимает цену, а лаборатория ставит предел", () => {
-    const twice = withIngredientKnowledge(createThorne(), MOON_HERB, [
+    const twice = withIngredientKnowledge(createWizard(), MOON_HERB, [
       { number: 1, nameRu: "Лечение здоровья" },
     ]);
 
@@ -321,7 +321,7 @@ describe("цена исследования", () => {
     expect(second?.plan?.consumablesRu).toBe("Обычные");
     expect(second?.plan?.consumablesGold).toBe(1);
 
-    const deep = withIngredientKnowledge(createThorne(), MOON_HERB, [
+    const deep = withIngredientKnowledge(createWizard(), MOON_HERB, [
       { number: 1, nameRu: "Лечение здоровья" },
       { number: 2, nameRu: "Временное здоровье" },
     ]);
@@ -357,7 +357,7 @@ describe("верстак", () => {
     return alive(
       KINDS.reduce(
         (character, kind) => withIngredientKnowledge(character, kind, properties),
-        createThorne(),
+        createWizard(),
       ),
     );
   }

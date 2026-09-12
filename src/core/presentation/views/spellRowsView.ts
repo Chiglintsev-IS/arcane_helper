@@ -12,7 +12,17 @@ import { RITUAL_EXTRA_MINUTES } from "@/core/domain/arcana/slots";
 import { combatRolesOf } from "@/core/domain/catalog/combatRole";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import { benefitsFromHigherSlot, effectiveDamage } from "@/core/domain/catalog/scaling";
-import { CANTRIP_LEVEL, DAMAGE_PLACEHOLDER, needsOwnComponent, type ListCard, type Spell } from "@/core/domain/catalog/spell";
+import {
+  ATTACK_PLACEHOLDER,
+  CANTRIP_LEVEL,
+  DAMAGE_PLACEHOLDER,
+  SAVE_DC_PLACEHOLDER,
+  SPELLCASTING_MODIFIER_PLACEHOLDER,
+  needsOwnComponent,
+  type ListCard,
+  type Spell,
+} from "@/core/domain/catalog/spell";
+import { signed } from "@/shared/language";
 import type { TurnEconomy } from "@/core/domain/encounter/encounter";
 import {
   bloodPrice,
@@ -106,15 +116,17 @@ function castOptionView(
   };
 }
 
-function spellCardView(spell: Spell): SpellCardView {
+function spellCardView(spell: Spell, fill: Fill): SpellCardView {
   const { castingTime, components, resolution, targeting } = spell;
 
   return {
     nameEn: spell.nameEn,
     school: spell.school,
-    fullRulesRu: spell.fullRulesRu,
-    ...(spell.higherLevelsRu === undefined ? {} : { higherLevelsRu: spell.higherLevelsRu }),
-    ...(spell.tacticalAdviceRu === undefined ? {} : { tacticalAdviceRu: spell.tacticalAdviceRu }),
+    fullRulesRu: fill(spell.fullRulesRu),
+    ...(spell.higherLevelsRu === undefined ? {} : { higherLevelsRu: fill(spell.higherLevelsRu) }),
+    ...(spell.tacticalAdviceRu === undefined
+      ? {}
+      : { tacticalAdviceRu: fill(spell.tacticalAdviceRu) }),
     targeting: {
       type: targeting.type,
       ...(targeting.maximumTargets === undefined
@@ -158,9 +170,27 @@ function ownLevelDamage(spell: Spell, character: CharacterState): string | undef
   });
 }
 
-function listCardView(card: ListCard, formula: string | undefined): NonNullable<SpellRowView["listCard"]> {
-  const fill = (text: string): string =>
-    formula === undefined ? text : text.replaceAll(DAMAGE_PLACEHOLDER, formula);
+type Fill = (text: string) => string;
+
+/**
+ * Числа заклинателя приходят от листа: карточка называет их подстановкой, и второго счёта здесь нет.
+ */
+function spellcasterFill(character: CharacterState): Fill {
+  const { sheet } = Character.of(character);
+  const substitutions: readonly (readonly [string, string])[] = [
+    [SAVE_DC_PLACEHOLDER, String(sheet.value("spellSaveDc"))],
+    [ATTACK_PLACEHOLDER, signed(sheet.value("spellAttackModifier"))],
+    [SPELLCASTING_MODIFIER_PLACEHOLDER, signed(sheet.abilityModifier(SPELLCASTING_ABILITY))],
+  ];
+  return (text) =>
+    substitutions.reduce((filled, [from, to]) => filled.replaceAll(from, to), text);
+}
+
+function damageFill(formula: string | undefined): Fill {
+  return (text) => (formula === undefined ? text : text.replaceAll(DAMAGE_PLACEHOLDER, formula));
+}
+
+function listCardView(card: ListCard, fill: Fill): NonNullable<SpellRowView["listCard"]> {
   const filled = (key: "effectLinesRu" | "hitLinesRu" | "failLinesRu" | "successLinesRu") => {
     const lines = card[key];
     return lines === undefined ? {} : { [key]: lines.map(fill) };
@@ -193,11 +223,14 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
   const material = materialOf(spell.components);
   const materialCovered = materialCoveredByFocus(spell.components, character);
   const damageFormula = ownLevelDamage(spell, character);
+  const numbers = spellcasterFill(character);
+  const damage = damageFill(damageFormula);
+  const fill = (text: string): string => damage(numbers(text));
 
   return {
     id: spell.id,
     nameRu: spell.nameRu,
-    shortRulesRu: spell.shortRulesRu,
+    shortRulesRu: fill(spell.shortRulesRu),
     level: spell.level,
     castingTime: {
       type: spell.castingTime.type,
@@ -250,8 +283,8 @@ function spellRowView(spell: Spell, character: CharacterState, turn: TurnEconomy
     ...(note === undefined ? {} : { note }),
     ...(spell.listCard === undefined
       ? {}
-      : { listCard: listCardView(spell.listCard, damageFormula) }),
-    card: spellCardView(spell),
+      : { listCard: listCardView(spell.listCard, fill) }),
+    card: spellCardView(spell, fill),
   };
 }
 

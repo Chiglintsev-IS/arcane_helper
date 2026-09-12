@@ -3,15 +3,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { SpellCardCompact } from "./SpellCardCompact";
 
 afterEach(cleanup);
 
-const SNAPSHOT = testSnapshot(knowing(createThorne(), "arcane-lock"));
+const SNAPSHOT = testSnapshot(knowing(createWizard(), "arcane-lock"));
 
 function rowOf(id: string) {
   const found = SNAPSHOT.spells.find((row) => row.id === id);

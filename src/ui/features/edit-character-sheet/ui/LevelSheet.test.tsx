@@ -4,14 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withSlotDebt } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withSlotDebt } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { LevelSheet } from "./LevelSheet";
 
 async function openLevel(
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   onSave: (next: { level: number; hitPointMaximumBase: number }) => void = () => {},
 ): Promise<void> {
   const { sheet } = testSnapshot(character);
@@ -60,7 +59,7 @@ describe("шторка уровня", () => {
   });
 
   it("уровень: долг ячейки перечню сдвигов не мешает", async () => {
-    await openLevel(withSlotDebt(createThorne(), 1));
+    await openLevel(withSlotDebt(createWizard(), 1));
 
     const field = screen.getByLabelText("Уровень");
     await userEvent.clear(field);
@@ -88,7 +87,7 @@ describe("шторка уровня", () => {
 
   it("уровень: пустое поле не уходит владельцу и отказывает у себя", async () => {
     const onSave = vi.fn();
-    await openLevel(createThorne(), onSave);
+    await openLevel(createWizard(), onSave);
 
     const maximum = screen.getByLabelText("Базовый максимум хитов");
     await userEvent.clear(maximum);
@@ -106,7 +105,7 @@ describe("шторка уровня", () => {
 
   it("уровень: сохранение отдаёт уровень и введённый максимум", async () => {
     const onSave = vi.fn();
-    await openLevel(createThorne(), onSave);
+    await openLevel(createWizard(), onSave);
 
     const level = screen.getByLabelText("Уровень");
     await userEvent.clear(level);

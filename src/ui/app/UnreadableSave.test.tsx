@@ -4,6 +4,8 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
+
 import {
   createStoresOverBrokenStorage,
   createStoresOverUnreadableSave,
@@ -61,7 +63,7 @@ describe("нечитаемое сохранение", () => {
     expect(stores.session.getState().snapshot).toBeNull();
   });
 
-  it("подтверждённое начало заново открывает чистого Торна", async () => {
+  it("подтверждённое начало заново открывает чистого персонажа", async () => {
     const user = userEvent.setup();
     const stores = await openScreen();
 
@@ -69,6 +71,6 @@ describe("нечитаемое сохранение", () => {
     await user.click(screen.getByRole("button", { name: "Удалить и начать" }));
 
     expect(stores.session.getState().status).toBe("ready");
-    expect(stores.session.getState().snapshot?.sheet.name).toBe("Торн");
+    expect(stores.session.getState().snapshot?.sheet.name).toBe(createWizard().name);
   });
 });

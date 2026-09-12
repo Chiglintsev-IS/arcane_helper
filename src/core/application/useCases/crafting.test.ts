@@ -4,8 +4,7 @@ import { Character } from "@/core/domain/assembly/character";
 import { Items } from "@/core/domain/items/items";
 import type { RecipeFormula } from "@/core/domain/crafting/recipe";
 import { undoLast, type Occasion, type Session } from "@/core/application/session";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withIngredientKnowledge } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withIngredientKnowledge } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { addItem, adjustBagCount } from "./equipment";
 import {
   craftBatch,
@@ -57,7 +56,7 @@ function exhaustedOf(session: Session, nameRu: string): boolean {
 function stocked(portionsEach: number): Session {
   const known = [MOON_HERB, CRIMSON_ROOT].reduce(
     (character, kind) => withIngredientKnowledge(character, kind, [HEALING]),
-    createThorne(),
+    createWizard(),
   );
   return [MOON_HERB, CRIMSON_ROOT].reduce<Session>(
     (session, kind) =>
@@ -73,7 +72,7 @@ function stocked(portionsEach: number): Session {
 
 describe("виды состава", () => {
   it("вид, которого нет среди вещей или который не ингредиент, отвергается с причиной", () => {
-    const root = Character.of(createThorne());
+    const root = Character.of(createWizard());
 
     expect(() => mixtureKinds(root.items, ["нет-такого"])).toThrow(/нет среди заведённых вещей/);
     expect(() => mixtureKinds(root.items, ["robe"])).toThrow(/нет среди заведённых вещей/);
@@ -196,7 +195,7 @@ describe("проверка разработки", () => {
 describe("полнота знания о виде", () => {
   it("отметка о полноте знания возвращается логом", () => {
     const before: Session = {
-      character: withIngredientKnowledge(createThorne(), MOON_HERB, [HEALING]),
+      character: withIngredientKnowledge(createWizard(), MOON_HERB, [HEALING]),
       log: [],
     };
 

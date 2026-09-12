@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { ConcentrationView, SpellRowView } from "@/contract/views";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 
-const CASTING = testSnapshot().casting;
+const CASTING = testSnapshot(createWizard()).casting;
 
-const ROW = testSpellRow("detect-magic");
+const ROW = testSpellRow("detect-magic", createWizard());
 
 function concentration(overrides: Partial<ConcentrationView> = {}): ConcentrationView {
   return {
@@ -108,7 +108,7 @@ describe("describeConcentration (FR-084)", () => {
   });
 
   it("показывает отрицательные модификаторы со знаком минус", () => {
-    const base = createThorne();
+    const base = createWizard();
     const character: CharacterState = {
       ...base,
       activeEffects: [

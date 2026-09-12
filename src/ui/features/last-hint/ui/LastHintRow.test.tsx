@@ -4,8 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withoutLastHint } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withoutLastHint } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { testSnapshot } from "@/ui/app/testing/stores";
 
 import { LastHintRow } from "./LastHintRow";
@@ -14,7 +13,7 @@ afterEach(cleanup);
 
 const RESOURCES = testSnapshot().resources;
 
-const SPENT = testSnapshot(withoutLastHint(createThorne())).resources;
+const SPENT = testSnapshot(withoutLastHint(createWizard())).resources;
 
 describe("последняя подсказка в списке действий (FR-329)", () => {
   it("строка называет особенность полным именем и пересказывает повод", () => {

@@ -5,10 +5,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import {
+  createWizard,
   withDamage,
   withoutHitDice,
   withoutRunes,
@@ -16,7 +16,7 @@ import {
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 function withTurnTracking(): CharacterState {
-  return { ...createThorne() };
+  return { ...createWizard() };
 }
 
 function spentSlots(): CharacterState {
@@ -32,8 +32,8 @@ function withoutAnyPayment(): CharacterState {
 
 function concentrating(): CharacterState {
   return {
-    ...createThorne(),
-    preparedSpellIds: [...createThorne().preparedSpellIds, "detect-magic"],
+    ...createWizard(),
+    preparedSpellIds: [...createWizard().preparedSpellIds, "detect-magic"],
     concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [
       {

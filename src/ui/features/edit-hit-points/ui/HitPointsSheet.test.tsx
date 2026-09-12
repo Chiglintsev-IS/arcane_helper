@@ -4,8 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { withBloodPaid, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withBloodPaid, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot, type RenderWithStores } from "@/ui/app/testing/stores";
 import { HitPointsSheet } from "./HitPointsSheet";
 
@@ -15,7 +14,7 @@ type Handlers = {
 };
 
 async function openHitPoints(
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   handlers: Handlers = {},
 ): Promise<RenderWithStores> {
   const { sheet } = testSnapshot(character);
@@ -70,7 +69,7 @@ describe("шторка хитов", () => {
   });
 
   it("хиты: снижение кровью названо, но не правится (FR-240)", async () => {
-    const hurt = withDamage(withBloodPaid(createThorne(), 1), 14);
+    const hurt = withDamage(withBloodPaid(createWizard(), 1), 14);
     await openHitPoints(hurt);
     await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
 
@@ -80,7 +79,7 @@ describe("шторка хитов", () => {
 
   it("хиты: набранный максимум уходит владельцу, а действующий считает ядро (FR-240)", async () => {
     const onMaximum = vi.fn();
-    const hurt = withDamage(withBloodPaid(createThorne(), 1), 14);
+    const hurt = withDamage(withBloodPaid(createWizard(), 1), 14);
     await openHitPoints(hurt, { onMaximum });
     await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
 
@@ -102,7 +101,7 @@ describe("шторка хитов", () => {
 
   it("пустое поле урона отказывает у поля, а не полосой", async () => {
     const onDamage = vi.fn();
-    const { stores } = await openHitPoints(createThorne(), { onDamage });
+    const { stores } = await openHitPoints(createWizard(), { onDamage });
 
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
@@ -131,7 +130,7 @@ describe("шторка хитов", () => {
 
   it("хиты: сохранение отдаёт базу и снижение мастера", async () => {
     const onMaximum = vi.fn();
-    await openHitPoints(createThorne(), { onMaximum });
+    await openHitPoints(createWizard(), { onMaximum });
     await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
 
     await userEvent.clear(screen.getByLabelText("Снижение мастера"));

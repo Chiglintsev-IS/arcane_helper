@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { fieldsOf } from "@/core/domain/shared/fields";
 import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
 import { Items } from "@/core/domain/items/items";
@@ -93,10 +93,10 @@ describe("приведение состояния версии 1", () => {
   it("состояние нынешней формы проходит насквозь: снаряжение знает про инвентарь", () => {
     const already = {
       ...VERSION_ONE,
-      abilities: createThorne().abilities,
-      equipment: createThorne().equipment,
-      arcaneRecovery: createThorne().arcaneRecovery,
-      suppression: createThorne().suppression,
+      abilities: createWizard().abilities,
+      equipment: createWizard().equipment,
+      arcaneRecovery: createWizard().arcaneRecovery,
+      suppression: createWizard().suppression,
     };
     expect(migrateCharacterState(already)).toBe(already);
   });
@@ -104,7 +104,7 @@ describe("приведение состояния версии 1", () => {
   it("версия 2 доносит компоненты, а числа, введённые руками, снимает", () => {
     const versionTwo = {
       ...VERSION_ONE,
-      abilities: createThorne().abilities,
+      abilities: createWizard().abilities,
       itemBonuses: { spellcasting: 1, armorClass: 2, savingThrows: 1 },
       armorClass: { base: 13 },
       equipment: { spellcastingFocus: true, componentPouch: false, materialsForSpellIds: ["identify"] },
@@ -125,7 +125,7 @@ describe("приведение состояния версии 1", () => {
   it("версия 2 без снаряжения и без прибавок получает умолчания и остаётся без компонентов", () => {
     const bare = {
       ...VERSION_ONE,
-      abilities: createThorne().abilities,
+      abilities: createWizard().abilities,
       armorClass: undefined,
       equipment: undefined,
       hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
@@ -148,7 +148,7 @@ describe("приведение состояния версии 1", () => {
 
   it("перебивки навыков и спасбросков снимаются: числа считаются заново", () => {
     const overridden = {
-      ...createThorne(),
+      ...createWizard(),
       overrides: { saves: { wisdom: 9 }, skills: { arcana: 12 } },
     };
     const state = characterStateSchema.parse(migrateCharacterState(overridden));
@@ -160,7 +160,7 @@ describe("приведение состояния версии 1", () => {
 
   it("вклад эффекта прежней формы становится вкладом в величину", () => {
     const withEffect = (armorClass: unknown) => ({
-      ...createThorne(),
+      ...createWizard(),
       activeEffects: [
         {
           id: "e-1",
@@ -187,7 +187,7 @@ describe("приведение состояния версии 1", () => {
   });
 
   it("прибавка без вещи снимается, где бы она ни лежала — у персонажа или в снаряжении", () => {
-    const base = createThorne();
+    const base = createWizard();
     const legacy = {
       ...base,
       miscBonuses: { spellcasting: 0, armorClass: 3, savingThrows: 0, лихость: 5 },
@@ -203,7 +203,7 @@ describe("приведение состояния версии 1", () => {
   });
 
   it("вещи, уже разведённые по местам, приводятся и без снаряжения прежней формы", () => {
-    const base = createThorne();
+    const base = createWizard();
     const legacy = {
       ...base,
       itemDefinitions: [
@@ -226,7 +226,7 @@ describe("приведение состояния версии 1", () => {
   });
 
   it("прибавки прежних слов, равные нулю, вещи не достаются вовсе", () => {
-    const base = createThorne();
+    const base = createWizard();
     const legacy = {
       ...base,
       itemDefinitions: [
@@ -244,7 +244,7 @@ describe("приведение состояния версии 1", () => {
   });
 
   it("вещь в снаряжении прежней формы приводится до разведения по местам", () => {
-    const base = createThorne();
+    const base = createWizard();
     const legacy = {
       ...base,
       itemDefinitions: [
@@ -343,7 +343,7 @@ describe("приведение состояния версии 1", () => {
 
   describe("род вещи становится категорией, а место надетой вещи — независимым счётом", () => {
     const withLegacyItems = (items: unknown[]) => {
-      const state = createThorne();
+      const state = createWizard();
       return { ...state, itemDefinitions: [], equipment: { ...state.equipment, items } };
     };
     const definitionsOf = (migrated: unknown): unknown[] =>
@@ -470,7 +470,7 @@ describe("приведение состояния версии 1", () => {
     });
 
     it("состояние с новыми категориями проходит насквозь той же ссылкой", () => {
-      const fresh = createThorne();
+      const fresh = createWizard();
       expect(migrateCharacterState(fresh)).toBe(fresh);
     });
 
@@ -482,7 +482,7 @@ describe("приведение состояния версии 1", () => {
     });
 
     it("состояние без списка вещей приведению не подлежит", () => {
-      const state = createThorne();
+      const state = createWizard();
       const broken = { ...state, equipment: { ...state.equipment, items: "не список" } };
       expect(migrateCharacterState(broken)).toBe(broken);
     });
@@ -491,7 +491,7 @@ describe("приведение состояния версии 1", () => {
   describe("«прибавки без вещи» снимаются вместе со своим прежним полем", () => {
     const bonuses = { spellcasting: 1, armorClass: 2, savingThrows: 0 };
     const legacyState = () => {
-      const state = fieldsOf(createThorne());
+      const state = fieldsOf(createWizard());
       return {
         ...state,
         equipment: { ...fieldsOf(state.equipment), otherBonuses: bonuses },
@@ -508,7 +508,7 @@ describe("приведение состояния версии 1", () => {
     });
 
     it("состояние без прежнего поля проходит насквозь той же ссылкой", () => {
-      const fresh = createThorne();
+      const fresh = createWizard();
       expect(migrateCharacterState(fresh)).toBe(fresh);
     });
 
@@ -522,7 +522,7 @@ describe("приведение состояния версии 1", () => {
 
   describe("хранимая база защиты уходит из снаряжения", () => {
     it("база не переезжает никуда: доспехом вещь больше не бывает", () => {
-      const state = createThorne();
+      const state = createWizard();
       const migrated = migrateCharacterState({
         ...state,
         itemDefinitions: [],
@@ -551,7 +551,7 @@ describe("приведение состояния версии 1", () => {
       armorClass: { kind: "bonus", value: 2 },
       endConditionRu: "Снимается вручную.",
     };
-    const withEffects = (activeEffects: unknown[]) => ({ ...createThorne(), activeEffects });
+    const withEffects = (activeEffects: unknown[]) => ({ ...createWizard(), activeEffects });
     const effectsOf = (migrated: unknown): unknown[] =>
       listOf(fieldsOf(migrated).activeEffects);
 
@@ -588,7 +588,7 @@ describe("приведение состояния версии 1", () => {
     });
 
     it("состояние без списка эффектов приведению не подлежит", () => {
-      const broken = { ...createThorne(), activeEffects: "не список" };
+      const broken = { ...createWizard(), activeEffects: "не список" };
       expect(migrateCharacterState(broken)).toBe(broken);
     });
 
@@ -618,7 +618,7 @@ describe("приведение состояния версии 1", () => {
 
     it("прежний особый срок расходится по тому, чем он кончался", () => {
       const migrated = migrateCharacterState({
-        ...createThorne(),
+        ...createWizard(),
         activeEffects: [
           legacyUntimed({ id: "familiar", spellId: "find-familiar" }),
           legacyUntimed({ id: "status" }),
@@ -687,7 +687,7 @@ const COMPONENTS = { spellcastingFocus: true, componentPouch: false, materialsFo
 
 const VERSION_TWO = {
   ...UNCHANGED,
-  abilities: createThorne().abilities,
+  abilities: createWizard().abilities,
   itemBonuses: { spellcasting: 0, armorClass: 2, savingThrows: 0 },
   armorClass: { base: 10 },
   equipment: COMPONENTS,
@@ -697,7 +697,7 @@ const VERSION_TWO = {
 
 const VERSION_THREE = {
   ...UNCHANGED,
-  abilities: createThorne().abilities,
+  abilities: createWizard().abilities,
   arcaneRecovery: { maximum: 4, remaining: 4 },
   hitPoints: SPLIT_HIT_POINTS,
   equipment: {
@@ -712,7 +712,7 @@ const VERSION_THREE = {
 
 const VERSION_FOUR = {
   ...UNCHANGED,
-  abilities: createThorne().abilities,
+  abilities: createWizard().abilities,
   arcaneRecovery: { maximum: 4, remaining: 4 },
   hitPoints: SPLIT_HIT_POINTS,
   equipment: {
@@ -724,13 +724,13 @@ const VERSION_FOUR = {
 };
 
 const VERSION_FIVE = {
-  ...createThorne(),
+  ...createWizard(),
   reactionAvailable: false,
   turnTracking: { enabled: true, actionAvailable: false, bonusActionAvailable: false },
   screenMode: "book",
 };
 
-const VERSION_SIX = createThorne();
+const VERSION_SIX = createWizard();
 
 describe("сохранение каждой версии открывается целиком, и числа за столом не едут", () => {
   it.each([
@@ -778,7 +778,7 @@ describe("отметка фокусировки становится вещью"
   });
 
   const withItems = () => {
-    const thorne = createThorne();
+    const thorne = createWizard();
     return {
       ...thorne,
       itemDefinitions: thorne.itemDefinitions.map(({ spellcastingFocus: _moved, ...item }) => item),
@@ -787,7 +787,7 @@ describe("отметка фокусировки становится вещью"
   };
 
   const withoutItems = (spellcastingFocus: boolean) => {
-    const { itemDefinitions: _none, ...thorne } = createThorne();
+    const { itemDefinitions: _none, ...thorne } = createWizard();
     return { ...thorne, equipment: { bag: [], components: components(spellcastingFocus) } };
   };
 
@@ -798,8 +798,8 @@ describe("отметка фокусировки становится вещью"
     const state = characterStateSchema.parse(migrateCharacterState(withItems()));
     const focus = state.itemDefinitions.filter((item) => item.spellcastingFocus === true);
 
-    expect(focus.map((item) => item.nameRu)).toEqual(["Магическая фокусировка +1"]);
-    expect(state.equipment.worn).toEqual(createThorne().equipment.worn);
+    expect(focus.map((item) => item.nameRu)).toEqual(["Фокусировка"]);
+    expect(state.equipment.worn).toEqual(createWizard().equipment.worn);
     expect(componentsOf(withItems())).not.toHaveProperty(FLAG);
   });
 
@@ -822,7 +822,7 @@ describe("отметка фокусировки становится вещью"
   });
 
   it("снимок отмены доносит отметку на самой вещи", () => {
-    const stored = createThorne().itemDefinitions.filter((item) => item.spellcastingFocus === true);
+    const stored = createWizard().itemDefinitions.filter((item) => item.spellcastingFocus === true);
     const patch = {
       itemDefinitions: stored.map(({ spellcastingFocus: _moved, ...item }) => item),
     };
@@ -860,7 +860,7 @@ describe("отметка купленного компонента станов�
   const LIST = "materialsForSpellIds";
 
   const withBought = (spellIds: unknown) => {
-    const thorne = createThorne();
+    const thorne = createWizard();
     return {
       ...thorne,
       equipment: {
@@ -885,16 +885,16 @@ describe("отметка купленного компонента станов�
   it("пустой список вещей не заводит, а сумку Торна оставляет как была", () => {
     const state = characterStateSchema.parse(migrateCharacterState(withBought([])));
 
-    expect(state.itemDefinitions).toEqual(createThorne().itemDefinitions);
-    expect(state.equipment.bag).toEqual(createThorne().equipment.bag);
+    expect(state.itemDefinitions).toEqual(createWizard().itemDefinitions);
+    expect(state.equipment.bag).toEqual(createWizard().equipment.bag);
     expect(componentsOf(withBought([]))).not.toHaveProperty(LIST);
   });
 
   it("незнакомое заклинание вещи не получает: назвать её нечем", () => {
     const state = characterStateSchema.parse(migrateCharacterState(withBought(["fireball", 7])));
 
-    expect(state.itemDefinitions).toEqual(createThorne().itemDefinitions);
-    expect(state.equipment.bag).toEqual(createThorne().equipment.bag);
+    expect(state.itemDefinitions).toEqual(createWizard().itemDefinitions);
+    expect(state.equipment.bag).toEqual(createWizard().equipment.bag);
   });
 
   it("уже заведённая вещь второй не становится", () => {
@@ -918,7 +918,7 @@ describe("отметка купленного компонента станов�
     const brokenList = withBought("identify");
     expect(migrateCharacterState(brokenList)).toBe(brokenList);
 
-    const thorne = createThorne();
+    const thorne = createWizard();
     const brokenBag = {
       ...thorne,
       equipment: { bag: "порча", components: { componentPouch: false, [LIST]: ["identify"] } },
@@ -1051,7 +1051,7 @@ describe("набор по каждому направлению становит
   it("из записанных остаётся сильнейший, а при равном пределе сложности — вместительнейший", () => {
     const stronger = fieldsOf(
       migrateCharacterState({
-        ...createThorne(),
+        ...createWizard(),
         alchemyApparatus: {
           potions: "Обычный походный комплект",
           poisons: "Мастерский походный комплект",
@@ -1073,14 +1073,14 @@ describe("набор по каждому направлению становит
   });
 
   it("мастерская без единого набора остаётся без него", () => {
-    const bare = fieldsOf(migrateCharacterState({ ...createThorne(), alchemyApparatus: {} }));
+    const bare = fieldsOf(migrateCharacterState({ ...createWizard(), alchemyApparatus: {} }));
 
     expect(bare).not.toHaveProperty("alchemyApparatus");
     expect(characterStateSchema.safeParse(bare).success).toBe(true);
   });
 
   it("записанный одним словом набор не трогается", () => {
-    const modern = createThorne();
+    const modern = createWizard();
 
     expect(fieldsOf(migrateCharacterState(modern)).alchemyApparatus).toBe(
       modern.alchemyApparatus,

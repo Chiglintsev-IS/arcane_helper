@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { EXPORT_SCHEMA_VERSION } from "@/core/domain/assembly/state";
 
 import {
@@ -18,21 +17,22 @@ const SPELLS = loadThorneSpells();
 const NOW = "2026-07-31T18:00:00.000Z";
 
 function snapshotText(): string {
-  return JSON.stringify(exportSnapshot(createThorne(), SPELLS, NOW));
+  return JSON.stringify(exportSnapshot(createWizard(), SPELLS, NOW));
 }
 
 describe("exportSnapshot (FR-120)", () => {
   it("выгружает персонажа целиком и все карточки", () => {
-    const file = exportSnapshot(createThorne(), SPELLS, NOW);
+    const character = createWizard();
+    const file = exportSnapshot(character, SPELLS, NOW);
 
     expect(file.schemaVersion).toBe(EXPORT_SCHEMA_VERSION);
-    expect(file.spells).toHaveLength(34);
-    expect(file.character.preparedSpellIds).toHaveLength(11);
+    expect(file.spells).toHaveLength(SPELLS.length);
+    expect(file.character.preparedSpellIds).toEqual(character.preparedSpellIds);
   });
 
   it("включает пользовательские дополнения: заметки и остаток ресурсов", () => {
     const character = {
-      ...withSpentSlots(createThorne(), 1, 3),
+      ...withSpentSlots(createWizard(), 1, 3),
       spellNotes: { shield: "мастер считает, что гасит и стрелу" },
     };
 
@@ -121,36 +121,36 @@ describe("parseImport (FR-121)", () => {
 
 describe("checkIntegrity (FR-121)", () => {
   it("на согласованных данных молчит", () => {
-    expect(checkIntegrity(createThorne(), SPELLS)).toBeNull();
+    expect(checkIntegrity(createWizard(), SPELLS)).toBeNull();
   });
 
   it("ловит заговор без карточки", () => {
     const character = {
-      ...createThorne(),
-      cantripIds: [...createThorne().cantripIds, "fireball"],
+      ...createWizard(),
+      cantripIds: [...createWizard().cantripIds, "fireball"],
     };
     expect(checkIntegrity(character, SPELLS)).toContain("fireball");
   });
 
   it("называет набор по-русски: сообщение читает игрок, а не автор схемы", () => {
     const character = {
-      ...createThorne(),
-      cantripIds: [...createThorne().cantripIds, "fireball"],
+      ...createWizard(),
+      cantripIds: [...createWizard().cantripIds, "fireball"],
     };
     expect(checkIntegrity(character, SPELLS)).toContain("заговоры");
   });
 
   it("проверяет и книгу: карточка нужна не только подготовленному", () => {
     const character = {
-      ...createThorne(),
-      spellbookSpellIds: [...createThorne().spellbookSpellIds, "wish"],
+      ...createWizard(),
+      spellbookSpellIds: [...createWizard().spellbookSpellIds, "wish"],
     };
     expect(checkIntegrity(character, SPELLS)).toContain("книга заклинаний");
   });
 
   it("говорит про каталог, а не про файл: проверка работает и при возврате к встроенному", () => {
     const withoutShield = SPELLS.filter((spell) => spell.id !== "shield");
-    expect(checkIntegrity(createThorne(), withoutShield)).toContain("каталоге");
+    expect(checkIntegrity(createWizard(), withoutShield)).toContain("каталоге");
   });
 });
 
@@ -160,7 +160,7 @@ describe("applyImport (FR-122)", () => {
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
 
-    const spent = withSpentSlots(createThorne(), 1, 4);
+    const spent = withSpentSlots(createWizard(), 1, 4);
 
     const applied = applyImport(spent, outcome.file, "replace");
     expect(applied.character.spellSlots[1]?.remaining).toBe(4);
@@ -171,7 +171,7 @@ describe("applyImport (FR-122)", () => {
     expect(outcome.ok).toBe(true);
     if (!outcome.ok) return;
 
-    const spent = withSpentSlots(createThorne(), 1, 4);
+    const spent = withSpentSlots(createWizard(), 1, 4);
 
     const applied = applyImport(spent, outcome.file, "spells_only");
     expect(applied.character.spellSlots[1]?.remaining).toBe(0);

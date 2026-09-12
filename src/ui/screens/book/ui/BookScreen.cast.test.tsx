@@ -6,12 +6,12 @@ import { describe, expect, it } from "vitest";
 
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 import { renderWithStores } from "@/ui/app/testing/stores";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 describe("шаг компонентов", () => {
   it("появляется для компонента со стоимостью и объясняет, что фокусировка его не заменяет", async () => {
     const user = userEvent.setup();
-    const thorne = createThorne();
+    const thorne = createWizard();
     const withLock = {
       ...thorne,
       spellbookSpellIds: [...thorne.spellbookSpellIds, "arcane-lock"],

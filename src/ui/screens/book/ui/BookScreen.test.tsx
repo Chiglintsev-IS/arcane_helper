@@ -4,14 +4,14 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard, preparedForPlay } from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, spell } from "@/ui/app/testing/stores";
 import { BookScreen } from "@/ui/screens/book/ui/BookScreen";
 
 function concentrating(): CharacterState {
   return {
-    ...createThorne(),
+    ...createWizard(),
     concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [
       {
@@ -29,7 +29,7 @@ function concentrating(): CharacterState {
   };
 }
 
-async function inBookMode(character?: CharacterState) {
+async function inBookMode(character: CharacterState = preparedForPlay(createWizard())) {
   const user = userEvent.setup();
   const result = await renderWithStores(<BookScreen />, character);
   return { user, ...result };
@@ -70,7 +70,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const user = userEvent.setup();
     const { stores } = await inBookMode();
 
-    await user.click(screen.getByRole("button", { name: "Снять подготовку: Крепость интеллекта" }));
+    await user.click(screen.getByRole("button", { name: "Снять подготовку: Паутина" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
     expect(shown(stores).spells.filter((row) => row.prepared).map((row) => row.id)).toContain("detect-magic");
 
@@ -81,7 +81,7 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
   });
 
   it("в бою счётчик называет причину (FR-214, FR-217)", async () => {
-    await renderWithStores(<BookScreen />, createThorne(), { inFight: true });
+    await renderWithStores(<BookScreen />, createWizard(), { inFight: true });
 
     expect(screen.queryByRole("button", { name: /^Подготовить: / })).toBeNull();
     expect(screen.getByLabelText(/^Подготовлено \d+ из \d+/).textContent).toContain(

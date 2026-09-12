@@ -13,6 +13,10 @@
   4. Строк статуса, проверки и дорожной карты нет: документ описывает состояние, а не путь к нему.
   5. Документ абстрактен: путей `src/…`, `e2e/…`, имён файлов кода и прогонов в нём нет. Исключение —
      `docs/architecture.md`: он называет корневые каталоги, но не файлы.
+  6. Документ называет правило, а не значение: рядом с именем персонажа чисел нет. Уровень, значение
+     характеристики, запас и длина списка живут в состоянии и меняются за столом; документ,
+     повторивший их примером, устаревает молча. Ловится самая частая форма — «у Торна 3»; остальное
+     держит правило, потому что значение без имени от правила регуляркой не отличить.
 
 Документ обязан пережить переименование функции и удаление соседнего документа, поэтому правила 2
 и 5 — единственная связь документации с кодом и друг с другом, и она проверяется тем, что связи нет.
@@ -36,6 +40,9 @@ PROCESS_MARKER = re.compile(
 )
 CODE_PATH = re.compile(r"\b(?:src|e2e|scripts)/[\w./-]*")
 CODE_FILE = re.compile(r"\b[\w-]+\.(?:tsx?|py|json|css|mjs)\b")
+# Имя единственного персонажа: проверка знает его, чтобы отличить число правила от числа за столом.
+CHARACTER = re.compile(r"\bТорн[а-яё]*\b")
+DIGIT = re.compile(r"\d")
 
 errors: list[str] = []
 
@@ -88,6 +95,12 @@ def check_abstract(path: pathlib.Path, text: str) -> None:
         errors.append(f"{path}: путь к коду — {found}")
 
 
+def check_no_character_values(path: pathlib.Path, text: str) -> None:
+    for number, line in enumerate(FENCE.sub("", text).split("\n"), start=1):
+        if CHARACTER.search(line) and DIGIT.search(line):
+            errors.append(f"{path}:{number}: число персонажа — документ называет правило, не значение")
+
+
 def main() -> int:
     if not DOCS.is_dir():
         print("Запускать из корня репозитория", file=sys.stderr)
@@ -100,6 +113,7 @@ def main() -> int:
         check_isolation(path, text)
         check_no_registry(path, text)
         check_abstract(path, text)
+        check_no_character_values(path, text)
 
     if errors:
         print(f"Проверка документации не прошла: {len(errors)} замечаний\n")

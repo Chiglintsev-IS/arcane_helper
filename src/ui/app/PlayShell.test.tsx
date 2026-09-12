@@ -4,7 +4,6 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { PlayShell } from "@/ui/app/PlayShell";
 import {
@@ -14,11 +13,11 @@ import {
   shown,
   slotsLeft,
 } from "@/ui/app/testing/stores";
-import { withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, preparedForPlay, withDamage } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 const IN_FIGHT = { inFight: true } as const;
 
-async function inBookMode(character?: CharacterState) {
+async function inBookMode(character: CharacterState = preparedForPlay(createWizard())) {
   const user = userEvent.setup();
   const result = await renderWithStores(<PlayShell initialMode="book" />, character);
   return { user, ...result };
@@ -41,17 +40,17 @@ async function openSheet(user: ReturnType<typeof userEvent.setup>): Promise<void
 }
 
 function wounded(): CharacterState {
-  return withDamage(createThorne(), 48);
+  return withDamage(createWizard(), 48);
 }
 
 function withBonusActionSpell(): CharacterState {
-  const hurt = withDamage(createThorne(), 30);
+  const hurt = withDamage(createWizard(), 30);
   return { ...hurt, preparedSpellIds: [...hurt.preparedSpellIds, "arcane-vigor"] };
 }
 
 function concentrating(): CharacterState {
   return {
-    ...createThorne(),
+    ...createWizard(),
     concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [
       {
@@ -291,13 +290,13 @@ describe("подготовка в «Книге» (FR-214, FR-101)", () => {
     const user = userEvent.setup();
     await inBookMode();
 
-    await user.click(screen.getByRole("button", { name: "Снять подготовку: Крепость интеллекта" }));
+    await user.click(screen.getByRole("button", { name: "Снять подготовку: Паутина" }));
     await user.click(screen.getByRole("button", { name: "Подготовить: Обнаружение магии" }));
     await openMode(user, /^Игра/);
 
     const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Обнаружение магии")).toBeDefined();
-    expect(list.queryByText("Крепость интеллекта")).toBeNull();
+    expect(list.queryByText("Паутина")).toBeNull();
   });
 
   it("отказ по лимиту не двигает список (FR-101)", async () => {
@@ -375,7 +374,7 @@ describe("«Знаки ограждения» вне боя (FR-153)", () => {
 describe("режим «Лог» (FR-114, FR-220)", () => {
   it("в «Игре» и «Книге» кнопки отмены нет", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
+    await renderWithStores(<PlayShell />, createWizard(), IN_FIGHT);
     expect(screen.queryByRole("button", { name: /^Вернуть/ })).toBeNull();
 
     await openMode(user, /^Книга/);
@@ -396,7 +395,7 @@ describe("режим «Лог» (FR-114, FR-220)", () => {
 
   it("отмена из лога возвращает потраченную ячейку", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
+    const { stores } = await renderWithStores(<PlayShell />, createWizard(), IN_FIGHT);
 
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
@@ -532,7 +531,7 @@ describe("проверка концентрации (FR-083, FR-154)", () => {
 describe("завершение активного эффекта (FR-091)", () => {
   it("закрывает неконцентрационный эффект и пишет это в лог", async () => {
     const character: CharacterState = {
-      ...createThorne(),
+      ...createWizard(),
       activeEffects: [
         {
           id: "effect-2",
@@ -629,7 +628,7 @@ describe("отдых и бой: отказ приходит с причиной 
 describe("экран показывает только своё (FR-217, FR-220)", () => {
   it("списка, фильтров и отметок схватки в логе нет", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<PlayShell />, createThorne(), IN_FIGHT);
+    await renderWithStores(<PlayShell />, createWizard(), IN_FIGHT);
     await openLog(user);
 
     expect(screen.queryByLabelText("Фильтры")).toBeNull();

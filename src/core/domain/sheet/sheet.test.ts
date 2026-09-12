@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Character } from "@/core/domain/assembly/character";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import {
   saveStatId,
@@ -12,9 +12,9 @@ import {
 
 import { Sheet } from "./sheet";
 
-const sheetOf = (state: CharacterState = createThorne()) => Character.of(state).sheet;
+const sheetOf = (state: CharacterState = createWizard()) => Character.of(state).sheet;
 
-const sheetBringing = (...brought: SourcedContribution[]) => Sheet.of(createThorne(), brought);
+const sheetBringing = (...brought: SourcedContribution[]) => Sheet.of(createWizard(), brought);
 
 const assigned = (stat: StatId, value: number): SourcedContribution => ({
   source: { origin: "effect", nameRu: "Слово мастера" },
@@ -27,7 +27,7 @@ const granted = (stat: StatId, value: number): SourcedContribution => ({
 });
 
 describe("производные числа листа", () => {
-  it("числа Торна сходятся с листом персонажа: одно основание и надетое", () => {
+  it("числа сходятся с листом персонажа: одно основание и надетое", () => {
     const sheet = sheetOf();
     expect(sheet.value("proficiencyBonus")).toBe(3);
     expect(sheet.value("spellSaveDc")).toBe(16);
@@ -53,7 +53,7 @@ describe("производные числа листа", () => {
   });
 
   it("инициатива двигается за Мудростью, а не только за Ловкостью", () => {
-    const state = createThorne();
+    const state = createWizard();
     expect(
       sheetOf({ ...state, abilities: { ...state.abilities, wisdom: 16 } }).value("initiative"),
     ).toBe(2);
@@ -64,7 +64,7 @@ describe("производные числа листа", () => {
   });
 
   it("владение навыком прибавляет бонус мастерства, компетентность — дважды", () => {
-    const state = createThorne();
+    const state = createWizard();
     expect(
       sheetOf({ ...state, skills: { arcana: "proficient" } }).value(skillStatId("arcana")),
     ).toBe(7);
@@ -94,14 +94,14 @@ describe("производные числа листа", () => {
   });
 
   it("назначение навыка перекрывает счёт по владению", () => {
-    const trained = { ...createThorne(), skills: { arcana: "proficient" as const } };
+    const trained = { ...createWizard(), skills: { arcana: "proficient" as const } };
     expect(
       Sheet.of(trained, [assigned(skillStatId("arcana"), 12)]).value(skillStatId("arcana")),
     ).toBe(12);
   });
 
   it("правка Интеллекта двигает КС, атаку и лимит подготовки", () => {
-    const state = createThorne();
+    const state = createWizard();
     const smarter = sheetOf({ ...state, abilities: { ...state.abilities, intelligence: 20 } });
     expect(smarter.value("spellSaveDc")).toBe(17);
     expect(smarter.value("spellAttackModifier")).toBe(9);
@@ -109,7 +109,7 @@ describe("производные числа листа", () => {
   });
 
   it("действующее число не совпадает с одним основанием, и разница видна в разборе", () => {
-    expect(Sheet.of(createThorne(), []).value("armorClass")).toBe(12);
+    expect(Sheet.of(createWizard(), []).value("armorClass")).toBe(12);
     expect(sheetOf().value("armorClass")).toBe(14);
   });
 });
@@ -129,7 +129,7 @@ describe("Класс Доспеха складывается той же свё�
   } as const;
 
   it("«Доспехи мага» и «Щит» действуют одновременно: способ счёта и прибавка не спорят", () => {
-    const root = Character.of(createThorne());
+    const root = Character.of(createWizard());
     expect(root.sheet.value("armorClass")).toBe(14);
     expect(root.sheetWith(mageArmor).value("armorClass")).toBe(17);
 
@@ -154,15 +154,15 @@ describe("Класс Доспеха складывается той же свё�
   });
 
   it("разбор называет каждый вклад его источником", () => {
-    const parts = Character.of(createThorne()).sheet.breakdown("armorClass").parts;
+    const parts = Character.of(createWizard()).sheet.breakdown("armorClass").parts;
 
-    expect(parts.map((part) => part.source)).toContainEqual({ origin: "item", nameRu: "Мантия +1" });
+    expect(parts.map((part) => part.source)).toContainEqual({ origin: "item", nameRu: "Мантия" });
     expect(parts.every((part) => part.applied)).toBe(true);
   });
 
   it("назначение перекрывает и доспех, и заклинание", () => {
     expect(
-      Sheet.of(createThorne(), [
+      Sheet.of(createWizard(), [
         assigned("armorClass", 19),
         { source: { origin: "effect", nameRu: "Щит" }, contribution: shield.contributions[0] },
       ]).value("armorClass"),
@@ -172,6 +172,6 @@ describe("Класс Доспеха складывается той же свё�
 
 describe("лист без принесённых вкладов", () => {
   it("считает одно основание: вклады — дело того, кто их собрал", () => {
-    expect(Sheet.of(createThorne(), []).value("armorClass")).toBe(12);
+    expect(Sheet.of(createWizard(), []).value("armorClass")).toBe(12);
   });
 });

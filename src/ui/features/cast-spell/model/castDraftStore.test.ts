@@ -3,9 +3,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Command } from "@/contract/commands";
 import type { CastOptionView, SpellRowView } from "@/contract/views";
 import { castSpell } from "@/core/application/useCases/casting";
-import { withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, preparedForPlay, withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
@@ -60,7 +59,7 @@ function played(
 
 function choosesTarget(rune: string): boolean {
   const preview = answerQuestion(
-    played(createThorne(), IN_FIGHT),
+    played(createWizard(), IN_FIGHT),
     { kind: "cast_preview", spellId: mageArmor.id, mode: "normal", payment: { kind: "slot", slotLevel: 1 } },
     testClock().now(),
   );
@@ -72,7 +71,7 @@ function choosesTarget(rune: string): boolean {
 
 function rowOf(
   target: Spell,
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   commands: readonly Command[] = IN_FIGHT,
   catalog?: readonly Spell[],
 ): SpellRowView {
@@ -100,7 +99,7 @@ function optionBy(row: SpellRowView, match: (option: CastOptionView) => boolean)
 
 function concentrating(): CharacterState {
   const session = castSpell(
-    createSession(createThorne()),
+    createSession(createWizard()),
     { spell: spell("web"), mode: "normal", payment: { kind: "slot", slotLevel: 2 } },
     { ...testClock(), commandId: "command-1" },
   );
@@ -146,7 +145,7 @@ describe("руна при сотворении (FR-151)", () => {
   });
 
   it("смена оплаты на ритуал снимает руну: ритуал её не принимает", () => {
-    const row = rowOf(detectMagic, createThorne(), OUTSIDE_FIGHT);
+    const row = rowOf(detectMagic, createWizard(), OUTSIDE_FIGHT);
     store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 1));
     store.getState().chooseRune("war", choosesTarget("war"));
@@ -183,7 +182,7 @@ describe("цель руны жизни (FR-156)", () => {
   });
 
   it("смена оплаты на ритуал возвращает цель к себе вместе с руной", () => {
-    const row = rowOf(detectMagic, createThorne(), OUTSIDE_FIGHT);
+    const row = rowOf(detectMagic, createWizard(), OUTSIDE_FIGHT);
     store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 1));
     store.getState().chooseRune("life", choosesTarget("life"));
@@ -221,7 +220,7 @@ describe("начало применения", () => {
   });
 
   it("неподготовленный ритуал начинается как ритуал: так его и сотворяют (FR-103)", () => {
-    store.getState().start(rowOf(alarm, createThorne(), OUTSIDE_FIGHT));
+    store.getState().start(rowOf(alarm, preparedForPlay(createWizard()), OUTSIDE_FIGHT));
     expect(draftOf().option).toMatchObject({ mode: "ritual", payment: { kind: "none" } });
   });
 
@@ -268,7 +267,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
       ...IN_FIGHT,
       { kind: "cast_spell", spellId: rayOfFrost.id, mode: "cantrip", payment: { kind: "none" } },
     ];
-    const row = rowOf(mageArmor, createThorne(), spent);
+    const row = rowOf(mageArmor, createWizard(), spent);
     store.getState().start(row);
 
     expect(visibleSteps(draftOf(), row)).toEqual(["availability", "slot"]);
@@ -288,7 +287,7 @@ describe("шаги мастера (FR-021, M-03)", () => {
   });
 
   it("компонент со стоимостью добавляет шаг проверки компонентов", () => {
-    const row = rowOf(spell("arcane-lock"), knowing(createThorne(), "arcane-lock"), OUTSIDE_FIGHT);
+    const row = rowOf(spell("arcane-lock"), knowing(createWizard(), "arcane-lock"), OUTSIDE_FIGHT);
     store.getState().start(row);
     expect(visibleSteps(draftOf(), row)).toContain("components");
   });
@@ -371,7 +370,7 @@ describe("запоминание выбора", () => {
     store.getState().chooseCastOption(slotOption(row, 4));
     store.getState().cancel();
 
-    const thorne = createThorne();
+    const thorne = createWizard();
     const { 4: _lost, ...withoutFourth } = thorne.spellSlots;
     const weaker = { ...thorne, spellSlots: withoutFourth };
 
@@ -380,7 +379,7 @@ describe("запоминание выбора", () => {
   });
 
   it("без свободных ячеек предлагает кровь: она и есть доступный способ", () => {
-    const spent = withoutSlots(createThorne());
+    const spent = withoutSlots(createWizard());
     const row = rowOf(mageArmor, spent);
 
     store.getState().start(row);
@@ -389,7 +388,7 @@ describe("запоминание выбора", () => {
 
   it("заклинание уровня, до которого персонаж не дорос, называет недостающую ячейку", () => {
     const ninthLevel: Spell = { ...mageArmor, level: 9 };
-    const row = rowOf(ninthLevel, createThorne(), IN_FIGHT, [ninthLevel]);
+    const row = rowOf(ninthLevel, createWizard(), IN_FIGHT, [ninthLevel]);
 
     store.getState().start(row);
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 9 });
@@ -476,7 +475,7 @@ describe("заявка на применение", () => {
 
 describe("инвариант FR-022: до подтверждения состояние не меняется", () => {
   it("полный проход мастера не трогает ни персонажа, ни лог", () => {
-    const session: Session = createSession(createThorne());
+    const session: Session = createSession(createWizard());
     const before = structuredClone(session);
     const row = rowOf(mageArmor, session.character);
 

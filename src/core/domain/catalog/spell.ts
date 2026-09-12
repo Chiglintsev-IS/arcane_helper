@@ -231,7 +231,19 @@ function ritualDiagramIssues(diagram: RitualDiagram): DiagramIssue[] {
   return issues;
 }
 
+/**
+ * Числа заклинателя в тексте карточки стоят подстановкой: КС, модификатор атаки и модификатор
+ * заклинательной характеристики считает лист, и написанные числом они разошлись бы с ним молча.
+ */
 export const DAMAGE_PLACEHOLDER = "{damage}";
+export const SAVE_DC_PLACEHOLDER = "{saveDc}";
+export const ATTACK_PLACEHOLDER = "{attack}";
+export const SPELLCASTING_MODIFIER_PLACEHOLDER = "{spellcastingModifier}";
+
+/** «d20+8» — модификатор броска числом. */
+const WRITTEN_ROLL_MODIFIER = /d20\s*[+−-]\s*\d/u;
+/** «КС 16» — КС числом. Форма «КС 10 плюс …» остаётся: это правило чужого заклинания, не лист. */
+const WRITTEN_SAVE_DC = /КС \d+\b(?! плюс)/u;
 
 const lines = z.array(nonEmpty).min(1);
 
@@ -322,9 +334,30 @@ function listCardIssues(spell: z.infer<typeof spellShape>): ListCardIssue[] {
   return issues;
 }
 
+const PROSE_FIELDS = ["shortRulesRu", "fullRulesRu", "higherLevelsRu", "tacticalAdviceRu"] as const;
+
+function writtenNumberIssues(spell: z.infer<typeof spellShape>): ListCardIssue[] {
+  const issues: ListCardIssue[] = [];
+  for (const field of PROSE_FIELDS) {
+    const text = spell[field];
+    if (text === undefined) continue;
+    if (WRITTEN_ROLL_MODIFIER.test(text)) {
+      issues.push({ path: [field], message: "Модификатор броска пишется подстановкой, а не числом" });
+    }
+    if (WRITTEN_SAVE_DC.test(text)) {
+      issues.push({ path: [field], message: "КС заклинателя пишется подстановкой, а не числом" });
+    }
+  }
+  return issues;
+}
+
 export const spellSchema = z.preprocess(foldRetiredSingleRole, spellShape).superRefine((spell, context) => {
   for (const issue of listCardIssues(spell)) {
     context.addIssue({ code: "custom", path: ["listCard", ...issue.path], message: issue.message });
+  }
+
+  for (const issue of writtenNumberIssues(spell)) {
+    context.addIssue({ code: "custom", path: issue.path, message: issue.message });
   }
 
   for (const [index, contribution] of spell.contributions.entries()) {

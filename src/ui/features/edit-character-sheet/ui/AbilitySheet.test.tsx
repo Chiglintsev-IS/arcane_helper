@@ -3,7 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import type { AbilityView } from "@/contract/views";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { toSheetView } from "@/core/presentation/views/sheetView";
@@ -12,7 +12,7 @@ import { AbilitySheet } from "./AbilitySheet";
 
 afterEach(cleanup);
 
-function abilityOf(id: string, character: CharacterState = createThorne()): AbilityView {
+function abilityOf(id: string, character: CharacterState = createWizard()): AbilityView {
   const found = toSheetView(character).abilities.find((ability) => ability.id === id);
   if (found === undefined) throw new Error(`нет характеристики ${id}`);
   return found;
@@ -127,7 +127,7 @@ describe("шторка характеристики", () => {
 
   it("характеристика: «нет» убирает навык, а не записывает значение", async () => {
     const onSave = vi.fn();
-    const state = createThorne();
+    const state = createWizard();
     render(
       <AbilitySheet choices={toChoicesView()}
         ability={abilityOf("intelligence", { ...state, skills: { arcana: "proficient" } })}

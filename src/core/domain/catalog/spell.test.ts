@@ -436,6 +436,36 @@ describe("вклады заклинания (FR-093)", () => {
   });
 });
 
+describe("числа заклинателя стоят подстановкой", () => {
+  it("модификатор броска, написанный числом, отвергается", () => {
+    const written = mutate(web(), (draft) => {
+      draft.tacticalAdviceRu = "Атака d20+8 по КД цели.";
+    });
+    expect(firstError(written)).toContain("Модификатор броска");
+  });
+
+  it("КС заклинателя, написанный числом, отвергается", () => {
+    const written = mutate(web(), (draft) => {
+      draft.shortRulesRu = "Цель бросает спасбросок против КС 16.";
+    });
+    expect(firstError(written)).toContain("КС заклинателя");
+  });
+
+  it("КС чужого заклинания остаётся числом: его даёт правило, а не лист", () => {
+    const rule = mutate(web(), (draft) => {
+      draft.tacticalAdviceRu = "Проверка идёт против КС 10 плюс уровень чужого заклинания.";
+    });
+    expect(spellSchema.safeParse(rule).success).toBe(true);
+  });
+
+  it("подстановки проходят", () => {
+    const filled = mutate(web(), (draft) => {
+      draft.tacticalAdviceRu = "Атака d20{attack} по КД цели, спасбросок против КС {saveDc}.";
+    });
+    expect(spellSchema.safeParse(filled).success).toBe(true);
+  });
+});
+
 describe("строка списка согласована с механикой", () => {
   const withListCard = (listCard: Record<string, unknown>, change: (draft: Record<string, unknown>) => void = () => {}) =>
     spellSchema.safeParse(

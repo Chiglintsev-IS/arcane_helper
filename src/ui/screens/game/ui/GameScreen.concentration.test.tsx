@@ -5,14 +5,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores } from "@/ui/app/testing/stores";
-import { withoutRunes } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withoutRunes } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 function concentrating(): CharacterState {
   return {
-    ...createThorne(),
+    ...createWizard(),
     concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [
       {

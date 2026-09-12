@@ -34,7 +34,7 @@ describe("подсхема персонажа", () => {
       strength: 8,
       dexterity: 14,
       constitution: 16,
-      intelligence: 18,
+      intelligence: 20,
       wisdom: 12,
       charisma: 8,
     });

@@ -3,7 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { CharacterSheet } from "./CharacterSheet";
 
@@ -13,13 +13,13 @@ describe("вкладка «Кто он»", () => {
   it("карточки того, что спрашивают раз за вечер, и ничего из боя (FR-230)", () => {
     render(
       <CharacterSheet
-        sheet={toSheetView(createThorne())}
+        sheet={toSheetView(createWizard())}
         onEdit={() => {}}
       />,
     );
 
     expect(screen.getByRole("heading", { name: "Кто он" })).toBeDefined();
-    expect(screen.getByText("Лунный тролль")).toBeDefined();
+    expect(screen.getByText("Тролль")).toBeDefined();
 
     expect(screen.queryByRole("heading", { name: "Интеллект" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Отметки мастера" })).toBeNull();
@@ -29,7 +29,7 @@ describe("вкладка «Кто он»", () => {
   });
 
   it("того, что двигает игра, на листе нет: ни защиты, ни хитов (FR-230)", () => {
-    const state = createThorne();
+    const state = createWizard();
     render(
       <CharacterSheet
         sheet={toSheetView({
@@ -52,7 +52,7 @@ describe("вкладка «Кто он»", () => {
     const onEdit = vi.fn();
     render(
       <CharacterSheet
-        sheet={toSheetView(createThorne())}
+        sheet={toSheetView(createWizard())}
         onEdit={onEdit}
       />,
     );
@@ -64,20 +64,20 @@ describe("вкладка «Кто он»", () => {
   });
 
   it("«Лист»: особенность стоит карточкой и правки не предлагает (FR-230)", () => {
-    render(<CharacterSheet sheet={toSheetView(createThorne())} onEdit={() => {}} />);
+    render(<CharacterSheet sheet={toSheetView(createWizard())} onEdit={() => {}} />);
 
     expect(screen.getByRole("heading", { name: "Особенности" })).toBeDefined();
-    expect(screen.getByText("Рунный почерк")).toBeDefined();
-    expect(screen.getByText(/Минута изучения записи/)).toBeDefined();
+    expect(screen.getByText("Почерк рун")).toBeDefined();
+    expect(screen.getByText(/Минута над записью/)).toBeDefined();
     expect(screen.queryByRole("button", { name: "Правка: Особенности" })).toBeNull();
   });
 
   it("особенностей нет ни одной — карточка называет пустоту прочерком", () => {
-    const state = createThorne();
+    const state = createWizard();
     render(<CharacterSheet sheet={toSheetView({ ...state, features: [] })} onEdit={() => {}} />);
 
     const card = screen.getByRole("heading", { name: "Особенности" }).closest("section");
     expect(card?.textContent).toContain("—");
-    expect(card?.textContent).not.toContain("Рунный почерк");
+    expect(card?.textContent).not.toContain("Почерк рун");
   });
 });

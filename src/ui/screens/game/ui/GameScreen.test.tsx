@@ -5,11 +5,12 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { renderWithStores, shown, slotsLeft } from "@/ui/app/testing/stores";
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import {
+  createWizard,
+  preparedForPlay,
   withBloodPaid,
   withDamage,
   withSpentSlots,
@@ -20,7 +21,7 @@ import {
 const IN_FIGHT = { inFight: true } as const;
 
 function withBonusActionSpell(): CharacterState {
-  const wounded = withDamage(createThorne(), 30);
+  const wounded = withDamage(createWizard(), 30);
   return { ...wounded, preparedSpellIds: [...wounded.preparedSpellIds, "arcane-vigor"] };
 }
 
@@ -38,7 +39,7 @@ const CAST_EACH_TURN_RESOURCE = [
 
 function concentrating(): CharacterState {
   return {
-    ...createThorne(),
+    ...createWizard(),
     concentration: { spellId: "detect-magic", startedAt: "2026-07-31T18:00:00.000Z" },
     activeEffects: [
       {
@@ -106,7 +107,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 
   it("вида действия, которого в списке нет, в шапке тоже нет (FR-001)", async () => {
-    await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+    await renderWithStores(<GameScreen />, preparedForPlay(createWizard()), IN_FIGHT);
 
     expect(screen.queryByRole("button", { name: /Мистическая бодрость/ })).toBeNull();
     expect(screen.queryByLabelText("Бонусное действие израсходовано")).toBeNull();
@@ -133,7 +134,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
   });
 
   it("израсходованная реакция видна ярлыком, а её состояние — доступным именем (FR-144)", async () => {
-    const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+    const { stores } = await renderWithStores(<GameScreen />, createWizard(), IN_FIGHT);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Щит/ }));
@@ -150,7 +151,7 @@ describe("состав экрана (FR-001, AC-14)", () => {
 describe("шапка «Игры» (FR-201, FR-232)", () => {
   it("начало боя убирает то, чем в ход не сходить (FR-201)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<GameScreen />);
+    await renderWithStores(<GameScreen />, preparedForPlay(createWizard()));
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
 
@@ -206,7 +207,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
 
   it("истощение видно значком со ступенью (FR-232)", async () => {
     const marked = {
-      ...createThorne(),
+      ...createWizard(),
       exhaustion: 3,
     };
     await renderWithStores(<GameScreen />, marked);
@@ -218,7 +219,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
 
   it("вдохновение видно, когда оно есть (FR-232)", async () => {
     const marked = {
-      ...createThorne(),
+      ...createWizard(),
       inspiration: true,
     };
     await renderWithStores(<GameScreen />, marked);
@@ -247,7 +248,7 @@ describe("шапка «Игры» (FR-201, FR-232)", () => {
 describe("фильтры (FR-002, FR-003, AC-07)", () => {
   it("фильтр по роли оставляет только подходящие заклинания", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<GameScreen />);
+    await renderWithStores(<GameScreen />, preparedForPlay(createWizard()));
 
     await user.click(screen.getByRole("button", { name: "Защита" }));
 
@@ -288,7 +289,7 @@ describe("фильтры (FR-002, FR-003, AC-07)", () => {
 describe("режим «Привал» и операции отдыха (FR-215, FR-237)", () => {
   it("«Прошёл час» доступен в «Игре» и в «Привале» одной и той же кнопкой (FR-173, FR-175)", async () => {
     const user = userEvent.setup();
-    const reduced = withBloodPaid(createThorne(), 2);
+    const reduced = withBloodPaid(createWizard(), 2);
     await renderWithStores(<GameScreen />, reduced);
 
     await user.click(screen.getByRole("button", { name: /Прошёл час/ }));
@@ -297,7 +298,7 @@ describe("режим «Привал» и операции отдыха (FR-215, 
 
   it("бой запрещает час: кнопка остаётся видимой, но недоступной с причиной (FR-215)", async () => {
     const user = userEvent.setup();
-    const reduced = withBloodPaid(createThorne(), 2);
+    const reduced = withBloodPaid(createWizard(), 2);
     await renderWithStores(<GameScreen />, reduced);
 
     await user.click(screen.getByRole("button", { name: /^Начать бой/ }));
@@ -349,7 +350,7 @@ describe("повторяемое действие эффекта (FR-092)", () =
 describe("ручная правка ресурсов (FR-071, FR-142, FR-155)", () => {
   it("плитка ячейки открывает правку и возвращает списанное", async () => {
     const user = userEvent.setup();
-    const character = withSpentSlots(createThorne(), 1, 2);
+    const character = withSpentSlots(createWizard(), 1, 2);
     const { stores } = await renderWithStores(<GameScreen />, character);
 
     await user.click(screen.getByRole("button", { name: /Ячейки 1 уровня: 2 из 4/ }));
@@ -383,7 +384,7 @@ describe("реакции (FR-060, FR-062)", () => {
 
   it("строка руны одета как соседние: роль, линейка и рамка те же", async () => {
     const user = userEvent.setup();
-    const { container } = await renderWithStores(<GameScreen />);
+    const { container } = await renderWithStores(<GameScreen />, preparedForPlay(createWizard()));
 
     await user.click(screen.getByRole("button", { name: "Реакция" }));
 
@@ -437,7 +438,7 @@ describe("реакции (FR-060, FR-062)", () => {
 
   it("провал спасброска отвечает руной, а не заклинанием (FR-153)", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+    const { stores } = await renderWithStores(<GameScreen />, createWizard(), IN_FIGHT);
 
     await user.click(screen.getByRole("button", { name: /Знаки ограждения/ }));
     await user.click(screen.getByRole("button", { name: "Потратить руну" }));
@@ -448,7 +449,7 @@ describe("реакции (FR-060, FR-062)", () => {
 
   it("руны кончились — строка остаётся, а отказ называет причину (FR-153)", async () => {
     const user = userEvent.setup();
-    const spentRunes = { ...createThorne(), runes: { remaining: 0, maximum: 3 } };
+    const spentRunes = { ...createWizard(), runes: { remaining: 0, maximum: 3 } };
     await renderWithStores(<GameScreen />, spentRunes, IN_FIGHT);
 
     await user.click(screen.getByRole("button", { name: /Знаки ограждения/ }));
@@ -460,7 +461,7 @@ describe("реакции (FR-060, FR-062)", () => {
 
 describe("конец боя (FR-216, FR-221)", () => {
   function wounded(): CharacterState {
-    return withDamage(createThorne(), 48);
+    return withDamage(createWizard(), 48);
   }
 
   it("кнопка конца боя восстанавливает до половины максимума", async () => {
@@ -589,7 +590,7 @@ describe("краткая карточка (FR-010)", () => {
 
   it("недоступное заклинание объясняет причину словами", async () => {
     const character = {
-      ...withoutSlots(createThorne()),
+      ...withoutSlots(createWizard()),
       suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
     const user = userEvent.setup();
@@ -604,7 +605,7 @@ describe("краткая карточка (FR-010)", () => {
 describe("учёт хода и отмена (FR-111, FR-143)", () => {
   it("«Новый ход» восстанавливает израсходованное", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+    const { stores } = await renderWithStores(<GameScreen />, createWizard(), IN_FIGHT);
 
     await user.click(screen.getByRole("button", { name: /Доспехи мага/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
@@ -618,7 +619,7 @@ describe("учёт хода и отмена (FR-111, FR-143)", () => {
 
   it("«Щит» сам исчезает с началом следующего хода, КД возвращается к 14 (FR-094)", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+    await renderWithStores(<GameScreen />, createWizard(), IN_FIGHT);
 
     await user.click(screen.getByRole("button", { name: /Щит/ }));
     await user.click(screen.getByRole("button", { name: "Сотворить" }));
@@ -718,7 +719,7 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
 
   it("включённый признак виден значком в шапке, а не только внутри листа", async () => {
     const sunlit = {
-      ...createThorne(),
+      ...createWizard(),
       suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
     await renderWithStores(<GameScreen />, sunlit);
@@ -732,7 +733,7 @@ describe("признак «под солнцем» (FR-181, FR-183)", () => {
   it("выключается тем же переключателем", async () => {
     const user = userEvent.setup();
     const sunlit = {
-      ...createThorne(),
+      ...createWizard(),
       suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
     };
     const { stores } = await renderWithStores(<GameScreen />, sunlit);
@@ -766,7 +767,7 @@ describe("«Книга» говорит только о книге (FR-217)", ()
 describe("руна разговора со зверями", () => {
   it("строка стоит среди бесплатного и активация тратит только руну", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<GameScreen />, createThorne(), IN_FIGHT);
+    const { stores } = await renderWithStores(<GameScreen />, createWizard(), IN_FIGHT);
 
     const list = within(screen.getByLabelText(/^Заклинания/));
     expect(list.getByText("Руна «Мяу»")).toBeDefined();
@@ -781,7 +782,7 @@ describe("руна разговора со зверями", () => {
 
   it("руны кончились — строка остаётся, а отказ называет причину", async () => {
     const user = userEvent.setup();
-    await renderWithStores(<GameScreen />, withoutRunes(createThorne()));
+    await renderWithStores(<GameScreen />, withoutRunes(createWizard()));
 
     await user.click(screen.getByRole("button", { name: /Руна «Мяу»/ }));
     await user.click(screen.getByRole("button", { name: "Активировать" }));

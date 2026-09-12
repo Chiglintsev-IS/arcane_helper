@@ -4,14 +4,14 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { AbilityLedger } from "./AbilityLedger";
 
 afterEach(cleanup);
 
 function show(onEdit: (edit: unknown) => void = () => {}) {
-  render(<AbilityLedger sheet={toSheetView(createThorne())} onEdit={onEdit} />);
+  render(<AbilityLedger sheet={toSheetView(createWizard())} onEdit={onEdit} />);
 }
 
 describe("гроссбух бросков", () => {

@@ -26,18 +26,20 @@ import { castSpell } from "@/core/application/useCases/casting";
 import { DomainError } from "@/core/domain/shared/errors";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { characterStateSchema } from "@/core/domain/assembly/state";
 import { Vitality } from "@/core/domain/vitality/vitality";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { createSession, undoLast, type Session } from "@/core/application/session";
 import { fromPersisted, parsePersisted, toPersisted } from "@/core/application/ports/sessionRepository";
+import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
+  createWizard,
   withBloodPaid,
   withDamage,
   withMasterReduction,
   withSpentHitDice,
+  withoutPreparation,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 const spells = new Map(loadThorneSpells().map((spell) => [spell.id, spell]));
@@ -62,7 +64,7 @@ let session: Session;
 
 beforeEach(() => {
   occasion = testOccasion();
-  session = createSession(createThorne());
+  session = createSession(createWizard());
 });
 
 function withTurnTracking(base: Session): Session {
@@ -82,13 +84,13 @@ describe("начальное состояние Торна", () => {
     const thorne = createThorne();
     expect(characterStateSchema.safeParse(thorne).success).toBe(true);
     const totals = Character.of(thorne).sheet;
-    expect(totals.value("spellSaveDc")).toBe(16);
-    expect(totals.value("spellAttackModifier")).toBe(8);
+    expect(totals.value("spellSaveDc")).toBe(17);
+    expect(totals.value("spellAttackModifier")).toBe(9);
     expect(totals.value(saveStatId("constitution"))).toBe(4);
-    expect(thorne.hitPoints).toEqual({ current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 });
+    expect(thorne.hitPoints).toEqual({ current: 60, maximumBase: 69, bloodReduction: 0, masterReduction: 0 });
     expect(thorne.runes).toEqual({ maximum: 3, remaining: 3 });
     expect(thorne.spellSlots[1]?.maximum).toBe(4);
-    expect(thorne.spellSlots[4]?.maximum).toBe(1);
+    expect(thorne.spellSlots[4]?.maximum).toBe(2);
   });
 
   it("каждый вызов даёт независимый объект", () => {
@@ -103,6 +105,16 @@ describe("начальное состояние Торна", () => {
       expect(thorne.preparedSpellIds).not.toContain(id);
       expect(thorne.spellbookSpellIds).toContain(id);
     }
+  });
+
+  it("набор начинается ровно на пределе (FR-101)", () => {
+    const thorne = createSession(createThorne());
+    const limit = Character.of(createThorne()).sheet.value("preparedLimit");
+
+    expect(thorne.character.preparedSpellIds).toHaveLength(limit);
+    expect(() => togglePreparation(thorne, spell("haste"), occasion)).toThrow(
+      /Снимите другое заклинание/,
+    );
   });
 });
 
@@ -1688,16 +1700,8 @@ describe("заметка к заклинанию (FR-012)", () => {
 })
 
 describe("подготовка заклинаний (FR-100, FR-101, FR-214)", () => {
-  const LIMIT = 11;
-
   function withRoom(): Session {
-    return {
-      ...session,
-      character: {
-        ...session.character,
-        preparedSpellIds: session.character.preparedSpellIds.slice(0, LIMIT - 1),
-      },
-    };
+    return { ...session, character: withoutPreparation(session.character) };
   }
 
   it("готовит и снимает подготовку, записывая каждое действие в лог", () => {
@@ -1753,13 +1757,6 @@ describe("подготовка заклинаний (FR-100, FR-101, FR-214)", (
     const first = full.character.preparedSpellIds[0]!;
     const after = togglePreparation(full, spell(first), occasion);
     expect(after.character.preparedSpellIds).toHaveLength(2);
-  });
-
-  it("набор Торна начинается ровно на пределе: 11 из 11 (FR-101)", () => {
-    expect(session.character.preparedSpellIds).toHaveLength(LIMIT);
-    expect(() => togglePreparation(session, spell("haste"), occasion)).toThrow(
-      /Снимите другое заклинание/,
-    );
   });
 
   it("заговор не готовится: он вне лимита и доступен всегда (FR-102)", () => {
@@ -2157,7 +2154,7 @@ describe("сотворённое вне боя не переносится в б
   it("вне боя действие не записывается: в бою оно остаётся целым", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      { character: createThorne(), log: [] },
+      { character: createWizard(), log: [] },
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
@@ -2169,7 +2166,7 @@ describe("сотворённое вне боя не переносится в б
   it("в бою действие записывается по-прежнему", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      startCombat({ character: createThorne(), log: [] }, occasion),
+      startCombat({ character: createWizard(), log: [] }, occasion),
       { spell: spell("mage-armor"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
@@ -2181,7 +2178,7 @@ describe("сотворённое вне боя не переносится в б
   it("раундовый эффект вне боя истекает сразу: КД не входит в бой", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      { character: createThorne(), log: [] },
+      { character: createWizard(), log: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
@@ -2193,7 +2190,7 @@ describe("сотворённое вне боя не переносится в б
   it("в бою раундовый эффект остаётся висеть", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      startCombat({ character: createThorne(), log: [] }, occasion),
+      startCombat({ character: createWizard(), log: [] }, occasion),
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
@@ -2204,7 +2201,7 @@ describe("сотворённое вне боя не переносится в б
   it("ячейка тратится в обоих случаях: сотворить игрок выбрал сам", () => {
     const occasion = testOccasion();
     const session = castSpell(
-      { character: createThorne(), log: [] },
+      { character: createWizard(), log: [] },
       { spell: spell("shield"), mode: "normal", payment: { kind: "slot", slotLevel: 1 }, allowAnyway: false },
       occasion,
     );
@@ -2215,7 +2212,7 @@ describe("сотворённое вне боя не переносится в б
 
 describe("расход костей хитов заклинанием (FR-135)", () => {
   function wounded() {
-    const character = withDamage(createThorne(), 30);
+    const character = withDamage(createWizard(), 30);
     return createSession(character);
   }
 
@@ -2286,7 +2283,7 @@ describe("расход костей хитов заклинанием (FR-135)",
   });
 
   it("у персонажа без костей вовсе — отказ с нулём: поле необязательное ради чужих выгрузок", () => {
-    const { hitDice: _absent, ...withoutDice } = createThorne();
+    const { hitDice: _absent, ...withoutDice } = createWizard();
     expect(() =>
       castSpell(
         createSession(withoutDice),
@@ -2302,7 +2299,7 @@ describe("расход костей хитов заклинанием (FR-135)",
   });
 
   it("костей меньше запрошенного — отказ, это несогласованность, а не выбор игрока", () => {
-    const character = withSpentHitDice(createThorne(), 6);
+    const character = withSpentHitDice(createWizard(), 6);
     expect(() =>
       castSpell(
         createSession(character),
@@ -2333,7 +2330,7 @@ describe("отметка короткого отдыха (FR-131)", () => {
   });
 
   it("сохранение прежней версии открывается без поля (NFR-003)", () => {
-    const { shortRestSinceLongRest: _omitted, ...withoutFlag } = createThorne();
+    const { shortRestSinceLongRest: _omitted, ...withoutFlag } = createWizard();
     expect(characterStateSchema.safeParse(withoutFlag).success).toBe(true);
   });
 

@@ -1,10 +1,9 @@
 import { Character } from "@/core/domain/assembly/character";
 import { describe, expect, it } from "vitest";
-import { withSlotDebt, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withSlotDebt, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { characterStateSchema } from "@/core/domain/assembly/state";
 import { undoLast, type Occasion, type Session } from "@/core/application/session";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
   changeLevel,
   previewLevelChange,
@@ -14,7 +13,7 @@ import {
   editMarks,
 } from "./sheet";
 
-const session = () => ({ character: createThorne(), log: [] });
+const session = () => ({ character: createWizard(), log: [] });
 
 function testOccasion(commandId = "command-1"): Occasion {
   let tick = 0;
@@ -29,7 +28,7 @@ const occasion = testOccasion();
 
 describe("предпросмотр смены уровня", () => {
   it("называет всё, что сдвинется: ячейки, руны, кости, лимит подготовки", () => {
-    const preview = previewLevelChange(createThorne(), 9);
+    const preview = previewLevelChange(createWizard(), 9);
 
     expect(preview.changes).toContainEqual({ of: "slots", slotLevel: 4, before: 1, after: 3 });
     expect(preview.changes).toContainEqual({ of: "slots", slotLevel: 5, before: 0, after: 1 });
@@ -38,14 +37,14 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("на своём уровне сдвигать нечего", () => {
-    expect(previewLevelChange(createThorne(), 7).changes).toEqual([]);
+    expect(previewLevelChange(createWizard(), 7).changes).toEqual([]);
   });
 
   it("руны следуют бонусу мастерства, а не уровню", () => {
-    expect(previewLevelChange(createThorne(), 8).changes).not.toContainEqual(
+    expect(previewLevelChange(createWizard(), 8).changes).not.toContainEqual(
       expect.objectContaining({ of: "runes" }),
     );
-    expect(previewLevelChange(createThorne(), 9).changes).toContainEqual({
+    expect(previewLevelChange(createWizard(), 9).changes).toContainEqual({
       of: "runes",
       before: 3,
       after: 4,
@@ -53,7 +52,7 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("дневной бюджет восстановления сдвигается вместе с ячейками", () => {
-    expect(previewLevelChange(createThorne(), 9).changes).toContainEqual({
+    expect(previewLevelChange(createWizard(), 9).changes).toContainEqual({
       of: "arcaneRecovery",
       before: 4,
       after: 5,
@@ -62,7 +61,7 @@ describe("предпросмотр смены уровня", () => {
 
   it("перебитый лимит подготовки за уровнем не идёт, и сдвига ему не обещают", () => {
     const overridden = {
-      ...createThorne(),
+      ...createWizard(),
       activeEffects: [
         {
           id: "master-word",
@@ -88,7 +87,7 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("долг ячейки перечню сдвигов не мешает: он законен, и уровень его не отменяет", () => {
-    const indebted = withSlotDebt(createThorne(), 1);
+    const indebted = withSlotDebt(createWizard(), 1);
 
     const preview = previewLevelChange(indebted, 9);
 
@@ -98,7 +97,7 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("прибавка хитов названа слагаемыми: среднее за кость и Телосложение", () => {
-    expect(previewLevelChange(createThorne(), 8).hitPoints).toEqual({
+    expect(previewLevelChange(createWizard(), 8).hitPoints).toEqual({
       perDie: 4,
       dieSize: 6,
       constitution: 3,
@@ -107,7 +106,7 @@ describe("предпросмотр смены уровня", () => {
   });
 
   it("без костей хитов прибавку назвать нечем: чужая выгрузка могла их не знать", () => {
-    const { hitDice: _absent, ...withoutDice } = createThorne();
+    const { hitDice: _absent, ...withoutDice } = createWizard();
     expect(previewLevelChange(withoutDice, 8).hitPoints).toBeNull();
   });
 });

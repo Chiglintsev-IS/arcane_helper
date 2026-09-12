@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { toSheetView } from "./sheetView";
 
-const thorne = () => toSheetView(createThorne());
+const wizard = () => toSheetView(createWizard());
 
 function ability(id: string) {
-  const found = thorne().abilities.find((candidate) => candidate.id === id);
+  const found = wizard().abilities.find((candidate) => candidate.id === id);
   if (found === undefined) throw new Error(`нет характеристики ${id}`);
   return found;
 }
 
 describe("скорость листа приходит действующей (FR-334)", () => {
   function hastened() {
-    const base = createThorne();
+    const base = createWizard();
     return toSheetView({
       ...base,
       activeEffects: [
@@ -33,17 +33,17 @@ describe("скорость листа приходит действующей (F
   }
 
   it("прибавка видна тем же числом, каким по столу и ходят", () => {
-    expect(hastened().speed).toBe(thorne().speed + 10);
+    expect(hastened().speed).toBe(wizard().speed + 10);
   });
 
   it("правится при этом своя скорость: чужая прибавка в неё не запекается", () => {
-    expect(hastened().speedBase).toBe(thorne().speedBase);
+    expect(hastened().speedBase).toBe(wizard().speedBase);
   });
 });
 
 describe("величины", () => {
   it("характеристики едут в порядке правил, каждая со своим модификатором", () => {
-    expect(thorne().abilities.map((entry) => entry.id)).toEqual([
+    expect(wizard().abilities.map((entry) => entry.id)).toEqual([
       "strength",
       "dexterity",
       "constitution",
@@ -70,18 +70,18 @@ describe("величины", () => {
   });
 
   it("все восемнадцать навыков разложены по своим характеристикам", () => {
-    expect(thorne().abilities.flatMap((entry) => entry.skills)).toHaveLength(18);
+    expect(wizard().abilities.flatMap((entry) => entry.skills)).toHaveLength(18);
   });
 
   it("бонус мастерства едет отдельным числом, хотя уже сложен в спасброски и навыки", () => {
-    expect(thorne().proficiencyBonus).toBe(3);
-    expect(toSheetView({ ...createThorne(), level: 9 }).proficiencyBonus).toBe(4);
+    expect(wizard().proficiencyBonus).toBe(3);
+    expect(toSheetView({ ...createWizard(), level: 9 }).proficiencyBonus).toBe(4);
   });
 });
 
 describe("разбор", () => {
   it("Класс Доспеха приезжает итогом, а из чего он сложился — не приезжает вовсе", () => {
-    const state = createThorne();
+    const state = createWizard();
     const armored = toSheetView({
       ...state,
       itemDefinitions: [
@@ -99,14 +99,14 @@ describe("разбор", () => {
       },
     });
 
-    expect(thorne().armorClass).toBe(14);
+    expect(wizard().armorClass).toBe(14);
     expect(armored.armorClass).toBe(18);
   });
 });
 
 describe("здоровье", () => {
   it("максимум приезжает действующим, а снижения — своими числами", () => {
-    const state = createThorne();
+    const state = createWizard();
     const hurt = toSheetView({
       ...state,
       hitPoints: { current: 30, maximumBase: 60, bloodReduction: 6, masterReduction: 4 },
@@ -122,30 +122,30 @@ describe("здоровье", () => {
   });
 
   it("Костей хитов может не быть вовсе: состояние приехало из чужой сборки", () => {
-    const { hitDice: _none, ...withoutDice } = createThorne();
+    const { hitDice: _none, ...withoutDice } = createWizard();
 
     expect(toSheetView(withoutDice).hitPoints.hitDice).toBeUndefined();
-    expect(thorne().hitPoints.hitDice).toEqual({ remaining: 7, total: 7, size: 6 });
+    expect(wizard().hitPoints.hitDice).toEqual({ remaining: 7, total: 7, size: 6 });
   });
 });
 
 describe("кто он", () => {
   it("справочные поля и отметки мастера едут как есть", () => {
-    expect(thorne()).toMatchObject({
-      name: "Торн",
-      species: "Лунный тролль",
+    expect(wizard()).toMatchObject({
+      name: "Волшебник",
+      species: "Тролль",
       size: "medium",
       speed: 30,
       className: "Волшебник",
       level: 7,
-      subclass: "Создатель рун",
+      subclass: "Рунист",
       exhaustion: 0,
       inspiration: false,
     });
   });
 
   it("владения едут списками слов игрока", () => {
-    const state = createThorne();
+    const state = createWizard();
     const armed = toSheetView({
       ...state,
       proficiencies: { ...state.proficiencies, languages: ["Общий", "Великаний"] },

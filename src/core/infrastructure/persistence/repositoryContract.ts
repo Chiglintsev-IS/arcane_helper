@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { Character } from "@/core/domain/assembly/character";
 import {
   parsePersisted,
@@ -16,7 +16,7 @@ import { createSession } from "@/core/application/session";
 const SAVED_AT = "2026-07-31T18:00:00.000Z";
 
 function snapshot() {
-  return toPersisted(createSession(createThorne()), SAVED_AT, null);
+  return toPersisted(createSession(createWizard()), SAVED_AT, null);
 }
 
 export function describeRepositoryContract(
@@ -100,7 +100,7 @@ export function describeRepositoryContract(
     const catalog = loadThorneSpells().map((spell) =>
       spell.id === "shield" ? { ...spell, nameRu: "Щит по-домашнему" } : spell,
     );
-    await repository.save(toPersisted(createSession(createThorne()), SAVED_AT, catalog));
+    await repository.save(toPersisted(createSession(createWizard()), SAVED_AT, catalog));
 
     const loaded = await repository.load();
     expect(loaded?.spellCatalog).toHaveLength(34);
@@ -123,7 +123,7 @@ export function describeRepositoryContract(
     expect(await repository.loadRaw()).toBeNull();
 
     const withoutShield = loadThorneSpells().filter((spell) => spell.id !== "shield");
-    const stored = toPersisted(createSession(createThorne()), SAVED_AT, withoutShield);
+    const stored = toPersisted(createSession(createWizard()), SAVED_AT, withoutShield);
     await repository.save(stored);
 
     await expect(repository.load()).rejects.toThrow(StorageCorruptedError);
@@ -133,7 +133,7 @@ export function describeRepositoryContract(
   it("сохранённый каталог без нужной карточки не загружается (FR-123)", async () => {
     const repository = await createRepository();
     const withoutShield = loadThorneSpells().filter((spell) => spell.id !== "shield");
-    await repository.save(toPersisted(createSession(createThorne()), SAVED_AT, withoutShield));
+    await repository.save(toPersisted(createSession(createWizard()), SAVED_AT, withoutShield));
 
     await expect(repository.load()).rejects.toThrow(StorageCorruptedError);
     await expect(repository.load()).rejects.toThrow(/shield/);

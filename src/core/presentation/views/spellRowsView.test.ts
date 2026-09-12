@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { Command } from "@/contract/commands";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
+  createWizard,
   knowing,
+  withoutPreparation,
   withSpentSlots,
   withoutComponentRecord,
   withoutSlots,
@@ -47,7 +48,7 @@ const START: readonly Command[] = [{ kind: "start_combat" }];
 
 function row(
   id: string,
-  character: CharacterState = createThorne(),
+  character: CharacterState = createWizard(),
   commands: readonly Command[] = [],
   catalog?: readonly Spell[],
 ) {
@@ -61,31 +62,30 @@ function row(
 describe("цена и обстановка", () => {
   it("вне боя ритуал стоит ноль, с началом боя — свой уровень", () => {
     expect(row("detect-magic").slotPrice).toBe(0);
-    expect(row("detect-magic", createThorne(), START).slotPrice).toBe(1);
+    expect(row("detect-magic", createWizard(), START).slotPrice).toBe(1);
   });
 
   it("ритуальный способ исчезает с началом боя", () => {
     expect(row("detect-magic").ritualAvailable).toBe(true);
-    expect(row("detect-magic", createThorne(), START).ritualAvailable).toBe(false);
+    expect(row("detect-magic", createWizard(), START).ritualAvailable).toBe(false);
   });
 
   it("неподготовленный ритуал в бою становится несотворимым вовсе", () => {
-    expect(row("detect-magic").castableNow).toBe(true);
-    expect(row("detect-magic", createThorne(), START).castableNow).toBe(false);
+    const unprepared = withoutPreparation(createWizard());
+
+    expect(row("detect-magic", unprepared).castableNow).toBe(true);
+    expect(row("detect-magic", unprepared, START).castableNow).toBe(false);
   });
 
   it("подготовка меняет применимость, а не цену", () => {
-    const thorne = createThorne();
-    const ready = { ...thorne, preparedSpellIds: [...thorne.preparedSpellIds, "detect-magic"] };
-
-    expect(row("detect-magic", ready, START).castableNow).toBe(true);
-    expect(row("detect-magic", ready, START).prepared).toBe(true);
+    expect(row("detect-magic", createWizard(), START).castableNow).toBe(true);
+    expect(row("detect-magic", createWizard(), START).prepared).toBe(true);
   });
 });
 
 function withoutAnyPayment(): CharacterState {
   return {
-    ...withoutSlots(createThorne()),
+    ...withoutSlots(createWizard()),
     suppression: { firedUponTurnStarts: 0, underDirectSunlight: true },
   };
 }
@@ -103,7 +103,7 @@ describe("почему нельзя", () => {
   });
 
   it("оплата кровью снимает причину: ячейку она создаёт сама", () => {
-    expect(row("mage-armor", withoutSlots(createThorne())).unavailableReason).toBeUndefined();
+    expect(row("mage-armor", withoutSlots(createWizard())).unavailableReason).toBeUndefined();
   });
 
   it("заклинание, до уровня которого он не дорос, называет недостающую ячейку", () => {
@@ -111,7 +111,7 @@ describe("почему нельзя", () => {
     const highest = catalog.find((spell) => spell.id === "storm-sphere");
     if (highest === undefined) throw new Error("нет карточки для подъёма уровня");
     const beyond = [{ ...highest, level: 6, ritual: false }];
-    const shown = row(highest.id, createThorne(), [], beyond);
+    const shown = row(highest.id, createWizard(), [], beyond);
 
     expect(shown.unavailableReason).toBe("Ячеек 6 уровня у персонажа нет");
     expect(shown.castOptions).toEqual([
@@ -139,7 +139,7 @@ describe("числа под этого персонажа", () => {
     ];
 
     expect(row("mage-armor").active).toBe(false);
-    expect(row("mage-armor", createThorne(), cast).active).toBe(true);
+    expect(row("mage-armor", createWizard(), cast).active).toBe(true);
   });
 
   it("защита с этим заклинанием считается заранее, а без вклада её нет вовсе", () => {
@@ -147,19 +147,38 @@ describe("числа под этого персонажа", () => {
     expect(row("ray-of-frost").armorClassIfCast).toBeUndefined();
   });
 
+  it("текст карточки получает числа заклинателя от листа, а не хранит их", () => {
+    const advice = row("web").card.tacticalAdviceRu ?? "";
+
+    expect(advice).toContain("против КС 16");
+    expect(advice).not.toContain("{saveDc}");
+    expect(row("ray-of-frost").card.tacticalAdviceRu ?? "").toContain("d20+8");
+    expect(row("counterspell").card.tacticalAdviceRu ?? "").toContain("Интеллектом d20+4");
+  });
+
+  it("числа заклинателя в тексте едут за листом", () => {
+    const state = createWizard();
+    const duller: CharacterState = {
+      ...state,
+      abilities: { ...state.abilities, intelligence: 16 },
+    };
+
+    expect(row("web", duller).card.tacticalAdviceRu ?? "").toContain("против КС 15");
+  });
+
   it("числа заклинателя стоят раз на персонажа, а не при каждой строке", () => {
-    expect(toCastingView(createThorne())).toEqual({
+    expect(toCastingView(createWizard())).toEqual({
       spellAttackModifier: 8,
       spellSaveDc: 16,
       spellcastingModifier: 4,
       preparedLimit: 11,
-      preparedCount: createThorne().preparedSpellIds.length,
+      preparedCount: createWizard().preparedSpellIds.length,
       freeComponentsCovered: true,
     });
   });
 
   it("о незаведённом снаряжении вердикта нет вовсе", () => {
-    const stranger = withoutComponentRecord(createThorne());
+    const stranger = withoutComponentRecord(createWizard());
 
     expect(toCastingView(stranger).freeComponentsCovered).toBeUndefined();
   });
@@ -176,7 +195,7 @@ describe("карточка", () => {
   });
 
   it("от персонажа не зависит ничем: у обездоленного она та же", () => {
-    expect(row("shield", withoutSlots(createThorne())).card).toEqual(row("shield").card);
+    expect(row("shield", withoutSlots(createWizard())).card).toEqual(row("shield").card);
   });
 
   it("реакция приезжает фразой своего условия", () => {
@@ -188,7 +207,7 @@ describe("карточка", () => {
     const found = loadThorneSpells().find((spell) => spell.id === "shield");
     if (found === undefined) throw new Error("нет карточки реакции");
     const { tacticalAdviceRu: _advice, ...bare } = found;
-    const shown = row("shield", createThorne(), [], [bare]).card;
+    const shown = row("shield", createWizard(), [], [bare]).card;
 
     expect(shown.tacticalAdviceRu).toBeUndefined();
     expect(shown.reaction).toEqual({ textRu: found.castingTime.reactionTrigger });
@@ -202,7 +221,7 @@ describe("карточка", () => {
   });
 
   it("свой компонент назван словами, и строка знает, лежит ли он в сумке", () => {
-    const knows = knowing(createThorne(), "arcane-lock");
+    const knows = knowing(createWizard(), "arcane-lock");
     expect(row("arcane-lock", knows).card.components.material?.textRu).toContain("золотая пыль");
     expect(row("arcane-lock", knows).ownComponentCarried).toBe(false);
 
@@ -216,7 +235,7 @@ describe("карточка", () => {
   it("заметка игрока едет строкой; ненаписанной нет вовсе", () => {
     expect(row("shield").note).toBeUndefined();
 
-    const noted = row("shield", createThorne(), [
+    const noted = row("shield", createWizard(), [
       { kind: "set_spell_note", spellId: "shield", note: "гасит и стрелу" },
     ]);
     expect(noted.note).toBe("гасит и стрелу");
@@ -231,7 +250,7 @@ describe("строка списка (FR-336)", () => {
 
   it("карточка без строки списка едет без неё, а не с пустой", () => {
     const bare = loadThorneSpells().map(({ listCard: _dropped, ...rest }) => rest);
-    expect(row("ray-of-frost", createThorne(), [], bare).listCard).toBeUndefined();
+    expect(row("ray-of-frost", createWizard(), [], bare).listCard).toBeUndefined();
   });
 });
 
@@ -270,7 +289,7 @@ describe("способы сотворения", () => {
   });
 
   it("вердикт стоит у каждого способа: потраченная ячейка не запрещает соседнюю", () => {
-    const spent = withSpentSlots(createThorne(), 1, 4);
+    const spent = withSpentSlots(createWizard(), 1, 4);
     const options = row("mage-armor", spent).castOptions;
     const bySlot = (level: number) =>
       options.find(
@@ -285,7 +304,7 @@ describe("способы сотворения", () => {
   it("шаги мастера решаются признаками строки, а не разбором карточки на экране", () => {
     expect(row("arcane-vigor").spendsHitDice).toBe(true);
     expect(row("mage-armor").spendsHitDice).toBe(false);
-    const knows = knowing(createThorne(), "arcane-lock");
+    const knows = knowing(createWizard(), "arcane-lock");
     expect(row("arcane-lock", knows).ownComponentRequired).toBe(true);
     expect(row("arcane-lock", knows).componentReminders.join(" ")).toContain("золотая пыль");
   });
@@ -293,11 +312,11 @@ describe("способы сотворения", () => {
 
 describe("экономия хода", () => {
   it("вне боя ходов нет: раунда не считают, всё доступно", () => {
-    expect(toTurnView(played(createThorne()))).toMatchObject({ inFight: false, round: 1 });
+    expect(toTurnView(played(createWizard()))).toMatchObject({ inFight: false, round: 1 });
   });
 
   it("сотворённое заклинание тратит своё действие", () => {
-    const spent = played(createThorne(), [
+    const spent = played(createWizard(), [
       ...START,
       { kind: "cast_spell", spellId: "ray-of-frost", mode: "cantrip", payment: { kind: "none" } },
     ]);
@@ -308,14 +327,14 @@ describe("экономия хода", () => {
 
 describe("общая причина названа один раз (FR-305)", () => {
   function afterSpendingTheAction(): LiveSession {
-    return played(createThorne(), [
+    return played(createWizard(), [
       ...START,
       { kind: "cast_spell", spellId: "ray-of-frost", mode: "cantrip", payment: { kind: "none" } },
     ]);
   }
 
   it("пока ход цел, общей причины нет вовсе", () => {
-    expect(toSpellsRefusal(played(createThorne(), START))).toBeUndefined();
+    expect(toSpellsRefusal(played(createWizard(), START))).toBeUndefined();
   });
 
   it("истраченное действие названо причиной списка, а не причиной каждой строки", () => {

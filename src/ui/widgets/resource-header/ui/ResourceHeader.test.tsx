@@ -3,9 +3,9 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import {
+  createWizard,
   withoutHitDice,
   withoutRunes,
 } from "@/core/infrastructure/catalog/thorne/fixtures";
@@ -52,7 +52,7 @@ function pool(rows: Tile[], name: string): Tile {
 
 describe("шапка на самом узком экране", () => {
   it("первый ряд умещает четыре плитки, а ячейки идут своим рядом во всю ширину", () => {
-    const row = header(createThorne());
+    const row = header(createWizard());
 
     for (const named of ["КД", "Хиты", "Руны", "Кости"]) {
       expect(row.textContent).toContain(named);
@@ -66,7 +66,7 @@ describe("шапка на самом узком экране", () => {
   });
 
   it("тихая строка называет то, что за бой не меняется, и правки не обещает", () => {
-    header(createThorne());
+    header(createWizard());
 
     expect(screen.getByText("Скорость").closest("div")?.textContent).toContain("30 футов");
     expect(screen.getByText("Размер").closest("div")?.textContent).toContain("Средний");
@@ -78,7 +78,7 @@ describe("шапка на самом узком экране", () => {
 
 describe("ступень плитки отвечает, метит ли в неё палец", () => {
   it("нажимаемая плитка лежит на ступени нажимаемого", () => {
-    const full = tiles(createThorne());
+    const full = tiles(createWizard());
 
     expect(pool(full, "Руны").classes).toContain(SURFACE_CONTROL);
 
@@ -86,7 +86,7 @@ describe("ступень плитки отвечает, метит ли в не�
     expect(pool(full, "Кости").classes).not.toContain(SURFACE_CONTROL);
 
     cleanup();
-    const drained = tiles(withoutRunes(createThorne()));
+    const drained = tiles(withoutRunes(createWizard()));
 
     expect(pool(drained, "Руны").classes).toContain(SURFACE_GROUP);
     expect(pool(drained, "Руны").classes).not.toContain(SURFACE_CONTROL);
@@ -95,20 +95,20 @@ describe("ступень плитки отвечает, метит ли в не�
 
 describe("пустой пул подан пустым", () => {
   it("нулевой пул подан как ноль", () => {
-    const full = tiles(createThorne());
+    const full = tiles(createWizard());
 
     expect(pool(full, "Кости").text).toContain("Кости d67/7");
     expect(pool(full, "Руны").text).toContain("Руны3/3");
 
     cleanup();
-    const drained = tiles(withoutRunes(withoutHitDice(createThorne())));
+    const drained = tiles(withoutRunes(withoutHitDice(createWizard())));
 
     expect(pool(drained, "Кости").text).toContain("Кости d6✗ 0/7");
     expect(pool(drained, "Руны").text).toContain("Руны✗ 0/3");
   });
 
   it("пул не занимает смыслового цвета: зелёная руна читалась бы как ритуал", () => {
-    const full = tiles(createThorne());
+    const full = tiles(createWizard());
 
     for (const name of ["Кости", "Руны"]) {
       for (const tone of ["ritual", "action", "reaction", "concentration", "bonus"]) {
@@ -118,9 +118,9 @@ describe("пустой пул подан пустым", () => {
   });
 
   it("постоянный цвет обещал бы остаток: пустой пул и полный не совпадают ничем", () => {
-    const full = tiles(createThorne());
+    const full = tiles(createWizard());
     cleanup();
-    const drained = tiles(withoutRunes(createThorne()));
+    const drained = tiles(withoutRunes(createWizard()));
 
     expect(pool(drained, "Руны").text).not.toBe(pool(full, "Руны").text);
   });

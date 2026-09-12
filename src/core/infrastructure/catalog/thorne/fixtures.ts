@@ -1,8 +1,125 @@
 import { Character } from "@/core/domain/assembly/character";
-import type { CharacterState } from "@/core/domain/assembly/state";
-import { bloodSlotCost, slotsInOrder } from "@/core/domain/arcana/slots";
+import { characterStateSchema, type CharacterState } from "@/core/domain/assembly/state";
+import {
+  arcaneRecoveryBudget,
+  bloodSlotCost,
+  slotsInOrder,
+  spellSlotsForLevel,
+} from "@/core/domain/arcana/slots";
+import { runesMaximum } from "@/core/domain/arcana/runes";
+import { RELIABLE_FIELD_KIT } from "@/core/domain/crafting/apparatus";
+import { proficiencyBonus } from "@/core/domain/character/abilities";
+import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
+import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { Items } from "@/core/domain/items/items";
 import type { RevealedProperty } from "@/core/domain/items/ingredient";
+
+/**
+ * Волшебник для прогонов правил. Его числа названы здесь и за листом Торна не едут: повышение уровня
+ * за столом их не двигает, и прогон формулы переживает его молча. Он снаряжён — знает и подготовил
+ * весь встроенный каталог и носит фокусировку, мантию и плащ, — чтобы прогону правила не приходилось
+ * собирать книгу и вещи заново; кому нужно обратное, снимает операцией.
+ *
+ * Начальный персонаж не достигается операциями: он ими меняется. Поэтому здесь литерал, как и у
+ * самого Торна.
+ */
+const WIZARD_LEVEL = 7;
+
+const WIZARD_SLOTS = spellSlotsForLevel(WIZARD_LEVEL);
+const WIZARD_RECOVERY = arcaneRecoveryBudget(WIZARD_LEVEL);
+const WIZARD_RUNES = runesMaximum(proficiencyBonus(WIZARD_LEVEL));
+
+function knownByLevel(cantrips: boolean): string[] {
+  return loadThorneSpells()
+    .filter((spell) => (spell.level === CANTRIP_LEVEL) === cantrips)
+    .map((spell) => spell.id);
+}
+
+export function createWizard(): CharacterState {
+  const spellbookSpellIds = knownByLevel(false);
+  return characterStateSchema.parse({
+    id: "wizard",
+    name: "Волшебник",
+    className: "Волшебник",
+    level: WIZARD_LEVEL,
+    species: "Тролль",
+    subclass: "Рунист",
+    features: [
+      {
+        nameRu: "Почерк рун",
+        summaryRu: "Минута над записью отвечает, один ли у двух записей автор.",
+      },
+    ],
+
+    abilities: {
+      strength: 8,
+      dexterity: 14,
+      constitution: 16,
+      intelligence: 18,
+      wisdom: 12,
+      charisma: 8,
+    },
+    saveProficiencies: ["intelligence", "wisdom"],
+    skills: {
+      arcana: "proficient",
+      investigation: "proficient",
+      nature: "proficient",
+      perception: "proficient",
+      sleightOfHand: "proficient",
+      survival: "proficient",
+    },
+
+    cantripIds: knownByLevel(true),
+    spellbookSpellIds,
+    preparedSpellIds: spellbookSpellIds,
+    spellNotes: {},
+
+    spellSlots: WIZARD_SLOTS,
+    arcaneRecovery: { maximum: WIZARD_RECOVERY, remaining: WIZARD_RECOVERY },
+    runes: { maximum: WIZARD_RUNES, remaining: WIZARD_RUNES },
+
+    activeEffects: [],
+
+    hitPoints: { current: 60, maximumBase: 60, bloodReduction: 0, masterReduction: 0 },
+    hitDice: { total: WIZARD_LEVEL, size: 6, remaining: WIZARD_LEVEL },
+    suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
+    alchemyApparatus: RELIABLE_FIELD_KIT,
+
+    itemDefinitions: [
+      {
+        id: "spellcasting-focus",
+        nameRu: "Фокусировка",
+        kinds: ["gear"],
+        spellcastingFocus: true,
+        bonuses: { spellSaveDc: 1, spellAttackModifier: 1 },
+      },
+      { id: "robe", nameRu: "Мантия", kinds: ["gear"], bonuses: { armorClass: 1 } },
+      {
+        id: "cloak-of-protection",
+        nameRu: "Плащ",
+        kinds: ["gear"],
+        bonuses: {
+          armorClass: 1,
+          "save:strength": 1,
+          "save:dexterity": 1,
+          "save:constitution": 1,
+          "save:intelligence": 1,
+          "save:wisdom": 1,
+          "save:charisma": 1,
+        },
+      },
+    ],
+    equipment: {
+      bag: [],
+      worn: [
+        { itemId: "spellcasting-focus", count: 1 },
+        { itemId: "robe", count: 1 },
+        { itemId: "cloak-of-protection", count: 1 },
+      ],
+      components: { componentPouch: false },
+    },
+  });
+}
 
 export function withSpentSlots(
   character: CharacterState,
@@ -172,6 +289,53 @@ export function withoutArcaneRecovery(
   return root
     .withArcana(root.arcana.useArcaneRecovery({ 1: budget }))
     .toState();
+}
+
+/** Снимает подготовку со всего: прогону про подготовку нужна книга, в которой есть что готовить. */
+export function withoutPreparation(character: CharacterState): CharacterState {
+  const root = Character.of(character);
+  const stripped = character.preparedSpellIds.reduce(
+    (spellbook, spellId) => spellbook.togglePreparation(spellId, spellId, 1, 0).spellbook,
+    root.spellbook,
+  );
+  return root.withSpellbook(stripped).toState();
+}
+
+/** Подготовлено ровно названное: прогон про список называет его состав сам, а не берёт чужой. */
+export function preparing(
+  character: CharacterState,
+  ...spellIds: readonly string[]
+): CharacterState {
+  const root = Character.of(withoutPreparation(character));
+  const prepared = spellIds.reduce(
+    (spellbook, spellId) =>
+      spellbook.togglePreparation(spellId, spellId, 1, spellIds.length).spellbook,
+    root.spellbook,
+  );
+  return root.withSpellbook(prepared).toState();
+}
+
+/**
+ * Рабочий набор подготовки для прогонов списка: ровно по предел листа, ритуалов в нём нет, и ни одно
+ * не творится бонусным действием. Состав назван здесь, чтобы прогон про список не зависел от того,
+ * что персонаж подготовил сегодня за столом.
+ */
+const READY_SPELL_IDS: readonly string[] = [
+  "shield",
+  "absorb-elements",
+  "mage-armor",
+  "magic-missile",
+  "web",
+  "counterspell",
+  "lightning-bolt",
+  "slow",
+  "thunder-step",
+  "intellect-fortress",
+  "storm-sphere",
+];
+
+export function preparedForPlay(character: CharacterState): CharacterState {
+  return preparing(character, ...READY_SPELL_IDS);
 }
 
 export function knowing(

@@ -258,7 +258,7 @@ test("technical instruction is two taps away", async ({ page }) => {
   const card = page.getByRole("dialog", { name: /Луч холода/ });
   const roll = card.getByLabel("Механика").locator("dt", { hasText: "Мой бросок" });
   await expect(roll).toBeVisible();
-  await expect(roll.locator("xpath=following-sibling::dd[1]")).toHaveText("Атака d20+8");
+  await expect(roll.locator("xpath=following-sibling::dd[1]")).toHaveText("Атака d20+9");
 });
 
 test("wizard steps order and cast spends the slot", async ({ page }) => {
@@ -464,7 +464,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
 
   await switchToSheet(page);
 
-  await page.getByRole("button", { name: /^Интеллект 18/ }).click();
+  await page.getByRole("button", { name: /^Интеллект 20/ }).click();
   await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
   await scan("шторка правки листа");
   await page.getByRole("button", { name: "Отмена" }).click();
@@ -526,13 +526,13 @@ test("reactions in one tap", async ({ page }) => {
 
 test("book mode prepares spells", async ({ page }) => {
   await switchMode(page, /^Книга/);
-  await expect(page.getByLabel("Подготовлено 11 из 11")).toBeVisible();
+  await expect(page.getByLabel("Подготовлено 13 из 13")).toBeVisible();
 
   await page.getByRole("button", { name: "Снять подготовку: Крепость интеллекта" }).click();
-  await expect(page.getByLabel("Подготовлено 10 из 11")).toBeVisible();
+  await expect(page.getByLabel("Подготовлено 12 из 13")).toBeVisible();
 
   await page.getByRole("button", { name: "Подготовить: Обнаружение магии" }).click();
-  await expect(page.getByLabel("Подготовлено 11 из 11")).toBeVisible();
+  await expect(page.getByLabel("Подготовлено 13 из 13")).toBeVisible();
 
   await switchMode(page, /^Игра/);
   await expect(page.getByLabel(/^Заклинания/)).toContainText("Обнаружение магии");
@@ -605,7 +605,7 @@ test("blood pays for a slot inside the cast wizard", async ({ page }) => {
   await page.getByRole("button", { name: "Подтвердить" }).click();
 
   await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("1 ур.4/4");
-  await expect(page.getByRole("region", { name: "Ресурсы" })).toContainText("54/54");
+  await expect(page.getByRole("region", { name: "Ресурсы" })).toContainText("54/63");
   await expect(page.getByLabel("Прочие ресурсы")).toContainText("Максимум снижен на 6");
 });
 
@@ -624,5 +624,5 @@ test("search reaches a row without scrolling", async ({ page }) => {
   await lightning.click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await expect(page.getByRole("searchbox", { name: "Поиск по названию" })).toBeHidden();
-  await expect(list.getByRole("listitem")).toHaveCount(20);
+  await expect(list.getByRole("listitem")).toHaveCount(22);
 });

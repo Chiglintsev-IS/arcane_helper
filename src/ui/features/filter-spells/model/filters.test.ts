@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { createWizard, withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import {
   NO_FILTERS,
@@ -12,7 +12,6 @@ import {
 } from "@/ui/features/filter-spells/model/filters";
 import type { Command } from "@/contract/commands";
 import type { SpellRowView } from "@/contract/views";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { lastHintTraits } from "@/ui/shared/model/actionTraits";
 import { spellsForScreen } from "@/ui/shared/model/spellList";
@@ -21,15 +20,15 @@ import { IN_FIGHT, testSpellRows } from "@/ui/app/testing/stores";
 function book(
   overrides: { character?: CharacterState; commands?: readonly Command[] } = {},
 ): SpellRowView[] {
-  return testSpellRows(overrides.character ?? createThorne(), overrides.commands ?? IN_FIGHT);
+  return testSpellRows(overrides.character ?? createWizard(), overrides.commands ?? IN_FIGHT);
 }
 
 function outOfFight(character?: CharacterState): SpellRowView[] {
-  return testSpellRows(character ?? createThorne(), []);
+  return testSpellRows(character ?? createWizard(), []);
 }
 
 function categoriesOf(inFight: boolean) {
-  const rows = testSpellRows(createThorne(), inFight ? IN_FIGHT : []);
+  const rows = testSpellRows(createWizard(), inFight ? IN_FIGHT : []);
   return dividingCategories(spellsForScreen(rows, "play"));
 }
 
@@ -42,7 +41,7 @@ function filters(overrides: Partial<SpellFilters> = {}): SpellFilters {
 }
 
 function spentThorne(): CharacterState {
-  return withoutSlots(createThorne());
+  return withoutSlots(createWizard());
 }
 
 describe("dividingCategories", () => {
@@ -148,8 +147,8 @@ describe("filterSpells: концентрация и подготовка", () =>
 
   it("фильтр «подготовлено» скрывает снятое с подготовки, но не заговоры (AC-05)", () => {
     const character = {
-      ...createThorne(),
-      preparedSpellIds: createThorne().preparedSpellIds.filter((id) => id !== "shield"),
+      ...createWizard(),
+      preparedSpellIds: createWizard().preparedSpellIds.filter((id) => id !== "shield"),
     };
 
     const shown = ids(filterSpells(book({ character }), filters({ prepared: true })));

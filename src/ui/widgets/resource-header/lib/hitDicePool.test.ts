@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { hitDicePool } from "@/ui/widgets/resource-header/lib/hitDicePool";
 
 describe("пул костей хитов плиткой (FR-134)", () => {
@@ -29,9 +29,9 @@ describe("пул костей хитов плиткой (FR-134)", () => {
   });
 });
 
-describe("кости хитов Торна плиткой", () => {
+describe("кости хитов плиткой", () => {
   it("полный пул читается как в листе", () => {
-    expect(hitDicePool(createThorne().hitDice)).toEqual({
+    expect(hitDicePool(createWizard().hitDice)).toEqual({
       nameRu: "Кости d6",
       remaining: "7/7",
       available: true,

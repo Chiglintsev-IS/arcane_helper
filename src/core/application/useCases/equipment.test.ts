@@ -6,7 +6,7 @@ import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
 import { undoLast, type Occasion } from "@/core/application/session";
 import { ALL_TURN_RESOURCES, checkAvailability } from "@/core/application/casting/availability";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
@@ -22,7 +22,7 @@ import {
   toggleWanted,
 } from "./equipment";
 
-const session = () => ({ character: createThorne(), log: [] });
+const session = () => ({ character: createWizard(), log: [] });
 
 function testOccasion(commandId = "command-1"): Occasion {
   let tick = 0;
@@ -40,7 +40,7 @@ const potions = { nameRu: "Зелье лечения", kinds: ["consumable"] as 
 const POTION_ID = Items.idFromName(potions.nameRu);
 
 const FOCUS_ID =
-  Items.of(createThorne()).all.filter((item) => item.spellcastingFocus === true)[0]?.id ?? "";
+  Items.of(createWizard()).all.filter((item) => item.spellcastingFocus === true)[0]?.id ?? "";
 
 function spellCard(id: string): Spell {
   const found = loadThorneSpells().find((spell) => spell.id === id);
