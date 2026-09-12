@@ -18,6 +18,7 @@ service worker ещё не управляет, и его обработчик `f
     python3 scripts/precache.py
 """
 
+import hashlib
 import os
 import re
 import sys
@@ -25,6 +26,7 @@ import sys
 OUT = "out"
 WORKER = os.path.join(OUT, "sw.js")
 PLACEHOLDER = re.compile(r"const BUILD = \[[^\]]*\];", re.S)
+IDENTITY = re.compile(r'const BUILD_ID = "[^"]*";')
 
 # Что имеет смысл класть в кэш при установке: оболочка тянет за собой всё
 # остальное, а картинки и карты исходников не нужны для запуска.
@@ -41,6 +43,24 @@ def build_files():
                 path = os.path.join(dirpath, name)
                 found.append("./" + os.path.relpath(path, OUT))
     return sorted(found)
+
+
+def build_identity():
+    """Отпечаток всей сборки, кроме самого воркера: им воркер и отличается от вчерашнего.
+
+    Одного списка файлов мало: правка разметки или значка имён с хешами не двигает, воркер остаётся
+    прежним побайтно, и телефон такой сборки не видит вовсе.
+    """
+    digest = hashlib.sha256()
+    for dirpath, _, filenames in os.walk(OUT):
+        for name in sorted(filenames):
+            path = os.path.join(dirpath, name)
+            if os.path.abspath(path) == os.path.abspath(WORKER):
+                continue
+            digest.update(os.path.relpath(path, OUT).encode("utf-8"))
+            with open(path, "rb") as file:
+                digest.update(hashlib.sha256(file.read()).digest())
+    return digest.hexdigest()[:12]
 
 
 def main() -> int:
@@ -60,9 +80,15 @@ def main() -> int:
         print("в sw.js нет строки `const BUILD = [...]` — вписывать некуда", file=sys.stderr)
         return 1
 
+    identity = build_identity()
+    patched, stamped = IDENTITY.subn(f'const BUILD_ID = "{identity}";', patched, count=1)
+    if stamped == 0:
+        print('в sw.js нет строки `const BUILD_ID = "…"` — отмечать нечем', file=sys.stderr)
+        return 1
+
     with open(WORKER, "w", encoding="utf-8") as file:
         file.write(patched)
-    print(f"{WORKER}: в кэш установки добавлено файлов — {len(files)}")
+    print(f"{WORKER}: отпечаток сборки {identity}, в кэш установки добавлено файлов — {len(files)}")
     return 0
 
 

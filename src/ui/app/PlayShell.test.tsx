@@ -735,6 +735,52 @@ describe("полоса обновления (FR-325)", () => {
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.getByRole("button", { name: /^Игра/ })).toBeDefined();
   });
+
+  it("возвращение в приложение спрашивает про обновление заново", async () => {
+    const asked = { times: 0 };
+    const registration = {
+      waiting: null,
+      addEventListener: () => {},
+      update: async () => {
+        asked.times += 1;
+      },
+    };
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: { register: async () => registration, addEventListener: () => {}, controller: null },
+    });
+
+    await renderWithStores(<PlayShell />);
+    await screen.findByRole("button", { name: /^Игра/ });
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(asked.times).toBe(1));
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(asked.times).toBe(2));
+  });
+
+  it("раздачи не было — при возвращении приложение пробует записаться заново", async () => {
+    const tries = { count: 0 };
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        register: async () => {
+          tries.count += 1;
+          throw new Error("раздача выключена");
+        },
+        addEventListener: () => {},
+        controller: null,
+      },
+    });
+
+    await renderWithStores(<PlayShell />);
+    await screen.findByRole("button", { name: /^Игра/ });
+    await vi.waitFor(() => expect(tries.count).toBe(1));
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.waitFor(() => expect(tries.count).toBe(2));
+  });
 });
 
 describe("нечитаемое сохранение вместо режимов (FR-311)", () => {

@@ -10,7 +10,10 @@ export function ServiceWorkerUpdate() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    let known: ServiceWorkerRegistration | null = null;
+
     const watch = (candidate: ServiceWorkerRegistration): void => {
+      known = candidate;
       if (candidate.waiting !== null) setWaiting(candidate.waiting);
       candidate.addEventListener("updatefound", () => {
         const installing = candidate.installing;
@@ -23,8 +26,28 @@ export function ServiceWorkerUpdate() {
       });
     };
 
-    void navigator.serviceWorker.register("./sw.js").then(watch, () => {
-    });
+    const look = (): void => {
+      if (known === null) {
+        void navigator.serviceWorker.register("./sw.js").then(watch, () => undefined);
+        return;
+      }
+      void known.update().catch(() => undefined);
+    };
+
+    look();
+
+    /**
+     * Приложение на домашнем экране телефона не перезагружается неделями: его сворачивают и
+     * разворачивают, а страница остаётся та же. Одного взгляда при запуске мало — новая версия
+     * ждала бы на раздаче, пока игрок не закроет приложение совсем. Смотрим при каждом возвращении:
+     * раздача включена не всегда, и неудачная попытка ничего не стоит.
+     */
+    const lookOnReturn = (): void => {
+      if (document.visibilityState === "visible") look();
+    };
+
+    document.addEventListener("visibilitychange", lookOnReturn);
+    return () => document.removeEventListener("visibilitychange", lookOnReturn);
   }, []);
 
   if (waiting === null || postponed) return null;
