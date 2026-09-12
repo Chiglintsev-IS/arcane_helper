@@ -103,7 +103,7 @@ export function describeRepositoryContract(
     await repository.save(toPersisted(createSession(createWizard()), SAVED_AT, catalog));
 
     const loaded = await repository.load();
-    expect(loaded?.spellCatalog).toHaveLength(34);
+    expect(loaded?.spellCatalog).toHaveLength(36);
     expect(loaded?.spellCatalog?.find((spell) => spell.id === "shield")?.nameRu).toBe(
       "Щит по-домашнему",
     );

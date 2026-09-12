@@ -249,7 +249,7 @@ test("filter by casting time", async ({ page }) => {
   await expect(list.getByText("Щит", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Реакция", exact: true }).click();
-  await expect(list.getByRole("listitem")).toHaveCount(32);
+  await expect(list.getByRole("listitem")).toHaveCount(34);
 });
 
 test("technical instruction is two taps away", async ({ page }) => {

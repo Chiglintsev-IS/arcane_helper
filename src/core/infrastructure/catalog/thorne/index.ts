@@ -6,12 +6,14 @@ import absorbElements from "./spells/absorb-elements.json";
 import alarm from "./spells/alarm.json";
 import arcaneLock from "./spells/arcane-lock.json";
 import arcaneVigor from "./spells/arcane-vigor.json";
+import blindnessDeafness from "./spells/blindness-deafness.json";
 import catapult from "./spells/catapult.json";
 import chromaticOrb from "./spells/chromatic-orb.json";
 import counterspell from "./spells/counterspell.json";
 import detectMagic from "./spells/detect-magic.json";
 import dispelMagic from "./spells/dispel-magic.json";
 import enlargeReduce from "./spells/enlarge-reduce.json";
+import evardsBlackTentacles from "./spells/evards-black-tentacles.json";
 import featherFall from "./spells/feather-fall.json";
 import haste from "./spells/haste.json";
 import iceStorm from "./spells/ice-storm.json";
@@ -61,6 +63,7 @@ const RAW_SPELLS: readonly unknown[] = [
   spiderClimb,
   enlargeReduce,
   seeInvisibility,
+  blindnessDeafness,
 
   counterspell,
   dispelMagic,
@@ -76,6 +79,7 @@ const RAW_SPELLS: readonly unknown[] = [
   stormSphere,
   iceStorm,
   vitriolicSphere,
+  evardsBlackTentacles,
 ];
 
 export class ContentError extends Error {

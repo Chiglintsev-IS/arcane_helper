@@ -187,6 +187,7 @@ const RAW: unknown = {
     "tashas-mind-whip",
     "enlarge-reduce",
     "see-invisibility",
+    "blindness-deafness",
 
     "counterspell",
     "dispel-magic",
@@ -201,6 +202,7 @@ const RAW: unknown = {
     "storm-sphere",
     "ice-storm",
     "vitriolic-sphere",
+    "evards-black-tentacles",
   ],
   preparedSpellIds: [
     "shield",

@@ -24,14 +24,14 @@ function paragraphs(text: string): string[] {
 }
 
 describe("книга заклинаний Торна", () => {
-  it("состоит из 34 карточек: 4 заговора и 30 заклинаний по уровням", () => {
-    expect(spells).toHaveLength(34);
+  it("состоит из 36 карточек: 4 заговора и 32 заклинания по уровням", () => {
+    expect(spells).toHaveLength(36);
     const byLevel = (level: number) => spells.filter((spell) => spell.level === level).length;
     expect(byLevel(CANTRIP_LEVEL)).toBe(4);
     expect(byLevel(1)).toBe(9);
-    expect(byLevel(2)).toBe(8);
+    expect(byLevel(2)).toBe(9);
     expect(byLevel(3)).toBe(9);
-    expect(byLevel(4)).toBe(4);
+    expect(byLevel(4)).toBe(5);
   });
 
   it("у каждой карточки указан источник (ADR-0020)", () => {

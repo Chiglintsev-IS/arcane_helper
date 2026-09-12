@@ -55,7 +55,7 @@ describe("parseImport (FR-121)", () => {
     const outcome = parseImport(snapshotText());
 
     expect(outcome.ok).toBe(true);
-    if (outcome.ok) expect(outcome.file.spells).toHaveLength(34);
+    if (outcome.ok) expect(outcome.file.spells).toHaveLength(36);
   });
 
   it("не-JSON отклоняется словами, а не исключением", () => {
@@ -175,6 +175,6 @@ describe("applyImport (FR-122)", () => {
 
     const applied = applyImport(spent, outcome.file, "spells_only");
     expect(applied.character.spellSlots[1]?.remaining).toBe(0);
-    expect(applied.spells).toHaveLength(34);
+    expect(applied.spells).toHaveLength(36);
   });
 });
