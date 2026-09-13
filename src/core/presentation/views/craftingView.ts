@@ -43,7 +43,7 @@ export function toCraftingView(character: CharacterState): CraftingView {
         ),
         researchNumbers: [...root.items.unrevealedNumbers(item.id)],
         propertiesExhausted: alchemy.propertiesExhausted,
-        observations: alchemy.observations.map((seen) => ({ ...seen })),
+        notes: item.notes.map((note) => ({ ...note })),
         properties: alchemy.properties.map((property) => ({ ...property })),
       };
     }),

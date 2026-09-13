@@ -32,7 +32,7 @@ export function IngredientCard({
   onChoose: () => void;
   onOpen: () => void;
 }) {
-  const { nameRu, properties, observations, shortageRu } = ingredient;
+  const { nameRu, properties, notes, shortageRu } = ingredient;
 
   return (
     <li className="flex items-stretch gap-1">
@@ -65,11 +65,11 @@ export function IngredientCard({
           <span className="text-xs leading-snug text-ink-quiet">{PROPERTIES_EXHAUSTED}</span>
         )}
 
-        {observations.length === 0 ? null : (
+        {notes.length === 0 ? null : (
           <span className="flex w-full flex-col gap-0.5">
-            {observations.map((seen) => (
-              <span key={seen.id} className="text-xs leading-snug text-ink-soft">
-                {seen.textRu}
+            {notes.map((note) => (
+              <span key={note.id} className="text-xs leading-snug text-ink-soft">
+                {note.textRu}
               </span>
             ))}
           </span>

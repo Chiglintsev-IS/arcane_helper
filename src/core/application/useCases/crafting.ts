@@ -10,7 +10,7 @@ import type { RevealedProperty } from "@/core/domain/items/ingredient";
 import { ingredient } from "@/core/domain/items/schema";
 import { DomainError } from "@/core/domain/shared/errors";
 import { withPlural } from "@/shared/language";
-import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
+import { commit, type Occasion, type Session } from "@/core/application/session";
 
 type CraftOrder = {
   readonly formula: RecipeFormula;
@@ -94,34 +94,6 @@ function craftedSummary(
 
   const reward = outcome.rewarded ? " Натуральная двадцать: лишняя единица или половина расходников." : "";
   return `Изготовлено: ${named}, ${unitsRu(batch)}. ${check}.${reward} ${spent}`;
-}
-
-export function noteObservation(
-  session: Session,
-  itemId: string,
-  textRu: string,
-  occasion: Occasion,
-): Session {
-  const root = Character.of(session.character);
-  return withoutRecord(
-    session,
-    root.withItems(root.items.noteObservation(itemId, { id: occasion.nextId(), textRu })),
-  );
-}
-
-export function rewriteObservation(
-  session: Session,
-  itemId: string,
-  id: string,
-  textRu: string,
-): Session {
-  const root = Character.of(session.character);
-  return withoutRecord(session, root.withItems(root.items.rewriteObservation(itemId, id, textRu)));
-}
-
-export function dropObservation(session: Session, itemId: string, id: string): Session {
-  const root = Character.of(session.character);
-  return withoutRecord(session, root.withItems(root.items.dropObservation(itemId, id)));
 }
 
 export function craftBatch(session: Session, order: CraftOrder, occasion: Occasion): Session {

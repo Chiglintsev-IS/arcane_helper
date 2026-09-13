@@ -76,7 +76,13 @@ describe("«Кто он» — то, что спрашивают раз за ве
       ...state,
       itemDefinitions: [
         ...state.itemDefinitions,
-        { id: "scale-mail", nameRu: "Чешуйчатый доспех", kinds: ["gear"] as const, armor: { base: 14 } },
+        {
+          id: "scale-mail",
+          nameRu: "Чешуйчатый доспех",
+          kinds: ["gear"] as const,
+          notes: [],
+          armor: { base: 14 },
+        },
       ],
       equipment: {
         ...state.equipment,

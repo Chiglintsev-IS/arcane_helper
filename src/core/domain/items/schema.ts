@@ -22,6 +22,14 @@ function ingredientOnlyRefusal(nameRu: string): string {
   return `«${nameRu}» не ингредиент: алхимических свойств у неё не бывает`;
 }
 
+export function noteTakenRefusal(id: string): string {
+  return `заметка «${id}» у этой вещи уже записана`;
+}
+
+export function noteMissingRefusal(nameRu: string, id: string): string {
+  return `у вещи «${nameRu}» нет заметки «${id}»`;
+}
+
 export function nameTakenRefusal(nameRu: string): string {
   return `«${nameRu}» уже заведена: двух вещей с одним именем не бывает`;
 }
@@ -34,12 +42,18 @@ function carriedBonusRefusal(nameRu: string): string {
   return `«${nameRu}» не экипировка: её прибавка действует при себе`;
 }
 
+/** Слова о вещи приходят по одной и живут поодиночке: потому у каждой своя запись, а не абзац. */
+const noteFields = z.object({
+  id: nonEmpty,
+  textRu: nonEmpty,
+});
+
 const itemDefinitionFields = z.object({
   id: nonEmpty,
   nameRu: nonEmpty,
   kinds: z.array(z.enum(ITEM_KINDS)).default([]),
   price: priceSchema.optional(),
-  note: nonEmpty.optional(),
+  notes: z.array(noteFields).default([]),
   bonuses: statBonusesSchema.optional(),
   worksCarried: z.literal(true).optional(),
   spellcastingFocus: z.literal(true).optional(),
@@ -133,12 +147,12 @@ const itemDefinitionSchema = itemDefinitionFields
     }
   });
 
+export type ItemNote = DeepReadonly<z.infer<typeof noteFields>>;
 export type ItemDefinition = DeepReadonly<z.infer<typeof itemDefinitionSchema>>;
-export type ItemKind = (typeof ITEM_KINDS)[number];
 
-export function assertItemDefinition(item: unknown): void {
-  parsedOrRefused(itemDefinitionSchema, item, "вещь");
-}
+/** Черновик вещи — то, что приносит правка: заметок он не называет, их ведут свои операции. */
+export type ItemDraft = Omit<ItemDefinition, "notes"> & { readonly notes?: readonly ItemNote[] };
+export type ItemKind = (typeof ITEM_KINDS)[number];
 
 export function itemDefinitionOf(value: unknown): ItemDefinition {
   return parsedOrRefused(itemDefinitionSchema, value, "вещь");
@@ -156,8 +170,8 @@ export function ingredient(item: ItemDefinition): boolean {
   return isIngredient(item);
 }
 
-export function alignedItemDefinition(item: ItemDefinition): ItemDefinition {
-  const worn = wearable(item)
+export function alignedItemDefinition(item: ItemDraft): ItemDefinition {
+  const worn = isWearable(item)
     ? item
     : {
         ...withoutWearableOnlyFields(item),

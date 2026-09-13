@@ -4,7 +4,6 @@ import { DomainError } from "@/core/domain/shared/errors";
 import {
   ITEMS_FIELDS,
   alignedItemDefinition,
-  assertItemDefinition,
   countedCarried,
   filledWearableOnlyFields,
   itemDefinitionOf,
@@ -13,10 +12,11 @@ import {
 } from "@/core/domain/items/schema";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 
-const potion: ItemDefinition = { id: "potion", nameRu: "Зелье", kinds: ["consumable"] };
+const potion: ItemDefinition = { id: "potion", nameRu: "Зелье", kinds: ["consumable"], notes: [] };
 const armored: ItemDefinition = {
   id: "chainmail",
   nameRu: "Кольчуга",
+  notes: [],
   kinds: ["gear"],
   spellcastingFocus: true,
   bonuses: { armorClass: 0 },
@@ -107,13 +107,13 @@ describe("свойства экипировки: перечисление, сн�
   });
 });
 
-describe("assertItemDefinition и alignedItemDefinition", () => {
+describe("объявление вещи", () => {
   it("прошедшая объявление вещь принимается молча", () => {
-    expect(() => assertItemDefinition(potion)).not.toThrow();
+    expect(() => itemDefinitionOf(potion)).not.toThrow();
   });
 
   it("«зелье-фокусировка» отвергается, и отказ называет вещь", () => {
-    expect(() => assertItemDefinition({ ...potion, spellcastingFocus: true })).toThrow(DomainError);
+    expect(() => itemDefinitionOf({ ...potion, spellcastingFocus: true })).toThrow(DomainError);
   });
 
   it("правка прочь от экипировки снимает фокусировку и оставляет прибавку при себе", () => {
@@ -128,6 +128,7 @@ describe("assertItemDefinition и alignedItemDefinition", () => {
       id: "ring",
       nameRu: "Кольцо защиты",
       kinds: [],
+      notes: [],
       bonuses: { armorClass: 1 },
       worksCarried: true,
     });

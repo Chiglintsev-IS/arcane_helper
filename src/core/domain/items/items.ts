@@ -5,16 +5,20 @@ import {
   piecesForPortions,
   portionsFromPieces,
   unrevealedNumbers,
-  withObservation,
   withPortionSize,
   withRevealedProperty,
   withoutProperty,
-  withRewrittenObservation,
-  withoutObservation,
 } from "./ingredient";
-import type { IngredientAlchemy, Observation, RevealedProperty } from "./ingredient";
-import { alignedItemDefinition, assertItemDefinition, ingredient, nameTakenRefusal } from "./schema";
-import type { ItemDefinition } from "./schema";
+import type { IngredientAlchemy, RevealedProperty } from "./ingredient";
+import {
+  alignedItemDefinition,
+  ingredient,
+  itemDefinitionOf,
+  nameTakenRefusal,
+  noteMissingRefusal,
+  noteTakenRefusal,
+} from "./schema";
+import type { ItemDefinition, ItemDraft, ItemNote } from "./schema";
 
 type ItemsState = { itemDefinitions: readonly ItemDefinition[] };
 
@@ -47,10 +51,9 @@ export class Items {
     return nameRu.trim().toLowerCase().replaceAll(" ", "-");
   }
 
-  addDefinition(item: Omit<ItemDefinition, "id"> & { id?: string }): Items {
+  addDefinition(item: Omit<ItemDraft, "id"> & { id?: string }): Items {
     const id = item.id ?? Items.idFromName(item.nameRu);
-    const withId: ItemDefinition = { ...item, id };
-    assertItemDefinition(withId);
+    const withId = itemDefinitionOf({ ...item, id });
     const found = this.find(id);
     if (found === undefined) return this.with([...this.data, withId]);
 
@@ -60,18 +63,17 @@ export class Items {
   }
 
   /**
-   * Правка заменяет объявленное: название, признаки, цену, заметку, прибавки, фокусировку. Алхимию
-   * правка не называет, и потому не теряет — её ведут свои операции, а снимает только утрата
-   * признака ингредиента.
+   * Правка заменяет объявленное: название, признаки, цену, прибавки, фокусировку. Алхимию и заметки
+   * правка не называет, и потому не теряет — их ведут свои операции, а алхимию снимает только
+   * утрата признака ингредиента.
    */
-  replaceDefinition(item: ItemDefinition): Items {
-    const kept = this.find(item.id)?.alchemy;
+  replaceDefinition(item: ItemDraft): Items {
+    const found = this.located(item.id);
+    const kept = found.alchemy;
+    const named = { ...item, notes: found.notes };
     const stored = alignedItemDefinition(
-      item.alchemy === undefined && kept !== undefined ? { ...item, alchemy: kept } : item,
+      named.alchemy === undefined && kept !== undefined ? { ...named, alchemy: kept } : named,
     );
-    if (!this.data.some((existing) => existing.id === item.id)) {
-      throw new DomainError(`Вещи «${item.id}» нет среди заведённых`);
-    }
     const sameName = Items.idFromName(stored.nameRu);
     if (
       this.data.some(
@@ -139,24 +141,48 @@ export class Items {
     return this.replacingAlchemy(id, { ...this.alchemyOf(id), propertiesExhausted });
   }
 
-  noteObservation(id: string, observation: Observation): Items {
-    return this.replacingAlchemy(id, withObservation(this.alchemyOf(id), observation));
+  private located(id: string): ItemDefinition {
+    const found = this.find(id);
+    if (found === undefined) throw new DomainError(`Вещи «${id}» нет среди заведённых`);
+    return found;
   }
 
-  rewriteObservation(id: string, observationId: string, textRu: string): Items {
-    const found = this.locatedIngredient(id);
-    return this.replacingAlchemy(
-      id,
-      withRewrittenObservation(found.nameRu, this.alchemyOf(id), observationId, textRu),
+  private replacingNotes(item: ItemDefinition, notes: readonly ItemNote[]): Items {
+    return this.with(
+      this.data.map((existing) => (existing.id === item.id ? { ...existing, notes } : existing)),
     );
   }
 
-  dropObservation(id: string, observationId: string): Items {
-    const found = this.locatedIngredient(id);
-    return this.replacingAlchemy(
-      id,
-      withoutObservation(found.nameRu, this.alchemyOf(id), observationId),
+  addNote(id: string, note: ItemNote): Items {
+    const found = this.located(id);
+    if (found.notes.some((written) => written.id === note.id)) {
+      throw new DomainError(noteTakenRefusal(note.id));
+    }
+    return this.replacingNotes(found, [...found.notes, note]);
+  }
+
+  rewriteNote(id: string, noteId: string, textRu: string): Items {
+    const found = this.locatedNote(id, noteId);
+    return this.replacingNotes(
+      found,
+      found.notes.map((written) => (written.id === noteId ? { ...written, textRu } : written)),
     );
+  }
+
+  dropNote(id: string, noteId: string): Items {
+    const found = this.locatedNote(id, noteId);
+    return this.replacingNotes(
+      found,
+      found.notes.filter((written) => written.id !== noteId),
+    );
+  }
+
+  private locatedNote(id: string, noteId: string): ItemDefinition {
+    const found = this.located(id);
+    if (!found.notes.some((written) => written.id === noteId)) {
+      throw new DomainError(noteMissingRefusal(found.nameRu, noteId));
+    }
+    return found;
   }
 
   removeDefinition(id: string): Items {

@@ -12,6 +12,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import {
   addItem,
+  addItemNote,
   adjustBagCount,
   adjustWornCount,
   editItem,
@@ -62,12 +63,26 @@ describe("правка снаряжения", () => {
 
   it("правка вещи меняет её саму и обратима через лог (FR-235)", () => {
     const carried = addItem(session(), ring, occasion);
-    const noted = editItem(carried, { id: RING_ID, nameRu: ring.nameRu, kinds: ["gear"], note: "фамильное" }, occasion);
+    const renamed = editItem(
+      carried,
+      { id: RING_ID, nameRu: "Кольцо бабушки", kinds: ["gear"] },
+      occasion,
+    );
 
-    const item = Items.of(noted.character).find(RING_ID);
-    expect(item?.note).toBe("фамильное");
-    expect(noted.log[1]?.summaryRu).toBe("Правка вещи: Кольцо защиты");
-    expect(Items.of(undoLast(noted).character).find(RING_ID)?.note).toBeUndefined();
+    expect(Items.of(renamed.character).find(RING_ID)?.nameRu).toBe("Кольцо бабушки");
+    expect(renamed.log[1]?.summaryRu).toBe("Правка вещи: Кольцо бабушки");
+    expect(Items.of(undoLast(renamed).character).find(RING_ID)?.nameRu).toBe(ring.nameRu);
+  });
+
+  it("заметка вещи переживает правку самой вещи", () => {
+    const carried = addItemNote(addItem(session(), ring, occasion), RING_ID, "фамильное", occasion);
+    const renamed = editItem(
+      carried,
+      { id: RING_ID, nameRu: "Кольцо бабушки", kinds: ["gear"] },
+      occasion,
+    );
+
+    expect(Items.of(renamed.character).find(RING_ID)?.notes[0]?.textRu).toBe("фамильное");
   });
 
   it("надетая вещь двигает КД и спасброски, но не характеристики", () => {

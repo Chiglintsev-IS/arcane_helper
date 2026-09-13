@@ -14,7 +14,7 @@ export function itemMeta(
   facts: { valueRu: string; labelsRu: string[] }[];
   marksRu: string[];
   neededFor: string | undefined;
-  note: string | undefined;
+  notes: readonly { id: string; textRu: string }[];
 } {
   return {
     marksRu: [
@@ -38,6 +38,6 @@ export function itemMeta(
           ]),
     ],
     neededFor: neededForLine(item.neededForRu),
-    note: item.note,
+    notes: item.notes,
   };
 }

@@ -173,6 +173,13 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
           onAdjustBagCount={(delta) => adjustBagCount(openedItem.id, delta)}
           onSetBagCount={(count) => setBagCount(openedItem.id, count)}
           onAdjustWornCount={(delta) => adjustWornCount(openedItem.id, delta)}
+          onAddNote={(textRu) => void execute({ kind: "add_item_note", itemId: openedItem.id, textRu })}
+          onEditNote={(noteId, textRu) =>
+            void execute({ kind: "edit_item_note", itemId: openedItem.id, noteId, textRu })
+          }
+          onRemoveNote={(noteId) =>
+            void execute({ kind: "remove_item_note", itemId: openedItem.id, noteId })
+          }
           onOpenProperties={() => {
             setRefusal(null);
             setPropertiesOf(openedItem.id);

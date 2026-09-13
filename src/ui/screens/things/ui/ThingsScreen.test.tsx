@@ -139,8 +139,8 @@ describe("«Вещи»", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
-    const herb = "Гольпера Большая";
-    const alchemyOf = () => itemOf(stores, "гольпера-большая")?.alchemicalProperties ?? [];
+    const herb = "Частичка плода большой гальперы";
+    const alchemyOf = () => itemOf(stores, "частичка-плода-большой-гальперы")?.alchemicalProperties ?? [];
 
     expect(alchemyOf()).toHaveLength(2);
 
@@ -148,7 +148,7 @@ describe("«Вещи»", () => {
     await user.click(screen.getByRole("button", { name: "Раскрыть и править свойства" }));
 
     const sheet = within(screen.getByRole("dialog", { name: `Свойства: ${herb}` }));
-    await user.click(sheet.getByRole("button", { name: /^Убрать: Усиление выносливости/ }));
+    await user.click(sheet.getByRole("button", { name: "Убрать: Усиление характеристики (Выносливость)" }));
 
     expect(alchemyOf().map((property) => property.number)).toEqual([1]);
   });
@@ -157,10 +157,10 @@ describe("«Вещи»", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
-    await user.click(screen.getByRole("button", { name: "Правка: Гольпера Большая" }));
+    await user.click(screen.getByRole("button", { name: "Правка: Частичка плода большой гальперы" }));
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
-    expect(itemOf(stores, "гольпера-большая")?.alchemicalProperties).toHaveLength(2);
+    expect(itemOf(stores, "частичка-плода-большой-гальперы")?.alchemicalProperties).toHaveLength(2);
   });
 
   it("кончившийся расходник уходит из рюкзака, оставаясь среди всех вещей", async () => {

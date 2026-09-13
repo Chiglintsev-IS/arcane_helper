@@ -34,7 +34,7 @@ describe("вторая строка вещи", () => {
     expect(itemMeta(wornOf("cloak-of-protection"), stats)).toEqual({
       facts: [{ valueRu: "+1", labelsRu: ["Класс Доспеха", "Все спасброски"] }],
       marksRu: [],
-      note: undefined,
+      notes: [],
     });
   });
 
@@ -44,19 +44,20 @@ describe("вторая строка вещи", () => {
         viewOf({
           id: "healing-potion",
           nameRu: "Зелье лечения",
+          notes: [],
           kinds: ["consumable"],
           price: { amount: 50, currency: "gold" },
         }),
         stats,
       ),
-    ).toEqual({ facts: [{ valueRu: "50", labelsRu: ["зм"] }], marksRu: [], note: undefined });
+    ).toEqual({ facts: [{ valueRu: "50", labelsRu: ["зм"] }], marksRu: [], notes: [] });
     expect(
       itemMeta(
         viewOf({
           id: "ring",
           nameRu: "Кольцо",
           kinds: ["gear"],
-          note: "фамильное",
+          notes: [{ id: "one", textRu: "фамильное" }],
           price: { amount: 3500, currency: "gold" },
           bonuses: { armorClass: 1, "save:constitution": 1 },
         }),
@@ -68,13 +69,14 @@ describe("вторая строка вещи", () => {
         { valueRu: "3500", labelsRu: ["зм"] },
       ],
       marksRu: [],
-      note: "фамильное",
+      notes: [{ id: "one", textRu: "фамильное" }],
     });
     expect(
       itemMeta(
         viewOf({
           id: "staff",
           nameRu: "Посох",
+          notes: [],
           kinds: ["gear"],
           bonuses: { armorClass: 1, spellSaveDc: 2, spellAttackModifier: 2 },
         }),
@@ -86,12 +88,12 @@ describe("вторая строка вещи", () => {
         { valueRu: "+2", labelsRu: ["Сложность спасброска врага", "Попадание заклинанием"] },
       ],
       marksRu: [],
-      note: undefined,
+      notes: [],
     });
-    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kinds: [] }), stats)).toEqual({
+    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kinds: [], notes: [] }), stats)).toEqual({
       facts: [],
       marksRu: [],
-      note: undefined,
+      notes: [],
     });
   });
 
@@ -99,6 +101,7 @@ describe("вторая строка вещи", () => {
     const stone = viewOf({
       id: "stone",
       nameRu: "Камень удачи",
+      notes: [],
       kinds: [],
       bonuses: { initiative: 1 },
       worksCarried: true,

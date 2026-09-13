@@ -17,6 +17,9 @@ type Handlers = {
   onAdjustWornCount?: (delta: number) => void;
   onRemove?: () => void;
   onOpenProperties?: () => void;
+  onAddNote?: (textRu: string) => void;
+  onEditNote?: (noteId: string, textRu: string) => void;
+  onRemoveNote?: (noteId: string) => void;
 };
 
 function itemOf(item: Partial<ItemView> & Pick<ItemView, "id" | "nameRu">): ItemView {
@@ -28,7 +31,8 @@ function itemOf(item: Partial<ItemView> & Pick<ItemView, "id" | "nameRu">): Item
     worksCarried: false,
     spellcastingFocus: false,
     alchemicalProperties: [],
-  neededForRu: [],
+    notes: [],
+    neededForRu: [],
     bonuses: [],
     bonusFacts: [],
     ...item,
@@ -47,6 +51,9 @@ function open(item: ItemView, handlers: Handlers = {}) {
       onAdjustWornCount={handlers.onAdjustWornCount ?? (() => {})}
       onRemove={handlers.onRemove ?? (() => {})}
       onOpenProperties={handlers.onOpenProperties ?? (() => {})}
+      onAddNote={handlers.onAddNote ?? (() => {})}
+      onEditNote={handlers.onEditNote ?? (() => {})}
+      onRemoveNote={handlers.onRemoveNote ?? (() => {})}
       onCancel={() => {}}
     />,
   );
@@ -112,7 +119,6 @@ describe("шторка вещи", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Расходник" }));
     await userEvent.click(screen.getByRole("button", { name: "Ингредиент" }));
-    await userEvent.type(screen.getByLabelText("Заметка"), "3 уровень, КС 15");
     await userEvent.type(screen.getByLabelText("Цена"), "150");
     await userEvent.click(screen.getByRole("radio", { name: "Монета: зм" }));
     await userEvent.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -122,9 +128,19 @@ describe("шторка вещи", () => {
       nameRu: "Свиток огненного шара",
       kinds: ["consumable", "ingredient"],
       price: { amount: 150, currency: "gold" },
-      note: "3 уровень, КС 15",
       bonuses: {},
     });
+  });
+
+  it("заметка вещи пишется своей командой, «Сохранить» её не ждёт", async () => {
+    const onAddNote = vi.fn();
+    const onSave = vi.fn();
+    open(scroll, { onSave, onAddNote });
+
+    await userEvent.type(screen.getByLabelText("Заметка"), "3 уровень, КС 15{Enter}");
+
+    expect(onAddNote).toHaveBeenCalledWith("3 уровень, КС 15");
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it("снятый признак снимается второй раз нажатием", async () => {

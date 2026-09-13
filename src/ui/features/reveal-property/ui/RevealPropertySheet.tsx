@@ -14,9 +14,9 @@ import {
 } from "@/ui/shared/lib/alchemyLabels";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { usePreview } from "@/ui/shared/model/usePreview";
-import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
-import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
+import { NoteList } from "@/ui/shared/ui/NoteList";
 import { RULE_BETWEEN, RULE_BLOCK } from "@/ui/shared/ui/rule";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
@@ -103,93 +103,8 @@ function ResearchCost({ plan }: { plan: NonNullable<PreviewOf<"research_preview"
   );
 }
 
-const OBSERVATIONS_TITLE = "Наблюдения";
-
-const OBSERVATIONS_HINT =
+const NOTES_HINT =
   "Слова стола, которых свойством не записать: в совпадения, сложность и партию они не входят.";
-
-const OBSERVATION_FIELD = "Наблюдение";
-
-const OBSERVATIONS_EMPTY = "Ничего не записано словами";
-
-/**
- * Сказанное столом о виде: короткими записями, каждая правится и убирается отдельно. Одним сплошным
- * текстом это не держат — заметки приходят по одной и живут поодиночке.
- */
-function Observations({
-  observations,
-  onNote,
-  onRewrite,
-  onDrop,
-}: {
-  observations: IngredientKnowledgeView["observations"];
-  onNote: (textRu: string) => void;
-  onRewrite: (observationId: string, textRu: string) => void;
-  onDrop: (observationId: string) => void;
-}) {
-  const [opened, setOpened] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-
-  const open = (id: string, textRu: string): void => {
-    setOpened(id);
-    setDraft(textRu);
-  };
-
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs text-ink-quiet">{OBSERVATIONS_TITLE}</span>
-
-      <p className="text-xs leading-snug text-ink-quiet">{OBSERVATIONS_HINT}</p>
-
-      {observations.length === 0 ? (
-        <p className="text-xs text-ink-quiet">{OBSERVATIONS_EMPTY}</p>
-      ) : (
-        <ul aria-label={OBSERVATIONS_TITLE} className={`flex flex-col ${RULE_BETWEEN}`}>
-          {observations.map((seen) =>
-            seen.id === opened ? (
-              <li key={seen.id} className="flex flex-col gap-1 py-1.5">
-                <GrowingField
-                  labelRu={OBSERVATION_FIELD}
-                  value={draft}
-                  autoFocus
-                  onChange={setDraft}
-                  onSubmit={(text) => {
-                    setOpened(null);
-                    onRewrite(seen.id, text);
-                  }}
-                  onCancel={() => setOpened(null)}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpened(null);
-                    onDrop(seen.id);
-                  }}
-                  className={`min-h-11 px-3 text-xs font-medium text-reaction ${SURFACE_CONTROL}`}
-                >
-                  {BUTTON_LABELS.remove}
-                </button>
-              </li>
-            ) : (
-              <li key={seen.id} className="py-1.5">
-                <button
-                  type="button"
-                  aria-label={editName(seen.textRu)}
-                  onClick={() => open(seen.id, seen.textRu)}
-                  className="w-full text-left text-sm leading-snug"
-                >
-                  {seen.textRu}
-                </button>
-              </li>
-            ),
-          )}
-        </ul>
-      )}
-
-      <QuickAddField labelRu={OBSERVATION_FIELD} onAdd={onNote} />
-    </div>
-  );
-}
 
 /**
  * Шторка ведёт запись вещи целиком, и обе двери к ней — «Алхимия» и «Вещи» — приносят только свой
@@ -214,12 +129,11 @@ export function RevealPropertySheet({
     onSend({ kind: "drop_property", itemId, number });
   const onPortionSize = (pieces: number): void =>
     onSend({ kind: "set_portion_size", itemId, pieces });
-  const onNoteObservation = (textRu: string): void =>
-    onSend({ kind: "note_observation", itemId, textRu });
-  const onRewriteObservation = (observationId: string, textRu: string): void =>
-    onSend({ kind: "rewrite_observation", itemId, observationId, textRu });
-  const onDropObservation = (observationId: string): void =>
-    onSend({ kind: "drop_observation", itemId, observationId });
+  const onAddNote = (textRu: string): void => onSend({ kind: "add_item_note", itemId, textRu });
+  const onEditNote = (noteId: string, textRu: string): void =>
+    onSend({ kind: "edit_item_note", itemId, noteId, textRu });
+  const onRemoveNote = (noteId: string): void =>
+    onSend({ kind: "remove_item_note", itemId, noteId });
   const [propertyRu, setPropertyRu] = useState("");
   const [chosenNumber, setChosenNumber] = useState<number | null>(null);
   const number = chosenNumber ?? ingredient.researchNumbers[0] ?? null;
@@ -322,11 +236,12 @@ export function RevealPropertySheet({
         {PROPERTIES_EXHAUSTED}
       </button>
 
-      <Observations
-        observations={ingredient.observations}
-        onNote={onNoteObservation}
-        onRewrite={onRewriteObservation}
-        onDrop={onDropObservation}
+      <NoteList
+        notes={ingredient.notes}
+        hintRu={NOTES_HINT}
+        onAdd={onAddNote}
+        onRewrite={onEditNote}
+        onDrop={onRemoveNote}
       />
 
       {refusalRu === null ? null : (

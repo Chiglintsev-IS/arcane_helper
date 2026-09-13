@@ -221,6 +221,7 @@ describe("приведение состояния версии 1", () => {
       id: "cloak",
       nameRu: "Плащ",
       kinds: ["gear"],
+      notes: [],
       bonuses: { armorClass: 1 },
     });
   });
@@ -240,7 +241,12 @@ describe("приведение состояния версии 1", () => {
     };
     const state = characterStateSchema.parse(migrateCharacterState(legacy));
 
-    expect(state.itemDefinitions[0]).toEqual({ id: "cloak", nameRu: "Плащ", kinds: ["gear"] });
+    expect(state.itemDefinitions[0]).toEqual({
+      id: "cloak",
+      nameRu: "Плащ",
+      kinds: ["gear"],
+      notes: [],
+    });
   });
 
   it("вещь в снаряжении прежней формы приводится до разведения по местам", () => {
@@ -952,7 +958,7 @@ describe("знание об ингредиенте переезжает к ве�
 
     expect(herb?.kinds).toContain("ingredient");
     expect(herb?.alchemy?.properties).toEqual([{ number: 1, nameRu: "Лечение здоровья" }]);
-    expect(herb?.alchemy?.observations).toEqual([{ id: "one", textRu: "Пахнет тиной" }]);
+    expect(herb?.notes).toEqual([{ id: "one", textRu: "Пахнет тиной" }]);
     expect(herb?.alchemy?.propertiesExhausted).toBe(true);
     expect(state.itemDefinitions.filter((item) => item.nameRu === "")).toEqual([]);
   });
@@ -992,8 +998,21 @@ describe("знание об ингредиенте переезжает к ве�
     const herb = state.itemDefinitions.find((item) => item.id === "лунная-трава");
 
     expect(herb?.kinds).toEqual(["consumable", "ingredient"]);
-    expect(herb?.note).toBe("склянка");
+    expect(herb?.notes[0]?.textRu).toBe("склянка");
     expect(herb?.alchemy?.properties).toHaveLength(1);
+  });
+
+  it("заметка вещи без алхимии переезжает записью списка", () => {
+    const state = characterStateSchema.parse(
+      migrateCharacterState({
+        ...modern(),
+        itemDefinitions: [{ id: "плащ", nameRu: "Плащ", kinds: ["gear"], note: "подарен" }],
+      }),
+    );
+    const cloak = state.itemDefinitions.find((item) => item.id === "плащ");
+
+    expect(cloak?.notes).toEqual([{ id: "плащ-note", textRu: "подарен" }]);
+    expect(cloak?.alchemy).toBeUndefined();
   });
 
   it("запись без раскрытого и без наблюдений переезжает пустой, а признак не двоится", () => {
@@ -1009,7 +1028,6 @@ describe("знание об ингредиенте переезжает к ве�
     expect(herb?.kinds).toEqual(["ingredient"]);
     expect(herb?.alchemy).toEqual({
       properties: [],
-      observations: [],
       propertiesExhausted: false,
       piecesPerPortion: 1,
     });

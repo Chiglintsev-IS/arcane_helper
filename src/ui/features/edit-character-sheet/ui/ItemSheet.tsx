@@ -6,7 +6,7 @@ import type { ChoicesView, ItemView } from "@/contract/views";
 import { currencyAbbr, itemKindLabel, statLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { EditSheetFrame, NumberField, TextField } from "./EditSheetFrame";
-import { GrowingField } from "@/ui/shared/ui/GrowingField";
+import { NoteList } from "@/ui/shared/ui/NoteList";
 import { NOTHING_REVEALED, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { StatPicker } from "./StatPicker";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
@@ -17,7 +17,6 @@ type ItemPatch = {
   nameRu: string;
   kinds: string[];
   price?: { amount: number; currency: string };
-  note?: string;
   bonuses: Record<string, number>;
   worksCarried?: true;
   spellcastingFocus?: true;
@@ -30,8 +29,6 @@ const INGREDIENT = "ingredient";
 const PROPERTIES_LABEL = "Алхимические свойства";
 
 const NAME_LABEL = "Название";
-
-const NOTE_LABEL = "Заметка";
 
 const WANTED_LABEL = "Хочу купить";
 
@@ -148,6 +145,9 @@ export function ItemSheet({
   onAdjustBagCount,
   onSetBagCount,
   onAdjustWornCount,
+  onAddNote,
+  onEditNote,
+  onRemoveNote,
   onRemove,
   onOpenProperties,
   onCancel,
@@ -161,6 +161,9 @@ export function ItemSheet({
   onAdjustBagCount: (delta: number) => void;
   onSetBagCount: (count: number) => void;
   onAdjustWornCount: (delta: number) => void;
+  onAddNote: (textRu: string) => void;
+  onEditNote: (noteId: string, textRu: string) => void;
+  onRemoveNote: (noteId: string) => void;
   onRemove: () => void;
   onOpenProperties: () => void;
   onCancel: () => void;
@@ -171,7 +174,6 @@ export function ItemSheet({
   const [carriedChoice, setCarriedChoice] = useState<boolean | null>(
     item.worksCarried ? true : null,
   );
-  const [note, setNote] = useState(item.note ?? "");
   const [priceAmount, setPriceAmount] = useState(
     item.price === undefined ? "" : String(item.price.amount),
   );
@@ -227,7 +229,6 @@ export function ItemSheet({
                 nameRu,
                 kinds: [...kinds],
                 ...(amount === undefined ? {} : { price: { amount, currency } }),
-                ...(note.trim() === "" ? {} : { note: note.trim() }),
                 bonuses: numbers,
                 ...(worksCarried && bonuses.length > 0 ? { worksCarried: true } : {}),
                 ...(wearable && focus ? { spellcastingFocus: focus } : {}),
@@ -370,15 +371,12 @@ export function ItemSheet({
           </div>
         )}
 
-        <div className="flex flex-col gap-1">
-          <span className="text-sm text-ink-quiet">{NOTE_LABEL}</span>
-          <GrowingField
-            labelRu={NOTE_LABEL}
-            value={note}
-            onChange={setNote}
-            onSubmit={setNote}
-          />
-        </div>
+        <NoteList
+          notes={item.notes}
+          onAdd={onAddNote}
+          onRewrite={onEditNote}
+          onDrop={onRemoveNote}
+        />
 
         <NumberField labelRu="Цена" value={priceAmount} onChange={setPriceAmount} min={0} />
         <div role="radiogroup" aria-label="Монета цены" className="flex gap-1">

@@ -89,6 +89,7 @@ describe("разбор", () => {
         {
           id: "bracers",
           nameRu: "Наручи защиты",
+          notes: [],
           kinds: ["gear"] as const,
           bonuses: { armorClass: 4 },
         },

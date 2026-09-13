@@ -26,14 +26,11 @@ import {
 import { castSpell } from "@/core/application/useCases/casting";
 import {
   craftBatch,
-  dropObservation,
   dropProperty,
   markPropertiesExhausted,
   noteIngredient,
-  noteObservation,
   revealProperty,
   setPortionSize,
-  rewriteObservation,
   setWorkshop,
 } from "@/core/application/useCases/crafting";
 import {
@@ -46,11 +43,14 @@ import {
 } from "@/core/application/useCases/effects";
 import {
   addItem,
+  addItemNote,
   adjustBagCount,
   adjustWornCount,
   editItem,
+  editItemNote,
   editMoney,
   removeItem,
+  removeItemNote,
   recordItem,
   setBagCount,
   toggleWanted,
@@ -313,14 +313,12 @@ export function applyCommand(
       return changed(
         dropProperty(session, { itemId: command.itemId, number: command.number }, occasion),
       );
-    case "note_observation":
-      return changed(noteObservation(session, command.itemId, command.textRu, occasion));
-    case "rewrite_observation":
-      return changed(
-        rewriteObservation(session, command.itemId, command.observationId, command.textRu),
-      );
-    case "drop_observation":
-      return changed(dropObservation(session, command.itemId, command.observationId));
+    case "add_item_note":
+      return changed(addItemNote(session, command.itemId, command.textRu, occasion));
+    case "edit_item_note":
+      return changed(editItemNote(session, command.itemId, command.noteId, command.textRu));
+    case "remove_item_note":
+      return changed(removeItemNote(session, command.itemId, command.noteId));
 
     case "set_alchemy_workshop":
       return changed(

@@ -23,7 +23,7 @@ export function ItemRow({
   onOpen: () => void;
   children?: ReactNode;
 }) {
-  const { facts, marksRu, neededFor, note } = itemMeta(item, stats);
+  const { facts, marksRu, neededFor, notes } = itemMeta(item, stats);
 
   return (
     <li className="flex flex-col py-1">
@@ -37,7 +37,7 @@ export function ItemRow({
         {facts.length === 0 &&
         marksRu.length === 0 &&
         neededFor === undefined &&
-        note === undefined ? null : (
+        notes.length === 0 ? null : (
           <span className="mt-1 flex flex-wrap items-center gap-1">
             {facts.map((fact) => (
               <span
@@ -70,11 +70,11 @@ export function ItemRow({
                 {neededFor}
               </span>
             )}
-            {note === undefined ? null : (
-              <span className="min-w-0 text-xs leading-snug text-ink-quiet">
-                {note}
+            {notes.map((note) => (
+              <span key={note.id} className="min-w-0 text-xs leading-snug text-ink-quiet">
+                {note.textRu}
               </span>
-            )}
+            ))}
           </span>
         )}
       </button>

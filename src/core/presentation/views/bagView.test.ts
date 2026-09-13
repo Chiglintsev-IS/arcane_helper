@@ -25,7 +25,7 @@ function withStock(definition: ItemDefinition, stock: { bag?: number; worn?: num
   };
 }
 
-const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [] };
+const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [], notes: [] };
 
 function itemOf(character: CharacterState, id: string) {
   const found = toBagView(character, spells).items.find((item) => item.id === id);
@@ -59,7 +59,7 @@ describe("вещи", () => {
       id: "ring",
       nameRu: "Кольцо",
       kinds: ["gear"],
-      note: "фамильное",
+      notes: [{ id: "one", textRu: "фамильное" }],
       price: { amount: 50, currency: "gold" },
       bonuses: { armorClass: 1 },
     };
@@ -67,7 +67,7 @@ describe("вещи", () => {
     expect(itemOf(withStock(ring), "ring")).toMatchObject({
       price: { amount: 50, currency: "gold" },
       bonuses: [{ stat: "armorClass", value: 1 }],
-      note: "фамильное",
+      notes: [{ id: "one", textRu: "фамильное" }],
     });
     expect(itemOf(withStock(rope), "rope")).toMatchObject({ bonuses: [] });
   });
@@ -81,7 +81,13 @@ describe("защита", () => {
 
   it("надетая вещь двигает защиту прибавкой, и защита стоит одним числом", () => {
     const armored = withStock(
-      { id: "bracers", nameRu: "Наручи защиты", kinds: ["gear"], bonuses: { armorClass: 2 } },
+      {
+        id: "bracers",
+        nameRu: "Наручи защиты",
+        kinds: ["gear"],
+        notes: [],
+        bonuses: { armorClass: 2 },
+      },
       { worn: 1 },
     );
 
@@ -134,6 +140,7 @@ describe("покупки", () => {
     const stone: ItemDefinition = {
       id: "stone",
       nameRu: "Камень удачи",
+      notes: [],
       kinds: [],
       bonuses: { initiative: 1 },
       worksCarried: true,

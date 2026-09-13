@@ -56,7 +56,7 @@ const staff: ItemDefinition = {
   id: "staff-of-power",
   nameRu: "Посох силы",
   kinds: ["gear"],
-  note: "требует настройки",
+  notes: [{ id: "one", textRu: "требует настройки" }],
   bonuses: { spellSaveDc: 2, spellAttackModifier: 2 },
 };
 
@@ -90,6 +90,7 @@ describe("строка вещи", () => {
       viewOf({
         id: "circlet-of-everything",
         nameRu: "Венец всего",
+        notes: [],
         kinds: ["gear"],
         bonuses: {
           armorClass: 1,
@@ -119,14 +120,14 @@ describe("строка вещи", () => {
     const material = ritual === undefined ? undefined : materialOf(ritual.components);
     if (material === undefined) throw new Error("«Волшебный замок» материала не требует");
 
-    renderRow(viewOf(material));
+    renderRow(viewOf({ ...material, notes: [] }));
 
     expect(screen.getByText("Требуется для: Волшебный замок")).toBeDefined();
     expect(factAt("25")).toBe("25 зм");
   });
 
   it("у вещи без подробностей второй строки нет вовсе (FR-250)", () => {
-    renderRow(viewOf({ id: "rope", nameRu: "Верёвка", kinds: [] }));
+    renderRow(viewOf({ id: "rope", nameRu: "Верёвка", kinds: [], notes: [] }));
 
     const open = screen.getByRole("button", { name: "Правка: Верёвка" });
     expect(open.textContent).toBe("Верёвка");

@@ -181,6 +181,38 @@ function migrateAlchemyApparatus(state: unknown): unknown {
   return strongest === undefined ? rest : { ...rest, alchemyApparatus: strongest };
 }
 
+/**
+ * Слова о вещи держали двумя способами: одной заметкой у любой вещи и списком наблюдений при её
+ * алхимии. Теперь это одни заметки вещи: прежняя заметка встаёт первой записью, наблюдения — за ней.
+ */
+function itemWithNotes(item: unknown): unknown {
+  if (item === null || typeof item !== "object") return item;
+  const fields = fieldsOf(item);
+  const alchemy = fields.alchemy === undefined ? undefined : fieldsOf(fields.alchemy);
+  const seen = Array.isArray(alchemy?.observations) ? alchemy.observations : [];
+  const legacy = typeof fields.note === "string" ? [{ id: `${String(fields.id)}-note`, textRu: fields.note }] : [];
+  if (legacy.length === 0 && seen.length === 0) return item;
+
+  const { note: _merged, ...rest } = fields;
+  const { observations: _moved, ...restAlchemy } = alchemy ?? {};
+  return {
+    ...rest,
+    ...(alchemy === undefined ? {} : { alchemy: restAlchemy }),
+    notes: [...legacy, ...seen],
+  };
+}
+
+function migrateItemNotes(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(itemWithNotes);
+  return items.every((item, at) => item === stored[at])
+    ? state
+    : { ...fields, itemDefinitions: items };
+}
+
 function migrateItemCategories(state: unknown): unknown {
   const fields = fieldsOf(state);
   const equipment = fieldsOf(fields.equipment);
@@ -514,6 +546,7 @@ export function migrateUndoPatch(patch: unknown): unknown {
     migrateIngredientKnowledge,
     migrateItemKinds,
     migrateAlchemyApparatus,
+    migrateItemNotes,
     withoutForgottenFields,
   ]);
 }
@@ -538,6 +571,7 @@ export function migrateCharacterState(raw: unknown): unknown {
     migrateIngredientKnowledge,
     migrateItemKinds,
     migrateAlchemyApparatus,
+    migrateItemNotes,
   ]);
 }
 

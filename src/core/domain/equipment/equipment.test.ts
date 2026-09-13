@@ -26,19 +26,21 @@ function armorMethods(brought: readonly SourcedContribution[]) {
 const ring: ItemDefinition = {
   id: "ring",
   nameRu: "Кольцо защиты",
+  notes: [],
   kinds: ["gear"],
   bonuses: { armorClass: 1, "save:wisdom": 1 },
 };
 
-const potion: ItemDefinition = { id: "healing-potion", nameRu: "Зелье лечения", kinds: ["consumable"] };
+const potion: ItemDefinition = { id: "healing-potion", nameRu: "Зелье лечения", kinds: ["consumable"], notes: [] };
 
-const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [] };
+const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [], notes: [] };
 
-const helmet: ItemDefinition = { id: "helmet", nameRu: "Шлем", kinds: ["gear"] };
+const helmet: ItemDefinition = { id: "helmet", nameRu: "Шлем", kinds: ["gear"], notes: [] };
 
 const stone: ItemDefinition = {
   id: "stone",
   nameRu: "Камень удачи",
+  notes: [],
   kinds: [],
   bonuses: { initiative: 1 },
   worksCarried: true,
@@ -47,6 +49,7 @@ const stone: ItemDefinition = {
 const chainmail: ItemDefinition = {
   id: "chainmail",
   nameRu: "Кольчуга",
+  notes: [],
   kinds: ["gear"],
   bonuses: { armorClass: 2 },
 };

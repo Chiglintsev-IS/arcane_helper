@@ -273,10 +273,13 @@ describe("снаряжение", () => {
     const added = run([rope]);
     const id = idOf(added, "Верёвка");
 
-    const edited = run([{ kind: "edit_item", item: { id, nameRu: "Верёвка", kinds: [], note: "в сумке" } }], added);
+    const edited = run(
+      [{ kind: "edit_item", item: { id, nameRu: "Прочная верёвка", kinds: [] } }],
+      added,
+    );
 
-    expect(edited.session.character.itemDefinitions.find((item) => item.id === id)?.note).toBe(
-      "в сумке",
+    expect(edited.session.character.itemDefinitions.find((item) => item.id === id)?.nameRu).toBe(
+      "Прочная верёвка",
     );
   });
 
@@ -548,35 +551,33 @@ describe("ремесло", () => {
     expect(propertiesOf(dropped)).toEqual([{ number: 2, nameRu: "Пробуждение" }]);
   });
 
-  it("наблюдения о виде пишутся, правятся, убираются и в лог не идут", () => {
-    const seen = run([
+  it("заметки о вещи пишутся, правятся, убираются и в лог не идут", () => {
+    const written = run([
       { kind: "note_ingredient", nameRu: MOON_HERB },
-      { kind: "note_observation", itemId: MOON_HERB_ID, textRu: "Пахнет тиной" },
-      { kind: "note_observation", itemId: MOON_HERB_ID, textRu: "Растёт у брода" },
+      { kind: "add_item_note", itemId: MOON_HERB_ID, textRu: "Пахнет тиной" },
+      { kind: "add_item_note", itemId: MOON_HERB_ID, textRu: "Растёт у брода" },
     ]);
-    const observationsOf = (live: LiveSession) =>
-      Character.of(live.session.character).items.alchemyOf(MOON_HERB_ID).observations;
+    const notesOf = (live: LiveSession) =>
+      Character.of(live.session.character).items.find(MOON_HERB_ID)?.notes ?? [];
 
-    expect(observationsOf(seen).map((one) => one.textRu)).toEqual([
+    expect(notesOf(written).map((note) => note.textRu)).toEqual([
       "Пахнет тиной",
       "Растёт у брода",
     ]);
-    expect(seen.session.log.at(-1)?.summaryRu).not.toContain("тиной");
+    expect(written.session.log.at(-1)?.summaryRu).not.toContain("тиной");
 
-    const first = observationsOf(seen)[0]!.id;
+    const first = notesOf(written)[0]!.id;
     const fixed = run(
-      [
-        { kind: "rewrite_observation", itemId: MOON_HERB_ID, observationId: first, textRu: "Тиной" },
-      ],
-      seen,
+      [{ kind: "edit_item_note", itemId: MOON_HERB_ID, noteId: first, textRu: "Тиной" }],
+      written,
     );
-    expect(observationsOf(fixed)[0]?.textRu).toBe("Тиной");
+    expect(notesOf(fixed)[0]?.textRu).toBe("Тиной");
 
     const dropped = run(
-      [{ kind: "drop_observation", itemId: MOON_HERB_ID, observationId: first }],
+      [{ kind: "remove_item_note", itemId: MOON_HERB_ID, noteId: first }],
       fixed,
     );
-    expect(observationsOf(dropped).map((one) => one.textRu)).toEqual(["Растёт у брода"]);
+    expect(notesOf(dropped).map((note) => note.textRu)).toEqual(["Растёт у брода"]);
   });
 
   it("мастерская записывается командой и правит пределы работы", () => {

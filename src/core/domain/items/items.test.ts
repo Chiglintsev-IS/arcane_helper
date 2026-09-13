@@ -4,7 +4,7 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 
-const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [] };
+const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [], notes: [] };
 
 describe("вещи", () => {
   it("заводит вещь: id выводится из имени", () => {
@@ -29,7 +29,9 @@ describe("вещи", () => {
   });
 
   it("переименование в занятое имя отклоняется с причиной", () => {
-    const both = Items.of({ itemDefinitions: [rope, { id: "cord", nameRu: "Бечёвка", kinds: [] }] });
+    const both = Items.of({
+      itemDefinitions: [rope, { id: "cord", nameRu: "Бечёвка", kinds: [], notes: [] }],
+    });
 
     expect(() => both.replaceDefinition({ id: "cord", nameRu: "верёвка", kinds: [] })).toThrow(
       DomainError,
@@ -50,7 +52,9 @@ describe("вещи", () => {
   });
 
   it("правка вещи целиком заменяет запись, соседей не трогает", () => {
-    const items = Items.of({ itemDefinitions: [rope, { id: "torch", nameRu: "Факел", kinds: [] }] });
+    const items = Items.of({
+      itemDefinitions: [rope, { id: "torch", nameRu: "Факел", kinds: [], notes: [] }],
+    });
     const renamed = items.replaceDefinition({ ...rope, nameRu: "Прочная верёвка" });
     expect(renamed.find("rope")?.nameRu).toBe("Прочная верёвка");
     expect(renamed.find("torch")?.nameRu).toBe("Факел");
@@ -64,6 +68,7 @@ describe("вещи", () => {
     const armored: ItemDefinition = {
       id: "ring",
       nameRu: "Кольцо защиты",
+      notes: [],
       kinds: ["gear"],
       spellcastingFocus: true,
       bonuses: { armorClass: 1 },
@@ -74,13 +79,16 @@ describe("вещи", () => {
       id: "ring",
       nameRu: "Кольцо защиты",
       kinds: [],
+      notes: [],
       bonuses: { armorClass: 1 },
       worksCarried: true,
     });
   });
 
   it("убирает вещь, соседей не трогает", () => {
-    const items = Items.of({ itemDefinitions: [rope, { id: "torch", nameRu: "Факел", kinds: [] }] });
+    const items = Items.of({
+      itemDefinitions: [rope, { id: "torch", nameRu: "Факел", kinds: [], notes: [] }],
+    });
     const removed = items.removeDefinition("rope");
     expect(removed.find("rope")).toBeUndefined();
     expect(removed.find("torch")).toBeDefined();
@@ -101,8 +109,8 @@ describe("вещи", () => {
 });
 
 describe("алхимия ингредиента у вещи", () => {
-  const herb = { id: "herb", nameRu: "Лунная трава", kinds: ["ingredient"] as const };
-  const rope = { id: "rope", nameRu: "Верёвка", kinds: [] as const };
+  const herb = { id: "herb", nameRu: "Лунная трава", kinds: ["ingredient"] as const, notes: [] };
+  const rope = { id: "rope", nameRu: "Верёвка", kinds: [] as const, notes: [] };
   const bench = (): Items => Items.of({ itemDefinitions: [herb, rope] });
 
   it("свойство раскрывается у вещи и стоит под своим номером", () => {
@@ -134,13 +142,11 @@ describe("алхимия ингредиента у вещи", () => {
       id: "herb",
       nameRu: "Лунная травка",
       kinds: ["ingredient"],
-      note: "склянка",
     });
 
     expect(renamed.alchemyOf("herb").properties).toEqual([
       { number: 1, nameRu: "Лечение здоровья" },
     ]);
-    expect(renamed.find("herb")?.note).toBe("склянка");
   });
 
   it("утрата признака ингредиента уносит алхимию с собой", () => {
@@ -163,28 +169,32 @@ describe("алхимия ингредиента у вещи", () => {
     );
   });
 
-  it("наблюдения живут по одному: пишутся, правятся и убираются по отдельности", () => {
-    const seen = bench()
-      .noteObservation("herb", { id: "one", textRu: "Пахнет тиной" })
-      .noteObservation("herb", { id: "two", textRu: "Растёт у брода" });
+  it("заметки живут по одной: пишутся, правятся и убираются по отдельности", () => {
+    const written = bench()
+      .addNote("herb", { id: "one", textRu: "Пахнет тиной" })
+      .addNote("herb", { id: "two", textRu: "Растёт у брода" });
 
-    expect(seen.alchemyOf("herb").observations).toHaveLength(2);
+    expect(written.find("herb")?.notes).toHaveLength(2);
 
-    const fixed = seen.rewriteObservation("herb", "one", "Пахнет болотом");
-    expect(fixed.alchemyOf("herb").observations[0]?.textRu).toBe("Пахнет болотом");
+    const fixed = written.rewriteNote("herb", "one", "Пахнет болотом");
+    expect(fixed.find("herb")?.notes[0]?.textRu).toBe("Пахнет болотом");
 
-    const dropped = fixed.dropObservation("herb", "two");
-    expect(dropped.alchemyOf("herb").observations.map((one) => one.id)).toEqual(["one"]);
+    const dropped = fixed.dropNote("herb", "two");
+    expect(dropped.find("herb")?.notes.map((note) => note.id)).toEqual(["one"]);
   });
 
-  it("наблюдение отклоняется по занятой и по чужой идентичности", () => {
-    const seen = bench().noteObservation("herb", { id: "one", textRu: "Тина" });
+  it("заметку пишут и не ингредиенту: слова бывают о всякой вещи", () => {
+    const written = bench().addNote("rope", { id: "one", textRu: "Подгорела с краю" });
 
-    expect(() => seen.noteObservation("herb", { id: "one", textRu: "Ещё" })).toThrow(
-      /уже записано/,
-    );
-    expect(() => seen.dropObservation("herb", "нет-такого")).toThrow(/нет наблюдения/);
-    expect(() => seen.rewriteObservation("herb", "нет-такого", "Ещё")).toThrow(/нет наблюдения/);
+    expect(written.find("rope")?.notes[0]?.textRu).toBe("Подгорела с краю");
+  });
+
+  it("заметка отклоняется по занятой и по чужой идентичности", () => {
+    const written = bench().addNote("herb", { id: "one", textRu: "Тина" });
+
+    expect(() => written.addNote("herb", { id: "one", textRu: "Ещё" })).toThrow(/уже записана/);
+    expect(() => written.dropNote("herb", "нет-такой")).toThrow(/нет заметки/);
+    expect(() => written.rewriteNote("herb", "нет-такой", "Ещё")).toThrow(/нет заметки/);
   });
 
   it("алхимии не спрашивают ни у незаведённой вещи, ни у той, что не ингредиент", () => {

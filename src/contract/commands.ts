@@ -84,9 +84,9 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("drop_property", { itemId: word, number: numeric }),
   command("set_portion_size", { itemId: word, pieces: numeric }),
 
-  command("note_observation", { itemId: word, textRu: word }),
-  command("rewrite_observation", { itemId: word, observationId: word, textRu: word }),
-  command("drop_observation", { itemId: word, observationId: word }),
+  command("add_item_note", { itemId: word, textRu: word }),
+  command("edit_item_note", { itemId: word, noteId: word, textRu: word }),
+  command("remove_item_note", { itemId: word, noteId: word }),
 
   command("set_alchemy_workshop", { apparatus: word.optional() }),
 

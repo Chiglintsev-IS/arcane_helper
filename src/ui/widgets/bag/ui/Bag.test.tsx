@@ -55,6 +55,7 @@ function withStock(
 const potion: ItemDefinition = {
   id: "healing-potion",
   nameRu: "Зелье лечения",
+  notes: [],
   kinds: ["consumable"],
   price: { amount: 50, currency: "gold" },
 };
@@ -62,11 +63,12 @@ const potion: ItemDefinition = {
 const ring: ItemDefinition = {
   id: "ring",
   nameRu: "Кольцо защиты",
+  notes: [],
   kinds: ["gear", "ingredient"],
   bonuses: { armorClass: 1 },
 };
 
-const shard: ItemDefinition = { id: "shard", nameRu: "Черепок", kinds: [] };
+const shard: ItemDefinition = { id: "shard", nameRu: "Черепок", kinds: [], notes: [] };
 
 function shownNames(): string[] {
   return screen

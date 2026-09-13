@@ -40,7 +40,7 @@ describe("проекция знания об ингредиентах", () => {
           { number: 1, nameRu: "Лечение здоровья" },
           { number: 3, nameRu: "Взрыв" },
         ],
-        observations: [],
+        notes: [],
         propertiesExhausted: false,
       },
     ]);
@@ -62,7 +62,7 @@ describe("проекция знания об ингредиентах", () => {
         shortageRu: "В сумке 0, столько не потратить",
         researchNumbers: [1, 2, 3, 4],
         properties: [],
-        observations: [],
+        notes: [],
         propertiesExhausted: false,
       },
     ]);
@@ -78,13 +78,13 @@ describe("проекция знания об ингредиентах", () => {
       Character.of(seen)
         .withItems(
           Character.of(seen)
-            .items.noteObservation(rootId, { id: "one", textRu: "Пахнет тиной" })
-            .noteObservation(rootId, { id: "two", textRu: "Мастер сказал: не варить" }),
+            .items.addNote(rootId, { id: "one", textRu: "Пахнет тиной" })
+            .addNote(rootId, { id: "two", textRu: "Мастер сказал: не варить" }),
         )
         .toState(),
     );
 
-    expect(noted.ingredients[0]?.observations).toEqual([
+    expect(noted.ingredients[0]?.notes).toEqual([
       { id: "one", textRu: "Пахнет тиной" },
       { id: "two", textRu: "Мастер сказал: не варить" },
     ]);

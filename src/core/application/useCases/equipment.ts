@@ -1,11 +1,11 @@
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import { Items } from "@/core/domain/items/items";
-import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
+import type { ItemDefinition, ItemDraft, ItemKind } from "@/core/domain/items/schema";
 import type { Money } from "@/core/domain/equipment/schema";
 import { CURRENCIES } from "@/core/domain/shared/schema";
 import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
-import { commit, type Occasion, type Session } from "@/core/application/session";
+import { commit, withoutRecord, type Occasion, type Session } from "@/core/application/session";
 
 function applied(
   session: Session,
@@ -37,7 +37,7 @@ export function addItem(
   );
 }
 
-export function editItem(session: Session, item: ItemDefinition, occasion: Occasion): Session {
+export function editItem(session: Session, item: ItemDraft, occasion: Occasion): Session {
   return applied(
     session,
     (root) => root.withItems(root.items.replaceDefinition(item)),
@@ -127,6 +127,34 @@ export function adjustWornCount(session: Session, id: string, delta: number, occ
     `${verb}: ${item?.nameRu ?? id}`,
     occasion,
   );
+}
+
+export function addItemNote(
+  session: Session,
+  itemId: string,
+  textRu: string,
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  return withoutRecord(
+    session,
+    root.withItems(root.items.addNote(itemId, { id: occasion.nextId(), textRu })),
+  );
+}
+
+export function editItemNote(
+  session: Session,
+  itemId: string,
+  id: string,
+  textRu: string,
+): Session {
+  const root = Character.of(session.character);
+  return withoutRecord(session, root.withItems(root.items.rewriteNote(itemId, id, textRu)));
+}
+
+export function removeItemNote(session: Session, itemId: string, id: string): Session {
+  const root = Character.of(session.character);
+  return withoutRecord(session, root.withItems(root.items.dropNote(itemId, id)));
 }
 
 export function editMoney(session: Session, money: Money, occasion: Occasion): Session {

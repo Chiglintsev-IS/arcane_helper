@@ -36,7 +36,7 @@ function itemView(
       targets: fact.targets.map((target) => ({ kind: target.kind, id: target.id })),
     })),
     spellcastingFocus: item.spellcastingFocus === true,
-    ...(item.note === undefined ? {} : { note: item.note }),
+    notes: item.notes.map((note) => ({ ...note })),
     alchemicalProperties: (item.alchemy?.properties ?? []).map((property) => ({ ...property })),
     neededForRu: need?.spellNamesRu ?? [],
   };

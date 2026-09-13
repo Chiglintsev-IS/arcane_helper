@@ -130,7 +130,7 @@ const itemViewSchema = z.object({
     }),
   ),
   spellcastingFocus: z.boolean(),
-  note: text.optional(),
+  notes: z.array(z.object({ id: word, textRu: word })),
   alchemicalProperties: z.array(revealedPropertyViewSchema),
   neededForRu: z.array(word),
 });
@@ -154,7 +154,7 @@ const ingredientKnowledgeViewSchema = z.object({
   shortageRu: word.nullable(),
   researchNumbers: z.array(whole),
   properties: z.array(revealedPropertyViewSchema),
-  observations: z.array(z.object({ id: word, textRu: word })),
+  notes: z.array(z.object({ id: word, textRu: word })),
   propertiesExhausted: z.boolean(),
 });
 

@@ -30,20 +30,6 @@ function portionSizeRefusal(pieces: number): string {
   return `Штук в порции — целое от одного, получено: ${pieces}`;
 }
 
-function observationTakenRefusal(id: string): string {
-  return `наблюдение «${id}» у этого вида уже записано`;
-}
-
-function observationMissingRefusal(nameRu: string, id: string): string {
-  return `у вида «${nameRu}» нет наблюдения «${id}»`;
-}
-
-/** Сказанное столом о виде, чего свойства выразить не могут: слова, а не механика. */
-const observationFields = z.object({
-  id: nonEmpty,
-  textRu: nonEmpty,
-});
-
 /** Свойство называет стол своими словами: перечня, по которому его сверять, у ремесла нет. */
 const revealedPropertyFields = z.object({
   number: z.number().int().min(1).max(DEEPEST_PROPERTY_NUMBER),
@@ -52,7 +38,6 @@ const revealedPropertyFields = z.object({
 
 type AlchemyFields = {
   properties: readonly z.infer<typeof revealedPropertyFields>[];
-  observations: readonly z.infer<typeof observationFields>[];
   propertiesExhausted: boolean;
   piecesPerPortion: number;
 };
@@ -67,7 +52,6 @@ function inNumberOrder(alchemy: AlchemyFields): AlchemyFields {
 export const ingredientAlchemySchema = z
   .object({
     properties: z.array(revealedPropertyFields).default([]),
-    observations: z.array(observationFields).default([]),
     propertiesExhausted: z.boolean().default(false),
     piecesPerPortion: z
       .number()
@@ -99,7 +83,6 @@ export const ingredientAlchemySchema = z
     }
   });
 
-export type Observation = DeepReadonly<z.infer<typeof observationFields>>;
 export type RevealedProperty = DeepReadonly<z.infer<typeof revealedPropertyFields>>;
 export type IngredientAlchemy = DeepReadonly<z.infer<typeof ingredientAlchemySchema>>;
 
@@ -109,7 +92,6 @@ export function revealedPropertyOf(value: unknown): RevealedProperty {
 
 export const NO_ALCHEMY: IngredientAlchemy = {
   properties: [],
-  observations: [],
   propertiesExhausted: false,
   piecesPerPortion: SMALLEST_PORTION_PIECES,
 };
@@ -158,44 +140,4 @@ export function withoutProperty(
     ...alchemy,
     properties: alchemy.properties.filter((property) => property.number !== number),
   };
-}
-
-export function withObservation(
-  alchemy: IngredientAlchemy,
-  observation: Observation,
-): IngredientAlchemy {
-  if (alchemy.observations.some((seen) => seen.id === observation.id)) {
-    throw new DomainError(observationTakenRefusal(observation.id));
-  }
-  return { ...alchemy, observations: [...alchemy.observations, observation] };
-}
-
-function locatedObservation(nameRu: string, alchemy: IngredientAlchemy, id: string): void {
-  if (!alchemy.observations.some((seen) => seen.id === id)) {
-    throw new DomainError(observationMissingRefusal(nameRu, id));
-  }
-}
-
-export function withRewrittenObservation(
-  nameRu: string,
-  alchemy: IngredientAlchemy,
-  id: string,
-  textRu: string,
-): IngredientAlchemy {
-  locatedObservation(nameRu, alchemy, id);
-  return {
-    ...alchemy,
-    observations: alchemy.observations.map((seen) =>
-      seen.id === id ? { ...seen, textRu } : seen,
-    ),
-  };
-}
-
-export function withoutObservation(
-  nameRu: string,
-  alchemy: IngredientAlchemy,
-  id: string,
-): IngredientAlchemy {
-  locatedObservation(nameRu, alchemy, id);
-  return { ...alchemy, observations: alchemy.observations.filter((seen) => seen.id !== id) };
 }
