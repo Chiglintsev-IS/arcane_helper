@@ -95,6 +95,7 @@ export const previewSchema = z.discriminatedUnion("kind", [
         consumablesRu: word.nullable(),
         consumablesGold: whole,
         rawSampleRu: word.nullable(),
+        requirementRu: word.nullable(),
       })
       .nullable(),
     refusalRu: word.optional(),

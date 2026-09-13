@@ -357,7 +357,7 @@ describe("«Алхимия»: запись знания", () => {
     ).toBeDefined();
   });
 
-  it("«Алхимия»: отказ по оснащению называет причину словами владельца", async () => {
+  it("«Алхимия»: без набора цена исследования названа, а рядом сказано, чего набору не хватает", async () => {
     const user = userEvent.setup();
     await renderWithStores(
       <AlchemyScreen />,
@@ -371,10 +371,10 @@ describe("«Алхимия»: запись знания", () => {
     await user.click(cardOf(MOON_HERB));
 
     expect(await screen.findByText(/без набора/)).toBeDefined();
-    expect(screen.queryByText("5")).toBeNull();
+    expect(screen.getByText("5")).toBeDefined();
   });
 
-  it("«Алхимия»: до третьего свойства походным комплектом не добраться", async () => {
+  it("«Алхимия»: походному комплекту третье свойство не по силам, и цена его всё равно названа", async () => {
     const user = userEvent.setup();
     await renderWithStores(
       <AlchemyScreen />,
@@ -386,7 +386,9 @@ describe("«Алхимия»: запись знания", () => {
 
     await user.click(cardOf(MOON_HERB));
 
-    expect(await screen.findByText(/стационарной лаборатории/)).toBeDefined();
+    expect(await screen.findByText(/Нужен стационарный набор/)).toBeDefined();
+    expect(screen.getByText("18")).toBeDefined();
+    expect(screen.getByText(/8 ч · 2 порции при любом исходе/)).toBeDefined();
   });
 
   it("«Алхимия»: отказ владельца стоит в той шторке, где набирали", async () => {

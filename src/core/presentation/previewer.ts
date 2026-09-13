@@ -188,6 +188,7 @@ function researchPreview(live: LiveSession, question: ResearchQuestion): Preview
         consumablesRu: plan.consumablesRu,
         consumablesGold: plan.consumablesGold,
         rawSampleRu: plan.rawSampleRu,
+        requirementRu: plan.requirementRu,
       },
     };
   } catch (error: unknown) {

@@ -325,7 +325,8 @@ describe("цена исследования", () => {
       { number: 1, nameRu: "Лечение здоровья" },
       { number: 2, nameRu: "Временное здоровье" },
     ]);
-    expect(cost(3, deep)?.refusalRu).toContain("стационарной лаборатории");
+    expect(cost(3, deep)?.plan?.difficulty).toBe(18);
+    expect(cost(3, deep)?.plan?.requirementRu).toContain("Нужен стационарный набор");
   });
 });
 

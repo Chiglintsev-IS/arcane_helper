@@ -1,5 +1,5 @@
 import { DomainError } from "@/core/domain/shared/errors";
-import { apparatusOf } from "./apparatus";
+import { apparatusLimits } from "./apparatus";
 import type { Apparatus } from "./apparatus";
 import { consumablesOf, startedHours } from "./consumables";
 
@@ -21,16 +21,12 @@ function unknownNumberRefusal(number: number): string {
   return `Глубже четвёртого свойства исследовать нечего, названо: ${number}`;
 }
 
-function withoutKitRefusal(): string {
-  return "Точного исследования без набора не бывает: импровизированными сосудами свойство не раскрыть";
-}
+const WITHOUT_KIT_RU =
+  "Точного исследования без набора не бывает: импровизированными сосудами свойство не раскрыть";
 
-function laboratoryRefusal(number: number): string {
-  return `Свойство под номером ${number} исследуют только в стационарной лаборатории`;
-}
-
-function tooHardResearchRefusal(difficulty: number, hardest: number): string {
-  return `Сложность исследования ${difficulty} выше предела оснащения ${hardest}`;
+function neededApparatusRu(stationary: boolean, hardest: number | null, apparatus: string): string {
+  const limit = hardest === null ? "" : ` с пределом сложности от ${hardest}`;
+  return `Нужен ${stationary ? "стационарный " : ""}набор${limit}: записан «${apparatus}»`;
 }
 
 export type ResearchStep = {
@@ -66,7 +62,26 @@ export type ResearchPlan = {
   readonly consumablesRu: string | null;
   readonly consumablesGold: number;
   readonly rawSampleRu: string | null;
+  readonly requirementRu: string | null;
 };
+
+/**
+ * Чего работа требует от оснащения сверх записанного. Цена номера — строка справочника, и она
+ * названа при любом наборе: годность набора не делает время и сложность неизвестными.
+ */
+function apparatusRequirement(
+  step: (typeof RESEARCH_STEPS)[number],
+  apparatus: Apparatus,
+): string | null {
+  if (apparatus === undefined) return WITHOUT_KIT_RU;
+
+  const kit = apparatusLimits(apparatus);
+  const stationary = step.laboratory && !kit.stationary;
+  const harder = step.difficulty > kit.hardest;
+  if (!stationary && !harder) return null;
+
+  return neededApparatusRu(stationary, harder ? step.difficulty : null, apparatus);
+}
 
 export function researchPlan(input: {
   readonly number: number;
@@ -74,14 +89,6 @@ export function researchPlan(input: {
 }): ResearchPlan {
   const step = RESEARCH_STEPS[input.number - RAW_SAMPLE_NUMBER];
   if (step === undefined) throw new DomainError(unknownNumberRefusal(input.number));
-
-  const kit = apparatusOf(input.apparatus);
-  if (kit === undefined) throw new DomainError(withoutKitRefusal());
-  if (step.laboratory && !kit.stationary) throw new DomainError(laboratoryRefusal(input.number));
-
-  if (step.difficulty > kit.hardest) {
-    throw new DomainError(tooHardResearchRefusal(step.difficulty, kit.hardest));
-  }
 
   const burns = input.number >= CONSUMABLES_FROM_NUMBER;
   const consumables = consumablesOf(step.difficulty);
@@ -94,5 +101,6 @@ export function researchPlan(input: {
     consumablesRu: burns ? consumables.nameRu : null,
     consumablesGold: burns ? consumables.goldPerStartedHour * startedHours(step.minutes) : 0,
     rawSampleRu: input.number === RAW_SAMPLE_NUMBER ? RAW_SAMPLE_RU : null,
+    requirementRu: apparatusRequirement(step, input.apparatus),
   };
 }

@@ -62,7 +62,7 @@ export function hardestPossible(): number {
   return apparatusEntries().reduce((hardest, one) => Math.max(hardest, one.hardest), 0);
 }
 
-export function apparatusOf(apparatus: Apparatus): ApparatusLimits | undefined {
+function apparatusOf(apparatus: Apparatus): ApparatusLimits | undefined {
   return apparatus === undefined ? undefined : APPARATUS_LIMITS[apparatus];
 }
 

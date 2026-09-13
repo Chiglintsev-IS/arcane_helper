@@ -17,7 +17,7 @@ import { usePreview } from "@/ui/shared/model/usePreview";
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
-import { RULE_BETWEEN } from "@/ui/shared/ui/rule";
+import { RULE_BETWEEN, RULE_BLOCK } from "@/ui/shared/ui/rule";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
@@ -92,7 +92,12 @@ function ResearchCost({ plan }: { plan: NonNullable<PreviewOf<"research_preview"
       </div>
       <p className="text-xs text-ink-quiet">{researchCostRu(plan)}</p>
       {plan.rawSampleRu === null ? null : (
-        <p className="text-xs text-ink-quiet">{plan.rawSampleRu}</p>
+        <p className="text-xs leading-snug text-ink-quiet">{plan.rawSampleRu}</p>
+      )}
+      {plan.requirementRu === null ? null : (
+        <p className={`py-0.5 pl-2 text-xs leading-snug text-ink-soft ${RULE_BLOCK}`}>
+          {plan.requirementRu}
+        </p>
       )}
     </div>
   );
