@@ -1,6 +1,5 @@
 "use client";
 
-import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, useState } from "react";
 
 import type { SheetView } from "@/contract/views";
@@ -8,7 +7,9 @@ import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNu
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
+import { Sheet } from "@/ui/shared/ui/Sheet";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 type Kind = "damage" | "heal" | "temporary" | "maximum";
 
@@ -100,7 +101,6 @@ export function HitPointsSheet({
   onMaximum: (change: { maximumBase: number; masterReduction: number }) => void;
   onCancel: () => void;
 }) {
-  const titleId = useId();
   const questionId = useId();
   const [kind, setKind] = useState<Kind>("damage");
   const [value, setValue] = useState("");
@@ -132,21 +132,32 @@ export function HitPointsSheet({
   };
 
   return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex flex-col gap-3 p-3 ${SURFACE_PANEL}`}
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 id={titleId} className="text-base font-semibold leading-tight">
-          Хиты
-        </h2>
+    <Sheet
+      titleRu="Хиты"
+      aside={
         <span id={questionId} className="shrink-0 text-sm text-ink-quiet">
           {QUESTION}?
         </span>
-      </div>
-
+      }
+      footer={
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={submit}
+            className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
+          >
+            {BUTTON_LABELS.confirm}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
+          >
+            {BUTTON_LABELS.dismiss}
+          </button>
+        </div>
+      }
+    >
       <div role="radiogroup" aria-labelledby={questionId} className="flex gap-1">
         {TABS.map((tab) => (
           <button
@@ -223,22 +234,6 @@ export function HitPointsSheet({
         </label>
       ) : null}
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={submit}
-          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
-        >
-          {BUTTON_LABELS.confirm}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
-        >
-          {BUTTON_LABELS.dismiss}
-        </button>
-      </div>
-    </section>
+    </Sheet>
   );
 }

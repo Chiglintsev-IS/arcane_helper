@@ -944,7 +944,6 @@ describe("знание об ингредиенте переезжает к ве�
       nameRu: "Лунная трава",
       properties: [{ number: 1, nameRu: "Лечение здоровья" }],
       observations: [{ id: "one", textRu: "Пахнет тиной" }],
-      propertiesExhausted: true,
     },
     { nameRu: "" },
     { nameRu: 5 },
@@ -959,7 +958,6 @@ describe("знание об ингредиенте переезжает к ве�
     expect(herb?.kinds).toContain("ingredient");
     expect(herb?.alchemy?.properties).toEqual([{ number: 1, nameRu: "Лечение здоровья" }]);
     expect(herb?.notes).toEqual([{ id: "one", textRu: "Пахнет тиной" }]);
-    expect(herb?.alchemy?.propertiesExhausted).toBe(true);
     expect(state.itemDefinitions.filter((item) => item.nameRu === "")).toEqual([]);
   });
 
@@ -1028,7 +1026,6 @@ describe("знание об ингредиенте переезжает к ве�
     expect(herb?.kinds).toEqual(["ingredient"]);
     expect(herb?.alchemy).toEqual({
       properties: [],
-      propertiesExhausted: false,
       piecesPerPortion: 1,
     });
   });
@@ -1043,7 +1040,7 @@ describe("знание об ингредиенте переезжает к ве�
         id: "лунная-трава",
         nameRu: "Лунная трава",
         kinds: ["ingredient"],
-        alchemy: { properties: [], observations: [], propertiesExhausted: false },
+        alchemy: { properties: [], observations: [] },
       },
     ]);
   });

@@ -8,7 +8,6 @@ import { createWizard, withIngredientKnowledge } from "@/core/infrastructure/cat
 import { addItem, adjustBagCount } from "./equipment";
 import {
   craftBatch,
-  markPropertiesExhausted,
   mixtureKinds,
 } from "./crafting";
 
@@ -46,11 +45,6 @@ const STANDARD: RecipeFormula = {
 
 function bagCount(session: Session, nameRu: string): number {
   return Character.of(session.character).equipment.bagCount(Items.idFromName(nameRu));
-}
-
-function exhaustedOf(session: Session, nameRu: string): boolean {
-  const root = Character.of(session.character);
-  return root.items.alchemyOf(Items.idFromName(nameRu)).propertiesExhausted;
 }
 
 function stocked(portionsEach: number): Session {
@@ -189,25 +183,5 @@ describe("проверка разработки", () => {
     const crafted = craftBatch(stocked(6), { formula: STANDARD, portions: 1, rolled: 20 }, occasion);
 
     expect(crafted.log.at(-1)?.summaryRu).toContain("Натуральная двадцать");
-  });
-});
-
-describe("полнота знания о виде", () => {
-  it("отметка о полноте знания возвращается логом", () => {
-    const before: Session = {
-      character: withIngredientKnowledge(createWizard(), MOON_HERB, [HEALING]),
-      log: [],
-    };
-
-    const marked = markPropertiesExhausted(
-      before,
-      { itemId: Items.idFromName(MOON_HERB), exhausted: true },
-      occasion,
-    );
-
-    expect(exhaustedOf(marked, MOON_HERB)).toBe(true);
-    expect(marked.log.at(-1)?.summaryRu).toBe(`У вида больше нет свойств: ${MOON_HERB}`);
-
-    expect(exhaustedOf(undoLast(marked), MOON_HERB)).toBe(false);
   });
 });

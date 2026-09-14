@@ -6,8 +6,8 @@ import { bloodSlotCost, hasSlotLevel, noSlotLevelRu, slotLevelPrice } from "@/co
 import { suppressionReason, woundsWarningRu } from "@/core/domain/vitality/blood";
 import {
   CURRENCY_ABBREVIATIONS,
-  longCastingTimeRu,
-  type LongCastingUnit,
+  timeSpanRu,
+  type TimeSpanUnit,
 } from "@/shared/language";
 import { consumesSlot, type CastMode } from "@/core/domain/arcana/slots";
 import { CANTRIP_LEVEL } from "@/core/domain/catalog/spell";
@@ -121,7 +121,7 @@ export function turnResourceFor(castingTime: Spell["castingTime"]["type"]): Turn
   }
 }
 
-const LONG_CASTING_UNITS: Partial<Record<Spell["castingTime"]["type"], LongCastingUnit>> = {
+const LONG_CASTING_UNITS: Partial<Record<Spell["castingTime"]["type"], TimeSpanUnit>> = {
   minute: "minute",
   hour: "hour",
 };
@@ -135,7 +135,7 @@ function checkCastingTime(input: AvailabilityInput): AvailabilityWarning[] {
     {
       code: "long_casting_time",
       reasonRu:
-        `Не уложится в один ход — ${longCastingTimeRu(unit, castingTime.value)},` +
+        `Не уложится в один ход — ${timeSpanRu(unit, castingTime.value)},` +
         " действие каждый ход и концентрация",
       enforcement: "advisory",
     },

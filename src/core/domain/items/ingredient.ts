@@ -38,7 +38,6 @@ const revealedPropertyFields = z.object({
 
 type AlchemyFields = {
   properties: readonly z.infer<typeof revealedPropertyFields>[];
-  propertiesExhausted: boolean;
   piecesPerPortion: number;
 };
 
@@ -52,7 +51,6 @@ function inNumberOrder(alchemy: AlchemyFields): AlchemyFields {
 export const ingredientAlchemySchema = z
   .object({
     properties: z.array(revealedPropertyFields).default([]),
-    propertiesExhausted: z.boolean().default(false),
     piecesPerPortion: z
       .number()
       .int()
@@ -92,7 +90,6 @@ export function revealedPropertyOf(value: unknown): RevealedProperty {
 
 export const NO_ALCHEMY: IngredientAlchemy = {
   properties: [],
-  propertiesExhausted: false,
   piecesPerPortion: SMALLEST_PORTION_PIECES,
 };
 

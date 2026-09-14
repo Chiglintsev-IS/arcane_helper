@@ -155,7 +155,6 @@ const ingredientKnowledgeViewSchema = z.object({
   researchNumbers: z.array(whole),
   properties: z.array(revealedPropertyViewSchema),
   notes: z.array(z.object({ id: word, textRu: word })),
-  propertiesExhausted: z.boolean(),
 });
 
 const alchemyHandbookViewSchema = z.object({

@@ -39,6 +39,13 @@ export const CURRENCY_ABBREVIATIONS = {
   copper: "мм",
 } as const;
 
+/** Полное имя монеты: его называют там, где цена стоит своей строкой и сокращать её незачем. */
+const GOLD_FORMS: [string, string, string] = ["золотой", "золотых", "золотых"];
+
+export function goldRu(amount: number): string {
+  return withPlural(amount, GOLD_FORMS);
+}
+
 export const AREA_SHAPES_RU = {
   cone: "Конус",
   cube: "Куб",
@@ -53,15 +60,15 @@ export const CHECK_DIE_RU = "d20";
 
 export const MISHAP_DIE_RU = "d6";
 
-export type LongCastingUnit = "minute" | "hour";
+export type TimeSpanUnit = "minute" | "hour";
 
-const LONG_CASTING_FORMS: Record<LongCastingUnit, [string, string, string]> = {
+const TIME_SPAN_FORMS: Record<TimeSpanUnit, [string, string, string]> = {
   minute: ["минута", "минуты", "минут"],
   hour: ["час", "часа", "часов"],
 };
 
-export function longCastingTimeRu(unit: LongCastingUnit, value: number): string {
-  return withPlural(value, LONG_CASTING_FORMS[unit]);
+export function timeSpanRu(unit: TimeSpanUnit, value: number): string {
+  return withPlural(value, TIME_SPAN_FORMS[unit]);
 }
 
 export type TimeUnit = "round" | "minute" | "hour";

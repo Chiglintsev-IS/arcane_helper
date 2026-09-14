@@ -1,7 +1,7 @@
 import type { IngredientKnowledgeView } from "@/contract/views";
 
 import { stockRu } from "@/ui/entities/crafting/lib/labels";
-import { PROPERTIES_EXHAUSTED, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
+import { propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { RULE_ACTIVE } from "@/ui/shared/ui/rule";
 import {
   SURFACE_CHOSEN,
@@ -59,10 +59,6 @@ export function IngredientCard({
               </span>
             ))}
           </span>
-        )}
-
-        {!ingredient.propertiesExhausted ? null : (
-          <span className="text-xs leading-snug text-ink-quiet">{PROPERTIES_EXHAUSTED}</span>
         )}
 
         {notes.length === 0 ? null : (

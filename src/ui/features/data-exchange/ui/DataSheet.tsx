@@ -1,12 +1,13 @@
 "use client";
 
-import { RULE_MARK } from "@/ui/shared/ui/rule";
-import { useId, useState } from "react";
+import { useState } from "react";
 
 import { DataCopy } from "@/ui/features/data-exchange/ui/DataCopy";
 import { StartOver } from "@/ui/features/data-exchange/ui/StartOver";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
+import { Sheet } from "@/ui/shared/ui/Sheet";
+import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function DataSheet({
   exportText,
@@ -28,7 +29,6 @@ export function DataSheet({
   onClose: () => void;
 }) {
   const [raw, setRaw] = useState("");
-  const titleId = useId();
 
   const readFile = (file: File | undefined): void => {
     if (file === undefined) return;
@@ -36,16 +36,28 @@ export function DataSheet({
   };
 
   return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-3 ${SURFACE_PANEL}`}
+    <Sheet
+      titleRu="Данные"
+      footer={
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={raw.trim() === ""}
+            onClick={() => onImport(raw)}
+            className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold disabled:opacity-50`}
+          >
+            Загрузить
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
+          >
+            Закрыть
+          </button>
+        </div>
+      }
     >
-      <h2 id={titleId} className="text-base font-semibold">
-        Данные
-      </h2>
-
       <h3 className="text-sm font-semibold">Выгрузка</h3>
       <DataCopy text={exportText} fileName={fileName} />
 
@@ -96,23 +108,6 @@ export function DataSheet({
 
       <StartOver onConfirm={onStartOver} />
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={raw.trim() === ""}
-          onClick={() => onImport(raw)}
-          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold disabled:opacity-50`}
-        >
-          Загрузить
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
-        >
-          Закрыть
-        </button>
-      </div>
-    </section>
+    </Sheet>
   );
 }

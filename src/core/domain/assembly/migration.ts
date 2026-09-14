@@ -147,7 +147,6 @@ function migrateIngredientKnowledge(state: unknown): unknown {
     const alchemy = {
       properties: known.properties ?? [],
       observations: known.observations ?? [],
-      propertiesExhausted: known.propertiesExhausted === true,
     };
     const at = definitions.findIndex((item) => fieldsOf(item).id === id);
     if (at < 0) {

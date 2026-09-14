@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { longCastingTimeRu, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, withPlural } from "@/shared/language";
+import { NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, timeSpanRu, withPlural } from "@/shared/language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -31,14 +31,14 @@ describe("withPlural", () => {
   });
 });
 
-describe("longCastingTimeRu (FR-033)", () => {
+describe("timeSpanRu (FR-033)", () => {
   it.each([
     ["minute" as const, 1, "1 минута"],
     ["minute" as const, 10, "10 минут"],
     ["hour" as const, 1, "1 час"],
     ["hour" as const, 8, "8 часов"],
   ])("%s %i — %s", (unit, value, expected) => {
-    expect(longCastingTimeRu(unit, value)).toBe(expected);
+    expect(timeSpanRu(unit, value)).toBe(expected);
   });
 });
 

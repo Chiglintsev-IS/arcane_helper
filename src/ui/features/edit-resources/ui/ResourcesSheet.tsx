@@ -1,10 +1,9 @@
 "use client";
 
-import { useId } from "react";
-
 import type { ResourcesView } from "@/contract/views";
 import { EDIT_LABEL } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { Sheet } from "@/ui/shared/ui/Sheet";
+import { SURFACE_CHOSEN, SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 export const RESOURCES_EDIT_LABEL = `${EDIT_LABEL} ресурсов`;
 
@@ -67,19 +66,20 @@ export function ResourcesSheet({
   onClose: () => void;
 }) {
   const { runes, suppression } = resources;
-  const titleId = useId();
 
   return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-3 ${SURFACE_PANEL}`}
+    <Sheet
+      titleRu={RESOURCES_EDIT_LABEL}
+      footer={
+        <button
+          type="button"
+          onClick={onClose}
+          className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
+        >
+          Закрыть
+        </button>
+      }
     >
-      <h2 id={titleId} className="text-base font-semibold leading-tight">
-        {RESOURCES_EDIT_LABEL}
-      </h2>
-
       <p className="text-xs text-ink-quiet">
         Для случаев вне модели приложения: эффект предмета, решение мастера, ошибка в списании.
         Каждая правка попадает в лог и отменяется там же — в режиме «Лог».
@@ -129,13 +129,6 @@ export function ResourcesSheet({
         </p>
       </section>
 
-      <button
-        type="button"
-        onClick={onClose}
-        className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
-      >
-        Закрыть
-      </button>
-    </section>
+    </Sheet>
   );
 }

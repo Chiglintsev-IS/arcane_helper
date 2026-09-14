@@ -11,7 +11,8 @@ import {
 } from "@/ui/entities/character/lib/labels";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { Sheet } from "@/ui/shared/ui/Sheet";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 const SAVES_FAMILY = "saves";
 
@@ -43,14 +44,19 @@ export function StatPicker({
   const saves = stats.filter((stat) => stat.kind === "save").map((stat) => stat.id);
 
   return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      aria-label={TITLE}
-      className={`fixed inset-x-0 bottom-0 z-30 flex max-h-[85dvh] flex-col gap-3 p-3 ${SURFACE_PANEL}`}
+    <Sheet
+      titleRu={TITLE}
+      overSheet
+      footer={
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
+        >
+          {BUTTON_LABELS.dismiss}
+        </button>
+      }
     >
-      <h2 className="text-sm font-semibold">{TITLE}</h2>
-
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-ink-quiet">Поиск</span>
         <input
@@ -61,7 +67,7 @@ export function StatPicker({
         />
       </label>
 
-      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+      <div className="flex flex-col gap-3">
         {found.length === 0 ? <p className="text-xs text-ink-quiet">Ничего не нашлось.</p> : null}
 
         {kinds.map((kind) => (
@@ -101,14 +107,6 @@ export function StatPicker({
           </section>
         ))}
       </div>
-
-      <button
-        type="button"
-        onClick={onCancel}
-        className={`min-h-11 px-3 text-sm ${SURFACE_GROUP_BARE}`}
-      >
-        {BUTTON_LABELS.dismiss}
-      </button>
-    </section>
+    </Sheet>
   );
 }

@@ -119,7 +119,6 @@ describe("алхимия ингредиента у вещи", () => {
     expect(known.alchemyOf("herb").properties).toEqual([
       { number: 1, nameRu: "Лечение здоровья" },
     ]);
-    expect(known.alchemyOf("herb").propertiesExhausted).toBe(false);
   });
 
   it("раскрытое убирается по номеру, а соседнее остаётся", () => {
@@ -158,15 +157,6 @@ describe("алхимия ингредиента у вещи", () => {
     });
 
     expect(demoted.find("herb")?.alchemy).toBeUndefined();
-  });
-
-  it("отметка «свойств больше нет» ставится и снимается", () => {
-    const marked = bench().markPropertiesExhausted("herb", true);
-
-    expect(marked.alchemyOf("herb").propertiesExhausted).toBe(true);
-    expect(marked.markPropertiesExhausted("herb", false).alchemyOf("herb").propertiesExhausted).toBe(
-      false,
-    );
   });
 
   it("заметки живут по одной: пишутся, правятся и убираются по отдельности", () => {

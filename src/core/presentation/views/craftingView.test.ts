@@ -41,7 +41,6 @@ describe("проекция знания об ингредиентах", () => {
           { number: 3, nameRu: "Взрыв" },
         ],
         notes: [],
-        propertiesExhausted: false,
       },
     ]);
   });
@@ -63,7 +62,6 @@ describe("проекция знания об ингредиентах", () => {
         researchNumbers: [1, 2, 3, 4],
         properties: [],
         notes: [],
-        propertiesExhausted: false,
       },
     ]);
   });

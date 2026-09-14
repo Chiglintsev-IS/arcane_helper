@@ -22,13 +22,11 @@ type Note = { readonly id: string; readonly textRu: string };
  */
 export function NoteList({
   notes,
-  hintRu,
   onAdd,
   onRewrite,
   onDrop,
 }: {
   notes: readonly Note[];
-  hintRu?: string;
   onAdd: (textRu: string) => void;
   onRewrite: (noteId: string, textRu: string) => void;
   onDrop: (noteId: string) => void;
@@ -45,9 +43,7 @@ export function NoteList({
     <div className="flex flex-col gap-1">
       <span className="text-xs text-ink-quiet">{NOTES_TITLE}</span>
 
-      {hintRu === undefined ? null : (
-        <p className="text-xs leading-snug text-ink-quiet">{hintRu}</p>
-      )}
+      <QuickAddField labelRu={NOTE_FIELD} onAdd={onAdd} />
 
       {notes.length === 0 ? (
         <p className="text-xs text-ink-quiet">{NOTES_EMPTY}</p>
@@ -93,8 +89,6 @@ export function NoteList({
           )}
         </ul>
       )}
-
-      <QuickAddField labelRu={NOTE_FIELD} onAdd={onAdd} />
     </div>
   );
 }

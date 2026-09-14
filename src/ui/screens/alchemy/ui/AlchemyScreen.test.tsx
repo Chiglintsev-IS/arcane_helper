@@ -95,30 +95,6 @@ describe("«Алхимия»", () => {
     expect(screen.queryByText(/раскрыто/)).toBeNull();
   });
 
-  it("«Алхимия»: отметка стола видна в списке и снимается там же, где ставилась", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(
-      <AlchemyScreen />,
-      withIngredientKnowledge(blank(), MOON_HERB, [
-        { number: 1, nameRu: "Лечение здоровья" },
-      ]),
-    );
-
-    expect(knownList().queryByText("Свойств у вида больше нет")).toBeNull();
-
-    await user.click(cardOf(MOON_HERB));
-    await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
-    await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-    expect(await knownList().findByText("Свойств у вида больше нет")).toBeDefined();
-
-    await user.click(cardOf(MOON_HERB));
-    await user.click(screen.getByRole("switch", { name: "Свойств у вида больше нет" }));
-    await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-    expect(knownList().queryByText("Свойств у вида больше нет")).toBeNull();
-  });
-
   it("«Алхимия»: порции называются, когда порция не штука", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(
@@ -132,7 +108,7 @@ describe("«Алхимия»", () => {
     await user.click(cardOf(MOON_HERB));
     await user.clear(screen.getByLabelText("Штук в порции"));
     await user.type(screen.getByLabelText("Штук в порции"), "10");
-    await user.click(screen.getByRole("button", { name: "Отмена" }));
+    await user.click(screen.getByRole("button", { name: "Закрыть" }));
 
     expect(await knownList().findByText("в сумке 63 · 6 порций")).toBeDefined();
   });
@@ -326,15 +302,14 @@ describe("«Алхимия»: запись знания", () => {
 
     await user.click(cardOf(MOON_HERB));
     expect(await screen.findByText("5")).toBeDefined();
-    expect(
-      screen.getByText(
-        /10 мин · 1 порция только при провале · без расходников/,
-      ),
-    ).toBeDefined();
+    const needs = within(screen.getByRole("dialog", { name: `Свойства: ${MOON_HERB}` }));
+    expect(needs.getByText("10 минут")).toBeDefined();
+    expect(needs.getByText("1 только при провале")).toBeDefined();
+    expect(needs.getByText("не нужны")).toBeDefined();
     expect(screen.getByText(/Сырая проба/)).toBeDefined();
   });
 
-  it("«Алхимия»: цена названа сразу для следующего номера, а раскрытых в выборе нет", async () => {
+  it("«Алхимия»: раскрывают очередное свойство, и цена названа сразу для него", async () => {
     const user = userEvent.setup();
     await renderWithStores(
       <AlchemyScreen />,
@@ -345,16 +320,12 @@ describe("«Алхимия»: запись знания", () => {
 
     await user.click(cardOf(MOON_HERB));
 
-    const numbers = within(screen.getByLabelText("Номер"));
-    expect(numbers.queryByRole("option", { name: "1-е" })).toBeNull();
-    expect(numbers.getByRole("option", { name: "2-е" })).toBeDefined();
+    expect(screen.getByText("Раскрыть 2-е свойство")).toBeDefined();
 
     expect(await screen.findByText("12")).toBeDefined();
-    expect(
-      screen.getByText(
-        /1 ч · 1 порция при любом исходе · расходники обычные, 1 зм/,
-      ),
-    ).toBeDefined();
+    expect(screen.getByText("1 час")).toBeDefined();
+    expect(screen.getByText("1 при любом исходе")).toBeDefined();
+    expect(screen.getByText("обычные, 1 золотой")).toBeDefined();
   });
 
   it("«Алхимия»: без набора цена исследования названа, а рядом сказано, чего набору не хватает", async () => {
@@ -388,7 +359,9 @@ describe("«Алхимия»: запись знания", () => {
 
     expect(await screen.findByText(/Нужен стационарный набор/)).toBeDefined();
     expect(screen.getByText("18")).toBeDefined();
-    expect(screen.getByText(/8 ч · 2 порции при любом исходе/)).toBeDefined();
+    expect(screen.getByText("8 часов")).toBeDefined();
+    expect(screen.getByText("2 при любом исходе")).toBeDefined();
+    expect(screen.getByText("обычные, 8 золотых")).toBeDefined();
   });
 
   it("«Алхимия»: отказ владельца стоит в той шторке, где набирали", async () => {

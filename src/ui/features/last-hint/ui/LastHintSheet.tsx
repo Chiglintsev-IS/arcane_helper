@@ -1,10 +1,9 @@
 "use client";
 
-import { useId } from "react";
-
 import type { ResourcesView } from "@/contract/views";
 import { LAST_HINT_SHORT_RU, LAST_HINT_SPENT_RU } from "@/ui/features/last-hint/ui/LastHintRow";
-import { SURFACE_CONTROL, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { Sheet } from "@/ui/shared/ui/Sheet";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 export function LastHintSheet({
   resources,
@@ -15,21 +14,22 @@ export function LastHintSheet({
   onAdjust: (delta: number) => void;
   onClose: () => void;
 }) {
-  const titleId = useId();
   const { lastHint } = resources;
   const spent = lastHint.remaining <= 0;
 
   return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-3 ${SURFACE_PANEL}`}
+    <Sheet
+      titleRu={lastHint.nameRu}
+      footer={
+        <button
+          type="button"
+          onClick={onClose}
+          className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
+        >
+          Закрыть
+        </button>
+      }
     >
-      <h2 id={titleId} className="text-sm font-semibold">
-        {lastHint.nameRu}
-      </h2>
-
       <p className="text-xs text-ink-soft">{LAST_HINT_SHORT_RU}</p>
 
       <p className="text-xs text-ink-quiet">
@@ -65,14 +65,6 @@ export function LastHintSheet({
       </div>
 
       {spent ? <p className="text-xs font-medium text-reaction">{LAST_HINT_SPENT_RU}</p> : null}
-
-      <button
-        type="button"
-        onClick={onClose}
-        className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
-      >
-        Закрыть
-      </button>
-    </section>
+    </Sheet>
   );
 }

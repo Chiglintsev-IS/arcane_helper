@@ -291,6 +291,13 @@ export function ItemSheet({
         {!item.kinds.includes(INGREDIENT) ? null : (
           <div className="flex flex-col gap-1">
             <span className="text-sm text-ink-quiet">{PROPERTIES_LABEL}</span>
+            <button
+              type="button"
+              onClick={onOpenProperties}
+              className={`min-h-11 px-3 text-sm font-medium text-action ${SURFACE_CONTROL}`}
+            >
+              Раскрыть и править свойства
+            </button>
             {item.alchemicalProperties.length === 0 ? (
               <p className="text-xs text-ink-quiet">{NOTHING_REVEALED}</p>
             ) : (
@@ -305,18 +312,18 @@ export function ItemSheet({
                 ))}
               </ul>
             )}
-            <button
-              type="button"
-              onClick={onOpenProperties}
-              className={`min-h-11 px-3 text-sm font-medium text-action ${SURFACE_CONTROL}`}
-            >
-              Раскрыть и править свойства
-            </button>
           </div>
         )}
 
         <div className="flex flex-col gap-1">
           <span className="text-sm text-ink-quiet">Прибавки</span>
+          <button
+            type="button"
+            onClick={() => setPicking(true)}
+            className={`min-h-11 px-3 text-sm font-medium text-action ${SURFACE_CONTROL}`}
+          >
+            Добавить прибавку
+          </button>
           {typedBonuses.map((bonus) => (
             <NumberField
               key={bonus.stat}
@@ -328,13 +335,6 @@ export function ItemSheet({
               reasonRu={required.reasonOf(bonus.value)}
             />
           ))}
-          <button
-            type="button"
-            onClick={() => setPicking(true)}
-            className={`min-h-11 px-3 text-sm font-medium text-action ${SURFACE_CONTROL}`}
-          >
-            Добавить прибавку
-          </button>
           <p className="text-xs text-ink-quiet">
             Нулевая прибавка снимается. Всё, что зависит от обстановки или требует броска, — заметка:
             в числа листа она не входит, бросаете и считаете сами.

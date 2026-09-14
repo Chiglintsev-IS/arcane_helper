@@ -42,7 +42,6 @@ export function toCraftingView(character: CharacterState): CraftingView {
           root.items.piecesForPortions(item.id, 1),
         ),
         researchNumbers: [...root.items.unrevealedNumbers(item.id)],
-        propertiesExhausted: alchemy.propertiesExhausted,
         notes: item.notes.map((note) => ({ ...note })),
         properties: alchemy.properties.map((property) => ({ ...property })),
       };

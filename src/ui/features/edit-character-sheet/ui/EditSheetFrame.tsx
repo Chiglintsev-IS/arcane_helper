@@ -1,11 +1,12 @@
 "use client";
 
-import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { useId, type ReactNode } from "react";
 
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PANEL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
+import { Sheet } from "@/ui/shared/ui/Sheet";
+import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function EditSheetFrame({
   titleRu,
@@ -21,36 +22,37 @@ export function EditSheetFrame({
   onCancel: () => void;
 }) {
   return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      aria-label={editName(titleRu)}
-      className={`fixed inset-x-0 bottom-0 z-20 flex max-h-[85dvh] flex-col gap-3 p-3 ${SURFACE_PANEL}`}
+    <Sheet
+      titleRu={titleRu}
+      nameRu={editName(titleRu)}
+      footer={
+        <>
+          {error === null ? null : (
+            <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}>
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onSave}
+              className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
+            >
+              {BUTTON_LABELS.save}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
+            >
+              {BUTTON_LABELS.dismiss}
+            </button>
+          </div>
+        </>
+      }
     >
-      <h2 className="text-sm font-semibold">{titleRu}</h2>
-      <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">{children}</div>
-      {error === null ? null : (
-        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm ${SURFACE_GROUP_BARE}`}>
-          {error}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onSave}
-          className={`min-h-11 flex-1 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
-        >
-          {BUTTON_LABELS.save}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
-        >
-          {BUTTON_LABELS.dismiss}
-        </button>
-      </div>
-    </section>
+      {children}
+    </Sheet>
   );
 }
 

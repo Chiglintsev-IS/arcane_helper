@@ -4,10 +4,10 @@ import {
   CURRENCY_ABBREVIATIONS,
   ROUNDS_PER_MINUTE,
   SAVING_THROW_SHORT,
-  longCastingTimeRu,
+  timeSpanRu,
   plural,
   timeSpanAccusativeRu,
-  type LongCastingUnit,
+  type TimeSpanUnit,
   type TimeUnit,
 } from "@/shared/language";
 import { TONE_GLYPH, type Tone } from "@/ui/shared/ui/tone";
@@ -56,7 +56,7 @@ export function castingTimeBadge(type: string): CastingTimeBadge {
   return CASTING_TIME[type] ?? { label: type, icon: "◷", tone: "muted" };
 }
 
-const LONG_CASTING_UNITS: Record<string, LongCastingUnit | undefined> = {
+const LONG_CASTING_UNITS: Record<string, TimeSpanUnit | undefined> = {
   minute: "minute",
   hour: "hour",
 };
@@ -66,7 +66,7 @@ export function castingTimeLabel(castingTime: SpellRowView["castingTime"]): stri
   if (unit === undefined || castingTime.value === undefined) {
     return castingTimeBadge(castingTime.type).label;
   }
-  return longCastingTimeRu(unit, castingTime.value);
+  return timeSpanRu(unit, castingTime.value);
 }
 
 export function castingTimePhrase(castingTime: SpellRowView["castingTime"]): string {

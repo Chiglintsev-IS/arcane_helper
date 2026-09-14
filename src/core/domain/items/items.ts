@@ -137,10 +137,6 @@ export class Items {
     return portionsFromPieces(this.alchemyOf(id), pieces);
   }
 
-  markPropertiesExhausted(id: string, propertiesExhausted: boolean): Items {
-    return this.replacingAlchemy(id, { ...this.alchemyOf(id), propertiesExhausted });
-  }
-
   private located(id: string): ItemDefinition {
     const found = this.find(id);
     if (found === undefined) throw new DomainError(`Вещи «${id}» нет среди заведённых`);

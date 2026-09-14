@@ -1,6 +1,6 @@
 import type { PreviewOf } from "@/contract/questions";
 
-import { CURRENCY_ABBREVIATIONS, withPlural } from "@/shared/language";
+import { goldRu, timeSpanRu, withPlural } from "@/shared/language";
 
 export const TIER_LABELS: Readonly<Record<string, string>> = {
   plain: "обычная",
@@ -27,16 +27,36 @@ export function stockRu(stock: { inBag: number; portionsInBag: number }): string
     : `${inBag} · ${withPlural(stock.portionsInBag, PORTION_FORMS)}`;
 }
 
-export function researchCostRu(plan: NonNullable<PreviewOf<"research_preview">["plan"]>): string {
-  const portions =
-    plan.portionsOnSuccess === plan.portionsOnFailure
-      ? `${withPlural(plan.portionsOnFailure, PORTION_FORMS)} при любом исходе`
-      : `${withPlural(plan.portionsOnFailure, PORTION_FORMS)} только при провале`;
-  const consumables =
-    plan.consumablesRu === null
-      ? "без расходников"
-      : `расходники ${plan.consumablesRu.toLowerCase()}, ` +
-        `${plan.consumablesGold} ${CURRENCY_ABBREVIATIONS.gold}`;
+export type ResearchNeed = { readonly labelRu: string; readonly valueRu: string };
 
-  return `${minutesRu(plan.minutes)} · ${portions} · ${consumables}`;
+const NO_CONSUMABLES_RU = "не нужны";
+
+/**
+ * Чего стоит исследование: каждое требование своей строкой и полным словом. В одну строку они не
+ * складываются — там их читают как перечень сокращений, а не как условия работы.
+ */
+export function researchNeedsRu(
+  plan: NonNullable<PreviewOf<"research_preview">["plan"]>,
+): readonly ResearchNeed[] {
+  const hours = plan.minutes / MINUTES_PER_HOUR;
+  const timeRu =
+    plan.minutes < MINUTES_PER_HOUR
+      ? timeSpanRu("minute", plan.minutes)
+      : timeSpanRu("hour", hours);
+  const outcomeRu =
+    plan.portionsOnSuccess === plan.portionsOnFailure
+      ? "при любом исходе"
+      : "только при провале";
+
+  return [
+    { labelRu: "Время", valueRu: timeRu },
+    { labelRu: "Порции", valueRu: `${plan.portionsOnFailure} ${outcomeRu}` },
+    {
+      labelRu: "Расходники",
+      valueRu:
+        plan.consumablesRu === null
+          ? NO_CONSUMABLES_RU
+          : `${plan.consumablesRu.toLowerCase()}, ${goldRu(plan.consumablesGold)}`,
+    },
+  ];
 }
