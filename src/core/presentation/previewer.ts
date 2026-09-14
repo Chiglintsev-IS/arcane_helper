@@ -18,10 +18,11 @@ import {
 } from "@/core/domain/vitality/hitDice";
 import { SPELLCASTING_ABILITY } from "@/core/domain/character/spellcasting";
 import type { Batch } from "@/core/domain/crafting/batch";
-import { ALCHEMY_ABILITY, mishapAwaited } from "@/core/domain/crafting/development";
+import { ALCHEMY_ABILITY } from "@/core/domain/crafting/development";
 import type { DevelopmentCheck } from "@/core/domain/crafting/development";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
-import { batchShortagesRu, mixtureKinds } from "@/core/application/useCases/crafting";
+import { batchSpending, mixtureKinds } from "@/core/application/useCases/crafting";
+import type { BatchSpending } from "@/core/application/useCases/crafting";
 import type { PropertyMatch, RecipeDifficulty } from "@/core/domain/crafting/recipe";
 import { refusalOf } from "@/core/domain/shared/errors";
 import { castLevelOf, type PaymentChoice } from "@/core/application/casting/availability";
@@ -113,13 +114,28 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
   let check: DevelopmentCheck | null = null;
   let batch: Batch | null = null;
   let known = false;
-  let shortagesRu: readonly string[] = [];
+  let spend: readonly BatchSpending[] = [];
+  let candidates: readonly { itemId: string; matchedRu: readonly string[] }[] = [];
   let refusalRu: string | undefined;
 
   try {
     const formula = recipeFormulaOf(question.formula);
+    const chosen = mixtureKinds(root.items, formula.kinds);
+    candidates = mixtureKinds(
+      root.items,
+      root.items.ingredients.map((item) => item.id),
+    ).map((candidate) => ({
+      itemId: candidate.id,
+      matchedRu: crafting.joinsOf(chosen, candidate),
+    }));
+  } catch {
+    candidates = [];
+  }
+
+  try {
+    const formula = recipeFormulaOf(question.formula);
     const kinds = mixtureKinds(root.items, formula.kinds);
-    shortagesRu = batchShortagesRu(root, kinds, question.portions);
+    spend = batchSpending(root, kinds, question.portions);
     matches = crafting.matches(kinds);
     known = crafting.knows(formula);
     difficulty = crafting.difficultyOf(kinds, formula, crafting.apparatus);
@@ -134,7 +150,8 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
 
   return {
     kind: "recipe_preview",
-    shortagesRu: [...shortagesRu],
+    spend: spend.map((one) => ({ ...one })),
+    candidates: candidates.map((one) => ({ itemId: one.itemId, matchedRu: [...one.matchedRu] })),
     matches: matches.map((match) => ({
       nameRu: match.nameRu,
       sources: [...match.sources],
@@ -154,16 +171,14 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
         : {
             minutes: batch.minutes,
             consumablesRu: batch.consumables.nameRu,
+            goldPerStartedHour: batch.consumables.goldPerStartedHour,
+            consumableKits: batch.consumableKits,
             consumablesGold: batch.consumablesGold,
             units: batch.units,
           },
-    check:
-      check === null
-        ? null
-        : {
-            bonus: check.bonus,
-            mishapAwaited: mishapAwaited(question.rolled),
-          },
+    warnings: batch === null ? [] : batch.warnings.map((warning) => ({ ...warning })),
+    noticesRu: difficulty === null ? [] : [...difficulty.noticesRu],
+    check: check === null ? null : { bonus: check.bonus },
     known,
     ...(refusalRu === undefined ? {} : { refusalRu }),
   };

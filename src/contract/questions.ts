@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { paymentSchema } from "./commands";
+import { paymentSchema, recipeFormulaSchema } from "./commands";
 
 const numeric = z.number();
 
@@ -26,9 +26,8 @@ export const questionSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("recipe_preview"),
-    formula: z.looseObject({}),
+    formula: recipeFormulaSchema,
     portions: numeric,
-    rolled: numeric.optional(),
   }),
   z.object({
     kind: z.literal("research_preview"),
@@ -102,10 +101,19 @@ export const previewSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("recipe_preview"),
-    shortagesRu: z.array(word),
+    spend: z.array(
+      z.object({
+        itemId: word,
+        nameRu: word,
+        portions: whole,
+        inBagPortions: whole,
+        shortPortions: whole,
+      }),
+    ),
     matches: z.array(
       z.object({ nameRu: word, sources: z.array(word), tier: word }),
     ),
+    candidates: z.array(z.object({ itemId: word, matchedRu: z.array(word) })),
     difficulty: z
       .object({
         total: whole,
@@ -114,9 +122,18 @@ export const previewSchema = z.discriminatedUnion("kind", [
       })
       .nullable(),
     batch: z
-      .object({ minutes: whole, consumablesRu: word, consumablesGold: whole, units: whole })
+      .object({
+        minutes: whole,
+        consumablesRu: word,
+        goldPerStartedHour: whole,
+        consumableKits: whole,
+        consumablesGold: whole,
+        units: whole,
+      })
       .nullable(),
-    check: z.object({ bonus: whole, mishapAwaited: z.boolean() }).nullable(),
+    warnings: z.array(z.object({ code: word, reasonRu: word })),
+    noticesRu: z.array(word),
+    check: z.object({ bonus: whole }).nullable(),
     known: z.boolean(),
     refusalRu: word.optional(),
   }),

@@ -7,6 +7,8 @@ import type { ConsumableBand } from "./consumables";
 import { FEWEST_KINDS, MOST_KINDS } from "./crafting";
 import { mishapBands } from "./development";
 import type { MishapBand } from "./development";
+import { rarities } from "./rarity";
+import type { RarityStep } from "./rarity";
 import { RECIPE_TARIFFS, tierSteps } from "./recipe";
 import type { TierStep } from "./recipe";
 import { researchSteps } from "./research";
@@ -22,6 +24,7 @@ type AlchemyHandbook = {
   readonly consumables: readonly ConsumableBand[];
   readonly batchTimes: readonly BatchTimeBand[];
   readonly tiers: readonly TierStep[];
+  readonly rarities: readonly RarityStep[];
   readonly mishaps: readonly MishapBand[];
   readonly tariffs: {
     readonly fewestKinds: number;
@@ -29,7 +32,9 @@ type AlchemyHandbook = {
     readonly base: number;
     readonly lowest: number;
     readonly additionalEffect: number;
-    readonly suppression: number;
+    readonly purification: number;
+    readonly perRepeat: number;
+    readonly mostRepeats: number;
     readonly mostLimitationRelief: number;
     readonly portionsPerBonusUnit: number;
     readonly portionsPerConsumableKit: number;
@@ -43,6 +48,7 @@ export function alchemyHandbook(): AlchemyHandbook {
     consumables: consumableBands(RECIPE_TARIFFS.lowest),
     batchTimes: batchTimeBands(hardestPossible()),
     tiers: tierSteps(FEWEST_KINDS, MOST_KINDS),
+    rarities: rarities(),
     mishaps: mishapBands(),
     tariffs: {
       fewestKinds: FEWEST_KINDS,
@@ -50,7 +56,9 @@ export function alchemyHandbook(): AlchemyHandbook {
       base: RECIPE_TARIFFS.base,
       lowest: RECIPE_TARIFFS.lowest,
       additionalEffect: RECIPE_TARIFFS.additionalEffect,
-      suppression: RECIPE_TARIFFS.suppression,
+      purification: RECIPE_TARIFFS.purification,
+      perRepeat: RECIPE_TARIFFS.perRepeat,
+      mostRepeats: RECIPE_TARIFFS.mostRepeats,
       mostLimitationRelief: RECIPE_TARIFFS.mostLimitationRelief,
       portionsPerBonusUnit: BATCH_TARIFFS.portionsPerBonusUnit,
       portionsPerConsumableKit: BATCH_TARIFFS.portionsPerConsumableKit,

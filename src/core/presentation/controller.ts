@@ -28,6 +28,8 @@ import {
   craftBatch,
   dropProperty,
   noteIngredient,
+  noteIngredientReference,
+  recordRecipe,
   revealProperty,
   setPortionSize,
   setWorkshop,
@@ -272,9 +274,28 @@ export function applyCommand(
           {
             formula: recipeFormulaOf(command.formula),
             portions: command.portions,
-            rolled: command.rolled,
-            mishapRolled: command.mishapRolled,
-            risky: command.risky,
+            allowAnyway: command.allowAnyway,
+          },
+          occasion,
+        ),
+      );
+
+    case "record_recipe":
+      return changed(recordRecipe(session, recipeFormulaOf(command.formula), occasion));
+
+    case "note_ingredient_reference":
+      return changed(
+        noteIngredientReference(
+          session,
+          {
+            itemId: command.itemId,
+            reference: {
+              ...(command.findDc === undefined ? {} : { findDc: command.findDc }),
+              ...(command.gatherDc === undefined ? {} : { gatherDc: command.gatherDc }),
+              ...(command.yieldRu === undefined ? {} : { yieldRu: command.yieldRu }),
+              ...(command.portionRu === undefined ? {} : { portionRu: command.portionRu }),
+            },
+            ...(command.priceGold === undefined ? {} : { priceGold: command.priceGold }),
           },
           occasion,
         ),
@@ -291,6 +312,7 @@ export function applyCommand(
             property: revealedPropertyOf({
               number: command.number,
               nameRu: command.propertyRu,
+              ...(command.directionRu === undefined ? {} : { dirRu: command.directionRu }),
             }),
           },
           occasion,

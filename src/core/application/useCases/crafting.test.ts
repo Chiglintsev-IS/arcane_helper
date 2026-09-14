@@ -7,8 +7,11 @@ import { undoLast, type Occasion, type Session } from "@/core/application/sessio
 import { createWizard, withIngredientKnowledge } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { addItem, adjustBagCount } from "./equipment";
 import {
+  batchSpending,
   craftBatch,
   mixtureKinds,
+  noteIngredientReference,
+  recordRecipe,
 } from "./crafting";
 
 function testOccasion(commandId = "command-1"): Occasion {
@@ -33,6 +36,8 @@ const HEALING = { number: 1, nameRu: "Лечение здоровья" } as cons
 const STANDARD: RecipeFormula = {
   kinds: [MOON_HERB_ID, CRIMSON_ROOT_ID],
   mainProperty: HEALING.nameRu,
+  mainRarity: "Обычное",
+  purified: false,
   duration: null,
   onset: "Немедленно",
   fullRepeats: 0,
@@ -74,17 +79,17 @@ describe("виды состава", () => {
 });
 
 describe("изготовление состава", () => {
-  it("изготовление списывает все виды одной записью лога", () => {
+  it("закладка партии списывает все виды одной записью лога", () => {
     const before = stocked(6);
     const entriesBefore = before.log.length;
 
-    const crafted = craftBatch(before, { formula: STANDARD, portions: 4, rolled: 15 }, occasion);
+    const crafted = craftBatch(before, { formula: STANDARD, portions: 4 }, occasion);
 
     expect(bagCount(crafted, MOON_HERB)).toBe(2);
     expect(bagCount(crafted, CRIMSON_ROOT)).toBe(2);
     expect(crafted.log).toHaveLength(entriesBefore + 1);
     expect(crafted.log.at(-1)?.summaryRu).toBe(
-      "Изготовлено: Лечение здоровья, 5 единиц. Проверка 22 против 10. Истрачено по 4 порции: Лунная трава, Багровый корень",
+      "Заложено: Лечение здоровья, сложность 10, 5 единиц. Истрачено по 4 порции: Лунная трава, Багровый корень",
     );
 
     const undone = undoLast(crafted);
@@ -95,93 +100,86 @@ describe("изготовление состава", () => {
   it("нехватка одного вида отменяет всю работу, и второй вид остаётся нетронутым", () => {
     const scarce = adjustBagCount(stocked(2), Items.idFromName(CRIMSON_ROOT), -1, occasion);
 
-    expect(() =>
-      craftBatch(scarce, { formula: STANDARD, portions: 2, rolled: 15 }, occasion),
-    ).toThrow(
+    expect(() => craftBatch(scarce, { formula: STANDARD, portions: 2 }, occasion)).toThrow(
       /столько не потратить/,
     );
     expect(bagCount(scarce, MOON_HERB)).toBe(2);
   });
 
-  it("работа сверх предела записанного оснащения не тратит ничего и называет лишнее", () => {
+  it("сверх предела набора не работают, пока мастер не разрешил, — и тогда ничего не тратят", () => {
     const stock = stocked(6);
+    const hard = { ...STANDARD, duration: "24 часа" } as const;
 
-    expect(() =>
-      craftBatch(
-        stock,
-        { formula: { ...STANDARD, duration: "24 часа" }, portions: 1, rolled: 15 },
-        occasion,
-      ),
-    ).toThrow(/Сложность 22 выше предела оснащения 20\. Набрано: Длительность \+12/);
+    expect(() => craftBatch(stock, { formula: hard, portions: 1 }, occasion)).toThrow(
+      /Сложность 22 выше предела набора \(20\)/,
+    );
     expect(bagCount(stock, MOON_HERB)).toBe(6);
+
+    const allowed = craftBatch(stock, { formula: hard, portions: 1, allowAnyway: true }, occasion);
+    expect(bagCount(allowed, MOON_HERB)).toBe(5);
+  });
+
+  it("расход партии называет и нужное, и то, чего недостаёт", () => {
+    const root = Character.of(stocked(2).character);
+    const kinds = mixtureKinds(root.items, STANDARD.kinds);
+
+    expect(batchSpending(root, kinds, 3)).toEqual([
+      { itemId: MOON_HERB_ID, nameRu: MOON_HERB, portions: 3, inBagPortions: 2, shortPortions: 1 },
+      {
+        itemId: CRIMSON_ROOT_ID,
+        nameRu: CRIMSON_ROOT,
+        portions: 3,
+        inBagPortions: 2,
+        shortPortions: 1,
+      },
+    ]);
   });
 });
 
-describe("проверка разработки", () => {
-  it("известный рецепт повторяется без броска, пока совпадают все четыре условия", () => {
-    const first = stocked(6);
-    expect(() => craftBatch(first, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
-      /назовите выпавшее/,
-    );
+describe("записанный рецепт", () => {
+  it("рецепт записывает игрок, и запись называет замысел и его цену", () => {
+    const recorded = recordRecipe(stocked(6), STANDARD, occasion);
 
-    const developed = craftBatch(first, { formula: STANDARD, portions: 1, rolled: 15 }, occasion);
+    expect(recorded.log.at(-1)?.summaryRu).toBe("Записан рецепт: Лечение здоровья, сложность 10");
+    expect(Character.of(recorded.character).crafting.knows(STANDARD)).toBe(true);
+  });
 
+  it("порядок видов формулы не меняет: записанное узнаётся и наоборот", () => {
+    const recorded = recordRecipe(stocked(6), STANDARD, occasion);
     const reordered = { ...STANDARD, kinds: [CRIMSON_ROOT_ID, MOON_HERB_ID] };
-    const repeated = craftBatch(developed, { formula: reordered, portions: 1 }, occasion);
-    expect(repeated.log.at(-1)?.summaryRu).toBe(
-      "Изготовлено: Лечение здоровья, 1 единица. Истрачено по 1 порции: Багровый корень, Лунная трава",
-    );
 
-    expect(() =>
-      craftBatch(developed, { formula: { ...STANDARD, duration: "1 минута" }, portions: 1 }, occasion),
-    ).toThrow(/назовите выпавшее/);
+    expect(Character.of(recorded.character).crafting.knows(reordered)).toBe(true);
+    expect(
+      Character.of(recorded.character).crafting.knows({ ...STANDARD, duration: "1 минута" }),
+    ).toBe(false);
+  });
+});
 
-    expect(() =>
-      craftBatch(developed, { formula: { ...STANDARD, duration: "24 часа" }, portions: 1 }, occasion),
-    ).toThrow(/выше предела оснащения/);
-
-    const risky = craftBatch(
-      stocked(6),
-      { formula: STANDARD, portions: 1, rolled: 15, risky: true },
+describe("справка о виде", () => {
+  it("дописанное со слов мастера перекрывает записанное прежде", () => {
+    const written = noteIngredientReference(
+      stocked(2),
+      { itemId: MOON_HERB_ID, reference: { findDc: 9 }, priceGold: 5 },
       occasion,
     );
-    expect(() => craftBatch(risky, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
-      /назовите выпавшее/,
-    );
-  });
-
-  it("провал тратит заложенное и рецепта не записывает", () => {
-    const stock = stocked(6);
-    const failed = craftBatch(stock, { formula: STANDARD, portions: 2, rolled: 2 }, occasion);
-
-    expect(bagCount(failed, MOON_HERB)).toBe(4);
-    expect(failed.log.at(-1)?.summaryRu).toBe(
-      "Не вышло: Лечение здоровья. Проверка 9 против 10. Истрачено по 2 порции: Лунная трава, Багровый корень",
-    );
-    expect(() => craftBatch(failed, { formula: STANDARD, portions: 1 }, occasion)).toThrow(
-      /назовите выпавшее/,
-    );
-  });
-
-  it("натуральная единица роняет рецепт и называет последствие таблицей", () => {
-    const stock = stocked(6);
-    expect(() => craftBatch(stock, { formula: STANDARD, portions: 1, rolled: 1 }, occasion)).toThrow(
-      /назовите выпавшее на d6/,
-    );
-
-    const mishap = craftBatch(
-      stock,
-      { formula: STANDARD, portions: 1, rolled: 1, mishapRolled: 5 },
+    const later = noteIngredientReference(
+      written,
+      { itemId: MOON_HERB_ID, reference: { findDc: 12, yieldRu: "1к6 порций с заросли" } },
       occasion,
     );
-    expect(mishap.log.at(-1)?.summaryRu).toBe(
-      "Авария: Лечение здоровья. Смесь воздействует на область радиусом 1 метр. Истрачено по 1 порции: Лунная трава, Багровый корень",
-    );
+    const items = Character.of(later.character).items;
+
+    expect(items.alchemyOf(MOON_HERB_ID)).toMatchObject({
+      findDc: 12,
+      yieldRu: "1к6 порций с заросли",
+    });
+    expect(items.find(MOON_HERB_ID)?.price).toEqual({ amount: 5, currency: "gold" });
+    expect(later.log.at(-1)?.summaryRu).toBe("Дописано о виде: Лунная трава");
   });
 
-  it("натуральная двадцать при успехе называет свою награду", () => {
-    const crafted = craftBatch(stocked(6), { formula: STANDARD, portions: 1, rolled: 20 }, occasion);
-
-    expect(crafted.log.at(-1)?.summaryRu).toContain("Натуральная двадцать");
+  it("сложность проверки — целое от одного, и отказ называет причину", () => {
+    expect(() =>
+      noteIngredientReference(stocked(2), { itemId: MOON_HERB_ID, reference: { gatherDc: 0 } }, occasion),
+    ).toThrow(/справку о виде/);
   });
 });

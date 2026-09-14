@@ -8,6 +8,25 @@ function command<K extends string, S extends z.ZodRawShape>(kind: K, shape: S) {
   return z.object({ kind: z.literal(kind), ...shape });
 }
 
+/**
+ * Замысел состава целиком: его набирают на верстаке, им спрашивают цену, им закладывают партию и им
+ * же записывают рецепт. Значения — слова справочника, и сверяет их с перечнями владелец правил.
+ */
+export const recipeFormulaSchema = z.object({
+  kinds: z.array(word),
+  mainProperty: word.nullable(),
+  mainRarity: word,
+  duration: word.nullable(),
+  onset: word,
+  fullRepeats: numeric,
+  reach: word,
+  application: word,
+  resistance: word,
+  purified: z.boolean(),
+  suppressed: z.array(z.object({ nameRu: word, rarityRu: word })),
+  limitations: z.array(word),
+});
+
 export const paymentSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("slot"), slotLevel: numeric }),
   z.object({ kind: z.literal("blood"), castLevel: numeric }),
@@ -71,15 +90,28 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("edit_money", { money: z.record(word, numeric) }),
 
   command("craft_batch", {
-    formula: z.looseObject({}),
+    formula: recipeFormulaSchema,
     portions: numeric,
-    rolled: numeric.optional(),
-    mishapRolled: numeric.optional(),
-    risky: z.boolean().optional(),
+    allowAnyway: z.boolean().optional(),
   }),
 
+  command("record_recipe", { formula: recipeFormulaSchema }),
+
   command("note_ingredient", { nameRu: word }),
-  command("reveal_property", { itemId: word, number: numeric, propertyRu: word }),
+  command("note_ingredient_reference", {
+    itemId: word,
+    findDc: numeric.optional(),
+    gatherDc: numeric.optional(),
+    yieldRu: word.optional(),
+    portionRu: word.optional(),
+    priceGold: numeric.optional(),
+  }),
+  command("reveal_property", {
+    itemId: word,
+    number: numeric,
+    propertyRu: word,
+    directionRu: word.optional(),
+  }),
   command("drop_property", { itemId: word, number: numeric }),
   command("set_portion_size", { itemId: word, pieces: numeric }),
 
@@ -105,6 +137,8 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("restore_built_in_catalog", {}),
   command("reset", {}),
 ]);
+
+export type RecipeFormulaView = z.infer<typeof recipeFormulaSchema>;
 
 export type Command = z.infer<typeof commandSchema>;
 

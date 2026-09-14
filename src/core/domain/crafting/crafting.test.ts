@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Apparatus } from "./apparatus";
 import { Crafting, type MixtureKind } from "./crafting";
+import type { RarityRu } from "./rarity";
 import type { RecipeFormula } from "./recipe";
 
 const EMPTY = { knownRecipes: [] };
@@ -100,6 +101,8 @@ const POISON = { number: 2, nameRu: "Ядовитый урон" } as const;
 const STANDARD: RecipeFormula = {
   kinds: TWO_KINDS,
   mainProperty: "Лечение здоровья",
+  mainRarity: "Обычное",
+  purified: false,
   duration: null,
   onset: "Немедленно",
   fullRepeats: 0,
@@ -116,6 +119,13 @@ const TORN_KIT: Apparatus = "Надёжный походный комплект"
 
 function grand(kinds: readonly MixtureKind[], changes: Partial<RecipeFormula>) {
   return ALCHEMIST.difficultyOf(kinds, { ...STANDARD, ...changes }, GRAND_KIT);
+}
+
+function suppressing(
+  nameRu: string,
+  rarityRu: RarityRu = "Обычное",
+): RecipeFormula["suppressed"][number] {
+  return { nameRu, rarityRu };
 }
 
 function healingAndPoison(): readonly MixtureKind[] {
@@ -138,6 +148,8 @@ describe("сложность рецепта", () => {
     });
 
     expect(sprayed.parts).toEqual([
+      { nameRu: "Основа", modifier: 10 },
+      { nameRu: "Основной эффект", modifier: 0 },
       { nameRu: "Дополнительные эффекты", modifier: 0 },
       { nameRu: "Ступень усиления", modifier: 3 },
       { nameRu: "Длительность", modifier: 2 },
@@ -146,6 +158,7 @@ describe("сложность рецепта", () => {
       { nameRu: "Цели и область", modifier: 5 },
       { nameRu: "Способ применения", modifier: 3 },
       { nameRu: "Сопротивление", modifier: 2 },
+      { nameRu: "Очистка", modifier: 0 },
       { nameRu: "Подавление", modifier: 0 },
       { nameRu: "Ограничения и последствия", modifier: 0 },
       { nameRu: "Оснащение", modifier: 0 },
@@ -200,17 +213,40 @@ describe("сложность рецепта", () => {
     expect(paired.total).toBe(12);
   });
 
-  it("подавленное свойство уходит из состава и стоит двух", () => {
-    const suppressed = grand(healingAndPoison(), { suppressed: ["Ядовитый урон"] });
+  it("подавленное свойство уходит из состава, а платят за него по его редкости", () => {
+    const plain = grand(healingAndPoison(), { suppressed: [suppressing("Ядовитый урон")] });
+    const legendary = grand(healingAndPoison(), {
+      suppressed: [suppressing("Ядовитый урон", "Легендарное")],
+    });
 
-    expect(suppressed.parts).toContainEqual({ nameRu: "Подавление", modifier: 2 });
-    expect(suppressed.parts).toContainEqual({ nameRu: "Дополнительные эффекты", modifier: 0 });
-    expect(suppressed.total).toBe(12);
+    expect(plain.parts).toContainEqual({ nameRu: "Подавление", modifier: 2 });
+    expect(plain.parts).toContainEqual({ nameRu: "Дополнительные эффекты", modifier: 0 });
+    expect(plain.total).toBe(12);
+    expect(legendary.total).toBe(18);
+  });
+
+  it("редкость основного эффекта называет стол, и она входит в цену", () => {
+    const rare = grand(sharingHealing(TWO_KINDS), { mainRarity: "Редкое" });
+
+    expect(rare.parts).toContainEqual({ nameRu: "Основной эффект", modifier: 5 });
+    expect(rare.total).toBe(15);
+  });
+
+  it("очистка стоит пяти и снимает плату за подавление, назвав это словами", () => {
+    const purified = grand(healingAndPoison(), {
+      purified: true,
+      suppressed: [suppressing("Ядовитый урон", "Легендарное")],
+    });
+
+    expect(purified.parts).toContainEqual({ nameRu: "Очистка", modifier: 5 });
+    expect(purified.parts).toContainEqual({ nameRu: "Подавление", modifier: 0 });
+    expect(purified.total).toBe(15);
+    expect(purified.noticesRu).toHaveLength(1);
   });
 
   it("подавить можно только совпавшее свойство", () => {
     expect(() =>
-      grand(healingAndPoison(), { suppressed: ["Взрыв"] }),
+      grand(healingAndPoison(), { suppressed: [suppressing("Взрыв")] }),
     ).toThrow(/Взрыв/);
   });
 
@@ -225,7 +261,7 @@ describe("сложность рецепта", () => {
     expect(() =>
       grand(sharingHealing(TWO_KINDS), {
         mainProperty: null,
-        suppressed: ["Лечение здоровья"],
+        suppressed: [suppressing("Лечение здоровья")],
       }),
     ).toThrow(/не осталось ни одного свойства/);
   });
@@ -234,7 +270,7 @@ describe("сложность рецепта", () => {
     expect(() =>
       grand(healingAndPoison(), {
         mainProperty: "Ядовитый урон",
-        suppressed: ["Ядовитый урон"],
+        suppressed: [suppressing("Ядовитый урон")],
       }),
     ).toThrow(/«Ядовитый урон» в нём нет/);
   });
@@ -282,23 +318,38 @@ describe("записанный рецепт", () => {
   const known = ALCHEMIST;
 
   it("замена даже одного вида даёт другую формулу и новую разработку", () => {
-    const developed = known.recordRecipe(STANDARD, false);
+    const developed = known.recordRecipe(STANDARD);
 
     expect(developed.knows(STANDARD)).toBe(true);
     expect(developed.knows({ ...STANDARD, kinds: ["Лунная трава", "Пепельный гриб"] })).toBe(false);
   });
 
-  it("рецепт с отдельным риском записан, но проверки не отменяет", () => {
-    expect(known.recordRecipe(STANDARD, true).knows(STANDARD)).toBe(false);
-  });
-
   it("второй раз тот же рецепт второй записи не заводит, а соседний остаётся", () => {
     const other = { ...STANDARD, duration: "1 минута" } as const;
-    const both = known.recordRecipe(STANDARD, false).recordRecipe(other, false);
-    const again = both.recordRecipe(STANDARD, false);
+    const both = known.recordRecipe(STANDARD).recordRecipe(other);
+    const again = both.recordRecipe(STANDARD);
 
-    expect(again.toState().knownRecipes).toHaveLength(2);
+    expect(again.recipes).toHaveLength(2);
     expect(again.knows(other)).toBe(true);
+  });
+
+  it("порядок подавленного формулы не меняет: та же запись узнаётся в любом порядке", () => {
+    const both = {
+      ...STANDARD,
+      suppressed: [suppressing("Ядовитый урон"), suppressing("Взрыв", "Редкое")],
+    };
+    const developed = known.recordRecipe(both);
+
+    expect(
+      developed.knows({ ...both, suppressed: [...both.suppressed].reverse() }),
+    ).toBe(true);
+  });
+
+  it("цена записанного замысла не смотрит на то, чем работают сейчас", () => {
+    const kinds = sharingHealing(TWO_KINDS);
+
+    expect(ALCHEMIST.costOf(kinds, STANDARD).total).toBe(10);
+    expect(ALCHEMIST.difficultyOf(kinds, STANDARD, undefined).total).toBe(15);
   });
 });
 
@@ -320,15 +371,17 @@ describe("партия и предел оснащения", () => {
     expect(batch.units).toBe(7);
   });
 
-  it("сложность выше предела набора отклоняется с причиной, называющей лишнее", () => {
-    expect(() =>
-      ALCHEMIST.batchOf(
-        healingAndPoison(),
-        { ...STANDARD, duration: "1 час", reach: "Радиус 4 м" },
-        TORN_KIT,
-        1,
-      ),
-    ).toThrow(/Сложность 26 выше предела оснащения 20.*Цели и область \+8, Длительность \+6/);
+  it("сложность выше предела набора не отказ, а предупреждение: разрешает его стол", () => {
+    const hard = ALCHEMIST.batchOf(
+      healingAndPoison(),
+      { ...STANDARD, duration: "1 час", reach: "Радиус 4 м" },
+      TORN_KIT,
+      1,
+    );
+
+    expect(hard.difficulty.total).toBe(26);
+    expect(hard.warnings.map((warning) => warning.code)).toEqual(["over_hardest"]);
+    expect(hard.warnings[0]?.reasonRu).toMatch(/выше предела набора \(20\)/);
   });
 
   it("время партии и класс расходников растут полосами сложности", () => {
@@ -390,9 +443,11 @@ describe("партия и предел оснащения", () => {
     expect(bare.difficulty.parts).toContainEqual({ nameRu: "Оснащение", modifier: 5 });
     expect(bare.difficulty.total).toBe(15);
     expect(bare.units).toBe(1);
-    expect(() => ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, undefined, 2)).toThrow(
-      /предел партии/,
-    );
+    expect(
+      ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, undefined, 2).warnings.map(
+        (warning) => warning.code,
+      ),
+    ).toEqual(["over_batch"]);
   });
 
 });

@@ -39,6 +39,12 @@ export const CURRENCY_ABBREVIATIONS = {
   copper: "мм",
 } as const;
 
+/** Цена сокращением монеты: таблица сокращений одна, и разбирать её на месте не приходится. */
+export function coinRu(amount: number, currency: string): string {
+  const found = Object.entries(CURRENCY_ABBREVIATIONS).find(([name]) => name === currency);
+  return found === undefined ? String(amount) : `${amount} ${found[1]}`;
+}
+
 /** Полное имя монеты: его называют там, где цена стоит своей строкой и сокращать её незачем. */
 const GOLD_FORMS: [string, string, string] = ["золотой", "золотых", "золотых"];
 

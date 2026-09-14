@@ -508,13 +508,23 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
       await scan(`${scheme}: ${mode.toLowerCase()}`);
     }
 
-    // Вкладки алхимии показывают разное: таблицы справочника панель режимов сама не откроет.
+    // Книга и верстак показывают разное: страницы книги панель режимов сама не откроет.
     await switchMode(page, /^Алхимия/);
-    for (const tab of ["Верстак", "Справочник"]) {
-      await page.getByRole("tab", { name: tab }).click();
-      await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
-      await scan(`${scheme}: алхимия — ${tab.toLowerCase()}`);
+    const alchemy = page.getByRole("navigation", { name: "Режим алхимии" });
+
+    for (const section of ["Ингредиенты", "Рецепты", "Правила стола"]) {
+      await page.getByRole("button", { name: new RegExp(`^${section}`) }).click();
+      await scan(`${scheme}: алхимия — ${section.toLowerCase()}`);
+      await page.getByRole("button", { name: new RegExp(`^${section}$`) }).click();
     }
+
+    await alchemy.getByRole("button", { name: "Верстак" }).click();
+    await expect(alchemy.getByRole("button", { name: "Верстак" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await scan(`${scheme}: алхимия — верстак`);
+    await alchemy.getByRole("button", { name: "Книга" }).click();
   }
 });
 

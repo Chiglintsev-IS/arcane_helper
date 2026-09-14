@@ -6,10 +6,11 @@ import {
   portionsFromPieces,
   unrevealedNumbers,
   withPortionSize,
+  withReference,
   withRevealedProperty,
   withoutProperty,
 } from "./ingredient";
-import type { IngredientAlchemy, RevealedProperty } from "./ingredient";
+import type { IngredientAlchemy, IngredientReference, RevealedProperty } from "./ingredient";
 import {
   alignedItemDefinition,
   ingredient,
@@ -126,6 +127,14 @@ export class Items {
 
   setPortionSize(id: string, piecesPerPortion: number): Items {
     return this.replacingAlchemy(id, withPortionSize(this.alchemyOf(id), piecesPerPortion));
+  }
+
+  noteReference(id: string, reference: IngredientReference): Items {
+    return this.replacingAlchemy(id, withReference(this.alchemyOf(id), reference));
+  }
+
+  setPrice(id: string, price: ItemDefinition["price"]): Items {
+    return this.replaceDefinition({ ...this.located(id), price });
   }
 
   /** Сумка считает штуки, верстак — порции: перевод между ними знает сам вид. */

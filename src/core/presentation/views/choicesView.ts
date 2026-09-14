@@ -10,6 +10,7 @@ import { CREATURE_SIZES } from "@/core/domain/character/schema";
 import { APPARATUS_GRADES } from "@/core/domain/crafting/apparatus";
 import { RECIPE_CHOICES } from "@/core/domain/crafting/recipe";
 import { SKILL_TRAINING } from "@/core/domain/character/skills";
+import { ALCHEMY_DIRECTIONS } from "@/core/domain/items/ingredient";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
 import { CURRENCIES } from "@/core/domain/shared/schema";
@@ -31,6 +32,7 @@ export function toChoicesView(): ChoicesView {
     characterLevel: { minimum: MINIMUM_CHARACTER_LEVEL, maximum: MAXIMUM_CHARACTER_LEVEL },
     abilityScore: { minimum: MINIMUM_ABILITY_SCORE, maximum: MAXIMUM_ABILITY_SCORE },
     apparatusGrades: [...APPARATUS_GRADES],
+    alchemyDirections: [...ALCHEMY_DIRECTIONS],
     recipeForm: RECIPE_CHOICES,
   };
 }

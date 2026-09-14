@@ -75,6 +75,9 @@ export const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse
 
 export const CURRENCIES = ["gold", "silver", "copper"] as const;
 
+/** Цены справочников названы золотом: мелкой монетой их не называют. */
+export const GOLD = CURRENCIES[0];
+
 export function parsedOrRefused<TValue>(schema: z.ZodType<TValue>, value: unknown, subject: string): TValue {
   const result = parsedBySchema(schema, value);
   if (result.success) return result.data;

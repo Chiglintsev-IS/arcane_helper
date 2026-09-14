@@ -1,6 +1,23 @@
+import type { RecipeFormulaView } from "@/contract/commands";
 import type { PreviewOf } from "@/contract/questions";
+import type { ChoicesView } from "@/contract/views";
 
-import { goldRu, timeSpanRu, withPlural } from "@/shared/language";
+import { CURRENCY_ABBREVIATIONS, goldRu, timeSpanRu, withPlural } from "@/shared/language";
+import type { Tone } from "@/ui/shared/ui/tone";
+
+/**
+ * Тон направления: у каждого направления свой навык и своё оснащение, и на странице вида они
+ * различаются раньше слов — цветом кромки слота. Цвет приходит из общей линейки значений.
+ */
+export const DIRECTION_TONE: Readonly<Record<string, Tone>> = {
+  "Зельеварение": "ritual",
+  "Синтез ядов": "damage",
+  "Трансмутация": "action",
+};
+
+export function directionTone(dirRu: string | null): Tone {
+  return dirRu === null ? "muted" : (DIRECTION_TONE[dirRu] ?? "bonus");
+}
 
 export const TIER_LABELS: Readonly<Record<string, string>> = {
   plain: "обычная",
@@ -15,6 +32,32 @@ export function minutesRu(minutes: number): string {
 }
 
 const PORTION_FORMS: [string, string, string] = ["порция", "порции", "порций"];
+
+export function portionsRu(portions: number): string {
+  return withPlural(portions, PORTION_FORMS);
+}
+
+/** «По столько-то с каждого вида»: счёт при предлоге склоняется иначе, чем счёт сам по себе. */
+const PER_KIND_FORMS: [string, string, string] = ["порции", "порции", "порций"];
+
+export function perKindPortionsRu(portions: number): string {
+  return withPlural(portions, PER_KIND_FORMS);
+}
+
+const UNIT_FORMS: [string, string, string] = ["единица", "единицы", "единиц"];
+
+export function unitsRu(units: number): string {
+  return withPlural(units, UNIT_FORMS);
+}
+
+/** Ставка расходников: цена комплекта за начатый час — её платят, сколько бы минут ни ушло. */
+export function goldPerHourRu(gold: number): string {
+  return `${gold} ${CURRENCY_ABBREVIATIONS.gold}/ч`;
+}
+
+export function goldTotalRu(gold: number): string {
+  return `${gold} ${CURRENCY_ABBREVIATIONS.gold}`;
+}
 
 /**
  * Запас вида: штуки сумки и порции верстака. Совпали числа — мера у вида штучная, и второй раз одно
@@ -58,5 +101,39 @@ export function researchNeedsRu(
           ? NO_CONSUMABLES_RU
           : `${plan.consumablesRu.toLowerCase()}, ${goldRu(plan.consumablesGold)}`,
     },
+  ];
+}
+
+const PURIFIED_RU = "очистка смеси";
+
+function repeatsRu(repeats: number): string {
+  return `повторов в полную силу: ${repeats}`;
+}
+
+function suppressedRu(nameRu: string): string {
+  return `подавлено: ${nameRu}`;
+}
+
+/**
+ * Чем замысел отличается от стандартной формы справочника: стандартное не называется, потому что
+ * оно и есть умолчание. Пустой перечень читается как «форма стандартная».
+ */
+export function formulaAsideRu(
+  formula: RecipeFormulaView,
+  standard: ChoicesView["recipeForm"]["standard"],
+): readonly string[] {
+  return [
+    ...(formula.duration === standard.duration || formula.duration === null
+      ? []
+      : [formula.duration]),
+    ...(formula.onset === standard.onset ? [] : [formula.onset]),
+    ...(formula.reach === standard.reach ? [] : [formula.reach]),
+    ...(formula.application === standard.application ? [] : [formula.application]),
+    ...(formula.resistance === standard.resistance ? [] : [formula.resistance]),
+    ...(formula.mainRarity === standard.mainRarity ? [] : [formula.mainRarity]),
+    ...(formula.fullRepeats === standard.fullRepeats ? [] : [repeatsRu(formula.fullRepeats)]),
+    ...(formula.purified ? [PURIFIED_RU] : []),
+    ...formula.suppressed.map((one) => suppressedRu(one.nameRu)),
+    ...formula.limitations,
   ];
 }

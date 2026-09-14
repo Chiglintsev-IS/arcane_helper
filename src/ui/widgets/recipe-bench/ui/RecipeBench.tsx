@@ -1,346 +1,390 @@
 "use client";
 
-import type { ChoicesView } from "@/contract/views";
+import { useState } from "react";
+
+import type { RecipeFormulaView } from "@/contract/commands";
 import type { PreviewOf } from "@/contract/questions";
+import type { ChoicesView, CraftingView } from "@/contract/views";
 
-import { durationPhrase } from "@/ui/entities/spell/lib/format";
-import { TIER_LABELS, minutesRu } from "@/ui/entities/crafting/lib/labels";
-import { labelled } from "@/ui/shared/lib/alchemyLabels";
-import { signed, withPlural } from "@/shared/language";
-import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { signed } from "@/shared/language";
+import {
+  goldPerHourRu,
+  goldTotalRu,
+  minutesRu,
+  perKindPortionsRu,
+  portionsRu,
+  unitsRu,
+} from "@/ui/entities/crafting/lib/labels";
+import { RULE_ROW, RULE_TILE } from "@/ui/shared/ui/rule";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
+import { KindPicker, MixtureCards, SpendRows } from "@/ui/widgets/recipe-bench/ui/MixtureCards";
+import { FormRows } from "@/ui/widgets/recipe-bench/ui/FormRows";
 
-export type RecipeDraft = {
-  readonly kinds: readonly string[];
-  readonly mainProperty: string | null;
-  readonly duration: string | null;
-  readonly onset: string;
-  readonly fullRepeats: number;
-  readonly reach: string;
-  readonly application: string;
-  readonly resistance: string;
-  readonly suppressed: readonly string[];
-  readonly limitations: readonly string[];
-};
+const WHAT_LABEL = "ЧТО ВАРИМ";
+const DIFFICULTY_LABEL = "СЛОЖНОСТЬ";
+const TIME_LABEL = "ВРЕМЯ ПАРТИИ";
+const CONSUMABLES_LABEL = "РАСХОДНИКИ";
+const APPARATUS_LABEL = "ОСНАЩЕНИЕ";
+const MIXTURE_LABEL = "ЧТО В СОСТАВЕ";
+const SPEND_LABEL = "РАСХОД ПОРЦИЙ";
+const PICKER_LABEL = "ВИДЫ В СОСТАВ";
+const RARITY_LABEL = "РЕДКОСТЬ ОСНОВНОГО ЭФФЕКТА";
+const FORM_LABEL = "ФОРМА СОСТАВА";
+const LIMITS_LABEL = "ОГРАНИЧЕНИЯ";
+const BATCH_LABEL = "ПАРТИЯ";
+const TALLY_LABEL = "ИЗ ЧЕГО СЛОЖИЛАСЬ СЛ";
 
-const NOTHING_ADDED_RU = "Ничего";
-const NO_MODIFIERS_RU = "стандартная форма, поправок нет";
+const NOTHING_TO_BREW = "варить нечего";
 
-type PricedChoice = ChoicesView["recipeForm"]["durations"][number];
+const NO_DIFFICULTY = "—";
 
-function pricedRu(option: PricedChoice, named: (value: string) => string): string {
-  return `${signed(option.modifier)} · ${named(option.value)}`;
+const CHANGE = "сменить";
+
+const BATCH_LOADED = "порций заложено";
+
+const RARITY_NOTE =
+  "Редкость называет мастер — от неё зависит и цена эффекта, и сложность исследования.";
+
+const APPARATUS_NOTE =
+  "Набор не даёт бонуса к броску. Он решает две вещи: какую сложность работа выдержит и сколько рецептурных порций можно заложить за один раз.";
+
+const LESS = "−";
+const MORE = "+";
+const OPEN_MARK = "▾";
+
+const SEPARATOR = " · ";
+
+function holdsRu(hardest: number): string {
+  return `набор держит до ${hardest}`;
 }
 
-function Field({
-  label,
-  value,
-  options,
-  empty,
-  named = (option) => option,
-  onChange,
+function kitLimitsRu(hardest: number, batch: number): string {
+  return `держит сложность до ${hardest}${SEPARATOR}до ${portionsRu(batch)} за раз`;
+}
+
+function batchOutRu(portions: number, units: number): string {
+  return `по ${perKindPortionsRu(portions)} с каждого вида → выйдет ${unitsRu(units)}`;
+}
+
+function atOnceRu(batch: number): string {
+  return `за раз набор держит до ${portionsRu(batch)}`;
+}
+
+function consumablesRu(batch: NonNullable<PreviewOf<"recipe_preview">["batch"]>): string {
+  return `${batch.consumablesRu.toLocaleLowerCase("ru")}${SEPARATOR}${goldTotalRu(
+    batch.consumablesGold,
+  )}`;
+}
+
+function kitsRu(batch: NonNullable<PreviewOf<"recipe_preview">["batch"]>): string {
+  return `${batch.consumableKits} × комплект${SEPARATOR}${minutesRu(
+    batch.minutes,
+  )}${SEPARATOR}${goldPerHourRu(batch.goldPerStartedHour)}`;
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return <span className="text-[0.625rem] tracking-[0.14em] text-accent">{children}</span>;
+}
+
+function Tile({
+  labelRu,
+  valueRu,
+  noteRu,
+  tone,
 }: {
-  label: string;
-  value: string;
-  options: readonly PricedChoice[];
-  empty?: string;
-  named?: (option: string) => string;
-  onChange: (next: string) => void;
+  labelRu: string;
+  valueRu: string;
+  noteRu: string;
+  tone: "action" | "muted";
 }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-xs text-ink-quiet">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`min-h-11 w-full px-2 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
-      >
-        {empty === undefined ? null : <option value="">{empty}</option>}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {pricedRu(option, named)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <div
+      className={`flex min-w-0 flex-1 flex-col gap-0.5 p-2 ${SURFACE_GROUP_BARE} ${RULE_TILE[tone]}`}
+    >
+      <span className="text-[0.59375rem] tracking-[0.1em] text-ink-quiet">{labelRu}</span>
+      <span className="text-[0.8125rem] font-semibold leading-tight">{valueRu}</span>
+      <span className="text-[0.625rem] leading-tight text-ink-quiet">{noteRu}</span>
+    </div>
   );
 }
 
-function Matches({
-  matches,
-  draft,
-  mainRu,
-  onMain,
-  onSuppress,
-}: {
-  matches: PreviewOf<"recipe_preview">["matches"];
-  draft: RecipeDraft;
-  mainRu: string | null;
-  onMain: (nameRu: string) => void;
-  onSuppress: (nameRu: string) => void;
-}) {
-  return (
-    <ul className="flex flex-col gap-2">
-      {matches.map((match) => {
-        const main = match.nameRu === mainRu;
-        const off = draft.suppressed.includes(match.nameRu);
-        return (
-          <li key={match.nameRu} className="flex flex-col gap-1">
-            <span className={`text-sm leading-tight ${main ? "font-semibold" : ""}`}>
-              {match.nameRu}
-            </span>
-            <span className="text-xs text-ink-quiet">
-              ступень {labelled(TIER_LABELS, match.tier)} · {match.sources.join(", ")}
-            </span>
-            <span className="flex gap-2">
-              <button
-                type="button"
-                aria-pressed={main}
-                onClick={() => onMain(match.nameRu)}
-                className={`min-h-11 flex-1 px-2 text-xs ${SURFACE_CONTROL} ${main ? "font-semibold" : ""}`}
-              >
-                Основной эффект
-              </button>
-              <button
-                type="button"
-                aria-pressed={off}
-                onClick={() => onSuppress(match.nameRu)}
-                className={`min-h-11 flex-1 px-2 text-xs ${SURFACE_CONTROL} ${off ? "font-semibold" : ""}`}
-              >
-                Подавить
-              </button>
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function Tally({ difficulty }: { difficulty: PreviewOf<"recipe_preview">["difficulty"] }) {
-  if (difficulty === null) return null;
-  const parts = difficulty.parts
-    .filter((part) => part.modifier !== 0)
-    .toSorted((one, other) => other.modifier - one.modifier);
-
-  if (parts.length === 0) {
-    return <p className="text-xs text-ink-quiet">{NO_MODIFIERS_RU}</p>;
-  }
-
-  return (
-    <ul className="flex flex-col gap-0.5 text-xs">
-      {parts.map((part) => (
-        <li key={part.nameRu} className="flex justify-between gap-2">
-          <span className="min-w-0 text-ink-quiet">{part.nameRu}</span>
-          <span className="shrink-0 tabular-nums">
-            {part.modifier < 0 ? "−" : "+"}
-            {Math.abs(part.modifier)}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
+/**
+ * Верстак: состав, форма и партия — и цена замысла, которую всё это складывает. Бросок и исход
+ * остаются за столом, а приложение называет, во что работа обойдётся до неё.
+ */
 export function RecipeBench({
+  crafting,
   choices,
-  preview,
   draft,
+  preview,
   portions,
-  rolledText,
-  mishapText,
-  rollLabels,
   onDraft,
   onPortions,
-  onRolled,
-  onMishap,
-  onCraft,
+  onApparatus,
 }: {
+  crafting: CraftingView;
   choices: ChoicesView["recipeForm"];
+  draft: RecipeFormulaView;
   preview: PreviewOf<"recipe_preview"> | null;
-  draft: RecipeDraft;
-  portions: string;
-  rolledText: string;
-  mishapText: string;
-  rollLabels: { check: string; mishap: string };
-  onDraft: (next: RecipeDraft) => void;
-  onPortions: (next: string) => void;
-  onRolled: (next: string) => void;
-  onMishap: (next: string) => void;
-  onCraft: () => void;
+  portions: number;
+  onDraft: (next: RecipeFormulaView) => void;
+  onPortions: (portions: number) => void;
+  onApparatus: (apparatusRu: string) => void;
 }) {
-  const refused = preview?.refusalRu !== undefined;
-  const change = (patch: Partial<RecipeDraft>): void => onDraft({ ...draft, ...patch });
-  const toggle = (list: readonly string[], value: string): readonly string[] =>
-    list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+  const [kitOpen, setKitOpen] = useState(false);
+  const { workshop, handbook } = crafting;
+  const difficulty = preview?.difficulty ?? null;
+  const batch = preview?.batch ?? null;
+  const overHardest = preview?.warnings.some((warning) => warning.code === "over_hardest") === true;
+
+  const namedRu = crafting.ingredients
+    .filter((kind) => draft.kinds.includes(kind.itemId))
+    .map((kind) => kind.nameRu)
+    .join(SEPARATOR);
 
   return (
-    <section aria-label="Верстак" className={`flex flex-col gap-3 p-3 ${SURFACE_GROUP}`}>
-      {preview === null || preview.matches.length === 0 ? (
-        refused ? null : (
-          <p className="text-sm leading-snug text-ink-quiet">
-            Совпавших свойств пока нет: состав держится на свойстве, раскрытом хотя бы у двух видов.
-            Что состав делает, остаётся за мастером — верстак называет только цену замысла.
-          </p>
-        )
-      ) : (
-        <Matches
-          matches={preview.matches}
-          draft={draft}
-          mainRu={preview.difficulty?.mainRu ?? null}
-          onMain={(nameRu) =>
-            change({ mainProperty: draft.mainProperty === nameRu ? null : nameRu })
-          }
-          onSuppress={(nameRu) => change({ suppressed: toggle(draft.suppressed, nameRu) })}
-        />
-      )}
+    <div className="flex flex-col gap-3.5 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-[0.625rem] tracking-[0.14em] text-ink-quiet">{WHAT_LABEL}</span>
+          <span className="text-sm font-semibold leading-tight">
+            {namedRu === "" ? NOTHING_TO_BREW : namedRu}
+          </span>
+        </span>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Field
-          label="Длительность"
-          value={draft.duration ?? ""}
-          empty={durationPhrase({ type: "instant" })}
-          options={choices.durations}
-          onChange={(next) => change({ duration: next === "" ? null : next })}
-        />
-        <Field
-          label="Начало"
-          value={draft.onset}
-          options={choices.onsets}
-          onChange={(next) => change({ onset: next })}
-        />
+        <span className="flex shrink-0 flex-col items-end">
+          <span className="text-[0.59375rem] tracking-[0.1em] text-ink-quiet">
+            {DIFFICULTY_LABEL}
+          </span>
+          <span
+            className={`text-[2.5rem] font-semibold leading-none tabular-nums ${
+              difficulty === null ? "text-off" : overHardest ? "text-damage" : ""
+            }`}
+          >
+            {difficulty?.total ?? NO_DIFFICULTY}
+          </span>
+          <span className="text-[0.625rem] text-ink-quiet">{holdsRu(workshop.hardest)}</span>
+        </span>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Field
-          label="Цели и область"
-          value={draft.reach}
-          options={choices.reaches}
-          onChange={(next) => change({ reach: next })}
-        />
-        <Field
-          label="Применение"
-          value={draft.application}
-          options={choices.applications}
-          onChange={(next) => change({ application: next })}
-        />
-        <Field
-          label="Сопротивление"
-          value={draft.resistance}
-          options={choices.resistances}
-          onChange={(next) => change({ resistance: next })}
-        />
-        <Field
-          label="Добавить ограничение"
-          value=""
-          empty={NOTHING_ADDED_RU}
-          options={choices.limitations.filter(
-            (option) => !draft.limitations.includes(option.value),
-          )}
-          onChange={(next) =>
-            next === "" ? undefined : change({ limitations: toggle(draft.limitations, next) })
-          }
-        />
-        {choices.limitations
-          .filter((option) => draft.limitations.includes(option.value))
-          .map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => change({ limitations: toggle(draft.limitations, option.value) })}
-              aria-label={`Убрать ограничение: ${option.value}`}
-              className={`min-h-11 px-2 text-left text-xs ${SURFACE_CONTROL}`}
-            >
-              {pricedRu(option, (named) => named)}
-            </button>
-          ))}
-      </div>
-
-      {preview?.refusalRu === undefined ? null : (
-        <p className="text-sm text-ink-soft">{preview.refusalRu}</p>
-      )}
-
-      {refused || preview?.difficulty == null ? null : (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-xs text-ink-quiet">Сложность</span>
-            <span className="text-2xl font-semibold tabular-nums leading-none">
-              {preview.difficulty.total}
-            </span>
-          </div>
-          <Tally difficulty={preview.difficulty} />
+      {batch === null ? null : (
+        <div className="flex items-stretch gap-1">
+          <Tile
+            labelRu={TIME_LABEL}
+            valueRu={minutesRu(batch.minutes)}
+            noteRu={batchOutRu(portions, batch.units)}
+            tone="action"
+          />
+          <Tile
+            labelRu={CONSUMABLES_LABEL}
+            valueRu={consumablesRu(batch)}
+            noteRu={kitsRu(batch)}
+            tone="muted"
+          />
         </div>
       )}
 
-      <label className="flex items-center justify-between gap-2">
-        <span className="text-xs text-ink-quiet">Рецептурных порций</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={portions}
-          onChange={(event) => onPortions(event.target.value)}
-          className={`min-h-11 w-20 px-2 text-right ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
-        />
-      </label>
-
-      {preview?.batch == null ? null : (
-        <p className="text-sm">
-          <span className="font-semibold tabular-nums">
-            {withPlural(preview.batch.units, ["единица", "единицы", "единиц"])}
-          </span>{" "}
-          состава · {minutesRu(preview.batch.minutes)} · расходники{" "}
-          {preview.batch.consumablesRu.toLowerCase()}
-        </p>
-      )}
-
-      {refused || preview?.check == null ? null : (
-        <p className="text-sm">
-          Проверка разработки:{" "}
-          <span className="font-semibold tabular-nums">
-            {`${rollLabels.check} + ${preview.check.bonus}`}
+      <section className="flex flex-col">
+        <button
+          type="button"
+          aria-expanded={kitOpen}
+          onClick={() => setKitOpen(!kitOpen)}
+          className={`flex min-h-12 items-center gap-2 p-2 text-left ${SURFACE_GROUP_BARE}`}
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-[0.625rem] tracking-[0.14em] text-ink-quiet">
+              {APPARATUS_LABEL}
+            </span>
+            <span className="text-[0.8125rem] font-semibold leading-tight">
+              {workshop.apparatusRu ?? handbook.apparatus.at(-1)?.nameRu}
+            </span>
+            <span className="text-[0.65625rem] text-ink-quiet">
+              {kitLimitsRu(workshop.hardest, workshop.batch)}
+            </span>
           </span>
-          {preview.known ? " — рецепт записан, бросок не нужен" : ""}
-        </p>
+          <span className="shrink-0 text-[0.6875rem] text-accent">
+            {CHANGE} <span aria-hidden="true">{OPEN_MARK}</span>
+          </span>
+        </button>
+
+        {!kitOpen ? null : (
+          <div className="flex flex-col">
+            <p className="py-2 text-[0.6875rem] leading-snug text-ink-quiet">{APPARATUS_NOTE}</p>
+            {handbook.apparatus.map((entry) => {
+              const own = entry.nameRu === (workshop.apparatusRu ?? handbook.apparatus.at(-1)?.nameRu);
+              return (
+                <button
+                  key={entry.nameRu}
+                  type="button"
+                  aria-pressed={own}
+                  onClick={() => {
+                    setKitOpen(false);
+                    onApparatus(entry.nameRu);
+                  }}
+                  className={`flex min-h-12 items-center justify-between gap-2 px-2 py-1.5 text-left ${RULE_ROW} ${
+                    own ? SURFACE_CHOSEN : ""
+                  }`}
+                >
+                  <span className="min-w-0 text-xs leading-tight">{entry.nameRu}</span>
+                  <span className="shrink-0 text-[0.65625rem] tabular-nums text-ink-quiet">
+                    {kitLimitsRu(entry.hardest, entry.batch)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-1.5">
+        <Label>{MIXTURE_LABEL}</Label>
+        <MixtureCards
+          matches={preview?.matches ?? []}
+          draft={draft}
+          mainRu={difficulty?.mainRu ?? null}
+          rarities={handbook.rarities}
+          onDraft={onDraft}
+        />
+      </section>
+
+      {preview === null || preview.spend.length === 0 ? null : (
+        <section className="flex flex-col gap-1.5">
+          <Label>{SPEND_LABEL}</Label>
+          <SpendRows spend={preview.spend} />
+        </section>
       )}
 
-      <div className="flex gap-2">
-        <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-xs text-ink-quiet">{`Выпало на ${rollLabels.check}`}</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={rolledText}
-            onChange={(event) => onRolled(event.target.value)}
-            className={`min-h-11 w-full px-2 ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
-          />
-        </label>
-        {preview?.check?.mishapAwaited !== true ? null : (
-          <label className="flex min-w-0 flex-1 flex-col gap-1">
-            <span className="text-xs text-ink-quiet">{`Выпало на ${rollLabels.mishap}`}</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={mishapText}
-              onChange={(event) => onMishap(event.target.value)}
-              className={`min-h-11 w-full px-2 ${FIELD_TEXT} tabular-nums ${SURFACE_CONTROL}`}
-            />
-          </label>
-        )}
-      </div>
+      <section className="flex flex-col gap-1.5">
+        <Label>{PICKER_LABEL}</Label>
+        <KindPicker
+          ingredients={crafting.ingredients}
+          candidates={preview?.candidates ?? []}
+          draft={draft}
+          onDraft={onDraft}
+        />
+      </section>
 
-      {preview?.shortagesRu.map((shortage) => (
-        <p key={shortage} className="text-sm leading-snug text-reaction">
-          {shortage}
+      <section className="flex flex-col gap-1.5">
+        <Label>{RARITY_LABEL}</Label>
+        <div className="flex flex-wrap gap-1">
+          {handbook.rarities.map((rarity) => (
+            <button
+              key={rarity.nameRu}
+              type="button"
+              aria-pressed={rarity.nameRu === draft.mainRarity}
+              onClick={() => onDraft({ ...draft, mainRarity: rarity.nameRu })}
+              className={`min-h-11 grow px-2 text-[0.6875rem] ${
+                rarity.nameRu === draft.mainRarity ? SURFACE_CHOSEN : SURFACE_CONTROL
+              }`}
+            >
+              {`${rarity.nameRu} ${signed(rarity.main)}`}
+            </button>
+          ))}
+        </div>
+        <p className="text-[0.65625rem] leading-snug text-ink-quiet">{RARITY_NOTE}</p>
+      </section>
+
+      <section className="flex flex-col gap-1.5">
+        <Label>{FORM_LABEL}</Label>
+        <FormRows
+          draft={draft}
+          choices={choices}
+          purificationCost={handbook.tariffs.purification}
+          perRepeat={handbook.tariffs.perRepeat}
+          onDraft={onDraft}
+        />
+      </section>
+
+      <section className="flex flex-col gap-1.5">
+        <Label>{LIMITS_LABEL}</Label>
+        <div className="flex flex-col">
+          {choices.limitations.map((limitation) => {
+            const taken = draft.limitations.includes(limitation.value);
+            return (
+              <button
+                key={limitation.value}
+                type="button"
+                aria-pressed={taken}
+                onClick={() =>
+                  onDraft({
+                    ...draft,
+                    limitations: taken
+                      ? draft.limitations.filter((one) => one !== limitation.value)
+                      : [...draft.limitations, limitation.value],
+                  })
+                }
+                className={`flex min-h-11 items-center gap-2 px-2 py-1.5 text-left ${RULE_ROW} ${
+                  taken ? SURFACE_GROUP_BARE : ""
+                }`}
+              >
+                <span
+                  className={`min-w-0 flex-1 text-[0.6875rem] leading-snug ${
+                    taken ? "font-semibold text-accent" : ""
+                  }`}
+                >
+                  {limitation.value}
+                </span>
+                <span className="shrink-0 text-xs font-semibold tabular-nums text-ritual">
+                  {signed(limitation.modifier)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-1.5">
+        <Label>{BATCH_LABEL}</Label>
+        <div className="flex items-center gap-2">
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[0.6875rem] leading-snug">
+              {batch === null ? atOnceRu(workshop.batch) : batchOutRu(portions, batch.units)}
+            </span>
+            <span className="text-[0.625rem] text-ink-quiet">{atOnceRu(workshop.batch)}</span>
+          </span>
+          <button
+            type="button"
+            aria-label={`${BATCH_LOADED}: ${LESS}`}
+            onClick={() => onPortions(portions === 1 ? 1 : portions - 1)}
+            className={`w-11 shrink-0 text-sm ${SURFACE_CONTROL}`}
+          >
+            <span aria-hidden="true">{LESS}</span>
+          </button>
+          <span className="w-8 shrink-0 text-center text-[1.625rem] font-semibold tabular-nums leading-none">
+            {portions}
+          </span>
+          <button
+            type="button"
+            aria-label={`${BATCH_LOADED}: ${MORE}`}
+            onClick={() => onPortions(portions + 1)}
+            className={`w-11 shrink-0 text-sm ${SURFACE_CONTROL}`}
+          >
+            <span aria-hidden="true">{MORE}</span>
+          </button>
+        </div>
+      </section>
+
+      {difficulty === null ? null : (
+        <section className="flex flex-col gap-1.5">
+          <Label>{TALLY_LABEL}</Label>
+          <dl className="flex flex-col gap-0.5 text-xs">
+            {difficulty.parts
+              .filter((part) => part.modifier !== 0)
+              .map((part) => (
+                <div key={part.nameRu} className="flex items-baseline justify-between gap-2">
+                  <dt className="min-w-0 text-ink-quiet">{part.nameRu}</dt>
+                  <dd className="shrink-0 tabular-nums">{signed(part.modifier)}</dd>
+                </div>
+              ))}
+          </dl>
+        </section>
+      )}
+
+      {preview?.noticesRu.map((notice) => (
+        <p key={notice} className="text-[0.6875rem] leading-snug text-ink-soft">
+          {notice}
         </p>
       ))}
-
-      <button
-        type="button"
-        onClick={onCraft}
-        className={`min-h-11 ${SURFACE_PRIMARY} px-3 text-sm font-semibold`}
-      >
-        Изготовить партию
-      </button>
-    </section>
+    </div>
   );
 }

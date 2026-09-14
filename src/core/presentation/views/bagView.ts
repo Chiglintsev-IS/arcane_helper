@@ -37,7 +37,11 @@ function itemView(
     })),
     spellcastingFocus: item.spellcastingFocus === true,
     notes: item.notes.map((note) => ({ ...note })),
-    alchemicalProperties: (item.alchemy?.properties ?? []).map((property) => ({ ...property })),
+    alchemicalProperties: (item.alchemy?.properties ?? []).map((property) => ({
+      number: property.number,
+      nameRu: property.nameRu,
+      dirRu: property.dirRu ?? null,
+    })),
     neededForRu: need?.spellNamesRu ?? [],
   };
 }

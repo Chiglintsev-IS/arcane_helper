@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, timeSpanRu, withPlural } from "@/shared/language";
+import { coinRu, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, timeSpanRu, withPlural } from "@/shared/language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -79,5 +79,16 @@ describe("signed", () => {
   it("минус типографский: дефис в этой позиции читается как перенос", () => {
     expect(signed(-2)).toBe("−2");
     expect(signed(-11)).toBe("−11");
+  });
+});
+
+describe("coinRu", () => {
+  it("цена называется сокращением своей монеты", () => {
+    expect(coinRu(85, "gold")).toBe("85 зм");
+    expect(coinRu(3, "copper")).toBe("3 мм");
+  });
+
+  it("монета, которой в словаре нет, оставляет цену без сокращения", () => {
+    expect(coinRu(7, "гроши")).toBe("7");
   });
 });

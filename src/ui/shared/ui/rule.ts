@@ -30,6 +30,45 @@ export const RULE_ROLE: Record<Tone, string> = {
 
 export const RULE_ACTIVE = "border border-accent";
 
+/** Кромка открытой строки списка: у прочих на её месте пустое поле той же ширины. */
+export const RULE_EDGE_ACTIVE = "border-l-4 border-l-accent";
+export const RULE_EDGE_QUIET = "border-l-4 border-l-transparent";
+
+/** Рамка вокруг знака: она держит квадрат, в котором стоит типографский знак раздела. */
+export const RULE_SIGN = "border border-accent-rule";
+
+/** Кромка роли пошире: ею отбивают карточку и слот, где роль читают раньше самого текста. */
+export const RULE_ROLE_WIDE: Record<Tone, string> = {
+  action: "border-l-4 border-l-action",
+  bonus: "border-l-4 border-l-bonus",
+  reaction: "border-l-4 border-l-reaction",
+  concentration: "border-l-4 border-l-concentration",
+  ritual: "border-l-4 border-l-ritual",
+  damage: "border-l-4 border-l-damage",
+  hindrance: "border-l-4 border-l-hindrance",
+  support: "border-l-4 border-l-support",
+  roll: "border-l-4 border-l-roll",
+  muted: "border-l-4 border-l-rule-strong",
+};
+
+/** Кромка плитки сверху: под ней стоит число, и род числа виден раньше подписи. */
+export const RULE_TILE: Record<Tone, string> = {
+  action: "border-t-2 border-t-action",
+  bonus: "border-t-2 border-t-bonus",
+  reaction: "border-t-2 border-t-reaction",
+  concentration: "border-t-2 border-t-concentration",
+  ritual: "border-t-2 border-t-ritual",
+  damage: "border-t-2 border-t-damage",
+  hindrance: "border-t-2 border-t-hindrance",
+  support: "border-t-2 border-t-support",
+  roll: "border-t-2 border-t-roll",
+  muted: "border-t-2 border-t-accent",
+};
+
+/** Закладка режима: полоса сверху у выбранной и пустое место у прочих — высота строки одна. */
+export const RULE_TAB_ON = "border-t-2 border-t-accent";
+export const RULE_TAB_OFF = "border-t-2 border-t-transparent";
+
 export const RULE_MARK: Record<Tone, string> = {
   action: "border border-action",
   bonus: "border border-bonus",

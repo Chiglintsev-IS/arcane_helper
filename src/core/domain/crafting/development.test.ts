@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { developmentCheck, developmentOutcome } from "./development";
+import { developmentCheck, mishapBands } from "./development";
 
 const THORNE = { proficiencyBonus: 3, abilityModifier: 4 };
 
@@ -9,57 +9,20 @@ describe("проверка разработки", () => {
     expect(developmentCheck(THORNE)).toEqual({ bonus: 7 });
   });
 
-  it("выпавшее сравнивается со сложностью, а невозможное отвергается с причиной", () => {
-    const check = developmentCheck(THORNE);
-
-    expect(developmentOutcome({ rolled: 8, mishapRolled: undefined, check, difficulty: 15 })).toEqual(
-      { rolled: 8, bonus: 7, total: 15, success: true, rewarded: false },
-    );
-    expect(developmentOutcome({ rolled: 7, mishapRolled: undefined, check, difficulty: 15 })).toEqual(
-      { rolled: 7, bonus: 7, total: 14, success: false, rewarded: false },
-    );
-
-    for (const rolled of [0, 21, 2.5]) {
-      expect(() =>
-        developmentOutcome({ rolled, mishapRolled: undefined, check, difficulty: 15 }),
-      ).toThrow(/На d20 столько не выпадает/);
-    }
+  it("бросает игрок: приложение называет бонус и не знает исхода", () => {
+    expect(Object.keys(developmentCheck(THORNE))).toEqual(["bonus"]);
   });
+});
 
-  it("натуральная двадцать награждает только успешный результат", () => {
-    const check = developmentCheck(THORNE);
+describe("авария", () => {
+  it("соседние грани с одним последствием стоят одной строкой справочника", () => {
+    const bands = mishapBands();
 
-    expect(
-      developmentOutcome({ rolled: 20, mishapRolled: undefined, check, difficulty: 20 }).rewarded,
-    ).toBe(true);
-    expect(
-      developmentOutcome({ rolled: 20, mishapRolled: undefined, check, difficulty: 30 }).rewarded,
-    ).toBe(false);
-  });
-
-  it("натуральная единица требует кости последствий и называет его таблицей", () => {
-    const check = developmentCheck(THORNE);
-
-    expect(() =>
-      developmentOutcome({ rolled: 1, mishapRolled: undefined, check, difficulty: 5 }),
-    ).toThrow(/назовите выпавшее на d6/);
-
-    const gone = developmentOutcome({ rolled: 1, mishapRolled: 2, check, difficulty: 5 });
-    expect(gone).toEqual({
-      rolled: 1,
-      bonus: 7,
-      total: 8,
-      success: false,
-      rewarded: false,
-      mishapRu: "Реакция гаснет без дополнительных последствий.",
+    expect(bands[0]).toEqual({
+      fromRolled: 1,
+      toRolled: 2,
+      textRu: "Реакция гаснет без дополнительных последствий.",
     });
-
-    expect(
-      developmentOutcome({ rolled: 1, mishapRolled: 6, check, difficulty: 5 }).mishapRu,
-    ).toContain("Повреждается оборудование");
-
-    expect(() => developmentOutcome({ rolled: 1, mishapRolled: 7, check, difficulty: 5 })).toThrow(
-      /На d6 столько не выпадает/,
-    );
+    expect(bands.at(-1)).toMatchObject({ fromRolled: 6, toRolled: 6 });
   });
 });

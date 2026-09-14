@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { paymentSchema } from "./commands";
+import { paymentSchema, recipeFormulaSchema } from "./commands";
 
 const word = z.string().min(1);
 
@@ -29,6 +29,7 @@ export const choicesViewSchema = z.object({
   characterLevel: z.object({ minimum: whole, maximum: whole }),
   abilityScore: z.object({ minimum: whole, maximum: whole }),
   apparatusGrades: z.array(word),
+  alchemyDirections: z.array(word),
   recipeForm: z.object({
     standard: z.object({
       duration: word.nullable(),
@@ -37,6 +38,8 @@ export const choicesViewSchema = z.object({
       reach: word,
       application: word,
       resistance: word,
+      mainRarity: word,
+      purified: z.boolean(),
     }),
     durations: z.array(pricedChoiceSchema),
     onsets: z.array(pricedChoiceSchema),
@@ -106,7 +109,11 @@ export const sheetViewSchema = z.object({
   features: z.array(characterFeatureViewSchema),
 });
 
-const revealedPropertyViewSchema = z.object({ number: whole, nameRu: word });
+const revealedPropertyViewSchema = z.object({
+  number: whole,
+  nameRu: word,
+  dirRu: word.nullable(),
+});
 
 const itemViewSchema = z.object({
   id: word,
@@ -155,6 +162,23 @@ const ingredientKnowledgeViewSchema = z.object({
   researchNumbers: z.array(whole),
   properties: z.array(revealedPropertyViewSchema),
   notes: z.array(z.object({ id: word, textRu: word })),
+  findDc: whole.nullable(),
+  gatherDc: whole.nullable(),
+  yieldRu: word.nullable(),
+  portionRu: word.nullable(),
+  price: z.object({ amount: whole, currency: word }).nullable(),
+});
+
+/** Записанный рецепт называет цену своего замысла: на нынешний набор алхимика он не смотрит. */
+const knownRecipeViewSchema = z.object({
+  nameRu: word,
+  kindsRu: z.array(word),
+  difficulty: whole.nullable(),
+  minutes: whole.nullable(),
+  consumablesRu: word.nullable(),
+  goldPerStartedHour: whole.nullable(),
+  refusalRu: word.nullable(),
+  formula: recipeFormulaSchema,
 });
 
 const alchemyHandbookViewSchema = z.object({
@@ -191,14 +215,26 @@ const alchemyHandbookViewSchema = z.object({
     z.object({ fromDifficulty: whole, toDifficulty: whole, minutes: whole }),
   ),
   tiers: z.array(z.object({ sources: whole, tier: word, modifier: whole })),
+  rarities: z.array(
+    z.object({
+      nameRu: word,
+      main: whole,
+      additional: whole,
+      suppression: whole,
+      research: whole,
+    }),
+  ),
   mishaps: z.array(z.object({ fromRolled: whole, toRolled: whole, textRu: word })),
+  checks: z.object({ findRu: word, gatherRu: word }),
   tariffs: z.object({
     fewestKinds: whole,
     mostKinds: whole,
     base: whole,
     lowest: whole,
     additionalEffect: whole,
-    suppression: whole,
+    purification: whole,
+    perRepeat: whole,
+    mostRepeats: whole,
     mostLimitationRelief: whole,
     portionsPerBonusUnit: whole,
     portionsPerConsumableKit: whole,
@@ -207,7 +243,13 @@ const alchemyHandbookViewSchema = z.object({
 
 export const craftingViewSchema = z.object({
   ingredients: z.array(ingredientKnowledgeViewSchema),
-  workshop: z.object({ apparatusRu: word.nullable() }),
+  recipes: z.array(knownRecipeViewSchema),
+  workshop: z.object({
+    apparatusRu: word.nullable(),
+    hardest: whole,
+    batch: whole,
+    stationary: z.boolean(),
+  }),
   smithing: z.object({ nameRu: word, noteRu: word }),
   handbook: alchemyHandbookViewSchema,
 });
@@ -469,6 +511,7 @@ export type CastingView = z.infer<typeof castingViewSchema>;
 export type ItemView = z.infer<typeof itemViewSchema>;
 export type BagView = z.infer<typeof bagViewSchema>;
 export type CraftingView = z.infer<typeof craftingViewSchema>;
+export type KnownRecipeView = z.infer<typeof knownRecipeViewSchema>;
 export type IngredientKnowledgeView = z.infer<typeof ingredientKnowledgeViewSchema>;
 export type AlchemyHandbookView = z.infer<typeof alchemyHandbookViewSchema>;
 export type StatChoiceView = z.infer<typeof statChoiceSchema>;

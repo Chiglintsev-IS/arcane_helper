@@ -16,7 +16,7 @@ import { NoteList } from "@/ui/shared/ui/NoteList";
 import { RULE_BETWEEN, RULE_BLOCK } from "@/ui/shared/ui/rule";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { Sheet } from "@/ui/shared/ui/Sheet";
-import { SURFACE_CONTROL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function ingredientPropertiesName(nameRu: string): string {
   return `Свойства: ${nameRu}`;
@@ -26,6 +26,9 @@ const PROPERTIES_TITLE = "Раскрытые свойства";
 
 /** Свойство приходит словами стола: перечня, из которого его выбирать, у приложения нет. */
 const PROPERTY_FIELD = "Свойство";
+
+/** Направление называет стол вместе со свойством — либо не называет вовсе. */
+const DIRECTION_FIELD = "Направление";
 
 const DIFFICULTY_LABEL = "Сложность";
 
@@ -118,11 +121,13 @@ function ResearchNeeds({ plan }: { plan: NonNullable<PreviewOf<"research_preview
  */
 export function RevealPropertySheet({
   ingredient,
+  directions,
   refusalRu,
   onSend,
   onCancel,
 }: {
   ingredient: IngredientKnowledgeView;
+  directions: readonly string[];
   refusalRu: string | null;
   onSend: (command: Command, whenDone?: () => void) => void;
   onCancel: () => void;
@@ -139,12 +144,23 @@ export function RevealPropertySheet({
   const onRemoveNote = (noteId: string): void =>
     onSend({ kind: "remove_item_note", itemId, noteId });
   const [propertyRu, setPropertyRu] = useState("");
+  const [dirRu, setDirRu] = useState<string | null>(null);
   const number = ingredient.researchNumbers[0] ?? null;
 
   const reveal = (textRu: string): void => {
     if (number === null) return;
-    onSend({ kind: "reveal_property", itemId, number, propertyRu: textRu }, () =>
-      setPropertyRu(""),
+    onSend(
+      {
+        kind: "reveal_property",
+        itemId,
+        number,
+        propertyRu: textRu,
+        ...(dirRu === null ? {} : { directionRu: dirRu }),
+      },
+      () => {
+        setPropertyRu("");
+        setDirRu(null);
+      },
     );
   };
 
@@ -193,6 +209,25 @@ export function RevealPropertySheet({
             <p className="text-xs text-ink-soft">{research.refusalRu}</p>
           )}
 
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-ink-quiet">{DIRECTION_FIELD}</span>
+            <div className="flex flex-wrap gap-1">
+              {directions.map((direction) => (
+                <button
+                  key={direction}
+                  type="button"
+                  aria-pressed={direction === dirRu}
+                  onClick={() => setDirRu(direction === dirRu ? null : direction)}
+                  className={`min-h-11 grow px-2 text-xs ${
+                    direction === dirRu ? SURFACE_CHOSEN : SURFACE_CONTROL
+                  }`}
+                >
+                  {direction}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-stretch gap-1">
             <div className="min-w-0 flex-1">
               <GrowingField
@@ -227,7 +262,12 @@ export function RevealPropertySheet({
                 <span className="shrink-0 text-xs font-semibold tabular-nums text-ink-quiet">
                   {propertyNumberRu(property.number)}
                 </span>
-                <span className="min-w-0 flex-1 text-sm leading-tight">{property.nameRu}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm leading-tight">{property.nameRu}</span>
+                  {property.dirRu === null ? null : (
+                    <span className="text-xs text-ink-quiet">{property.dirRu}</span>
+                  )}
+                </span>
                 <button
                   type="button"
                   aria-label={`${BUTTON_LABELS.remove}: ${property.nameRu}`}

@@ -474,7 +474,8 @@ describe("ремесло", () => {
     reach: "Одна цель, предмет или участок",
     application: "Выпить, накормить или нанести на неподвижную цель",
     resistance: "Положительное воздействие на добровольную цель",
-    purification: null,
+    mainRarity: "Обычное",
+    purified: false,
     suppressed: [],
     limitations: [],
   };
@@ -495,7 +496,7 @@ describe("ремесло", () => {
       ),
     );
     const rated = known.withItems(withKnowledge);
-    const live = run([...stock, { kind: "craft_batch", formula, portions: 1, rolled: 15 }], {
+    const live = run([...stock, { kind: "craft_batch", formula, portions: 1 }], {
       session: createSession(rated.toState()),
       spellCatalog: CATALOG,
       spellCatalogSource: "built_in",
@@ -530,6 +531,34 @@ describe("ремесло", () => {
       Character.of(measured.session.character).items.alchemyOf(MOON_HERB_ID).piecesPerPortion,
     ).toBe(10);
     expect(measured.session.log.at(-1)?.summaryRu).toBe(`Штук в порции: ${MOON_HERB} — 10`);
+  });
+
+  it("справка о виде дописывается по одному полю, и названное направление встаёт со свойством", () => {
+    const written = run([
+      { kind: "note_ingredient", nameRu: MOON_HERB },
+      {
+        kind: "reveal_property",
+        itemId: MOON_HERB_ID,
+        number: 1,
+        propertyRu: "Лечение здоровья",
+        directionRu: "Зельеварение",
+      },
+      { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, findDc: 9 },
+      { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, gatherDc: 7 },
+      { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, yieldRu: "пучок с заросли" },
+      { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, portionRu: "десять листьев" },
+      { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, priceGold: 5 },
+    ]);
+    const items = Character.of(written.session.character).items;
+
+    expect(items.alchemyOf(MOON_HERB_ID)).toMatchObject({
+      findDc: 9,
+      gatherDc: 7,
+      yieldRu: "пучок с заросли",
+      portionRu: "десять листьев",
+      properties: [{ number: 1, nameRu: "Лечение здоровья", dirRu: "Зельеварение" }],
+    });
+    expect(items.find(MOON_HERB_ID)?.price).toEqual({ amount: 5, currency: "gold" });
   });
 
   it("раскрытое убирается, и правка вещи его не теряет", () => {
@@ -596,7 +625,6 @@ describe("ремесло", () => {
           kind: "craft_batch",
           formula: { ...formula, onset: "когда-нибудь" },
           portions: 1,
-          rolled: 15,
         },
       ]),
     ).toMatch(/начало действия/);

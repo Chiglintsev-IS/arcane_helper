@@ -30,16 +30,50 @@ function portionSizeRefusal(pieces: number): string {
   return `Штук в порции — целое от одного, получено: ${pieces}`;
 }
 
+/**
+ * Чем проверяют поиск и сбор вида: справочник стола называет одни и те же проверки для всех видов,
+ * и потому они стоят при самом понятии вида, а не при каждой записи.
+ */
+export const FIND_CHECK_RU = "Мудрость (Внимательность)";
+export const GATHER_CHECK_RU = "Интеллект (Травничество)";
+
+/** Сложность проверки называет стол числом: ниже единицы на кости не выпадает ничего. */
+const EASIEST_CHECK = 1;
+
+const difficultyClass = z.number().int().min(EASIEST_CHECK);
+
+/**
+ * Направление алхимии, к которому свойство относится: у каждого свой профильный навык и своё
+ * профильное оснащение, и потому чужое направление узнают, а раскрыть не могут. Направление
+ * принадлежит самому свойству — его называет стол вместе с эффектом либо вместо него.
+ */
+export const ALCHEMY_DIRECTIONS = ["Зельеварение", "Трансмутация", "Синтез ядов"] as const;
+
 /** Свойство называет стол своими словами: перечня, по которому его сверять, у ремесла нет. */
 const revealedPropertyFields = z.object({
   number: z.number().int().min(1).max(DEEPEST_PROPERTY_NUMBER),
   nameRu: nonEmpty,
+  dirRu: z.enum(ALCHEMY_DIRECTIONS).optional(),
 });
+
+/**
+ * Справка о виде — то, что стол сказал про сам вид, а не про его свойства: чем проверяют поиск и
+ * сбор, сколько порций даёт один сбор и что такое порция на вид и на вес. Ремесло её не считает —
+ * порцию оно меряет штуками сумки, — и потому каждое поле стоит ровно там, где его записали.
+ */
+const referenceFields = z.object({
+  findDc: difficultyClass.optional(),
+  gatherDc: difficultyClass.optional(),
+  yieldRu: nonEmpty.optional(),
+  portionRu: nonEmpty.optional(),
+});
+
+export type IngredientReference = DeepReadonly<z.infer<typeof referenceFields>>;
 
 type AlchemyFields = {
   properties: readonly z.infer<typeof revealedPropertyFields>[];
   piecesPerPortion: number;
-};
+} & z.infer<typeof referenceFields>;
 
 function inNumberOrder(alchemy: AlchemyFields): AlchemyFields {
   return {
@@ -56,6 +90,7 @@ export const ingredientAlchemySchema = z
       .int()
       .min(SMALLEST_PORTION_PIECES)
       .default(SMALLEST_PORTION_PIECES),
+    ...referenceFields.shape,
   })
   .transform(inNumberOrder)
   .superRefine((alchemy, context) => {
@@ -108,6 +143,14 @@ export function withPortionSize(
     throw new DomainError(portionSizeRefusal(piecesPerPortion));
   }
   return { ...alchemy, piecesPerPortion };
+}
+
+/** Дописанное перекрывает записанное прежде: справку ведут по одному полю, как её и называют. */
+export function withReference(
+  alchemy: IngredientAlchemy,
+  reference: IngredientReference,
+): IngredientAlchemy {
+  return { ...alchemy, ...parsedOrRefused(referenceFields, reference, "справку о виде") };
 }
 
 export function piecesForPortions(alchemy: IngredientAlchemy, portions: number): number {

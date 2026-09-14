@@ -1,0 +1,2019 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><style>
+body{margin:0;background:#0c0a08;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:#d3ab5f}a:hover{color:#e9c887}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(233,214,176,.1);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#d3ab5f;color:#15120e;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#efe7d6}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(233,214,176,.12);color:#efe7d6;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(239,231,214,.55);max-width:390px}
+.dv-card{background:#15120e;border:1px solid rgba(233,214,176,.22);border-radius:10px;overflow:hidden}
+.dv-opt:target .dv-oid{background:#d3ab5f;color:#15120e}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(239,231,214,.5)}
+.ph{width:390px;height:844px;display:flex;flex-direction:column;color:#efe7d6;background:#15120e;position:relative;overflow:hidden}
+.sc{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(233,214,176,.22) transparent}
+</style></helmet>
+<section class="dv-turn" id="final">
+<div class="dv-thd"><a class="dv-tid" href="#final">Финал</a><span class="dv-tname">Алхимия: книга (разделы, ингредиенты, вид, рецепты, правила) и верстак · запас живёт в общих «Вещах»</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="f2">
+<div class="dv-olabel"><a class="dv-oid" href="#f2">f2</a><b style="color:#efe7d6;font-weight:600">Книга алхимика — разделы.</b> Верхний уровень книги — три раздела: ингредиенты, рецепты, правила. Методичка в одном нажатии, сколько бы видов ни накопилось. Внизу три закладки режимов в одну строку — 46 px вместо 54 и без подписей, они съедали место на каждом экране.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;padding:14px 12px 12px;border-bottom:3px double rgba(211,171,95,.45)">
+    <span style="font-size:20px;font-weight:600;letter-spacing:.01em">Книга алхимика</span>
+  </div>
+
+<div class="sc" style="padding:12px;display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">РАЗДЕЛЫ</span>
+      <sc-for list="{{ bookSections }}" as="sec" hint-placeholder-count="3">
+        <button type="button" style="display:flex;align-items:center;gap:14px;min-height:84px;padding:14px;background:#1e1a15;border:1px solid rgba(233,214,176,.22);color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+          <span style="flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#d3ab5f;border:1px solid rgba(211,171,95,.45)">{{ sec.glyph }}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:17px;font-weight:600;line-height:1.2">{{ sec.titleRu }}</span>
+            <span style="font-size:10.5px;line-height:1.25;color:#9c9280">{{ sec.leadRu }}</span>
+          </span>
+          <span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+            <span style="font-size:10.5px;color:#b4a78e">{{ sec.countRu }}</span>
+            <span style="font-size:13px;color:#9c9280">→</span>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+
+  </div>
+
+
+  <div style="flex:none;display:flex;border-top:1px solid rgba(233,214,176,.22);background:#272219">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid #d3ab5f;background:#1e1a15;font-size:13px;font-weight:600;color:#d3ab5f">Книга</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid transparent;background:transparent;font-size:13px;font-weight:600;color:#9c9280">Верстак</div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="f7">
+<div class="dv-olabel"><a class="dv-oid" href="#f7">f7</a><b style="color:#efe7d6;font-weight:600">Книга — раздел «Ингредиенты».</b> Список живёт в своём разделе: буквенные разделители, как в бумажном справочнике, справа у строки только изученность. Шапка одна и работает как заголовок и как возврат — «← Ингредиенты»; внизу единственное действие раздела.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;border-bottom:1px solid rgba(233,214,176,.22);display:flex;align-items:center;gap:8px;padding:0 12px 0 6px">
+    <button type="button" style="flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:6px;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+      <span style="flex:none;font-size:14px;color:#d3ab5f">←</span>
+      <span style="flex:1;min-width:0;font-size:16px;font-weight:600;line-height:1.2">Ингредиенты</span>
+    </button>
+    <span style="flex:none;font-size:10.5px;color:#9c9280">{{ bookCountRu }}</span>
+  </div>
+  <div style="flex:1;min-height:0;display:flex">
+    <div class="sc" style="flex:1;min-width:0">
+      <sc-for list="{{ bookGroups }}" as="g" hint-placeholder-count="6">
+        <div>
+          <div style="padding:6px 12px;background:#1e1a15;border-bottom:1px solid rgba(233,214,176,.11);font-size:11px;font-weight:600;letter-spacing:.1em;color:#d3ab5f">{{ g.letterRu }}</div>
+          <sc-for list="{{ g.rows }}" as="one" hint-placeholder-count="2">
+            <button type="button" onClick="{{ one.open }}" style="width:100%;display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 12px;background:{{ one.bg }};border:0;border-left:3px solid {{ one.edge }};border-bottom:1px solid rgba(233,214,176,.11);color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+              <span style="flex:1;min-width:0;font-size:13.5px;line-height:1.25">{{ one.name }}</span>
+              <span style="flex:none;font-size:12px;letter-spacing:1.5px"><span style="color:#d3ab5f">{{ one.barKnown }}</span><span style="color:#5c5347">{{ one.barRest }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="flex:none;background:#272219;border-top:1px solid rgba(233,214,176,.22);padding:7px 12px">
+    <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" value="{{ newName }}" onChange="{{ onNewName }}" placeholder="Название со слов мастера" style="width:100%;min-height:44px;padding:0 10px;background:#2b251d;border:1px solid #d3ab5f;color:#efe7d6;font-size:16px;font-family:inherit;outline:none" />
+        <div style="display:flex;gap:6px">
+          <button type="button" onClick="{{ cancelNew }}" style="flex:1;min-height:44px;font-size:13px;background:transparent;color:#9c9280;border:1px solid rgba(233,214,176,.22);cursor:pointer;font-family:inherit">Отмена</button>
+          <button type="button" onClick="{{ saveNew }}" style="flex:2;min-height:44px;font-size:13px;font-weight:600;background:#d3ab5f;color:#15120e;border:0;cursor:pointer;font-family:inherit">Записать</button>
+        </div>
+        <span style="font-size:10px;line-height:1.35;color:#9c9280">Свойства не заполняются: вид встанет в книгу как 0 из 4 и будет ждать исследования.</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ newClosed }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ openNew }}" style="width:100%;min-height:44px;font-size:13px;font-weight:600;background:#2b251d;color:#efe7d6;border:1px solid rgba(233,214,176,.22);cursor:pointer;font-family:inherit">Записать вид</button>
+    </sc-if>
+  </div>
+  <div style="flex:none;display:flex;border-top:1px solid rgba(233,214,176,.22);background:#272219">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid #d3ab5f;background:#1e1a15;font-size:13px;font-weight:600;color:#d3ab5f">Книга</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid transparent;background:transparent;font-size:13px;font-weight:600;color:#9c9280">Верстак</div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="f3">
+<div class="dv-olabel"><a class="dv-oid" href="#f3">f3</a><b style="color:#efe7d6;font-weight:600">Книга — страница вида.</b> Статья справочника: свойства с цветом направления, цена следующего свойства (с блокировкой, если направление чужое), СЛ поиска и сбора, что такое порция, цена за порцию. Страница листается стрелками в шапке. Любое поле дописывается со слов мастера: нажмите СЛ, выход, порцию или цену — у свежей записи там прочерки. Ничего кроме книги здесь нет: только записанное о виде.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;padding:6px 8px 6px 4px;border-bottom:1px solid rgba(233,214,176,.22);display:flex;align-items:center;gap:4px">
+    <button type="button" style="flex:none;min-height:44px;padding:0 10px;background:transparent;border:0;color:#d3ab5f;font-size:12px;cursor:pointer;font-family:inherit">← Ингредиенты</button>
+    <span style="flex:1;min-width:0"></span>
+    <button type="button" onClick="{{ pagePrev }}" title="{{ pagePrevRu }}" style="flex:none;width:44px;min-height:44px;background:transparent;border:1px solid rgba(233,214,176,.22);color:#d3ab5f;font-size:15px;cursor:pointer;font-family:inherit">‹</button>
+    <button type="button" onClick="{{ pageNext }}" title="{{ pageNextRu }}" style="flex:none;width:44px;min-height:44px;background:transparent;border:1px solid rgba(233,214,176,.22);color:#d3ab5f;font-size:15px;cursor:pointer;font-family:inherit">›</button>
+  </div>
+  <div class="sc" style="padding:12px;display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:21px;font-weight:600;line-height:1.15;border-bottom:3px double rgba(211,171,95,.45);padding-bottom:8px">{{ entryName }}</h2>
+
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">СВОЙСТВА</span>
+      <sc-for list="{{ entrySlots }}" as="slot" hint-placeholder-count="4">
+        <div style="display:flex;align-items:stretch;gap:8px;background:{{ slot.bg }};border-left:4px solid {{ slot.bar }};padding:7px 8px">
+          <span style="flex:none;width:20px;font-size:11px;font-weight:600;color:#9c9280">{{ slot.nRu }}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:14px;line-height:1.2;color:{{ slot.color }}">{{ slot.name }}</span>
+            <span style="font-size:10.5px;line-height:1.2;color:#9c9280">{{ slot.dirRu }}</span>
+          </span>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ entryHasNext }}" hint-placeholder-val="{{ true }}">
+      <div style="background:#1e1a15;border-left:4px solid {{ entryNextEdge }};padding:12px 14px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+          <span style="flex:1;min-width:0;font-size:17px;font-weight:600;line-height:1.2;color:{{ entryNextTitleColor }}">{{ entryNextRu }}</span>
+          <span style="flex:none;text-align:right">
+            <span style="display:block;font-size:9.5px;letter-spacing:.1em;color:#9c9280">БАЗОВАЯ СЛ</span>
+            <span style="display:block;font-size:36px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums">{{ entryNextDc }}</span>
+            <span style="display:block;padding-top:3px;font-size:10px;color:#9c9280">{{ entryNextFixedRu }}</span>
+          </span>
+        </div>
+        <dl style="margin:0;display:flex;flex-direction:column;gap:0">
+          <sc-for list="{{ entryNextRows }}" as="r" hint-placeholder-count="4">
+            <div style="display:flex;align-items:baseline;gap:12px;padding:6px 0;border-top:1px solid rgba(233,214,176,.11)">
+              <dt style="flex:none;width:88px;font-size:11.5px;color:#9c9280">{{ r.labelRu }}</dt>
+              <dd style="margin:0;flex:1;min-width:0;font-size:13.5px;line-height:1.3">{{ r.valueRu }}</dd>
+            </div>
+          </sc-for>
+        </dl>
+        <sc-if value="{{ entryNextLocked }}" hint-placeholder-val="{{ false }}">
+          <p style="margin:0;font-size:11.5px;line-height:1.45;color:#e79079">{{ entryNextLockedRu }}</p>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">ПОИСК И СБОР</span>
+      <div style="display:flex;gap:6px">
+        <button type="button" onClick="{{ startFindDc }}" style="flex:1;min-height:52px;padding:7px 8px;background:#1e1a15;border:0;border-top:2px solid #d3ab5f;color:inherit;text-align:left;cursor:pointer;font-family:inherit"><span style="display:block;font-size:9.5px;color:#9c9280">НАЙТИ · МДР</span><span style="display:block;font-size:22px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums">{{ entryFindDc }}</span></button>
+        <button type="button" onClick="{{ startGatherDc }}" style="flex:1;min-height:52px;padding:7px 8px;background:#1e1a15;border:0;border-top:2px solid #6fa9e2;color:inherit;text-align:left;cursor:pointer;font-family:inherit"><span style="display:block;font-size:9.5px;color:#9c9280">СОБРАТЬ · ИНТ</span><span style="display:block;font-size:22px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;color:#6fa9e2">{{ entryGatherDc }}</span></button>
+        <button type="button" onClick="{{ startYield }}" style="flex:1.5;min-height:52px;padding:7px 8px;background:#1e1a15;border:0;border-top:2px solid #8dc46e;color:inherit;text-align:left;cursor:pointer;font-family:inherit"><span style="display:block;font-size:9.5px;color:#9c9280">СБОР ДАЁТ</span><span style="display:block;font-size:12px;font-weight:600;line-height:1.25;padding-top:3px">{{ entryYieldRu }}</span></button>
+      </div>
+      <sc-if value="{{ fillOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:6px;background:#1e1a15;border:1px solid #d3ab5f;padding:8px">
+          <span style="font-size:10.5px;color:#9c9280">{{ fillLabelRu }} — со слов мастера</span>
+          <input type="text" value="{{ fillText }}" onChange="{{ onFillText }}" style="width:100%;min-height:44px;padding:0 10px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;font-size:16px;font-family:inherit;outline:none" />
+          <div style="display:flex;gap:6px">
+            <button type="button" onClick="{{ cancelFill }}" style="flex:1;min-height:44px;font-size:13px;background:transparent;color:#9c9280;border:1px solid rgba(233,214,176,.22);cursor:pointer;font-family:inherit">Отмена</button>
+            <button type="button" onClick="{{ saveFill }}" style="flex:2;min-height:44px;font-size:13px;font-weight:600;background:#d3ab5f;color:#15120e;border:0;cursor:pointer;font-family:inherit">Записать</button>
+          </div>
+        </div>
+      </sc-if>
+      <p style="margin:0;font-size:12px;line-height:1.4;color:#b4a78e">{{ entryWhereRu }}</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:0">
+      <button type="button" onClick="{{ startPortion }}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:44px;padding:7px 0;border:0;border-top:1px solid rgba(233,214,176,.11);background:transparent;color:inherit;font-size:12.5px;text-align:left;cursor:pointer;font-family:inherit"><span style="color:#9c9280">Что такое порция</span><span style="text-align:right;line-height:1.3;max-width:210px">{{ entryPortionTextRu }}</span></button>
+      <button type="button" onClick="{{ startPrice }}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:44px;padding:7px 0;border:0;border-top:1px solid rgba(233,214,176,.11);background:transparent;color:inherit;font-size:12.5px;text-align:left;cursor:pointer;font-family:inherit"><span style="color:#9c9280">Цена</span><span style="font-weight:600">{{ entryPriceRu }}</span></button>
+    </div>
+
+    <sc-if value="{{ entryHasBlock }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#1e1a15;border-left:4px solid #e4707f;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:12.5px;font-weight:600;color:#e79079">{{ entryBlockTitleRu }}</span>
+        <span style="font-size:12px;line-height:1.4;color:#b4a78e">{{ entryBlockRu }}</span>
+      </div>
+    </sc-if>
+    <sc-if value="{{ entryHasSpecial }}" hint-placeholder-val="{{ true }}">
+      <p style="margin:0;border-left:3px solid rgba(211,171,95,.45);padding:3px 0 3px 9px;font-size:12px;line-height:1.4;color:#b4a78e">{{ entrySpecialRu }}</p>
+    </sc-if>
+  </div>
+
+  <div style="flex:none;display:flex;border-top:1px solid rgba(233,214,176,.22);background:#272219">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid #d3ab5f;background:#1e1a15;font-size:13px;font-weight:600;color:#d3ab5f">Книга</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid transparent;background:transparent;font-size:13px;font-weight:600;color:#9c9280">Верстак</div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="f4">
+<div class="dv-olabel"><a class="dv-oid" href="#f4">f4</a><b style="color:#efe7d6;font-weight:600">Книга — рецепты.</b> Записанные формулы: виды, форма, СЛ, время, расходники. Карточка описывает саму формулу — виды, форму, СЛ, время, расходники — и не заглядывает в наш набор и наши навыки: книга есть книга. Что нужно для варки, сказано нейтрально: «нужен набор на сложность 38».</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;border-bottom:1px solid rgba(233,214,176,.22);display:flex;align-items:center;gap:8px;padding:0 12px 0 6px">
+    <button type="button" style="flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:6px;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+      <span style="flex:none;font-size:14px;color:#d3ab5f">←</span>
+      <span style="flex:1;min-width:0;font-size:16px;font-weight:600;line-height:1.2">Рецепты</span>
+    </button>
+    <span style="flex:none;font-size:10.5px;color:#9c9280">2 записи</span>
+  </div>
+  <div class="sc" style="padding:12px;display:flex;flex-direction:column;gap:12px">
+    <sc-for list="{{ recipes }}" as="r" hint-placeholder-count="2">
+      <div style="background:#1e1a15;border-left:4px solid rgba(211,171,95,.45);padding:11px 12px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:15.5px;font-weight:600;line-height:1.2">{{ r.nameRu }}</span>
+            <span style="font-size:10px;letter-spacing:.06em;color:#9c9280">{{ r.dirRu }}</span>
+            <span style="font-size:11px;line-height:1.35;color:#b4a78e">{{ r.kindsRu }}</span>
+          </span>
+          <span style="flex:none;text-align:right">
+            <span style="display:block;font-size:9.5px;letter-spacing:.08em;color:#9c9280">СЛ</span>
+            <span style="display:block;font-size:28px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums">{{ r.dcRu }}</span>
+          </span>
+        </div>
+        <span style="font-size:11.5px;line-height:1.35;color:#9c9280">{{ r.formRu }}</span>
+        <div style="display:flex;gap:6px">
+          <span style="flex:1;padding:5px 8px;background:#2b251d;display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;letter-spacing:.06em;color:#9c9280">ВРЕМЯ</span>
+            <span style="font-size:12px;font-weight:600">{{ r.timeRu }}</span>
+          </span>
+          <span style="flex:1.6;padding:5px 8px;background:#2b251d;display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;letter-spacing:.06em;color:#9c9280">РАСХОДНИКИ</span>
+            <span style="font-size:12px;font-weight:600;line-height:1.2">{{ r.consRu }}</span>
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="flex:1;min-width:0;font-size:11px;color:#9c9280">{{ r.needRu }}</span>
+          <button type="button" style="flex:none;min-height:44px;padding:0 12px;font-size:12px;font-weight:600;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">На верстак</button>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="flex:none;background:#272219;border-top:1px solid rgba(233,214,176,.22);padding:7px 12px">
+    <button type="button" style="width:100%;min-height:44px;font-size:13px;font-weight:600;background:#2b251d;color:#efe7d6;border:1px solid rgba(233,214,176,.22);cursor:pointer;font-family:inherit">Записать рецепт</button>
+  </div>
+
+  <div style="flex:none;display:flex;border-top:1px solid rgba(233,214,176,.22);background:#272219">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid #d3ab5f;background:#1e1a15;font-size:13px;font-weight:600;color:#d3ab5f">Книга</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid transparent;background:transparent;font-size:13px;font-weight:600;color:#9c9280">Верстак</div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="f5">
+<div class="dv-olabel"><a class="dv-oid" href="#f5">f5</a><b style="color:#efe7d6;font-weight:600">Верстак.</b> Варка целиком: виды в состав со свойствами и меткой «совпадёт», расход порций с проверкой сумки, совпавшие свойства, основной эффект и его редкость, подавление по редкости, очистка, форма состава, повторы, ограничения, партия и выход единиц. Живая СЛ с разбором, из неё же — время партии и цена расходников. Бросок и исход остаются за столом: внизу только подсказка, что кинуть и какие владения прибавить.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;padding:10px 12px;border-bottom:1px solid rgba(233,214,176,.22);display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding-top:2px">
+        <span style="font-size:10px;letter-spacing:.1em;color:#9c9280">ЧТО ВАРИМ</span>
+        <span style="font-size:14px;font-weight:600;line-height:1.2">{{ ideaTitleRu }}</span>
+      </span>
+      <span style="flex:none;text-align:right">
+        <span style="display:block;font-size:9.5px;letter-spacing:.1em;color:#9c9280">СЛОЖНОСТЬ</span>
+        <span style="display:block;font-size:40px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:{{ dcColorNow }}">{{ dcTotalRu }}</span>
+        <span style="display:block;padding-top:2px;font-size:10px;color:{{ limitNoteColor }}">{{ kitLimitShortRu }}</span>
+      </span>
+    </div>
+    <div style="display:flex;gap:6px">
+      <span style="flex:1;padding:6px 8px;background:#1e1a15;border-top:2px solid #6fa9e2;display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:9px;letter-spacing:.06em;color:#9c9280">ВРЕМЯ ПАРТИИ</span>
+        <span style="font-size:13px;font-weight:600">{{ timeRu }}</span>
+      </span>
+      <span style="flex:1.5;padding:6px 8px;background:#1e1a15;border-top:2px solid #d3ab5f;display:flex;flex-direction:column;gap:1px">
+        <span style="font-size:9px;letter-spacing:.06em;color:#9c9280">РАСХОДНИКИ</span>
+        <span style="font-size:12px;font-weight:600;line-height:1.2">{{ consRu }}</span>
+        <span style="font-size:9.5px;line-height:1.2;color:#9c9280">{{ consDetailRu }}</span>
+      </span>
+    </div>
+  </div>
+
+  <div class="sc" style="padding:12px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;flex-direction:column">
+      <button type="button" onClick="{{ kitToggle }}" style="display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 10px;background:#1e1a15;border:1px solid rgba(233,214,176,.22);color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+        <span style="flex:none;font-size:10px;letter-spacing:.1em;color:#9c9280">ОСНАЩЕНИЕ</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+          <span style="font-size:13px;font-weight:600;line-height:1.2">{{ kitSummaryRu }}</span>
+          <span style="font-size:10.5px;color:#9c9280">{{ kitDetailRu }}</span>
+        </span>
+        <span style="flex:none;font-size:11px;color:#d3ab5f">сменить {{ kitArrowRu }}</span>
+      </button>
+      <sc-if value="{{ kitOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;border:1px solid rgba(233,214,176,.22);border-top:0">
+          <p style="margin:0;padding:8px 10px;font-size:10.5px;line-height:1.4;color:#9c9280;border-bottom:1px solid rgba(233,214,176,.11)">Набор не даёт бонуса к броску. Он решает две вещи: какую сложность работа выдержит и сколько рецептурных порций можно заложить за один раз.</p>
+          <sc-for list="{{ kitRows }}" as="k" hint-placeholder-count="10">
+            <button type="button" onClick="{{ k.pick }}" style="display:flex;flex-direction:column;gap:1px;min-height:48px;padding:7px 10px;background:{{ k.bg }};border:0;border-left:3px solid {{ k.edge }};border-bottom:1px solid rgba(233,214,176,.11);color:{{ k.fg }};text-align:left;cursor:pointer;font-family:inherit">
+              <span style="font-size:12.5px;line-height:1.25">{{ k.name }}</span>
+              <span style="font-size:10px;color:#9c9280">{{ k.noteRu }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ noMain }}" hint-placeholder-val="{{ false }}">
+      <p style="margin:0;border-left:3px solid rgba(228,112,127,.5);padding:3px 0 3px 9px;font-size:12px;line-height:1.4;color:#b4a78e">Совпавших свойств нет: пока нечего варить. Свойство входит в состав, если раскрыто хотя бы у двух видов.</p>
+    </sc-if>
+
+    <sc-if value="{{ hasMain }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:10px;letter-spacing:.14em;color:#8dc46e">ЧТО В СОСТАВЕ</span>
+        <sc-for list="{{ mainPicks }}" as="m" hint-placeholder-count="1">
+          <div style="background:#1e1a15;border-left:4px solid {{ m.edge }};padding:9px 10px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14.5px;font-weight:600;line-height:1.2">{{ m.name }}</span>
+              <span style="font-size:10.5px;line-height:1.25;color:#9c9280">{{ m.sourcesRu }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="flex:1;min-width:0;font-size:11px;font-weight:600;color:{{ m.roleColor }}">{{ m.roleRu }}</span>
+              <button type="button" onClick="{{ m.setMain }}" style="flex:none;min-height:44px;padding:0 10px;font-size:11px;background:transparent;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">Сделать основным</button>
+              <button type="button" onClick="{{ m.toggleOff }}" style="flex:none;min-height:44px;padding:0 10px;font-size:11px;background:transparent;border:1px solid rgba(233,214,176,.22);color:#e79079;cursor:pointer;font-family:inherit">{{ m.offRu }}</button>
+            </div>
+            <sc-if value="{{ m.suppressed }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:5px;padding-top:2px;border-top:1px solid rgba(233,214,176,.11)">
+                <span style="font-size:10.5px;color:#9c9280">Цена подавления зависит от редкости свойства · {{ m.suppressPriceRu }}</span>
+                <div style="display:flex;flex-wrap:wrap;gap:5px">
+                  <sc-for list="{{ m.rarityPicks }}" as="r" hint-placeholder-count="5">
+                    <button type="button" onClick="{{ r.pick }}" style="flex:none;min-height:44px;padding:0 8px;font-size:11px;background:{{ r.bg }};border:1px solid {{ r.border }};color:{{ r.fg }};cursor:pointer;font-family:inherit">{{ r.labelRu }} <span style="color:#9c9280">{{ r.modRu }}</span></button>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">РАСХОД ПОРЦИЙ</span>
+        <sc-for list="{{ spendRows }}" as="row" hint-placeholder-count="1">
+          <div style="display:flex;align-items:baseline;gap:8px;border-left:3px solid {{ row.edge }};padding:6px 8px;background:#1e1a15">
+            <span style="flex:1;min-width:0;font-size:12.5px;line-height:1.25">{{ row.name }}</span>
+            <span style="flex:none;font-size:11px;color:#9c9280;font-variant-numeric:tabular-nums">{{ row.needRu }}</span>
+            <span style="flex:none;font-size:11px;font-weight:600;color:{{ row.stateColor }}">{{ row.stateRu }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">ВИДЫ В СОСТАВ</span>
+        <sc-for list="{{ pickerRows }}" as="one" hint-placeholder-count="6">
+          <div style="display:flex;align-items:stretch;gap:6px">
+            <div style="flex:1;min-width:0;background:{{ one.bg }};border:1px solid {{ one.edge }};padding:8px 10px;display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+                <span style="font-size:13.5px;font-weight:600;line-height:1.2">{{ one.name }}</span>
+                <span style="flex:none;font-size:10.5px;color:#9c9280;font-variant-numeric:tabular-nums">{{ one.haveRu }}</span>
+              </div>
+              <sc-for list="{{ one.props }}" as="p" hint-placeholder-count="2">
+                <span style="display:flex;align-items:baseline;gap:8px">
+                  <span style="flex:none;width:3px;align-self:stretch;background:{{ p.bar }}"></span>
+                  <span style="flex:none;font-size:10.5px;font-weight:600;color:#9c9280">{{ p.nRu }}</span>
+                  <span style="flex:1;min-width:0;font-size:12px;line-height:1.25;color:{{ p.color }}">{{ p.name }}</span>
+                  <span style="flex:none;font-size:10px;font-weight:600;color:#8dc46e">{{ p.tagRu }}</span>
+                </span>
+              </sc-for>
+              <sc-if value="{{ one.empty }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:11px;color:#5c5347">свойства не раскрыты</span>
+              </sc-if>
+            </div>
+            <button type="button" onClick="{{ one.toggle }}" style="flex:none;width:44px;min-height:44px;font-size:17px;background:{{ one.markBg }};border:1px solid {{ one.edge }};color:{{ one.markFg }};cursor:pointer;font-family:inherit">{{ one.markRu }}</button>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">РЕДКОСТЬ ОСНОВНОГО ЭФФЕКТА</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <sc-for list="{{ rarityPicks }}" as="r" hint-placeholder-count="5">
+            <button type="button" onClick="{{ r.pick }}" style="flex:none;min-height:44px;padding:0 10px;font-size:11.5px;background:{{ r.bg }};border:1px solid {{ r.border }};color:{{ r.fg }};cursor:pointer;font-family:inherit">{{ r.labelRu }} <span style="color:#9c9280">{{ r.modRu }}</span></button>
+          </sc-for>
+        </div>
+        <span style="font-size:10.5px;line-height:1.3;color:#9c9280">Редкость называет мастер — от неё зависит и цена эффекта, и СЛ исследования.</span>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">ФОРМА СОСТАВА</span>
+      <sc-for list="{{ formUI }}" as="row" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column">
+          <button type="button" onClick="{{ row.toggle }}" style="display:flex;align-items:center;gap:8px;min-height:48px;padding:6px 0;background:transparent;border:0;border-bottom:1px solid rgba(233,214,176,.11);color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+            <span style="flex:none;width:6px;height:6px;border-radius:3px;background:{{ row.dotColor }}"></span>
+            <span style="flex:none;width:96px;font-size:11px;color:#9c9280">{{ row.labelRu }}</span>
+            <span style="flex:1;min-width:0;font-size:13px;line-height:1.25">{{ row.valueRu }}</span>
+            <span style="flex:none;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ row.modColor }}">{{ row.modRu }}</span>
+            <span style="flex:none;width:14px;text-align:right;font-size:10px;color:#9c9280">{{ row.arrowRu }}</span>
+          </button>
+          <sc-if value="{{ row.open }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;padding:4px 0 8px">
+              <sc-for list="{{ row.options }}" as="o" hint-placeholder-count="6">
+                <button type="button" onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 8px;background:{{ o.bg }};border:0;border-bottom:1px solid rgba(233,214,176,.11);color:{{ o.fg }};text-align:left;cursor:pointer;font-family:inherit">
+                  <span style="flex:1;min-width:0;font-size:13px;line-height:1.3">{{ o.labelRu }}</span>
+                  <span style="flex:none;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:#9c9280">{{ o.modRu }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(233,214,176,.11)">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+          <span style="font-size:11px;color:#9c9280">Повторы в полную силу</span>
+          <span style="font-size:12.5px">{{ repeatsRu }}</span>
+          <span style="font-size:10px;line-height:1.3;color:#9c9280">+3 за каждый повтор, максимум +12. Если сила просто делится между моментами — бесплатно.</span>
+        </span>
+        <button type="button" onClick="{{ repeatsDown }}" style="flex:none;width:44px;min-height:44px;font-size:16px;background:transparent;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">−</button>
+        <button type="button" onClick="{{ repeatsUp }}" style="flex:none;width:44px;min-height:44px;font-size:16px;background:transparent;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">+</button>
+      </div>
+      <button type="button" onClick="{{ togglePurge }}" style="display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 0;background:transparent;border:0;border-bottom:1px solid rgba(233,214,176,.11);color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+        <span style="flex:1;min-width:0;font-size:13px;color:{{ purgeColor }}">{{ purgeRu }}</span>
+        <span style="flex:none;font-size:10.5px;color:#9c9280">оставить только одну группу свойств</span>
+      </button>
+      <sc-if value="{{ purgeBlocksSuppress }}" hint-placeholder-val="{{ false }}">
+        <p style="margin:6px 0 0;border-left:3px solid rgba(228,112,127,.5);padding:3px 0 3px 9px;font-size:11px;line-height:1.4;color:#b4a78e">Очистка уже убирает противоположную группу целиком: одно и то же свойство нельзя снять и очисткой, и подавлением — отдельное подавление в цену не идёт.</p>
+      </sc-if>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#8dc46e">ОГРАНИЧЕНИЯ · СНИЖАЮТ СЛ, НЕ БОЛЬШЕ −6</span>
+      <sc-for list="{{ limitRows }}" as="l" hint-placeholder-count="8">
+        <div style="display:flex;align-items:stretch;gap:6px">
+          <div style="flex:1;min-width:0;background:{{ l.bg }};border-left:3px solid {{ l.edge }};padding:7px 8px;display:flex;align-items:baseline;gap:8px">
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:12.5px;line-height:1.3">{{ l.labelRu }}</span>
+              <sc-if value="{{ l.hasHint }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:10.5px;line-height:1.3;color:#9c9280">{{ l.hintRu }}</span>
+              </sc-if>
+            </span>
+            <span style="flex:none;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:#8dc46e">{{ l.modRu }}</span>
+          </div>
+          <button type="button" onClick="{{ l.toggle }}" style="flex:none;width:44px;min-height:44px;font-size:15px;background:transparent;border:1px solid rgba(233,214,176,.22);color:{{ l.fg }};cursor:pointer;font-family:inherit">{{ l.markRu }}</button>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">ПАРТИЯ</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+          <span style="font-size:12.5px">по {{ batchPortionsRu }} с каждого вида → выйдет <span style="font-weight:600">{{ unitsRu }}</span> готового состава</span>
+          <span style="font-size:10.5px;color:{{ batchNoteColor }}">{{ batchNoteRu }}</span>
+        </span>
+        <button type="button" onClick="{{ batchDown }}" style="flex:none;width:44px;min-height:44px;font-size:18px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">−</button>
+        <span style="flex:none;min-width:64px;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <span style="font-size:26px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums">{{ batchRu }}</span>
+          <span style="font-size:9px;line-height:1.1;text-align:center;color:#9c9280">порций<br>заложено</span>
+        </span>
+        <button type="button" onClick="{{ batchUp }}" style="flex:none;width:44px;min-height:44px;font-size:18px;font-weight:600;background:#d3ab5f;border:0;color:#15120e;cursor:pointer;font-family:inherit">+</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ hasDcParts }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#d3ab5f">ИЗ ЧЕГО СЛОЖИЛАСЬ СЛ</span>
+      <sc-for list="{{ dcParts }}" as="p" hint-placeholder-count="0">
+        <div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:12.5px">
+          <span style="min-width:0;color:#b4a78e">{{ p.labelRu }}</span>
+          <span style="flex:none;font-weight:600;font-variant-numeric:tabular-nums;color:{{ p.color }}">{{ p.valueRu }}</span>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </div>
+
+  <div style="flex:none;background:#272219;border-top:1px solid rgba(233,214,176,.22);padding:6px 12px 7px;display:flex;flex-direction:column;gap:6px">
+    <div style="display:flex;align-items:baseline;gap:8px">
+      <span style="flex:none;font-size:12.5px;font-weight:600">{{ checkRu }}</span>
+      <span style="flex:1;min-width:0;text-align:right;font-size:10px;line-height:1.3;color:#9c9280">{{ checkSkillRu }}</span>
+    </div>
+    <sc-if value="{{ hasCraftWarn }}" hint-placeholder-val="{{ false }}">
+      <span style="font-size:10.5px;line-height:1.35;color:#e79079">{{ craftWarnRu }}</span>
+    </sc-if>
+    <button type="button" disabled="{{ craftBlocked }}" style="width:100%;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:{{ craftBg }};border:1px solid {{ craftBorder }};color:{{ craftFg }};cursor:{{ craftCursor }};font-family:inherit">
+      <span style="font-size:13px;font-weight:600">{{ craftLabelRu }}</span>
+      <span style="font-size:9.5px;opacity:.75">{{ craftCostRu }}</span>
+    </button>
+  </div>
+
+  <div style="flex:none;display:flex;border-top:1px solid rgba(233,214,176,.22);background:#272219">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid transparent;background:transparent;font-size:13px;font-weight:600;color:#9c9280">Книга</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid #d3ab5f;background:#1e1a15;font-size:13px;font-weight:600;color:#d3ab5f">Верстак</div>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="f6">
+<div class="dv-olabel"><a class="dv-oid" href="#f6">f6</a><b style="color:#efe7d6;font-weight:600">Книга — правила стола.</b> Три главы подряд: раскрытие свойств, варка, оснащение. Шапка «← Правила стола» и есть заголовок; подвал с лишней подписью убран.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;border-bottom:1px solid rgba(233,214,176,.22);display:flex;align-items:center;gap:8px;padding:0 12px 0 6px">
+    <button type="button" style="flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:6px;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+      <span style="flex:none;font-size:14px;color:#d3ab5f">←</span>
+      <span style="flex:1;min-width:0;font-size:16px;font-weight:600;line-height:1.2">Правила стола</span>
+    </button>
+    <span style="flex:none;font-size:10.5px;color:#9c9280">3 главы</span>
+  </div>
+
+  <div class="sc" style="padding:12px;display:flex;flex-direction:column;gap:22px">
+
+    <div style="padding-top:6px">
+      <h3 style="margin:0;font-size:16px;font-weight:600;line-height:1.2;color:#d3ab5f;border-bottom:3px double rgba(211,171,95,.45);padding-bottom:6px">1 · Раскрытие свойств</h3>
+      <p style="margin:6px 0 0;font-size:11.5px;line-height:1.45;color:#9c9280">Ингредиент хранит до четырёх свойств. Номер говорит, насколько глубоко свойство скрыто, а не насколько оно сильное. Раскрывают их по порядку.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">ГЛУБИНА ИССЛЕДОВАНИЯ</span>
+      <sc-for list="{{ researchRows }}" as="r" hint-placeholder-count="4">
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid rgba(233,214,176,.11)">
+          <span style="flex:none;width:28px;font-size:12px;font-weight:600;color:#9c9280">{{ r.nRu }}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:14px;font-weight:600">{{ r.timeRu }}</span>
+            <span style="font-size:11px;line-height:1.35;color:#b4a78e">{{ r.costRu }}</span>
+          </span>
+          <span style="flex:none;text-align:right"><span style="display:block;font-size:9.5px;color:#9c9280">БАЗ. СЛ</span><span style="display:block;font-size:22px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums">{{ r.dcRu }}</span></span>
+        </div>
+      </sc-for>
+      <p style="margin:6px 0 0;font-size:11px;line-height:1.45;color:#9c9280">Первое свойство можно взять быстро: сырая проба — порция тратится, а её эффект достаётся исследователю; поверхностный анализ — 10 минут и Сл 5.</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">НАДБАВКА ЗА РЕДКОСТЬ СВОЙСТВА</span>
+      <span style="font-size:11px;line-height:1.4;color:#9c9280">Прибавляется к базовой Сл выше. Редкость называет мастер, и заранее она неизвестна.</span>
+      <sc-for list="{{ rarityRows }}" as="r" hint-placeholder-count="5">
+        <div style="display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px">
+          <span style="flex:none;width:6px;align-self:stretch;background:{{ r.edge }}"></span>
+          <span style="flex:1;min-width:0;color:#b4a78e">{{ r.labelRu }}</span>
+          <span style="flex:none;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:#d3ab5f">{{ r.researchRu }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">ЧУЖОЕ НАПРАВЛЕНИЕ</span>
+      <p style="margin:0;font-size:12px;line-height:1.45;color:#b4a78e">Непрофильными инструментами точное свойство не раскрыть. После половины обычного времени удачная проверка говорит лишь то, к какому направлению относится реакция; дальше работу начинают заново с правильным набором.</p>
+    </div>
+
+    <div style="padding-top:6px">
+      <h3 style="margin:0;font-size:16px;font-weight:600;line-height:1.2;color:#d3ab5f;border-bottom:3px double rgba(211,171,95,.45);padding-bottom:6px">2 · Варка зелья</h3>
+      <p style="margin:6px 0 0;font-size:11.5px;line-height:1.45;color:#9c9280">Состав держится на совпадении: свойство работает, если раскрыто хотя бы у двух видов. Сложность начинается с 10 и ниже 5 не опускается.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">ЦЕНА ЗАМЫСЛА</span>
+      <sc-for list="{{ difficultyRows }}" as="r" hint-placeholder-count="5">
+        <div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px">
+          <span style="color:#b4a78e">{{ r.labelRu }}</span>
+          <span style="font-weight:600;font-variant-numeric:tabular-nums">{{ r.valueRu }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">ЦЕНА ЭФФЕКТА ПО РЕДКОСТИ</span>
+      <span style="font-size:11px;line-height:1.4;color:#9c9280">Основной эффект — тот, ради которого варят. Остальные совпавшие свойства всё равно входят в состав, и каждое доплачивается отдельно.</span>
+      <div style="display:flex;gap:8px;font-size:9.5px;letter-spacing:.06em;color:#9c9280">
+        <span style="flex:1">СВОЙСТВО</span>
+        <span style="flex:none;width:68px;text-align:right">ОСНОВНОЙ</span>
+        <span style="flex:none;width:66px;text-align:right">ДОПОЛНИТ.</span>
+        <span style="flex:none;width:62px;text-align:right">ПОДАВИТЬ</span>
+      </div>
+      <sc-for list="{{ rarityRows }}" as="r" hint-placeholder-count="5">
+        <div style="display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px">
+          <span style="flex:1;min-width:0;color:#b4a78e">{{ r.labelRu }}</span>
+          <span style="flex:none;width:68px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">{{ r.mainRu }}</span>
+          <span style="flex:none;width:66px;text-align:right;font-variant-numeric:tabular-nums">{{ r.extraRu }}</span>
+          <span style="flex:none;width:62px;text-align:right;font-variant-numeric:tabular-nums">{{ r.suppressRu }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">СТУПЕНЬ СОВПАДЕНИЯ</span>
+      <sc-for list="{{ tierRows }}" as="r" hint-placeholder-count="3">
+        <div style="display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px">
+          <span style="flex:none;width:64px;color:#b4a78e">{{ r.labelRu }}</span>
+          <span style="flex:1;min-width:0">{{ r.valueRu }}</span>
+          <span style="flex:none;font-weight:600;font-variant-numeric:tabular-nums">{{ r.modRu }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">СКОЛЬКО ВАРИТСЯ ПАРТИЯ</span>
+      <span style="font-size:11px;line-height:1.4;color:#9c9280">Время зависит только от итоговой сложности. Одна единица и полная партия варятся одинаково долго.</span>
+      <sc-for list="{{ batchTimeRows }}" as="r" hint-placeholder-count="10">
+        <div style="display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px">
+          <span style="flex:none;width:104px;color:#b4a78e;font-variant-numeric:tabular-nums">{{ r.labelRu }}</span>
+          <span style="flex:1;min-width:0;font-weight:600">{{ r.valueRu }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">ЧЕМ ПЛАТИМ ЗА РАБОТУ</span>
+      <span style="font-size:11px;line-height:1.4;color:#9c9280">Класс материалов задаёт итоговая сложность, а платим за каждый начатый час. Один комплект обслуживает до пяти рецептурных порций.</span>
+      <sc-for list="{{ consumableRows }}" as="r" hint-placeholder-count="4">
+        <div style="display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px">
+          <span style="flex:none;width:104px;color:#b4a78e;font-variant-numeric:tabular-nums">{{ r.labelRu }}</span>
+          <span style="flex:1;min-width:0">{{ r.classRu }}</span>
+          <span style="flex:none;font-weight:600;font-variant-numeric:tabular-nums">{{ r.priceRu }} / час</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">СКОЛЬКО ВЫЙДЕТ ЕДИНИЦ</span>
+      <sc-for list="{{ unitRows }}" as="r" hint-placeholder-count="5">
+        <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px">
+          <span style="color:#b4a78e">{{ r.labelRu }}</span>
+          <span style="font-weight:600;font-variant-numeric:tabular-nums">{{ r.valueRu }}</span>
+        </div>
+      </sc-for>
+      <p style="margin:6px 0 0;font-size:11px;line-height:1.45;color:#9c9280">Порции + ⌊порции / 4⌋. Бонусные единицы предел оснащения не занимают.</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#b4a78e">ИЗВЕСТНЫЙ РЕЦЕПТ</span>
+      <p style="margin:0;font-size:12px;line-height:1.45;color:#b4a78e">После первого успеха формула записана и повторяется без броска. Она перестаёт быть известной, если сменить хотя бы один вид, изменить параметры эффекта, длительность, применение или очистку — либо если оснащение не держит итоговую сложность.</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#e4707f">АВАРИЯ · 1к6</span>
+      <span style="font-size:11px;line-height:1.4;color:#9c9280">Бросается на натуральной 1 при проверке разработки.</span>
+      <sc-for list="{{ mishapRows }}" as="r" hint-placeholder-count="5">
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:12.5px">
+          <span style="flex:none;width:34px;font-weight:600;color:#9c9280;font-variant-numeric:tabular-nums">{{ r.labelRu }}</span>
+          <span style="flex:1;min-width:0;line-height:1.35">{{ r.valueRu }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding-top:6px">
+      <h3 style="margin:0;font-size:16px;font-weight:600;line-height:1.2;color:#d3ab5f;border-bottom:3px double rgba(211,171,95,.45);padding-bottom:6px">3 · Оснащение</h3>
+      <p style="margin:6px 0 0;font-size:11.5px;line-height:1.45;color:#9c9280">Качество набора не даёт бонуса к броску: оно задаёт, какую сложность работа выдержит и сколько рецептурных порций можно заложить за раз. Если итоговая сложность выше — попытка невозможна.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <div style="display:flex;gap:10px;padding-bottom:4px;font-size:10px;letter-spacing:.1em;color:#9c9280">
+        <span style="flex:1">НАБОР</span><span style="flex:none;width:58px;text-align:right">СЛ ДО</span><span style="flex:none;width:76px;text-align:right">ПОРЦИЙ ЗА РАЗ</span>
+      </div>
+      <sc-for list="{{ apparatusPage }}" as="a">
+        <div style="display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid rgba(233,214,176,.11);font-size:13px;color:{{ a.color }}">
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+            <span style="line-height:1.2">{{ a.name }}</span>
+            <span style="font-size:10.5px;color:#9c9280">{{ a.noteRu }}</span>
+          </span>
+          <span style="flex:none;width:58px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums">{{ a.hardest }}</span>
+          <span style="flex:none;width:76px;text-align:right;font-variant-numeric:tabular-nums">{{ a.batch }}</span>
+        </div>
+      </sc-for>
+      <p style="margin:6px 0 20px;font-size:11px;line-height:1.45;color:#9c9280">Без профильного набора: +5 к сложности и вдвое меньшая партия. Ремонт повреждённого оснащения — 5% его цены, до ремонта предел Сл на 5 ниже.</p>
+    </div>
+  </div>
+
+
+
+  <div style="flex:none;display:flex;border-top:1px solid rgba(233,214,176,.22);background:#272219">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid #d3ab5f;background:#1e1a15;font-size:13px;font-weight:600;color:#d3ab5f">Книга</div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;min-height:46px;border-top:2px solid transparent;background:transparent;font-size:13px;font-weight:600;color:#9c9280">Верстак</div>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Алхимия — это два режима: <a class="dv-oid" href="#f2">f2</a> книга и <a class="dv-oid" href="#f5">f5</a> верстак. Внутри книги: разделы → <a class="dv-oid" href="#f7">f7</a> ингредиенты → <a class="dv-oid" href="#f3">f3</a> вид, либо <a class="dv-oid" href="#f4">f4</a> рецепты и <a class="dv-oid" href="#f6">f6</a> правила. Запас и деньги ведёт общий экран «Вещи», поэтому своей сумки у алхимии нет.</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;apparatus&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Обычный походный комплект&quot;,&quot;Надёжный походный комплект&quot;,&quot;Профессиональный походный комплект&quot;,&quot;Мастерский походный комплект&quot;,&quot;Базовый лабораторный модуль&quot;,&quot;Оснащённый лабораторный модуль&quot;,&quot;Профессиональный лабораторный модуль&quot;,&quot;Мастерский лабораторный модуль&quot;,&quot;Великий лабораторный модуль&quot;],&quot;default&quot;:&quot;Надёжный походный комплект&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Стол&quot;},&quot;showPrices&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Стол&quot;}}">
+const ACCENT = "#d3ab5f", INK = "#efe7d6", QUIET = "#9c9280", GROUP = "#1e1a15", CONTROL = "#2b251d";
+const RULE = "rgba(233,214,176,.22)", RULE_SOFT = "rgba(233,214,176,.11)";
+
+const STEPS = {
+  1: { dc: 5, t: "10 мин", portions: "1 порция при провале", cons: "расходники не нужны", lab: false },
+  2: { dc: 12, t: "1 ч", portions: "1 порция при любом исходе", cons: "обычные, 1 зм", lab: false },
+  3: { dc: 18, t: "8 ч", portions: "2 порции при любом исходе", cons: "обычные, 8 зм", lab: true },
+  4: { dc: 25, t: "24 ч", portions: "3 порции при любом исходе", cons: "очищенные, 72 зм", lab: true },
+};
+
+const DATA = [
+  { id: "galpera-fruit", name: "Частичка плода большой гальперы", stock: null, price: 85, priceRu: "85 зм",
+    rarityRu: "Редкий", findDc: 8, gatherDc: 8, yieldRu: "1 порция с каждых 250 г",
+    whereRu: "Возле плодоносящей большой гальперы; сок быстро окисляется",
+    portionRu: "250 г свежей мякоти с соком",
+    props: [{ n: 1, name: "Снижение потребности в пище и воде", dir: "Зельеварение" }, { n: 2, name: "Усиление характеристики (Выносливость)", dir: "Зельеварение" }] },
+  { id: "galpera-pollen", name: "Пыльца большой гальперы", stock: 22, price: 15, priceRu: "15 зм",
+    rarityRu: "Редкий", findDc: 10, gatherDc: 12, yieldRu: "4к20+40 порций с шара",
+    whereRu: "На цветущей большой гальпере; ошибка рассеивает облако",
+    portionRu: "20 г очищенной сухой пыльцы",
+    props: [{ n: 1, name: "Ускорение роста растений", dir: "Зельеварение" }, { n: 2, name: "Усиление характеристики (Сила)", dir: "Зельеварение" }] },
+  { id: "dwarf-blight", name: "Дварфийская хворь", stock: 4, price: 15, priceRu: "15 зм",
+    rarityRu: "Необычный", findDc: 12, gatherDc: 13, yieldRu: "1к4 порций с колонии",
+    whereRu: "Старые шахты, пивные погреба, заброшенные поселения",
+    portionRu: "колония: 25 г свежей или 8 г сухой",
+    specialRu: "Две порции хвори друг с другом активируют «Отвращение к пиву» без второго вида — отдельно утверждённое исключение стола.",
+    props: [{ n: 1, name: "Отвращение к пиву", dir: "Синтез ядов" }, { n: 2, name: "Ослабление характеристики (Выносливость)", dir: "Синтез ядов" }] },
+  { id: "plantain", name: "Подорожник", stock: 48, price: 5, priceRu: "5 зм",
+    rarityRu: "Обычный", findDc: 9, gatherDc: 7, yieldRu: "1к6+1 порций с заросли",
+    whereRu: "Влажные обочины, луга, края болот",
+    portionRu: "пучок 8–10 листьев, ~40 г",
+    specialRu: "Рядом с болотами цена падает до 2–3 зм: там подорожник обычен, и местный рынок даёт около половины базовой цены.",
+    props: [{ n: 1, name: "Лечение здоровья", dir: "Зельеварение" }, { n: 2, name: "Остановка кровотечения", dir: "Зельеварение" }, { n: 3, name: "Сопротивление типу урона (ядовитый)", dir: "Зельеварение" }] },
+  { id: "swamp-mushroom", name: "Болотный гриб", stock: 16, price: 1, priceRu: "1 зм",
+    rarityRu: "Обычный", findDc: 8, gatherDc: 7, yieldRu: "1к4+2 порций с грибницы",
+    whereRu: "Сырые кочки, гниющие пни, края болотных зарослей",
+    portionRu: "3 средних тела: ~60 г свежих",
+    blockRu: "Обнаружена реакция синтеза ядов: направление известно, эффект — нет. 3-е свойство недоступно, пока 2-е не раскрыто точно.",
+    foreign: { number: 2, dirRu: "Синтез ядов" },
+    props: [{ n: 1, name: "Противоядие", dir: "Зельеварение" }] },
+  { id: "zinaida", name: "«Неожиданность Зинаиды»", stock: 2, price: 1350, priceRu: "1 350 зм",
+    rarityRu: "Очень редкий", findDc: 17, gatherDc: 15, yieldRu: "1к4+1 порций с колонии",
+    whereRu: "Влажные места со следами старой магии или фей",
+    portionRu: "1 зрелое тело: 50–70 г",
+    blockRu: "Прошлая попытка раскрыть 2-е свойство провалена.",
+    specialRu: "Расчётная алхимическая ценность; устойчивого обычного рынка почти нет.",
+    props: [{ n: 1, name: "Диарея", dir: "Синтез ядов" }] },
+  { id: "family-ulcer", name: "Листья «Язвы семейной»", stock: 2, price: 3300, priceRu: "3 300 зм",
+    rarityRu: "Очень редкий", findDc: 10, gatherDc: 14, yieldRu: "1к6+2 порций за сбор",
+    whereRu: "Только если само дерево уже обнаружено",
+    portionRu: "10 зрелых листьев, ~25 г",
+    specialRu: "Повторный сбор требует восстановления кроны.",
+    props: [{ n: 1, name: "Омоложение", dir: "Зельеварение" }, { n: 2, name: "Регенерация здоровья", dir: "Зельеварение" }] },
+  { id: "mandrake", name: "Корень мандрагоры", stock: 1, price: 13500, priceRu: "13 500+ зм",
+    rarityRu: "Очень редкий", findDc: 15, gatherDc: 16, yieldRu: "1 порция с растения",
+    whereRu: "Старые влажные почвы, насыщенные маной",
+    portionRu: "1 зрелый очищенный корень",
+    specialRu: "Одной порции хватает на зелье первого свойства без второго вида. Обработка: базовая +1, усиленная +2 (+3 к Сл), концентрированная +3 (+6 к Сл).",
+    props: [{ n: 1, name: "Постоянное усиление случайной характеристики", dir: "Зельеварение / Особое" }, { n: 2, name: "Полное восстановление здоровья", dir: "Зельеварение" }] },
+  { id: "dwarf-mushroom", name: "Грибы карлика", stock: 4, price: 90, priceRu: "90 зм",
+    rarityRu: "Редкий", findDc: 14, gatherDc: 11, yieldRu: "1к6 порций с грибницы",
+    whereRu: "Сырые корневые пустоты и тёмные участки старого болота",
+    portionRu: "1 зрелое тело: 25–35 г",
+    props: [{ n: 1, name: "Галлюцинации", dir: "Синтез ядов" }, { n: 2, name: "Уменьшение существа", dir: "Зельеварение" }] },
+];
+
+const KIND_STYLE = {
+  "Растение": { glyph: "▲", color: "#8dc46e" },
+  "Гриб": { glyph: "●", color: "#d9a441" },
+  "Животное": { glyph: "◆", color: "#e79079" },
+};
+
+const DIR_COLOR = {
+  "Зельеварение": "#8dc46e",
+  "Синтез ядов": "#e4707f",
+  "Зельеварение / Особое": "#b98de8",
+  "Трансмутация": "#6fa9e2",
+};
+
+const FIELD_META = {
+  "galpera-fruit": { kind: "Растение", biomes: ["Гальпера"] },
+  "galpera-pollen": { kind: "Растение", biomes: ["Гальпера"] },
+  "dwarf-blight": { kind: "Гриб", biomes: ["Шахты"] },
+  "plantain": { kind: "Растение", biomes: ["Луга", "Болото"] },
+  "swamp-mushroom": { kind: "Гриб", biomes: ["Болото"] },
+  "zinaida": { kind: "Гриб", biomes: ["Болото", "Мана"] },
+  "family-ulcer": { kind: "Растение", biomes: ["Особое"] },
+  "mandrake": { kind: "Растение", biomes: ["Мана"] },
+  "dwarf-mushroom": { kind: "Гриб", biomes: ["Болото"] },
+  "raven-guts": { kind: "Животное", biomes: ["Луга", "Шахты"] },
+  "swallow-gland": { kind: "Животное", biomes: ["Болото"] },
+};
+
+const ANIMALS = [
+  { id: "raven-guts", name: "Кишки ворона", stock: 3, price: 0, priceRu: "цены нет",
+    rarityRu: "Обычный", findDc: 11, gatherDc: 10, yieldRu: "1 порция с птицы",
+    whereRu: "Падаль, виселицы, старые башни — где держатся вороны",
+    portionRu: "полный кишечник одной взрослой птицы",
+    specialRu: "Вид записан со слов отряда: свойства не раскрыты, цена не установлена.",
+    props: [] },
+  { id: "swallow-gland", name: "Железа болотной ласточки", stock: 1, price: 0, priceRu: "цены нет",
+    rarityRu: "Редкий", findDc: 14, gatherDc: 15, yieldRu: "1 порция с особи",
+    whereRu: "Болотные ласточки над стоячей водой",
+    portionRu: "одна железа целиком",
+    specialRu: "Вид записан со слов отряда: свойства не раскрыты, цена не установлена.",
+    props: [] },
+];
+
+const BIOMES = ["Все", "Болото", "Луга", "Шахты", "Мана", "Гальпера", "Особое"];
+
+/** В алхимии счёт один — порции. Недобранное порцией не считается: оно просто отмечено начатым. */
+const PORTIONS = {
+  "galpera-fruit": { portions: 7, partial: true },
+  "galpera-pollen": { portions: 22, partial: false },
+  "dwarf-blight": { portions: 4, partial: false },
+  "plantain": { portions: 48, partial: true },
+  "swamp-mushroom": { portions: 16, partial: false },
+  "zinaida": { portions: 2, partial: false },
+  "family-ulcer": { portions: 2, partial: false },
+  "mandrake": { portions: 1, partial: false },
+  "dwarf-mushroom": { portions: 4, partial: false },
+  "raven-guts": { portions: 3, partial: false },
+  "swallow-gland": { portions: 1, partial: false },
+};
+
+/**
+ * Сумка считает предметы — то, что подобрали руками. Порция живёт только в рецепте: столько
+ * предметов вида уходит на одну порцию состава, как железо в кузнечном рецепте.
+ */
+const ITEMS = {
+  "galpera-fruit": { itemRu: ["кусок мякоти", "куска мякоти", "кусков мякоти"], count: 7, per: 1 },
+  "galpera-pollen": { itemRu: ["щепоть", "щепоти", "щепотей"], count: 22, per: 1 },
+  "dwarf-blight": { itemRu: ["колония", "колонии", "колоний"], count: 4, per: 1 },
+  "plantain": { itemRu: ["лист", "листа", "листьев"], count: 487, per: 10 },
+  "swamp-mushroom": { itemRu: ["гриб", "гриба", "грибов"], count: 48, per: 3 },
+  "zinaida": { itemRu: ["гриб", "гриба", "грибов"], count: 2, per: 1 },
+  "family-ulcer": { itemRu: ["лист", "листа", "листьев"], count: 20, per: 10 },
+  "mandrake": { itemRu: ["корень", "корня", "корней"], count: 1, per: 1 },
+  "dwarf-mushroom": { itemRu: ["гриб", "гриба", "грибов"], count: 4, per: 1 },
+  "raven-guts": { itemRu: ["кишки", "кишок", "кишок"], count: 3, per: 1 },
+  "swallow-gland": { itemRu: ["железа", "железы", "желёз"], count: 1, per: 1 },
+};
+
+const FORM = {
+  duration: { labelRu: "Длительность", standard: "Мгновенный эффект", options: [
+    ["Мгновенный эффект", 0], ["1 раунд", -2], ["3 раунда", 0], ["1 минута", 2], ["10 минут", 4],
+    ["1 час", 6], ["8 часов", 9], ["24 часа", 12], ["До конкретного условия, не более суток", 14], ["Постоянно", 20],
+  ] },
+  onset: { labelRu: "Начало действия", standard: "Немедленно", options: [
+    ["Немедленно", 0], ["Постепенно, полная сила через 3 раунда", -1], ["Задержка до 1 минуты", 1],
+    ["Задержка до 10 минут", 2], ["Задержка до 1 часа", 3], ["Активация при заданном событии", 5],
+  ] },
+  reach: { labelRu: "Цели и область", standard: "Одна цель, предмет или участок", options: [
+    ["Одна цель, предмет или участок", 0], ["Две отдельные цели", 2], ["До четырёх отдельных целей", 4],
+    ["Радиус 1 м", 3], ["Радиус 2 м", 5], ["Радиус 4 м", 8], ["Радиус 8 м", 12],
+  ] },
+  application: { labelRu: "Способ применения", standard: "Выпить, накормить или нанести на неподвижную цель", options: [
+    ["Выпить, накормить или нанести на неподвижную цель", 0], ["Нанести через рану или оружейное покрытие", 1],
+    ["Разбить метаемую ампулу о цель", 2], ["Вдохнуть или распылить", 3],
+    ["Краткий контакт с неповреждённой кожей", 3], ["Дистанционная или условная активация", 5],
+  ] },
+  resistance: { labelRu: "Сопротивление", standard: "Положительное воздействие на добровольную цель", options: [
+    ["Положительное воздействие на добровольную цель", 0], ["Обычный спасбросок полностью отменяет эффект", 0],
+    ["Спасбросок с преимуществом", -2], ["Новый спасбросок в конце каждого раунда", -2],
+    ["Успех уменьшает эффект вдвое", 2], ["Один спасбросок при попадании, без повторов", 2],
+    ["Эффект не допускает спасброска", 8],
+  ] },
+};
+
+const LIMITS = [
+  ["Только конкретный биологический вид или узкая группа материалов", -2, "работает лишь на дварфах, на волках — или лишь по железу, по коже"],
+  ["Требуется уже существующее состояние", -1, "цель уже отравлена, ранена, спит"],
+  ["Требуется редкое внешнее условие", -2, "только в полнолуние, только в воде"],
+  ["Состав портится через 24 часа", -1, "срок хранения — одно из двух", "spoil"],
+  ["Состав портится через 1 час", -2, "срок хранения — одно из двух", "spoil"],
+  ["Неизбежный лёгкий побочный эффект", -1],
+  ["Неизбежный серьёзный побочный эффект", -3],
+  ["Неизбежное опасное последствие", -5],
+];
+
+const RARITY = [
+  ["Обычное", 0, 2, 2],
+  ["Необычное", 2, 3, 3],
+  ["Редкое", 5, 5, 4],
+  ["Очень редкое", 8, 7, 6],
+  ["Легендарное", 12, 10, 8],
+];
+
+const BATCH_TIME = [[9, "15 минут", 1], [14, "30 минут", 1], [19, "1 час", 1], [24, "2 часа", 2], [29, "4 часа", 4],
+  [34, "8 часов", 8], [39, "16 часов", 16], [44, "32 часа", 32], [49, "64 часа", 64]];
+
+const CONSUMABLES = [[19, "Обычные", 1], [29, "Очищенные", 3], [39, "Высокоточные", 10]];
+
+const RULE_PAGES = [
+  { id: "difficulty", titleRu: "Сложность замысла", leadRu: "Цена того, что задумано" },
+  { id: "apparatus", titleRu: "Оснащение", leadRu: "Предел сложности и размер партии" },
+  { id: "research", titleRu: "Глубина исследования", leadRu: "Чего стоит очередное свойство" },
+];
+
+function pluralRu(count, forms) {
+  const mod100 = count % 100;
+  const mod10 = count % 10;
+  if (mod100 >= 11 && mod100 <= 14) return forms[2];
+  if (mod10 === 1) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4) return forms[1];
+  return forms[2];
+}
+
+const PORTION_FORMS = ["порция", "порции", "порций"];
+
+/** Родительный падеж: «до 1 порции», «до 3 порций». */
+const PORTION_OF_FORMS = ["порции", "порций", "порций"];
+
+const APPARATUS = [
+  ["Обычный походный комплект", 15, 3, ""],
+  ["Надёжный походный комплект", 20, 6, "сейчас"],
+  ["Профессиональный походный комплект", 25, 10, ""],
+  ["Мастерский походный комплект", 30, 15, ""],
+  ["Базовый лабораторный модуль", 20, 10, "стационарный"],
+  ["Оснащённый лабораторный модуль", 25, 20, "стационарный"],
+  ["Профессиональный лабораторный модуль", 30, 40, "стационарный"],
+  ["Мастерский лабораторный модуль", 35, 80, "стационарный"],
+  ["Великий лабораторный модуль", 45, 150, "стационарный"],
+  ["Импровизированные сосуды", 15, 1, "+5 к сложности"],
+];
+
+function moneyRu(value) {
+  return value.toLocaleString("ru-RU").replace(/\u00a0/g, " ") + " зм";
+}
+
+class Component extends DCLogic {
+  state = { moment: "field", sort: "name", open: null, chosen: [], drawer: true,
+    q: "", kind: "Все", biome: "Болото", targets: ["plantain", "swamp-mushroom"], phases: { "plantain": "gather" },
+    card: "mandrake",
+    bookQuery: "", bookOpen: "plantain", rulePage: "difficulty", amount: {},
+    items: {}, perItem: {}, batch: 2, compose: ["mandrake"],
+    gatherId: "swamp-mushroom", gatherText: "", openParam: null,
+    form: { duration: "Постоянно", onset: "Немедленно", reach: "Одна цель, предмет или участок",
+      application: "Выпить, накормить или нанести на неподвижную цель",
+      resistance: "Положительное воздействие на добровольную цель",
+      repeats: 0, purge: false, suppressed: [], limitations: [],
+      mainRarity: "Очень редкое", main: null, suppressRarity: {} },
+    rolled: "", bonus: "", mishap: "", kitPick: null, kitOpen: false,
+    newOpen: false, newName: "", extra: [], fill: {}, fillKey: null, fillText: "" };
+
+  kit() {
+    const name = this.state.kitPick ?? this.props.apparatus ?? "Надёжный походный комплект";
+    const found = APPARATUS.find((one) => one[0] === name) ?? APPARATUS[1];
+    return { name: found[0], hardest: found[1], batch: found[2] };
+  }
+
+  nextOf(one) {
+    const n = one.props.length + 1;
+    if (n > 4) return null;
+    const step = STEPS[n];
+    return {
+      n, dc: step.dc,
+      costRu: step.t + " · " + step.portions + " · " + step.cons + (step.lab ? " · нужен стационарный набор" : ""),
+      rows: [
+        { labelRu: "Время", valueRu: step.t },
+        { labelRu: "Порции", valueRu: step.portions },
+        { labelRu: "Расходники", valueRu: step.cons },
+        { labelRu: "Оснащение", valueRu: step.lab ? "профильная стационарная лаборатория" : "профильные походные инструменты" },
+      ],
+    };
+  }
+
+  notesOf(one) {
+    const where = "Найти — СЛ " + one.findDc + " Мудрость (Внимательность); собрать — СЛ " + one.gatherDc + " Интеллект (Травничество); " + one.yieldRu.toLowerCase();
+    return [{ id: "p", textRu: "Порция — " + one.portionRu + "." }, { id: "w", textRu: where }];
+  }
+
+  toggleChosen(id) {
+    this.setState((s) => ({ chosen: s.chosen.includes(id) ? s.chosen.filter((x) => x !== id) : [...s.chosen, id] }));
+  }
+
+  matchesOf(ids) {
+    const chosen = DATA.filter((one) => ids.includes(one.id));
+    const byName = new Map();
+    chosen.forEach((one) => one.props.forEach((p) => {
+      const list = byName.get(p.name) ?? [];
+      list.push(one.name);
+      byName.set(p.name, list);
+    }));
+    const found = [...byName.entries()].filter(([, sources]) => sources.length >= 2)
+      .map(([name, sources]) => ({ name, sources }));
+    if (ids.length === 1 && ids[0] === "dwarf-blight") {
+      found.push({ name: "Отвращение к пиву", sources: ["Дварфийская хворь ×2 — утверждённая реакция самосмешивания"] });
+    }
+    if (ids.length === 1 && ids[0] === "mandrake") {
+      found.push({ name: "Постоянное усиление случайной характеристики", sources: ["Корень мандрагоры — особый одноингредиентный рецепт"] });
+    }
+    return found;
+  }
+
+  renderVals() {
+    const kit = this.kit();
+    const showPrices = this.props.showPrices ?? true;
+    const s = this.state;
+
+    const ing = DATA.map((one) => {
+      const next = this.nextOf(one);
+      return {
+        ...one,
+        stockRu: one.stock === null ? "остаток не зафиксирован" : "в сумке " + one.stock,
+        stockShort: one.stock === null ? "—" : String(one.stock),
+        barKnown: "▮".repeat(one.props.length),
+        barRest: "▯".repeat(4 - one.props.length),
+        props: one.props.map((p) => ({ ...p, nRu: p.n + "-е" })),
+        notes: this.notesOf(one),
+        hasNext: next !== null,
+        nextRu: next === null ? "" : next.n + "-е",
+        nextDc: next === null ? "" : next.dc,
+        nextCostRu: next === null ? "" : next.costRu,
+        nextBlocked: one.blockRu !== undefined,
+        blockRu: one.blockRu ?? "",
+        gather: () => undefined,
+        research: () => undefined,
+      };
+    });
+
+    const moments = [
+      { id: "field", labelRu: "Поле", tallyRu: "9 видов" },
+      { id: "lab", labelRu: "Лаборатория", tallyRu: "8 готовы" },
+      { id: "bench", labelRu: "Верстак", tallyRu: s.chosen.length + " в составе" },
+      { id: "market", labelRu: "Рынок", tallyRu: showPrices ? "17 порций" : "скрыт" },
+    ].map((m) => ({
+      ...m,
+      pick: () => this.setState({ moment: m.id }),
+      bg: m.id === s.moment ? GROUP : CONTROL,
+      fg: m.id === s.moment ? ACCENT : INK,
+      border: m.id === s.moment ? ACCENT : RULE,
+    }));
+
+    const hints = {
+      field: "Нашли источник — здесь только то, что нужно броску: СЛ поиска, СЛ сбора и выход.",
+      lab: "Что стоит следующее свойство у каждого вида и что мешает его раскрыть.",
+      bench: "Виды в состав. Свойство работает, если раскрыто минимум у двух видов.",
+      market: "Цена порции, остаток и чего сколько стоит прямо сейчас.",
+    };
+
+    const chosenSet = s.chosen;
+    const benchRows = ing.map((one) => {
+      const on = chosenSet.includes(one.id);
+      return {
+        name: one.name,
+        stockRu: one.stockShort === "—" ? "остаток —" : one.stockShort + " в сумке",
+        props: one.props.map((p) => ({ name: p.name, withRu: "", color: INK })),
+        edge: on ? ACCENT : RULE,
+        btnBg: on ? GROUP : CONTROL,
+        btnFg: on ? ACCENT : QUIET,
+        mark: on ? "✓" : "+",
+        toggle: () => this.toggleChosen(one.id),
+      };
+    });
+
+    const worth = (one) => (one.stock === null ? null : one.stock * one.price);
+    const bagWorth = DATA.reduce((sum, one) => sum + (worth(one) ?? 0), 0);
+    const marketRows = [...DATA].sort((a, b) => (worth(b) ?? -1) - (worth(a) ?? -1)).map((one) => ({
+      name: one.name,
+      stockShort: one.stock === null ? "—" : String(one.stock),
+      priceRu: showPrices ? one.priceRu : "скрыто",
+      worthRu: !showPrices ? "—" : worth(one) === null ? "—" : moneyRu(worth(one)),
+      worthColor: worth(one) !== null && worth(one) >= 10000 ? ACCENT : INK,
+    }));
+
+    const sorts = [
+      { id: "name", labelRu: "По имени" },
+      { id: "known", labelRu: "По изученности" },
+      { id: "price", labelRu: "По цене" },
+    ].map((one) => ({
+      ...one,
+      pick: () => this.setState({ sort: one.id }),
+      bg: one.id === s.sort ? GROUP : CONTROL,
+      fg: one.id === s.sort ? ACCENT : INK,
+      border: one.id === s.sort ? ACCENT : RULE,
+    }));
+
+    const sorted = [...ing].sort((a, b) => {
+      if (s.sort === "known") return b.props.length - a.props.length;
+      if (s.sort === "price") return b.price - a.price;
+      return a.name.localeCompare(b.name, "ru");
+    });
+
+    const denseRows = sorted.map((one) => {
+      const slots = [1, 2, 3, 4].map((n) => {
+        const known = one.props.find((p) => p.n === n);
+        return known
+          ? { nRu: n + "-е", name: known.name, dirRu: known.dir, color: INK }
+          : { nRu: n + "-е", name: "не раскрыто", dirRu: "", color: "#5c5347" };
+      });
+      return {
+        ...one,
+        leadRu: one.props.map((p) => p.name).join(" · "),
+        priceRu: showPrices ? one.priceRu : "—",
+        slots,
+        open: s.open === one.id,
+        rowBg: s.open === one.id ? GROUP : "transparent",
+        hasSpecial: one.specialRu !== undefined,
+        specialRu: one.specialRu ?? "",
+        toggle: () => this.setState({ open: s.open === one.id ? null : one.id }),
+      };
+    });
+
+    const matches = this.matchesOf(s.chosen);
+    const tierOf = (count) => (count >= 4 ? { ru: "концентрированная", mod: 6 } : count >= 3 ? { ru: "усиленная", mod: 3 } : { ru: "обычная", mod: 0 });
+    const matchRows = matches.map((m) => {
+      const tier = tierOf(m.sources.length);
+      return { name: m.name, tierRu: tier.ru, sourcesRu: m.sources.join(", ") };
+    });
+    const extra = Math.max(matches.length - 1, 0) * 2;
+    const tierSum = matches.reduce((sum, m) => sum + tierOf(m.sources.length).mod, 0);
+    const dc = matches.length === 0 ? null : 10 + extra + tierSum;
+
+    const chips = DATA.map((one) => {
+      const on = s.chosen.includes(one.id);
+      return {
+        name: one.name.length > 24 ? one.name.slice(0, 22) + "…" : one.name,
+        subRu: one.props.length + "/4 · " + (one.stock === null ? "—" : one.stock),
+        toggle: () => this.toggleChosen(one.id),
+        bg: on ? GROUP : CONTROL,
+        fg: on ? ACCENT : INK,
+        border: on ? ACCENT : RULE,
+      };
+    });
+
+
+    const footByMoment = {
+      field: { title: "Сбор за сегодня", hint: "записанное уходит в «Вещи»", btn: "Свернуть", action: () => undefined, bg: CONTROL, fg: INK },
+      lab: { title: "Ничего не заложено", hint: "время идёт только на привале", btn: "К привалу", action: () => undefined, bg: CONTROL, fg: INK },
+      bench: { title: s.chosen.length === 0 ? "Состав пуст" : "В составе: " + s.chosen.length, hint: matches.length === 0 ? "совпавших свойств нет" : "совпавших свойств: " + matches.length, btn: "К замыслу", action: () => undefined, bg: ACCENT, fg: "#15120e" },
+      market: { title: "Сумка по базовой цене", hint: "цена сырья, не готового зелья", btn: "Что продать", action: () => undefined, bg: CONTROL, fg: INK },
+    };
+    const foot = footByMoment[s.moment];
+
+    const all = [...DATA, ...ANIMALS, ...s.extra].map((one) => {
+      const meta = FIELD_META[one.id] ?? { kind: "Растение", biomes: [] };
+      const style = KIND_STYLE[meta.kind] ?? KIND_STYLE["Растение"];
+      return { ...one, kindRu: meta.kind, biomes: meta.biomes, glyph: style.glyph, glyphColor: style.color };
+    });
+
+    const chosenNames = all.filter((one) => s.compose.includes(one.id)).map((one) => one.name);
+
+    const kinds = ["Все", "Растение", "Гриб", "Животное"].map((k) => ({
+      labelRu: k,
+      glyph: k === "Все" ? "∗" : KIND_STYLE[k].glyph,
+      pick: () => this.setState({ kind: k }),
+      bg: k === s.kind ? GROUP : "transparent",
+      fg: k === s.kind ? (k === "Все" ? ACCENT : KIND_STYLE[k].color) : QUIET,
+      border: k === s.kind ? (k === "Все" ? ACCENT : KIND_STYLE[k].color) : RULE,
+    }));
+
+    const biomes = BIOMES.map((b) => ({
+      labelRu: b,
+      pick: () => this.setState({ biome: b }),
+      bg: b === s.biome ? ACCENT : "transparent",
+      fg: b === s.biome ? "#15120e" : QUIET,
+      border: b === s.biome ? ACCENT : RULE,
+    }));
+
+    const query = s.q.trim().toLowerCase();
+    const found = all.filter((one) => {
+      const byKind = s.kind === "Все" || one.kindRu === s.kind;
+      const byBiome = s.biome === "Все" || one.biomes.includes(s.biome);
+      const byText = query === "" || one.name.toLowerCase().includes(query)
+        || one.props.some((p) => p.name.toLowerCase().includes(query));
+      return byKind && byBiome && byText;
+    });
+
+    const searchRows = found.map((one) => ({
+      name: one.name,
+      glyph: one.glyph,
+      glyphColor: one.glyphColor,
+      metaRu: one.kindRu + " · " + one.biomes.join(", ") + " · " + one.rarityRu,
+      findDc: one.findDc,
+      gatherDc: one.gatherDc,
+      knownRu: one.props.length + "/4",
+      barKnown: "▮".repeat(one.props.length),
+      barRest: "▯".repeat(4 - one.props.length),
+      targeted: s.targets.includes(one.id),
+      markRu: s.targets.includes(one.id) ? "✓" : "+",
+      markBg: s.targets.includes(one.id) ? ACCENT : "transparent",
+      markFg: s.targets.includes(one.id) ? "#15120e" : QUIET,
+      markBorder: s.targets.includes(one.id) ? ACCENT : RULE,
+      toggle: () => this.setState((prev) => ({
+        targets: prev.targets.includes(one.id) ? prev.targets.filter((x) => x !== one.id) : [...prev.targets, one.id],
+      })),
+      openCard: () => this.setState({ card: one.id }),
+    }));
+
+    const PHASES = { search: "gather", gather: "done", done: "done" };
+    const huntRows = s.targets.map((id) => {
+      const one = all.find((x) => x.id === id);
+      const phase = s.phases[id] ?? "search";
+      const box = { search: { labelRu: "Найти", dc: one.findDc, skillRu: "Мудрость (Внимательность)", btnRu: "Нашли", color: ACCENT },
+        gather: { labelRu: "Собрать", dc: one.gatherDc, skillRu: "Интеллект (Травничество)", btnRu: "Собрали", color: "#6fa9e2" },
+        done: { labelRu: "Выход", dc: null, skillRu: "бросьте выход и запишите, сколько вышло", btnRu: "Записать в сумку", color: "#8dc46e" } }[phase];
+      return {
+        name: one.name, glyph: one.glyph, glyphColor: one.glyphColor,
+        whereRu: one.whereRu,
+        stepRu: box.labelRu,
+        dcRu: box.dc === null ? one.yieldRu : "СЛ " + box.dc,
+        isRoll: box.dc !== null,
+        isDone: phase === "done",
+        skillRu: box.skillRu,
+        btnRu: box.btnRu,
+        accent: box.color,
+        portionRu: "порция — " + one.portionRu,
+        advance: () => this.setState((prev) => ({ phases: { ...prev.phases, [id]: PHASES[phase] } })),
+        drop: () => this.setState((prev) => ({ targets: prev.targets.filter((x) => x !== id) })),
+      };
+    });
+
+    const card = all.find((one) => one.id === s.card) ?? all[3];
+    const cardNext = this.nextOf(card);
+    const cardSlots = [1, 2, 3, 4].map((n) => {
+      const known = card.props.find((p) => p.n === n);
+      return {
+        nRu: n + "-е",
+        name: known ? known.name : "не раскрыто",
+        dirRu: known ? known.dir : "направление неизвестно",
+        color: known ? INK : "#5c5347",
+        bar: known ? (DIR_COLOR[known.dir] ?? ACCENT) : "rgba(233,214,176,.14)",
+        bg: known ? GROUP : "transparent",
+      };
+    });
+
+    const measureOf = (id) => {
+      const portions = s.amount[id] ?? PORTIONS[id]?.portions ?? 0;
+      return { portions, portionsRu: portions + " " + pluralRu(portions, PORTION_FORMS) };
+    };
+
+    const itemsOf = (id) => {
+      const base = ITEMS[id] ?? { itemRu: ["штука", "штуки", "штук"], count: 0, per: 1 };
+      const count = s.items[id] ?? base.count;
+      const per = s.perItem[id] ?? base.per;
+      return {
+        count, per,
+        countRu: count + " " + pluralRu(count, base.itemRu),
+        oneRu: pluralRu(1, base.itemRu),
+        perRu: per === 1
+          ? "1 порция = 1 " + pluralRu(1, base.itemRu)
+          : "1 порция = " + per + " " + pluralRu(per, base.itemRu),
+        unitsFor: (portions) => portions * per,
+        wordFor: (count) => pluralRu(count, base.itemRu),
+      };
+    };
+
+    const bagRows = all.map((one) => {
+      const it = itemsOf(one.id);
+      return {
+        name: one.name,
+        countRu: String(it.count),
+        unitRu: it.wordFor(it.count),
+        perRu: it.perRu,
+        add: () => this.setState((prev) => ({ items: { ...prev.items, [one.id]: (prev.items[one.id] ?? ITEMS[one.id]?.count ?? 0) + 1 } })),
+        sub: () => this.setState((prev) => ({ items: { ...prev.items, [one.id]: Math.max((prev.items[one.id] ?? ITEMS[one.id]?.count ?? 0) - 1, 0) } })),
+      };
+    });
+
+    const batch = s.batch;
+    const recipeRows = all.filter((one) => s.compose.includes(one.id)).map((one) => {
+      const it = itemsOf(one.id);
+      const needUnits = it.unitsFor(batch);
+      const enough = it.count >= needUnits;
+      const short = Math.max(needUnits - it.count, 0);
+      return {
+        name: one.name,
+        needRu: batch + " " + pluralRu(batch, PORTION_FORMS) + " = " + needUnits + " " + it.wordFor(needUnits),
+        haveRu: "в сумке " + it.count,
+        stateRu: enough ? "хватает" : "не хватает " + short + " " + it.wordFor(short),
+        stateColor: enough ? "#8dc46e" : "#e4707f",
+        edge: enough ? "#8dc46e" : "#e4707f",
+        drop: () => this.setState((prev) => ({ compose: prev.compose.filter((x) => x !== one.id) })),
+      };
+    });
+    const shortfall = recipeRows.filter((row) => row.stateColor === "#e4707f").length;
+
+    const composeChips = all.map((one) => {
+      const on = s.compose.includes(one.id);
+      return {
+        labelRu: one.name.length > 20 ? one.name.slice(0, 18) + "…" : one.name,
+        toggle: () => this.setState((prev) => ({
+          compose: on ? prev.compose.filter((x) => x !== one.id) : [...prev.compose, one.id],
+        })),
+        bg: on ? GROUP : "transparent",
+        fg: on ? ACCENT : QUIET,
+        border: on ? ACCENT : RULE,
+      };
+    });
+
+    const portionsOf = (id) => s.amount[id] ?? PORTIONS[id]?.portions ?? 0;
+
+    const gatherRows = all.map((one) => {
+      const have = portionsOf(one.id);
+      const open = s.gatherId === one.id;
+      return {
+        name: one.name,
+        yieldRu: one.yieldRu,
+        haveRu: String(have),
+        haveWordRu: pluralRu(have, PORTION_FORMS),
+        findDc: one.findDc,
+        gatherDc: one.gatherDc,
+        open,
+        edge: open ? ACCENT : "transparent",
+        bg: open ? GROUP : "transparent",
+        pick: () => this.setState({ gatherId: open ? null : one.id, gatherText: "" }),
+        typed: s.gatherText,
+        onTyped: (event) => this.setState({ gatherText: event.target.value }),
+        write: () => {
+          const added = Number.parseInt(s.gatherText, 10);
+          if (!Number.isFinite(added) || added <= 0) return;
+          this.setState((prev) => ({
+            amount: { ...prev.amount, [one.id]: (prev.amount[one.id] ?? PORTIONS[one.id]?.portions ?? 0) + added },
+            gatherId: null, gatherText: "",
+          }));
+        },
+        plusOne: () => this.setState((prev) => ({
+          amount: { ...prev.amount, [one.id]: (prev.amount[one.id] ?? PORTIONS[one.id]?.portions ?? 0) + 1 },
+        })),
+      };
+    });
+
+    const batchNeed = s.batch;
+    const spendRows = all.filter((one) => s.compose.includes(one.id)).map((one) => {
+      const have = portionsOf(one.id);
+      const enough = have >= batchNeed;
+      return {
+        name: one.name,
+        needRu: batchNeed + " " + pluralRu(batchNeed, PORTION_FORMS) + " из " + have,
+        stateRu: enough ? "хватает" : "не хватает " + (batchNeed - have),
+        stateColor: enough ? "#8dc46e" : "#e4707f",
+        edge: enough ? "#8dc46e" : "#e4707f",
+        drop: () => this.setState((prev) => ({ compose: prev.compose.filter((x) => x !== one.id) })),
+      };
+    });
+    const spendShort = spendRows.filter((row) => row.stateColor === "#e4707f").length;
+
+    const inComposeProps = new Set();
+    all.filter((one) => s.compose.includes(one.id)).forEach((one) => one.props.forEach((p) => inComposeProps.add(p.name)));
+
+    const composeMatches = this.matchesOf(s.compose).map((m) => ({
+      name: m.name,
+      sourcesRu: m.sources.join(", "),
+      color: DIR_COLOR[(all.find((one) => one.props.some((p) => p.name === m.name)) ?? { props: [] }).props.find((p) => p.name === m.name)?.dir] ?? ACCENT,
+    }));
+
+    const spendRowsWithProps = spendRows.map((row) => {
+      const one = all.find((x) => x.name === row.name);
+      return {
+        ...row,
+        props: one.props.map((p) => ({
+          name: p.name,
+          color: DIR_COLOR[p.dir] ?? ACCENT,
+          markRu: composeMatches.some((m) => m.name === p.name) ? "совпало" : "пары нет",
+          markColor: composeMatches.some((m) => m.name === p.name) ? "#8dc46e" : "#5c5347",
+        })),
+      };
+    });
+
+    const pickerRows = all.map((one) => {
+      const on = s.compose.includes(one.id);
+      const have = portionsOf(one.id);
+      return {
+        name: one.name,
+        haveRu: have + " " + pluralRu(have, PORTION_FORMS),
+        chosen: on,
+        markRu: on ? "✓" : "+",
+        markBg: on ? ACCENT : "transparent",
+        markFg: on ? "#15120e" : QUIET,
+        edge: on ? ACCENT : RULE_SOFT,
+        bg: on ? GROUP : "transparent",
+        empty: one.props.length === 0,
+        props: one.props.map((p) => {
+          const willMatch = !on && inComposeProps.has(p.name);
+          return {
+            nRu: p.n + "-е",
+            name: p.name,
+            color: willMatch ? "#8dc46e" : INK,
+            bar: DIR_COLOR[p.dir] ?? ACCENT,
+            tagRu: willMatch ? "совпадёт" : "",
+          };
+        }),
+        toggle: () => this.setState((prev) => ({
+          compose: on ? prev.compose.filter((x) => x !== one.id) : [...prev.compose, one.id],
+        })),
+      };
+    });
+
+    const f = s.form;
+    const modOf = (key, value) => (FORM[key].options.find((o) => o[0] === value) ?? [null, 0])[1];
+    const rarityOf = (name) => RARITY.find((r) => r[0] === name) ?? RARITY[0];
+
+    const formUI = Object.keys(FORM).map((key) => {
+      const spec = FORM[key];
+      const value = f[key];
+      const mod = modOf(key, value);
+      const changed = value !== spec.standard;
+      return {
+        labelRu: spec.labelRu,
+        valueRu: value,
+        modRu: mod === 0 ? "" : (mod > 0 ? "+" : "−") + Math.abs(mod),
+        modColor: mod > 0 ? "#e79079" : mod < 0 ? "#8dc46e" : QUIET,
+        dotColor: changed ? ACCENT : "transparent",
+        open: s.openParam === key,
+        arrowRu: s.openParam === key ? "▴" : "▾",
+        toggle: () => this.setState({ openParam: s.openParam === key ? null : key }),
+        options: spec.options.map(([label, m]) => ({
+          labelRu: label,
+          modRu: m === 0 ? "0" : (m > 0 ? "+" : "−") + Math.abs(m),
+          active: label === value,
+          bg: label === value ? GROUP : "transparent",
+          fg: label === value ? ACCENT : INK,
+          pick: () => this.setState((prev) => ({ form: { ...prev.form, [key]: label }, openParam: null })),
+        })),
+      };
+    });
+
+    const limitRows = LIMITS.map(([label, mod, hintRu, group]) => {
+      const on = f.limitations.includes(label);
+      const sameGroup = group === undefined ? [] : LIMITS.filter((l) => l[3] === group).map((l) => l[0]);
+      return {
+        labelRu: label,
+        hintRu: hintRu ?? "",
+        hasHint: hintRu !== undefined,
+        modRu: (mod > 0 ? "+" : "−") + Math.abs(mod),
+        on,
+        bg: on ? GROUP : "transparent",
+        edge: on ? "#8dc46e" : RULE_SOFT,
+        fg: on ? "#8dc46e" : QUIET,
+        markRu: on ? "✓" : "+",
+        toggle: () => this.setState((prev) => ({
+          form: {
+            ...prev.form,
+            limitations: on
+              ? prev.form.limitations.filter((x) => x !== label)
+              : [...prev.form.limitations.filter((x) => !sameGroup.includes(x)), label],
+          },
+        })),
+      };
+    });
+
+    const matchesNow = this.matchesOf(s.compose);
+    const mainName = f.main ?? (matchesNow[0]?.name ?? null);
+    const keptMatches = matchesNow.filter((m) => !f.suppressed.includes(m.name));
+    const rarityMain = rarityOf(f.mainRarity);
+    const tierMod = keptMatches.reduce((sum, m) => sum + (m.sources.length >= 4 ? 6 : m.sources.length >= 3 ? 3 : 0), 0);
+    const extraMod = Math.max(keptMatches.length - 1, 0) * rarityOf("Обычное")[2];
+    const formMod = Object.keys(FORM).reduce((sum, key) => sum + modOf(key, f[key]), 0);
+    const repeatMod = Math.min(f.repeats * 3, 12);
+    const purgeMod = f.purge ? 5 : 0;
+    const suppressMod = f.purge ? 0 : f.suppressed.reduce((sum, name) => sum + rarityOf(f.suppressRarity[name] ?? "Обычное")[3], 0);
+    const limitMod = Math.max(f.limitations.reduce((sum, label) => sum + (LIMITS.find((l) => l[0] === label) ?? [null, 0])[1], 0), -6);
+    const mainMod = keptMatches.length === 0 ? 0 : rarityMain[1];
+    const dcTotal = keptMatches.length === 0 ? null
+      : Math.max(10 + mainMod + extraMod + tierMod + formMod + repeatMod + purgeMod + suppressMod + limitMod, 5);
+
+    const dcParts = dcTotal === null ? [] : [
+      { labelRu: "Основа", valueRu: "10" },
+      { labelRu: "Основной эффект · " + f.mainRarity.toLowerCase(), valueRu: mainMod },
+      { labelRu: "Дополнительные эффекты", valueRu: extraMod },
+      { labelRu: "Ступень совпадения", valueRu: tierMod },
+      { labelRu: "Форма состава", valueRu: formMod },
+      { labelRu: "Повторные срабатывания", valueRu: repeatMod },
+      { labelRu: "Очистка", valueRu: purgeMod },
+      { labelRu: "Подавление", valueRu: suppressMod },
+      { labelRu: "Ограничения", valueRu: limitMod },
+    ].filter((part) => part.valueRu !== 0).map((part) => ({
+      labelRu: part.labelRu,
+      valueRu: typeof part.valueRu === "string" ? part.valueRu : (part.valueRu > 0 ? "+" : "−") + Math.abs(part.valueRu),
+      color: typeof part.valueRu === "string" ? INK : part.valueRu > 0 ? "#e79079" : "#8dc46e",
+    }));
+
+    const timeBand = dcTotal === null ? null : (BATCH_TIME.find(([upto]) => dcTotal <= upto) ?? [null, "особый проект", null]);
+    const timeRu = timeBand === null ? "—" : timeBand[1];
+    const startedHours = timeBand === null ? null : timeBand[2];
+    const consRow = dcTotal === null ? null : (CONSUMABLES.find(([upto]) => dcTotal <= upto) ?? [null, "Экзотические", 30]);
+    const units = batchNeed + Math.floor(batchNeed / 4);
+    const kits = Math.ceil(batchNeed / 5);
+    const overLimit = dcTotal !== null && dcTotal > kit.hardest;
+    const overBatch = batchNeed > kit.batch;
+
+    const rarityPicks = RARITY.map(([name, main]) => ({
+      labelRu: name,
+      modRu: "+" + main,
+      active: name === f.mainRarity,
+      bg: name === f.mainRarity ? GROUP : "transparent",
+      border: name === f.mainRarity ? ACCENT : RULE_SOFT,
+      fg: name === f.mainRarity ? ACCENT : QUIET,
+      pick: () => this.setState((prev) => ({ form: { ...prev.form, mainRarity: name } })),
+    }));
+
+    const mainPicks = matchesNow.map((m) => {
+      const chosen = m.name === mainName;
+      const off = f.suppressed.includes(m.name);
+      return {
+        name: m.name,
+        sourcesRu: m.sources.join(", "),
+        roleRu: off ? "подавлено" : chosen ? "основной эффект" : "войдёт в состав",
+        roleColor: off ? "#5c5347" : chosen ? ACCENT : "#8dc46e",
+        edge: off ? "#5c5347" : chosen ? ACCENT : "#8dc46e",
+        setMain: () => this.setState((prev) => ({ form: { ...prev.form, main: m.name } })),
+        toggleOff: () => this.setState((prev) => ({
+          form: { ...prev.form, suppressed: off ? prev.form.suppressed.filter((x) => x !== m.name) : [...prev.form.suppressed, m.name] },
+        })),
+        offRu: off ? "Вернуть" : "Подавить",
+        suppressed: off,
+        suppressPriceRu: off
+          ? "подавление · " + (f.purge ? "входит в очистку" : "+" + rarityOf(f.suppressRarity[m.name] ?? "Обычное")[3])
+          : "",
+        rarityPicks: RARITY.map(([name, , , suppress]) => ({
+          labelRu: name,
+          modRu: "+" + suppress,
+          bg: (f.suppressRarity[m.name] ?? "Обычное") === name ? GROUP : "transparent",
+          border: (f.suppressRarity[m.name] ?? "Обычное") === name ? ACCENT : RULE_SOFT,
+          fg: (f.suppressRarity[m.name] ?? "Обычное") === name ? ACCENT : QUIET,
+          pick: () => this.setState((prev) => ({
+            form: { ...prev.form, suppressRarity: { ...prev.form.suppressRarity, [m.name]: name } },
+          })),
+        })),
+      };
+    });
+
+    const die = Number.parseInt(s.rolled, 10);
+    const bonus = Number.parseInt(s.bonus, 10);
+    const hasDie = Number.isFinite(die) && die >= 1 && die <= 20;
+    const total = hasDie ? die + (Number.isFinite(bonus) ? bonus : 0) : null;
+    const nat20 = hasDie && die === 20;
+    const nat1 = hasDie && die === 1;
+    const success = total !== null && dcTotal !== null && total >= dcTotal;
+    const mishapDie = Number.parseInt(s.mishap, 10);
+    const mishapRow = Number.isFinite(mishapDie) && mishapDie >= 1 && mishapDie <= 6
+      ? (mishapDie <= 2 ? "Реакция гаснет без последствий."
+        : mishapDie === 3 ? "Повреждён сменный элемент оснащения; ремонт — 5% цены набора. До ремонта предел Сл на 5 ниже."
+        : mishapDie === 4 ? "Алхимик подвергается одному случайному эффекту смеси на обычной ступени."
+        : mishapDie === 5 ? "Смесь воздействует на область радиусом 1 метр."
+        : "Повреждено оборудование, и алхимик подвергается случайному эффекту смеси.")
+      : "";
+
+    const outcome = !hasDie || dcTotal === null ? null
+      : nat20 ? {
+        titleRu: "Натуральная 20 — успех с наградой",
+        bodyRu: "Партия создана, формулу можно записать. Выберите одно: сохранить половину стоимости расходников или получить одну дополнительную единицу состава.",
+        color: "#8dc46e", mishap: false,
+      }
+      : nat1 ? {
+        titleRu: "Натуральная 1 — алхимическая авария",
+        bodyRu: "Рецепт не создан, ингредиенты и расходники потеряны. Бросьте 1к6 на последствие.",
+        color: "#e4707f", mishap: true,
+      }
+      : success ? {
+        titleRu: "Успех · " + total + " против " + dcTotal,
+        bodyRu: "Партия создана. Формулу можно записать в книгу рецептов — при точном повторе броска больше не потребуется.",
+        color: "#8dc46e", mishap: false,
+      }
+      : {
+        titleRu: "Провал · " + total + " против " + dcTotal,
+        bodyRu: "Все заложенные ингредиенты и расходники потеряны. Размер экспериментальной партии выбирается до броска — теряется вся партия.",
+        color: "#e79079", mishap: false,
+      };
+
+    const bookQuery = s.bookQuery.trim().toLowerCase();
+    const written = all.filter((one) => bookQuery === "" || one.name.toLowerCase().includes(bookQuery)
+      || one.props.some((p) => p.name.toLowerCase().includes(bookQuery)));
+
+    const bookRows = written.map((one) => {
+      const m = measureOf(one.id);
+      return {
+        name: one.name,
+        portionsRu: String(m.portions),
+        barKnown: "▮".repeat(one.props.length),
+        barRest: "▯".repeat(4 - one.props.length),
+        open: () => this.setState({ bookOpen: one.id }),
+        edge: one.id === s.bookOpen ? ACCENT : "transparent",
+        bg: one.id === s.bookOpen ? GROUP : "transparent",
+      };
+    });
+
+    const entry = all.find((one) => one.id === s.bookOpen) ?? all[3];
+    const em = measureOf(entry.id);
+    const entryNext = this.nextOf(entry);
+    const entrySlots = [1, 2, 3, 4].map((n) => {
+      const known = entry.props.find((p) => p.n === n);
+      const foreign = entry.foreign !== undefined && entry.foreign.number === n ? entry.foreign : null;
+      return {
+        nRu: n + "-е",
+        name: known ? known.name : foreign ? "эффект не раскрыт" : "не раскрыто",
+        dirRu: known ? known.dir : foreign ? foreign.dirRu + " · чужое направление" : "направление неизвестно",
+        color: known ? INK : foreign ? "#b4a78e" : "#5c5347",
+        bar: known ? (DIR_COLOR[known.dir] ?? ACCENT) : foreign ? "rgba(228,112,127,.55)" : "rgba(233,214,176,.14)",
+        bg: known ? GROUP : "transparent",
+      };
+    });
+    const bump = (delta) => () => this.setState((prev) => ({
+      amount: { ...prev.amount, [entry.id]: Math.max((prev.amount[entry.id] ?? PORTIONS[entry.id]?.portions ?? 0) + delta, 0) },
+    }));
+    const togglePartial = () => this.setState((prev) => ({
+      partial: { ...prev.partial, [entry.id]: !(prev.partial[entry.id] ?? PORTIONS[entry.id].partial) },
+    }));
+
+    const rulePages = RULE_PAGES.map((page) => ({
+      ...page,
+      pick: () => this.setState({ rulePage: page.id }),
+      bg: page.id === s.rulePage ? GROUP : "transparent",
+      edge: page.id === s.rulePage ? ACCENT : "transparent",
+    }));
+
+    return {
+      kitName: kit.name, kitHardest: kit.hardest, kitBatch: kit.batch,
+      rolledText: s.rolled, bonusText: s.bonus, mishapText: s.mishap,
+      onRolled: (event) => this.setState({ rolled: event.target.value }),
+      onBonus: (event) => this.setState({ bonus: event.target.value }),
+      onMishap: (event) => this.setState({ mishap: event.target.value }),
+      hasOutcome: outcome !== null,
+      outcomeTitleRu: outcome?.titleRu ?? "",
+      outcomeBodyRu: outcome?.bodyRu ?? "",
+      outcomeColor: outcome?.color ?? QUIET,
+      needMishap: outcome?.mishap === true,
+      mishapResultRu: mishapRow,
+      hasMishapResult: mishapRow !== "",
+      purgeBlocksSuppress: f.purge && f.suppressed.length > 0,
+      recipes: [
+        {
+          nameRu: "Постоянное усиление случайной характеристики",
+          dirRu: "зельеварение",
+          kindsRu: "Корень мандрагоры, 1 порция — особый одноингредиентный рецепт",
+          formRu: "постоянный эффект · одна цель · выпить · очень редкое свойство · базовая обработка +1",
+          dc: 38, timeRu: "16 часов", consRu: "высокоточные, 10 зм за начатый час",
+        },
+        {
+          nameRu: "Отвращение к пиву",
+          dirRu: "синтез ядов · владения нет",
+          kindsRu: "Дварфийская хворь ×2 — утверждённая реакция самосмешивания",
+          formRu: "мгновенный эффект · одна цель · выпить или накормить · стандартная форма",
+          dc: 10, timeRu: "30 минут", consRu: "обычные, 1 зм за начатый час",
+        },
+      ].map((r) => ({ ...r, dcRu: String(r.dc), needRu: "нужен набор на сложность " + r.dc })),
+      recipeBreakRu: "Формула перестаёт быть известной, если сменить хотя бы один вид, изменить параметры эффекта, длительность, применение или очистку — либо если оснащение не держит итоговую сложность.",
+      formUI, limitRows, rarityPicks, mainPicks, dcParts, hasDcParts: dcParts.length > 0,
+      hasMain: mainPicks.length > 0,
+      noMain: mainPicks.length === 0,
+      dcTotalRu: dcTotal === null ? "—" : String(dcTotal),
+      dcColorNow: dcTotal === null ? "#5c5347" : overLimit ? "#e4707f" : INK,
+      limitNoteRu: dcTotal === null ? "нужны совпавшие свойства"
+        : overLimit ? kit.name + " держит только " + kit.hardest
+        : kit.name + " держит до " + kit.hardest,
+      limitNoteColor: dcTotal === null ? QUIET : overLimit ? "#e4707f" : QUIET,
+      timeRu,
+      consRu: consRow === null ? "—"
+        : startedHours === null
+          ? consRow[1].toLowerCase() + " · срок считает мастер"
+          : consRow[1].toLowerCase() + " · " + (consRow[2] * startedHours * kits) + " зм за партию",
+      consDetailRu: consRow === null || startedHours === null ? ""
+        : kits + " × комплект материалов · " + startedHours + " ч · " + consRow[2] + " зм/ч",
+      unitsRu: units + " " + pluralRu(units, ["единица", "единицы", "единиц"]),
+      kitsRu: kits + " " + pluralRu(kits, ["комплект", "комплекта", "комплектов"]),
+      batchNoteRu: overBatch
+        ? "за раз набор держит только " + kit.batch + " " + pluralRu(kit.batch, PORTION_FORMS)
+        : "за раз набор держит до " + kit.batch + " " + pluralRu(kit.batch, PORTION_OF_FORMS),
+      batchNoteColor: overBatch ? "#e4707f" : QUIET,
+      kitOpen: s.kitOpen,
+      kitToggle: () => this.setState({ kitOpen: !s.kitOpen }),
+      kitArrowRu: s.kitOpen ? "▴" : "▾",
+      kitSummaryRu: kit.name,
+      kitLimitShortRu: dcTotal === null ? "" : overLimit ? "набор держит " + kit.hardest : "набор держит до " + kit.hardest,
+      kitDetailRu: "держит сложность до " + kit.hardest + " · до " + kit.batch + " " + pluralRu(kit.batch, PORTION_OF_FORMS) + " за раз",
+      kitRows: APPARATUS.map(([name, hardest, batch, noteRu]) => ({
+        name,
+        noteRu: [noteRu === "сейчас" ? "" : noteRu, "сложность до " + hardest, "до " + batch + " " + pluralRu(batch, PORTION_OF_FORMS) + " за раз"].filter((x) => x !== "").join(" · "),
+        bg: name === kit.name ? GROUP : "transparent",
+        fg: name === kit.name ? ACCENT : INK,
+        edge: name === kit.name ? ACCENT : RULE_SOFT,
+        pick: () => this.setState({ kitPick: name, kitOpen: false }),
+      })),
+      craftBlocked: dcTotal === null,
+      craftLabelRu: "Заложить партию",
+      craftBg: dcTotal === null ? "transparent" : overLimit || overBatch ? "transparent" : ACCENT,
+      craftFg: dcTotal === null ? "#5c5347" : overLimit || overBatch ? "#e79079" : "#15120e",
+      craftBorder: dcTotal === null ? RULE : overLimit || overBatch ? "#e79079" : ACCENT,
+      craftCursor: dcTotal === null ? "not-allowed" : "pointer",
+      craftWarnRu: dcTotal === null ? ""
+        : overLimit && overBatch ? "Выше предела набора по сложности и партии — только с разрешения мастера"
+        : overLimit ? "Выше предела набора (" + kit.hardest + ") — только с разрешения мастера"
+        : overBatch ? "Партия больше " + kit.batch + " — только с разрешения мастера"
+        : "",
+      hasCraftWarn: dcTotal !== null && (overLimit || overBatch),
+      craftCostRu: dcTotal === null ? ""
+        : "спишет −" + batchNeed + " порц. с вида · " + timeRu
+          + (consRow === null || startedHours === null ? "" : " · расходники " + (consRow[2] * startedHours * kits) + " зм считает стол"),
+      hasCraftCost: dcTotal !== null,
+      checkRu: dcTotal === null ? "Варить пока нечего" : "Проверка против " + dcTotal,
+      checkSkillRu: (() => {
+        if (dcTotal === null) return "";
+        const dirs = [...new Set(keptMatches.map((m) => {
+          const owner = all.find((one) => one.props.some((p) => p.name === m.name));
+          const prop = owner?.props.find((p) => p.name === m.name);
+          return (prop?.dir ?? "Зельеварение").split(" / ")[0];
+        }))];
+        const own = ["Зельеварение"];
+        const missing = dirs.filter((d) => !own.includes(d));
+        if (missing.length === 0) {
+          return "1к20 + Зельеварение + Инт";
+        }
+        return "1к20 + Инт · «" + missing.join(", ") + "» не изучено";
+      })(),
+      repeatsRu: f.repeats === 0
+        ? "срабатывает один раз"
+        : "срабатывает " + (f.repeats + 1) + " раза в полную силу · +" + Math.min(f.repeats * 3, 12),
+      repeatsUp: () => this.setState((prev) => ({ form: { ...prev.form, repeats: Math.min(prev.form.repeats + 1, 4) } })),
+      repeatsDown: () => this.setState((prev) => ({ form: { ...prev.form, repeats: Math.max(prev.form.repeats - 1, 0) } })),
+      purgeOn: f.purge,
+      purgeRu: f.purge ? "Очистка включена · +5" : "Очистить смесь · +5",
+      purgeColor: f.purge ? "#8dc46e" : QUIET,
+      togglePurge: () => this.setState((prev) => ({ form: { ...prev.form, purge: !prev.form.purge } })),
+      gatherRows, spendRows: spendRowsWithProps, pickerRows, composeMatches,
+      hasComposeMatches: composeMatches.length > 0,
+      noComposeMatches: composeMatches.length === 0 && spendRows.length > 0,
+      spendSummaryRu: spendRows.length === 0 ? "Состав пуст" : spendShort === 0 ? "Хватает" : "Не хватает: " + spendShort,
+      spendSummaryColor: spendRows.length === 0 ? QUIET : spendShort === 0 ? "#8dc46e" : "#e4707f",
+      spendEmpty: spendRows.length === 0,
+      entryPortionsOnlyRu: portionsOf(entry.id) + " " + pluralRu(portionsOf(entry.id), PORTION_FORMS),
+      bagRows, recipeRows, composeChips,
+      batchOutRu: (batchNeed + Math.floor(batchNeed / 4)) + " " + pluralRu(batchNeed + Math.floor(batchNeed / 4), ["единица", "единицы", "единиц"]) + " состава",
+      batchKitsRu: Math.ceil(batchNeed / 5) + " " + pluralRu(Math.ceil(batchNeed / 5), ["комплект", "комплекта", "комплектов"]) + " расходников за начатый час",
+      batchPortionsRu: batchNeed + " " + pluralRu(batchNeed, PORTION_FORMS),
+      batchRu: String(batch),
+      batchWordRu: pluralRu(batch, PORTION_FORMS),
+      batchUp: () => this.setState({ batch: batch + 1 }),
+      batchDown: () => this.setState({ batch: Math.max(batch - 1, 1) }),
+      recipeEmpty: recipeRows.length === 0,
+      recipeSummaryRu: recipeRows.length === 0
+        ? "Виды в состав берутся ниже"
+        : shortfall === 0 ? "Сырья хватает на всю партию" : "Не хватает сырья: " + shortfall,
+      recipeSummaryColor: recipeRows.length === 0 ? QUIET : shortfall === 0 ? "#8dc46e" : "#e4707f",
+      entryItemsRu: itemsOf(entry.id).countRu,
+      entryItemPerRu: itemsOf(entry.id).perRu,
+      bookQuery: s.bookQuery,
+      onBookQuery: (event) => this.setState({ bookQuery: event.target.value }),
+      clearBookQuery: () => this.setState({ bookQuery: "" }),
+      bookRows, rulePages,
+      newOpen: s.newOpen,
+      newClosed: !s.newOpen,
+      newName: s.newName,
+      onNewName: (event) => this.setState({ newName: event.target.value }),
+      openNew: () => this.setState({ newOpen: true, newName: "" }),
+      cancelNew: () => this.setState({ newOpen: false, newName: "" }),
+      saveNew: () => {
+        const nameRu = s.newName.trim();
+        if (nameRu === "") return;
+        this.setState((prev) => ({
+          newOpen: false, newName: "",
+          extra: [...prev.extra, {
+            id: "new-" + prev.extra.length + "-" + nameRu.length,
+            name: nameRu, stock: null, price: 0, priceRu: "цены нет",
+            rarityRu: "записано со слов стола", findDc: "—", gatherDc: "—",
+            yieldRu: "—", whereRu: "Со слов мастера", portionRu: "—", props: [],
+          }],
+        }));
+      },
+      bookSections: [
+        { titleRu: "Ингредиенты", leadRu: "виды, их свойства, поиск и сбор", countRu: all.length + " записей", glyph: "◆" },
+        { titleRu: "Рецепты", leadRu: "записанные формулы, повтор без броска", countRu: "2 записи", glyph: "✎" },
+        { titleRu: "Правила стола", leadRu: "раскрытие свойств · варка · оснащение", countRu: "3 главы", glyph: "§" },
+      ],
+      bookRecent: all.slice(0, 4).map((one) => ({
+        name: one.name,
+        knownRu: one.props.length + "/4",
+        barKnown: "▮".repeat(one.props.length),
+        barRest: "▯".repeat(4 - one.props.length),
+        open: () => this.setState({ bookOpen: one.id }),
+      })),
+      bookGroups: (() => {
+        const keyOf = (name) => name.replace(/[«»"'\s]/g, "");
+        const sorted = [...written].sort((a, b) => keyOf(a.name).localeCompare(keyOf(b.name), "ru"));
+        const letters = [];
+        sorted.forEach((one) => {
+          const letter = keyOf(one.name).charAt(0).toUpperCase();
+          const last = letters[letters.length - 1];
+          const row = {
+            name: one.name,
+            barKnown: "▮".repeat(one.props.length),
+            barRest: "▯".repeat(4 - one.props.length),
+            open: () => this.setState({ bookOpen: one.id }),
+            edge: one.id === s.bookOpen ? ACCENT : "transparent",
+            bg: one.id === s.bookOpen ? GROUP : "transparent",
+          };
+          if (last !== undefined && last.letterRu === letter) last.rows.push(row);
+          else letters.push({ letterRu: letter, rows: [row] });
+        });
+        return letters;
+      })(),
+      bookCountRu: written.length === all.length ? all.length + " видов записано" : written.length + " из " + all.length,
+      entryName: entry.name,
+      entryGlyph: entry.glyph, entryGlyphColor: entry.glyphColor,
+      entryKindRu: entry.kindRu,
+      entryPortionsRu: String(em.portions),
+      entryPortionWordRu: pluralRu(em.portions, PORTION_FORMS),
+      addOne: bump(1), subOne: bump(-1),
+      entrySlots,
+      entryHasNext: entryNext !== null,
+      entryNextRu: entryNext === null ? "" : "Раскрыть " + entryNext.n + "-е свойство",
+      entryNextDc: entryNext === null ? "" : entryNext.dc,
+      entryNextCostRu: entryNext === null ? "" : entryNext.costRu,
+      entryNextRows: entryNext === null ? [] : (
+        entry.foreign !== undefined && entry.foreign.number === entryNext.n
+          ? [
+            ...entryNext.rows.slice(0, 3),
+            { labelRu: "Оснащение", valueRu: "профильный набор или модуль «" + entry.foreign.dirRu.toLowerCase() + "»" },
+            { labelRu: "Навык", valueRu: "профильный «" + entry.foreign.dirRu + "»" },
+          ]
+          : entryNext.rows
+      ),
+      entryNextLockedRu: entryNext !== null && entry.foreign !== undefined && entry.foreign.number === entryNext.n
+        ? "Без профильного набора и навыка точное свойство не раскрывается: непрофильные инструменты дают только направление реакции, а оно уже известно."
+        : "",
+      entryNextLocked: entryNext !== null && entry.foreign !== undefined && entry.foreign.number === entryNext.n,
+      entryNextEdge: entryNext !== null && entry.foreign !== undefined && entry.foreign.number === entryNext.n ? "#e4707f" : ACCENT,
+      entryNextTitleColor: entryNext !== null && entry.foreign !== undefined && entry.foreign.number === entryNext.n ? "#e79079" : ACCENT,
+      entryNextFixedRu: entryNext === null ? "" : "+ редкость свойства",
+      entryPriceRu: (s.fill[entry.id] ?? {}).priceRu ?? (entry.price === 0 ? "не записана" : entry.priceRu + " за порцию"),
+      entryPortionTextRu: (s.fill[entry.id] ?? {}).portionRu ?? entry.portionRu,
+      entryFindDc: (s.fill[entry.id] ?? {}).findDc ?? entry.findDc,
+      entryGatherDc: (s.fill[entry.id] ?? {}).gatherDc ?? entry.gatherDc,
+      entryYieldRu: (s.fill[entry.id] ?? {}).yieldRu ?? entry.yieldRu,
+      fillOpen: s.fillKey !== null,
+      fillLabelRu: { findDc: "СЛ найти", gatherDc: "СЛ собрать", yieldRu: "Сколько даёт сбор", portionRu: "Что такое порция", priceRu: "Цена порции" }[s.fillKey] ?? "",
+      fillText: s.fillText,
+      onFillText: (event) => this.setState({ fillText: event.target.value }),
+      startFindDc: () => this.setState({ fillKey: "findDc", fillText: "" }),
+      startGatherDc: () => this.setState({ fillKey: "gatherDc", fillText: "" }),
+      startYield: () => this.setState({ fillKey: "yieldRu", fillText: "" }),
+      startPortion: () => this.setState({ fillKey: "portionRu", fillText: "" }),
+      startPrice: () => this.setState({ fillKey: "priceRu", fillText: "" }),
+      cancelFill: () => this.setState({ fillKey: null, fillText: "" }),
+      saveFill: () => {
+        const value = s.fillText.trim();
+        if (value === "" || s.fillKey === null) return;
+        this.setState((prev) => ({
+          fill: { ...prev.fill, [entry.id]: { ...(prev.fill[entry.id] ?? {}), [prev.fillKey]: value } },
+          fillKey: null, fillText: "",
+        }));
+      },
+      entryWhereRu: entry.whereRu,
+      pagePrevRu: (() => {
+        const keyOf = (name) => name.replace(/[«»"'\s]/g, "");
+        const order = [...all].sort((a, b) => keyOf(a.name).localeCompare(keyOf(b.name), "ru"));
+        const at = order.findIndex((one) => one.id === entry.id);
+        return at > 0 ? order[at - 1].name : "";
+      })(),
+      pageNextRu: (() => {
+        const keyOf = (name) => name.replace(/[«»"'\s]/g, "");
+        const order = [...all].sort((a, b) => keyOf(a.name).localeCompare(keyOf(b.name), "ru"));
+        const at = order.findIndex((one) => one.id === entry.id);
+        return at >= 0 && at < order.length - 1 ? order[at + 1].name : "";
+      })(),
+      pagePrev: () => this.setState(() => {
+        const keyOf = (name) => name.replace(/[«»"'\s]/g, "");
+        const order = [...all].sort((a, b) => keyOf(a.name).localeCompare(keyOf(b.name), "ru"));
+        const at = order.findIndex((one) => one.id === entry.id);
+        return at > 0 ? { bookOpen: order[at - 1].id } : {};
+      }),
+      pageNext: () => this.setState(() => {
+        const keyOf = (name) => name.replace(/[«»"'\s]/g, "");
+        const order = [...all].sort((a, b) => keyOf(a.name).localeCompare(keyOf(b.name), "ru"));
+        const at = order.findIndex((one) => one.id === entry.id);
+        return at >= 0 && at < order.length - 1 ? { bookOpen: order[at + 1].id } : {};
+      }),
+      gatherText: s.gatherText,
+      onGatherText: (event) => this.setState({ gatherText: event.target.value }),
+      writeGather: () => {
+        const added = Number.parseInt(s.gatherText, 10);
+        if (!Number.isFinite(added) || added <= 0) return;
+        this.setState((prev) => ({
+          amount: { ...prev.amount, [entry.id]: (prev.amount[entry.id] ?? PORTIONS[entry.id]?.portions ?? 0) + added },
+          gatherText: "",
+        }));
+      },
+      entryHasBlock: entry.blockRu !== undefined,
+      entryBlockRu: entry.blockRu ?? "",
+      entryBlockTitleRu: entry.id === "swamp-mushroom" ? "Чужое направление" : "Исследование застопорилось",
+      entryHasSpecial: entry.specialRu !== undefined,
+      entrySpecialRu: entry.specialRu ?? "",
+      isDifficultyPage: s.rulePage === "difficulty",
+      isApparatusPage: s.rulePage === "apparatus",
+      isResearchPage: s.rulePage === "research",
+      rulePageTitleRu: (RULE_PAGES.find((p) => p.id === s.rulePage) ?? RULE_PAGES[0]).titleRu,
+      difficultyRows: [
+        { labelRu: "Начальная сложность", valueRu: "10" },
+        { labelRu: "Ниже не опускается", valueRu: "5" },
+        { labelRu: "Очистка смеси", valueRu: "+5" },
+        { labelRu: "Без профильного набора", valueRu: "+5" },
+        { labelRu: "Ограничения снимают не больше", valueRu: "−6" },
+      ],
+      rarityRows: [
+        { labelRu: "Обычное", mainRu: "+0", extraRu: "+2", suppressRu: "+2", researchRu: "+0", edge: "rgba(233,214,176,.22)" },
+        { labelRu: "Необычное", mainRu: "+2", extraRu: "+3", suppressRu: "+3", researchRu: "+1", edge: "#63bdd0" },
+        { labelRu: "Редкое", mainRu: "+5", extraRu: "+5", suppressRu: "+4", researchRu: "+2", edge: "#6fa9e2" },
+        { labelRu: "Очень редкое", mainRu: "+8", extraRu: "+7", suppressRu: "+6", researchRu: "+4", edge: "#b98de8" },
+        { labelRu: "Легендарное", mainRu: "+12", extraRu: "+10", suppressRu: "+8", researchRu: "+7", edge: "#d3ab5f" },
+      ],
+      batchTimeRows: [[5, 9, "15 минут"], [10, 14, "30 минут"], [15, 19, "1 час"], [20, 24, "2 часа"],
+        [25, 29, "4 часа"], [30, 34, "8 часов"], [35, 39, "16 часов"], [40, 44, "32 часа"],
+        [45, 49, "64 часа"], [50, null, "особый проект"]].map(([from, to, valueRu]) => {
+        return { labelRu: to === null ? "Сл " + from + " и выше" : "Сл " + from + "–" + to, valueRu };
+      }),
+      consumableRows: [[5, 19, "Обычные", 1], [20, 29, "Очищенные", 3], [30, 39, "Высокоточные", 10],
+        [40, null, "Экзотические", 30]].map(([from, to, classRu, gold]) => {
+        return { labelRu: to === null ? "Сл " + from + " и выше" : "Сл " + from + "–" + to, classRu, priceRu: gold + " зм" };
+      }),
+      unitRows: [
+        { labelRu: "1 порция", valueRu: "1 единица" },
+        { labelRu: "4 порции", valueRu: "5 единиц" },
+        { labelRu: "8 порций", valueRu: "10 единиц" },
+        { labelRu: "12 порций", valueRu: "15 единиц" },
+        { labelRu: "20 порций", valueRu: "25 единиц" },
+      ],
+      mishapRows: [
+        { labelRu: "1–2", valueRu: "Реакция гаснет без последствий." },
+        { labelRu: "3", valueRu: "Повреждён сменный элемент оснащения; ремонт — 5% цены набора." },
+        { labelRu: "4", valueRu: "Алхимик подвергается одному случайному эффекту смеси." },
+        { labelRu: "5", valueRu: "Смесь воздействует на область радиусом 1 метр." },
+        { labelRu: "6", valueRu: "Повреждено оборудование и алхимик подвергается случайному эффекту." },
+      ],
+      tierRows: [
+        { labelRu: "2 вида", valueRu: "обычная", modRu: "0" },
+        { labelRu: "3 вида", valueRu: "усиленная", modRu: "+3" },
+        { labelRu: "4 вида", valueRu: "концентрированная", modRu: "+6" },
+      ],
+      formRows: [
+        { labelRu: "1 раунд", valueRu: "−2" },
+        { labelRu: "1 минута", valueRu: "+2" },
+        { labelRu: "1 час", valueRu: "+6" },
+        { labelRu: "8 часов", valueRu: "+9" },
+        { labelRu: "24 часа", valueRu: "+12" },
+        { labelRu: "Постоянно", valueRu: "+20" },
+      ],
+      researchRows: [
+        { nRu: "1-е", timeRu: "10 мин", dcRu: "5", costRu: "1 порция при провале" },
+        { nRu: "2-е", timeRu: "1 ч", dcRu: "12", costRu: "1 порция · обычные, 1 зм" },
+        { nRu: "3-е", timeRu: "8 ч", dcRu: "18", costRu: "2 порции · обычные, 8 зм · стационарный" },
+        { nRu: "4-е", timeRu: "24 ч", dcRu: "25", costRu: "3 порции · очищенные, 72 зм · стационарный" },
+      ],
+      q: s.q,
+      onQuery: (event) => this.setState({ q: event.target.value }),
+      clearQuery: () => this.setState({ q: "" }),
+      kindChips: kinds, biomeChips: biomes,
+      searchRows,
+      foundCountRu: found.length === all.length ? String(all.length) + " видов" : found.length + " из " + all.length,
+      hasTargets: s.targets.length > 0,
+      noTargets: s.targets.length === 0,
+      huntRows,
+      huntCountRu: s.targets.length === 0 ? "ничего не ищем" : "ищем: " + s.targets.length,
+      cardName: card.name, cardGlyph: card.glyph, cardGlyphColor: card.glyphColor,
+      cardMetaRu: card.kindRu + " · " + card.biomes.join(", ") + " · " + card.rarityRu,
+      cardStockRu: card.stock === null ? "остаток не зафиксирован" : card.stock + " в сумке",
+      cardPriceRu: card.price === 0 ? "цена не установлена" : card.priceRu + " за порцию",
+      cardPortionRu: card.portionRu,
+      cardFindDc: card.findDc, cardGatherDc: card.gatherDc, cardYieldRu: card.yieldRu,
+      cardSlots,
+      cardHasNext: cardNext !== null,
+      cardNextRu: cardNext === null ? "" : "Раскрыть " + cardNext.n + "-е свойство",
+      cardNextDc: cardNext === null ? "" : cardNext.dc,
+      cardNextCostRu: cardNext === null ? "" : cardNext.costRu,
+      cardHasSpecial: card.specialRu !== undefined,
+      cardSpecialRu: card.specialRu ?? "",
+      cardPicks: all.map((one) => ({
+        labelRu: one.name.length > 18 ? one.name.slice(0, 16) + "…" : one.name,
+        pick: () => this.setState({ card: one.id }),
+        bg: one.id === card.id ? GROUP : "transparent",
+        fg: one.id === card.id ? ACCENT : QUIET,
+        border: one.id === card.id ? ACCENT : RULE,
+      })),
+      ing, moments,
+      isField: s.moment === "field", isLab: s.moment === "lab", isBench: s.moment === "bench", isMarket: s.moment === "market",
+      momentHintRu: hints[s.moment],
+      benchRows, marketRows,
+      bagWorthRu: showPrices ? moneyRu(bagWorth) : "скрыто",
+      bagWorthShort: showPrices ? moneyRu(bagWorth) : "—",
+      bagNoteRu: "Считаны только зафиксированные остатки: у двух видов остаток не записан.",
+      footTitleRu: foot.title, footHintRu: foot.hint, footBtnRu: foot.btn, footAction: foot.action, footBg: foot.bg, footFg: foot.fg,
+      sorts, denseRows,
+      ideaTitleRu: chosenNames.length === 0 ? "Ничего не выбрано" : chosenNames.join(" + "),
+      dcRu: dc === null ? "—" : String(dc),
+      dcColor: dc === null ? "#5c5347" : dc > kit.hardest ? "#e79079" : INK,
+      noMatches: matchRows.length === 0,
+      hasMatches: matchRows.length > 0,
+      matches: matchRows,
+      emptyTitleRu: chosenNames.length === 0 ? "Возьмите виды из ящика" : "Совпавших свойств нет",
+      emptyBodyRu: chosenNames.length === 0
+        ? "Состав держится на свойстве, раскрытом хотя бы у двух видов. Что состав делает — слово мастера; верстак называет только цену замысла."
+        : "Среди раскрытых свойств субботнего набора подтверждённых обычных пар сейчас нет. Работают два особых рецепта ниже — или добавьте вид, у которого раскрыто то же свойство.",
+      tally: [
+        { labelRu: "Начальная сложность", valueRu: "10" },
+        { labelRu: "Лишние эффекты", valueRu: extra === 0 ? "0" : "+" + extra },
+        { labelRu: "Ступень совпадения", valueRu: tierSum === 0 ? "0" : "+" + tierSum },
+        { labelRu: "Форма замысла", valueRu: "стандартная, 0" },
+        { labelRu: "Оснащение", valueRu: kit.name + " · предел " + kit.hardest + " · партия " + kit.batch },
+      ],
+      knownRecipes: [
+        { name: "Корень мандрагоры, 1 порция", bodyRu: "Постоянное усиление случайной характеристики. Одноингредиентный рецепт; обработка усиливает прирост до +2 (+3 к Сл) и +3 (+6 к Сл).", load: () => this.setState({ chosen: ["mandrake"] }) },
+        { name: "Дварфийская хворь ×2", bodyRu: "Отвращение к пиву — утверждённая реакция самосмешивания, второй вид не нужен. Знание реакции не даёт навык Синтеза ядов.", load: () => this.setState({ chosen: ["dwarf-blight"] }) },
+      ],
+      chips,
+      drawerOpen: s.drawer,
+      drawerBtnRu: s.drawer ? "Скрыть" : "Открыть",
+      drawerHintRu: s.chosen.length === 0 ? "9 видов · ничего не взято" : "взято: " + s.chosen.length,
+      toggleDrawer: () => this.setState({ drawer: !s.drawer }),
+      legacyCards: ing.slice(0, 4),
+      handbookSteps: [
+        "Возьмите от 2 до 4 разных видов: на каждую порцию состава уходит по порции каждого.",
+        "Свойство входит в состав, если раскрыто не меньше чем у 2 видов.",
+        "Назовите основной эффект и настройте форму: длительность, начало, цели, применение, сопротивление.",
+        "Сложность начинается с 10, ниже 5 не опускается и не может превысить предел оснащения.",
+        "Заложите партию: время зависит только от сложности, а расходники — от её класса.",
+        "Новый замысел требует проверки разработки; удавшийся рецепт повторяется без броска.",
+      ].map((textRu, index) => ({ nRu: String(index + 1), textRu })),
+      apparatusPage: APPARATUS.map(([name, hardest, batch, noteRu]) => ({
+        name, hardest, batch,
+        noteRu: noteRu === "сейчас" ? "" : noteRu,
+        color: INK,
+      })),
+      apparatus: APPARATUS.map(([name, hardest, batch, noteRu]) => ({
+        name, hardest, batch, noteRu,
+        color: name === kit.name ? ACCENT : INK,
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

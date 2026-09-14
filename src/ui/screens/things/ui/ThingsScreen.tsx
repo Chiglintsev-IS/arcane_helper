@@ -196,6 +196,7 @@ export function ThingsScreen({ initialPart }: { initialPart?: ThingsPart } = {})
         <RevealPropertySheet
           key={openedIngredient.itemId}
           ingredient={openedIngredient}
+          directions={choices.alchemyDirections}
           refusalRu={refusal}
           onSend={send}
           onCancel={() => {

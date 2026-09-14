@@ -350,6 +350,8 @@ describe("верстак", () => {
     reach: "Одна цель, предмет или участок",
     application: "Выпить, накормить или нанести на неподвижную цель",
     resistance: "Положительное воздействие на добровольную цель",
+    mainRarity: "Обычное",
+    purified: false,
     suppressed: [],
     limitations: [],
   };
@@ -378,6 +380,38 @@ describe("верстак", () => {
     ]);
     expect(preview.difficulty?.total).toBe(12);
     expect(preview.refusalRu).toBeUndefined();
+  });
+
+  it("вид, которого нет среди вещей, не мешает верстаку назвать отказ", () => {
+    const preview = answerQuestion(
+      knowing(HEALING),
+      {
+        kind: "recipe_preview",
+        formula: { ...FORMULA, kinds: ["нет-такого"] },
+        portions: 1,
+      },
+      NOW,
+    );
+
+    expect(preview.kind).toBe("recipe_preview");
+    if (preview.kind !== "recipe_preview") return;
+    expect(preview.candidates).toEqual([]);
+    expect(preview.refusalRu).toMatch(/нет среди заведённых вещей/);
+  });
+
+  it("верстак называет, чьё свойство совпадёт со взятыми", () => {
+    const preview = answerQuestion(
+      knowing(HEALING),
+      { kind: "recipe_preview", formula: { ...FORMULA, kinds: [KIND_IDS[0]!] }, portions: 1 },
+      NOW,
+    );
+
+    expect(preview.kind).toBe("recipe_preview");
+    if (preview.kind !== "recipe_preview") return;
+    expect(preview.candidates.find((one) => one.itemId === KIND_IDS[1])?.matchedRu).toEqual([
+      "Лечение здоровья",
+    ]);
+    expect(preview.candidates.find((one) => one.itemId === KIND_IDS[0])?.matchedRu).toEqual([]);
   });
 
   it("состав из одного совпавшего свойства считается целиком", () => {

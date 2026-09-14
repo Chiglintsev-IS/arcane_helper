@@ -5,7 +5,7 @@ import { batchFrom } from "./batch";
 import type { Batch } from "./batch";
 import { developmentCheck } from "./development";
 import type { CheckNumbers, DevelopmentCheck } from "./development";
-import { recipeDifficulty, recipeSignature, tierOf } from "./recipe";
+import { formulaDifficulty, recipeDifficulty, recipeSignature, tierOf } from "./recipe";
 import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { researchPlan } from "./research";
 import type { ResearchPlan } from "./research";
@@ -74,19 +74,22 @@ export class Crafting {
     return developmentCheck(numbers);
   }
 
-  knows(formula: RecipeFormula): boolean {
-    const signature = recipeSignature(formula);
-    return this.state.knownRecipes.some(
-      (known) => !known.risky && recipeSignature(known.formula) === signature,
-    );
+  get recipes(): readonly RecipeFormula[] {
+    return this.state.knownRecipes.map((known) => known.formula);
   }
 
-  recordRecipe(formula: RecipeFormula, risky: boolean): Crafting {
+  knows(formula: RecipeFormula): boolean {
+    const signature = recipeSignature(formula);
+    return this.recipes.some((known) => recipeSignature(known) === signature);
+  }
+
+  /** Запись перекрывает свою: та же формула, записанная снова, второй строкой книги не встаёт. */
+  recordRecipe(formula: RecipeFormula): Crafting {
     const signature = recipeSignature(formula);
     const others = this.state.knownRecipes.filter(
       (known) => recipeSignature(known.formula) !== signature,
     );
-    return new Crafting({ ...this.state, knownRecipes: [...others, { formula, risky }] });
+    return new Crafting({ ...this.state, knownRecipes: [...others, { formula }] });
   }
 
   nextResearchable(kind: MixtureKind): number {
@@ -121,12 +124,30 @@ export class Crafting {
       .map(([nameRu, sources]) => ({ nameRu, sources, tier: tierOf(sources.length) }));
   }
 
+  /**
+   * Что вид добавит взятым: его свойство совпадёт, если хотя бы у одного из взятых оно уже
+   * раскрыто. Пустому составу совпадать не с чем, и отказом это не считается.
+   */
+  joinsOf(chosen: readonly MixtureKind[], candidate: MixtureKind): readonly string[] {
+    const taken = chosen.filter((kind) => kind.id !== candidate.id);
+    return candidate.properties
+      .filter((property) =>
+        taken.some((kind) => kind.properties.some((one) => one.nameRu === property.nameRu)),
+      )
+      .map((property) => property.nameRu);
+  }
+
   difficultyOf(
     kinds: readonly MixtureKind[],
     formula: RecipeFormula,
     apparatus: Apparatus,
   ): RecipeDifficulty {
     return recipeDifficulty(this.matches(kinds), formula, apparatus);
+  }
+
+  /** Записанный рецепт называет цену своего замысла и не смотрит на то, чем работают сейчас. */
+  costOf(kinds: readonly MixtureKind[], formula: RecipeFormula): RecipeDifficulty {
+    return formulaDifficulty(this.matches(kinds), formula);
   }
 
   batchOf(

@@ -4,6 +4,7 @@ import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
 import { strongestApparatus } from "@/core/domain/crafting/apparatus";
+import { PLAINEST_RARITY } from "@/core/domain/crafting/rarity";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { Items } from "@/core/domain/items/items";
 import { filledWearableOnlyFields, withoutWearableOnlyFields } from "@/core/domain/items/schema";
@@ -525,6 +526,35 @@ function migrateEffectShapes(state: unknown): unknown {
   return { ...fields, activeEffects: effects };
 }
 
+/** Прежде подавленное называлось одним словом: редкость у него спрашивать было незачем. */
+function migrateSuppressed(formula: unknown): unknown {
+  const fields = fieldsOf(formula);
+  const { suppressed } = fields;
+  if (!Array.isArray(suppressed) || !suppressed.some((one) => typeof one === "string")) {
+    return formula;
+  }
+  return {
+    ...fields,
+    suppressed: suppressed.map((one) =>
+      typeof one === "string" ? { nameRu: one, rarityRu: PLAINEST_RARITY } : one,
+    ),
+  };
+}
+
+function migrateKnownRecipes(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const { knownRecipes } = fields;
+  if (!Array.isArray(knownRecipes)) return state;
+
+  const recipes = knownRecipes.map((known) => {
+    const { risky, formula, ...rest } = fieldsOf(known);
+    const migrated = migrateSuppressed(formula);
+    return risky === undefined && migrated === formula ? known : { ...rest, formula: migrated };
+  });
+  if (recipes.every((known, index) => known === knownRecipes[index])) return state;
+  return { ...fields, knownRecipes: recipes };
+}
+
 function migrated(state: unknown, steps: readonly ((state: unknown) => unknown)[]): unknown {
   return steps.reduce((carried, step) => step(carried), state);
 }
@@ -545,6 +575,7 @@ export function migrateUndoPatch(patch: unknown): unknown {
     migrateIngredientKnowledge,
     migrateItemKinds,
     migrateAlchemyApparatus,
+    migrateKnownRecipes,
     migrateItemNotes,
     withoutForgottenFields,
   ]);
@@ -570,6 +601,7 @@ export function migrateCharacterState(raw: unknown): unknown {
     migrateIngredientKnowledge,
     migrateItemKinds,
     migrateAlchemyApparatus,
+    migrateKnownRecipes,
     migrateItemNotes,
   ]);
 }

@@ -1103,3 +1103,57 @@ describe("набор по каждому направлению становит
     );
   });
 });
+
+describe("приведение записанных рецептов", () => {
+  const LEGACY = {
+    risky: true,
+    formula: {
+      kinds: ["moon", "root"],
+      mainProperty: "Лечение здоровья",
+      duration: null,
+      onset: "Немедленно",
+      fullRepeats: 0,
+      reach: "Одна цель, предмет или участок",
+      application: "Выпить, накормить или нанести на неподвижную цель",
+      resistance: "Положительное воздействие на добровольную цель",
+      suppressed: ["Диарея"],
+      limitations: [],
+    },
+  };
+
+  it("подавленное одним словом получает редкость, а отметка риска уходит", () => {
+    const migrated = fieldsOf(
+      migrateCharacterState({ ...createWizard(), knownRecipes: [LEGACY] }),
+    );
+    const [recipe] = Array.isArray(migrated.knownRecipes) ? migrated.knownRecipes : [];
+
+    expect(recipe).not.toHaveProperty("risky");
+    expect(fieldsOf(fieldsOf(recipe).formula).suppressed).toEqual([
+      { nameRu: "Диарея", rarityRu: "Обычное" },
+    ]);
+    expect(characterStateSchema.safeParse(migrated).success).toBe(true);
+  });
+
+  it("уже приведённое подавленное остаётся собой рядом с прежним", () => {
+    const mixed = {
+      formula: {
+        ...LEGACY.formula,
+        suppressed: ["Диарея", { nameRu: "Взрыв", rarityRu: "Редкое" }],
+      },
+    };
+    const migrated = fieldsOf(migrateUndoPatch({ knownRecipes: [mixed] }));
+    const [recipe] = Array.isArray(migrated.knownRecipes) ? migrated.knownRecipes : [];
+
+    expect(fieldsOf(fieldsOf(recipe).formula).suppressed).toEqual([
+      { nameRu: "Диарея", rarityRu: "Обычное" },
+      { nameRu: "Взрыв", rarityRu: "Редкое" },
+    ]);
+  });
+
+  it("рецепт нынешней формы проходит насквозь той же ссылкой", () => {
+    const modern = { formula: { ...LEGACY.formula, suppressed: [], purified: false } };
+    const carried = fieldsOf(migrateUndoPatch({ knownRecipes: [modern] }));
+
+    expect(Array.isArray(carried.knownRecipes) ? carried.knownRecipes[0] : null).toBe(modern);
+  });
+});

@@ -4,6 +4,8 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { improvisedDifficulty } from "./apparatus";
 import type { Apparatus } from "./apparatus";
+import { PLAINEST_RARITY, RARITY_MODIFIERS } from "./rarity";
+import type { RarityRu } from "./rarity";
 
 type MatchTier = "plain" | "amplified" | "concentrated";
 
@@ -25,8 +27,14 @@ export function tierOf(sources: number): MatchTier {
 const BASE_DIFFICULTY = 10;
 export const LOWEST_DIFFICULTY = 5;
 
-/** Основной эффект — то, ради чего состав задуман: он в цену не входит, платят за остальные. */
-const ADDITIONAL_EFFECT_DIFFICULTY = 2;
+/** Попутное свойство стоит по обычной редкости: про его редкость стол не спрашивают. */
+const ADDITIONAL_EFFECT_DIFFICULTY = RARITY_MODIFIERS[PLAINEST_RARITY].additional;
+
+/**
+ * Очистка снимает со смеси целую сторону — противоположную выбранной, — и потому не спрашивает, что
+ * именно в ней было. Одно и то же свойство не снимают дважды: при очистке подавление не платится.
+ */
+const PURIFICATION_DIFFICULTY = 5;
 
 const TIER_DIFFICULTY = {
   plain: 0,
@@ -87,8 +95,6 @@ const RESISTANCE_DIFFICULTY = {
   "Эффект не допускает спасброска": 8,
 } as const;
 
-const SUPPRESSION_DIFFICULTY = 2;
-
 const LIMITATION_DIFFICULTY = {
   "Только конкретный биологический вид или узкая группа материалов": -2,
   "Требуется уже существующее состояние": -1,
@@ -102,16 +108,24 @@ const LIMITATION_DIFFICULTY = {
 
 const MOST_LIMITATION_RELIEF = -6;
 
+/** Гасят названное свойство, и цену гашения задаёт его редкость — её тоже называет стол. */
+type SuppressedProperty = {
+  readonly nameRu: string;
+  readonly rarityRu: RarityRu;
+};
+
 export type RecipeFormula = {
   readonly kinds: readonly string[];
   readonly mainProperty: string | null;
+  readonly mainRarity: RarityRu;
   readonly duration: keyof typeof DURATION_DIFFICULTY | null;
   readonly onset: keyof typeof ONSET_DIFFICULTY;
   readonly fullRepeats: number;
   readonly reach: keyof typeof REACH_DIFFICULTY;
   readonly application: keyof typeof APPLICATION_DIFFICULTY;
   readonly resistance: keyof typeof RESISTANCE_DIFFICULTY;
-  readonly suppressed: readonly string[];
+  readonly purified: boolean;
+  readonly suppressed: readonly SuppressedProperty[];
   readonly limitations: readonly (keyof typeof LIMITATION_DIFFICULTY)[];
 };
 
@@ -121,16 +135,20 @@ function fromTable<TTable extends object>(table: TTable, what: string) {
   });
 }
 
+const rarityField = fromTable(RARITY_MODIFIERS, "редкость");
+
 const recipeFormulaSchema = z.object({
   kinds: z.array(nonEmpty),
   mainProperty: nonEmpty.nullable(),
+  mainRarity: rarityField.default(PLAINEST_RARITY),
   duration: fromTable(DURATION_DIFFICULTY, "длительность").nullable(),
   onset: fromTable(ONSET_DIFFICULTY, "начало действия"),
   fullRepeats: z.number(),
   reach: fromTable(REACH_DIFFICULTY, "цели и область"),
   application: fromTable(APPLICATION_DIFFICULTY, "способ применения"),
   resistance: fromTable(RESISTANCE_DIFFICULTY, "сопротивление"),
-  suppressed: z.array(nonEmpty),
+  purified: z.boolean().default(false),
+  suppressed: z.array(z.object({ nameRu: nonEmpty, rarityRu: rarityField })),
   limitations: z.array(fromTable(LIMITATION_DIFFICULTY, "ограничение")),
 });
 
@@ -152,7 +170,9 @@ export const RECIPE_TARIFFS = {
   base: BASE_DIFFICULTY,
   lowest: LOWEST_DIFFICULTY,
   additionalEffect: ADDITIONAL_EFFECT_DIFFICULTY,
-  suppression: SUPPRESSION_DIFFICULTY,
+  purification: PURIFICATION_DIFFICULTY,
+  mostRepeats: MOST_REPEAT_DIFFICULTY,
+  perRepeat: FULL_REPEAT_DIFFICULTY,
   mostLimitationRelief: MOST_LIMITATION_RELIEF,
 } as const;
 
@@ -170,6 +190,8 @@ export const RECIPE_CHOICES = {
     reach: "Одна цель, предмет или участок",
     application: "Выпить, накормить или нанести на неподвижную цель",
     resistance: "Положительное воздействие на добровольную цель",
+    mainRarity: PLAINEST_RARITY,
+    purified: false,
   },
   durations: priced(DURATION_DIFFICULTY),
   onsets: priced(ONSET_DIFFICULTY),
@@ -183,12 +205,9 @@ export function recipeFormulaOf(value: unknown): RecipeFormula {
   return parsedOrRefused(recipeFormulaSchema, value, "замысел состава");
 }
 
-const knownRecipeSchema = z.object({
-  formula: recipeFormulaSchema,
-  risky: z.boolean(),
-});
+const knownRecipeSchema = z.object({ formula: recipeFormulaSchema });
 
-export type KnownRecipe = { readonly formula: RecipeFormula; readonly risky: boolean };
+export type KnownRecipe = { readonly formula: RecipeFormula };
 
 export const KNOWN_RECIPE_FIELDS = {
   knownRecipes: z.array(knownRecipeSchema).default([]),
@@ -198,7 +217,9 @@ function canonical(formula: RecipeFormula): RecipeFormula {
   return recipeFormulaOf({
     ...formula,
     kinds: [...new Set(formula.kinds)].sort(),
-    suppressed: [...new Set(formula.suppressed)].sort(),
+    suppressed: [...new Map(formula.suppressed.map((one) => [one.nameRu, one])).values()].sort(
+      (one, other) => one.nameRu.localeCompare(other.nameRu),
+    ),
     limitations: [...formula.limitations].sort(),
   });
 }
@@ -213,7 +234,11 @@ export type RecipeDifficulty = {
   readonly parts: readonly DifficultyPart[];
   readonly total: number;
   readonly mainRu: string;
+  readonly noticesRu: readonly string[];
 };
+
+const NOTHING_REMOVED_TWICE_RU =
+  "Очистка снимает свойство сама: подавление сверх неё не считается и не платится";
 
 function repeatsRefusal(): string {
   return "Дополнительных полных срабатываний бывает целое неотрицательное число";
@@ -246,19 +271,34 @@ function sum(values: readonly number[]): number {
 
 type Removal = { readonly kept: readonly PropertyMatch[]; readonly difficulty: number };
 
-function afterSuppression(
-  matches: readonly PropertyMatch[],
-  suppressed: readonly string[],
-): Removal {
-  const removed = [...new Set(suppressed)].map((name) => {
-    const target = matches.find((match) => match.nameRu === name);
-    if (target === undefined) throw new DomainError(unmatchedSuppressionRefusal(name));
-    return target;
+/**
+ * Снятое очисткой второй раз не платится: справочник прямо запрещает гасить одно и то же свойство
+ * и общей очисткой, и поимённым подавлением.
+ */
+function afterSuppression(matches: readonly PropertyMatch[], formula: RecipeFormula): Removal {
+  const named = [...new Map(formula.suppressed.map((one) => [one.nameRu, one])).values()];
+  const removed = named.map((one) => {
+    const target = matches.find((match) => match.nameRu === one.nameRu);
+    if (target === undefined) throw new DomainError(unmatchedSuppressionRefusal(one.nameRu));
+    return { target, rarityRu: one.rarityRu };
   });
   return {
-    kept: matches.filter((match) => !removed.includes(match)),
-    difficulty: removed.length * SUPPRESSION_DIFFICULTY,
+    kept: matches.filter((match) => !removed.some((one) => one.target === match)),
+    difficulty: formula.purified
+      ? 0
+      : sum(removed.map((one) => RARITY_MODIFIERS[one.rarityRu].suppression)),
   };
+}
+
+/** Профильный набор надбавки не даёт: её платит мастерская, работающая чем придётся. */
+const WITH_PROFILE_KIT = 0;
+
+/** Цена самого замысла, какой бы ни была мастерская: ею записанный рецепт и называет свою нужду. */
+export function formulaDifficulty(
+  matches: readonly PropertyMatch[],
+  formula: RecipeFormula,
+): RecipeDifficulty {
+  return difficultyWith(matches, formula, WITH_PROFILE_KIT);
 }
 
 export function recipeDifficulty(
@@ -266,14 +306,24 @@ export function recipeDifficulty(
   formula: RecipeFormula,
   apparatus: Apparatus,
 ): RecipeDifficulty {
+  return difficultyWith(matches, formula, improvisedDifficulty(apparatus));
+}
+
+function difficultyWith(
+  matches: readonly PropertyMatch[],
+  formula: RecipeFormula,
+  equipmentSurcharge: number,
+): RecipeDifficulty {
   if (!Number.isInteger(formula.fullRepeats) || formula.fullRepeats < 0) {
     throw new DomainError(repeatsRefusal());
   }
 
-  const cleansed = afterSuppression(matches, formula.suppressed);
+  const cleansed = afterSuppression(matches, formula);
   const main = mainOf(cleansed.kept, formula.mainProperty);
 
   const parts: readonly DifficultyPart[] = [
+    { nameRu: "Основа", modifier: BASE_DIFFICULTY },
+    { nameRu: "Основной эффект", modifier: RARITY_MODIFIERS[formula.mainRarity].main },
     {
       nameRu: "Дополнительные эффекты",
       modifier: (cleansed.kept.length - 1) * ADDITIONAL_EFFECT_DIFFICULTY,
@@ -294,6 +344,7 @@ export function recipeDifficulty(
     { nameRu: "Цели и область", modifier: REACH_DIFFICULTY[formula.reach] },
     { nameRu: "Способ применения", modifier: APPLICATION_DIFFICULTY[formula.application] },
     { nameRu: "Сопротивление", modifier: RESISTANCE_DIFFICULTY[formula.resistance] },
+    { nameRu: "Очистка", modifier: formula.purified ? PURIFICATION_DIFFICULTY : 0 },
     { nameRu: "Подавление", modifier: cleansed.difficulty },
     {
       nameRu: "Ограничения и последствия",
@@ -302,12 +353,14 @@ export function recipeDifficulty(
         MOST_LIMITATION_RELIEF,
       ),
     },
-    { nameRu: "Оснащение", modifier: improvisedDifficulty(apparatus) },
+    { nameRu: "Оснащение", modifier: equipmentSurcharge },
   ];
 
   return {
     parts,
-    total: Math.max(BASE_DIFFICULTY + sum(parts.map((part) => part.modifier)), LOWEST_DIFFICULTY),
+    total: Math.max(sum(parts.map((part) => part.modifier)), LOWEST_DIFFICULTY),
     mainRu: main.nameRu,
+    noticesRu:
+      formula.purified && formula.suppressed.length > 0 ? [NOTHING_REMOVED_TWICE_RU] : [],
   };
 }
