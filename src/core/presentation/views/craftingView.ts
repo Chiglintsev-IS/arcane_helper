@@ -26,10 +26,14 @@ function toHandbookView(): CraftingView["handbook"] {
     tiers: copied(handbook.tiers),
     rarities: copied(handbook.rarities),
     mishaps: copied(handbook.mishaps),
+    effects: handbook.effects.map((group) => ({ dirRu: group.dirRu, namesRu: [...group.namesRu] })),
     checks: { findRu: FIND_CHECK_RU, gatherRu: GATHER_CHECK_RU },
     tariffs: { ...handbook.tariffs },
   };
 }
+
+/** Меньше порции алхимия не берёт: она и есть единица счёта запаса. */
+const ONE_PORTION = 1;
 
 const UNPRICED = {
   difficulty: null,
@@ -99,23 +103,18 @@ export function toCraftingView(character: CharacterState): CraftingView {
     recipes: root.crafting.recipes.map((formula) => toRecipeView(root, formula)),
     ingredients: root.items.ingredients.map((item) => {
       const alchemy = root.items.alchemyOf(item.id);
-      const inBag = root.equipment.bagCount(item.id);
       return {
         itemId: item.id,
         nameRu: item.nameRu,
-        inBag,
-        piecesPerPortion: alchemy.piecesPerPortion,
-        portionsInBag: root.items.portionsFromPieces(item.id, inBag),
-        shortageRu: root.equipment.shortageRu(
-          item.id,
-          root.items.piecesForPortions(item.id, 1),
-        ),
+        portionsInBag: root.equipment.bagCount(item.id),
+        shortageRu: root.equipment.shortageRu(item.id, ONE_PORTION),
         researchNumbers: [...root.items.unrevealedNumbers(item.id)],
         notes: item.notes.map((note) => ({ ...note })),
         properties: alchemy.properties.map((property) => ({
           number: property.number,
           nameRu: property.nameRu,
           dirRu: property.dirRu ?? null,
+          rarityRu: property.rarityRu ?? null,
         })),
         findDc: alchemy.findDc ?? null,
         gatherDc: alchemy.gatherDc ?? null,

@@ -2,10 +2,7 @@ import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
 import {
   NO_ALCHEMY,
-  piecesForPortions,
-  portionsFromPieces,
   unrevealedNumbers,
-  withPortionSize,
   withReference,
   withRevealedProperty,
   withoutProperty,
@@ -125,25 +122,12 @@ export class Items {
     return unrevealedNumbers(this.alchemyOf(id));
   }
 
-  setPortionSize(id: string, piecesPerPortion: number): Items {
-    return this.replacingAlchemy(id, withPortionSize(this.alchemyOf(id), piecesPerPortion));
-  }
-
   noteReference(id: string, reference: IngredientReference): Items {
     return this.replacingAlchemy(id, withReference(this.alchemyOf(id), reference));
   }
 
   setPrice(id: string, price: ItemDefinition["price"]): Items {
     return this.replaceDefinition({ ...this.located(id), price });
-  }
-
-  /** Сумка считает штуки, верстак — порции: перевод между ними знает сам вид. */
-  piecesForPortions(id: string, portions: number): number {
-    return piecesForPortions(this.alchemyOf(id), portions);
-  }
-
-  portionsFromPieces(id: string, pieces: number): number {
-    return portionsFromPieces(this.alchemyOf(id), pieces);
   }
 
   private located(id: string): ItemDefinition {

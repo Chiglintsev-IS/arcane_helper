@@ -136,7 +136,7 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
     const formula = recipeFormulaOf(question.formula);
     const kinds = mixtureKinds(root.items, formula.kinds);
     spend = batchSpending(root, kinds, question.portions);
-    matches = crafting.matches(kinds);
+    matches = crafting.offeredOf(kinds);
     known = crafting.knows(formula);
     difficulty = crafting.difficultyOf(kinds, formula, crafting.apparatus);
     check = crafting.checkFor({
@@ -156,6 +156,7 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
       nameRu: match.nameRu,
       sources: [...match.sources],
       tier: match.tier,
+      assured: match.assured,
     })),
     difficulty:
       difficulty === null

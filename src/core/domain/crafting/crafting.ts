@@ -5,7 +5,14 @@ import { batchFrom } from "./batch";
 import type { Batch } from "./batch";
 import { developmentCheck } from "./development";
 import type { CheckNumbers, DevelopmentCheck } from "./development";
-import { formulaDifficulty, recipeDifficulty, recipeSignature, tierOf } from "./recipe";
+import {
+  FEWEST_KINDS,
+  MOST_KINDS,
+  formulaDifficulty,
+  recipeDifficulty,
+  recipeSignature,
+  tierOf,
+} from "./recipe";
 import type { KnownRecipe, PropertyMatch, RecipeDifficulty, RecipeFormula } from "./recipe";
 import { researchPlan } from "./research";
 import type { ResearchPlan } from "./research";
@@ -34,12 +41,8 @@ type CraftingState = {
   knownRecipes: readonly KnownRecipe[];
 };
 
-export const FEWEST_KINDS = 2;
-
 /** Разные виды состава берутся порция за порцию: свою меру в штуках каждый вид знает сам. */
 const PORTION_EACH = 1;
-export const MOST_KINDS = 4;
-
 function tooFewKindsRefusal(): string {
   return "Состав собирается из двух разных видов ингредиентов, пока стол не утвердил виду одиночную реакцию";
 }
@@ -113,16 +116,18 @@ export class Crafting {
     return researchPlan({ number, apparatus: this.apparatus });
   }
 
-  matches(kinds: readonly MixtureKind[]): readonly PropertyMatch[] {
+  /**
+   * Что состав вообще может дать: у каждого свойства названы его источники. Справочник ручается
+   * только за те, что раскрыты не меньше чем у двух видов, — остальные названы тоже, потому что
+   * разрешить их вправе стол, и молча вычеркнуть его решение приложению не по чину.
+   */
+  offeredOf(kinds: readonly MixtureKind[]): readonly PropertyMatch[] {
     const distinct = [...new Map(kinds.map((kind) => [kind.id, kind])).values()];
     if (distinct.length > MOST_KINDS) throw new DomainError(tooManyKindsRefusal());
+    if (distinct.length === 0) throw new DomainError(tooFewKindsRefusal());
 
     const alone = distinct.length === 1 ? distinct[0] : undefined;
     const solo = alone?.solo;
-    if (solo !== undefined && alone !== undefined) {
-      return [{ nameRu: solo.propertyRu, sources: [alone.nameRu], tier: tierOf(1) }];
-    }
-    if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
 
     const gathered = new Map<string, string[]>();
     for (const kind of distinct) {
@@ -133,9 +138,28 @@ export class Crafting {
       }
     }
 
-    return [...gathered]
-      .filter(([, sources]) => sources.length >= FEWEST_KINDS)
-      .map(([nameRu, sources]) => ({ nameRu, sources, tier: tierOf(sources.length) }));
+    return [...gathered].map(([nameRu, sources]) => ({
+      nameRu,
+      sources,
+      tier: tierOf(sources.length),
+      assured: sources.length >= FEWEST_KINDS || nameRu === solo?.propertyRu,
+    }));
+  }
+
+  /**
+   * Что войдёт в состав: совпавшее по справочнику и, если стол назвал такое основным, свойство
+   * одного источника. Остальное одиночное в состав не идёт — иначе цель подверглась бы всему, чего
+   * справочник ей не обещал.
+   */
+  matches(kinds: readonly MixtureKind[], mainRu: string | null = null): readonly PropertyMatch[] {
+    const offered = this.offeredOf(kinds);
+    const assured = offered.filter((match) => match.assured);
+    const named = offered.find((match) => match.nameRu === mainRu && !match.assured);
+    if (named !== undefined) return [named, ...assured];
+    if (assured.length === 0 && new Set(kinds.map((kind) => kind.id)).size < FEWEST_KINDS) {
+      throw new DomainError(tooFewKindsRefusal());
+    }
+    return assured;
   }
 
   /**
@@ -170,12 +194,12 @@ export class Crafting {
     formula: RecipeFormula,
     apparatus: Apparatus,
   ): RecipeDifficulty {
-    return recipeDifficulty(this.matches(kinds), formula, apparatus);
+    return recipeDifficulty(this.matches(kinds, formula.mainProperty), formula, apparatus);
   }
 
   /** Записанный рецепт называет цену своего замысла и не смотрит на то, чем работают сейчас. */
   costOf(kinds: readonly MixtureKind[], formula: RecipeFormula): RecipeDifficulty {
-    return formulaDifficulty(this.matches(kinds), formula);
+    return formulaDifficulty(this.matches(kinds, formula.mainProperty), formula);
   }
 
   batchOf(

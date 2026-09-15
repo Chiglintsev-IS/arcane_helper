@@ -91,6 +91,7 @@ export function batchFrom(
     consumablesGold: consumables.goldPerStartedHour * startedHours(minutes) * kits,
     units: portions + Math.floor(portions / PORTIONS_PER_BONUS_UNIT),
     warnings: [
+      ...difficulty.warningsRu.map((reasonRu) => ({ code: "off_handbook", reasonRu })),
       ...(difficulty.total > limits.hardest
         ? [{ code: "over_hardest", reasonRu: tooHardRu(difficulty.total, limits.hardest) }]
         : []),

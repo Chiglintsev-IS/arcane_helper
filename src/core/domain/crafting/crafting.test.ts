@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Apparatus } from "./apparatus";
 import { Crafting, type MixtureKind } from "./crafting";
-import type { RarityRu } from "./rarity";
+import type { RarityRu } from "@/core/domain/shared/rarity";
 import type { RecipeFormula } from "./recipe";
 
 const EMPTY = { knownRecipes: [] };
@@ -48,6 +48,7 @@ describe("совпадения", () => {
         nameRu: "Лечение здоровья",
         sources: ["Лунная трава", "Багровый корень"],
         tier: "plain",
+        assured: true,
       },
     ]);
   });
@@ -89,7 +90,7 @@ describe("совпадения", () => {
     const own = sharing(TWO_KINDS, { number: 1, nameRu: "Отвращение к пиву" });
 
     expect(ALCHEMIST.matches(own)).toEqual([
-      { nameRu: "Отвращение к пиву", sources: TWO_KINDS, tier: "plain" },
+      { nameRu: "Отвращение к пиву", sources: TWO_KINDS, tier: "plain", assured: true },
     ]);
   });
 });

@@ -521,18 +521,6 @@ describe("ремесло", () => {
     ]);
   });
 
-  it("мера порции правится своей командой и ложится в лог", () => {
-    const measured = run([
-      { kind: "note_ingredient", nameRu: MOON_HERB },
-      { kind: "set_portion_size", itemId: MOON_HERB_ID, pieces: 10 },
-    ]);
-
-    expect(
-      Character.of(measured.session.character).items.alchemyOf(MOON_HERB_ID).piecesPerPortion,
-    ).toBe(10);
-    expect(measured.session.log.at(-1)?.summaryRu).toBe(`Штук в порции: ${MOON_HERB} — 10`);
-  });
-
   it("справка о виде дописывается по одному полю, и названное направление встаёт со свойством", () => {
     const written = run([
       { kind: "note_ingredient", nameRu: MOON_HERB },

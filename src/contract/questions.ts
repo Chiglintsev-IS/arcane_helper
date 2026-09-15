@@ -112,7 +112,8 @@ export const previewSchema = z.discriminatedUnion("kind", [
       }),
     ),
     matches: z.array(
-      z.object({ nameRu: word, sources: z.array(word), tier: word }),
+      z.object({
+        assured: z.boolean(), nameRu: word, sources: z.array(word), tier: word }),
     ),
     candidates: z.array(z.object({ itemId: word, matchedRu: z.array(word) })),
     difficulty: z

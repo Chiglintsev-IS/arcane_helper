@@ -2,14 +2,18 @@
 
 import type { IngredientKnowledgeView } from "@/contract/views";
 
+import { propertySlots } from "@/ui/entities/crafting/lib/slots";
+import {
+  EmptyStripes,
+  PropertyStripes,
+  markNameRu,
+} from "@/ui/entities/crafting/ui/PropertyMark";
 import { RULE_EDGE_ACTIVE, RULE_EDGE_QUIET, RULE_ROW } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
-/* Знаки изученности — квадраты, а не бруски: у брусков нет пустой пары в системном шрифте. */
-const REVEALED_MARK = "■";
-const HIDDEN_MARK = "□";
-
 const PROGRESS_NAME = "Раскрыто свойств";
+
+const SEPARATOR = ", ";
 
 /** Кавычки и пробелы в начале имени порядка не задают: «Неожиданность Зинаиды» стоит на «Н». */
 function sortable(nameRu: string): string {
@@ -40,18 +44,31 @@ export function kindGroups(kinds: readonly IngredientKnowledgeView[]): readonly 
   }, []);
 }
 
+/**
+ * Изученность строкой: четыре знака по числу слотов, и каждый раскрытый несёт цвета своего
+ * направления и своей редкости. Считать их не приходится — видно и сколько раскрыто, и чем.
+ */
 function Progress({ kind }: { kind: IngredientKnowledgeView }) {
+  const slots = propertySlots(kind);
+  const revealedRu = slots
+    .filter((slot) => slot.nameRu !== null)
+    .map((slot) => markNameRu(slot))
+    .join(SEPARATOR);
+
   return (
     <span
-      aria-label={`${PROGRESS_NAME}: ${kind.properties.length}`}
-      className="shrink-0 tracking-[1.5px]"
+      aria-label={`${PROGRESS_NAME}: ${kind.properties.length}${
+        revealedRu === "" ? "" : ` — ${revealedRu}`
+      }`}
+      className="flex shrink-0 items-center gap-1.5"
     >
-      <span aria-hidden="true" className="text-accent">
-        {REVEALED_MARK.repeat(kind.properties.length)}
-      </span>
-      <span aria-hidden="true" className="text-off">
-        {HIDDEN_MARK.repeat(kind.researchNumbers.length)}
-      </span>
+      {slots.map((slot) =>
+        slot.nameRu === null ? (
+          <EmptyStripes key={slot.number} height="h-4" />
+        ) : (
+          <PropertyStripes key={slot.number} slot={slot} height="h-4" />
+        ),
+      )}
     </span>
   );
 }

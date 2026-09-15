@@ -31,7 +31,6 @@ import {
   noteIngredientReference,
   recordRecipe,
   revealProperty,
-  setPortionSize,
   setWorkshop,
 } from "@/core/application/useCases/crafting";
 import {
@@ -313,14 +312,11 @@ export function applyCommand(
               number: command.number,
               nameRu: command.propertyRu,
               ...(command.directionRu === undefined ? {} : { dirRu: command.directionRu }),
+              ...(command.rarityRu === undefined ? {} : { rarityRu: command.rarityRu }),
             }),
           },
           occasion,
         ),
-      );
-    case "set_portion_size":
-      return changed(
-        setPortionSize(session, { itemId: command.itemId, pieces: command.pieces }, occasion),
       );
     case "drop_property":
       return changed(

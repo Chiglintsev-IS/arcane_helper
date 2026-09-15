@@ -37,9 +37,8 @@ export function mixtureKinds(items: Items, kinds: readonly string[]): readonly M
 }
 
 /**
- * Одна трата на все виды: сколько порций берёт партия, говорит ремесло, а сколько в порции штук —
- * сам вид. Спросивший цену и заложивший партию идут этим же путём: вторая такая же трата разошлась
- * бы с настоящей при первой правке меры.
+ * Одна трата на все виды: сколько порций берёт партия, говорит ремесло. Порция и есть единица
+ * запаса — алхимия считает порциями, и второй меры между сумкой и верстаком нет.
  */
 function spentOnBatch(
   root: Character,
@@ -48,8 +47,7 @@ function spentOnBatch(
 ): Equipment {
   const each = root.crafting.portionsEach(kinds) * portions;
   return kinds.reduce(
-    (equipment, kind) =>
-      equipment.adjustBagCount(kind.id, -root.items.piecesForPortions(kind.id, each)),
+    (equipment, kind) => equipment.adjustBagCount(kind.id, -each),
     root.equipment,
   );
 }
@@ -70,7 +68,7 @@ export function batchSpending(
 ): readonly BatchSpending[] {
   const each = root.crafting.portionsEach(kinds) * portions;
   return kinds.map((kind) => {
-    const inBagPortions = root.items.portionsFromPieces(kind.id, root.equipment.bagCount(kind.id));
+    const inBagPortions = root.equipment.bagCount(kind.id);
     return {
       itemId: kind.id,
       nameRu: kind.nameRu,
@@ -208,17 +206,3 @@ export function noteIngredientReference(
   );
 }
 
-export function setPortionSize(
-  session: Session,
-  portion: { itemId: string; pieces: number },
-  occasion: Occasion,
-): Session {
-  const root = Character.of(session.character);
-  const nameRu = root.items.ingredientNameRu(portion.itemId);
-  return commit(
-    session,
-    root.withItems(root.items.setPortionSize(portion.itemId, portion.pieces)),
-    { kind: "sheet_edited", summaryRu: `Штук в порции: ${nameRu} — ${portion.pieces}` },
-    occasion,
-  );
-}

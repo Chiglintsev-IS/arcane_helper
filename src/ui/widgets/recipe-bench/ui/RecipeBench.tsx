@@ -13,9 +13,11 @@ import {
   minutesRu,
   perKindPortionsRu,
   portionsRu,
+  rarityTone,
   unitsRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { RULE_ROW, RULE_TILE } from "@/ui/shared/ui/rule";
+import { TONE_TEXT } from "@/ui/shared/ui/tone";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 import { KindPicker, MixtureCards, SpendRows } from "@/ui/widgets/recipe-bench/ui/MixtureCards";
 import { FormRows } from "@/ui/widgets/recipe-bench/ui/FormRows";
@@ -275,9 +277,9 @@ export function RecipeBench({
               type="button"
               aria-pressed={rarity.nameRu === draft.mainRarity}
               onClick={() => onDraft({ ...draft, mainRarity: rarity.nameRu })}
-              className={`min-h-11 grow px-2 text-[0.6875rem] ${
+              className={`min-h-11 grow px-2 text-[0.6875rem] leading-tight ${
                 rarity.nameRu === draft.mainRarity ? SURFACE_CHOSEN : SURFACE_CONTROL
-              }`}
+              } ${TONE_TEXT[rarityTone(rarity.nameRu)]}`}
             >
               {`${rarity.nameRu} ${signed(rarity.main)}`}
             </button>

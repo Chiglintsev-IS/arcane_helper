@@ -1026,7 +1026,6 @@ describe("знание об ингредиенте переезжает к ве�
     expect(herb?.kinds).toEqual(["ingredient"]);
     expect(herb?.alchemy).toEqual({
       properties: [],
-      piecesPerPortion: 1,
     });
   });
 

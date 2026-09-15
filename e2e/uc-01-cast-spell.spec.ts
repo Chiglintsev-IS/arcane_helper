@@ -512,7 +512,7 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
     await switchMode(page, /^Алхимия/);
     const alchemy = page.getByRole("navigation", { name: "Режим алхимии" });
 
-    for (const section of ["Ингредиенты", "Рецепты", "Правила стола"]) {
+    for (const section of ["Ингредиенты", "Рецепты", "Правила стола", "Эффекты"]) {
       await page.getByRole("button", { name: new RegExp(`^${section}`) }).click();
       await scan(`${scheme}: алхимия — ${section.toLowerCase()}`);
       await page.getByRole("button", { name: new RegExp(`^${section}$`) }).click();

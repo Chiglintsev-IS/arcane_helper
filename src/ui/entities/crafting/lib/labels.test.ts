@@ -7,7 +7,8 @@ import {
   goldPerHourRu,
   goldTotalRu,
   portionsRu,
-  stockRu,
+  propertyMarks,
+  rarityTone,
   unitsRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { labelled } from "@/ui/shared/lib/alchemyLabels";
@@ -55,7 +56,7 @@ describe("тон направления", () => {
   it("своё направление, чужое и неизвестное различаются тоном", () => {
     expect(directionTone("Зельеварение")).toBe("ritual");
     expect(directionTone("Синтез ядов")).toBe("damage");
-    expect(directionTone("Трансмутация")).toBe("action");
+    expect(directionTone("Трансмутация")).toBe("concentration");
     expect(directionTone(null)).toBe("muted");
     expect(directionTone("Кулинария")).toBe("bonus");
   });
@@ -98,8 +99,25 @@ describe("чем замысел отличается от стандартног
     ]);
   });
 
-  it("штучная мера не повторяет одно число дважды, а составная называет порции", () => {
-    expect(stockRu({ inBag: 6, portionsInBag: 6 })).toBe("в сумке 6");
-    expect(stockRu({ inBag: 6, portionsInBag: 3 })).toBe("в сумке 6 · 3 порции");
+  it("редкость окрашена по таблице, а неназванная и незнакомая — приглушена", () => {
+    expect(rarityTone("Легендарное")).toBe("roll");
+    expect(rarityTone("Очень редкое")).toBe("bonus");
+    expect(rarityTone(null)).toBe("muted");
+    expect(rarityTone("Небывалое")).toBe("muted");
+  });
+
+  it("составное направление читается двумя пометками, а редкость становится третьей", () => {
+    /* Особое цвета себе не берёт: свободных в палитре нет, и всякий занятый спутали бы с другим. */
+    expect(propertyMarks({ dirRu: "Зельеварение / Особое", rarityRu: null })).toEqual([
+      { labelRu: "Зельеварение", tone: "ritual", special: false },
+      { labelRu: "Особое", tone: "bonus", special: true },
+    ]);
+    expect(propertyMarks({ dirRu: "Зельеварение", rarityRu: "Очень редкое" })).toEqual([
+      { labelRu: "Зельеварение", tone: "ritual", special: false },
+      { labelRu: "Очень редкое", tone: "bonus", special: false },
+    ]);
+    expect(propertyMarks({ dirRu: null, rarityRu: null })).toEqual([
+      { labelRu: "направление неизвестно", tone: "muted", special: false },
+    ]);
   });
 });

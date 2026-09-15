@@ -1,15 +1,17 @@
+import { alchemyEffects } from "./effects";
+import type { EffectGroup } from "./effects";
 import { apparatusEntries, hardestPossible } from "./apparatus";
 import type { ApparatusEntry } from "./apparatus";
 import { BATCH_TARIFFS, batchTimeBands } from "./batch";
 import type { BatchTimeBand } from "./batch";
 import { consumableBands } from "./consumables";
 import type { ConsumableBand } from "./consumables";
-import { FEWEST_KINDS, MOST_KINDS } from "./crafting";
+
 import { mishapBands } from "./development";
 import type { MishapBand } from "./development";
 import { rarities } from "./rarity";
 import type { RarityStep } from "./rarity";
-import { RECIPE_TARIFFS, tierSteps } from "./recipe";
+import { FEWEST_KINDS, MOST_KINDS, RECIPE_TARIFFS, tierSteps } from "./recipe";
 import type { TierStep } from "./recipe";
 import { researchSteps } from "./research";
 import type { ResearchStep } from "./research";
@@ -26,6 +28,7 @@ type AlchemyHandbook = {
   readonly tiers: readonly TierStep[];
   readonly rarities: readonly RarityStep[];
   readonly mishaps: readonly MishapBand[];
+  readonly effects: readonly EffectGroup[];
   readonly tariffs: {
     readonly fewestKinds: number;
     readonly mostKinds: number;
@@ -50,6 +53,7 @@ export function alchemyHandbook(): AlchemyHandbook {
     tiers: tierSteps(FEWEST_KINDS, MOST_KINDS),
     rarities: rarities(),
     mishaps: mishapBands(),
+    effects: alchemyEffects(),
     tariffs: {
       fewestKinds: FEWEST_KINDS,
       mostKinds: MOST_KINDS,

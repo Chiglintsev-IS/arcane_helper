@@ -1,13 +1,11 @@
 import { z } from "zod";
 
 import { DomainError } from "@/core/domain/shared/errors";
+import { RARITY_NAMES } from "@/core/domain/shared/rarity";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 const DEEPEST_PROPERTY_NUMBER = 4;
-
-/** Порция вида — одна штука, пока стол не назвал другую меру: у большинства ингредиентов так. */
-const SMALLEST_PORTION_PIECES = 1;
 
 const PROPERTY_NUMBERS: readonly number[] = Array.from(
   { length: DEEPEST_PROPERTY_NUMBER },
@@ -24,10 +22,6 @@ function repeatedPropertyRefusal(name: string): string {
 
 function unrevealedNumberRefusal(nameRu: string, number: number): string {
   return `у вида «${nameRu}» под номером ${number} ничего не раскрыто`;
-}
-
-function portionSizeRefusal(pieces: number): string {
-  return `Штук в порции — целое от одного, получено: ${pieces}`;
 }
 
 /**
@@ -47,13 +41,22 @@ const difficultyClass = z.number().int().min(EASIEST_CHECK);
  * профильное оснащение, и потому чужое направление узнают, а раскрыть не могут. Направление
  * принадлежит самому свойству — его называет стол вместе с эффектом либо вместо него.
  */
-export const ALCHEMY_DIRECTIONS = ["Зельеварение", "Трансмутация", "Синтез ядов"] as const;
+export const ALCHEMY_DIRECTIONS = [
+  "Зельеварение",
+  "Зельеварение / Особое",
+  "Трансмутация",
+  "Синтез ядов",
+] as const;
 
-/** Свойство называет стол своими словами: перечня, по которому его сверять, у ремесла нет. */
+/**
+ * Свойство называет стол своими словами: перечня, по которому его сверять, у ремесла нет. Направление
+ * и редкость стол называет вместе с ним либо не называет вовсе — и тогда их у записи просто нет.
+ */
 const revealedPropertyFields = z.object({
   number: z.number().int().min(1).max(DEEPEST_PROPERTY_NUMBER),
   nameRu: nonEmpty,
   dirRu: z.enum(ALCHEMY_DIRECTIONS).optional(),
+  rarityRu: z.enum(RARITY_NAMES).optional(),
 });
 
 /**
@@ -86,7 +89,6 @@ const soloReactionFields = z.object({
 
 type AlchemyFields = {
   properties: readonly z.infer<typeof revealedPropertyFields>[];
-  piecesPerPortion: number;
   solo?: z.infer<typeof soloReactionFields> | undefined;
 } & z.infer<typeof referenceFields>;
 
@@ -100,11 +102,6 @@ function inNumberOrder(alchemy: AlchemyFields): AlchemyFields {
 export const ingredientAlchemySchema = z
   .object({
     properties: z.array(revealedPropertyFields).default([]),
-    piecesPerPortion: z
-      .number()
-      .int()
-      .min(SMALLEST_PORTION_PIECES)
-      .default(SMALLEST_PORTION_PIECES),
     solo: soloReactionFields.optional(),
     ...referenceFields.shape,
   })
@@ -139,26 +136,12 @@ export function revealedPropertyOf(value: unknown): RevealedProperty {
   return parsedOrRefused(revealedPropertyFields, value, "раскрытое свойство");
 }
 
-export const NO_ALCHEMY: IngredientAlchemy = {
-  properties: [],
-  piecesPerPortion: SMALLEST_PORTION_PIECES,
-};
+export const NO_ALCHEMY: IngredientAlchemy = { properties: [] };
 
 /** Номера, под которыми у вида ещё ничего не записано: первый из них и есть следующий по порядку. */
 export function unrevealedNumbers(alchemy: IngredientAlchemy): readonly number[] {
   const revealed = new Set(alchemy.properties.map((property) => property.number));
   return PROPERTY_NUMBERS.filter((number) => !revealed.has(number));
-}
-
-/** Сколько штук сумки составляют одну порцию вида: меру называет стол, и у каждого вида свою. */
-export function withPortionSize(
-  alchemy: IngredientAlchemy,
-  piecesPerPortion: number,
-): IngredientAlchemy {
-  if (!Number.isInteger(piecesPerPortion) || piecesPerPortion < SMALLEST_PORTION_PIECES) {
-    throw new DomainError(portionSizeRefusal(piecesPerPortion));
-  }
-  return { ...alchemy, piecesPerPortion };
 }
 
 /** Дописанное перекрывает записанное прежде: справку ведут по одному полю, как её и называют. */
@@ -167,14 +150,6 @@ export function withReference(
   reference: IngredientReference,
 ): IngredientAlchemy {
   return { ...alchemy, ...parsedOrRefused(referenceFields, reference, "справку о виде") };
-}
-
-export function piecesForPortions(alchemy: IngredientAlchemy, portions: number): number {
-  return alchemy.piecesPerPortion * portions;
-}
-
-export function portionsFromPieces(alchemy: IngredientAlchemy, pieces: number): number {
-  return Math.floor(pieces / alchemy.piecesPerPortion);
 }
 
 export function withRevealedProperty(

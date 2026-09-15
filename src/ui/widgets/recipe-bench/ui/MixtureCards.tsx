@@ -5,7 +5,8 @@ import type { PreviewOf } from "@/contract/questions";
 import type { CraftingView } from "@/contract/views";
 
 import { signed } from "@/shared/language";
-import { TIER_LABELS, directionTone, portionsRu } from "@/ui/entities/crafting/lib/labels";
+import { TIER_LABELS, portionsRu, rarityTone } from "@/ui/entities/crafting/lib/labels";
+import { PropertyStripes, markNameRu } from "@/ui/entities/crafting/ui/PropertyMark";
 import { labelled, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { RULE_ROLE_WIDE, RULE_ROW } from "@/ui/shared/ui/rule";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
@@ -16,6 +17,7 @@ type Match = PreviewOf<"recipe_preview">["matches"][number];
 const MAIN_ROLE = "основной эффект";
 const KEPT_ROLE = "войдёт в состав";
 const OFF_ROLE = "подавлено";
+const ASKED_ROLE = "только с разрешения стола";
 
 const MAKE_MAIN = "Сделать основным";
 const SUPPRESS = "Подавить";
@@ -28,8 +30,11 @@ const ADD_MARK = "+";
 
 const JOINS = "совпадёт";
 
-const NOTHING_MATCHED =
-  "Совпавших свойств нет: пока нечего варить. Свойство входит в состав, если раскрыто хотя бы у двух видов.";
+const NOTHING_OFFERED =
+  "У взятых видов не раскрыто ни одного свойства: варить пока нечего.";
+
+const NOTHING_ASSURED =
+  "Совпавших свойств нет: справочник даёт совпадение от двух видов. Свойство одного источника можно сделать основным — работа пойдёт с разрешения мастера.";
 
 function shortRu(portions: number): string {
   return `не хватает ${portions}`;
@@ -63,21 +68,31 @@ export function MixtureCards({
   if (matches.length === 0) {
     return (
       <p className={`py-1 pl-2 text-xs leading-snug text-ink-soft ${RULE_ROLE_WIDE.damage}`}>
-        {NOTHING_MATCHED}
+        {NOTHING_OFFERED}
       </p>
     );
   }
+
+  const nothingAssured = !matches.some((match) => match.assured);
 
   const suppressedOf = (nameRu: string) =>
     draft.suppressed.find((one) => one.nameRu === nameRu) ?? null;
 
   return (
-    <ul className="flex flex-col gap-1.5">
+    <>
+      {!nothingAssured ? null : (
+        <p className={`py-1 pl-2 text-xs leading-snug text-ink-soft ${RULE_ROLE_WIDE.reaction}`}>
+          {NOTHING_ASSURED}
+        </p>
+      )}
+
+      <ul className="flex flex-col gap-1.5">
       {matches.map((match) => {
         const off = suppressedOf(match.nameRu);
         const main = match.nameRu === mainRu && off === null;
-        const tone = off !== null ? "muted" : main ? "roll" : "ritual";
-        const roleRu = off !== null ? OFF_ROLE : main ? MAIN_ROLE : KEPT_ROLE;
+        const asked = !match.assured && !main;
+        const tone = off !== null ? "muted" : main ? "roll" : asked ? "reaction" : "ritual";
+        const roleRu = off !== null ? OFF_ROLE : main ? MAIN_ROLE : asked ? ASKED_ROLE : KEPT_ROLE;
 
         return (
           <li
@@ -104,6 +119,7 @@ export function MixtureCards({
               >
                 {MAKE_MAIN}
               </button>
+              {asked ? null : (
               <button
                 type="button"
                 aria-pressed={off !== null}
@@ -125,6 +141,7 @@ export function MixtureCards({
               >
                 {off === null ? SUPPRESS : KEEP}
               </button>
+              )}
             </span>
 
             {off === null ? null : (
@@ -144,9 +161,9 @@ export function MixtureCards({
                         ),
                       })
                     }
-                    className={`min-h-11 grow px-2 text-[0.6875rem] ${
+                    className={`min-h-11 grow px-2 text-[0.6875rem] leading-tight ${
                       rarity.nameRu === off.rarityRu ? SURFACE_CHOSEN : SURFACE_CONTROL
-                    }`}
+                    } ${TONE_TEXT[rarityTone(rarity.nameRu)]}`}
                   >
                     {`${rarity.nameRu} ${signed(rarity.suppression)}`}
                   </button>
@@ -156,7 +173,8 @@ export function MixtureCards({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </>
   );
 }
 
@@ -220,17 +238,13 @@ export function KindPicker({
               <span className="text-[0.8125rem] font-semibold leading-tight">{kind.nameRu}</span>
               {kind.properties.map((property) => (
                 <span key={property.number} className="flex items-baseline gap-1.5">
-                  <span
-                    aria-hidden="true"
-                    className={`h-2.5 w-0.5 shrink-0 self-center ${
-                      TONE_TEXT[directionTone(property.dirRu)]
-                    } bg-current`}
-                  />
+                  <PropertyStripes slot={property} height="h-3 self-center" />
                   <span className="shrink-0 text-[0.625rem] tabular-nums text-ink-quiet">
                     {propertyNumberRu(property.number)}
                   </span>
                   <span className="min-w-0 flex-1 text-[0.6875rem] leading-tight">
                     {property.nameRu}
+                    <span className="sr-only">{` — ${markNameRu(property)}`}</span>
                   </span>
                   {!matched.includes(property.nameRu) ? null : (
                     <span className={`shrink-0 text-[0.625rem] ${TONE_TEXT.ritual}`}>{JOINS}</span>

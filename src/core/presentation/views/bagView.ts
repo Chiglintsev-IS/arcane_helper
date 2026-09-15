@@ -41,6 +41,7 @@ function itemView(
       number: property.number,
       nameRu: property.nameRu,
       dirRu: property.dirRu ?? null,
+      rarityRu: property.rarityRu ?? null,
     })),
     neededForRu: need?.spellNamesRu ?? [],
   };

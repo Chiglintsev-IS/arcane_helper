@@ -6,7 +6,13 @@ import type { PreviewOf, Question } from "@/contract/questions";
 import type { CraftingView, IngredientKnowledgeView } from "@/contract/views";
 
 import { coinRu } from "@/shared/language";
-import { directionTone, researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
+import { researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
+import { propertySlots } from "@/ui/entities/crafting/lib/slots";
+import {
+  EmptyStripes,
+  PropertyStripes,
+  markNameRu,
+} from "@/ui/entities/crafting/ui/PropertyMark";
 import { KindFieldEditor } from "@/ui/features/note-kind-field/ui/KindFieldEditor";
 import {
   BASE_DIFFICULTY_LABEL,
@@ -18,7 +24,6 @@ import { usePreview } from "@/ui/shared/model/usePreview";
 import {
   RULE_BLOCK,
   RULE_EDGE_ACTIVE,
-  RULE_ROLE_WIDE,
   RULE_ROW,
   RULE_SECTION,
   RULE_TILE,
@@ -49,19 +54,6 @@ type Field = keyof typeof RECORD_NAMES;
 
 export type KindFieldWritten = { readonly field: Field; readonly typed: string };
 
-type Slot = { readonly number: number; readonly nameRu: string | null; readonly dirRu: string | null };
-
-/** Четыре слота подряд: раскрытое стоит на своём номере, нераскрытое держит своё место пустым. */
-function slotsOf(kind: IngredientKnowledgeView): readonly Slot[] {
-  return [
-    ...kind.properties.map((property) => ({
-      number: property.number,
-      nameRu: property.nameRu,
-      dirRu: property.dirRu,
-    })),
-    ...kind.researchNumbers.map((number) => ({ number, nameRu: null, dirRu: null })),
-  ].sort((one, other) => one.number - other.number);
-}
 
 function Tile({
   labelRu,
@@ -213,23 +205,26 @@ export function KindPage({
       <section className="flex flex-col gap-1">
         <span className="text-[0.625rem] tracking-[0.14em] text-accent">{PROPERTIES_LABEL}</span>
 
-        {slotsOf(kind).map((slot) => (
+        {propertySlots(kind).map((slot) => (
           <div
             key={slot.number}
-            className={`flex items-baseline gap-2 py-1.5 pl-2 ${
-              RULE_ROLE_WIDE[directionTone(slot.dirRu)]
-            } ${slot.nameRu === null ? "" : SURFACE_GROUP_BARE}`}
+            className={`flex items-stretch gap-2 ${slot.nameRu === null ? "" : SURFACE_GROUP_BARE}`}
           >
-            <span className="w-7 shrink-0 text-[0.6875rem] tabular-nums text-ink-quiet">
-              {propertyNumberRu(slot.number)}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className={`text-sm leading-tight ${slot.nameRu === null ? "text-off" : ""}`}>
-                {slot.nameRu ?? NOT_REVEALED}
+            {slot.nameRu === null ? (
+              <EmptyStripes height="self-stretch" />
+            ) : (
+              <PropertyStripes slot={slot} height="self-stretch" />
+            )}
+            <span className="flex min-w-0 flex-1 items-baseline gap-2 py-1.5 pr-2">
+              <span className="w-7 shrink-0 text-[0.6875rem] tabular-nums text-ink-quiet">
+                {propertyNumberRu(slot.number)}
               </span>
-              {slot.dirRu === null ? null : (
-                <span className="text-[0.65625rem] text-ink-quiet">{slot.dirRu}</span>
-              )}
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className={`text-sm leading-tight ${slot.nameRu === null ? "text-off" : ""}`}>
+                  {slot.nameRu ?? NOT_REVEALED}
+                </span>
+                <span className="text-[0.65625rem] text-ink-quiet">{markNameRu(slot)}</span>
+              </span>
             </span>
           </div>
         ))}

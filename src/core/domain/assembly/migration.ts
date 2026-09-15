@@ -4,7 +4,7 @@ import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
 import { strongestApparatus } from "@/core/domain/crafting/apparatus";
-import { PLAINEST_RARITY } from "@/core/domain/crafting/rarity";
+import { PLAINEST_RARITY } from "@/core/domain/shared/rarity";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { Items } from "@/core/domain/items/items";
 import { filledWearableOnlyFields, withoutWearableOnlyFields } from "@/core/domain/items/schema";

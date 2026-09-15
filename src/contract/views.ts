@@ -113,6 +113,7 @@ const revealedPropertyViewSchema = z.object({
   number: whole,
   nameRu: word,
   dirRu: word.nullable(),
+  rarityRu: word.nullable(),
 });
 
 const itemViewSchema = z.object({
@@ -155,8 +156,6 @@ export const bagViewSchema = z.object({
 const ingredientKnowledgeViewSchema = z.object({
   itemId: word,
   nameRu: word,
-  inBag: whole,
-  piecesPerPortion: whole,
   portionsInBag: whole,
   shortageRu: word.nullable(),
   researchNumbers: z.array(whole),
@@ -182,6 +181,7 @@ const knownRecipeViewSchema = z.object({
 });
 
 const alchemyHandbookViewSchema = z.object({
+  effects: z.array(z.object({ dirRu: word, namesRu: z.array(word) })),
   apparatus: z.array(
     z.object({
       nameRu: word,

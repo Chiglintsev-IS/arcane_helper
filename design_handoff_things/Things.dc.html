@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><style>
+body{margin:0;background:#0c0a08;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:#d3ab5f}a:hover{color:#e9c887}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(233,214,176,.1)}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#d3ab5f;color:#15120e;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#efe7d6}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(233,214,176,.12);color:#efe7d6;border-radius:5px;text-decoration:none}
+.dv-olabel{display:block;font:400 11px/1.4 system-ui,sans-serif;color:rgba(239,231,214,.55);max-width:390px}
+.dv-olabel .dv-oid{display:inline-block;margin-right:6px}
+.dv-olabel code{white-space:nowrap}
+.dv-card{background:#15120e;border:1px solid rgba(233,214,176,.22);border-radius:10px;overflow:hidden}
+.dv-opt:target .dv-oid{background:#d3ab5f;color:#15120e}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(239,231,214,.5)}
+.ph{width:390px;height:844px;display:flex;flex-direction:column;color:#efe7d6;background:#15120e;position:relative;overflow:hidden}
+.sc{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(233,214,176,.22) transparent}
+</style></helmet>
+<section class="dv-turn" id="final">
+<div class="dv-thd"><a class="dv-tid" href="#final">Финал</a><span class="dv-tname">Три списка: рюкзак, встречалось, покупки</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="b1">
+<div class="dv-olabel"><a class="dv-oid" href="#b1">b1</a><b style="color:#efe7d6;font-weight:600">Рюкзак.</b> Спокойный список: имя, число со своей единицей, «−/+». Сверху деньги (правятся нажатием по строке) и кнопка «признаки»: чипы трёхпозиционные — только это, кроме этого, снять. Ниже поиск по названию. В строке признаки подписаны серым, надетые копии — золотым. Нажатие выбирает вещь — её карточка показана рядом кадром <a class="dv-oid" href="#b4">b4</a>; в приложении она открывается страницей.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;display:flex;gap:4px;padding:6px 12px 0">
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#d3ab5f;background:#1e1a15;border:1px solid #d3ab5f">Рюкзак</div>
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#9c9280;background:#2b251d;border:1px solid rgba(233,214,176,.22)">Встречалось</div>
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#9c9280;background:#2b251d;border:1px solid rgba(233,214,176,.22)">Покупки</div>
+  </div>
+  <div style="flex:none;display:flex;align-items:stretch;gap:0;margin-top:6px;border-bottom:1px solid rgba(233,214,176,.11)">
+    <button type="button" onClick="{{ toggleMoney }}" style="flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;background:{{ moneyBg }};border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit;font-size:12.5px;font-variant-numeric:tabular-nums">{{ moneyLineRu }}</button>
+    <button type="button" onClick="{{ toggleMarks }}" style="flex:none;min-height:44px;padding:0 12px;font-size:11.5px;background:transparent;border:0;border-left:1px solid rgba(233,214,176,.11);color:{{ marksColor }};cursor:pointer;font-family:inherit">{{ marksLabelRu }}</button>
+  </div>
+
+  <sc-if value="{{ moneyOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:flex;gap:6px;padding:8px 12px;background:#1e1a15;border-bottom:1px solid rgba(233,214,176,.22)">
+      <sc-for list="{{ moneyCoins }}" as="coin" hint-placeholder-count="3">
+        <label style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:10px;color:#9c9280">{{ coin.labelRu }}</span>
+          <input type="text" inputmode="numeric" value="{{ coin.valueRu }}" onChange="{{ coin.onChange }}" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 10px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;font-size:16px;font-family:inherit;outline:none;text-align:right;font-variant-numeric:tabular-nums" />
+        </label>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div style="flex:none;display:flex;align-items:center;gap:8px;min-height:44px;margin:8px 12px;padding:0 10px;background:#2b251d;border:1px solid rgba(233,214,176,.22)">
+    <span style="flex:none;font-size:13px;color:#9c9280">⌕</span>
+    <input type="text" value="{{ query }}" onChange="{{ onQuery }}" placeholder="Найти вещь" style="flex:1;min-width:0;background:transparent;border:0;outline:none;color:#efe7d6;font-size:16px;font-family:inherit" />
+    <button type="button" onClick="{{ clearQuery }}" style="flex:none;width:44px;height:44px;background:transparent;border:0;color:#9c9280;font-size:13px;cursor:pointer;font-family:inherit">✕</button>
+  </div>
+
+  <sc-if value="{{ marksOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;background:#1e1a15;border-bottom:1px solid rgba(233,214,176,.22)">
+        <sc-for list="{{ markChips }}" as="chip" hint-placeholder-count="4">
+          <button type="button" onClick="{{ chip.cycle }}" style="flex:none;min-height:44px;padding:0 12px;font-size:12px;border-radius:22px;background:{{ chip.bg }};border:1px solid {{ chip.border }};color:{{ chip.fg }};cursor:pointer;font-family:inherit">{{ chip.labelRu }}</button>
+        </sc-for>
+    </div>
+  </sc-if>
+
+  <div class="sc">
+    <sc-for list="{{ bagRows }}" as="one" hint-placeholder-count="10">
+      <div style="display:flex;align-items:stretch;border-bottom:1px solid rgba(233,214,176,.11);background:{{ one.bg }};border-left:3px solid {{ one.edge }}">
+        <button type="button" onClick="{{ one.toggle }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 10px 8px 9px;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:14px;line-height:1.25;color:{{ one.nameColor }}">{{ one.name }}</span>
+            <sc-if value="{{ one.hasWorn }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:10.5px;line-height:1.2;color:#d3ab5f">{{ one.wornRu }}</span>
+            </sc-if>
+            <sc-if value="{{ one.hasSurface }}" hint-placeholder-val="{{ false }}">
+              <span style="font-size:10.5px;line-height:1.25;color:#b4a78e">{{ one.leadRu }}</span>
+            </sc-if>
+            <sc-if value="{{ one.hasTraits }}" hint-placeholder-val="{{ true }}">
+              <span style="font-size:10px;line-height:1.2;color:#9c9280">{{ one.traitLineRu }}</span>
+            </sc-if>
+          </span>
+          <span style="flex:none;display:flex;align-items:baseline;gap:3px">
+            <span style="font-size:19px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:{{ one.countColor }}">{{ one.countRu }}</span>
+            <span style="font-size:9.5px;color:#9c9280">{{ one.unitRu }}</span>
+          </span>
+        </button>
+        <button type="button" onClick="{{ one.less }}" style="flex:none;width:46px;min-height:56px;font-size:19px;background:transparent;border:0;border-left:1px solid rgba(233,214,176,.11);color:#d3ab5f;cursor:pointer;font-family:inherit">−</button>
+        <button type="button" onClick="{{ one.more }}" style="flex:none;width:46px;min-height:56px;font-size:17px;background:transparent;border:0;border-left:1px solid rgba(233,214,176,.11);color:#9c9280;cursor:pointer;font-family:inherit">+</button>
+      </div>
+    </sc-for>
+  </div>
+
+
+  <sc-if value="{{ hasUndo }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:flex;align-items:center;gap:10px;padding:6px 12px;background:#2b251d;border-top:1px solid rgba(233,214,176,.22)">
+      <span style="flex:1;min-width:0;font-size:11.5px;color:#b4a78e">{{ undoRu }}</span>
+      <button type="button" onClick="{{ undo }}" style="flex:none;min-height:44px;padding:0 12px;font-size:12.5px;font-weight:600;background:transparent;border:0;color:#d3ab5f;cursor:pointer;font-family:inherit">Отменить</button>
+    </div>
+  </sc-if>
+
+  <div style="flex:none;background:#272219;border-top:1px solid rgba(233,214,176,.22);padding:7px 12px">
+    <sc-if value="{{ newClosed }}" hint-placeholder-val="{{ true }}">
+      <button type="button" onClick="{{ openNew }}" style="width:100%;min-height:44px;font-size:13px;font-weight:600;background:#2b251d;color:#efe7d6;border:1px solid rgba(233,214,176,.22);cursor:pointer;font-family:inherit">Записать вещь</button>
+    </sc-if>
+    <sc-if value="{{ newOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" value="{{ newName }}" onChange="{{ onNewName }}" placeholder="Название со слов мастера" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 10px;background:#2b251d;border:1px solid #d3ab5f;color:#efe7d6;font-size:16px;font-family:inherit;outline:none" />
+        <div style="display:flex;gap:6px">
+          <button type="button" onClick="{{ cancelNew }}" style="flex:1;min-height:44px;font-size:12.5px;background:transparent;color:#9c9280;border:1px solid rgba(233,214,176,.22);cursor:pointer;font-family:inherit">Отмена</button>
+          <button type="button" onClick="{{ saveNew }}" style="flex:2;min-height:44px;font-size:13px;font-weight:600;background:#d3ab5f;color:#15120e;border:0;cursor:pointer;font-family:inherit">Записать</button>
+        </div>
+        </div>
+    </sc-if>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="b4">
+<div class="dv-olabel"><a class="dv-oid" href="#b4">b4</a><b style="color:#efe7d6;font-weight:600">Карточка вещи.</b> Страница, а не шторка: её дописывают по ходу игры. Любая вещь сначала просто вещь — потом выясняется, что она носимая, что мифрил годится в состав, что даёт +2 к КД. Название правится прямо в поле. Прибавки — как в приложении: выбрали, к чему прибавка, и крутите число; нулевая снимается, а всё, что зависит от обстановки, идёт заметкой. Заметки правятся на месте, там же «Убрать». Алхимическая часть вещи показана фактами, но правят её в алхимии — там исследование и оснащение. Цена вводится тремя полями номиналов — зм, см, мм, как в кошельке. «Убрать вещь» доступно, только когда от неё не осталось ни следа.</div>
+<div class="dv-card">
+<div class="ph">
+  <sc-if value="{{ cardPicking }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;background:#15120e">
+      <div style="flex:none;padding:12px;background:#1e1a15;border-bottom:1px solid rgba(233,214,176,.22)">
+        <span style="font-size:16px;font-weight:600">К чему прибавка</span>
+      </div>
+      <div style="flex:none;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11px;color:#9c9280">Поиск</span>
+        <input type="text" value="{{ pickQuery }}" onChange="{{ onPickQuery }}" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 10px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;font-size:16px;font-family:inherit;outline:none" />
+      </div>
+      <div class="sc" style="padding:0 12px 12px;display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ cardTargetGroups }}" as="group" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:11px;color:#9c9280">{{ group.titleRu }}</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ group.items }}" as="target" hint-placeholder-count="6">
+                <button type="button" onClick="{{ target.pick }}" style="flex:none;min-height:48px;padding:6px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit;text-align:left">
+                  <span style="font-size:13px;line-height:1.2">{{ target.labelRu }}</span>
+                  <sc-if value="{{ target.hasHint }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:10px;line-height:1.2;color:#9c9280">{{ target.hintRu }}</span>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="flex:none;padding:8px 12px 10px;border-top:1px solid rgba(233,214,176,.22)">
+        <button type="button" onClick="{{ pickCancel }}" style="width:100%;min-height:44px;font-size:13px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">Отмена</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="flex:none;border-bottom:1px solid rgba(233,214,176,.22);display:flex;align-items:center;gap:8px;padding:0 12px 0 6px">
+    <button type="button" style="flex:1;min-width:0;min-height:48px;display:flex;align-items:center;gap:6px;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+      <span style="flex:none;font-size:14px;color:#d3ab5f">←</span>
+      <span style="flex:1;min-width:0;font-size:13px;color:#9c9280">Рюкзак</span>
+    </button>
+    <span style="flex:none;font-size:10.5px;color:#9c9280">{{ cardTraitLineRu }}</span>
+  </div>
+
+  <div class="sc" style="padding:12px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#9c9280">НАЗВАНИЕ</span>
+      <input type="text" value="{{ cardName }}" onChange="{{ onCardName }}" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 10px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;font-size:16px;font-family:inherit;outline:none" />
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font-size:10px;letter-spacing:.14em;color:#9c9280">ПРИЗНАКИ</span>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <sc-for list="{{ cardTraitPicks }}" as="trait" hint-placeholder-count="3">
+          <button type="button" onClick="{{ trait.toggle }}" style="flex:none;min-height:44px;padding:0 12px;font-size:12px;background:{{ trait.bg }};border:1px solid {{ trait.border }};color:{{ trait.fg }};cursor:pointer;font-family:inherit">{{ trait.labelRu }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid rgba(233,214,176,.11)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+          <span style="font-size:12px;color:#9c9280">При себе</span>
+        </span>
+        <button type="button" onClick="{{ cardLess }}" style="flex:none;width:52px;min-height:48px;font-size:19px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">−</button>
+        <span style="flex:none;min-width:44px;text-align:center;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums">{{ cardCountRu }}</span>
+        <button type="button" onClick="{{ cardMore }}" style="flex:none;width:52px;min-height:48px;font-size:19px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">+</button>
+      </div>
+      <sc-if value="{{ cardCanWear }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="flex:1;min-width:0;font-size:12.5px;color:#9c9280">Надето</span>
+          <button type="button" onClick="{{ cardWearLess }}" disabled="{{ cardWearLessOff }}" style="flex:none;width:52px;min-height:48px;font-size:19px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">−</button>
+          <span style="flex:none;min-width:44px;text-align:center;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;color:#d3ab5f">{{ cardWornRu }}</span>
+          <button type="button" onClick="{{ cardWearMore }}" disabled="{{ cardWearMoreOff }}" style="flex:none;width:52px;min-height:48px;font-size:19px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">+</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(233,214,176,.11)">
+      <span style="font-size:10px;letter-spacing:.14em;color:#9c9280">ПРИБАВКИ</span>
+      <sc-for list="{{ cardBonuses }}" as="bonus" hint-placeholder-count="2">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="flex:1;min-width:0;font-size:13px;line-height:1.3">{{ bonus.labelRu }}</span>
+          <button type="button" onClick="{{ bonus.less }}" style="flex:none;width:46px;min-height:44px;font-size:17px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">−</button>
+          <span style="flex:none;min-width:38px;text-align:center;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">{{ bonus.valueRu }}</span>
+          <button type="button" onClick="{{ bonus.more }}" style="flex:none;width:46px;min-height:44px;font-size:17px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">+</button>
+        </div>
+      </sc-for>
+
+      <sc-if value="{{ cardNotPicking }}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{ cardPick }}" style="min-height:44px;font-size:12.5px;font-weight:600;background:transparent;border:1px solid rgba(111,169,226,.5);color:#6fa9e2;cursor:pointer;font-family:inherit">Добавить прибавку</button>
+      </sc-if>
+      <sc-if value="{{ cardHasBonuses }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:4px;padding-top:2px">
+          <button type="button" onClick="{{ cardWornWorks }}" style="flex:1;min-height:44px;font-size:11.5px;font-weight:600;background:{{ cardWornWorksBg }};border:1px solid {{ cardWornWorksBorder }};color:{{ cardWornWorksFg }};cursor:pointer;font-family:inherit">действует надетой</button>
+          <button type="button" onClick="{{ cardCarriedWorks }}" style="flex:1;min-height:44px;font-size:11.5px;font-weight:600;background:{{ cardCarriedBg }};border:1px solid {{ cardCarriedBorder }};color:{{ cardCarriedFg }};cursor:pointer;font-family:inherit">действует при себе</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(233,214,176,.11)">
+      <span style="font-size:10px;letter-spacing:.14em;color:#9c9280">ЗАПИСАНО</span>
+      <sc-for list="{{ cardNotes }}" as="note" hint-placeholder-count="1">
+        <sc-if value="{{ note.quiet }}" hint-placeholder-val="{{ true }}">
+          <button type="button" onClick="{{ note.edit }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:4px 0;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+            <span style="flex:1;min-width:0;font-size:12.5px;line-height:1.4;color:#b4a78e">{{ note.textRu }}</span>
+            <span style="flex:none;font-size:10.5px;color:#9c9280">правка</span>
+          </button>
+        </sc-if>
+        <sc-if value="{{ note.editing }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:6px 0">
+            <input type="text" value="{{ editDraft }}" onChange="{{ onEditDraft }}" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 10px;background:#2b251d;border:1px solid #d3ab5f;color:#efe7d6;font-size:16px;font-family:inherit;outline:none" />
+            <div style="display:flex;gap:6px">
+              <button type="button" onClick="{{ dropNote }}" style="flex:1;min-height:44px;font-size:12px;background:transparent;border:1px solid rgba(231,144,121,.5);color:#e79079;cursor:pointer;font-family:inherit">Убрать</button>
+              <button type="button" onClick="{{ saveNote }}" style="flex:2;min-height:44px;font-size:12.5px;font-weight:600;background:#d3ab5f;border:0;color:#15120e;cursor:pointer;font-family:inherit">Сохранить</button>
+            </div>
+          </div>
+        </sc-if>
+      </sc-for>
+      <div style="display:flex;gap:6px">
+        <input type="text" value="{{ cardNoteDraft }}" onChange="{{ onCardNoteDraft }}" placeholder="например: нашли в шахте" style="flex:1;min-width:0;min-height:48px;padding:0 10px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;font-size:16px;font-family:inherit;outline:none" />
+        <button type="button" onClick="{{ cardAddNote }}" style="flex:none;min-height:48px;padding:0 12px;font-size:12.5px;font-weight:600;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;cursor:pointer;font-family:inherit">Дописать</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ cardAlch }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid rgba(233,214,176,.11)">
+        <sc-if value="{{ cardAlchFilled }}" hint-placeholder-val="{{ true }}">
+          <span style="font-size:10px;letter-spacing:.14em;color:#8dc46e">АЛХИМИЯ ЭТОЙ ВЕЩИ</span>
+        </sc-if>
+        <sc-for list="{{ cardSlots }}" as="slot" hint-placeholder-count="4">
+          <div style="display:flex;align-items:baseline;gap:8px;border-left:3px solid {{ slot.bar }};padding:5px 8px;background:{{ slot.bg }}">
+            <span style="flex:none;width:22px;font-size:10.5px;font-weight:600;color:#9c9280">{{ slot.nRu }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+              <span style="font-size:12.5px;line-height:1.25;color:{{ slot.color }}">{{ slot.name }}</span>
+              <span style="font-size:10px;line-height:1.2;color:#9c9280">{{ slot.dirRu }}</span>
+            </span>
+          </div>
+        </sc-for>
+        <div style="display:flex;flex-direction:column;gap:0">
+          <sc-for list="{{ cardAlchRows }}" as="row" hint-placeholder-count="4">
+            <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid rgba(233,214,176,.11);font-size:12.5px">
+              <span style="color:#9c9280">{{ row.labelRu }}</span>
+              <span style="text-align:right;max-width:210px;line-height:1.3">{{ row.valueRu }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <button type="button" style="min-height:44px;font-size:12px;background:transparent;border:1px solid rgba(141,196,110,.45);color:#8dc46e;cursor:pointer;font-family:inherit">Открыть в алхимии →</button>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid rgba(233,214,176,.11)">
+      <span style="font-size:10px;letter-spacing:.14em;color:#9c9280">ЦЕНА ЗА ОДНУ ШТУКУ</span>
+      <div style="display:flex;gap:6px">
+        <sc-for list="{{ cardCoins }}" as="coin" hint-placeholder-count="3">
+          <label style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:10px;letter-spacing:.06em;color:#9c9280">{{ coin.labelRu }}</span>
+            <input type="text" inputmode="numeric" value="{{ coin.valueRu }}" onChange="{{ coin.onChange }}" placeholder="0" style="width:100%;box-sizing:border-box;min-height:48px;padding:0 10px;background:#2b251d;border:1px solid rgba(233,214,176,.22);color:#efe7d6;font-size:16px;font-family:inherit;outline:none;text-align:right;font-variant-numeric:tabular-nums" />
+          </label>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid rgba(233,214,176,.11)">
+      <button type="button" disabled="{{ cardDropOff }}" style="min-height:44px;font-size:12.5px;background:transparent;border:1px solid {{ cardDropBorder }};color:{{ cardDropColor }};cursor:pointer;font-family:inherit">Убрать вещь</button>
+      <span style="font-size:10.5px;line-height:1.4;color:#9c9280">{{ cardDropHintRu }}</span>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="b2">
+<div class="dv-olabel"><a class="dv-oid" href="#b2">b2</a><b style="color:#efe7d6;font-weight:600">Встречалось.</b> Всё, что мы знаем о вещах: и то, что при себе, и то, что только видели у торговца или обещали. Состояний два — «при себе» и «нет при себе»; третья кнопка сверху отбирает отмеченное к покупке. Запись хранит, где видели и за сколько; «в покупки» кладёт вещь в третью закладку. Та же отметка есть в карточке любой вещи из рюкзака — зелье кончилось, отметил, и оно уже в списке на город.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;display:flex;gap:4px;padding:6px 12px 0">
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#9c9280;background:#2b251d;border:1px solid rgba(233,214,176,.22)">Рюкзак</div>
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#d3ab5f;background:#1e1a15;border:1px solid #d3ab5f">Встречалось</div>
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#9c9280;background:#2b251d;border:1px solid rgba(233,214,176,.22)">Покупки</div>
+  </div>
+
+  <div style="flex:none;display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding:8px 12px;border-bottom:1px solid rgba(233,214,176,.22)">
+    <sc-for list="{{ baseFilters }}" as="one" hint-placeholder-count="3">
+      <button type="button" onClick="{{ one.pick }}" style="flex:1;min-height:44px;padding:0 8px;font-size:12px;background:{{ one.bg }};border:1px solid {{ one.border }};color:{{ one.fg }};cursor:pointer;font-family:inherit">{{ one.labelRu }} <span style="color:#9c9280">{{ one.tallyRu }}</span></button>
+    </sc-for>
+  </div>
+
+  <div class="sc">
+    <sc-for list="{{ baseRows }}" as="one" hint-placeholder-count="6">
+      <div style="display:flex;align-items:stretch;border-bottom:1px solid rgba(233,214,176,.11)">
+        <button type="button" onClick="{{ one.open }}" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;padding:9px 12px;border:0;border-left:3px solid {{ one.edge }};background:transparent;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+          <span style="display:flex;align-items:baseline;gap:8px">
+            <span style="flex:1;min-width:0;font-size:14px;line-height:1.2;color:{{ one.nameColor }}">{{ one.name }}</span>
+            <span style="flex:none;font-size:10px;color:{{ one.stateColor }}">{{ one.stateRu }}</span>
+          </span>
+          <span style="font-size:10.5px;line-height:1.3;color:#9c9280">{{ one.whereRu }}</span>
+        </button>
+        <button type="button" onClick="{{ one.toggleWanted }}" style="flex:none;width:58px;min-height:58px;font-size:9.5px;line-height:1.2;text-align:center;background:transparent;border:0;border-left:1px solid rgba(233,214,176,.11);color:{{ one.wantColor }};cursor:pointer;font-family:inherit">{{ one.wantRu }}</button>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="flex:none;background:#272219;border-top:1px solid rgba(233,214,176,.22);padding:7px 12px">
+    <button type="button" style="width:100%;min-height:44px;font-size:13px;font-weight:600;background:#2b251d;color:#efe7d6;border:1px solid rgba(233,214,176,.22);cursor:pointer;font-family:inherit">Записать вещь</button>
+  </div>
+</div>
+</div>
+</div>
+
+<div class="dv-opt" id="b3">
+<div class="dv-olabel"><a class="dv-oid" href="#b3">b3</a><b style="color:#efe7d6;font-weight:600">Покупки.</b> Список, который заполняют по ходу игры, чтобы не забыть в городе. Цена и где видели — с записи вещи; сверху итог и что от него останется от денег. Нажатие помечает купленным: вещь встаёт в рюкзак записью с числом 1.</div>
+<div class="dv-card">
+<div class="ph">
+  <div style="flex:none;display:flex;gap:4px;padding:6px 12px 0">
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#9c9280;background:#2b251d;border:1px solid rgba(233,214,176,.22)">Рюкзак</div>
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#9c9280;background:#2b251d;border:1px solid rgba(233,214,176,.22)">Встречалось</div>
+    <div style="flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:#d3ab5f;background:#1e1a15;border:1px solid #d3ab5f">Покупки</div>
+  </div>
+
+  <div style="flex:none;margin-top:6px;padding:10px 12px;border-bottom:1px solid rgba(233,214,176,.22);display:flex;align-items:flex-end;gap:10px">
+    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:10px;letter-spacing:.1em;color:#9c9280">НУЖНО НА ВСЁ</span>
+      <span style="font-size:11px;color:{{ buyRestColor }}">{{ buyPurseRu }} · {{ buyRestRu }}</span>
+      <span style="font-size:10px;color:#9c9280">{{ buyNoPriceRu }}</span>
+    </span>
+    <span style="flex:none;font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums">{{ buyTotalRu }}</span>
+  </div>
+
+  <div class="sc">
+    <sc-for list="{{ buyRows }}" as="one" hint-placeholder-count="4">
+      <div style="display:flex;align-items:stretch;border-bottom:1px solid rgba(233,214,176,.11)">
+        <button type="button" onClick="{{ one.toggle }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:58px;padding:9px 12px;background:transparent;border:0;color:inherit;text-align:left;cursor:pointer;font-family:inherit">
+          <span style="flex:none;width:22px;font-size:14px;color:{{ one.markColor }}">{{ one.markRu }}</span>
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:14px;line-height:1.2;color:{{ one.nameColor }}">{{ one.name }}</span>
+            <span style="font-size:10.5px;line-height:1.3;color:#9c9280">{{ one.whereRu }}</span>
+          </span>
+          <span style="flex:none;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ one.nameColor }}">{{ one.priceRu }}</span>
+        </button>
+      </div>
+    </sc-for>
+    <p style="margin:0;padding:12px;font-size:10.5px;line-height:1.5;color:#9c9280">Цены — со слов торговцев и мастера; у вещей, отмеченных из рюкзака, цена не записана, пока её не назвали. Купленное встаёт в рюкзак записью с числом 1; деньги списывает стол.</p>
+  </div>
+
+  <div style="flex:none;background:#272219;border-top:1px solid rgba(233,214,176,.22);padding:7px 12px">
+    <button type="button" style="width:100%;min-height:44px;font-size:13px;font-weight:600;background:#d3ab5f;color:#15120e;border:0;cursor:pointer;font-family:inherit">Добавить в покупки</button>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Дальше: «покажи запись вещи шторкой» · «дай собирать пояс самому» · «покажи надевание в листе персонажа»</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1300,&quot;height&quot;:1000}}">
+const ACCENT = "#d3ab5f", INK = "#efe7d6", QUIET = "#9c9280", GROUP = "#1e1a15";
+const RULE = "rgba(233,214,176,.22)", RULE_SOFT = "rgba(233,214,176,.11)";
+
+const ITEMS = [
+  { id: "focus", name: "Магическая фокусировка +1", unit: "шт", worn: 1, bag: 1,
+    facts: [], notes: [] },
+  { id: "robe", name: "Мантия +1", unit: "шт", worn: 1, bag: 2,
+    facts: [], notes: [{ id: "n1", textRu: "Вторая — запасная, из добычи" }] },
+  { id: "ring", name: "Кольцо защиты", unit: "шт", worn: 2, bag: 5,
+    facts: [], notes: [{ id: "n1", textRu: "Носить можно по одному на руку" }] },
+  { id: "mail", name: "Мифриловая кольчуга дварфийской работы", unit: "шт", worn: 0, bag: 1,
+    facts: [],
+    notes: [{ id: "n1", textRu: "Мифрил идёт в состав как сырьё, но тогда кольчуга испорчена" }] },
+  { id: "cloak", name: "Плащ защиты", unit: "шт", worn: 1, bag: 1,
+    facts: [], notes: [] },
+  { id: "camo", name: "Комплект болотной маскировки", unit: "шт", worn: 0, bag: 1,
+    facts: [], notes: [{ id: "n1", textRu: "1к4 к Скрытности в болотах" }] },
+  { id: "hammer", name: "Кузнечный Молот Гормонголь", unit: "шт", worn: 0, bag: 1,
+    facts: [], notes: [{ id: "n1", textRu: "Мифриловый · растущий" }] },
+  { id: "kit", name: "Надёжный походный комплект", unit: "шт", worn: 0, bag: 1,
+    facts: [], notes: [{ id: "n1", textRu: "Набор зельевара: сложность до 20, до 6 порций за раз" }] },
+  { id: "reagents", name: "Обычные расходники", unit: "комплект", worn: 0, bag: 12,
+    facts: [], notes: [{ id: "n1", textRu: "Часовой комплект на пять рецептурных порций" }] },
+  { id: "plantain", name: "Подорожник", unit: "порция", worn: 0, bag: 48, facts: [], notes: [] },
+  { id: "pollen", name: "Пыльца большой гальперы", unit: "порция", worn: 0, bag: 22, facts: [], notes: [] },
+  { id: "mushroom", name: "Болотный гриб", unit: "порция", worn: 0, bag: 16, facts: [], notes: [] },
+  { id: "mandrake", name: "Корень мандрагоры", unit: "порция", worn: 0, bag: 1, facts: [], notes: [] },
+  { id: "rope", name: "Верёвка, 15 м", unit: "шт", worn: 0, bag: 1, facts: [], notes: [] },
+  { id: "letter", name: "Письмо от Зинаиды", unit: "шт", worn: 0, bag: 1,
+    facts: [], notes: [{ id: "n1", textRu: "Не прочитано" }] },
+];
+
+/** Алхимическая часть записи вещи: живёт в самой вещи, книга алхимика её только читает. */
+const ALCHEMY = {
+  plantain: { portionRu: "пучок 8–10 листьев, ~40 г", findDc: "9", gatherDc: "7", yieldRu: "1к6+1 порций с заросли",
+    props: [{ n: 1, name: "Лечение здоровья", dir: "Зельеварение" }, { n: 2, name: "Остановка кровотечения", dir: "Зельеварение" },
+      { n: 3, name: "Сопротивление типу урона (ядовитый)", dir: "Зельеварение" }] },
+  pollen: { portionRu: "20 г очищенной сухой пыльцы", findDc: "10", gatherDc: "12", yieldRu: "4к20+40 порций с шара",
+    props: [{ n: 1, name: "Ускорение роста растений", dir: "Зельеварение" }, { n: 2, name: "Усиление характеристики (Сила)", dir: "Зельеварение" }] },
+  mushroom: { portionRu: "3 средних тела: ~60 г свежих", findDc: "8", gatherDc: "7", yieldRu: "1к4+2 порций с грибницы",
+    props: [{ n: 1, name: "Противоядие", dir: "Зельеварение" }] },
+  mandrake: { portionRu: "1 зрелый очищенный корень", findDc: "15", gatherDc: "16", yieldRu: "1 порция с растения",
+    props: [{ n: 1, name: "Постоянное усиление случайной характеристики", dir: "Зельеварение / Особое" },
+      { n: 2, name: "Полное восстановление здоровья", dir: "Зельеварение" }] },
+  mail: { portionRu: "не записано", findDc: "—", gatherDc: "—", yieldRu: "не записано", props: [] },
+  hammer: { portionRu: "не записано", findDc: "—", gatherDc: "—", yieldRu: "не записано", props: [] },
+};
+
+/** Цели прибавок: прибавка — это число к названному, а не свободная строка (ItemSheet → StatPicker). */
+const BONUS_GROUPS = [
+  { titleRu: "Числа листа", items: [
+    ["Класс Доспеха", "во что труднее попасть"],
+    ["Сложность спасброска врага", "выше — врагу труднее спастись от вашего заклинания"],
+    ["Попадание заклинанием", "прибавка к броску попадания, урона не трогает"],
+    ["Инициатива", "бросок на порядок хода"],
+    ["Пассивная внимательность", "замечаете без броска"],
+    ["Заклинаний в подготовке", "сколько заклинаний готовите за день"],
+    ["Бонус мастерства", "прибавка там, где есть владение"],
+    ["Скорость", "футов за ход"],
+  ] },
+  { titleRu: "Характеристики", items: [
+    ["Сила", ""], ["Ловкость", ""], ["Телосложение", ""], ["Интеллект", ""], ["Мудрость", ""], ["Харизма", ""],
+  ] },
+  { titleRu: "Спасброски", items: [
+    ["Все спасброски", ""], ["Спасбросок: Сила", ""], ["Спасбросок: Ловкость", ""],
+    ["Спасбросок: Телосложение", ""], ["Спасбросок: Интеллект", ""], ["Спасбросок: Мудрость", ""],
+    ["Спасбросок: Харизма", ""],
+  ] },
+  { titleRu: "Навыки", items: [
+    ["Акробатика", ""], ["Уход за животными", ""], ["Аркана", ""], ["Атлетика", ""], ["Обман", ""],
+    ["История", ""], ["Проницательность", ""], ["Запугивание", ""], ["Анализ", ""], ["Медицина", ""],
+    ["Природа", ""], ["Внимательность", ""], ["Выступление", ""], ["Убеждение", ""], ["Религия", ""],
+    ["Ловкость рук", ""], ["Скрытность", ""], ["Выживание", ""],
+  ] },
+];
+
+const BONUSES = {
+  focus: { "Сложность спасброска врага": 1, "Попадание заклинанием": 1 },
+  robe: { "Класс Доспеха": 1 },
+  ring: { "Класс Доспеха": 1, "Все спасброски": 1 },
+  cloak: { "Класс Доспеха": 1, "Все спасброски": 1 },
+  mail: { "Класс Доспеха": 2 },
+};
+
+const PRICES = {
+  plantain: [{ amount: 5, currency: "зм" }],
+  pollen: [{ amount: 15, currency: "зм" }],
+  mandrake: [{ amount: 13500, currency: "зм" }],
+  mushroom: [{ amount: 1, currency: "зм" }],
+  reagents: [{ amount: 1, currency: "зм" }],
+  ring: [{ amount: 1, currency: "зм" }, { amount: 10, currency: "см" }],
+  mail: [{ amount: 4000, currency: "зм" }],
+};
+
+const UNITS = {
+  "шт": ["шт", "шт", "шт"],
+  "комплект": ["комплект", "комплекта", "комплектов"],
+  "порция": ["порция", "порции", "порций"],
+};
+
+const TRAITS = {
+  wear: { labelRu: "экипировка", color: "#d3ab5f" },
+  spend: { labelRu: "расходник", color: "#6fa9e2" },
+  alch: { labelRu: "ингредиент", color: "#8dc46e" },
+  focus: { labelRu: "фокусировка", color: "#b98de8" },
+};
+
+const ITEM_TRAITS = {
+  focus: ["wear", "focus"], robe: ["wear"], ring: ["wear"], cloak: ["wear"], camo: ["wear"],
+  mail: ["wear", "alch"], hammer: ["wear", "alch"],
+  kit: [], reagents: ["spend"],
+  plantain: ["alch", "spend"], pollen: ["alch", "spend"], mushroom: ["alch", "spend"], mandrake: ["alch", "spend"],
+  rope: [], letter: [],
+};
+
+const BELT_NAMES = {
+  reagents: "расходники",
+  plantain: "подорожник",
+  pollen: "пыльца",
+  mushroom: "болотный гриб",
+};
+
+const FILTERS = [
+  ["all", "Всё"], ["wear", "Экипировка"], ["spend", "Расходники"], ["alch", "Ингредиенты"], ["plain", "Другое"],
+];
+
+function pluralRu(count, forms) {
+  const mod100 = count % 100, mod10 = count % 10;
+  if (mod100 >= 11 && mod100 <= 14) return forms[2];
+  if (mod10 === 1) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4) return forms[1];
+  return forms[2];
+}
+
+class Component extends DCLogic {
+  state = { filter: "all", open: null, counts: {}, worn: {},
+    baseFilter: "all", wanted: {}, bought: {}, undo: null, filtersOpen: false,
+    traits: {}, facts: {}, notes: {}, names: {}, draft: "", noteDraft: "",
+    prices: {}, bonuses: {}, picking: false, pickQuery: "", carried: {}, factList: {}, noteList: {}, editKind: null, editIndex: null, editDraft: "",
+    newOpen: false, newName: "", added: [], query: "", marks: {}, marksOpen: false,
+    moneyOpen: false, purse: { "зм": 7800, "см": 110, "мм": 0 } };
+
+  traitsOf(one) {
+    return this.state.traits[one.id] ?? ITEM_TRAITS[one.id] ?? [];
+  }
+
+  bonusesOf(one) {
+    return this.state.bonuses[one.id] ?? BONUSES[one.id] ?? {};
+  }
+
+  setBonus(one, labelRu, value) {
+    this.setState((prev) => {
+      const now = prev.bonuses[one.id] ?? BONUSES[one.id] ?? {};
+      return { bonuses: { ...prev.bonuses, [one.id]: { ...now, [labelRu]: value } } };
+    });
+  }
+
+  factsOf(one) {
+    return this.state.factList[one.id]
+      ?? [...one.facts.map((fact) => ({ textRu: fact.textRu ?? (fact.valueRu + " " + fact.labelRu) })),
+        ...(this.state.facts[one.id] ?? [])];
+  }
+
+  notesOf(one) {
+    return this.state.noteList[one.id] ?? [...one.notes, ...(this.state.notes[one.id] ?? [])];
+  }
+
+  /** Правка записи на месте: список материализуется в состояние, дальше правится по индексу. */
+  editRow(kind, card, index) {
+    const list = kind === "fact" ? this.factsOf(card) : this.notesOf(card);
+    this.setState((prev) => ({
+      ...(kind === "fact"
+        ? { factList: { ...prev.factList, [card.id]: list } }
+        : { noteList: { ...prev.noteList, [card.id]: list } }),
+      editKind: kind, editIndex: index, editDraft: list[index].textRu,
+    }));
+  }
+
+  saveRow(kind, card) {
+    const textRu = this.state.editDraft.trim();
+    const index = this.state.editIndex;
+    this.setState((prev) => {
+      const key = kind === "fact" ? "factList" : "noteList";
+      const list = [...(prev[key][card.id] ?? [])];
+      if (textRu === "") list.splice(index, 1);
+      else list[index] = { ...list[index], textRu };
+      return { [key]: { ...prev[key], [card.id]: list }, editKind: null, editIndex: null, editDraft: "" };
+    });
+  }
+
+  dropRow(kind, card) {
+    const index = this.state.editIndex;
+    this.setState((prev) => {
+      const key = kind === "fact" ? "factList" : "noteList";
+      const list = [...(prev[key][card.id] ?? [])];
+      list.splice(index, 1);
+      return { [key]: { ...prev[key], [card.id]: list }, editKind: null, editIndex: null, editDraft: "" };
+    });
+  }
+
+  bagOf(one) {
+    return this.state.counts[one.id] ?? one.bag;
+  }
+
+  wornOf(one) {
+    return this.state.worn[one.id] ?? one.worn;
+  }
+
+  rowOf(one) {
+    const bag = this.bagOf(one);
+    const worn = Math.min(this.wornOf(one), bag);
+    const traits = this.traitsOf(one);
+    const open = this.state.open === one.id;
+    const noteRu = this.notesOf(one).map((note) => note.textRu).join(" · ");
+    const bonusRu = Object.entries(this.bonusesOf(one)).filter(([, value]) => value !== 0)
+      .map(([labelRu, value]) => (value > 0 ? "+" : "−") + Math.abs(value) + " " + labelRu).join(" · ");
+    const factRu = bonusRu;
+    const setWorn = (next) => this.setState((prev) => ({
+      worn: { ...prev.worn, [one.id]: Math.max(Math.min(next, prev.counts[one.id] ?? one.bag), 0) },
+    }));
+    return {
+      name: this.state.names[one.id] ?? one.name,
+      leadRu: factRu,
+      hasSurface: factRu !== "",
+      traits: traits.map((id) => ({ labelRu: TRAITS[id].labelRu, color: TRAITS[id].color })),
+      traitLineRu: traits.map((id) => TRAITS[id].labelRu).join(" · "),
+      hasTraits: traits.length > 0,
+      alch: traits.includes("alch"),
+      canWear: traits.includes("wear"),
+      countRu: String(bag),
+      unitRu: pluralRu(bag, UNITS[one.unit] ?? UNITS["шт"]),
+      countColor: bag === 0 ? "#5c5347" : INK,
+      nameColor: bag === 0 ? QUIET : INK,
+      wornRu: worn === 0 || !traits.includes("wear") ? "" : "надето " + worn + " из " + bag,
+      hasWorn: worn > 0 && traits.includes("wear"),
+      wornCountRu: String(worn),
+      open,
+      bg: open ? GROUP : "transparent",
+      edge: open ? ACCENT : "transparent",
+      toggle: () => this.setState((prev) => ({ open: prev.open === one.id ? null : one.id })),
+      hasNote: noteRu !== "",
+      noteRu,
+      less: () => this.setState((prev) => {
+        const next = Math.max((prev.counts[one.id] ?? one.bag) - 1, 0);
+        return {
+          counts: { ...prev.counts, [one.id]: next },
+          worn: { ...prev.worn, [one.id]: Math.min(prev.worn[one.id] ?? one.worn, next) },
+          undo: { id: one.id, nameRu: one.name },
+        };
+      }),
+      more: () => this.setState((prev) => ({
+        counts: { ...prev.counts, [one.id]: (prev.counts[one.id] ?? one.bag) + 1 },
+      })),
+      wearMore: () => setWorn(worn + 1),
+      wearLess: () => setWorn(worn - 1),
+      wearMoreOff: worn >= bag,
+      wearLessOff: worn <= 0,
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+
+    const filters = FILTERS.map(([id, labelRu]) => ({
+      labelRu,
+      pick: () => this.setState({ filter: id }),
+      bg: id === s.filter ? ACCENT : "transparent",
+      fg: id === s.filter ? "#15120e" : QUIET,
+      border: id === s.filter ? ACCENT : RULE,
+    }));
+
+    const asked = (s.query ?? "").trim().toLowerCase();
+    const wanted = Object.keys(s.marks ?? {}).filter((id) => s.marks[id] === "in");
+    const barred = Object.keys(s.marks ?? {}).filter((id) => s.marks[id] === "out");
+    const passes = (one) => {
+      const traits = this.traitsOf(one);
+      const name = (s.names[one.id] ?? one.name).toLowerCase();
+      if (asked !== "" && !name.includes(asked)) return false;
+      if (barred.some((id) => traits.includes(id))) return false;
+      if (wanted.length > 0 && !wanted.every((id) => traits.includes(id))) return false;
+      return true;
+    };
+
+    const card = [...ITEMS].find((one) => one.id === s.open) ?? ITEMS.find((one) => one.id === "mail");
+    const bought = Object.keys(s.bought).filter((name) => s.bought[name] === true);
+    const boughtItems = bought.map((name) => ({
+      id: "bought-" + name, name, kind: "other", worn: 0, bag: 1, facts: [],
+      notes: [{ id: "n1", textRu: "куплено по списку покупок" }],
+    }));
+    const inBag = [...ITEMS, ...(s.added ?? []), ...boughtItems];
+    const shown = inBag.filter(passes);
+    const bagRows = shown.map((one) => this.rowOf(one));
+
+
+
+    const base = [
+      { name: "Зелье лечения, среднее", state: "at", whereRu: "лавка в Гнилом Броде", price: 150, wanted: true },
+      { name: "Мифриловая кольчуга", state: "absent", whereRu: "видели у дварфа-торговца", price: 4000, wanted: true },
+      { name: "Клетка для фамильяра", state: "absent", whereRu: "обещал кузнец в Гнилом Броде", price: null, wanted: false },
+      { name: "Оснащённый лабораторный модуль", state: "absent", whereRu: "алхимик в столице · за направление", price: 4000, wanted: true },
+      { name: "Кузнечный Молот Гормонголь", state: "at", whereRu: "найден в шахте · мифриловый, растущий", price: null, wanted: false },
+      { name: "Письмо от Зинаиды", state: "at", whereRu: "не прочитано", price: null, wanted: false },
+      { name: "Противоядие, готовое", state: "absent", whereRu: "было и кончилось после болота · алхимик в столице", price: 50, wanted: true },
+    ].map((one, index) => {
+      const wanted = s.wanted[one.name] ?? one.wanted;
+      const shownState = s.baseFilter === "all" || (s.baseFilter === "at" && one.state === "at")
+        || (s.baseFilter === "want" && wanted);
+      return {
+        ...one, index, wanted, shownState,
+        stateRu: one.state === "at" ? "при себе" : "нет при себе",
+        stateColor: one.state === "at" ? "#8dc46e" : QUIET,
+        edge: one.state === "at" ? "rgba(141,196,110,.5)" : "transparent",
+        nameColor: one.state === "at" ? INK : "#b4a78e",
+        wantRu: wanted ? "в покупках" : "в покупки",
+        wantColor: wanted ? ACCENT : QUIET,
+        toggleWanted: () => this.setState((prev) => ({ wanted: { ...prev.wanted, [one.name]: !(prev.wanted[one.name] ?? one.wanted) } })),
+        open: () => this.setState({ open: (ITEMS.find((item) => item.name === one.name) ?? {}).id ?? null }),
+      };
+    });
+    const baseShown = base.filter((one) => one.shownState);
+
+    const buyList = [
+      ...base.filter((one) => one.wanted),
+      ...inBag.filter((one) => s.wanted[one.name] === true && !base.some((b) => b.name === one.name))
+        .map((one) => {
+          const own = s.prices[one.id] ?? Object.fromEntries((PRICES[one.id] ?? []).map((p) => [p.currency, p.amount]));
+          const gold = own["зм"] ?? null;
+          return {
+            name: one.name,
+            whereRu: gold === null ? "отмечено из рюкзака · цену ещё не назвали" : "отмечено из рюкзака",
+            price: gold,
+          };
+        }),
+    ];
+    const buyLeft = buyList.filter((one) => s.bought[one.name] !== true);
+    const buySum = buyLeft.reduce((sum, one) => sum + (one.price ?? 0), 0);
+    const buyNoPrice = buyLeft.filter((one) => one.price === null).length;
+    const purseGold = (s.purse ?? {})["зм"] ?? 0;
+
+    const baseFilters = [
+      ["all", "Всё", base.length],
+      ["at", "При себе", base.filter((one) => one.state === "at").length],
+      ["want", "Купить", buyList.length],
+    ].map(([id, labelRu, tally]) => ({
+      labelRu,
+      tallyRu: String(tally),
+      pick: () => this.setState({ baseFilter: id }),
+      bg: id === s.baseFilter ? GROUP : "transparent",
+      fg: id === s.baseFilter ? ACCENT : INK,
+      border: id === s.baseFilter ? ACCENT : RULE,
+    }));
+
+    return {
+      bagRows,
+      moneyOpen: s.moneyOpen === true,
+      moneyBg: s.moneyOpen === true ? GROUP : "transparent",
+      toggleMoney: () => this.setState((prev) => ({ moneyOpen: prev.moneyOpen !== true })),
+      moneyLineRu: (() => {
+        const purse = s.purse ?? { "зм": 7800, "см": 110, "мм": 0 };
+        return ["зм", "см", "мм"].filter((c) => (purse[c] ?? 0) !== 0)
+          .map((c) => (purse[c] ?? 0).toLocaleString("ru-RU").replace(/\u00a0/g, " ") + " " + c).join(" · ");
+      })(),
+      moneyCoins: ["зм", "см", "мм"].map((labelRu) => {
+        const purse = s.purse ?? { "зм": 7800, "см": 110, "мм": 0 };
+        return {
+          labelRu,
+          valueRu: String(purse[labelRu] ?? 0),
+          onChange: (event) => this.setState((prev) => {
+            const now = prev.purse ?? { "зм": 7800, "см": 110, "мм": 0 };
+            const amount = Number.parseInt(event.target.value, 10);
+            return { purse: { ...now, [labelRu]: Number.isFinite(amount) ? amount : 0 } };
+          }),
+        };
+      }),
+      query: s.query ?? "",
+      onQuery: (event) => this.setState({ query: event.target.value }),
+      clearQuery: () => this.setState({ query: "" }),
+      marksOpen: s.marksOpen === true,
+      toggleMarks: () => this.setState((prev) => ({ marksOpen: prev.marksOpen !== true })),
+      marksLabelRu: (() => {
+        const on = Object.keys(s.marks ?? {}).filter((id) => s.marks[id] !== undefined).length;
+        return on === 0 ? "признаки" : "признаки: " + on;
+      })(),
+      marksColor: Object.keys(s.marks ?? {}).some((id) => s.marks[id] !== undefined) ? ACCENT : QUIET,
+      markChips: ["wear", "spend", "alch", "focus"].map((id) => {
+        const state = (s.marks ?? {})[id];
+        return {
+          labelRu: state === "out" ? "кроме: " + TRAITS[id].labelRu : TRAITS[id].labelRu,
+          bg: state === "in" ? GROUP : "transparent",
+          border: state === "in" ? TRAITS[id].color : state === "out" ? "#e4707f" : RULE,
+          fg: state === "in" ? TRAITS[id].color : state === "out" ? "#e79079" : QUIET,
+          cycle: () => this.setState((prev) => {
+            const now = (prev.marks ?? {})[id];
+            const next = now === undefined ? "in" : now === "in" ? "out" : undefined;
+            return { marks: { ...(prev.marks ?? {}), [id]: next } };
+          }),
+        };
+      }),
+      shownTallyRu: shown.length + " из " + inBag.length,
+      hasUndo: s.undo !== null,
+      undoRu: s.undo === null ? "" : "Списано: " + s.undo.nameRu,
+      undo: () => this.setState((prev) => {
+        if (prev.undo === null) return {};
+        const id = prev.undo.id;
+        const base = ITEMS.find((one) => one.id === id);
+        return { counts: { ...prev.counts, [id]: (prev.counts[id] ?? base.bag) + 1 }, undo: null };
+      }),
+      buyRows: buyList.map((one) => ({
+        name: one.name,
+        whereRu: one.whereRu,
+        priceRu: one.price === null ? "цена не записана" : one.price.toLocaleString("ru-RU").replace(/\u00a0/g, " ") + " зм",
+        done: s.bought[one.name] === true,
+        nameColor: s.bought[one.name] === true ? "#5c5347" : INK,
+        markRu: s.bought[one.name] === true ? "✓" : "",
+        markColor: s.bought[one.name] === true ? "#8dc46e" : QUIET,
+        toggle: () => this.setState((prev) => ({ bought: { ...prev.bought, [one.name]: !(prev.bought[one.name] === true) } })),
+      })),
+      buyTotalRu: buySum.toLocaleString("ru-RU").replace(/\u00a0/g, " ") + " зм",
+      buyPurseRu: "в кошельке " + purseGold.toLocaleString("ru-RU").replace(/\u00a0/g, " ") + " зм",
+      buyRestRu: buySum > purseGold
+        ? "не хватает " + (buySum - purseGold).toLocaleString("ru-RU").replace(/\u00a0/g, " ") + " зм"
+        : "останется " + (purseGold - buySum).toLocaleString("ru-RU").replace(/\u00a0/g, " ") + " зм",
+      buyRestColor: buySum > purseGold ? "#e79079" : QUIET,
+      buyNoPriceRu: buyNoPrice === 0 ? "все цены записаны"
+        : buyNoPrice + " " + pluralRu(buyNoPrice, ["запись", "записи", "записей"]) + " без цены",
+      newOpen: s.newOpen === true,
+      newClosed: s.newOpen !== true,
+      newName: s.newName ?? "",
+      onNewName: (event) => this.setState({ newName: event.target.value }),
+      openNew: () => this.setState({ newOpen: true, newName: "" }),
+      cancelNew: () => this.setState({ newOpen: false, newName: "" }),
+      saveNew: () => {
+        const nameRu = (s.newName ?? "").trim();
+        if (nameRu === "") return;
+        this.setState((prev) => ({
+          added: [...(prev.added ?? []), { id: "new-" + (prev.added ?? []).length, name: nameRu, unit: "шт", worn: 0, bag: 1, facts: [], notes: [] }],
+          newOpen: false, newName: "",
+        }));
+      },
+      baseTallyRu: base.length + " " + pluralRu(base.length, ["запись", "записи", "записей"]),
+      baseRows: baseShown, baseFilters,
+      cardName: s.names[card.id] ?? card.name,
+      onCardName: (event) => this.setState((prev) => ({ names: { ...prev.names, [card.id]: event.target.value } })),
+      cardTraitLineRu: this.traitsOf(card).length === 0 ? "просто вещь" : this.traitsOf(card).map((id) => TRAITS[id].labelRu).join(" · "),
+      cardTraitPicks: [...["wear", "spend", "alch", "focus"].map((id) => {
+        const on = this.traitsOf(card).includes(id);
+        return {
+          labelRu: TRAITS[id].labelRu,
+          bg: on ? GROUP : "transparent",
+          border: on ? TRAITS[id].color : RULE,
+          fg: on ? TRAITS[id].color : QUIET,
+          toggle: () => this.setState((prev) => {
+            const now = prev.traits[card.id] ?? ITEM_TRAITS[card.id] ?? [];
+            const next = now.includes(id) ? now.filter((x) => x !== id) : [...now, id];
+            const dropWorn = id === "wear" && now.includes(id);
+            return {
+              traits: { ...prev.traits, [card.id]: next },
+              ...(dropWorn ? { worn: { ...prev.worn, [card.id]: 0 } } : {}),
+            };
+          }),
+        };
+      }), {
+        labelRu: "хочу купить",
+        bg: s.wanted[card.name] === true ? GROUP : "transparent",
+        border: s.wanted[card.name] === true ? ACCENT : RULE,
+        fg: s.wanted[card.name] === true ? ACCENT : QUIET,
+        toggle: () => this.setState((prev) => ({ wanted: { ...prev.wanted, [card.name]: !(prev.wanted[card.name] === true) } })),
+      }],
+      cardCountRu: String(this.bagOf(card)),
+      cardMore: this.rowOf(card).more,
+      cardLess: this.rowOf(card).less,
+      cardCanWear: this.traitsOf(card).includes("wear"),
+      cardWornRu: String(Math.min(this.wornOf(card), this.bagOf(card))),
+      cardWearMore: this.rowOf(card).wearMore,
+      cardWearLess: this.rowOf(card).wearLess,
+      cardWearMoreOff: Math.min(this.wornOf(card), this.bagOf(card)) >= this.bagOf(card),
+      cardWearLessOff: Math.min(this.wornOf(card), this.bagOf(card)) <= 0,
+      cardBonuses: Object.entries(this.bonusesOf(card)).filter(([, value]) => value !== 0).map(([labelRu, value]) => ({
+        labelRu,
+        valueRu: (value > 0 ? "+" : "−") + Math.abs(value),
+        less: () => this.setBonus(card, labelRu, value - 1),
+        more: () => this.setBonus(card, labelRu, value + 1),
+      })),
+      cardHasBonuses: Object.values(this.bonusesOf(card)).some((value) => value !== 0),
+      cardPicking: s.picking === true,
+      cardNotPicking: s.picking !== true,
+      cardPick: () => this.setState({ picking: true }),
+      pickQuery: s.pickQuery ?? "",
+      onPickQuery: (event) => this.setState({ pickQuery: event.target.value }),
+      pickCancel: () => this.setState({ picking: false, pickQuery: "" }),
+      cardTargetGroups: BONUS_GROUPS.map((group) => ({
+        titleRu: group.titleRu,
+        items: group.items
+          .filter(([labelRu]) => (this.bonusesOf(card)[labelRu] ?? 0) === 0)
+          .filter(([labelRu]) => (s.pickQuery ?? "") === "" || labelRu.toLowerCase().includes((s.pickQuery ?? "").toLowerCase()))
+          .map(([labelRu, hintRu]) => ({
+            labelRu,
+            hintRu,
+            hasHint: hintRu !== "",
+            pick: () => { this.setBonus(card, labelRu, 1); this.setState({ picking: false, pickQuery: "" }); },
+          })),
+      })).filter((group) => group.items.length > 0),
+      cardWornWorks: () => this.setState((prev) => ({ carried: { ...prev.carried, [card.id]: false } })),
+      cardCarriedWorks: () => this.setState((prev) => ({ carried: { ...prev.carried, [card.id]: true } })),
+      cardWornWorksBg: s.carried[card.id] === true ? "transparent" : GROUP,
+      cardWornWorksBorder: s.carried[card.id] === true ? RULE : ACCENT,
+      cardWornWorksFg: s.carried[card.id] === true ? QUIET : ACCENT,
+      cardCarriedBg: s.carried[card.id] === true ? GROUP : "transparent",
+      cardCarriedBorder: s.carried[card.id] === true ? ACCENT : RULE,
+      cardCarriedFg: s.carried[card.id] === true ? ACCENT : QUIET,
+      cardNotes: this.notesOf(card).map((note, index) => ({
+        textRu: note.textRu,
+        editing: s.editKind === "note" && s.editIndex === index,
+        quiet: !(s.editKind === "note" && s.editIndex === index),
+        edit: () => this.editRow("note", card, index),
+      })),
+      editDraft: s.editDraft,
+      onEditDraft: (event) => this.setState({ editDraft: event.target.value }),
+      saveNote: () => this.saveRow("note", card),
+      dropNote: () => this.dropRow("note", card),
+      cardNoteDraft: s.noteDraft,
+      onCardNoteDraft: (event) => this.setState({ noteDraft: event.target.value }),
+      cardAddNote: () => {
+        const textRu = s.noteDraft.trim();
+        if (textRu === "") return;
+        const list = this.notesOf(card);
+        this.setState((prev) => ({ noteList: { ...prev.noteList, [card.id]: [...list, { id: "n" + list.length, textRu }] }, noteDraft: "" }));
+      },
+      cardAlch: this.traitsOf(card).includes("alch"),
+      cardSlots: (ALCHEMY[card.id] ?? { props: [] }).props.map((known) => ({
+        nRu: known.n + "-е",
+        name: known.name,
+        dirRu: known.dir,
+        color: INK,
+        bar: "#8dc46e",
+        bg: GROUP,
+      })),
+      cardAlchRows: (() => {
+        const alch = ALCHEMY[card.id] ?? {};
+        return [
+          { labelRu: "Что такое порция", valueRu: alch.portionRu },
+          { labelRu: "СЛ найти", valueRu: alch.findDc },
+          { labelRu: "СЛ собрать", valueRu: alch.gatherDc },
+          { labelRu: "Сбор даёт", valueRu: alch.yieldRu },
+        ].filter((row) => row.valueRu !== undefined && row.valueRu !== "не записано" && row.valueRu !== "—");
+      })(),
+      cardAlchFilled: (() => {
+        const alch = ALCHEMY[card.id] ?? { props: [] };
+        const rows = [alch.portionRu, alch.findDc, alch.gatherDc, alch.yieldRu]
+          .filter((value) => value !== undefined && value !== "не записано" && value !== "—");
+        return (alch.props ?? []).length > 0 || rows.length > 0;
+      })(),
+      cardCoins: ["зм", "см", "мм"].map((labelRu) => {
+        const own = s.prices[card.id] ?? Object.fromEntries((PRICES[card.id] ?? []).map((one) => [one.currency, one.amount]));
+        return {
+          labelRu,
+          valueRu: own[labelRu] === undefined ? "" : String(own[labelRu]),
+          onChange: (event) => this.setState((prev) => {
+            const now = prev.prices[card.id] ?? Object.fromEntries((PRICES[card.id] ?? []).map((one) => [one.currency, one.amount]));
+            const amount = Number.parseInt(event.target.value, 10);
+            return { prices: { ...prev.prices, [card.id]: { ...now, [labelRu]: Number.isFinite(amount) ? amount : undefined } } };
+          }),
+        };
+      }),
+      cardDropOff: this.bagOf(card) > 0 || this.wornOf(card) > 0,
+      cardDropBorder: this.bagOf(card) > 0 || this.wornOf(card) > 0 ? RULE_SOFT : "rgba(231,144,121,.5)",
+      cardDropColor: this.bagOf(card) > 0 || this.wornOf(card) > 0 ? "#5c5347" : "#e79079",
+      cardDropHintRu: this.bagOf(card) > 0 || this.wornOf(card) > 0
+        ? "Убрать можно, когда от вещи не осталось ни следа: сперва потратьте запас и снимите надетое."
+        : "От вещи ничего не осталось — запись можно убрать.",
+      cardWantRu: s.wanted[card.name] === true ? "В покупках — убрать" : "В покупки",
+      cardWantColor: s.wanted[card.name] === true ? ACCENT : QUIET,
+      cardWantBorder: s.wanted[card.name] === true ? ACCENT : RULE,
+      cardToggleWanted: () => this.setState((prev) => ({ wanted: { ...prev.wanted, [card.name]: !(prev.wanted[card.name] === true) } })),
+    };
+  }
+}
+</script>
+</body>
+</html>

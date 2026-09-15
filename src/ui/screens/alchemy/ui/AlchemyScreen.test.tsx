@@ -58,6 +58,7 @@ describe("«Алхимия»: книга", () => {
     expect(press(/Ингредиенты/).textContent).toContain("2 вида записано");
     expect(press(/Рецепты/).textContent).toContain("0 записей");
     expect(press(/Правила стола/).textContent).toContain("3 главы");
+    expect(press(/Эффекты/).textContent).toContain("225 названий");
   });
 
   it("список видов идёт по буквам, и изученность видна у каждой строки", async () => {
@@ -70,7 +71,10 @@ describe("«Алхимия»: книга", () => {
     await openSection(user, "Ингредиенты");
 
     expect(screen.getByRole("heading", { name: "Л" })).toBeDefined();
-    expect(within(press(new RegExp(MOON_HERB))).getByLabelText("Раскрыто свойств: 2")).toBeDefined();
+    /* Знаки изученности говорят и словами: цветом одним смысл не передаётся. */
+    expect(
+      within(press(new RegExp(MOON_HERB))).getByLabelText(/Раскрыто свойств: 2 — /),
+    ).toBeDefined();
   });
 
   it("страница вида называет слоты свойств и цену очередного раскрытия", async () => {
@@ -119,12 +123,15 @@ describe("«Алхимия»: книга", () => {
     await user.click(await screen.findByRole("button", { name: /Раскрыть 1-е свойство/ }));
 
     await user.click(press("Зельеварение"));
+    await user.click(press("Редкое"));
     await user.type(screen.getByRole("textbox", { name: "Свойство" }), "Лечение здоровья");
     await user.click(press("Записать"));
 
     expect(
       shown(stores).crafting.ingredients.find((kind) => kind.nameRu === MOON_HERB)?.properties,
-    ).toEqual([{ number: 1, nameRu: "Лечение здоровья", dirRu: "Зельеварение" }]);
+    ).toEqual([
+      { number: 1, nameRu: "Лечение здоровья", dirRu: "Зельеварение", rarityRu: "Редкое" },
+    ]);
   });
 
   it("раскрытое убирают с той же страницы", async () => {
@@ -278,5 +285,49 @@ describe("«Алхимия»: верстак", () => {
       "Лечение здоровья",
     ]);
     expect(await screen.findByText(/нужен набор на сложность 10/)).toBeDefined();
+  });
+
+  it("перечень эффектов читается направлениями и ничего не подставляет", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<AlchemyScreen />, blank());
+
+    await openSection(user, "Эффекты");
+
+    expect(screen.getByRole("heading", { name: "Зельеварение" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Синтез ядов" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Трансмутация" })).toBeDefined();
+    expect(screen.getByText("Хаотическая мутация материи")).toBeDefined();
+  });
+
+  it("свойство одного источника берут основным, и работа идёт с предупреждением", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(
+      <AlchemyScreen />,
+      [
+        { nameRu: MOON_HERB, propertyRu: "Лечение здоровья" },
+        { nameRu: CRIMSON_ROOT, propertyRu: "Взрыв" },
+      ].reduce(
+        (character, one) =>
+          withIngredientKnowledge(character, one.nameRu, [{ number: 1, nameRu: one.propertyRu }]),
+        blank(),
+      ),
+    );
+    for (const nameRu of [MOON_HERB, CRIMSON_ROOT]) await stocked(stores, nameRu, 4);
+
+    await openBench(user);
+    for (const nameRu of [MOON_HERB, CRIMSON_ROOT]) await user.click(press(`${nameRu}: +`));
+
+    /* Справочник такого совпадения не даёт — но гасить кнопку за мастера приложение не вправе. */
+    expect(await screen.findByText(/Совпавших свойств нет/)).toBeDefined();
+    const offered = screen
+      .getAllByRole("button", { name: "Сделать основным" })
+      .find((button) => button.closest("li")?.textContent?.includes("Лечение здоровья"));
+    await user.click(offered!);
+
+    expect(await screen.findByText(/раскрыто только у одного вида/)).toBeDefined();
+
+    await user.click(press(/Заложить партию/));
+
+    expect(shown(stores).log.some((entry) => entry.summaryRu.startsWith("Заложено"))).toBe(true);
   });
 });

@@ -1,9 +1,10 @@
 import type { AlchemyHandbookView } from "@/contract/views";
 
 import { CURRENCY_ABBREVIATIONS, MISHAP_DIE_RU, signed, withPlural } from "@/shared/language";
-import { TIER_LABELS, minutesRu, portionsRu } from "@/ui/entities/crafting/lib/labels";
+import { TIER_LABELS, minutesRu, portionsRu, rarityTone } from "@/ui/entities/crafting/lib/labels";
 import { labelled, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
-import { RULE_BETWEEN, RULE_BLOCK, RULE_SECTION } from "@/ui/shared/ui/rule";
+import { RULE_BETWEEN, RULE_BLOCK, RULE_ROW, RULE_SECTION } from "@/ui/shared/ui/rule";
+import { TONE_TEXT } from "@/ui/shared/ui/tone";
 
 const STATIONARY_RU = "стационарный";
 
@@ -45,9 +46,14 @@ function Chapter({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className={`pb-1.5 text-base font-semibold text-accent ${RULE_SECTION}`}>{titleRu}</h2>
-      <p className="text-[0.71875rem] leading-snug text-ink-quiet">{leadRu}</p>
+    <section className="flex flex-col gap-5">
+      {/* Заголовок и подзаголовок держатся вместе, а от таблиц их отделяет целый шаг. */}
+      <div className="flex flex-col gap-2">
+        <h2 className={`pb-2 text-[1.0625rem] font-semibold text-accent ${RULE_SECTION}`}>
+          {titleRu}
+        </h2>
+        <p className="text-xs leading-snug text-ink-quiet">{leadRu}</p>
+      </div>
       {children}
     </section>
   );
@@ -55,7 +61,7 @@ function Chapter({
 
 function Block({ labelRu, children }: { labelRu: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2.5">
       <span className="text-[0.625rem] tracking-[0.14em] text-ink-soft">{labelRu}</span>
       {children}
     </div>
@@ -74,7 +80,7 @@ function Table({
   rows: readonly Row[];
 }) {
   return (
-    <table className="w-full text-xs">
+    <table className="w-full">
       <caption className="sr-only">{nameRu}</caption>
       <thead>
         <tr>
@@ -82,9 +88,9 @@ function Table({
             <th
               key={title}
               scope="col"
-              className={`pb-1 font-normal text-ink-quiet ${
-                column === 0 ? "pr-2 text-left" : "pl-2 text-right"
-              }`}
+              className={`pb-2 text-[0.6875rem] font-normal leading-tight text-ink-quiet ${
+                RULE_ROW
+              } ${column === 0 ? "pr-3 text-left" : "pl-3 text-right"}`}
             >
               {title}
             </th>
@@ -97,8 +103,10 @@ function Table({
             {row.cells.map((cell, column) => (
               <td
                 key={headRu[column]}
-                className={`py-1.5 align-baseline ${
-                  column === 0 ? "pr-2 text-left" : "pl-2 text-right tabular-nums"
+                className={`py-2.5 align-baseline ${
+                  column === 0
+                    ? "pr-3 text-left text-[0.84375rem]"
+                    : "pl-3 text-right text-[0.9375rem] font-medium tabular-nums"
                 }`}
               >
                 {cell}
@@ -113,15 +121,28 @@ function Table({
 
 function Note({ children }: { children: React.ReactNode }) {
   return (
-    <p className={`py-0.5 pl-2 text-[0.71875rem] leading-snug text-ink-soft ${RULE_BLOCK}`}>
+    <p className={`mt-1 py-1 pl-2.5 text-xs leading-relaxed text-ink-soft ${RULE_BLOCK}`}>
       {children}
     </p>
   );
 }
 
+/** Редкость читается цветом и в справочнике: тот же цвет, что у слота свойства и кнопки выбора. */
+function Rarity({ nameRu }: { nameRu: string }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span
+        aria-hidden="true"
+        className={`h-3.5 w-1 shrink-0 ${TONE_TEXT[rarityTone(nameRu)]} bg-current`}
+      />
+      <span className="min-w-0">{nameRu}</span>
+    </span>
+  );
+}
+
 function Name({ nameRu, noteRu }: { nameRu: string; noteRu: string | null }) {
   return (
-    <span className="flex flex-col">
+    <span className="flex flex-col gap-0.5">
       <span className="leading-tight">{nameRu}</span>
       {noteRu === null ? null : (
         <span className="text-[0.6875rem] leading-tight text-ink-quiet">{noteRu}</span>
@@ -165,7 +186,7 @@ export function AlchemyHandbook({
   const { tariffs } = handbook;
 
   return (
-    <div className="flex flex-col gap-6 p-3">
+    <div className="flex flex-col gap-8 p-3">
       <Chapter titleRu={HANDBOOK_CHAPTERS[0].titleRu} leadRu={HANDBOOK_CHAPTERS[0].leadRu}>
         <Block labelRu="ГЛУБИНА ИССЛЕДОВАНИЯ">
           <Table
@@ -194,7 +215,7 @@ export function AlchemyHandbook({
             headRu={["Редкость свойства", "К Сл"]}
             rows={handbook.rarities.map((rarity) => ({
               key: rarity.nameRu,
-              cells: [rarity.nameRu, signed(rarity.research)],
+              cells: [<Rarity key={rarity.nameRu} nameRu={rarity.nameRu} />, signed(rarity.research)],
             }))}
           />
           <Note>
@@ -217,7 +238,7 @@ export function AlchemyHandbook({
             rows={handbook.rarities.map((rarity) => ({
               key: rarity.nameRu,
               cells: [
-                rarity.nameRu,
+                <Rarity key={rarity.nameRu} nameRu={rarity.nameRu} />,
                 signed(rarity.main),
                 signed(rarity.additional),
                 signed(rarity.suppression),
@@ -246,7 +267,7 @@ export function AlchemyHandbook({
         </Block>
 
         <Block labelRu="СЧЁТ СЛОЖНОСТИ">
-          <dl className="flex flex-col gap-1 text-xs">
+          <dl className={`flex flex-col ${RULE_BETWEEN}`}>
             {[
               { labelRu: "Начальная сложность", value: String(tariffs.base) },
               { labelRu: "Ниже не опускается", value: String(tariffs.lowest) },
@@ -266,9 +287,11 @@ export function AlchemyHandbook({
                 value: `на ${portionsRu(tariffs.portionsPerConsumableKit)}`,
               },
             ].map((row) => (
-              <div key={row.labelRu} className="flex items-baseline justify-between gap-2">
-                <dt className="min-w-0 text-ink-quiet">{row.labelRu}</dt>
-                <dd className="shrink-0 tabular-nums">{row.value}</dd>
+              <div key={row.labelRu} className="flex items-baseline justify-between gap-3 py-2.5">
+                <dt className="min-w-0 text-[0.84375rem] leading-snug text-ink-quiet">
+                  {row.labelRu}
+                </dt>
+                <dd className="shrink-0 text-[0.9375rem] font-medium tabular-nums">{row.value}</dd>
               </div>
             ))}
           </dl>

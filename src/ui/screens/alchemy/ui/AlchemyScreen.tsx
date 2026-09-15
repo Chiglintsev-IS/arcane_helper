@@ -13,6 +13,7 @@ import { AlchemyHandbook, HANDBOOK_CHAPTERS } from "@/ui/widgets/alchemy-handboo
 import { BookSections } from "@/ui/widgets/alchemy-book/ui/BookSections";
 import { KindList, kindGroups } from "@/ui/widgets/alchemy-book/ui/KindList";
 import { KindPage, type KindFieldWritten } from "@/ui/widgets/alchemy-book/ui/KindPage";
+import { EffectList } from "@/ui/widgets/alchemy-book/ui/EffectList";
 import { RecipeList } from "@/ui/widgets/alchemy-book/ui/RecipeList";
 import { RecipeBench } from "@/ui/widgets/recipe-bench/ui/RecipeBench";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
@@ -50,6 +51,12 @@ const SECTIONS = [
     titleRu: "Правила стола",
     leadRu: "раскрытие свойств · варка · оснащение",
   },
+  {
+    id: "effects",
+    glyph: "✷",
+    titleRu: "Эффекты",
+    leadRu: "перечень справочника по направлениям",
+  },
 ] as const;
 
 type Page = "sections" | (typeof SECTIONS)[number]["id"] | "kind" | "reveal";
@@ -75,6 +82,7 @@ const SEPARATOR = " · ";
 const KIND_FORMS: [string, string, string] = ["вид записан", "вида записано", "видов записано"];
 const RECORD_FORMS: [string, string, string] = ["запись", "записи", "записей"];
 const CHAPTER_FORMS: [string, string, string] = ["глава", "главы", "глав"];
+const EFFECT_FORMS: [string, string, string] = ["название", "названия", "названий"];
 
 const NOT_A_NUMBER = "Сложность и цена называются числом";
 
@@ -158,7 +166,12 @@ export function AlchemyScreen() {
         ? withPlural(crafting.ingredients.length, KIND_FORMS)
         : section.id === "recipes"
           ? withPlural(crafting.recipes.length, RECORD_FORMS)
-          : withPlural(HANDBOOK_CHAPTERS.length, CHAPTER_FORMS),
+          : section.id === "effects"
+            ? withPlural(
+                crafting.handbook.effects.reduce((sum, one) => sum + one.namesRu.length, 0),
+                EFFECT_FORMS,
+              )
+            : withPlural(HANDBOOK_CHAPTERS.length, CHAPTER_FORMS),
   }));
 
   const sectionOf = (id: Page): (typeof sections)[number] =>
@@ -286,7 +299,17 @@ export function AlchemyScreen() {
         ) : page === "sections" ? (
           <BookSections
             sections={sections}
-            onOpen={(id) => setPage(id === "kinds" ? "kinds" : id === "recipes" ? "recipes" : "rules")}
+            onOpen={(id) =>
+              setPage(
+                id === "kinds"
+                  ? "kinds"
+                  : id === "recipes"
+                    ? "recipes"
+                    : id === "effects"
+                      ? "effects"
+                      : "rules",
+              )
+            }
           />
         ) : page === "kinds" ? (
           <KindList
@@ -302,6 +325,7 @@ export function AlchemyScreen() {
             key={opened.itemId}
             ingredient={opened}
             directions={choices.alchemyDirections}
+            rarities={crafting.handbook.rarities.map((rarity) => rarity.nameRu)}
             onSend={send}
           />
         ) : page === "kind" && opened !== undefined && opened !== null ? (
@@ -321,6 +345,8 @@ export function AlchemyScreen() {
               setMode("bench");
             }}
           />
+        ) : page === "effects" ? (
+          <EffectList effects={crafting.handbook.effects} />
         ) : (
           <AlchemyHandbook
             handbook={crafting.handbook}

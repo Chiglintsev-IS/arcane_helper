@@ -4,12 +4,15 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { improvisedDifficulty } from "./apparatus";
 import type { Apparatus } from "./apparatus";
-import { PLAINEST_RARITY, RARITY_MODIFIERS } from "./rarity";
-import type { RarityRu } from "./rarity";
+import { PLAINEST_RARITY, RARITY_NAMES } from "@/core/domain/shared/rarity";
+import type { RarityRu } from "@/core/domain/shared/rarity";
+import { rarityCost } from "./rarity";
 
 type MatchTier = "plain" | "amplified" | "concentrated";
 
 export type PropertyMatch = {
+  /** Даёт ли это совпадение справочник: одного источника ему мало, и такое решает стол. */
+  readonly assured: boolean;
   readonly nameRu: string;
   readonly sources: readonly string[];
   readonly tier: MatchTier;
@@ -24,11 +27,15 @@ export function tierOf(sources: number): MatchTier {
   return "plain";
 }
 
+/** Совпадение справочник даёт от двух видов; больше четырёх состав не держит. */
+export const FEWEST_KINDS = 2;
+export const MOST_KINDS = 4;
+
 const BASE_DIFFICULTY = 10;
 export const LOWEST_DIFFICULTY = 5;
 
 /** Попутное свойство стоит по обычной редкости: про его редкость стол не спрашивают. */
-const ADDITIONAL_EFFECT_DIFFICULTY = RARITY_MODIFIERS[PLAINEST_RARITY].additional;
+const ADDITIONAL_EFFECT_DIFFICULTY = rarityCost(PLAINEST_RARITY).additional;
 
 /**
  * Очистка снимает со смеси целую сторону — противоположную выбранной, — и потому не спрашивает, что
@@ -135,7 +142,7 @@ function fromTable<TTable extends object>(table: TTable, what: string) {
   });
 }
 
-const rarityField = fromTable(RARITY_MODIFIERS, "редкость");
+const rarityField = z.enum(RARITY_NAMES);
 
 const recipeFormulaSchema = z.object({
   kinds: z.array(nonEmpty),
@@ -235,6 +242,8 @@ export type RecipeDifficulty = {
   readonly total: number;
   readonly mainRu: string;
   readonly noticesRu: readonly string[];
+  /** Чего справочник не даёт, а стол может разрешить: работать с этим можно только с его слова. */
+  readonly warningsRu: readonly string[];
 };
 
 const NOTHING_REMOVED_TWICE_RU =
@@ -259,6 +268,10 @@ function mainOf(kept: readonly PropertyMatch[], named: string | null): PropertyM
     throw new DomainError(named === null ? emptyMixtureRefusal() : missingMainRefusal(named));
   }
   return found;
+}
+
+function unassuredRu(nameRu: string, sources: readonly string[]): string {
+  return `«${nameRu}» раскрыто только у одного вида (${sources.join(", ")}): справочник даёт совпадение от ${FEWEST_KINDS} видов`;
 }
 
 function unmatchedSuppressionRefusal(name: string): string {
@@ -286,7 +299,7 @@ function afterSuppression(matches: readonly PropertyMatch[], formula: RecipeForm
     kept: matches.filter((match) => !removed.some((one) => one.target === match)),
     difficulty: formula.purified
       ? 0
-      : sum(removed.map((one) => RARITY_MODIFIERS[one.rarityRu].suppression)),
+      : sum(removed.map((one) => rarityCost(one.rarityRu).suppression)),
   };
 }
 
@@ -323,7 +336,7 @@ function difficultyWith(
 
   const parts: readonly DifficultyPart[] = [
     { nameRu: "Основа", modifier: BASE_DIFFICULTY },
-    { nameRu: "Основной эффект", modifier: RARITY_MODIFIERS[formula.mainRarity].main },
+    { nameRu: "Основной эффект", modifier: rarityCost(formula.mainRarity).main },
     {
       nameRu: "Дополнительные эффекты",
       modifier: (cleansed.kept.length - 1) * ADDITIONAL_EFFECT_DIFFICULTY,
@@ -362,5 +375,8 @@ function difficultyWith(
     mainRu: main.nameRu,
     noticesRu:
       formula.purified && formula.suppressed.length > 0 ? [NOTHING_REMOVED_TWICE_RU] : [],
+    warningsRu: cleansed.kept
+      .filter((match) => !match.assured)
+      .map((match) => unassuredRu(match.nameRu, match.sources)),
   };
 }

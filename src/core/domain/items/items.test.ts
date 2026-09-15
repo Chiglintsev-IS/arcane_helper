@@ -192,21 +192,6 @@ describe("алхимия ингредиента у вещи", () => {
     expect(() => bench().alchemyOf("rope")).toThrow(/не ингредиент/);
   });
 
-  it("порция вида меряется штуками, и перевод знает сам вид", () => {
-    const measured = bench().setPortionSize("herb", 10);
-
-    expect(measured.alchemyOf("herb").piecesPerPortion).toBe(10);
-    expect(measured.piecesForPortions("herb", 3)).toBe(30);
-    expect(measured.portionsFromPieces("herb", 63)).toBe(6);
-  });
-
-  it("порция вида по умолчанию штучная, и мера меньше одной штуки отвергается", () => {
-    expect(bench().piecesForPortions("herb", 3)).toBe(3);
-    expect(bench().portionsFromPieces("herb", 63)).toBe(63);
-    expect(() => bench().setPortionSize("herb", 0)).toThrow(/целое от одного/);
-    expect(() => bench().setPortionSize("herb", 1.5)).toThrow(/целое от одного/);
-  });
-
   it("нераскрытые номера называются по порядку, без уже занятых", () => {
     const known = bench()
       .revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" })

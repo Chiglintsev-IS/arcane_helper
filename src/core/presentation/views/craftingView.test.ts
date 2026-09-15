@@ -60,8 +60,6 @@ describe("проекция знания об ингредиентах", () => {
       {
         itemId: Items.idFromName("Лунная трава"),
         nameRu: "Лунная трава",
-        inBag: 0,
-        piecesPerPortion: 1,
         portionsInBag: 0,
         shortageRu: "В сумке 0, столько не потратить",
         findDc: null,
@@ -71,8 +69,8 @@ describe("проекция знания об ингредиентах", () => {
         price: null,
         researchNumbers: [2, 4],
         properties: [
-          { number: 1, nameRu: "Лечение здоровья", dirRu: null },
-          { number: 3, nameRu: "Взрыв", dirRu: null },
+          { number: 1, nameRu: "Лечение здоровья", dirRu: null, rarityRu: null },
+          { number: 3, nameRu: "Взрыв", dirRu: null, rarityRu: null },
         ],
         notes: [],
       },
@@ -89,8 +87,6 @@ describe("проекция знания об ингредиентах", () => {
       {
         itemId: Items.idFromName("Багровый корень"),
         nameRu: "Багровый корень",
-        inBag: 0,
-        piecesPerPortion: 1,
         portionsInBag: 0,
         shortageRu: "В сумке 0, столько не потратить",
         findDc: null,

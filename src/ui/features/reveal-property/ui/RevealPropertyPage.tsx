@@ -6,7 +6,8 @@ import type { Command } from "@/contract/commands";
 import type { PreviewOf, Question } from "@/contract/questions";
 import type { IngredientKnowledgeView } from "@/contract/views";
 
-import { directionTone, researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
+import { rarityTone, researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
+import { PropertyStripes, markNameRu } from "@/ui/entities/crafting/ui/PropertyMark";
 import {
   BASE_DIFFICULTY_LABEL,
   NOTHING_REVEALED,
@@ -17,13 +18,17 @@ import {
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
-import { RULE_EDGE_ACTIVE, RULE_ROLE_WIDE, RULE_ROW, RULE_TITLE } from "@/ui/shared/ui/rule";
+import { RULE_EDGE_ACTIVE, RULE_ROW, RULE_TITLE } from "@/ui/shared/ui/rule";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { TONE_TEXT } from "@/ui/shared/ui/tone";
 
 const COST_LABEL = "Чего это стоит";
 const DIRECTION_LABEL = "НАПРАВЛЕНИЕ";
 const NAMED_LABEL = "ЧТО МАСТЕР НАЗВАЛ";
 const REVEALED_LABEL = "УЖЕ РАСКРЫТО";
+const RARITY_LABEL = "РЕДКОСТЬ";
+
+const RARITY_HINT = "Редкость называет мастер: от неё зависит и цена эффекта, и сложность работы.";
 
 /** Свойство приходит словами стола: перечня, из которого его выбирать, у приложения нет. */
 const PROPERTY_FIELD = "Свойство";
@@ -72,14 +77,17 @@ function Cost({ plan }: { plan: NonNullable<PreviewOf<"research_preview">["plan"
 export function RevealPropertyPage({
   ingredient,
   directions,
+  rarities,
   onSend,
 }: {
   ingredient: IngredientKnowledgeView;
   directions: readonly string[];
+  rarities: readonly string[];
   onSend: (command: Command, whenDone?: () => void) => void;
 }) {
   const [propertyRu, setPropertyRu] = useState("");
   const [dirRu, setDirRu] = useState<string | null>(null);
+  const [rarityRu, setRarityRu] = useState<string | null>(null);
   const itemId = ingredient.itemId;
   const number = ingredient.researchNumbers[0] ?? null;
 
@@ -98,10 +106,12 @@ export function RevealPropertyPage({
         number,
         propertyRu: textRu.trim(),
         ...(dirRu === null ? {} : { directionRu: dirRu }),
+        ...(rarityRu === null ? {} : { rarityRu }),
       },
       () => {
         setPropertyRu("");
         setDirRu(null);
+        setRarityRu(null);
       },
     );
   };
@@ -124,14 +134,14 @@ export function RevealPropertyPage({
         <>
           <section className="flex flex-col gap-1.5">
             <Label>{DIRECTION_LABEL}</Label>
-            <div className="flex items-stretch gap-2">
+            <div className="flex flex-wrap items-stretch gap-2">
               {directions.map((direction) => (
                 <button
                   key={direction}
                   type="button"
                   aria-pressed={direction === dirRu}
                   onClick={() => setDirRu(direction === dirRu ? null : direction)}
-                  className={`min-h-[3.5rem] flex-1 px-1 text-[0.8125rem] leading-tight ${
+                  className={`min-h-[3.5rem] grow basis-[45%] px-1 text-[0.8125rem] leading-tight ${
                     direction === dirRu ? SURFACE_CHOSEN : SURFACE_CONTROL
                   }`}
                 >
@@ -139,6 +149,26 @@ export function RevealPropertyPage({
                 </button>
               ))}
             </div>
+          </section>
+
+          <section className="flex flex-col gap-1.5">
+            <Label>{RARITY_LABEL}</Label>
+            <div className="flex flex-wrap items-stretch gap-1">
+              {rarities.map((rarity) => (
+                <button
+                  key={rarity}
+                  type="button"
+                  aria-pressed={rarity === rarityRu}
+                  onClick={() => setRarityRu(rarity === rarityRu ? null : rarity)}
+                  className={`min-h-11 grow px-2 text-[0.6875rem] leading-tight ${
+                    rarity === rarityRu ? SURFACE_CHOSEN : SURFACE_CONTROL
+                  } ${TONE_TEXT[rarityTone(rarity)]}`}
+                >
+                  {rarity}
+                </button>
+              ))}
+            </div>
+            <p className="text-[0.65625rem] leading-snug text-ink-quiet">{RARITY_HINT}</p>
           </section>
 
           <section className="flex flex-col gap-1.5">
@@ -175,24 +205,21 @@ export function RevealPropertyPage({
             {ingredient.properties.map((property) => (
               <li
                 key={property.number}
-                className={`flex items-center gap-3 p-2.5 ${SURFACE_GROUP_BARE} ${
-                  RULE_ROLE_WIDE[directionTone(property.dirRu)]
-                }`}
+                className={`flex items-stretch gap-3 ${SURFACE_GROUP_BARE}`}
               >
-                <span className="w-7 shrink-0 text-[0.6875rem] tabular-nums text-ink-quiet">
+                <PropertyStripes slot={property} height="self-stretch" />
+                <span className="w-7 shrink-0 self-center py-2.5 text-[0.6875rem] tabular-nums text-ink-quiet">
                   {propertyNumberRu(property.number)}
                 </span>
-                <span className="flex min-w-0 flex-1 flex-col">
+                <span className="flex min-w-0 flex-1 flex-col justify-center py-2.5">
                   <span className="text-[0.9375rem] leading-tight">{property.nameRu}</span>
-                  {property.dirRu === null ? null : (
-                    <span className="text-[0.6875rem] text-ink-quiet">{property.dirRu}</span>
-                  )}
+                  <span className="text-[0.6875rem] text-ink-quiet">{markNameRu(property)}</span>
                 </span>
                 <button
                   type="button"
                   aria-label={`${BUTTON_LABELS.remove}: ${property.nameRu}`}
                   onClick={() => onSend({ kind: "drop_property", itemId, number: property.number })}
-                  className="shrink-0 px-2 text-[0.8125rem] lowercase text-reaction"
+                  className="shrink-0 self-center px-2 text-[0.8125rem] lowercase text-reaction"
                 >
                   {BUTTON_LABELS.remove}
                 </button>

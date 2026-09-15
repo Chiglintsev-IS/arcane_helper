@@ -111,9 +111,9 @@ export const commandSchema = z.discriminatedUnion("kind", [
     number: numeric,
     propertyRu: word,
     directionRu: word.optional(),
+    rarityRu: word.optional(),
   }),
   command("drop_property", { itemId: word, number: numeric }),
-  command("set_portion_size", { itemId: word, pieces: numeric }),
 
   command("add_item_note", { itemId: word, textRu: word }),
   command("edit_item_note", { itemId: word, noteId: word, textRu: word }),
