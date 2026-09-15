@@ -183,6 +183,7 @@ describe("«Алхимия»: книга", () => {
     await user.click(press(new RegExp(MOON_HERB)));
     await user.click(await screen.findByRole("button", { name: /Раскрыть 2-е свойство/ }));
     await user.click(press(`Убрать: ${HEALING.nameRu}`));
+    await user.click(press("Да, убрать"));
 
     expect(
       shown(stores).crafting.ingredients.find((kind) => kind.nameRu === MOON_HERB)?.properties,
@@ -227,7 +228,8 @@ describe("«Алхимия»: книга", () => {
     ]);
 
     await user.click(press("Правка: Рядом с болотами берут за 2–3 золотых"));
-    await user.click(press("Убрать"));
+    await user.click(press(/^Убрать:/));
+    await user.click(press("Да, убрать"));
     expect(notesOf()).toHaveLength(0);
   });
 

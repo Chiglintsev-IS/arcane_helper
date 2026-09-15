@@ -6,7 +6,8 @@ import type { Snapshot } from "@/contract/snapshot";
 import { matchesQuery } from "@/ui/shared/lib/searchable";
 import { timeRu } from "@/ui/shared/lib/timeRu";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
-import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
+import { editName } from "@/ui/shared/ui/buttonLabels";
+import { NOTE_REMOVAL, RemoveButton } from "@/ui/shared/ui/RemoveButton";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
@@ -15,8 +16,6 @@ type WorldNote = Snapshot["notes"][number];
 
 const SEARCH_LABEL = "Поиск по слову";
 const NOTE_LABEL = "Заметка";
-const REMOVE_LABEL = BUTTON_LABELS.remove;
-
 const MUTED = "text-ink-quiet";
 
 const SELECTED = SURFACE_CHOSEN;
@@ -69,14 +68,12 @@ function NoteRow({
 
       <div className="flex items-center justify-between gap-2">
         <Time at={note.at} />
-        <button
-          type="button"
-          aria-label={`${REMOVE_LABEL}: ${note.text}`}
-          onClick={onRemove}
-          className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
-        >
-          {REMOVE_LABEL}
-        </button>
+        <RemoveButton
+          nameRu={note.text}
+          askRu={NOTE_REMOVAL.askRu}
+          bodyRu={NOTE_REMOVAL.bodyOf(note.text)}
+          onConfirm={onRemove}
+        />
       </div>
     </li>
   );

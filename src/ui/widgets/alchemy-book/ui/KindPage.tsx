@@ -27,9 +27,9 @@ import { usePreview } from "@/ui/shared/model/usePreview";
 import { NameEditor, NAME_LABEL } from "@/ui/shared/ui/NameEditor";
 import { NOT_WRITTEN, ValueRow } from "@/ui/shared/ui/ValueRow";
 import { NoteList } from "@/ui/shared/ui/NoteList";
+import { RemoveButton, RETURNED_IN_LOG } from "@/ui/shared/ui/RemoveButton";
 import {
   RULE_EDGE_ACTIVE,
-  RULE_GROUP,
   RULE_SECTION,
   RULE_TILE,
 } from "@/ui/shared/ui/rule";
@@ -43,6 +43,12 @@ const DROP_KIND = "Убрать запись из алхимии";
 
 const DROP_KIND_HINT =
   "Уйдёт всё записанное о виде — и раскрытое, и справка. Сама вещь с ценой и заметками останется.";
+
+const DROP_KIND_ASK = "Убрать запись из алхимии?";
+
+function dropKindBodyRu(nameRu: string): string {
+  return `«${nameRu}» останется вещью в сумке, но всё, что алхимия о ней знает, уйдёт. ${RETURNED_IN_LOG}`;
+}
 
 const NOT_REVEALED = "не раскрыто";
 
@@ -335,14 +341,13 @@ export function KindPage({
       />
 
       <section className="flex flex-col gap-1">
-        <button
-          type="button"
-          aria-label={`${DROP_KIND}: ${kind.nameRu}`}
-          onClick={onDropKind}
-          className={`min-h-11 px-3 text-xs font-medium ${TONE_TEXT.reaction} ${RULE_GROUP}`}
-        >
-          {DROP_KIND}
-        </button>
+        <RemoveButton
+          labelRu={DROP_KIND}
+          nameRu={kind.nameRu}
+          askRu={DROP_KIND_ASK}
+          bodyRu={dropKindBodyRu(kind.nameRu)}
+          onConfirm={onDropKind}
+        />
         <p className="text-[0.65rem] leading-snug text-ink-quiet">{DROP_KIND_HINT}</p>
       </section>
     </div>

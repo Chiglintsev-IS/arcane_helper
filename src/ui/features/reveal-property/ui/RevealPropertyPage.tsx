@@ -17,6 +17,7 @@ import {
 } from "@/ui/shared/lib/alchemyLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
+import { RemoveButton, RETURNED_IN_LOG } from "@/ui/shared/ui/RemoveButton";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { RULE_EDGE_ACTIVE, RULE_ROW, RULE_TITLE } from "@/ui/shared/ui/rule";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
@@ -24,6 +25,12 @@ import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } 
 const COST_LABEL = "Чего это стоит";
 const DIRECTION_LABEL = "НАПРАВЛЕНИЕ";
 const NAMED_LABEL = "ЧТО МАСТЕР НАЗВАЛ";
+
+const DROP_ASK = "Убрать раскрытое?";
+
+function dropBodyRu(nameRu: string): string {
+  return `«${nameRu}» перестанет быть раскрытым у этого вида, соседние номера останутся. ${RETURNED_IN_LOG}`;
+}
 const REVEALED_LABEL = "УЖЕ РАСКРЫТО";
 const RARITY_LABEL = "РЕДКОСТЬ";
 
@@ -229,14 +236,16 @@ export function RevealPropertyPage({
                   <span className="text-[0.9375rem] leading-tight">{property.nameRu}</span>
                   <span className="text-[0.6875rem] text-ink-quiet">{markNameRu(property)}</span>
                 </span>
-                <button
-                  type="button"
-                  aria-label={`${BUTTON_LABELS.remove}: ${property.nameRu}`}
-                  onClick={() => onSend({ kind: "drop_property", itemId, number: property.number })}
-                  className="shrink-0 self-center px-2 text-[0.8125rem] lowercase text-reaction"
-                >
-                  {BUTTON_LABELS.remove}
-                </button>
+                <span className="shrink-0 self-center px-2">
+                  <RemoveButton
+                    nameRu={property.nameRu}
+                    askRu={DROP_ASK}
+                    bodyRu={dropBodyRu(property.nameRu)}
+                    onConfirm={() =>
+                      onSend({ kind: "drop_property", itemId, number: property.number })
+                    }
+                  />
+                </span>
               </li>
             ))}
           </ul>

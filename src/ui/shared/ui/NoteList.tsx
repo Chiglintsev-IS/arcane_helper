@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 
-import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
+import { editName } from "@/ui/shared/ui/buttonLabels";
 import { FieldForm } from "@/ui/shared/ui/FieldForm";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
+import { NOTE_REMOVAL, RemoveButton } from "@/ui/shared/ui/RemoveButton";
 import { RULE_BETWEEN, RULE_GROUP } from "@/ui/shared/ui/rule";
-import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 import { TONE_TEXT } from "@/ui/shared/ui/tone";
 
 export const NOTES_TITLE = "Заметки";
@@ -89,16 +89,15 @@ export function NoteList({
             opened?.kind === "note" && opened.id === note.id ? (
               <li key={note.id} className="flex flex-col gap-1 py-1.5">
                 {field}
-                <button
-                  type="button"
-                  onClick={() => {
+                <RemoveButton
+                  nameRu={note.textRu}
+                  askRu={NOTE_REMOVAL.askRu}
+                  bodyRu={NOTE_REMOVAL.bodyOf(note.textRu)}
+                  onConfirm={() => {
                     close();
                     onDrop(note.id);
                   }}
-                  className={`min-h-11 px-3 text-xs font-medium text-reaction ${SURFACE_CONTROL}`}
-                >
-                  {BUTTON_LABELS.remove}
-                </button>
+                />
               </li>
             ) : (
               <li key={note.id} className="py-1.5">

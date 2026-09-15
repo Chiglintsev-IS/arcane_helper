@@ -22,8 +22,6 @@ import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { scrollPlaces } from "@/ui/shared/model/scrollPlaces";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BackHeader } from "@/ui/shared/ui/BackHeader";
-import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { FooterAction } from "@/ui/shared/ui/FooterAction";
 import { NAME_LABEL } from "@/ui/shared/ui/NameEditor";
 import { RULE_GROUP, RULE_TAB_OFF, RULE_TAB_ON } from "@/ui/shared/ui/rule";
@@ -110,14 +108,6 @@ const EFFECT_FORMS: [string, string, string] = ["название", "назва�
 
 const NOT_A_NUMBER = "Сложность вида называется числом";
 
-/* Кнопку убирания легко задеть соседним нажатием, а знание о виде копится месяцами: спрашиваем. */
-const DROP_KIND_TITLE = "Убрать запись из алхимии?";
-const DROP_KIND_CONFIRM = "Да, убрать";
-
-function dropKindBodyRu(nameRu: string): string {
-  return `«${nameRu}» останется вещью в сумке, но всё, что алхимия о ней знает, уйдёт. Вернуть запись можно в логе.`;
-}
-
 function emptyDraft(standard: ChoicesView["recipeForm"]["standard"]): RecipeFormulaView {
   return {
     ...standard,
@@ -155,7 +145,6 @@ export function AlchemyScreen({
   const [openedId, setOpenedId] = useState<string | null>(initialKindId ?? null);
   const [whence, setWhence] = useState<Whence>(initialKindId === undefined ? "kinds" : "away");
   const [adding, setAdding] = useState(false);
-  const [dropping, setDropping] = useState(false);
   /* Номер раскрытого, которое правят: страница та же, что у записи, и поля на ней те же. */
   const [edited, setEdited] = useState<number | null>(null);
   const [refusalRu, setRefusalRu] = useState<string | null>(null);
@@ -455,7 +444,13 @@ export function AlchemyScreen({
             onDropNote={(noteId) =>
               send({ kind: "remove_item_note", itemId: opened.itemId, noteId })
             }
-            onDropKind={() => setDropping(true)}
+            onDropKind={() =>
+              send({ kind: "drop_ingredient", itemId: opened.itemId }, () => {
+                setOpenedId(null);
+                setWhence("kinds");
+                setPage("kinds");
+              })
+            }
           />
         ) : page === "recipes" ? (
           <RecipeList
@@ -483,24 +478,6 @@ export function AlchemyScreen({
       )}
 
       {footer}
-
-      {!dropping || opened === undefined || opened === null ? null : (
-        <ConfirmSheet
-          title={DROP_KIND_TITLE}
-          body={dropKindBodyRu(opened.nameRu)}
-          confirmLabel={DROP_KIND_CONFIRM}
-          cancelLabel={BUTTON_LABELS.dismiss}
-          onConfirm={() =>
-            send({ kind: "drop_ingredient", itemId: opened.itemId }, () => {
-              setDropping(false);
-              setOpenedId(null);
-              setWhence("kinds");
-              setPage("kinds");
-            })
-          }
-          onCancel={() => setDropping(false)}
-        />
-      )}
 
       <nav aria-label="Режим алхимии" className={`flex shrink-0 ${SURFACE_PANEL}`}>
         {MODES.map((one) => {

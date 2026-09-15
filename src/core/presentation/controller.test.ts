@@ -522,6 +522,39 @@ describe("ремесло", () => {
     ]);
   });
 
+  it("раскрытое переписывается словами стола: и голым именем, и с направлением с редкостью", () => {
+    const fixed = run([
+      { kind: "note_ingredient", nameRu: MOON_HERB },
+      { kind: "reveal_property", itemId: MOON_HERB_ID, number: 1, propertyRu: "Лечение" },
+      {
+        kind: "rewrite_property",
+        itemId: MOON_HERB_ID,
+        number: 1,
+        propertyRu: "Лечение здоровья",
+        directionRu: "Зельеварение",
+        rarityRu: "Редкое",
+      },
+    ]);
+    const items = Character.of(fixed.session.character).items;
+
+    expect(items.alchemyOf(MOON_HERB_ID).properties).toEqual([
+      { number: 1, nameRu: "Лечение здоровья", dirRu: "Зельеварение", rarityRu: "Редкое" },
+    ]);
+    expect(fixed.session.log.at(-1)?.summaryRu).toBe(
+      `Переписано раскрытое: ${MOON_HERB} — Лечение здоровья`,
+    );
+
+    const bare = run([
+      { kind: "note_ingredient", nameRu: MOON_HERB },
+      { kind: "reveal_property", itemId: MOON_HERB_ID, number: 1, propertyRu: "Лечение" },
+      { kind: "rewrite_property", itemId: MOON_HERB_ID, number: 1, propertyRu: "Лечение ран" },
+    ]);
+
+    expect(Character.of(bare.session.character).items.alchemyOf(MOON_HERB_ID).properties).toEqual([
+      { number: 1, nameRu: "Лечение ран" },
+    ]);
+  });
+
   it("справка о виде дописывается по одному полю, и названное направление встаёт со свойством", () => {
     const written = run([
       { kind: "note_ingredient", nameRu: MOON_HERB },

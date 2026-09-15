@@ -69,6 +69,7 @@ describe("режим «Заметки» (FR-321)", () => {
 
     await user.click(screen.getByRole("button", { name: edited }));
     await user.click(screen.getByRole("button", { name: "Убрать: Барон обещал мост к весне" }));
+    await user.click(screen.getByRole("button", { name: "Да, убрать" }));
 
     expect(screen.getByText(EMPTY_RU)).toBeDefined();
   });

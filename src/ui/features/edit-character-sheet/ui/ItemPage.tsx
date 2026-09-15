@@ -23,6 +23,7 @@ import { BackHeader } from "@/ui/shared/ui/BackHeader";
 import { NameEditor, NAME_LABEL } from "@/ui/shared/ui/NameEditor";
 import { ValueRow } from "@/ui/shared/ui/ValueRow";
 import { NoteList } from "@/ui/shared/ui/NoteList";
+import { RemoveButton, RETURNED_IN_LOG } from "@/ui/shared/ui/RemoveButton";
 import { RULE_GROUP, RULE_ROW } from "@/ui/shared/ui/rule";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 import { TONE_TEXT } from "@/ui/shared/ui/tone";
@@ -68,6 +69,12 @@ const BONUS_HINT =
 const TO_ALCHEMY = "Открыть в алхимии →";
 
 const DROP_ITEM = "Убрать вещь";
+
+const DROP_ASK = "Убрать вещь?";
+
+function dropBodyRu(nameRu: string): string {
+  return `«${nameRu}» уйдёт из списка вместе со всем, что о ней записано. ${RETURNED_IN_LOG}`;
+}
 
 const DROP_HINT =
   "Убрать можно, когда от вещи не остаётся ни следа: сперва потратьте запас в сумке и снимите надетое.";
@@ -477,15 +484,14 @@ export function ItemPage({
         </div>
 
         <div className={`${BLOCK_CLASS} ${RULE_ROW}`}>
-          <button
-            type="button"
-            aria-label={`${DROP_ITEM}: ${item.nameRu}`}
+          <RemoveButton
+            labelRu={DROP_ITEM}
+            nameRu={item.nameRu}
+            askRu={DROP_ASK}
+            bodyRu={dropBodyRu(item.nameRu)}
             disabled={item.ownedCount > 0}
-            onClick={onRemove}
-            className={`min-h-11 px-3 text-xs font-medium ${TONE_TEXT.reaction} disabled:text-off ${RULE_GROUP}`}
-          >
-            {DROP_ITEM}
-          </button>
+            onConfirm={onRemove}
+          />
           {item.ownedCount === 0 ? null : (
             <p className="text-[0.65rem] leading-snug text-ink-quiet">{DROP_HINT}</p>
           )}

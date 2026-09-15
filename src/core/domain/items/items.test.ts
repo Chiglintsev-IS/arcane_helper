@@ -157,18 +157,22 @@ describe("алхимия ингредиента у вещи", () => {
   });
 
   it("раскрытое переписывается под своим номером, а пустому номеру переписывать нечего", () => {
-    const known = bench().revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" });
+    const known = bench()
+      .revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" })
+      .revealProperty("herb", { number: 2, nameRu: "Взрыв" });
     const fixed = known.rewriteProperty("herb", {
       number: 1,
       nameRu: "Лечение ран",
       rarityRu: "Редкое",
     });
 
+    /* Переписанное встаёт на своё место, а сосед по номеру остаётся каким был. */
     expect(fixed.alchemyOf("herb").properties).toEqual([
       { number: 1, nameRu: "Лечение ран", rarityRu: "Редкое" },
+      { number: 2, nameRu: "Взрыв" },
     ]);
     expect(() =>
-      known.rewriteProperty("herb", { number: 3, nameRu: "Взрыв" }),
+      known.rewriteProperty("herb", { number: 3, nameRu: "Пробуждение" }),
     ).toThrow(/Лунная трава.*3/);
   });
 
