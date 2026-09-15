@@ -1,5 +1,6 @@
 import type { CraftingView, KnownRecipeView } from "@/contract/views";
 
+import { coinsView } from "@/core/presentation/views/coins";
 import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { apparatusLimits } from "@/core/domain/crafting/apparatus";
@@ -35,8 +36,9 @@ function toHandbookView(): CraftingView["handbook"] {
 /** Меньше порции алхимия не берёт: она и есть единица счёта запаса. */
 const ONE_PORTION = 1;
 
-const UNPRICED = {
+const NO_NUMBERS = {
   difficulty: null,
+  unpriced: false,
   minutes: null,
   consumablesRu: null,
   goldPerStartedHour: null,
@@ -71,6 +73,7 @@ function toRecipeView(root: Character, formula: RecipeFormula): KnownRecipeView 
       nameRu: cost.mainRu,
       kindsRu: named,
       difficulty: cost.total,
+      unpriced: cost.unpriced,
       minutes,
       consumablesRu: consumables.nameRu,
       goldPerStartedHour: consumables.goldPerStartedHour,
@@ -81,7 +84,7 @@ function toRecipeView(root: Character, formula: RecipeFormula): KnownRecipeView 
     return {
       nameRu: formula.mainProperty ?? named.join(", "),
       kindsRu: named,
-      ...UNPRICED,
+      ...NO_NUMBERS,
       refusalRu: refusalOf(error),
       formula: copy,
     };
@@ -120,7 +123,7 @@ export function toCraftingView(character: CharacterState): CraftingView {
         gatherDc: alchemy.gatherDc ?? null,
         yieldRu: alchemy.yieldRu ?? null,
         portionRu: alchemy.portionRu ?? null,
-        price: item.price === undefined ? null : { ...item.price },
+        price: item.price === undefined ? null : coinsView(item.price),
       };
     }),
   };

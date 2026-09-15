@@ -1,7 +1,15 @@
 import type { AlchemyHandbookView } from "@/contract/views";
 
 import { CURRENCY_ABBREVIATIONS, MISHAP_DIE_RU, signed, withPlural } from "@/shared/language";
-import { TIER_LABELS, minutesRu, portionsRu, rarityTone } from "@/ui/entities/crafting/lib/labels";
+import {
+  TIER_LABELS,
+  minutesRu,
+  portionsRu,
+  priceRu,
+  rarityTone,
+} from "@/ui/entities/crafting/lib/labels";
+import { SPECIAL_RARITY } from "@/ui/entities/crafting/lib/labels";
+import { SpecialStripe } from "@/ui/entities/crafting/ui/PropertyMark";
 import { labelled, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { RULE_BETWEEN, RULE_BLOCK, RULE_ROW, RULE_SECTION } from "@/ui/shared/ui/rule";
 import { TONE_TEXT } from "@/ui/shared/ui/tone";
@@ -9,6 +17,9 @@ import { TONE_TEXT } from "@/ui/shared/ui/tone";
 const STATIONARY_RU = "стационарный";
 
 const NOW_RU = "сейчас";
+
+/** Прочерк в строке особой редкости — не пропуск в таблице, и сказать об этом надо словами. */
+const SPECIAL_NOTE = "Особому цены справочник не даёт: её называет мастер.";
 
 const KIND_FORMS: [string, string, string] = ["вид", "вида", "видов"];
 
@@ -127,14 +138,22 @@ function Note({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Редкость читается цветом и в справочнике: тот же цвет, что у слота свойства и кнопки выбора. */
+/**
+ * Редкость читается цветом и в справочнике: тот же цвет, что у слота свойства и кнопки выбора. У
+ * особой цвета своего нет — её метка собрана из всех сразу, и по ней видно, что чисел в строке не
+ * будет.
+ */
 function Rarity({ nameRu }: { nameRu: string }) {
   return (
     <span className="flex items-center gap-2">
-      <span
-        aria-hidden="true"
-        className={`h-3.5 w-1 shrink-0 ${TONE_TEXT[rarityTone(nameRu)]} bg-current`}
-      />
+      {nameRu === SPECIAL_RARITY ? (
+        <SpecialStripe height="h-3.5" width="w-1" />
+      ) : (
+        <span
+          aria-hidden="true"
+          className={`h-3.5 w-1 shrink-0 ${TONE_TEXT[rarityTone(nameRu)]} bg-current`}
+        />
+      )}
       <span className="min-w-0">{nameRu}</span>
     </span>
   );
@@ -215,12 +234,15 @@ export function AlchemyHandbook({
             headRu={["Редкость свойства", "К Сл"]}
             rows={handbook.rarities.map((rarity) => ({
               key: rarity.nameRu,
-              cells: [<Rarity key={rarity.nameRu} nameRu={rarity.nameRu} />, signed(rarity.research)],
+              cells: [
+                <Rarity key={rarity.nameRu} nameRu={rarity.nameRu} />,
+                priceRu(rarity.research),
+              ],
             }))}
           />
           <Note>
             Редкость называет мастер, и заранее она неизвестна: базовая сложность номера — только
-            начало счёта.
+            начало счёта. {SPECIAL_NOTE}
           </Note>
         </Block>
 
@@ -239,15 +261,15 @@ export function AlchemyHandbook({
               key: rarity.nameRu,
               cells: [
                 <Rarity key={rarity.nameRu} nameRu={rarity.nameRu} />,
-                signed(rarity.main),
-                signed(rarity.additional),
-                signed(rarity.suppression),
+                priceRu(rarity.main),
+                priceRu(rarity.additional),
+                priceRu(rarity.suppression),
               ],
             }))}
           />
           <Note>
             Редкость попутного эффекта стол не называет: в счёт идёт первая строка, а за очистку
-            смеси платят {signed(tariffs.purification)} вместо подавления.
+            смеси платят {signed(tariffs.purification)} вместо подавления. {SPECIAL_NOTE}
           </Note>
         </Block>
 

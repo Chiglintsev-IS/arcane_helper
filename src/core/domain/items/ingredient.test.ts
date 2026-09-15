@@ -7,7 +7,7 @@ function ingredientWith(properties: readonly unknown[]): unknown {
   return itemDefinitionOf({
     id: "лунная-трава",
     nameRu: "Лунная трава",
-    kinds: ["ingredient"],
+    kinds: [],
     alchemy: { properties },
   });
 }
@@ -25,21 +25,32 @@ describe("алхимия ингредиента", () => {
     const item = itemDefinitionOf({
       id: "лунная-трава",
       nameRu: "Лунная трава",
-      kinds: ["ingredient"],
+      kinds: [],
       alchemy: { properties: [{ number: 2, nameRu: "Лечение здоровья" }] },
     });
 
     expect(item.alchemy?.properties).toEqual([{ number: 2, nameRu: "Лечение здоровья" }]);
   });
 
-  it("ингредиент без единого раскрытого свойства остаётся вещью", () => {
+  it("вещь без алхимической записи видом не считается вовсе", () => {
     const item = itemDefinitionOf({
       id: "лунная-трава",
       nameRu: "Лунная трава",
-      kinds: ["ingredient"],
+      kinds: [],
     });
 
     expect(item.alchemy).toBeUndefined();
+  });
+
+  it("вид начинается с пустой записи: раскрывать ещё нечего, а вид уже есть", () => {
+    const item = itemDefinitionOf({
+      id: "лунная-трава",
+      nameRu: "Лунная трава",
+      kinds: [],
+      alchemy: {},
+    });
+
+    expect(item.alchemy?.properties).toEqual([]);
   });
 
   it("номер свойства не выходит за четвёртый", () => {
@@ -70,7 +81,7 @@ describe("алхимия ингредиента", () => {
     const item = itemDefinitionOf({
       id: "лунная-трава",
       nameRu: "Лунная трава",
-      kinds: ["ingredient"],
+      kinds: [],
       alchemy: {
         properties: [
           { number: 4, nameRu: "Взрыв" },
@@ -94,14 +105,14 @@ describe("алхимия ингредиента", () => {
     expect(() => revealedPropertyOf({ number: 1, nameRu: "  " })).toThrow();
   });
 
-  it("вещь, которая не ингредиент, алхимии не несёт: отказ называет вещь", () => {
-    expect(() =>
-      itemDefinitionOf({
-        id: "мантия",
-        nameRu: "Мантия",
-        kinds: ["gear"],
-        alchemy: { properties: [{ number: 1, nameRu: "Лечение здоровья" }] },
-      }),
-    ).toThrow(/не ингредиент/);
+  it("алхимия живёт при всякой вещи: мифриловая кольчуга и экипировка, и сырьё состава", () => {
+    const mail = itemDefinitionOf({
+      id: "кольчуга",
+      nameRu: "Мифриловая кольчуга",
+      kinds: ["gear"],
+      alchemy: { properties: [{ number: 1, nameRu: "Лечение здоровья" }] },
+    });
+
+    expect(mail.alchemy?.properties).toHaveLength(1);
   });
 });

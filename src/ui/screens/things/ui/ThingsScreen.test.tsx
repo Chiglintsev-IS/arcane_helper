@@ -7,237 +7,144 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ItemView } from "@/contract/views";
 import type { AppStores } from "@/ui/shared/model/storeContext";
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
-import { renderWithStores, shown, testSnapshot } from "@/ui/app/testing/stores";
+import { renderWithStores, shown } from "@/ui/app/testing/stores";
 import { ThingsScreen } from "@/ui/screens/things/ui/ThingsScreen";
 
 function itemOf(stores: AppStores, id: string): ItemView | undefined {
   return shown(stores).bag.items.find((item) => item.id === id);
 }
 
-const PART_KEY = "thingsPart";
+const TAB_KEY = "thingsPart";
 
-const BAG_FILTER_KEY = "thingsBagFilter";
-
-const BASE_FILTER_KEY = "thingsBaseFilter";
+const HERB = "Частичка плода большой гальперы";
 
 afterEach(() => {
   localStorage.clear();
 });
 
 describe("«Вещи»", () => {
-  it("рюкзак и база вещей — две части с разными фильтрами", async () => {
+  it("три закладки, и выбранная переживает перезапуск, а чепуха в памяти — нет", async () => {
     const user = userEvent.setup();
     await renderWithStores(<ThingsScreen />, createThorne());
 
-    const parts = within(screen.getByRole("radiogroup", { name: "Что показать" }));
-    expect(parts.getAllByRole("radio").map((button) => button.textContent)).toEqual([
+    const tabs = within(screen.getByRole("navigation", { name: "Что показать" }));
+    expect(tabs.getAllByRole("button").map((button) => button.textContent)).toEqual([
       "Рюкзак",
-      "Все вещи",
+      "Встречалось",
+      "Покупки",
     ]);
 
-    expect(screen.getByRole("radiogroup", { name: "Что в рюкзаке" })).toBeDefined();
-    expect(screen.queryByLabelText("Поиск")).toBeNull();
+    await user.click(tabs.getByRole("button", { name: "Покупки" }));
+    expect(localStorage.getItem(TAB_KEY)).toBe("buy");
 
-    await user.click(within(screen.getByRole("radiogroup", { name: "Что в рюкзаке" })).getByRole(
-      "radio",
-      { name: "Экипировка" },
-    ));
-    expect(screen.getByRole("heading", { name: "Защита" })).toBeDefined();
-
-    await user.click(parts.getByRole("radio", { name: "Все вещи" }));
-    expect(screen.queryByRole("radiogroup", { name: "Что в рюкзаке" })).toBeNull();
-    expect(screen.getByRole("radiogroup", { name: "Какие вещи" })).toBeDefined();
-    expect(screen.getByLabelText("Поиск")).toBeDefined();
-  });
-
-  it("выбранное переживает перезапуск, а чепуха в памяти — нет", async () => {
-    const user = userEvent.setup();
-    await renderWithStores(<ThingsScreen />, createThorne());
-
-    await user.click(screen.getByRole("radio", { name: "Расходники" }));
-    await user.click(screen.getByRole("radio", { name: "Все вещи" }));
-    await user.click(screen.getByRole("radio", { name: "Покупки" }));
-
-    expect(localStorage.getItem(PART_KEY)).toBe("base");
-    expect(localStorage.getItem(BAG_FILTER_KEY)).toBe("consumable");
-    expect(localStorage.getItem(BASE_FILTER_KEY)).toBe("wanted");
-
-    localStorage.setItem(PART_KEY, "чепуха");
-    localStorage.setItem(BAG_FILTER_KEY, "чепуха");
+    localStorage.setItem(TAB_KEY, "чепуха");
     const { container } = await renderWithStores(<ThingsScreen />, createThorne());
-    expect(within(container).getByRole("radio", { name: "Рюкзак" })).toHaveProperty(
-      "ariaChecked",
-      "true",
-    );
-    expect(within(container).getByRole("radio", { name: "Всё" })).toHaveProperty(
-      "ariaChecked",
-      "true",
-    );
+    expect(
+      within(container).getByRole("button", { name: "Рюкзак" }).getAttribute("aria-current"),
+    ).toBe("page");
   });
 
-  it("надетая вещь двигает КД, снятая — возвращает", async () => {
+  it("записанная вещь сразу встаёт в рюкзак числом в одну штуку и без признаков", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
+
+    await user.click(screen.getByRole("button", { name: "Записать вещь" }));
+    await user.type(screen.getByLabelText("Название со слов мастера"), "Кольцо защиты{Enter}");
+
+    expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ bagCount: 1, kinds: [] });
+  });
+
+  it("списание отменяется плашкой, а опустевшая строка остаётся на месте", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
+
+    await user.click(screen.getByRole("button", { name: "Записать вещь" }));
+    await user.type(screen.getByLabelText("Название со слов мастера"), "Зелье лечения{Enter}");
+    await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
+
+    expect(itemOf(stores, "зелье-лечения")?.bagCount).toBe(0);
+    expect(screen.getByText("Списано: Зелье лечения")).toBeDefined();
+    expect(screen.getByRole("button", { name: /^Зелье лечения/ }).textContent).toContain("0шт");
+
+    await user.click(screen.getByRole("button", { name: "Вернуть" }));
+    expect(itemOf(stores, "зелье-лечения")?.bagCount).toBe(1);
+  });
+
+  it("карточка вещи открывается страницей и правит вещь без «Сохранить»", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     const before = shown(stores).bag.armorClass.value;
 
-    await user.click(screen.getByRole("radio", { name: "Экипировка" }));
-    await user.type(screen.getByLabelText("Новая экипировка"), "Кольцо защиты{Enter}");
+    await user.click(screen.getByRole("button", { name: "Записать вещь" }));
+    await user.type(screen.getByLabelText("Название со слов мастера"), "Кольцо защиты{Enter}");
+    await user.click(screen.getByRole("button", { name: /^Кольцо защиты/ }));
 
-    expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ bagCount: 1, wornCount: 0 });
-    expect(shown(stores).bag.armorClass.value).toBe(before);
-
-    await user.click(screen.getByRole("button", { name: "Правка: Кольцо защиты" }));
+    await user.click(screen.getByRole("button", { name: "Экипировка" }));
     await user.click(screen.getByRole("button", { name: "Добавить прибавку" }));
     await user.click(
       within(screen.getByRole("dialog", { name: "К чему прибавка" })).getByRole("button", {
         name: /^Класс Доспеха/,
       }),
     );
-    const armorField = screen.getByLabelText("Класс Доспеха");
-    await user.clear(armorField);
-    await user.type(armorField, "1");
-    await user.click(screen.getByRole("button", { name: "Сохранить" }));
-
+    await user.click(screen.getByRole("button", { name: "Класс Доспеха: больше" }));
     await user.click(screen.getByRole("button", { name: "Надеть один: Кольцо защиты" }));
 
     expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ wornCount: 1, bagCount: 0 });
     expect(shown(stores).bag.armorClass.value).toBe(before + 1);
-    expect(shown(stores).sheet.abilities).toEqual(testSnapshot(createThorne()).sheet.abilities);
 
-    await user.click(screen.getByRole("button", { name: "Снять один: Кольцо защиты" }));
-
-    expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ wornCount: 0, bagCount: 1 });
-    expect(shown(stores).bag.armorClass.value).toBe(before);
+    await user.click(screen.getByRole("button", { name: "Рюкзак" }));
+    expect(screen.getByRole("navigation", { name: "Что показать" })).toBeDefined();
   });
 
-  it("прибавка «при себе» считается из сумки, не требуя надеть", async () => {
+  it("свойства ингредиента карточка показывает фактами, а правят их в алхимии", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
+    await renderWithStores(<ThingsScreen />, createThorne());
 
-    const before = shown(stores).resources.initiative;
+    await user.click(screen.getByRole("button", { name: new RegExp(`^${HERB}`) }));
 
-    await user.type(screen.getByLabelText("Новая вещь"), "Камень удачи{Enter}");
-    await user.click(screen.getByRole("button", { name: "Правка: Камень удачи" }));
-    await user.click(screen.getByRole("button", { name: "Добавить прибавку" }));
+    expect(screen.getByText("Алхимия этой вещи")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Открыть в алхимии →" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Раскрыть и править свойства" })).toBeNull();
+  });
+
+  it("отмеченное к покупке считается деньгами и встаёт в рюкзак купленным", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<ThingsScreen initialTab="met" />, createThorne());
+
+    await user.click(screen.getByRole("button", { name: "Записать вещь" }));
+    await user.type(screen.getByLabelText("Название со слов мастера"), "Зелье невидимости{Enter}");
+
+    expect(itemOf(stores, "зелье-невидимости")).toMatchObject({ bagCount: 0, wanted: false });
+
+    await user.click(screen.getByRole("button", { name: "в покупки: Зелье невидимости" }));
+    expect(itemOf(stores, "зелье-невидимости")?.wanted).toBe(true);
+
     await user.click(
-      within(screen.getByRole("dialog", { name: "К чему прибавка" })).getByRole("button", {
-        name: /^Инициатива/,
+      within(screen.getByRole("navigation", { name: "Что показать" })).getByRole("button", {
+        name: "Покупки",
       }),
     );
-    const field = screen.getByLabelText("Инициатива");
-    await user.clear(field);
-    await user.type(field, "1");
-    await user.click(screen.getByRole("radio", { name: "при себе" }));
-    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+    await user.click(screen.getByRole("button", { name: "Купить: Зелье невидимости" }));
 
-    expect(itemOf(stores, "камень-удачи")).toMatchObject({ wornCount: 0, worksCarried: true });
-    expect(shown(stores).resources.initiative).toBe(before + 1);
+    expect(itemOf(stores, "зелье-невидимости")).toMatchObject({ bagCount: 1, wanted: true });
+    expect(itemOf(stores, "зелье-невидимости")?.notes.at(-1)?.textRu).toBe(
+      "куплено по списку покупок",
+    );
+    expect(shown(stores).log.at(-1)?.summaryRu).toBe("Куплено: Зелье невидимости (в сумке 1)");
   });
 
-  it("свойства ингредиента правятся там же, где заметка: своей вещью", async () => {
+  it("деньги правятся прямо в строке рюкзака", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
-    const herb = "Частичка плода большой гальперы";
-    const alchemyOf = () => itemOf(stores, "частичка-плода-большой-гальперы")?.alchemicalProperties ?? [];
-
-    expect(alchemyOf()).toHaveLength(2);
-
-    await user.click(screen.getByRole("button", { name: `Правка: ${herb}` }));
-    await user.click(screen.getByRole("button", { name: "Раскрыть и править свойства" }));
-
-    const sheet = within(screen.getByRole("dialog", { name: `Свойства: ${herb}` }));
-    await user.click(sheet.getByRole("button", { name: "Убрать: Усиление характеристики (Выносливость)" }));
-
-    expect(alchemyOf().map((property) => property.number)).toEqual([1]);
-  });
-
-  it("правка вещи раскрытого не теряет", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
-
-    await user.click(screen.getByRole("button", { name: "Правка: Частичка плода большой гальперы" }));
-    await user.click(screen.getByRole("button", { name: "Сохранить" }));
-
-    expect(itemOf(stores, "частичка-плода-большой-гальперы")?.alchemicalProperties).toHaveLength(2);
-  });
-
-  it("кончившийся расходник уходит из рюкзака, оставаясь среди всех вещей", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
-
-    await user.click(screen.getByRole("radio", { name: "Расходники" }));
-    await user.type(screen.getByLabelText("Новый расходник"), "Зелье лечения{Enter}");
-    await user.click(screen.getByRole("button", { name: "Добавить один в сумку: Зелье лечения" }));
-    await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
-    await user.click(screen.getByRole("button", { name: "Потратить один из сумки: Зелье лечения" }));
-
-    expect(itemOf(stores, "зелье-лечения")?.bagCount).toBe(0);
-    expect(screen.queryByRole("button", { name: "Правка: Зелье лечения" })).toBeNull();
-
-    await user.click(screen.getByRole("radio", { name: "Все вещи" }));
-    expect(screen.getByRole("button", { name: "Правка: Зелье лечения" })).toBeDefined();
-    expect(itemOf(stores, "зелье-лечения")?.bagCount).toBe(0);
-  });
-
-  it("деньги правятся своей шторкой", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
-
-    await user.click(screen.getByRole("button", { name: "Правка: Деньги" }));
-    const gold = screen.getByLabelText("Золото");
+    await user.click(screen.getByRole("button", { name: "Деньги" }));
+    const gold = screen.getByLabelText("зм");
     await user.clear(gold);
     await user.type(gold, "215");
-    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+    await user.click(screen.getByRole("button", { name: "Записать" }));
 
     expect(shown(stores).bag.money.find((coin) => coin.currency === "gold")?.amount).toBe(215);
     expect(shown(stores).log.at(-1)?.summaryRu).toBe("Деньги: зм 7800 → 215");
-  });
-
-  it("признаки вещи правятся в её шторке, и вещь остаётся собой без единого признака", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
-
-    await user.click(screen.getByRole("radio", { name: "Ингредиенты" }));
-    await user.type(screen.getByLabelText("Новый ингредиент"), "Пыль{Enter}");
-    expect(itemOf(stores, "пыль")?.kinds).toEqual(["ingredient"]);
-
-    await user.click(screen.getByRole("button", { name: "Правка: Пыль" }));
-    await user.click(screen.getByRole("button", { name: "Ингредиент" }));
-    await user.click(screen.getByRole("button", { name: "Сохранить" }));
-
-    expect(itemOf(stores, "пыль")?.kinds).toEqual([]);
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("встреченную вещь записывают без запаса, покупку — с отметкой", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen initialPart="base" />);
-
-    await user.type(screen.getByLabelText("Просто запомнить"), "Зелье невидимости{Enter}");
-
-    expect(itemOf(stores, "зелье-невидимости")).toMatchObject({ bagCount: 0, wanted: false });
-    expect(shown(stores).log.at(-1)?.summaryRu).toBe("Записано: Зелье невидимости");
-  });
-
-  it("покупки — список желаний: заведённое без запаса и отметка у уже лежащего", async () => {
-    const user = userEvent.setup();
-    const { stores } = await renderWithStores(<ThingsScreen initialPart="base" />);
-
-    await user.click(screen.getByRole("radio", { name: "Покупки" }));
-    expect(screen.getByText("Купить пока нечего.")).toBeDefined();
-
-    await user.type(screen.getByLabelText("Что купить"), "Верёвка{Enter}");
-
-    expect(itemOf(stores, "верёвка")).toMatchObject({ bagCount: 0, wanted: true, kinds: [] });
-    expect(screen.getByRole("button", { name: "Правка: Верёвка" })).toBeDefined();
-
-    await user.click(screen.getByRole("button", { name: "Добавить один в сумку: Верёвка" }));
-    expect(itemOf(stores, "верёвка")).toMatchObject({ bagCount: 1, wanted: true });
-
-    await user.click(screen.getByRole("button", { name: "Правка: Верёвка" }));
-    await user.click(screen.getByRole("button", { name: "Хочу купить" }));
-    expect(itemOf(stores, "верёвка")?.wanted).toBe(false);
   });
 });

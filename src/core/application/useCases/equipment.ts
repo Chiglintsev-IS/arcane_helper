@@ -1,6 +1,7 @@
 import { Character } from "@/core/domain/assembly/character";
 import { DomainError } from "@/core/domain/shared/errors";
 import { Items } from "@/core/domain/items/items";
+import { wearable } from "@/core/domain/items/schema";
 import type { ItemDefinition, ItemDraft, ItemKind } from "@/core/domain/items/schema";
 import type { Money } from "@/core/domain/equipment/schema";
 import { CURRENCIES } from "@/core/domain/shared/schema";
@@ -37,11 +38,38 @@ export function addItem(
   );
 }
 
+/** Вещь, переставшая быть экипировкой, остаётся при персонаже, но снятой: надетой её уже не носят. */
 export function editItem(session: Session, item: ItemDraft, occasion: Occasion): Session {
   return applied(
     session,
-    (root) => root.withItems(root.items.replaceDefinition(item)),
+    (root) => {
+      const items = root.items.replaceDefinition(item);
+      const edited = items.find(item.id);
+      const worn = root.equipment.wornCount(item.id);
+      return worn === 0 || (edited !== undefined && wearable(edited))
+        ? root.withItems(items)
+        : root.withItems(items).withEquipment(root.equipment.unequip(item.id, worn));
+    },
     `Правка вещи: ${item.nameRu}`,
+    occasion,
+  );
+}
+
+/**
+ * Переименовать вещь: правка одного ярлыка, которую делают там, где имя прочли, — и в карточке, и
+ * в книге алхимика. Остальной природы вещи она не называет, потому и потерять её не может.
+ */
+export function renameItem(
+  session: Session,
+  itemId: string,
+  nameRu: string,
+  occasion: Occasion,
+): Session {
+  const before = Character.of(session.character).items.find(itemId)?.nameRu ?? itemId;
+  return applied(
+    session,
+    (root) => root.withItems(root.items.rename(itemId, nameRu)),
+    `Переименовано: ${before} → ${nameRu}`,
     occasion,
   );
 }
@@ -89,6 +117,23 @@ export function toggleWanted(session: Session, id: string, occasion: Occasion): 
     session,
     (root) => root.withEquipment(root.equipment.withWanted(id, wanted)),
     wanted ? `В покупки: ${nameRu}` : `Из покупок: ${nameRu}`,
+    occasion,
+  );
+}
+
+/** Слова записи о покупке: откуда вещь взялась, видно у неё самой, а не только в журнале. */
+const BOUGHT_NOTE_RU = "куплено по списку покупок";
+
+export function buyItem(session: Session, id: string, occasion: Occasion): Session {
+  const character = Character.of(session.character);
+  const item = character.items.find(id);
+  return applied(
+    session,
+    (root) =>
+      root
+        .withItems(root.items.addNote(id, { id: occasion.nextId(), textRu: BOUGHT_NOTE_RU }))
+        .withEquipment(root.equipment.adjustBagCount(id, 1)),
+    `Куплено: ${item?.nameRu ?? id} (в сумке ${character.equipment.bagCount(id) + 1})`,
     occasion,
   );
 }

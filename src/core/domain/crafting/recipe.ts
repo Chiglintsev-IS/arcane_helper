@@ -4,9 +4,9 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { improvisedDifficulty } from "./apparatus";
 import type { Apparatus } from "./apparatus";
-import { PLAINEST_RARITY, RARITY_STEPS } from "@/core/domain/shared/rarity";
-import type { RarityStepRu } from "@/core/domain/shared/rarity";
-import { rarityCost } from "./rarity";
+import { PLAINEST_RARITY, RARITY_NAMES } from "@/core/domain/shared/rarity";
+import type { RarityRu } from "@/core/domain/shared/rarity";
+import { rarityCost, rarityRow } from "./rarity";
 
 type MatchTier = "plain" | "amplified" | "concentrated";
 
@@ -118,13 +118,13 @@ const MOST_LIMITATION_RELIEF = -6;
 /** Гасят названное свойство, и цену гашения задаёт его редкость — её тоже называет стол. */
 type SuppressedProperty = {
   readonly nameRu: string;
-  readonly rarityRu: RarityStepRu;
+  readonly rarityRu: RarityRu;
 };
 
 export type RecipeFormula = {
   readonly kinds: readonly string[];
   readonly mainProperty: string | null;
-  readonly mainRarity: RarityStepRu;
+  readonly mainRarity: RarityRu;
   readonly duration: keyof typeof DURATION_DIFFICULTY | null;
   readonly onset: keyof typeof ONSET_DIFFICULTY;
   readonly fullRepeats: number;
@@ -142,7 +142,7 @@ function fromTable<TTable extends object>(table: TTable, what: string) {
   });
 }
 
-const rarityField = z.enum(RARITY_STEPS);
+const rarityField = z.enum(RARITY_NAMES);
 
 const recipeFormulaSchema = z.object({
   kinds: z.array(nonEmpty),
@@ -235,11 +235,22 @@ export function recipeSignature(formula: RecipeFormula): string {
   return JSON.stringify(canonical(formula));
 }
 
-type DifficultyPart = { readonly nameRu: string; readonly modifier: number };
+/**
+ * Слагаемое сложности. `unpriced` — слагаемое, которого справочник не оценивает: цену ему называет
+ * стол, и в итог оно входит нулём. Итог с таким слагаемым неполон, и сказать об этом обязан тот,
+ * кто его показывает.
+ */
+type DifficultyPart = {
+  readonly nameRu: string;
+  readonly modifier: number;
+  readonly unpriced: boolean;
+};
 
 export type RecipeDifficulty = {
   readonly parts: readonly DifficultyPart[];
   readonly total: number;
+  /** Итог собран не из всех слагаемых: хотя бы одно ждёт числа от стола. */
+  readonly unpriced: boolean;
   readonly mainRu: string;
   readonly noticesRu: readonly string[];
   /** Чего справочник не даёт, а стол может разрешить: работать с этим можно только с его слова. */
@@ -248,6 +259,13 @@ export type RecipeDifficulty = {
 
 const NOTHING_REMOVED_TWICE_RU =
   "Очистка снимает свойство сама: подавление сверх неё не считается и не платится";
+
+/** Слагаемые, которые особая редкость оставляет без числа: её цену называет стол. */
+const MAIN_EFFECT_PART = "Основной эффект";
+const SUPPRESSION_PART = "Подавление";
+
+const MASTER_PRICES_SPECIAL_RU =
+  "Особой редкости в таблице цен нет: её цену называет мастер и прибавляет к этой сложности сам";
 
 function repeatsRefusal(): string {
   return "Дополнительных полных срабатываний бывает целое неотрицательное число";
@@ -282,7 +300,11 @@ function sum(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
-type Removal = { readonly kept: readonly PropertyMatch[]; readonly difficulty: number };
+type Removal = {
+  readonly kept: readonly PropertyMatch[];
+  readonly difficulty: number;
+  readonly unpriced: boolean;
+};
 
 /**
  * Снятое очисткой второй раз не платится: справочник прямо запрещает гасить одно и то же свойство
@@ -295,11 +317,13 @@ function afterSuppression(matches: readonly PropertyMatch[], formula: RecipeForm
     if (target === undefined) throw new DomainError(unmatchedSuppressionRefusal(one.nameRu));
     return { target, rarityRu: one.rarityRu };
   });
+  const priced = removed.map((one) => rarityRow(one.rarityRu));
   return {
     kept: matches.filter((match) => !removed.some((one) => one.target === match)),
     difficulty: formula.purified
       ? 0
-      : sum(removed.map((one) => rarityCost(one.rarityRu).suppression)),
+      : sum(priced.map((row) => row?.suppression ?? 0)),
+    unpriced: !formula.purified && priced.some((row) => row === null),
   };
 }
 
@@ -333,10 +357,15 @@ function difficultyWith(
 
   const cleansed = afterSuppression(matches, formula);
   const main = mainOf(cleansed.kept, formula.mainProperty);
+  const mainRow = rarityRow(formula.mainRarity);
+  const unpricedParts = new Set([
+    ...(mainRow === null ? [MAIN_EFFECT_PART] : []),
+    ...(cleansed.unpriced ? [SUPPRESSION_PART] : []),
+  ]);
 
-  const parts: readonly DifficultyPart[] = [
+  const tally: readonly Omit<DifficultyPart, "unpriced">[] = [
     { nameRu: "Основа", modifier: BASE_DIFFICULTY },
-    { nameRu: "Основной эффект", modifier: rarityCost(formula.mainRarity).main },
+    { nameRu: MAIN_EFFECT_PART, modifier: mainRow?.main ?? 0 },
     {
       nameRu: "Дополнительные эффекты",
       modifier: (cleansed.kept.length - 1) * ADDITIONAL_EFFECT_DIFFICULTY,
@@ -358,7 +387,7 @@ function difficultyWith(
     { nameRu: "Способ применения", modifier: APPLICATION_DIFFICULTY[formula.application] },
     { nameRu: "Сопротивление", modifier: RESISTANCE_DIFFICULTY[formula.resistance] },
     { nameRu: "Очистка", modifier: formula.purified ? PURIFICATION_DIFFICULTY : 0 },
-    { nameRu: "Подавление", modifier: cleansed.difficulty },
+    { nameRu: SUPPRESSION_PART, modifier: cleansed.difficulty },
     {
       nameRu: "Ограничения и последствия",
       modifier: Math.max(
@@ -369,12 +398,20 @@ function difficultyWith(
     { nameRu: "Оснащение", modifier: equipmentSurcharge },
   ];
 
+  const parts: readonly DifficultyPart[] = tally.map((part) => ({
+    ...part,
+    unpriced: unpricedParts.has(part.nameRu),
+  }));
+
   return {
     parts,
     total: Math.max(sum(parts.map((part) => part.modifier)), LOWEST_DIFFICULTY),
+    unpriced: unpricedParts.size > 0,
     mainRu: main.nameRu,
-    noticesRu:
-      formula.purified && formula.suppressed.length > 0 ? [NOTHING_REMOVED_TWICE_RU] : [],
+    noticesRu: [
+      ...(formula.purified && formula.suppressed.length > 0 ? [NOTHING_REMOVED_TWICE_RU] : []),
+      ...(unpricedParts.size > 0 ? [MASTER_PRICES_SPECIAL_RU] : []),
+    ],
     warningsRu: cleansed.kept
       .filter((match) => !match.assured)
       .map((match) => unassuredRu(match.nameRu, match.sources)),

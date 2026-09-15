@@ -117,15 +117,18 @@ const revealedPropertyViewSchema = z.object({
   rarityRu: word.nullable(),
 });
 
+const coinsViewSchema = z.array(z.object({ currency: word, amount: whole }));
+
 const itemViewSchema = z.object({
   id: word,
   nameRu: word,
   kinds: z.array(word),
   bagCount: whole,
   wornCount: whole,
+  ownedCount: whole,
   wanted: z.boolean(),
   worksCarried: z.boolean(),
-  price: z.object({ amount: whole, currency: word }).optional(),
+  price: coinsViewSchema.optional(),
   bonuses: z.array(z.object({ stat: word, value: whole })),
   bonusFacts: z.array(
     z.object({
@@ -139,14 +142,22 @@ const itemViewSchema = z.object({
     }),
   ),
   spellcastingFocus: z.boolean(),
+  /** Вещь — вид алхимии: о ней записано алхимическое знание, пусть и пустое. */
+  alchemical: z.boolean(),
   notes: z.array(z.object({ id: word, textRu: word })),
   alchemicalProperties: z.array(revealedPropertyViewSchema),
   neededForRu: z.array(word),
 });
 
 export const bagViewSchema = z.object({
-  money: z.array(z.object({ currency: word, amount: whole })),
+  money: coinsViewSchema,
   items: z.array(itemViewSchema),
+  shopping: z.object({
+    cost: coinsViewSchema,
+    rest: coinsViewSchema,
+    unpriced: whole,
+    short: z.boolean(),
+  }),
   armorClass: z.object({
     value: whole,
     baseNameRu: word.optional(),
@@ -166,7 +177,7 @@ const ingredientKnowledgeViewSchema = z.object({
   gatherDc: whole.nullable(),
   yieldRu: word.nullable(),
   portionRu: word.nullable(),
-  price: z.object({ amount: whole, currency: word }).nullable(),
+  price: coinsViewSchema.nullable(),
 });
 
 /** Записанный рецепт называет цену своего замысла: на нынешний набор алхимика он не смотрит. */
@@ -174,6 +185,8 @@ const knownRecipeViewSchema = z.object({
   nameRu: word,
   kindsRu: z.array(word),
   difficulty: whole.nullable(),
+  /** Цену особой редкости справочник не даёт: названная сложность ждёт числа от мастера. */
+  unpriced: z.boolean(),
   minutes: whole.nullable(),
   consumablesRu: word.nullable(),
   goldPerStartedHour: whole.nullable(),
@@ -219,10 +232,10 @@ const alchemyHandbookViewSchema = z.object({
   rarities: z.array(
     z.object({
       nameRu: word,
-      main: whole,
-      additional: whole,
-      suppression: whole,
-      research: whole,
+      main: whole.nullable(),
+      additional: whole.nullable(),
+      suppression: whole.nullable(),
+      research: whole.nullable(),
     }),
   ),
   mishaps: z.array(z.object({ fromRolled: whole, toRolled: whole, textRu: word })),
@@ -514,6 +527,7 @@ export type BagView = z.infer<typeof bagViewSchema>;
 export type CraftingView = z.infer<typeof craftingViewSchema>;
 export type KnownRecipeView = z.infer<typeof knownRecipeViewSchema>;
 export type IngredientKnowledgeView = z.infer<typeof ingredientKnowledgeViewSchema>;
+export type RevealedPropertyView = z.infer<typeof revealedPropertyViewSchema>;
 export type AlchemyHandbookView = z.infer<typeof alchemyHandbookViewSchema>;
 export type StatChoiceView = z.infer<typeof statChoiceSchema>;
 export type ChoicesView = z.infer<typeof choicesViewSchema>;

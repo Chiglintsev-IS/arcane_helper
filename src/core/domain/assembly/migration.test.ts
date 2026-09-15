@@ -359,7 +359,7 @@ describe("приведение состояния версии 1", () => {
     const wornOf = (migrated: unknown): unknown[] =>
       listOf(fieldsOf(fieldsOf(migrated).equipment).worn);
 
-    it("зелье — расходник, хлам — «другое», ингредиент остаётся собой", () => {
+    it("зелье и хлам остаются без признаков, ингредиент становится видом алхимии", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([
           { id: "potion", nameRu: "Зелье", kind: "potion" },
@@ -367,11 +367,8 @@ describe("приведение состояния версии 1", () => {
           { id: "dust", nameRu: "Пыль", kind: "ingredient" },
         ]),
       );
-      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kinds)).toEqual([
-        ["consumable"],
-        [],
-        ["ingredient"],
-      ]);
+      expect(definitionsOf(migrated).map((item) => fieldsOf(item).kinds)).toEqual([[], [], []]);
+      expect(fieldsOf(definitionsOf(migrated)[2]).alchemy).toEqual({});
     });
 
     it("вещь без рода опознаётся по прибавке или базе доспеха, голая вещь остаётся «другим»", () => {
@@ -394,7 +391,7 @@ describe("приведение состояния версии 1", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([{ id: "potion", nameRu: "Зелье", kind: "potion", worn: true }]),
       );
-      expect(fieldsOf(definitionsOf(migrated)[0]).kinds).toEqual(["consumable"]);
+      expect(fieldsOf(definitionsOf(migrated)[0]).kinds).toEqual([]);
       expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["potion"]);
       expect(wornOf(migrated)).toEqual([]);
     });
@@ -414,7 +411,7 @@ describe("приведение состояния версии 1", () => {
       expect(definitionsOf(migrated)[0]).toEqual({
         id: "potion",
         nameRu: "Зелье",
-        kinds: ["consumable"],
+        kinds: [],
         bonuses: { armorClass: 1 },
         worksCarried: true,
       });
@@ -443,7 +440,12 @@ describe("приведение состояния версии 1", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([{ id: "dust", nameRu: "Пыль", kind: "ingredient", worn: true }]),
       );
-      expect(definitionsOf(migrated)[0]).toEqual({ id: "dust", nameRu: "Пыль", kinds: ["ingredient"] });
+      expect(definitionsOf(migrated)[0]).toEqual({
+        id: "dust",
+        nameRu: "Пыль",
+        kinds: [],
+        alchemy: {},
+      });
       expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["dust"]);
       expect(wornOf(migrated)).toEqual([]);
     });
@@ -467,7 +469,7 @@ describe("приведение состояния версии 1", () => {
       expect(definitionsOf(migrated)[0]).toEqual({
         id: "potion",
         nameRu: "Зелье",
-        kinds: ["consumable"],
+        kinds: [],
       });
       expect(bagOf(migrated).map((entry) => fieldsOf(entry).itemId)).toEqual(["potion"]);
       expect(wornOf(migrated)).toEqual([]);
@@ -759,12 +761,7 @@ describe("сохранение каждой версии открывается 
 
   it("рода вещей версии 3 становятся признаками, надетость вне экипировки снимается", () => {
     const state = characterStateSchema.parse(migrateCharacterState(VERSION_THREE));
-    expect(state.itemDefinitions.map((item) => item.kinds)).toEqual([
-      ["consumable"],
-      [],
-      ["gear"],
-      [],
-    ]);
+    expect(state.itemDefinitions.map((item) => item.kinds)).toEqual([[], [], ["gear"], []]);
     expect(state.equipment.bag.map((entry) => entry.itemId)).toEqual([
       "healing-potion",
       "rope",
@@ -879,11 +876,28 @@ describe("отметка купленного компонента станов�
   const componentsOf = (save: unknown): Record<string, unknown> =>
     fieldsOf(fieldsOf(fieldsOf(migrateCharacterState(save)).equipment).components);
 
+  it("цена одной монетой прежнего сохранения становится счётом по номиналам", () => {
+    const migrated = characterStateSchema.parse(
+      migrateCharacterState({
+        ...createWizard(),
+        itemDefinitions: [
+          { id: "ring", nameRu: "Кольцо", kinds: [], notes: [], price: { amount: 7, currency: "silver" } },
+        ],
+      }),
+    );
+
+    expect(migrated.itemDefinitions.find((item) => item.id === "ring")?.price).toEqual({
+      gold: 0,
+      silver: 7,
+      copper: 0,
+    });
+  });
+
   it("купленный компонент прежнего сохранения становится вещью в сумке", () => {
     const state = characterStateSchema.parse(migrateCharacterState(withBought(["identify"])));
     const pearl = state.itemDefinitions.find((item) => item.nameRu.startsWith("жемчужина"));
 
-    expect(pearl).toMatchObject({ kinds: [], price: { amount: 100, currency: "gold" } });
+    expect(pearl).toMatchObject({ kinds: [], price: { gold: 100, silver: 0, copper: 0 } });
     expect(state.equipment.bag).toContainEqual({ itemId: pearl?.id, count: 1 });
     expect(componentsOf(withBought(["identify"]))).not.toHaveProperty(LIST);
   });
@@ -955,7 +969,8 @@ describe("знание об ингредиенте переезжает к ве�
     );
     const herb = state.itemDefinitions.find((item) => item.nameRu === "Лунная трава");
 
-    expect(herb?.kinds).toContain("ingredient");
+    expect(herb?.kinds).toEqual([]);
+    expect(herb?.alchemy).toBeDefined();
     expect(herb?.alchemy?.properties).toEqual([{ number: 1, nameRu: "Лечение здоровья" }]);
     expect(herb?.notes).toEqual([{ id: "one", textRu: "Пахнет тиной" }]);
     expect(state.itemDefinitions.filter((item) => item.nameRu === "")).toEqual([]);
@@ -983,19 +998,19 @@ describe("знание об ингредиенте переезжает к ве�
     ]);
   });
 
-  it("уже заведённой вещи дописывается признак и алхимия, а прочее остаётся", () => {
+  it("уже заведённой вещи дописывается алхимия, а прочее остаётся", () => {
     const state = characterStateSchema.parse(
       migrateCharacterState({
         ...modern(),
         itemDefinitions: [
-          { id: "лунная-трава", nameRu: "Лунная трава", kinds: ["consumable"], note: "склянка" },
+          { id: "лунная-трава", nameRu: "Лунная трава", kinds: ["gear"], note: "склянка" },
         ],
         ingredientKnowledge: KNOWLEDGE,
       }),
     );
     const herb = state.itemDefinitions.find((item) => item.id === "лунная-трава");
 
-    expect(herb?.kinds).toEqual(["consumable", "ingredient"]);
+    expect(herb?.kinds).toEqual(["gear"]);
     expect(herb?.notes[0]?.textRu).toBe("склянка");
     expect(herb?.alchemy?.properties).toHaveLength(1);
   });
@@ -1013,7 +1028,7 @@ describe("знание об ингредиенте переезжает к ве�
     expect(cloak?.alchemy).toBeUndefined();
   });
 
-  it("запись без раскрытого и без наблюдений переезжает пустой, а признак не двоится", () => {
+  it("запись без раскрытого и без наблюдений переезжает пустой алхимией", () => {
     const state = characterStateSchema.parse(
       migrateCharacterState({
         ...modern(),
@@ -1023,10 +1038,43 @@ describe("знание об ингредиенте переезжает к ве�
     );
     const herb = state.itemDefinitions.find((item) => item.id === "лунная-трава");
 
-    expect(herb?.kinds).toEqual(["ingredient"]);
+    expect(herb?.kinds).toEqual([]);
     expect(herb?.alchemy).toEqual({
       properties: [],
     });
+  });
+
+  it("признак расходника уходит, а сама вещь со всем записанным остаётся", () => {
+    const state = characterStateSchema.parse(
+      migrateCharacterState({
+        ...modern(),
+        itemDefinitions: [
+          { id: "зелье", nameRu: "Зелье лечения", kinds: ["consumable"], notes: [] },
+          { id: "плащ", nameRu: "Плащ", kinds: ["gear", "consumable"], notes: [] },
+          { id: "верёвка", nameRu: "Верёвка", kinds: [], notes: [] },
+        ],
+      }),
+    );
+
+    expect(state.itemDefinitions.map((item) => item.kinds)).toEqual([[], ["gear"], []]);
+    expect(state.itemDefinitions.map((item) => item.nameRu)).toEqual([
+      "Зелье лечения",
+      "Плащ",
+      "Верёвка",
+    ]);
+  });
+
+  it("отмена с расходником поднимается той же правкой, а нечитаемая запись остаётся собой", () => {
+    const moved = fieldsOf(
+      migrateUndoPatch({
+        itemDefinitions: [{ id: "зелье", nameRu: "Зелье", kinds: ["consumable"] }, "не запись"],
+      }),
+    );
+
+    expect(moved.itemDefinitions).toEqual([
+      { id: "зелье", nameRu: "Зелье", kinds: [] },
+      "не запись",
+    ]);
   });
 
   it("вещей ещё нет и признаков у записи нет: и то и другое заводится", () => {
@@ -1038,13 +1086,13 @@ describe("знание об ингредиенте переезжает к ве�
       {
         id: "лунная-трава",
         nameRu: "Лунная трава",
-        kinds: ["ingredient"],
+        kinds: [],
         alchemy: { properties: [], observations: [] },
       },
     ]);
   });
 
-  it("у прежней вещи без признаков появляется ингредиент", () => {
+  it("у прежней вещи без признаков появляется алхимическая запись", () => {
     const moved = fieldsOf(
       migrateUndoPatch({
         itemDefinitions: [{ id: "лунная-трава", nameRu: "Лунная трава", kinds: "не массив" }],
@@ -1053,7 +1101,7 @@ describe("знание об ингредиенте переезжает к ве�
     );
 
     expect(moved.itemDefinitions).toEqual([
-      expect.objectContaining({ id: "лунная-трава", kinds: ["ingredient"] }),
+      expect.objectContaining({ id: "лунная-трава", kinds: [] }),
     ]);
   });
 

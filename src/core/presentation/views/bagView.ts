@@ -6,9 +6,9 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
-import { countedCarried, type ItemDefinition } from "@/core/domain/items/schema";
+import { countedCarried, ingredient, type ItemDefinition } from "@/core/domain/items/schema";
 import { bonusFactsOf } from "@/core/domain/sheet/families";
-import { CURRENCIES } from "@/core/domain/shared/schema";
+import { coinsView } from "@/core/presentation/views/coins";
 import { STAT_IDS } from "@/core/domain/shared/stats";
 
 function itemView(
@@ -27,15 +27,17 @@ function itemView(
     kinds: [...item.kinds],
     bagCount: equipment.bagCount(item.id),
     wornCount: equipment.wornCount(item.id),
+    ownedCount: equipment.ownedCount(item.id),
     wanted: equipment.wants(item.id),
     worksCarried: countedCarried(item),
-    ...(item.price === undefined ? {} : { price: item.price }),
+    ...(item.price === undefined ? {} : { price: coinsView(item.price) }),
     bonuses,
     bonusFacts: bonusFactsOf(bonuses).map((fact) => ({
       value: fact.value,
       targets: fact.targets.map((target) => ({ kind: target.kind, id: target.id })),
     })),
     spellcastingFocus: item.spellcastingFocus === true,
+    alchemical: ingredient(item),
     notes: item.notes.map((note) => ({ ...note })),
     alchemicalProperties: (item.alchemy?.properties ?? []).map((property) => ({
       number: property.number,
@@ -61,8 +63,16 @@ export function toBagView(character: CharacterState, spells: readonly Spell[]): 
     (part) => part.applied && part.contribution.kind === "method",
   );
 
+  const shopping = equipment.shopping(items);
+
   return {
-    money: CURRENCIES.map((currency) => ({ currency, amount: money[currency] })),
+    money: coinsView(money),
+    shopping: {
+      cost: coinsView(shopping.cost),
+      rest: coinsView(shopping.rest),
+      unpriced: shopping.unpriced,
+      short: shopping.short,
+    },
     items: items.all.map((item) =>
       itemView(item, equipment, needs.get(item.id)),
     ),

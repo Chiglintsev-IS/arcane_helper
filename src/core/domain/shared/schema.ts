@@ -75,8 +75,21 @@ export const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse
 
 export const CURRENCIES = ["gold", "silver", "copper"] as const;
 
-/** Цены справочников названы золотом: мелкой монетой их не называют. */
-export const GOLD = CURRENCIES[0];
+const MAXIMUM_COIN_AMOUNT = 999_999;
+
+const coinAmount = z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT);
+
+/**
+ * Монеты стола счётом: и цена, и кошелёк называют каждый номинал своим числом. Числом с ярлыком
+ * монеты их не описать — за вещь платят и золотом, и медью разом, а пересчёта между ними нет.
+ */
+export const coinsSchema = z.object({
+  gold: coinAmount.default(0),
+  silver: coinAmount.default(0),
+  copper: coinAmount.default(0),
+});
+
+export const NO_COINS = { gold: 0, silver: 0, copper: 0 };
 
 export function parsedOrRefused<TValue>(schema: z.ZodType<TValue>, value: unknown, subject: string): TValue {
   const result = parsedBySchema(schema, value);

@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react";
 
-import { DEFAULT_SCREEN_MODE, SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
+import {
+  DEFAULT_SCREEN_MODE,
+  SCREEN_LABELS,
+  SCREEN_MODES,
+  type ScreenMode,
+} from "@/ui/shared/model/screenMode";
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { BottomNav } from "@/ui/features/screen-mode/ui/BottomNav";
@@ -22,7 +27,24 @@ import { SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
 const STORAGE_KEY = "playScreenMode";
 
-function ScreenContent({ mode }: { mode: ScreenMode }) {
+/**
+ * Уход за одной записью на чужой экран: визит помнит саму запись, экран, который её сейчас
+ * показывает, и тот, с которого за ней пришли. Возврат без записи высадил бы игрока в список,
+ * откуда он только что ушёл в карточку.
+ */
+type Visit = { readonly itemId: string; readonly at: ScreenMode; readonly whence: ScreenMode | null };
+
+function ScreenContent({
+  mode,
+  visit,
+  onOpenAlchemy,
+  onReturn,
+}: {
+  mode: ScreenMode;
+  visit: Visit | null;
+  onOpenAlchemy: (itemId: string) => void;
+  onReturn: () => void;
+}) {
   switch (mode) {
     case "play":
       return <GameScreen />;
@@ -31,9 +53,23 @@ function ScreenContent({ mode }: { mode: ScreenMode }) {
     case "sheet":
       return <SheetScreen />;
     case "things":
-      return <ThingsScreen />;
+      return visit?.at === "things" ? (
+        <ThingsScreen initialItemId={visit.itemId} onOpenAlchemy={onOpenAlchemy} />
+      ) : (
+        <ThingsScreen onOpenAlchemy={onOpenAlchemy} />
+      );
     case "alchemy":
-      return <AlchemyScreen />;
+      return visit?.at !== "alchemy" ? (
+        <AlchemyScreen />
+      ) : visit.whence === null ? (
+        <AlchemyScreen initialKindId={visit.itemId} />
+      ) : (
+        <AlchemyScreen
+          initialKindId={visit.itemId}
+          whenceNameRu={SCREEN_LABELS[visit.whence].title}
+          onLeave={onReturn}
+        />
+      );
     case "smithing":
       return <SmithingScreen />;
     case "familiar":
@@ -54,6 +90,8 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
   const error = useSession((state) => state.error);
 
   const [mode, setMode] = useState<ScreenMode>(() => initialMode ?? DEFAULT_SCREEN_MODE);
+  /* Вид, ради которого ушли в алхимию: страница вещи обещает открыть её там, а не просто режим. */
+  const [visit, setVisit] = useState<Visit | null>(null);
 
   useEffect(() => {
     if (initialMode === undefined) {
@@ -73,12 +111,25 @@ export function PlayShell({ initialMode }: { initialMode?: ScreenMode } = {}) {
 
   const changeMode = (next: ScreenMode): void => {
     setMode(next);
+    setVisit(null);
     writeRemembered(STORAGE_KEY, next);
   };
 
   return (
     <main className="flex h-dvh flex-col pt-[env(safe-area-inset-top)]">
-      <ScreenContent mode={mode} />
+      <ScreenContent
+        mode={mode}
+        visit={visit}
+        onOpenAlchemy={(itemId) => {
+          changeMode("alchemy");
+          setVisit({ itemId, at: "alchemy", whence: mode });
+        }}
+        onReturn={() => {
+          const back = visit?.whence ?? DEFAULT_SCREEN_MODE;
+          changeMode(back);
+          if (visit !== null) setVisit({ itemId: visit.itemId, at: back, whence: null });
+        }}
+      />
 
       <div className="relative shrink-0">
         <div className="absolute inset-x-3 bottom-full z-20 mb-2 flex flex-col gap-2">

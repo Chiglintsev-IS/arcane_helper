@@ -1,105 +1,93 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
-
 import type { ChoicesView, ItemView } from "@/contract/views";
-import { editName } from "@/ui/shared/ui/buttonLabels";
-import { RULE_MARK } from "@/ui/shared/ui/rule";
+import { RULE_COLUMN, RULE_EDGE_ACTIVE, RULE_EDGE_QUIET } from "@/ui/shared/ui/rule";
+import { SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
-import { propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
+import { bonusLine, traitLine, unitRu } from "../lib/itemMeta";
+import { itemTraitLabel, itemTraitsOf } from "../lib/itemTraits";
 
-import { itemMeta } from "../lib/itemMeta";
+const SPEND_MARK = "−";
 
+const STOCK_MARK = "+";
+
+function wornRu(item: ItemView): string {
+  return `надето ${item.wornCount} из ${item.ownedCount}`;
+}
+
+/**
+ * Строка наличия: число со своей единицей и два нажатия рядом с ним. Прибавки, надетое и признаки
+ * подписаны под именем, потому что за столом спрашивают «сколько осталось», а не «что это».
+ */
 export function ItemRow({
   item,
   stats,
-  countRu,
+  opened,
   onOpen,
-  children,
+  onSpend,
+  onStock,
 }: {
   item: ItemView;
   stats: ChoicesView["stats"];
-  countRu?: string;
+  opened: boolean;
   onOpen: () => void;
-  children?: ReactNode;
+  onSpend: () => void;
+  onStock: () => void;
 }) {
-  const { facts, marksRu, neededFor, notes } = itemMeta(item, stats);
+  const bonusesRu = bonusLine(item, stats);
+  const traitsRu = traitLine(itemTraitsOf(item).map(itemTraitLabel));
+  const empty = item.ownedCount === 0;
 
   return (
-    <li className="flex flex-col py-1">
+    <li
+      className={`flex items-stretch ${opened ? `${SURFACE_GROUP_BARE} ${RULE_EDGE_ACTIVE}` : RULE_EDGE_QUIET}`}
+    >
       <button
         type="button"
         onClick={onOpen}
-        aria-label={editName(item.nameRu)}
-        className="min-h-11 w-full px-1 py-1.5 text-left"
+        className="flex min-h-14 min-w-0 flex-1 items-center gap-2.5 px-2.5 py-2 text-left"
       >
-        <span className="block text-sm font-medium">{item.nameRu}</span>
-        {facts.length === 0 &&
-        marksRu.length === 0 &&
-        neededFor === undefined &&
-        notes.length === 0 ? null : (
-          <span className="mt-1 flex flex-wrap items-center gap-1">
-            {facts.map((fact) => (
-              <span
-                key={`${fact.valueRu} ${fact.labelsRu.join(" ")}`}
-                className={`px-1.5 py-0.5 text-xs leading-tight text-ink-quiet ${RULE_MARK.muted}`}
-              >
-                <span className="font-semibold tabular-nums text-ink">
-                  {fact.valueRu}
-                </span>
-                {fact.labelsRu.map((labelRu) => (
-                  <Fragment key={labelRu}>
-                    {" "}
-                    <span className="whitespace-nowrap">
-                      {labelRu === fact.labelsRu.at(-1) ? labelRu : `${labelRu},`}
-                    </span>
-                  </Fragment>
-                ))}
-              </span>
-            ))}
-            {marksRu.map((markRu) => (
-              <span
-                key={markRu}
-                className={`px-1.5 py-0.5 text-xs leading-tight text-ink-quiet ${RULE_MARK.muted}`}
-              >
-                {markRu}
-              </span>
-            ))}
-            {neededFor === undefined ? null : (
-              <span className="min-w-0 text-xs leading-snug text-ink-quiet">
-                {neededFor}
-              </span>
-            )}
-            {notes.map((note) => (
-              <span key={note.id} className="min-w-0 text-xs leading-snug text-ink-quiet">
-                {note.textRu}
-              </span>
-            ))}
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className={`text-sm leading-tight ${empty ? "text-ink-quiet" : ""}`}>
+            {item.nameRu}
           </span>
-        )}
+          {item.wornCount === 0 ? null : (
+            <span className="text-[0.65rem] leading-tight text-accent">{wornRu(item)}</span>
+          )}
+          {bonusesRu === "" ? null : (
+            <span className="text-[0.65rem] leading-snug text-ink-soft">{bonusesRu}</span>
+          )}
+          {traitsRu === "" ? null : (
+            <span className="text-[0.625rem] leading-tight text-ink-quiet lowercase">{traitsRu}</span>
+          )}
+        </span>
+        <span className="flex shrink-0 items-baseline gap-1">
+          <span
+            className={`text-lg font-semibold leading-none tabular-nums ${empty ? "text-off" : ""}`}
+          >
+            {item.ownedCount}
+          </span>
+          <span className="text-[0.6rem] text-ink-quiet">{unitRu(item, item.ownedCount)}</span>
+        </span>
       </button>
 
-      {item.alchemicalProperties.length === 0 ? null : (
-        <ul className="flex flex-col gap-0.5 px-1 pb-1">
-          {item.alchemicalProperties.map((property) => (
-            <li key={property.number} className="flex items-baseline gap-2 text-xs">
-              <span className="shrink-0 font-semibold tabular-nums text-ink-quiet">
-                {propertyNumberRu(property.number)}
-              </span>
-              <span className="min-w-0 flex-1 leading-snug">{property.nameRu}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="flex items-center justify-between gap-2 pb-1 pl-1">
-        {countRu === undefined ? (
-          <span />
-        ) : (
-          <span className="min-w-0 text-xs tabular-nums text-ink-quiet">{countRu}</span>
-        )}
-        <span className="flex shrink-0 items-center gap-1">{children}</span>
-      </div>
+      <button
+        type="button"
+        aria-label={`Потратить один из сумки: ${item.nameRu}`}
+        disabled={item.bagCount === 0}
+        onClick={onSpend}
+        className={`w-12 shrink-0 text-lg text-accent disabled:text-off ${RULE_COLUMN}`}
+      >
+        <span aria-hidden="true">{SPEND_MARK}</span>
+      </button>
+      <button
+        type="button"
+        aria-label={`Добавить один в сумку: ${item.nameRu}`}
+        onClick={onStock}
+        className={`w-12 shrink-0 text-base text-ink-quiet ${RULE_COLUMN}`}
+      >
+        <span aria-hidden="true">{STOCK_MARK}</span>
+      </button>
     </li>
   );
 }

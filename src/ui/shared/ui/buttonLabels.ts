@@ -6,6 +6,7 @@ export function editName(recordRu: string): string {
 
 export const BUTTON_LABELS = {
   save: "Сохранить",
+  write: "Записать",
   confirm: "Подтвердить",
   dismiss: "Отмена",
   undo: "Вернуть",

@@ -5,8 +5,9 @@ import { STAT_IDS } from "@/core/domain/shared/stats";
 import type { ContributionSource, SourcedContribution } from "@/core/domain/shared/stats";
 import { ownedFields } from "@/core/domain/shared/ownedFields";
 import { DomainError } from "@/core/domain/shared/errors";
+import { CURRENCIES } from "@/core/domain/shared/schema";
 import { assertMoney, assertStockEntry, MAXIMUM_ITEM_COUNT } from "./schema";
-import type { EquipmentData, Money, StockEntry } from "./schema";
+import type { Coins, EquipmentData, Money, Shopping, StockEntry } from "./schema";
 
 type EquipmentState = { equipment: EquipmentData };
 
@@ -54,6 +55,11 @@ export class Equipment {
     return this.data.worn.find((entry) => entry.itemId === itemId)?.count ?? 0;
   }
 
+  /** Сколько вещи у персонажа всего: надетое лежит не в сумке, но принадлежит ему так же. */
+  ownedCount(itemId: string): number {
+    return this.bagCount(itemId) + this.wornCount(itemId);
+  }
+
   contributions(items: Items): readonly SourcedContribution[] {
     return items.all.flatMap((item) => {
       const onBody = this.wornCount(item.id) > 0;
@@ -82,6 +88,28 @@ export class Equipment {
 
   wants(itemId: string): boolean {
     return this.data.wanted.includes(itemId);
+  }
+
+  /**
+   * Чего стоят покупки и что от кошелька останется. Цену снаряжение читает у вещи и складывает
+   * монету с монетой своего имени: сколько серебра идёт за золотой, решает стол, а не приложение.
+   */
+  shopping(items: Items): Shopping {
+    const wished = items.all.filter((item) => this.wants(item.id));
+    const spent = (currency: (typeof CURRENCIES)[number]): number =>
+      wished.reduce((sum, item) => sum + (item.price?.[currency] ?? 0), 0);
+    const cost: Coins = { gold: spent("gold"), silver: spent("silver"), copper: spent("copper") };
+    const rest: Coins = {
+      gold: this.money.gold - cost.gold,
+      silver: this.money.silver - cost.silver,
+      copper: this.money.copper - cost.copper,
+    };
+    return {
+      cost,
+      rest,
+      unpriced: wished.filter((item) => item.price === undefined).length,
+      short: CURRENCIES.some((currency) => rest[currency] < 0),
+    };
   }
 
   withWanted(itemId: string, wanted: boolean): Equipment {

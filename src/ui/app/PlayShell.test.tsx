@@ -125,6 +125,24 @@ describe("режим экрана переживает перезапуск (FR-
     expect(localStorage.getItem(STORAGE_KEY)).toBe("things");
   });
 
+  it("вид открывают из карточки вещи и возвращаются в неё же, а не в список", async () => {
+    const user = userEvent.setup();
+    const herb = "Лунная трава";
+    const { stores } = await renderWithStores(<PlayShell />);
+    await stores.session.getState().execute({ kind: "add_item", nameRu: herb, itemKinds: [] });
+    await stores.session.getState().execute({ kind: "note_ingredient", nameRu: herb });
+
+    await openMode(user, /^Вещи/);
+    await user.click(screen.getAllByRole("button", { name: new RegExp(herb) })[0]!);
+    await user.click(screen.getByRole("button", { name: "Открыть в алхимии →" }));
+
+    /* Возврат назван приведшим экраном и ведёт туда, где вещь и открывали. */
+    await user.click(screen.getByRole("button", { name: "Вещи" }));
+
+    expect(screen.getByRole("button", { name: new RegExp(`^Название`) }).textContent).toContain(herb);
+    expect(screen.getByRole("button", { name: `Убрать вещь: ${herb}` })).toBeDefined();
+  });
+
   it("битое значение читается как отсутствующее и открывает «Игру»", async () => {
     localStorage.setItem(STORAGE_KEY, "combat");
 
@@ -445,12 +463,6 @@ describe("одно дело — одно слово (FR-264)", () => {
     expect(screen.getByRole("dialog", { name: "КД" })).toBeDefined();
     expect(screen.getByLabelText("Поправка")).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Отмена" }));
-
-    await openMode(user, /^Вещи/);
-    const money = screen.getByRole("button", { name: "Правка: Деньги" });
-    expect(money.textContent).toBe("Правка");
-    await user.click(money);
-    expect(screen.getByRole("dialog", { name: "Правка: Деньги" })).toBeDefined();
   });
 
   it("уход со шторки и возврат сделанного зовутся по-разному", async () => {

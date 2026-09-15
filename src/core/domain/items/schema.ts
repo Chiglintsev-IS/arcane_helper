@@ -1,25 +1,20 @@
 import { z } from "zod";
 
 import { ingredientAlchemySchema } from "@/core/domain/items/ingredient";
-import { CURRENCIES, nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
+import { CURRENCIES, coinsSchema, nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { statBonusesSchema } from "@/core/domain/shared/stats";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
-export const ITEM_KINDS = ["gear", "consumable", "ingredient"] as const;
-
-const MAXIMUM_COIN_AMOUNT = 999_999;
-
-const priceSchema = z.object({
-  amount: z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT),
-  currency: z.enum(CURRENCIES),
-});
+/**
+ * Признаки, которые ставят рукой. Ингредиента среди них нет: вещь становится видом алхимии, когда о
+ * ней записано алхимическое знание, — пометкой этого не объявляют и снятием пометки не отменяют.
+ * Расходника тоже нет: тратят счётом всякую вещь, и признак, ничего не меняющий, отличал бы одно
+ * от другого только на словах.
+ */
+export const ITEM_KINDS = ["gear"] as const;
 
 function wearableOnlyRefusal(nameRu: string): string {
   return `«${nameRu}» не экипировка: доспеха и фокусировки у неё не бывает`;
-}
-
-function ingredientOnlyRefusal(nameRu: string): string {
-  return `«${nameRu}» не ингредиент: алхимических свойств у неё не бывает`;
 }
 
 export function noteTakenRefusal(id: string): string {
@@ -52,7 +47,7 @@ const itemDefinitionFields = z.object({
   id: nonEmpty,
   nameRu: nonEmpty,
   kinds: z.array(z.enum(ITEM_KINDS)).default([]),
-  price: priceSchema.optional(),
+  price: coinsSchema.optional(),
   notes: z.array(noteFields).default([]),
   bonuses: statBonusesSchema.optional(),
   worksCarried: z.literal(true).optional(),
@@ -63,8 +58,6 @@ const itemDefinitionFields = z.object({
 type ItemFields = z.infer<typeof itemDefinitionFields>;
 
 const WEARABLE_ONLY_FIELDS = ["spellcastingFocus"] as const satisfies readonly (keyof ItemFields)[];
-
-const INGREDIENT_ONLY_FIELDS = ["alchemy"] as const satisfies readonly (keyof ItemFields)[];
 
 function filledFields(
   item: Readonly<Record<string, unknown>>,
@@ -101,6 +94,12 @@ function withoutEmptyBonuses(item: ItemFields): ItemFields {
   return contributing.length === 0 ? rest : { ...rest, bonuses: Object.fromEntries(contributing) };
 }
 
+/** Цена без единой ненулевой монеты — не цена в ноль, а неназванная цена: её при вещи не хранят. */
+function withoutEmptyPrice(item: ItemFields): ItemFields {
+  const { price, ...rest } = item;
+  return price === undefined || CURRENCIES.some((currency) => price[currency] > 0) ? item : rest;
+}
+
 function withoutIdleCondition(item: ItemFields): ItemFields {
   if (item.bonuses !== undefined || item.worksCarried === undefined) return item;
   const { worksCarried: _idle, ...rest } = item;
@@ -115,13 +114,10 @@ function isWearable(item: { readonly kinds: readonly string[] }): boolean {
   return item.kinds.includes("gear");
 }
 
-function isIngredient(item: { readonly kinds: readonly string[] }): boolean {
-  return item.kinds.includes("ingredient");
-}
-
 const itemDefinitionSchema = itemDefinitionFields
   .transform(withOrderedKinds)
   .transform(withoutEmptyBonuses)
+  .transform(withoutEmptyPrice)
   .transform(withoutIdleCondition)
   .superRefine((item, context) => {
     if (!isWearable(item)) {
@@ -136,16 +132,10 @@ const itemDefinitionSchema = itemDefinitionFields
         });
       }
     }
-    if (!isIngredient(item)) {
-      for (const field of filledFields(item, INGREDIENT_ONLY_FIELDS)) {
-        context.addIssue({
-          code: "custom",
-          path: [field],
-          message: ingredientOnlyRefusal(item.nameRu),
-        });
-      }
-    }
   });
+
+/** Вещь с алхимической записью: у вида она есть всегда, потому что записью вид и начинается. */
+export type Alchemical = ItemDefinition & { readonly alchemy: NonNullable<ItemDefinition["alchemy"]> };
 
 export type ItemNote = DeepReadonly<z.infer<typeof noteFields>>;
 export type ItemDefinition = DeepReadonly<z.infer<typeof itemDefinitionSchema>>;
@@ -158,6 +148,10 @@ export function itemDefinitionOf(value: unknown): ItemDefinition {
   return parsedOrRefused(itemDefinitionSchema, value, "вещь");
 }
 
+export function itemPriceOf(value: unknown): ItemDefinition["price"] {
+  return parsedOrRefused(coinsSchema, value, "цена");
+}
+
 export function wearable(item: ItemDefinition): boolean {
   return isWearable(item);
 }
@@ -166,8 +160,12 @@ export function countedCarried(item: ItemDefinition): boolean {
   return item.worksCarried === true;
 }
 
-export function ingredient(item: ItemDefinition): boolean {
-  return isIngredient(item);
+/**
+ * Вид алхимии — вещь, о которой ремеслу есть что сказать: у неё есть алхимическая запись, хотя бы
+ * пустая. Запись заводят и убирают в книге алхимика; правка вещи её не касается.
+ */
+export function ingredient(item: ItemDefinition): item is Alchemical {
+  return item.alchemy !== undefined;
 }
 
 export function alignedItemDefinition(item: ItemDraft): ItemDefinition {
@@ -177,8 +175,7 @@ export function alignedItemDefinition(item: ItemDraft): ItemDefinition {
         ...withoutWearableOnlyFields(item),
         ...(item.bonuses === undefined ? {} : { worksCarried: true }),
       };
-  const aligned = isIngredient(item) ? worn : withoutFields(worn, INGREDIENT_ONLY_FIELDS);
-  return parsedOrRefused(itemDefinitionSchema, aligned, "вещь");
+  return parsedOrRefused(itemDefinitionSchema, worn, "вещь");
 }
 
 export const ITEMS_FIELDS = {

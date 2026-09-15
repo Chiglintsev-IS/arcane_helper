@@ -2,7 +2,7 @@ import type { RecipeFormulaView } from "@/contract/commands";
 import type { PreviewOf } from "@/contract/questions";
 import type { ChoicesView } from "@/contract/views";
 
-import { CURRENCY_ABBREVIATIONS, coinRu, withPlural } from "@/shared/language";
+import { CURRENCY_ABBREVIATIONS, coinRu, GOLD_CURRENCY, signed, withPlural } from "@/shared/language";
 import type { Tone } from "@/ui/shared/ui/tone";
 
 /**
@@ -80,6 +80,27 @@ export function propertyMarks(slot: {
   ];
 }
 
+/** Числа нет: справочник его не даёт, и на месте цифры стоит прочерк, а не пустота. */
+export const NO_NUMBER_RU = "—";
+
+/** Цена по справочнику: у редкости вне лестницы её называет мастер, и число сюда не подставляется. */
+export function priceRu(modifier: number | null): string {
+  return modifier === null ? NO_NUMBER_RU : signed(modifier);
+}
+
+/**
+ * Слагаемое разбора: неоценённое стоит прочерком, а неоценённое с числом — тем, что справочник в
+ * нём всё же оценил. Чего в нём недостаёт, сказано словами под разбором.
+ */
+export function partValueRu(part: { readonly modifier: number; readonly unpriced: boolean }): string {
+  return part.unpriced && part.modifier === 0 ? NO_NUMBER_RU : signed(part.modifier);
+}
+
+/** Итог, которому недостаёт цены особого, называется снизу: мастер прибавит к нему своё число. */
+export function difficultyRu(total: number, unpriced: boolean): string {
+  return unpriced ? `${total}+` : `${total}`;
+}
+
 export const TIER_LABELS: Readonly<Record<string, string>> = {
   plain: "обычная",
   amplified: "усиленная",
@@ -125,7 +146,6 @@ export type ResearchNeed = { readonly labelRu: string; readonly valueRu: string 
 const NO_CONSUMABLES_RU = "не нужны";
 
 /** Монета цены расходников: та же, какой справочник называет тарифы. */
-const GOLD = "gold";
 
 /**
  * Чего работа требует от инструмента — по справочнику, а не по нашей сумке: книга нашего набора не
@@ -157,7 +177,7 @@ export function researchNeedsRu(
       valueRu:
         plan.consumablesRu === null
           ? NO_CONSUMABLES_RU
-          : `${plan.consumablesRu.toLowerCase()}, ${coinRu(plan.consumablesGold, GOLD)}`,
+          : `${plan.consumablesRu.toLowerCase()}, ${coinRu(plan.consumablesGold, GOLD_CURRENCY)}`,
     },
     { labelRu: "Оснащение", valueRu: plan.laboratory ? LABORATORY_RU : FIELD_TOOLS_RU },
   ];

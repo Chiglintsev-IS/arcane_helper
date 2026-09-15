@@ -119,7 +119,8 @@ export const previewSchema = z.discriminatedUnion("kind", [
     difficulty: z
       .object({
         total: whole,
-        parts: z.array(z.object({ nameRu: word, modifier: whole })),
+        unpriced: z.boolean(),
+        parts: z.array(z.object({ nameRu: word, modifier: whole, unpriced: z.boolean() })),
         mainRu: word,
       })
       .nullable(),

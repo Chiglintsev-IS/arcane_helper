@@ -6,6 +6,7 @@ import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
 import { strongestApparatus } from "@/core/domain/crafting/apparatus";
 import { PLAINEST_RARITY, SPECIAL_RARITY } from "@/core/domain/shared/rarity";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
+import { NO_COINS } from "@/core/domain/shared/schema";
 import { Items } from "@/core/domain/items/items";
 import { filledWearableOnlyFields, withoutWearableOnlyFields } from "@/core/domain/items/schema";
 import { fieldsOf } from "@/core/domain/shared/fields";
@@ -15,6 +16,9 @@ import { FIRE_SUPPRESSION_TURN_STARTS } from "@/core/domain/vitality/blood";
 import { CURRENCY_ABBREVIATIONS } from "@/shared/language";
 
 const UNKNOWN_ABILITY_SCORE = 10;
+
+const LEGACY_INGREDIENT_KIND = "ingredient";
+const LEGACY_CONSUMABLE_KIND = "consumable";
 
 const NO_LEGACY_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
@@ -77,10 +81,10 @@ function migrateArcaneRecovery(state: unknown): unknown {
 
 const LEGACY_ITEM_KINDS: Record<string, readonly string[]> = {
   gear: ["gear"],
-  consumable: ["consumable"],
+  consumable: [],
   ingredient: ["ingredient"],
   other: [],
-  potion: ["consumable"],
+  potion: [],
   junk: [],
 };
 
@@ -241,6 +245,70 @@ function itemWithNotes(item: unknown): unknown {
   };
 }
 
+/** Цена одной монетой была числом с ярлыком: теперь у неё свой счёт на каждый номинал стола. */
+function itemWithCoinPrice(item: unknown): unknown {
+  if (item === null || typeof item !== "object") return item;
+  const fields = fieldsOf(item);
+  const price = fieldsOf(fields.price);
+  if (typeof price.amount !== "number" || typeof price.currency !== "string") return item;
+  return { ...fields, price: { ...NO_COINS, [price.currency]: price.amount } };
+}
+
+/** Признак ингредиента был пометкой, а стал фактом: вид начинается с алхимической записи. */
+function itemWithAlchemyRecord(item: unknown): unknown {
+  if (item === null || typeof item !== "object") return item;
+  const fields = fieldsOf(item);
+  const kinds = fields.kinds;
+  if (!Array.isArray(kinds) || !kinds.includes(LEGACY_INGREDIENT_KIND)) return item;
+  return {
+    ...fields,
+    kinds: kinds.filter((kind: unknown) => kind !== LEGACY_INGREDIENT_KIND),
+    alchemy: fields.alchemy ?? {},
+  };
+}
+
+/** Признак расходника ничего не менял и потому убран: вещь остаётся, пометки при ней не остаётся. */
+function itemWithoutConsumableKind(item: unknown): unknown {
+  if (item === null || typeof item !== "object") return item;
+  const fields = fieldsOf(item);
+  const kinds = fields.kinds;
+  if (!Array.isArray(kinds) || !kinds.includes(LEGACY_CONSUMABLE_KIND)) return item;
+  return { ...fields, kinds: kinds.filter((kind: unknown) => kind !== LEGACY_CONSUMABLE_KIND) };
+}
+
+function migrateConsumableKind(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(itemWithoutConsumableKind);
+  return items.every((item, at) => item === stored[at])
+    ? state
+    : { ...fields, itemDefinitions: items };
+}
+
+function migrateIngredientKind(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(itemWithAlchemyRecord);
+  return items.every((item, at) => item === stored[at])
+    ? state
+    : { ...fields, itemDefinitions: items };
+}
+
+function migrateItemPrices(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(itemWithCoinPrice);
+  return items.every((item, at) => item === stored[at])
+    ? state
+    : { ...fields, itemDefinitions: items };
+}
+
 function migrateItemNotes(state: unknown): unknown {
   const fields = fieldsOf(state);
   const stored = fields.itemDefinitions;
@@ -368,19 +436,19 @@ function migrateSpellcastingFocus(state: unknown): unknown {
 
 const LEGACY_BOUGHT_MATERIALS: Record<
   string,
-  { nameRu: string; kind: string; price: { amount: number; currency: string } }
+  { nameRu: string; kind: string; price: Record<string, number> }
 > = {
   identify: {
     nameRu: `жемчужина стоимостью не менее 100 ${CURRENCY_ABBREVIATIONS.gold}`,
     kind: "other",
-    price: { amount: 100, currency: "gold" },
+    price: { ...NO_COINS, gold: 100 },
   },
   "find-familiar": {
     nameRu:
       `уголь, благовония и травы стоимостью 10 ${CURRENCY_ABBREVIATIONS.gold},` +
       " сжигаемые в огне в латунной жаровне",
-    kind: "consumable",
-    price: { amount: 10, currency: "gold" },
+    kind: "other",
+    price: { ...NO_COINS, gold: 10 },
   },
 };
 
@@ -617,6 +685,9 @@ export function migrateUndoPatch(patch: unknown): unknown {
     migrateAlchemyApparatus,
     migrateKnownRecipes,
     migrateItemNotes,
+    migrateItemPrices,
+    migrateIngredientKind,
+    migrateConsumableKind,
     withoutForgottenFields,
   ]);
 }
@@ -644,6 +715,9 @@ export function migrateCharacterState(raw: unknown): unknown {
     migrateAlchemyApparatus,
     migrateKnownRecipes,
     migrateItemNotes,
+    migrateItemPrices,
+    migrateIngredientKind,
+    migrateConsumableKind,
   ]);
 }
 

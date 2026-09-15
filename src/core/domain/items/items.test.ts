@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DomainError } from "@/core/domain/shared/errors";
+import { NO_ALCHEMY } from "@/core/domain/items/ingredient";
 import { Items } from "@/core/domain/items/items";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 
@@ -42,13 +43,14 @@ describe("вещи", () => {
   });
 
   it("повторное заведение дописывает названный признак заведённой вещи", () => {
-    const once = Items.of({ itemDefinitions: [] }).addDefinition({
-      nameRu: "Верёвка",
-      kinds: ["gear"],
-    });
-    const twice = once.addDefinition({ nameRu: "Верёвка", kinds: ["consumable"] });
-    expect(twice.all).toHaveLength(1);
-    expect(twice.find("верёвка")?.kinds).toEqual(["gear", "consumable"]);
+    const once = Items.of({ itemDefinitions: [] }).addDefinition({ nameRu: "Верёвка", kinds: [] });
+
+    const named = once.addDefinition({ nameRu: "Верёвка", kinds: ["gear"] });
+    expect(named.all).toHaveLength(1);
+    expect(named.find("верёвка")?.kinds).toEqual(["gear"]);
+
+    /* Названное второй раз ничего не дописывает: набор и так полон. */
+    expect(named.addDefinition({ nameRu: "Верёвка", kinds: ["gear"] })).toBe(named);
   });
 
   it("правка вещи целиком заменяет запись, соседей не трогает", () => {
@@ -85,6 +87,22 @@ describe("вещи", () => {
     });
   });
 
+  it("переименование одним словом ничего больше о вещи не называет и не теряет", () => {
+    const known = Items.of({ itemDefinitions: [{ ...rope, kinds: ["gear"], bonuses: { armorClass: 1 } }] })
+      .addNote("rope", { id: "one", textRu: "Подгорела с краю" })
+      .startAlchemy("rope");
+
+    const renamed = known.rename("rope", "Шёлковая верёвка");
+
+    expect(renamed.find("rope")).toMatchObject({
+      nameRu: "Шёлковая верёвка",
+      kinds: ["gear"],
+      bonuses: { armorClass: 1 },
+      notes: [{ id: "one", textRu: "Подгорела с краю" }],
+    });
+    expect(renamed.ingredients.map((item) => item.id)).toEqual(["rope"]);
+  });
+
   it("убирает вещь, соседей не трогает", () => {
     const items = Items.of({
       itemDefinitions: [rope, { id: "torch", nameRu: "Факел", kinds: [], notes: [] }],
@@ -109,9 +127,26 @@ describe("вещи", () => {
 });
 
 describe("алхимия ингредиента у вещи", () => {
-  const herb = { id: "herb", nameRu: "Лунная трава", kinds: ["ingredient"] as const, notes: [] };
+  const herb = {
+    id: "herb",
+    nameRu: "Лунная трава",
+    kinds: [] as const,
+    notes: [],
+    alchemy: NO_ALCHEMY,
+  };
   const rope = { id: "rope", nameRu: "Верёвка", kinds: [] as const, notes: [] };
   const bench = (): Items => Items.of({ itemDefinitions: [herb, rope] });
+
+  it("вид заводится записью, и второй раз она не заводится поверх раскрытого", () => {
+    const plain = Items.of({ itemDefinitions: [rope] });
+    expect(plain.ingredients).toEqual([]);
+
+    const started = plain.startAlchemy("rope");
+    expect(started.ingredients.map((item) => item.id)).toEqual(["rope"]);
+
+    const known = started.revealProperty("rope", { number: 1, nameRu: "Лечение здоровья" });
+    expect(known.startAlchemy("rope").alchemyOf("rope").properties).toHaveLength(1);
+  });
 
   it("свойство раскрывается у вещи и стоит под своим номером", () => {
     const known = bench().revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" });
@@ -119,6 +154,22 @@ describe("алхимия ингредиента у вещи", () => {
     expect(known.alchemyOf("herb").properties).toEqual([
       { number: 1, nameRu: "Лечение здоровья" },
     ]);
+  });
+
+  it("раскрытое переписывается под своим номером, а пустому номеру переписывать нечего", () => {
+    const known = bench().revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" });
+    const fixed = known.rewriteProperty("herb", {
+      number: 1,
+      nameRu: "Лечение ран",
+      rarityRu: "Редкое",
+    });
+
+    expect(fixed.alchemyOf("herb").properties).toEqual([
+      { number: 1, nameRu: "Лечение ран", rarityRu: "Редкое" },
+    ]);
+    expect(() =>
+      known.rewriteProperty("herb", { number: 3, nameRu: "Взрыв" }),
+    ).toThrow(/Лунная трава.*3/);
   });
 
   it("раскрытое убирается по номеру, а соседнее остаётся", () => {
@@ -140,7 +191,7 @@ describe("алхимия ингредиента у вещи", () => {
     const renamed = known.replaceDefinition({
       id: "herb",
       nameRu: "Лунная травка",
-      kinds: ["ingredient"],
+      kinds: [],
     });
 
     expect(renamed.alchemyOf("herb").properties).toEqual([
@@ -148,15 +199,17 @@ describe("алхимия ингредиента у вещи", () => {
     ]);
   });
 
-  it("утрата признака ингредиента уносит алхимию с собой", () => {
+  it("снятый признак ингредиента алхимию не уносит: раскрытое убирают своей операцией", () => {
     const known = bench().revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" });
     const demoted = known.replaceDefinition({
       id: "herb",
       nameRu: "Лунная трава",
-      kinds: ["consumable"],
+      kinds: ["gear"],
     });
 
-    expect(demoted.find("herb")?.alchemy).toBeUndefined();
+    expect(demoted.find("herb")?.alchemy?.properties).toHaveLength(1);
+    expect(demoted.ingredients.map((item) => item.id)).toEqual(["herb"]);
+    expect(demoted.dropProperty("herb", 1).find("herb")?.alchemy?.properties).toHaveLength(0);
   });
 
   it("заметки живут по одной: пишутся, правятся и убираются по отдельности", () => {
@@ -204,10 +257,11 @@ describe("алхимия ингредиента у вещи", () => {
     expect(bench().ingredients.map((item) => item.id)).toEqual(["herb"]);
   });
 
-  it("снятый признак ингредиента уносит алхимию: свойств у неингредиента не бывает", () => {
+  it("вещь без единого признака остаётся видом алхимии, пока о ней записано знание", () => {
     const known = bench().revealProperty("herb", { number: 1, nameRu: "Лечение здоровья" });
     const plain = known.replaceDefinition({ ...known.find("herb")!, kinds: [] });
 
-    expect(plain.find("herb")?.alchemy).toBeUndefined();
+    expect(plain.find("herb")?.alchemy?.properties).toHaveLength(1);
+    expect(plain.ingredients.map((item) => item.id)).toEqual(["herb"]);
   });
 });

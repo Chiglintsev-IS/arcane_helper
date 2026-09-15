@@ -3,12 +3,11 @@ import { describe, expect, it } from "vitest";
 import { Character } from "@/core/domain/assembly/character";
 import { Items } from "@/core/domain/items/items";
 import type { RecipeFormula } from "@/core/domain/crafting/recipe";
-import { undoLast, type Occasion, type Session } from "@/core/application/session";
+import type { Occasion, Session } from "@/core/application/session";
 import { createWizard, withIngredientKnowledge } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { addItem, adjustBagCount } from "./equipment";
 import {
   batchSpending,
-  craftBatch,
   mixtureKinds,
   noteIngredientReference,
   recordRecipe,
@@ -48,10 +47,6 @@ const STANDARD: RecipeFormula = {
   limitations: [],
 };
 
-function bagCount(session: Session, nameRu: string): number {
-  return Character.of(session.character).equipment.bagCount(Items.idFromName(nameRu));
-}
-
 function stocked(portionsEach: number): Session {
   const known = [MOON_HERB, CRIMSON_ROOT].reduce(
     (character, kind) => withIngredientKnowledge(character, kind, [HEALING]),
@@ -60,7 +55,7 @@ function stocked(portionsEach: number): Session {
   return [MOON_HERB, CRIMSON_ROOT].reduce<Session>(
     (session, kind) =>
       adjustBagCount(
-        addItem(session, { nameRu: kind, kinds: ["ingredient"] }, occasion),
+        addItem(session, { nameRu: kind, kinds: [] }, occasion),
         Items.idFromName(kind),
         portionsEach - 1,
         occasion,
@@ -79,46 +74,6 @@ describe("виды состава", () => {
 });
 
 describe("изготовление состава", () => {
-  it("закладка партии списывает все виды одной записью лога", () => {
-    const before = stocked(6);
-    const entriesBefore = before.log.length;
-
-    const crafted = craftBatch(before, { formula: STANDARD, portions: 4 }, occasion);
-
-    expect(bagCount(crafted, MOON_HERB)).toBe(2);
-    expect(bagCount(crafted, CRIMSON_ROOT)).toBe(2);
-    expect(crafted.log).toHaveLength(entriesBefore + 1);
-    expect(crafted.log.at(-1)?.summaryRu).toBe(
-      "Заложено: Лечение здоровья, сложность 10, 5 единиц. Истрачено по 4 порции: Лунная трава, Багровый корень",
-    );
-
-    const undone = undoLast(crafted);
-    expect(bagCount(undone, MOON_HERB)).toBe(6);
-    expect(bagCount(undone, CRIMSON_ROOT)).toBe(6);
-  });
-
-  it("нехватка одного вида отменяет всю работу, и второй вид остаётся нетронутым", () => {
-    const scarce = adjustBagCount(stocked(2), Items.idFromName(CRIMSON_ROOT), -1, occasion);
-
-    expect(() => craftBatch(scarce, { formula: STANDARD, portions: 2 }, occasion)).toThrow(
-      /столько не потратить/,
-    );
-    expect(bagCount(scarce, MOON_HERB)).toBe(2);
-  });
-
-  it("сверх предела набора не работают, пока мастер не разрешил, — и тогда ничего не тратят", () => {
-    const stock = stocked(6);
-    const hard = { ...STANDARD, duration: "24 часа" } as const;
-
-    expect(() => craftBatch(stock, { formula: hard, portions: 1 }, occasion)).toThrow(
-      /Сложность 22 выше предела набора \(20\)/,
-    );
-    expect(bagCount(stock, MOON_HERB)).toBe(6);
-
-    const allowed = craftBatch(stock, { formula: hard, portions: 1, allowAnyway: true }, occasion);
-    expect(bagCount(allowed, MOON_HERB)).toBe(5);
-  });
-
   it("расход партии называет и нужное, и то, чего недостаёт", () => {
     const root = Character.of(stocked(2).character);
     const kinds = mixtureKinds(root.items, STANDARD.kinds);
@@ -159,7 +114,11 @@ describe("справка о виде", () => {
   it("дописанное со слов мастера перекрывает записанное прежде", () => {
     const written = noteIngredientReference(
       stocked(2),
-      { itemId: MOON_HERB_ID, reference: { findDc: 9 }, priceGold: 5 },
+      {
+        itemId: MOON_HERB_ID,
+        reference: { findDc: 9 },
+        price: { gold: 5, silver: 0, copper: 3 },
+      },
       occasion,
     );
     const later = noteIngredientReference(
@@ -173,7 +132,7 @@ describe("справка о виде", () => {
       findDc: 12,
       yieldRu: "1к6 порций с заросли",
     });
-    expect(items.find(MOON_HERB_ID)?.price).toEqual({ amount: 5, currency: "gold" });
+    expect(items.find(MOON_HERB_ID)?.price).toEqual({ gold: 5, silver: 0, copper: 3 });
     expect(later.log.at(-1)?.summaryRu).toBe("Дописано о виде: Лунная трава");
   });
 

@@ -12,7 +12,8 @@ describe("персонаж целиком", () => {
     const root = Character.of(createThorne());
     const known = root.withItems(
       root.items
-        .addDefinition({ nameRu: MOON_HERB, kinds: ["ingredient"] })
+        .addDefinition({ nameRu: MOON_HERB, kinds: [] })
+        .startAlchemy(HERB_ID)
         .revealProperty(HERB_ID, { number: 1, nameRu: "Лечение здоровья" }),
     );
 

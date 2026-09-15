@@ -1,21 +1,11 @@
 import { Character } from "@/core/domain/assembly/character";
-import type { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
-import type { Batch } from "@/core/domain/crafting/batch";
 import type { RecipeFormula } from "@/core/domain/crafting/recipe";
 import type { MixtureKind } from "@/core/domain/crafting/crafting";
 import type { IngredientReference, RevealedProperty } from "@/core/domain/items/ingredient";
-import { ingredient } from "@/core/domain/items/schema";
+import { ingredient, type ItemDefinition } from "@/core/domain/items/schema";
 import { DomainError } from "@/core/domain/shared/errors";
-import { GOLD } from "@/core/domain/shared/schema";
-import { withPlural } from "@/shared/language";
 import { commit, type Occasion, type Session } from "@/core/application/session";
-
-type CraftOrder = {
-  readonly formula: RecipeFormula;
-  readonly portions: number;
-  readonly allowAnyway?: boolean | undefined;
-};
 
 function unknownKindRefusal(itemId: string): string {
   return `Ингредиента «${itemId}» нет среди заведённых вещей`;
@@ -34,22 +24,6 @@ export function mixtureKinds(items: Items, kinds: readonly string[]): readonly M
       solo: alchemy.solo,
     };
   });
-}
-
-/**
- * Одна трата на все виды: сколько порций берёт партия, говорит ремесло. Порция и есть единица
- * запаса — алхимия считает порциями, и второй меры между сумкой и верстаком нет.
- */
-function spentOnBatch(
-  root: Character,
-  kinds: readonly MixtureKind[],
-  portions: number,
-): Equipment {
-  const each = root.crafting.portionsEach(kinds) * portions;
-  return kinds.reduce(
-    (equipment, kind) => equipment.adjustBagCount(kind.id, -each),
-    root.equipment,
-  );
 }
 
 export type BatchSpending = {
@@ -77,41 +51,6 @@ export function batchSpending(
       shortPortions: Math.max(each - inBagPortions, 0),
     };
   });
-}
-
-function unitsRu(batch: Batch): string {
-  return withPlural(batch.units, ["единица", "единицы", "единиц"]);
-}
-
-function spentRu(order: CraftOrder, kinds: readonly MixtureKind[]): string {
-  const portions = withPlural(order.portions, ["порции", "порции", "порций"]);
-  return `Истрачено по ${portions}: ${kinds.map((kind) => kind.nameRu).join(", ")}`;
-}
-
-function craftedSummary(order: CraftOrder, batch: Batch, kinds: readonly MixtureKind[]): string {
-  const named = batch.difficulty.mainRu;
-  const check = `сложность ${batch.difficulty.total}`;
-  return `Заложено: ${named}, ${check}, ${unitsRu(batch)}. ${spentRu(order, kinds)}`;
-}
-
-/**
- * Партия закладывается, а бросок и исход остаются за столом: приложение считает цену замысла и
- * списывает порции. Предел набора оно называет предупреждением — снять его вправе только мастер.
- */
-export function craftBatch(session: Session, order: CraftOrder, occasion: Occasion): Session {
-  const root = Character.of(session.character);
-  const crafting = root.crafting;
-  const kinds = mixtureKinds(root.items, order.formula.kinds);
-  const batch = crafting.batchOf(kinds, order.formula, crafting.apparatus, order.portions);
-  const warning = batch.warnings[0];
-  if (warning !== undefined && order.allowAnyway !== true) throw new DomainError(warning.reasonRu);
-
-  return commit(
-    session,
-    root.withEquipment(spentOnBatch(root, kinds, order.portions)),
-    { kind: "batch_crafted", summaryRu: craftedSummary(order, batch, kinds) },
-    occasion,
-  );
 }
 
 /** Рецепт записывает игрок, когда стол подтвердил успех: исход приложению неоткуда узнать. */
@@ -143,8 +82,19 @@ export function noteIngredient(session: Session, nameRu: string, occasion: Occas
   const root = Character.of(session.character);
   return commit(
     session,
-    root.withItems(root.items.addDefinition({ nameRu, kinds: ["ingredient"] })),
+    root.withItems(root.items.addDefinition({ nameRu, kinds: [] }).startAlchemy(Items.idFromName(nameRu))),
     { kind: "sheet_edited", summaryRu: `Записан ингредиент: ${nameRu}` },
+    occasion,
+  );
+}
+
+export function dropIngredient(session: Session, itemId: string, occasion: Occasion): Session {
+  const root = Character.of(session.character);
+  const nameRu = root.items.ingredientNameRu(itemId);
+  return commit(
+    session,
+    root.withItems(root.items.dropAlchemy(itemId)),
+    { kind: "sheet_edited", summaryRu: `Убрана запись из алхимии: ${nameRu}` },
     occasion,
   );
 }
@@ -161,6 +111,24 @@ export function revealProperty(
     {
       kind: "sheet_edited",
       summaryRu: `Раскрыто: ${root.items.ingredientNameRu(reveal.itemId)} — ${reveal.property.nameRu}`,
+    },
+    occasion,
+  );
+}
+
+/** Правка раскрытого — своя запись в логе: уточнение слов стола работой исследования не было. */
+export function rewriteProperty(
+  session: Session,
+  rewritten: { itemId: string; property: RevealedProperty },
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  return commit(
+    session,
+    root.withItems(root.items.rewriteProperty(rewritten.itemId, rewritten.property)),
+    {
+      kind: "sheet_edited",
+      summaryRu: `Переписано раскрытое: ${root.items.ingredientNameRu(rewritten.itemId)} — ${rewritten.property.nameRu}`,
     },
     occasion,
   );
@@ -187,16 +155,18 @@ export function dropProperty(
  */
 export function noteIngredientReference(
   session: Session,
-  written: { itemId: string; reference: IngredientReference; priceGold?: number | undefined },
+  written: {
+    itemId: string;
+    reference: IngredientReference;
+    price?: ItemDefinition["price"] | undefined;
+  },
   occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
   const nameRu = root.items.ingredientNameRu(written.itemId);
   const noted = root.items.noteReference(written.itemId, written.reference);
   const priced =
-    written.priceGold === undefined
-      ? noted
-      : noted.setPrice(written.itemId, { amount: written.priceGold, currency: GOLD });
+    written.price === undefined ? noted : noted.setPrice(written.itemId, written.price);
 
   return commit(
     session,

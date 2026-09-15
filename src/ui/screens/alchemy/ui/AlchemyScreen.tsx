@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Command, RecipeFormulaView } from "@/contract/commands";
 import type { PreviewOf, Question } from "@/contract/questions";
@@ -19,9 +19,13 @@ import { RecipeBench } from "@/ui/widgets/recipe-bench/ui/RecipeBench";
 import { requiredFieldNumber } from "@/ui/shared/lib/fieldNumber";
 import { applyEdit } from "@/ui/shared/model/editing";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
+import { scrollPlaces } from "@/ui/shared/model/scrollPlaces";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BackHeader } from "@/ui/shared/ui/BackHeader";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { ConfirmSheet } from "@/ui/shared/ui/ConfirmSheet";
 import { FooterAction } from "@/ui/shared/ui/FooterAction";
+import { NAME_LABEL } from "@/ui/shared/ui/NameEditor";
 import { RULE_GROUP, RULE_TAB_OFF, RULE_TAB_ON } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP_BARE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 
@@ -31,6 +35,14 @@ const MODES = [
 ] as const;
 
 type Mode = (typeof MODES)[number]["id"];
+
+const BENCH_TITLE = MODES[1].titleRu;
+
+/**
+ * Откуда пришли на страницу вида — оттуда же с неё и уходят: из списка, с верстака или с чужого
+ * экрана. Возврат не туда, откуда пришёл, стоит игроку лишнего пути обратно.
+ */
+type Whence = "kinds" | "bench" | "away";
 
 const SECTIONS = [
   {
@@ -59,20 +71,32 @@ const SECTIONS = [
   },
 ] as const;
 
+const KINDS_TITLE = SECTIONS[0].titleRu;
+
 type Page = "sections" | (typeof SECTIONS)[number]["id"] | "kind" | "reveal";
 
 const NOTE_KIND = "Записать вид";
 const NOTE_KIND_HINT =
   "Свойства не заполняются: вид встанет в книгу как нераскрытый и будет ждать исследования.";
-const KIND_NAME_FIELD = "Название";
 
 const NOTE_RECIPE = "Записать рецепт";
 const NOTHING_TO_RECORD = "Соберите замысел на верстаке — записывать пока нечего";
 
-const CRAFT = "Заложить партию";
+/*
+ * Верстак считает и называет, а не делает: бросок за столом, и его исход мастер вправе повернуть
+ * как угодно. Списывать порции наперёд значило бы решить за стол и заставить потом всё чинить.
+ */
+const ROLL_LABEL = "БРОСОК";
 
 const PREVIOUS = "‹";
 const NEXT = "›";
+
+/* Книга, уже раскрытая, нажатием по своей закладке поднимает к оглавлению: иначе со страницы вида
+ * в правила или к рецептам хода нет вовсе — только назад по тому пути, каким пришли. */
+const TO_SECTIONS = "Книга: к разделам";
+
+const PREVIOUS_KIND = "Предыдущий вид";
+const NEXT_KIND = "Следующий вид";
 
 const CHECK_LABEL = "Проверка против";
 const CHECK_PARTS = "Зельеварение + Инт";
@@ -84,7 +108,15 @@ const RECORD_FORMS: [string, string, string] = ["запись", "записи", 
 const CHAPTER_FORMS: [string, string, string] = ["глава", "главы", "глав"];
 const EFFECT_FORMS: [string, string, string] = ["название", "названия", "названий"];
 
-const NOT_A_NUMBER = "Сложность и цена называются числом";
+const NOT_A_NUMBER = "Сложность вида называется числом";
+
+/* Кнопку убирания легко задеть соседним нажатием, а знание о виде копится месяцами: спрашиваем. */
+const DROP_KIND_TITLE = "Убрать запись из алхимии?";
+const DROP_KIND_CONFIRM = "Да, убрать";
+
+function dropKindBodyRu(nameRu: string): string {
+  return `«${nameRu}» останется вещью в сумке, но всё, что алхимия о ней знает, уйдёт. Вернуть запись можно в логе.`;
+}
 
 function emptyDraft(standard: ChoicesView["recipeForm"]["standard"]): RecipeFormulaView {
   return {
@@ -104,20 +136,47 @@ function toDraft(recipe: KnownRecipeView): RecipeFormulaView {
  * Алхимия двумя режимами: книга — знание, верстак — работа. Экран владеет своей навигацией, своим
  * замыслом и проводкой операций; виджеты только сообщают о нажатом.
  */
-export function AlchemyScreen() {
+export function AlchemyScreen({
+  initialKindId,
+  whenceNameRu,
+  onLeave,
+}: {
+  initialKindId?: string;
+  /** Как зовётся экран, с которого сюда пришли за видом: его называет возврат. */
+  whenceNameRu?: string;
+  onLeave?: () => void;
+} = {}) {
   const { session: sessionStore } = useStores();
   const snapshot = useSession((state) => state.snapshot)!;
   const { crafting, choices } = snapshot;
 
   const [mode, setMode] = useState<Mode>("book");
-  const [page, setPage] = useState<Page>("sections");
-  const [openedId, setOpenedId] = useState<string | null>(null);
+  const [page, setPage] = useState<Page>(initialKindId === undefined ? "sections" : "kind");
+  const [openedId, setOpenedId] = useState<string | null>(initialKindId ?? null);
+  const [whence, setWhence] = useState<Whence>(initialKindId === undefined ? "kinds" : "away");
   const [adding, setAdding] = useState(false);
+  const [dropping, setDropping] = useState(false);
+  /* Номер раскрытого, которое правят: страница та же, что у записи, и поля на ней те же. */
+  const [edited, setEdited] = useState<number | null>(null);
   const [refusalRu, setRefusalRu] = useState<string | null>(null);
   const [draft, setDraft] = useState<RecipeFormulaView>(() =>
     emptyDraft(choices.recipeForm.standard),
   );
   const [portions, setPortions] = useState(1);
+
+  const viewport = useRef<HTMLDivElement>(null);
+  const [places] = useState(scrollPlaces);
+  /* Место узнаётся страницей, а не отметкой открытого: список видов один и тот же, кого ни открой. */
+  const place = mode === "bench" ? mode : page === "kind" ? `${page}:${openedId ?? ""}` : page;
+
+  /*
+   * Прокрутка у книги одна на все страницы, а место у каждой своё: открытая начинается сверху, а
+   * та, куда вернулись, — там, где её оставили. Иначе нажатие внизу выносит на середину чужой
+   * страницы, и искать начало приходится глазами.
+   */
+  useEffect(() => {
+    viewport.current!.scrollTop = places.at(place);
+  }, [place, places]);
 
   const send = (command: Command, whenDone?: () => void): void => {
     void applyEdit(sessionStore, command).then((reason) => {
@@ -130,6 +189,21 @@ export function AlchemyScreen() {
   const answer = usePreview(question);
   const preview: PreviewOf<"recipe_preview"> | null =
     answer?.kind === "recipe_preview" ? answer : null;
+
+  const openKind = (itemId: string, from: Whence): void => {
+    setOpenedId(itemId);
+    setWhence(from);
+    setMode("book");
+    setPage("kind");
+  };
+
+  /* Со страницы вида уходят туда, откуда пришли; книга при этом остаётся раскрытой на списке. */
+  const leaveKind = (): void => {
+    setWhence("kinds");
+    setPage("kinds");
+    if (whence === "bench") setMode("bench");
+    if (whence === "away") onLeave?.();
+  };
 
   const ordered = kindGroups(crafting.ingredients).flatMap((group) => group.kinds);
   const openedAt = ordered.findIndex((kind) => kind.itemId === openedId);
@@ -146,18 +220,8 @@ export function AlchemyScreen() {
     else if (Number.isNaN(number)) setRefusalRu(NOT_A_NUMBER);
     else if (written.field === "find")
       send({ kind: "note_ingredient_reference", itemId, findDc: number });
-    else if (written.field === "gather")
-      send({ kind: "note_ingredient_reference", itemId, gatherDc: number });
-    else send({ kind: "note_ingredient_reference", itemId, priceGold: number });
+    else send({ kind: "note_ingredient_reference", itemId, gatherDc: number });
   };
-
-  const craft = (): void =>
-    send({
-      kind: "craft_batch",
-      formula: draft,
-      portions,
-      ...(preview?.warnings.length === 0 ? {} : { allowAnyway: true }),
-    });
 
   const sections = SECTIONS.map((section) => ({
     ...section,
@@ -177,6 +241,13 @@ export function AlchemyScreen() {
   const sectionOf = (id: Page): (typeof sections)[number] =>
     sections.find((section) => section.id === id) ?? sections[0]!;
 
+  const whenceTitleRu =
+    whence === "bench"
+      ? BENCH_TITLE
+      : whence === "away"
+        ? (whenceNameRu ?? KINDS_TITLE)
+        : KINDS_TITLE;
+
   const header =
     page === "sections" || mode === "bench" ? null : page === "reveal" ? (
       <BackHeader
@@ -184,65 +255,91 @@ export function AlchemyScreen() {
         backNameRu={opened?.nameRu ?? ""}
         onBack={() => setPage("kind")}
       />
+    ) : page === "kind" ? (
+      <BackHeader
+        titleRu={whenceTitleRu}
+        backNameRu={whenceTitleRu}
+        onBack={leaveKind}
+        aside={
+          <span className="flex shrink-0 items-center">
+            {[
+              { markRu: PREVIOUS, nameRu: PREVIOUS_KIND, at: openedAt - 1 },
+              { markRu: NEXT, nameRu: NEXT_KIND, at: openedAt + 1 },
+            ].map((step) => {
+              const neighbour = ordered[step.at];
+              return (
+                <button
+                  key={step.markRu}
+                  type="button"
+                  disabled={neighbour === undefined}
+                  title={neighbour?.nameRu}
+                  aria-label={
+                    neighbour === undefined ? step.nameRu : `${step.nameRu}: ${neighbour.nameRu}`
+                  }
+                  onClick={() => {
+                    /* Пролистнув к соседу, игрок листает книгу: карточка, с которой пришли, уже
+                     * не о нём, и возврат ведёт к списку видов, а не к чужой вещи. */
+                    if (whence === "away") setWhence("kinds");
+                    setOpenedId(neighbour?.itemId ?? null);
+                  }}
+                  className={`h-11 w-11 text-base text-accent disabled:text-off ${RULE_GROUP}`}
+                >
+                  <span aria-hidden="true">{step.markRu}</span>
+                </button>
+              );
+            })}
+          </span>
+        }
+      />
     ) : (
       <BackHeader
-        titleRu={sectionOf(page === "kind" ? "kinds" : page).titleRu}
-        backNameRu={sectionOf(page === "kind" ? "kinds" : page).titleRu}
-        onBack={() => setPage(page === "kind" ? "kinds" : "sections")}
+        titleRu={sectionOf(page).titleRu}
+        backNameRu={sectionOf(page).titleRu}
+        onBack={() => setPage("sections")}
         aside={
-          page !== "kind" ? (
-            <span className="shrink-0 text-[0.6875rem] text-ink-soft">
-              {sectionOf(page).countRu}
-            </span>
-          ) : (
-            <span className="flex shrink-0 items-center">
-              {[
-                { markRu: PREVIOUS, at: openedAt - 1 },
-                { markRu: NEXT, at: openedAt + 1 },
-              ].map((step) => {
-                const neighbour = ordered[step.at];
-                return (
-                  <button
-                    key={step.markRu}
-                    type="button"
-                    disabled={neighbour === undefined}
-                    title={neighbour?.nameRu}
-                    aria-label={neighbour?.nameRu ?? step.markRu}
-                    onClick={() => setOpenedId(neighbour?.itemId ?? null)}
-                    className={`h-11 w-11 text-base text-accent disabled:text-off ${RULE_GROUP}`}
-                  >
-                    <span aria-hidden="true">{step.markRu}</span>
-                  </button>
-                );
-              })}
-            </span>
-          )
+          <span className="shrink-0 text-[0.6875rem] text-ink-soft">{sectionOf(page).countRu}</span>
         }
       />
     );
 
+  const checkRu =
+    preview?.batch == null || preview.difficulty === null
+      ? null
+      : `${CHECK_LABEL} ${preview.difficulty.total}${SEPARATOR}${CHECK_DIE_RU}${signed(
+          preview.check?.bonus ?? 0,
+        )}${SEPARATOR}${CHECK_PARTS}`;
+
+  const warningsRu =
+    preview === null || preview.warnings.length === 0
+      ? null
+      : preview.warnings.map((warning) => warning.reasonRu).join(SEPARATOR);
+
+  /*
+   * Замысел, который ремесло не приняло, называет причину: гаснущее число её не заменяет. Пустой
+   * верстак причины не имеет — там ещё ничего не собрано, и красная строка кричала бы впустую.
+   */
+  const deniedRu = draft.kinds.length === 0 ? null : (preview?.refusalRu ?? null);
+
   const footer =
     mode === "bench" ? (
-      <FooterAction
-        labelRu={CRAFT}
-        noteRu={
-          preview?.batch == null || preview.difficulty === null
-            ? null
-            : `${CHECK_LABEL} ${preview.difficulty.total}${SEPARATOR}${CHECK_DIE_RU}${signed(
-                preview.check?.bonus ?? 0,
-              )}${SEPARATOR}${CHECK_PARTS}`
-        }
-        warning={preview !== null && preview.warnings.length > 0}
-        disabled={preview?.batch == null}
-        above={
-          preview === null || preview.warnings.length === 0 ? null : (
-            <p className="px-3 pt-2 text-[0.6875rem] leading-snug text-reaction">
-              {preview.warnings.map((warning) => warning.reasonRu).join(SEPARATOR)}
+      checkRu === null && warningsRu === null && deniedRu === null ? null : (
+        <div className={`flex shrink-0 flex-col gap-1 px-3 py-2 ${SURFACE_PANEL}`}>
+          {deniedRu === null ? null : (
+            <p role="alert" className="text-xs leading-snug text-reaction">
+              {deniedRu}
             </p>
-          )
-        }
-        onAct={craft}
-      />
+          )}
+          {warningsRu === null ? null : (
+            <p className="text-[0.6875rem] leading-snug text-reaction">{warningsRu}</p>
+          )}
+          {checkRu === null ? null : (
+            <p className="flex flex-col gap-0.5">
+              <span className="text-[0.625rem] tracking-[0.14em] text-accent">{ROLL_LABEL}</span>
+              <span className="text-[0.8125rem] font-semibold leading-snug">{checkRu}</span>
+            </p>
+          )}
+        </div>
+      )
     ) : page === "kinds" ? (
       <FooterAction
         labelRu={NOTE_KIND}
@@ -251,7 +348,7 @@ export function AlchemyScreen() {
             <div className="flex flex-col gap-2 p-3">
               <p className="text-[0.6875rem] leading-snug text-ink-quiet">{NOTE_KIND_HINT}</p>
               <KindFieldEditor
-                labelRu={KIND_NAME_FIELD}
+                labelRu={NAME_LABEL}
                 value=""
                 onWrite={(typed) => {
                   const nameRu = typed.trim();
@@ -279,7 +376,12 @@ export function AlchemyScreen() {
       {header}
 
       {/* Правила стола — одно чтение без кнопок: прокрутку такой странице клавиатуре даёт фокус. */}
-      <div tabIndex={0} className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        ref={viewport}
+        tabIndex={0}
+        onScroll={(event) => places.leftAt(place, event.currentTarget.scrollTop)}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
         {mode === "bench" ? (
           <RecipeBench
             crafting={crafting}
@@ -289,6 +391,7 @@ export function AlchemyScreen() {
             portions={portions}
             onDraft={setDraft}
             onPortions={setPortions}
+            onOpenKind={(itemId) => openKind(itemId, "bench")}
             onApparatus={(apparatusRu) =>
               send({
                 kind: "set_alchemy_workshop",
@@ -315,15 +418,13 @@ export function AlchemyScreen() {
           <KindList
             kinds={crafting.ingredients}
             openedId={openedId}
-            onOpen={(itemId) => {
-              setOpenedId(itemId);
-              setPage("kind");
-            }}
+            onOpen={(itemId) => openKind(itemId, "kinds")}
           />
         ) : page === "reveal" && opened !== undefined && opened !== null ? (
           <RevealPropertyPage
-            key={opened.itemId}
+            key={`${opened.itemId}:${edited ?? ""}`}
             ingredient={opened}
+            edited={opened.properties.find((property) => property.number === edited)}
             directions={choices.alchemyDirections}
             rarities={choices.alchemyRarities}
             onSend={send}
@@ -333,8 +434,28 @@ export function AlchemyScreen() {
             key={opened.itemId}
             kind={opened}
             checks={crafting.handbook.checks}
-            onReveal={() => setPage("reveal")}
+            currencies={choices.currencies}
+            onReveal={() => {
+              setEdited(null);
+              setPage("reveal");
+            }}
+            onEditProperty={(number) => {
+              setEdited(number);
+              setPage("reveal");
+            }}
+            onRename={(nameRu) => send({ kind: "rename_item", itemId: opened.itemId, nameRu })}
+            onWritePrice={(priced) =>
+              send({ kind: "note_ingredient_reference", itemId: opened.itemId, price: priced })
+            }
             onWrite={(written) => writeField(written, opened.itemId)}
+            onAddNote={(textRu) => send({ kind: "add_item_note", itemId: opened.itemId, textRu })}
+            onRewriteNote={(noteId, textRu) =>
+              send({ kind: "edit_item_note", itemId: opened.itemId, noteId, textRu })
+            }
+            onDropNote={(noteId) =>
+              send({ kind: "remove_item_note", itemId: opened.itemId, noteId })
+            }
+            onDropKind={() => setDropping(true)}
           />
         ) : page === "recipes" ? (
           <RecipeList
@@ -363,22 +484,48 @@ export function AlchemyScreen() {
 
       {footer}
 
+      {!dropping || opened === undefined || opened === null ? null : (
+        <ConfirmSheet
+          title={DROP_KIND_TITLE}
+          body={dropKindBodyRu(opened.nameRu)}
+          confirmLabel={DROP_KIND_CONFIRM}
+          cancelLabel={BUTTON_LABELS.dismiss}
+          onConfirm={() =>
+            send({ kind: "drop_ingredient", itemId: opened.itemId }, () => {
+              setDropping(false);
+              setOpenedId(null);
+              setWhence("kinds");
+              setPage("kinds");
+            })
+          }
+          onCancel={() => setDropping(false)}
+        />
+      )}
+
       <nav aria-label="Режим алхимии" className={`flex shrink-0 ${SURFACE_PANEL}`}>
-        {MODES.map((one) => (
-          <button
-            key={one.id}
-            type="button"
-            aria-current={one.id === mode ? "page" : undefined}
-            onClick={() => setMode(one.id)}
-            className={`flex h-[2.875rem] flex-1 items-center justify-center text-sm font-semibold ${
-              one.id === mode
-                ? `${SURFACE_GROUP_BARE} text-accent ${RULE_TAB_ON}`
-                : `text-ink-quiet ${RULE_TAB_OFF}`
-            }`}
-          >
-            {one.titleRu}
-          </button>
-        ))}
+        {MODES.map((one) => {
+          const toSections = one.id === mode && one.id === "book" && page !== "sections";
+          return (
+            <button
+              key={one.id}
+              type="button"
+              aria-current={one.id === mode ? "page" : undefined}
+              aria-label={toSections ? TO_SECTIONS : undefined}
+              onClick={() => {
+                if (!toSections) return setMode(one.id);
+                setWhence("kinds");
+                setPage("sections");
+              }}
+              className={`flex h-[2.875rem] flex-1 items-center justify-center text-sm font-semibold ${
+                one.id === mode
+                  ? `${SURFACE_GROUP_BARE} text-accent ${RULE_TAB_ON}`
+                  : `text-ink-quiet ${RULE_TAB_OFF}`
+              }`}
+            >
+              {one.titleRu}
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

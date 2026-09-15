@@ -154,6 +154,26 @@ export function withRevealedProperty(
   return { ...alchemy, properties: [...alchemy.properties, property] };
 }
 
+/**
+ * Переписать раскрытое: слова стола уточняются позже — имя названо иначе, редкость всплыла после.
+ * Свойство остаётся под своим номером, а его нераскрытые соседи заведения не получают.
+ */
+export function withRewrittenProperty(
+  nameRu: string,
+  alchemy: IngredientAlchemy,
+  property: RevealedProperty,
+): IngredientAlchemy {
+  if (!alchemy.properties.some((one) => one.number === property.number)) {
+    throw new DomainError(unrevealedNumberRefusal(nameRu, property.number));
+  }
+  return {
+    ...alchemy,
+    properties: alchemy.properties.map((one) =>
+      one.number === property.number ? property : one,
+    ),
+  };
+}
+
 export function withoutProperty(
   nameRu: string,
   alchemy: IngredientAlchemy,

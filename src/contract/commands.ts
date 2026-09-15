@@ -81,32 +81,36 @@ export const commandSchema = z.discriminatedUnion("kind", [
 
   command("add_item", { nameRu: word, itemKinds: z.array(word) }),
   command("edit_item", { item: z.looseObject({ id: word, nameRu: word }) }),
+  command("rename_item", { itemId: word, nameRu: word }),
   command("remove_item", { itemId: word }),
   command("toggle_wanted", { itemId: word }),
+  command("buy_item", { itemId: word }),
   command("record_item", { nameRu: word, wanted: z.boolean() }),
   command("adjust_bag_count", { itemId: word, delta: numeric }),
   command("set_bag_count", { itemId: word, count: numeric }),
   command("adjust_worn_count", { itemId: word, delta: numeric }),
   command("edit_money", { money: z.record(word, numeric) }),
 
-  command("craft_batch", {
-    formula: recipeFormulaSchema,
-    portions: numeric,
-    allowAnyway: z.boolean().optional(),
-  }),
-
   command("record_recipe", { formula: recipeFormulaSchema }),
 
   command("note_ingredient", { nameRu: word }),
+  command("drop_ingredient", { itemId: word }),
   command("note_ingredient_reference", {
     itemId: word,
     findDc: numeric.optional(),
     gatherDc: numeric.optional(),
     yieldRu: word.optional(),
     portionRu: word.optional(),
-    priceGold: numeric.optional(),
+    price: z.record(word, numeric).optional(),
   }),
   command("reveal_property", {
+    itemId: word,
+    number: numeric,
+    propertyRu: word,
+    directionRu: word.optional(),
+    rarityRu: word.optional(),
+  }),
+  command("rewrite_property", {
     itemId: word,
     number: numeric,
     propertyRu: word,

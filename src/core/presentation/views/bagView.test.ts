@@ -60,12 +60,16 @@ describe("вещи", () => {
       nameRu: "Кольцо",
       kinds: ["gear"],
       notes: [{ id: "one", textRu: "фамильное" }],
-      price: { amount: 50, currency: "gold" },
+      price: { gold: 50, silver: 0, copper: 0 },
       bonuses: { armorClass: 1 },
     };
 
     expect(itemOf(withStock(ring), "ring")).toMatchObject({
-      price: { amount: 50, currency: "gold" },
+      price: [
+        { currency: "gold", amount: 50 },
+        { currency: "silver", amount: 0 },
+        { currency: "copper", amount: 0 },
+      ],
       bonuses: [{ stat: "armorClass", value: 1 }],
       notes: [{ id: "one", textRu: "фамильное" }],
     });

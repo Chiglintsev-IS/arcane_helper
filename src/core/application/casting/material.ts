@@ -2,6 +2,7 @@ import { Character } from "@/core/domain/assembly/character";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { needsOwnComponent, type Spell } from "@/core/domain/catalog/spell";
 import { Items } from "@/core/domain/items/items";
+import { NO_COINS } from "@/core/domain/shared/schema";
 import type { ItemDefinition, ItemKind } from "@/core/domain/items/schema";
 
 type SpellMaterial = {
@@ -17,11 +18,11 @@ export function materialOf(components: Spell["components"]): SpellMaterial | und
   if (!material || materialText === undefined) return undefined;
 
   const price: ItemDefinition["price"] =
-    costGp === undefined ? undefined : { amount: costGp, currency: "gold" };
+    costGp === undefined ? undefined : { ...NO_COINS, gold: costGp };
   return {
     id: Items.idFromName(materialText),
     nameRu: materialText,
-    kinds: consumed === true ? ["consumable"] : [],
+    kinds: [],
     consumed: consumed === true,
     ...(price === undefined ? {} : { price }),
   };

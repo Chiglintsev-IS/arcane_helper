@@ -2,7 +2,7 @@
 
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
 import {
@@ -12,11 +12,13 @@ import {
 import { Items } from "@/core/domain/items/items";
 import type { AppStores } from "@/ui/shared/model/storeContext";
 import { renderWithStores, shown } from "@/ui/app/testing/stores";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
 import { AlchemyScreen } from "./AlchemyScreen";
 
 const MOON_HERB = "Лунная трава";
 const CRIMSON_ROOT = "Багровый корень";
 const HEALING = { number: 1, nameRu: "Лечение здоровья" } as const;
+const BLAST = { number: 2, nameRu: "Взрыв" } as const;
 
 /** Знание об ингредиентах собирается прогоном с нуля: начальное содержимое здесь только помешало бы. */
 function blank(): ReturnType<typeof createThorne> {
@@ -26,6 +28,14 @@ function blank(): ReturnType<typeof createThorne> {
 function twoKinds(): ReturnType<typeof createThorne> {
   return [MOON_HERB, CRIMSON_ROOT].reduce(
     (character, kind) => withIngredientKnowledge(character, kind, [HEALING]),
+    blank(),
+  );
+}
+
+/** Два вида с двумя общими свойствами: в составе есть и основное, и попутное — то, что гасят. */
+function twoKindsTwoProperties(): ReturnType<typeof createThorne> {
+  return [MOON_HERB, CRIMSON_ROOT].reduce(
+    (character, kind) => withIngredientKnowledge(character, kind, [HEALING, BLAST]),
     blank(),
   );
 }
@@ -87,7 +97,7 @@ describe("«Алхимия»: книга", () => {
     await openSection(user, "Ингредиенты");
     await user.click(press(new RegExp(MOON_HERB)));
 
-    expect(screen.getByRole("heading", { name: MOON_HERB })).toBeDefined();
+    expect(press(/^Название/).textContent).toContain(MOON_HERB);
     expect(screen.getByText("Лечение здоровья")).toBeDefined();
     expect(screen.getAllByText("не раскрыто")).toHaveLength(3);
     expect(await screen.findByText("Раскрыть 2-е свойство")).toBeDefined();
@@ -108,7 +118,7 @@ describe("«Алхимия»: книга", () => {
     expect(screen.getByText("профильные походные инструменты")).toBeDefined();
     /* Возврат ведёт к странице вида, а не к списку: работу открыли из неё. */
     await user.click(press(MOON_HERB));
-    expect(screen.getByRole("heading", { name: MOON_HERB })).toBeDefined();
+    expect(press(/^Название/).textContent).toContain(MOON_HERB);
   });
 
   it("свойство записывают словами мастера вместе с направлением", async () => {
@@ -132,6 +142,34 @@ describe("«Алхимия»: книга", () => {
     ).toEqual([
       { number: 1, nameRu: "Лечение здоровья", dirRu: "Зельеварение", rarityRu: "Редкое" },
     ]);
+  });
+
+  it("раскрытое правят нажатием по нему: имя и редкость уточняют теми же полями", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(
+      <AlchemyScreen />,
+      withIngredientKnowledge(blank(), MOON_HERB, [HEALING]),
+    );
+
+    await openSection(user, "Ингредиенты");
+    await user.click(press(new RegExp(MOON_HERB)));
+    await user.click(press(`Правка: ${HEALING.nameRu}`));
+
+    const named = screen.getByRole("textbox", { name: "Свойство" });
+    expect(named).toHaveProperty("value", HEALING.nameRu);
+
+    await user.clear(named);
+    await user.type(named, "Лечение ран");
+    await user.click(press("Редкое"));
+    await user.click(press("Записать"));
+
+    const properties = shown(stores).crafting.ingredients[0]?.properties;
+    expect(properties).toEqual([
+      { number: 1, nameRu: "Лечение ран", dirRu: null, rarityRu: "Редкое" },
+    ]);
+    expect(shown(stores).log.at(-1)?.summaryRu).toBe(
+      `Переписано раскрытое: ${MOON_HERB} — Лечение ран`,
+    );
   });
 
   it("раскрытое убирают с той же страницы", async () => {
@@ -168,6 +206,91 @@ describe("«Алхимия»: книга", () => {
     expect(known?.findDc).toBe(9);
   });
 
+  it("заметки вида правятся тут же и той же формой, что и у вещи", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(
+      <AlchemyScreen />,
+      withIngredientKnowledge(blank(), MOON_HERB, [HEALING]),
+    );
+
+    await openSection(user, "Ингредиенты");
+    await user.click(press(new RegExp(MOON_HERB)));
+
+    await user.click(press("Записать заметку"));
+    await user.type(screen.getByLabelText("Заметка"), "Рядом с болотами берут за 2–3 золотых");
+    await user.click(press(BUTTON_LABELS.write));
+
+    const notesOf = () =>
+      shown(stores).crafting.ingredients.find((kind) => kind.nameRu === MOON_HERB)?.notes ?? [];
+    expect(notesOf().map((note) => note.textRu)).toEqual([
+      "Рядом с болотами берут за 2–3 золотых",
+    ]);
+
+    await user.click(press("Правка: Рядом с болотами берут за 2–3 золотых"));
+    await user.click(press("Убрать"));
+    expect(notesOf()).toHaveLength(0);
+  });
+
+  it("имя и цену вида правят в книге — теми же полями, что в карточке вещи", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(
+      <AlchemyScreen />,
+      withIngredientKnowledge(blank(), MOON_HERB, [HEALING]),
+    );
+
+    await openSection(user, "Ингредиенты");
+    await user.click(press(new RegExp(MOON_HERB)));
+
+    await user.click(press(/^Название/));
+    await user.clear(screen.getByLabelText("Название"));
+    await user.type(screen.getByLabelText("Название"), `${MOON_HERB}ка{Enter}`);
+
+    await user.click(press(/^Цена за одну штуку/));
+    await user.clear(screen.getByLabelText("зм"));
+    await user.type(screen.getByLabelText("зм"), "1");
+    await user.clear(screen.getByLabelText("мм"));
+    await user.type(screen.getByLabelText("мм"), "3");
+    await user.click(press(BUTTON_LABELS.write));
+
+    const kind = shown(stores).crafting.ingredients[0];
+    expect(kind?.nameRu).toBe(`${MOON_HERB}ка`);
+    /* Мелкая монета не теряется от правки в книге: цена у вещи одна, и правят её целиком. */
+    expect(kind?.price).toEqual([
+      { currency: "gold", amount: 1 },
+      { currency: "silver", amount: 0 },
+      { currency: "copper", amount: 3 },
+    ]);
+    expect(shown(stores).log.some((record) => record.summaryRu.startsWith("Переименовано"))).toBe(
+      true,
+    );
+  });
+
+  it("запись убирают со страницы вида, и не раньше, чем ответят на вопрос", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(
+      <AlchemyScreen />,
+      withIngredientKnowledge(blank(), MOON_HERB, [HEALING]),
+    );
+
+    await openSection(user, "Ингредиенты");
+    await user.click(press(new RegExp(MOON_HERB)));
+
+    /* Нажатие само по себе ничего не стирает: случайно задетая кнопка — не решение игрока. */
+    await user.click(press(`Убрать запись из алхимии: ${MOON_HERB}`));
+    expect(shown(stores).crafting.ingredients).toHaveLength(1);
+
+    await user.click(press(BUTTON_LABELS.dismiss));
+    expect(shown(stores).crafting.ingredients).toHaveLength(1);
+
+    await user.click(press(`Убрать запись из алхимии: ${MOON_HERB}`));
+    await user.click(press("Да, убрать"));
+
+    expect(shown(stores).crafting.ingredients).toEqual([]);
+    expect(shown(stores).bag.items.some((item) => item.nameRu === MOON_HERB)).toBe(true);
+    expect(shown(stores).log.at(-1)?.summaryRu).toBe(`Убрана запись из алхимии: ${MOON_HERB}`);
+    expect(screen.getByRole("button", { name: "Записать вид" })).toBeDefined();
+  });
+
   it("вид записывается со страницы списка и сразу встаёт в книгу", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<AlchemyScreen />, blank());
@@ -178,6 +301,71 @@ describe("«Алхимия»: книга", () => {
     await user.click(press("Записать"));
 
     expect(shown(stores).crafting.ingredients.map((kind) => kind.nameRu)).toEqual([MOON_HERB]);
+  });
+
+  it("вид открывают с верстака и возвращаются на верстак, не собирая замысел заново", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<AlchemyScreen />, twoKinds());
+    await stocked(stores, MOON_HERB, 4);
+
+    await openBench(user);
+    await user.click(press(`Открыть вид: ${MOON_HERB}`));
+
+    expect(press(/^Название/).textContent).toContain(MOON_HERB);
+
+    /* Наверху «назад: Верстак», внизу вкладка режима — возврат берут наверху, как и пришли. */
+    await user.click(screen.getAllByRole("button", { name: "Верстак" })[0]!);
+    expect(screen.getByText("ВИДЫ В СОСТАВ")).toBeDefined();
+  });
+
+  it("придя за видом с чужого экрана, возврат ведёт на него, а не в список видов", async () => {
+    const user = userEvent.setup();
+    const leaving = vi.fn();
+    await renderWithStores(
+      <AlchemyScreen
+        initialKindId={Items.idFromName(MOON_HERB)}
+        whenceNameRu="Рюкзак"
+        onLeave={leaving}
+      />,
+      withIngredientKnowledge(blank(), MOON_HERB, [HEALING]),
+    );
+
+    await user.click(press("Рюкзак"));
+    expect(leaving).toHaveBeenCalled();
+  });
+
+  it("пролистнув к соседнему виду, возврат ведёт уже в список: пришедшая карточка не о нём", async () => {
+    const user = userEvent.setup();
+    const leaving = vi.fn();
+    await renderWithStores(
+      <AlchemyScreen
+        initialKindId={Items.idFromName(MOON_HERB)}
+        whenceNameRu="Рюкзак"
+        onLeave={leaving}
+      />,
+      twoKinds(),
+    );
+
+    await user.click(press(`Предыдущий вид: ${CRIMSON_ROOT}`));
+
+    expect(screen.queryByRole("button", { name: "Рюкзак" })).toBeNull();
+    await user.click(press("Ингредиенты"));
+    expect(leaving).not.toHaveBeenCalled();
+    expect(press(/Записать вид/)).toBeDefined();
+  });
+
+  it("раскрытая книга поднимает к разделам нажатием по своей закладке", async () => {
+    const user = userEvent.setup();
+    await renderWithStores(<AlchemyScreen />, withIngredientKnowledge(blank(), MOON_HERB, [HEALING]));
+
+    await openSection(user, "Ингредиенты");
+    await user.click(press(new RegExp(MOON_HERB)));
+
+    /* Со страницы вида к правилам и рецептам пути назад нет — его даёт закладка уже раскрытой книги. */
+    await user.click(press(/^Книга/));
+
+    expect(press(/Правила стола/)).toBeDefined();
+    expect(press(/Рецепты/)).toBeDefined();
   });
 
   it("правила стола идут тремя главами и отмечают нынешний набор", async () => {
@@ -227,17 +415,14 @@ describe("«Алхимия»: верстак", () => {
     expect(press("24 часа+12")).toBeDefined();
   });
 
-  it("сверх предела набора верстак предупреждает, но работать не запрещает", async () => {
-    const { user, stores } = await assembled();
+  it("сверх предела набора верстак предупреждает, но замысел считать не перестаёт", async () => {
+    const { user } = await assembled();
 
     await user.click(press(/Длительность/));
     await user.click(press("24 часа+12"));
 
     expect(await screen.findByText(/выше предела набора \(20\)/)).toBeDefined();
-
-    await user.click(press(/Заложить партию/));
-
-    expect(shown(stores).log.some((entry) => entry.summaryRu.startsWith("Заложено"))).toBe(true);
+    expect(screen.getByText(/Проверка против 22/)).toBeDefined();
   });
 
   it("расход партии называет нужное и то, чего недостаёт", async () => {
@@ -261,17 +446,50 @@ describe("«Алхимия»: верстак", () => {
     );
   });
 
-  it("заложенная партия списывает порции каждого вида одной записью", async () => {
-    const { user, stores } = await assembled();
+  it("верстак называет бросок и ничего не тратит: исход за столом, а не за приложением", async () => {
+    const { stores } = await assembled();
 
-    await user.click(press(/Заложить партию/));
+    expect(await screen.findByText(/Проверка против 10/)).toBeDefined();
+    expect(screen.getByText(/Зельеварение \+ Инт/)).toBeDefined();
 
     const bag = shown(stores).bag.items;
-    expect(bag.find((item) => item.nameRu === MOON_HERB)?.bagCount).toBe(3);
-    expect(bag.find((item) => item.nameRu === CRIMSON_ROOT)?.bagCount).toBe(3);
-    expect(
-      shown(stores).log.filter((entry) => entry.summaryRu.startsWith("Заложено")),
-    ).toHaveLength(1);
+    expect(bag.find((item) => item.nameRu === MOON_HERB)?.bagCount).toBe(4);
+    expect(bag.find((item) => item.nameRu === CRIMSON_ROOT)?.bagCount).toBe(4);
+    expect(shown(stores).log.some((entry) => entry.kind === "batch_crafted")).toBe(false);
+  });
+
+  it("попутное гасят и возвращают тем же нажатием, а основное подавить не предлагают", async () => {
+    const { user } = await assembled(twoKindsTwoProperties());
+
+    const cardOf = (nameRu: string) => () =>
+      screen.getAllByRole("listitem").find((one) => one.textContent?.includes(nameRu))!;
+    const healing = cardOf("Лечение здоровья");
+    const blast = cardOf("Взрыв");
+
+    /* Основное — то, ради чего варят: гасить его значит спорить с собственным замыслом. */
+    expect(within(healing()).getByText("основной эффект")).toBeDefined();
+    expect(within(healing()).queryByRole("button", { name: "Подавить" })).toBeNull();
+
+    await user.click(within(blast()).getByRole("button", { name: "Подавить" }));
+    expect(within(blast()).getByText("подавлено")).toBeDefined();
+
+    await user.click(within(blast()).getByRole("button", { name: "Вернуть в состав" }));
+    expect(within(blast()).getByText("войдёт в состав")).toBeDefined();
+  });
+
+  it("замысел, которого ремесло не приняло, называет причину словами", async () => {
+    const { user } = await assembled(twoKindsTwoProperties());
+
+    /* Один вид совпадения не даёт — и верстак говорит об этом, а не гасит число молча. */
+    await user.click(press(`${CRIMSON_ROOT}: ✓`));
+
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Состав собирается из двух разных видов ингредиентов, пока стол не утвердил виду одиночную реакцию",
+    );
+
+    await user.click(press(`${CRIMSON_ROOT}: +`));
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("записанный рецепт встаёт в книгу и возвращается на верстак", async () => {
@@ -326,8 +544,20 @@ describe("«Алхимия»: верстак", () => {
 
     expect(await screen.findByText(/раскрыто только у одного вида/)).toBeDefined();
 
-    await user.click(press(/Заложить партию/));
+    /* Подавленное возвращают в состав и там, где справочник совпадения не даёт: иначе роль без выхода. */
+    const explosion = screen
+      .getAllByRole("listitem")
+      .find((one) => one.textContent?.includes("Взрыв"))!;
+    expect(within(explosion).queryByRole("button", { name: "Подавить" })).toBeNull();
+    expect(within(explosion).getByText("в состав не войдёт, пока не станет основным")).toBeDefined();
 
-    expect(shown(stores).log.some((entry) => entry.summaryRu.startsWith("Заложено"))).toBe(true);
+    /* Названное основным свойство одного источника тем же нажатием и выводят из состава. */
+    const healing = screen
+      .getAllByRole("listitem")
+      .find((one) => one.textContent?.includes("Лечение здоровья"))!;
+    await user.click(within(healing).getByRole("button", { name: "Не основное" }));
+
+    expect(screen.queryByText(/раскрыто только у одного вида/)).toBeNull();
+    expect(within(healing).getByText("в состав не войдёт, пока не станет основным")).toBeDefined();
   });
 });

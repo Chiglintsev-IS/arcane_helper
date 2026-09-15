@@ -8,16 +8,19 @@ import type { ChoicesView, CraftingView } from "@/contract/views";
 
 import { signed } from "@/shared/language";
 import {
+  NO_NUMBER_RU,
+  difficultyRu,
   goldPerHourRu,
   goldTotalRu,
   minutesRu,
+  partValueRu,
   perKindPortionsRu,
   portionsRu,
-  rarityTone,
+  priceRu,
   unitsRu,
 } from "@/ui/entities/crafting/lib/labels";
+import { rarityWordClass } from "@/ui/entities/crafting/ui/PropertyMark";
 import { RULE_ROW, RULE_TILE } from "@/ui/shared/ui/rule";
-import { TONE_TEXT } from "@/ui/shared/ui/tone";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 import { KindPicker, MixtureCards, SpendRows } from "@/ui/widgets/recipe-bench/ui/MixtureCards";
 import { FormRows } from "@/ui/widgets/recipe-bench/ui/FormRows";
@@ -37,8 +40,6 @@ const BATCH_LABEL = "ПАРТИЯ";
 const TALLY_LABEL = "ИЗ ЧЕГО СЛОЖИЛАСЬ СЛ";
 
 const NOTHING_TO_BREW = "варить нечего";
-
-const NO_DIFFICULTY = "—";
 
 const CHANGE = "сменить";
 
@@ -123,6 +124,7 @@ export function RecipeBench({
   onDraft,
   onPortions,
   onApparatus,
+  onOpenKind,
 }: {
   crafting: CraftingView;
   choices: ChoicesView["recipeForm"];
@@ -132,6 +134,7 @@ export function RecipeBench({
   onDraft: (next: RecipeFormulaView) => void;
   onPortions: (portions: number) => void;
   onApparatus: (apparatusRu: string) => void;
+  onOpenKind: (itemId: string) => void;
 }) {
   const [kitOpen, setKitOpen] = useState(false);
   const { workshop, handbook } = crafting;
@@ -165,7 +168,9 @@ export function RecipeBench({
               difficulty === null ? "text-off" : overHardest ? "text-damage" : ""
             }`}
           >
-            {difficulty?.total ?? NO_DIFFICULTY}
+            {difficulty === null
+              ? NO_NUMBER_RU
+              : difficultyRu(difficulty.total, difficulty.unpriced)}
           </span>
           <span className="text-[0.625rem] text-ink-quiet">{holdsRu(workshop.hardest)}</span>
         </span>
@@ -254,7 +259,7 @@ export function RecipeBench({
       {preview === null || preview.spend.length === 0 ? null : (
         <section className="flex flex-col gap-1.5">
           <Label>{SPEND_LABEL}</Label>
-          <SpendRows spend={preview.spend} />
+          <SpendRows spend={preview.spend} onOpenKind={onOpenKind} />
         </section>
       )}
 
@@ -265,6 +270,7 @@ export function RecipeBench({
           candidates={preview?.candidates ?? []}
           draft={draft}
           onDraft={onDraft}
+          onOpenKind={onOpenKind}
         />
       </section>
 
@@ -279,9 +285,9 @@ export function RecipeBench({
               onClick={() => onDraft({ ...draft, mainRarity: rarity.nameRu })}
               className={`min-h-11 grow px-2 text-[0.6875rem] leading-tight ${
                 rarity.nameRu === draft.mainRarity ? SURFACE_CHOSEN : SURFACE_CONTROL
-              } ${TONE_TEXT[rarityTone(rarity.nameRu)]}`}
+              } ${rarityWordClass(rarity.nameRu)}`}
             >
-              {`${rarity.nameRu} ${signed(rarity.main)}`}
+              {`${rarity.nameRu} ${priceRu(rarity.main)}`}
             </button>
           ))}
         </div>
@@ -373,11 +379,11 @@ export function RecipeBench({
           <Label>{TALLY_LABEL}</Label>
           <dl className="flex flex-col gap-0.5 text-xs">
             {difficulty.parts
-              .filter((part) => part.modifier !== 0)
+              .filter((part) => part.modifier !== 0 || part.unpriced)
               .map((part) => (
                 <div key={part.nameRu} className="flex items-baseline justify-between gap-2">
                   <dt className="min-w-0 text-ink-quiet">{part.nameRu}</dt>
-                  <dd className="shrink-0 tabular-nums">{signed(part.modifier)}</dd>
+                  <dd className="shrink-0 tabular-nums">{partValueRu(part)}</dd>
                 </div>
               ))}
           </dl>

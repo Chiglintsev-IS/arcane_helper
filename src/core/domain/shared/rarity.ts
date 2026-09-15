@@ -5,7 +5,7 @@
  *
  * Порядок — от частого к редкому: им же идут строки справочника и кнопки выбора.
  */
-export const RARITY_STEPS = [
+const RARITY_STEPS = [
   "Обычное",
   "Необычное",
   "Редкое",
@@ -24,6 +24,8 @@ export const SPECIAL_RARITY = "Особое";
 
 /** Все слова редкости, какими стол может пометить свойство: ступени лестницы и особая. */
 export const RARITY_NAMES = [...RARITY_STEPS, SPECIAL_RARITY] as const;
+
+export type RarityRu = (typeof RARITY_NAMES)[number];
 
 /**
  * Редкость попутного свойства стол не называет — спрашивают про то, ради чего варят. Поэтому

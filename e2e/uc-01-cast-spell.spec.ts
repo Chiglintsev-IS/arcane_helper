@@ -426,20 +426,18 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await scan("лист персонажа, кто он");
 
   await switchMode(page, /^Вещи/);
-  await expect(page.getByRole("heading", { name: "Деньги" })).toBeVisible();
-  await scan("сумка");
+  await expect(page.getByRole("button", { name: "Деньги" })).toBeVisible();
+  await scan("рюкзак");
 
-  await page.getByRole("radio", { name: "Экипировка" }).click();
-  await expect(page.getByRole("heading", { name: "Защита" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Снять один: Плащ защиты" })).toBeVisible();
-  await scan("экипировка");
+  await page.getByRole("button", { name: "Признаки", exact: true }).click();
+  await page.getByRole("button", { name: "Экипировка", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Плащ защиты/ })).toBeVisible();
+  await scan("сито признаков");
 
-  await page.getByRole("radio", { name: "Расходники" }).click();
-  await page.getByRole("textbox", { name: "Новый расходник" }).fill("Зелье лечения");
-  await page.getByRole("textbox", { name: "Новый расходник" }).press("Enter");
-  await page.getByRole("button", { name: "Правка: Зелье лечения" }).click();
-  await expect(page.getByRole("dialog", { name: "Правка: Зелье лечения" })).toBeVisible();
-  await scan("шторка вещи");
+  await page.getByRole("button", { name: /^Плащ защиты/ }).click();
+  await expect(page.getByRole("button", { name: /^Название/ })).toBeVisible();
+  await scan("карточка вещи");
+
   await page.getByRole("button", { name: "Добавить прибавку" }).click();
   await expect(page.getByRole("dialog", { name: "К чему прибавка" })).toBeVisible();
   await scan("выбор величины прибавки");
@@ -447,19 +445,19 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
     .getByRole("dialog", { name: "К чему прибавка" })
     .getByRole("button", { name: "Отмена" })
     .click();
-  await page.getByRole("button", { name: "Отмена" }).click();
+  await page.getByRole("button", { name: "Рюкзак", exact: true }).click();
 
-  await page.getByRole("button", { name: "Правка: Деньги" }).click();
-  await expect(page.getByRole("dialog", { name: "Правка: Деньги" })).toBeVisible();
-  await scan("шторка денег");
-  await page.getByRole("button", { name: "Отмена" }).click();
+  await page.getByRole("button", { name: "Встречалось", exact: true }).click();
+  await expect(page.getByRole("radio", { name: /^Всё/ })).toBeVisible();
+  await scan("встречалось");
 
-  await page.getByRole("radio", { name: "Все вещи" }).click();
-  await expect(page.getByLabel("Поиск")).toBeVisible();
-  await page.getByRole("radio", { name: "Покупки" }).click();
-  await page.getByRole("textbox", { name: "Что купить" }).fill("Верёвка");
-  await page.getByRole("textbox", { name: "Что купить" }).press("Enter");
-  await expect(page.getByRole("button", { name: "Правка: Верёвка" })).toBeVisible();
+  await page.getByRole("button", { name: "Записать вещь", exact: true }).click();
+  await page.getByRole("textbox", { name: "Название со слов мастера" }).fill("Верёвка");
+  await page.getByRole("textbox", { name: "Название со слов мастера" }).press("Enter");
+  await page.getByRole("button", { name: "в покупки: Верёвка" }).click();
+
+  await page.getByRole("button", { name: "Покупки", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Купить: Верёвка" })).toBeVisible();
   await scan("покупки");
 
   await switchToSheet(page);

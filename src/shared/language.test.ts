@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { coinRu, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, timeSpanRu, withPlural } from "@/shared/language";
+import { coinRu, coinsRu, NO_ROLL_RU, plural, SAVING_THROW_NAMES, signed, timeSpanAccusativeRu, timeSpanRu, withPlural } from "@/shared/language";
 
 const POINTS: [string, string, string] = ["очко", "очка", "очков"];
 
@@ -90,5 +90,21 @@ describe("coinRu", () => {
 
   it("монета, которой в словаре нет, оставляет цену без сокращения", () => {
     expect(coinRu(7, "гроши")).toBe("7");
+  });
+});
+
+describe("coinsRu", () => {
+  const price = [
+    { currency: "gold", amount: 1 },
+    { currency: "silver", amount: 0 },
+    { currency: "copper", amount: 3 },
+  ];
+
+  it("цена читается перечнем номиналов, и пустая монета в нём не называется", () => {
+    expect(coinsRu(price)).toBe("1 зм · 3 мм");
+  });
+
+  it("цены без единой монеты не бывает: перечень пуст", () => {
+    expect(coinsRu(price.map((coin) => ({ ...coin, amount: 0 })))).toBe("");
   });
 });

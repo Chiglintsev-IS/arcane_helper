@@ -23,9 +23,9 @@ describe("материал заклинания", () => {
     expect(materialOf(arcaneLock.components)).toEqual({
       id: "золотая-пыль-стоимостью-минимум-25-зм,-расходуемая-заклинанием",
       nameRu: "золотая пыль стоимостью минимум 25 зм, расходуемая заклинанием",
-      kinds: ["consumable"],
+      kinds: [],
       consumed: true,
-      price: { amount: 25, currency: "gold" },
+      price: { gold: 25, silver: 0, copper: 0 },
     });
   });
 

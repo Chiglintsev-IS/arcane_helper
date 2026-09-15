@@ -12,7 +12,7 @@ import {
 } from "@/core/domain/items/schema";
 import type { ItemDefinition } from "@/core/domain/items/schema";
 
-const potion: ItemDefinition = { id: "potion", nameRu: "Зелье", kinds: ["consumable"], notes: [] };
+const potion: ItemDefinition = { id: "potion", nameRu: "Зелье", kinds: [], notes: [] };
 const armored: ItemDefinition = {
   id: "chainmail",
   nameRu: "Кольчуга",
@@ -32,9 +32,8 @@ describe("подсхема вещи", () => {
     expect(parsed[0]?.kinds).toEqual([]);
   });
 
-  it("признаки бывают втроём разом, и выдуманного признака не бывает", () => {
-    const all = ["gear", "consumable", "ingredient"];
-    expect(withDefinition({ id: "thing", nameRu: "Штука", kinds: all }).success).toBe(true);
+  it("признак ставится известный, и выдуманного признака не бывает", () => {
+    expect(withDefinition({ id: "thing", nameRu: "Штука", kinds: ["gear"] }).success).toBe(true);
     expect(withDefinition({ id: "thing", nameRu: "Штука", kinds: ["potion"] }).success).toBe(false);
   });
 
@@ -42,17 +41,30 @@ describe("подсхема вещи", () => {
     const messy = itemDefinitionOf({
       id: "thing",
       nameRu: "Штука",
-      kinds: ["ingredient", "gear", "ingredient"],
+      kinds: ["gear", "gear"],
     });
-    expect(messy.kinds).toEqual(["gear", "ingredient"]);
+    expect(messy.kinds).toEqual(["gear"]);
   });
 
-  it("цена вещи необязательна, а заданная проверяется монетой и целым числом", () => {
+  it("цена вещи необязательна, а заданная считает каждый номинал целым от нуля", () => {
     const priced = (price: unknown) => withDefinition({ id: "thing", nameRu: "Штука", price });
     expect(withDefinition({ id: "thing", nameRu: "Штука" }).success).toBe(true);
-    expect(priced({ amount: 50, currency: "gold" }).success).toBe(true);
-    expect(priced({ amount: -1, currency: "gold" }).success).toBe(false);
-    expect(priced({ amount: 50, currency: "рубль" }).success).toBe(false);
+    expect(priced({ gold: 1, copper: 3 }).success).toBe(true);
+    expect(priced({}).success).toBe(true);
+    expect(priced({ gold: -1 }).success).toBe(false);
+    expect(priced({ gold: 1.5 }).success).toBe(false);
+
+    /* Цена без единой ненулевой монеты — не цена в ноль, а неназванная: при вещи её не хранят. */
+    const strange = priced({ рубль: 50 });
+    expect(strange.success && strange.data[0]?.price).toBeUndefined();
+    const zeroed = priced({ gold: 0, silver: 0, copper: 0 });
+    expect(zeroed.success && zeroed.data[0]?.price).toBeUndefined();
+    const withCopper = priced({ copper: 3 });
+    expect(withCopper.success && withCopper.data[0]?.price).toEqual({
+      gold: 0,
+      silver: 0,
+      copper: 3,
+    });
   });
 
   it("фокусировка бывает только у экипировки", () => {

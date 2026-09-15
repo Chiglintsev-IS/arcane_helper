@@ -7,7 +7,7 @@ import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 
-import { itemMeta } from "./itemMeta";
+import { bonusLine, neededForLine, traitLine, unitRu } from "./itemMeta";
 
 const spells = loadThorneSpells();
 
@@ -15,10 +15,10 @@ const { stats } = toChoicesView();
 
 function viewOf(definition: ItemDefinition): ItemView {
   const state = createWizard();
-  const found = toBagView({
-    ...state,
-    itemDefinitions: [...state.itemDefinitions, definition],
-  }, spells).items.find((item) => item.id === definition.id);
+  const found = toBagView(
+    { ...state, itemDefinitions: [...state.itemDefinitions, definition] },
+    spells,
+  ).items.find((item) => item.id === definition.id);
   if (found === undefined) throw new Error(`нет вещи ${definition.id}`);
   return found;
 }
@@ -29,50 +29,16 @@ function wornOf(id: string): ItemView {
   return found;
 }
 
-describe("вторая строка вещи", () => {
-  it("однородное приходит одним фактом: спасброски плаща защиты — целое", () => {
-    expect(itemMeta(wornOf("cloak-of-protection"), stats)).toEqual({
-      facts: [{ valueRu: "+1", labelsRu: ["Класс Доспеха", "Все спасброски"] }],
-      marksRu: [],
-      notes: [],
-    });
+describe("строки вещи", () => {
+  it("однородные прибавки сходятся в одну: спасброски плаща защиты — целое", () => {
+    expect(bonusLine(wornOf("cloak-of-protection"), stats)).toBe(
+      "+1 Класс Доспеха · +1 Все спасброски",
+    );
   });
 
-  it("цена и прибавки — неделимые факты второй строки, заметка — свободный текст", () => {
+  it("разные числа стоят разными фактами, а вещь без прибавок молчит", () => {
     expect(
-      itemMeta(
-        viewOf({
-          id: "healing-potion",
-          nameRu: "Зелье лечения",
-          notes: [],
-          kinds: ["consumable"],
-          price: { amount: 50, currency: "gold" },
-        }),
-        stats,
-      ),
-    ).toEqual({ facts: [{ valueRu: "50", labelsRu: ["зм"] }], marksRu: [], notes: [] });
-    expect(
-      itemMeta(
-        viewOf({
-          id: "ring",
-          nameRu: "Кольцо",
-          kinds: ["gear"],
-          notes: [{ id: "one", textRu: "фамильное" }],
-          price: { amount: 3500, currency: "gold" },
-          bonuses: { armorClass: 1, "save:constitution": 1 },
-        }),
-        stats,
-      ),
-    ).toEqual({
-      facts: [
-        { valueRu: "+1", labelsRu: ["Класс Доспеха", "Спасбросок: Телосложение"] },
-        { valueRu: "3500", labelsRu: ["зм"] },
-      ],
-      marksRu: [],
-      notes: [{ id: "one", textRu: "фамильное" }],
-    });
-    expect(
-      itemMeta(
+      bonusLine(
         viewOf({
           id: "staff",
           nameRu: "Посох",
@@ -82,34 +48,30 @@ describe("вторая строка вещи", () => {
         }),
         stats,
       ),
-    ).toEqual({
-      facts: [
-        { valueRu: "+1", labelsRu: ["Класс Доспеха"] },
-        { valueRu: "+2", labelsRu: ["Сложность спасброска врага", "Попадание заклинанием"] },
-      ],
-      marksRu: [],
-      notes: [],
-    });
-    expect(itemMeta(viewOf({ id: "rope", nameRu: "Верёвка", kinds: [], notes: [] }), stats)).toEqual({
-      facts: [],
-      marksRu: [],
-      notes: [],
-    });
+    ).toBe("+1 Класс Доспеха · +2 Сложность спасброска врага · +2 Попадание заклинанием");
+
+    expect(bonusLine(viewOf({ id: "rope", nameRu: "Верёвка", kinds: [], notes: [] }), stats)).toBe(
+      "",
+    );
   });
 
-  it("отметки называют условие действия прибавки и желание купить", () => {
-    const stone = viewOf({
-      id: "stone",
-      nameRu: "Камень удачи",
-      notes: [],
-      kinds: [],
-      bonuses: { initiative: 1 },
-      worksCarried: true,
-    });
-    expect(itemMeta(stone, stats).marksRu).toEqual(["действует при себе"]);
-    expect(itemMeta({ ...stone, wanted: true }, stats).marksRu).toEqual([
-      "действует при себе",
-      "в покупках",
+  it("единицу счёта называет признак: ингредиент считают порциями, прочее — штуками", () => {
+    const herb = viewOf({ id: "herb", nameRu: "Подорожник", kinds: [], notes: [], alchemy: { properties: [] } });
+    const rope = viewOf({ id: "rope", nameRu: "Верёвка", kinds: [], notes: [] });
+
+    expect([1, 2, 5, 48].map((count) => unitRu(herb, count))).toEqual([
+      "порция",
+      "порции",
+      "порций",
+      "порций",
     ]);
+    expect(unitRu(rope, 2)).toBe("шт");
+  });
+
+  it("перечень признаков и перечень заклинаний называются одной чередой", () => {
+    expect(traitLine(["Экипировка", "Ингредиент"])).toBe("Экипировка · Ингредиент");
+    expect(traitLine([])).toBe("");
+    expect(neededForLine([])).toBeUndefined();
+    expect(neededForLine(["Огненный шар", "Щит"])).toBe("Требуется для: Огненный шар · Щит");
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Apparatus } from "./apparatus";
 import { Crafting, type MixtureKind } from "./crafting";
-import type { RarityStepRu } from "@/core/domain/shared/rarity";
+import type { RarityRu } from "@/core/domain/shared/rarity";
 import type { RecipeFormula } from "./recipe";
 
 const EMPTY = { knownRecipes: [] };
@@ -124,7 +124,7 @@ function grand(kinds: readonly MixtureKind[], changes: Partial<RecipeFormula>) {
 
 function suppressing(
   nameRu: string,
-  rarityRu: RarityStepRu = "Обычное",
+  rarityRu: RarityRu = "Обычное",
 ): RecipeFormula["suppressed"][number] {
   return { nameRu, rarityRu };
 }
@@ -149,21 +149,22 @@ describe("сложность рецепта", () => {
     });
 
     expect(sprayed.parts).toEqual([
-      { nameRu: "Основа", modifier: 10 },
-      { nameRu: "Основной эффект", modifier: 0 },
-      { nameRu: "Дополнительные эффекты", modifier: 0 },
-      { nameRu: "Ступень усиления", modifier: 3 },
-      { nameRu: "Длительность", modifier: 2 },
-      { nameRu: "Начало действия", modifier: 0 },
-      { nameRu: "Периодичность", modifier: 0 },
-      { nameRu: "Цели и область", modifier: 5 },
-      { nameRu: "Способ применения", modifier: 3 },
-      { nameRu: "Сопротивление", modifier: 2 },
-      { nameRu: "Очистка", modifier: 0 },
-      { nameRu: "Подавление", modifier: 0 },
-      { nameRu: "Ограничения и последствия", modifier: 0 },
-      { nameRu: "Оснащение", modifier: 0 },
+      { nameRu: "Основа", modifier: 10, unpriced: false },
+      { nameRu: "Основной эффект", modifier: 0, unpriced: false },
+      { nameRu: "Дополнительные эффекты", modifier: 0, unpriced: false },
+      { nameRu: "Ступень усиления", modifier: 3, unpriced: false },
+      { nameRu: "Длительность", modifier: 2, unpriced: false },
+      { nameRu: "Начало действия", modifier: 0, unpriced: false },
+      { nameRu: "Периодичность", modifier: 0, unpriced: false },
+      { nameRu: "Цели и область", modifier: 5, unpriced: false },
+      { nameRu: "Способ применения", modifier: 3, unpriced: false },
+      { nameRu: "Сопротивление", modifier: 2, unpriced: false },
+      { nameRu: "Очистка", modifier: 0, unpriced: false },
+      { nameRu: "Подавление", modifier: 0, unpriced: false },
+      { nameRu: "Ограничения и последствия", modifier: 0, unpriced: false },
+      { nameRu: "Оснащение", modifier: 0, unpriced: false },
     ]);
+    expect(sprayed.unpriced).toBe(false);
     expect(sprayed.total).toBe(25);
 
     const crippled = grand(sharingHealing(TWO_KINDS), {
@@ -220,8 +221,8 @@ describe("сложность рецепта", () => {
       suppressed: [suppressing("Ядовитый урон", "Легендарное")],
     });
 
-    expect(plain.parts).toContainEqual({ nameRu: "Подавление", modifier: 2 });
-    expect(plain.parts).toContainEqual({ nameRu: "Дополнительные эффекты", modifier: 0 });
+    expect(plain.parts).toContainEqual({ nameRu: "Подавление", modifier: 2, unpriced: false });
+    expect(plain.parts).toContainEqual({ nameRu: "Дополнительные эффекты", modifier: 0, unpriced: false });
     expect(plain.total).toBe(12);
     expect(legendary.total).toBe(18);
   });
@@ -229,8 +230,46 @@ describe("сложность рецепта", () => {
   it("редкость основного эффекта называет стол, и она входит в цену", () => {
     const rare = grand(sharingHealing(TWO_KINDS), { mainRarity: "Редкое" });
 
-    expect(rare.parts).toContainEqual({ nameRu: "Основной эффект", modifier: 5 });
+    expect(rare.parts).toContainEqual({ nameRu: "Основной эффект", modifier: 5, unpriced: false });
     expect(rare.total).toBe(15);
+  });
+
+  it("особую редкость основного эффекта справочник не оценивает, и итог назван неполным", () => {
+    const special = grand(sharingHealing(TWO_KINDS), { mainRarity: "Особое" });
+
+    expect(special.parts).toContainEqual({
+      nameRu: "Основной эффект",
+      modifier: 0,
+      unpriced: true,
+    });
+    expect(special.total).toBe(10);
+    expect(special.unpriced).toBe(true);
+    expect(special.noticesRu).toContainEqual(expect.stringMatching(/называет мастер/));
+  });
+
+  it("особая редкость подавляемого оставляет без цены подавление, а не весь замысел", () => {
+    const special = grand(healingAndPoison(), {
+      suppressed: [suppressing("Ядовитый урон", "Особое")],
+    });
+
+    expect(special.parts).toContainEqual({ nameRu: "Подавление", modifier: 0, unpriced: true });
+    expect(special.parts).toContainEqual({
+      nameRu: "Основной эффект",
+      modifier: 0,
+      unpriced: false,
+    });
+    expect(special.unpriced).toBe(true);
+  });
+
+  it("очистка снимает и особое подавление: платить за снятое дважды не с чего", () => {
+    const purified = grand(healingAndPoison(), {
+      purified: true,
+      suppressed: [suppressing("Ядовитый урон", "Особое")],
+    });
+
+    expect(purified.parts).toContainEqual({ nameRu: "Подавление", modifier: 0, unpriced: false });
+    expect(purified.unpriced).toBe(false);
+    expect(purified.total).toBe(15);
   });
 
   it("очистка стоит пяти и снимает плату за подавление, назвав это словами", () => {
@@ -239,8 +278,8 @@ describe("сложность рецепта", () => {
       suppressed: [suppressing("Ядовитый урон", "Легендарное")],
     });
 
-    expect(purified.parts).toContainEqual({ nameRu: "Очистка", modifier: 5 });
-    expect(purified.parts).toContainEqual({ nameRu: "Подавление", modifier: 0 });
+    expect(purified.parts).toContainEqual({ nameRu: "Очистка", modifier: 5, unpriced: false });
+    expect(purified.parts).toContainEqual({ nameRu: "Подавление", modifier: 0, unpriced: false });
     expect(purified.total).toBe(15);
     expect(purified.noticesRu).toHaveLength(1);
   });
@@ -441,7 +480,7 @@ describe("партия и предел оснащения", () => {
   it("без набора работают импровизированными сосудами: пять сверху и одна порция", () => {
     const bare = ALCHEMIST.batchOf(sharingHealing(TWO_KINDS), STANDARD, undefined, 1);
 
-    expect(bare.difficulty.parts).toContainEqual({ nameRu: "Оснащение", modifier: 5 });
+    expect(bare.difficulty.parts).toContainEqual({ nameRu: "Оснащение", modifier: 5, unpriced: false });
     expect(bare.difficulty.total).toBe(15);
     expect(bare.units).toBe(1);
     expect(

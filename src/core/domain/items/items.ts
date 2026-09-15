@@ -5,6 +5,7 @@ import {
   unrevealedNumbers,
   withReference,
   withRevealedProperty,
+  withRewrittenProperty,
   withoutProperty,
 } from "./ingredient";
 import type { IngredientAlchemy, IngredientReference, RevealedProperty } from "./ingredient";
@@ -16,7 +17,7 @@ import {
   noteMissingRefusal,
   noteTakenRefusal,
 } from "./schema";
-import type { ItemDefinition, ItemDraft, ItemNote } from "./schema";
+import type { Alchemical, ItemDefinition, ItemDraft, ItemNote } from "./schema";
 
 type ItemsState = { itemDefinitions: readonly ItemDefinition[] };
 
@@ -62,8 +63,8 @@ export class Items {
 
   /**
    * Правка заменяет объявленное: название, признаки, цену, прибавки, фокусировку. Алхимию и заметки
-   * правка не называет, и потому не теряет — их ведут свои операции, а алхимию снимает только
-   * утрата признака ингредиента.
+   * правка не называет и потому не теряет: знание о вещи копится своими операциями и снимается ими
+   * же — признак говорит, что вещь копят под состав, а не даёт ремеслу право стереть записанное.
    */
   replaceDefinition(item: ItemDraft): Items {
     const found = this.located(item.id);
@@ -88,7 +89,7 @@ export class Items {
     return this.data.filter((item) => ingredient(item));
   }
 
-  private locatedIngredient(id: string): ItemDefinition {
+  private locatedIngredient(id: string): Alchemical {
     const found = this.find(id);
     if (found === undefined) throw new DomainError(`Вещи «${id}» нет среди заведённых`);
     if (!ingredient(found)) {
@@ -101,8 +102,27 @@ export class Items {
     return this.locatedIngredient(id).nameRu;
   }
 
-  alchemyOf(id: string): IngredientAlchemy {
-    return this.locatedIngredient(id).alchemy ?? NO_ALCHEMY;
+  /** Завести вид: у вещи появляется алхимическая запись, пусть и пустая, — с неё и начинается вид. */
+  startAlchemy(id: string): Items {
+    const found = this.located(id);
+    return found.alchemy !== undefined
+      ? this
+      : this.replaceDefinition({ ...found, alchemy: NO_ALCHEMY });
+  }
+
+  /** У вида запись есть всегда — ею вид и начинается, — и пустая она значит «раскрывать нечего». */
+  /**
+   * Убрать вид: алхимическая запись уходит целиком, и вещь перестаёт быть видом. Правка вещи так не
+   * умеет и уметь не должна — знание убирают там, где его вели, и одним осознанным действием.
+   */
+  dropAlchemy(id: string): Items {
+    const { alchemy: _gone, ...rest } = this.locatedIngredient(id);
+    const stored = alignedItemDefinition(rest);
+    return this.with(this.data.map((existing) => (existing.id === id ? stored : existing)));
+  }
+
+  alchemyOf(id: string): NonNullable<ItemDefinition["alchemy"]> {
+    return this.locatedIngredient(id).alchemy;
   }
 
   private replacingAlchemy(id: string, alchemy: IngredientAlchemy): Items {
@@ -111,6 +131,14 @@ export class Items {
 
   revealProperty(id: string, property: RevealedProperty): Items {
     return this.replacingAlchemy(id, withRevealedProperty(this.alchemyOf(id), property));
+  }
+
+  rewriteProperty(id: string, property: RevealedProperty): Items {
+    const found = this.locatedIngredient(id);
+    return this.replacingAlchemy(
+      id,
+      withRewrittenProperty(found.nameRu, this.alchemyOf(id), property),
+    );
   }
 
   dropProperty(id: string, number: number): Items {
@@ -128,6 +156,11 @@ export class Items {
 
   setPrice(id: string, price: ItemDefinition["price"]): Items {
     return this.replaceDefinition({ ...this.located(id), price });
+  }
+
+  /** Переименование — правка одного ярлыка: остальную природу вещи оно не называет и не теряет. */
+  rename(id: string, nameRu: string): Items {
+    return this.replaceDefinition({ ...this.located(id), nameRu });
   }
 
   private located(id: string): ItemDefinition {

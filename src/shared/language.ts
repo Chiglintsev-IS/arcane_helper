@@ -45,6 +45,17 @@ export function coinRu(amount: number, currency: string): string {
   return found === undefined ? String(amount) : `${amount} ${found[1]}`;
 }
 
+/** Цены справочников названы золотом: мелкой монетой их не называют. */
+export const GOLD_CURRENCY = "gold";
+
+/** Цену и кошелёк читают перечнем номиналов; нулевая монета в нём не называется вовсе. */
+export function coinsRu(coins: readonly { currency: string; amount: number }[]): string {
+  return coins
+    .filter(({ amount }) => amount !== 0)
+    .map(({ amount, currency }) => coinRu(amount, currency))
+    .join(" · ");
+}
+
 export const AREA_SHAPES_RU = {
   cone: "Конус",
   cube: "Куб",

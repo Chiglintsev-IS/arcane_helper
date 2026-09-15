@@ -23,3 +23,14 @@ export const RARITY_NOTE = "+ редкость свойства";
 export function revealTitleRu(number: number): string {
   return `Раскрыть ${propertyNumberRu(number)} свойство`;
 }
+
+/**
+ * Слова справки о виде: их называют и книга алхимика, где справку дописывают, и карточка вещи, где
+ * её читают. Место у слов одно, иначе два экрана назвали бы одно поле по-разному.
+ */
+export const INGREDIENT_RECORD_NAMES = {
+  find: "СЛ поиска",
+  gather: "СЛ сбора",
+  yield: "Выход с источника",
+  portion: "Что такое порция",
+} as const;

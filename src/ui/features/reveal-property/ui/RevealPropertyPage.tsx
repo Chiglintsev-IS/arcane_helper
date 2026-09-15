@@ -4,10 +4,10 @@ import { useState } from "react";
 
 import type { Command } from "@/contract/commands";
 import type { PreviewOf, Question } from "@/contract/questions";
-import type { IngredientKnowledgeView } from "@/contract/views";
+import type { IngredientKnowledgeView, RevealedPropertyView } from "@/contract/views";
 
-import { SPECIAL_RARITY, rarityTone, researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
-import { PropertyStripes, SpecialStripe, markNameRu } from "@/ui/entities/crafting/ui/PropertyMark";
+import { researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
+import { PropertyStripes, markNameRu, rarityWordClass } from "@/ui/entities/crafting/ui/PropertyMark";
 import {
   BASE_DIFFICULTY_LABEL,
   NOTHING_REVEALED,
@@ -16,11 +16,10 @@ import {
   revealTitleRu,
 } from "@/ui/shared/lib/alchemyLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
-import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { RULE_EDGE_ACTIVE, RULE_ROW, RULE_TITLE } from "@/ui/shared/ui/rule";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
-import { TONE_TEXT } from "@/ui/shared/ui/tone";
 
 const COST_LABEL = "Чего это стоит";
 const DIRECTION_LABEL = "НАПРАВЛЕНИЕ";
@@ -30,14 +29,17 @@ const RARITY_LABEL = "РЕДКОСТЬ";
 
 const RARITY_HINT = "Редкость называет мастер: от неё зависит и цена эффекта, и сложность работы.";
 
-/** Особая редкость стоит вне лестницы: цены справочник ей не даёт, и полоса у неё всех цветов. */
+/** Особая редкость стоит вне лестницы: цены справочник ей не даёт, и букв у неё всех цветов. */
 const SPECIAL_HINT = "Особое — то, для чего справочник цены не называет.";
 
 /** Свойство приходит словами стола: перечня, из которого его выбирать, у приложения нет. */
 const PROPERTY_FIELD = "Свойство";
 const PROPERTY_HINT = "Свойство словами мастера";
 
-const WRITE_DOWN = "Записать";
+/** Слова стола уточняются позже: раскрытое правят теми же полями, какими записывали. */
+function rewriteTitleRu(number: number): string {
+  return editName(`${propertyNumberRu(number)} свойство`);
+}
 
 function Label({ children }: { children: string }) {
   return <span className="text-[0.625rem] tracking-[0.14em] text-accent">{children}</span>;
@@ -79,23 +81,28 @@ function Cost({ plan }: { plan: NonNullable<PreviewOf<"research_preview">["plan"
  */
 export function RevealPropertyPage({
   ingredient,
+  edited,
   directions,
   rarities,
   onSend,
 }: {
   ingredient: IngredientKnowledgeView;
+  /** Раскрытое, которое правят: без него страница записывает очередное, а не переписывает. */
+  edited?: RevealedPropertyView | undefined;
   directions: readonly string[];
   rarities: readonly string[];
   onSend: (command: Command, whenDone?: () => void) => void;
 }) {
-  const [propertyRu, setPropertyRu] = useState("");
-  const [dirRu, setDirRu] = useState<string | null>(null);
-  const [rarityRu, setRarityRu] = useState<string | null>(null);
+  const [propertyRu, setPropertyRu] = useState(edited?.nameRu ?? "");
+  const [dirRu, setDirRu] = useState<string | null>(edited?.dirRu ?? null);
+  const [rarityRu, setRarityRu] = useState<string | null>(edited?.rarityRu ?? null);
   const itemId = ingredient.itemId;
-  const number = ingredient.researchNumbers[0] ?? null;
+  const number = edited?.number ?? ingredient.researchNumbers[0] ?? null;
 
   const question: Question | null =
-    number === null ? null : { kind: "research_preview", itemId, number };
+    number === null || edited !== undefined
+      ? null
+      : { kind: "research_preview", itemId, number };
   const answer = usePreview(question);
   const research: PreviewOf<"research_preview"> | null =
     answer?.kind === "research_preview" ? answer : null;
@@ -104,18 +111,20 @@ export function RevealPropertyPage({
     if (number === null || textRu.trim() === "") return;
     onSend(
       {
-        kind: "reveal_property",
+        kind: edited === undefined ? "reveal_property" : "rewrite_property",
         itemId,
         number,
         propertyRu: textRu.trim(),
         ...(dirRu === null ? {} : { directionRu: dirRu }),
         ...(rarityRu === null ? {} : { rarityRu }),
       },
-      () => {
-        setPropertyRu("");
-        setDirRu(null);
-        setRarityRu(null);
-      },
+      edited !== undefined
+        ? undefined
+        : () => {
+            setPropertyRu("");
+            setDirRu(null);
+            setRarityRu(null);
+          },
     );
   };
 
@@ -123,7 +132,7 @@ export function RevealPropertyPage({
     <div className="flex flex-col gap-3.5 p-3">
       {number === null ? null : (
         <h2 className={`pb-2 text-[1.625rem] font-semibold leading-tight ${RULE_TITLE}`}>
-          {revealTitleRu(number)}
+          {edited === undefined ? revealTitleRu(number) : rewriteTitleRu(number)}
         </h2>
       )}
 
@@ -163,12 +172,11 @@ export function RevealPropertyPage({
                   type="button"
                   aria-pressed={rarity === rarityRu}
                   onClick={() => setRarityRu(rarity === rarityRu ? null : rarity)}
-                  className={`flex min-h-11 grow items-stretch justify-center gap-1.5 px-2 text-[0.6875rem] leading-tight ${
+                  className={`flex min-h-11 grow items-center justify-center px-2 text-[0.6875rem] leading-tight ${
                     rarity === rarityRu ? SURFACE_CHOSEN : SURFACE_CONTROL
-                  } ${TONE_TEXT[rarityTone(rarity)]}`}
+                  } ${rarityWordClass(rarity)}`}
                 >
-                  {rarity === SPECIAL_RARITY ? <SpecialStripe height="self-stretch" /> : null}
-                  <span className="self-center">{rarity}</span>
+                  {rarity}
                 </button>
               ))}
             </div>
@@ -194,7 +202,7 @@ export function RevealPropertyPage({
                 onClick={() => reveal(propertyRu)}
                 className={`shrink-0 px-4 text-[0.9375rem] font-semibold ${SURFACE_PRIMARY}`}
               >
-                {WRITE_DOWN}
+                {BUTTON_LABELS.write}
               </button>
             </div>
           </section>

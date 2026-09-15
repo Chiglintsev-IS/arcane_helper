@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 
 import {
   TIER_LABELS,
+  difficultyRu,
   directionTone,
   formulaAsideRu,
+  partValueRu,
+  priceRu,
   goldPerHourRu,
   goldTotalRu,
   portionsRu,
   propertyMarks,
   rarityTone,
+  researchNeedsRu,
   unitsRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { labelled } from "@/ui/shared/lib/alchemyLabels";
@@ -119,5 +123,54 @@ describe("чем замысел отличается от стандартног
     expect(propertyMarks({ dirRu: null, rarityRu: null })).toEqual([
       { labelRu: "направление неизвестно", tone: "muted", special: false },
     ]);
+  });
+});
+
+describe("цена, которой справочник не называет", () => {
+  it("цена ступени — число со знаком, цена особого — прочерк", () => {
+    expect(priceRu(5)).toBe("+5");
+    expect(priceRu(-2)).toBe("−2");
+    expect(priceRu(null)).toBe("—");
+  });
+
+  it("слагаемое без цены стоит прочерком, а неоценённое с числом — своим числом", () => {
+    expect(partValueRu({ modifier: 3, unpriced: false })).toBe("+3");
+    expect(partValueRu({ modifier: 0, unpriced: true })).toBe("—");
+    expect(partValueRu({ modifier: 4, unpriced: true })).toBe("+4");
+  });
+
+  it("неполный итог назван снизу, полный — самим числом", () => {
+    expect(difficultyRu(17, false)).toBe("17");
+    expect(difficultyRu(17, true)).toBe("17+");
+  });
+});
+
+describe("чего стоит исследование", () => {
+  const plan = {
+    minutes: 120,
+    difficulty: 15,
+    portionsOnFailure: 2,
+    portionsOnSuccess: 2,
+    consumablesRu: null,
+    consumablesGold: 0,
+    rawSampleRu: null,
+    laboratory: false,
+    requirementRu: null,
+  };
+
+  it("оснащение названо тем, чего работа требует: лаборатория или походные инструменты", () => {
+    expect(researchNeedsRu(plan).at(-1)?.valueRu).toBe("профильные походные инструменты");
+    expect(researchNeedsRu({ ...plan, laboratory: true }).at(-1)?.valueRu).toBe(
+      "профильная стационарная лаборатория",
+    );
+  });
+
+  it("порции названы исходом, а расходники — своей ценой", () => {
+    expect(researchNeedsRu({ ...plan, portionsOnSuccess: 0 })[1]?.valueRu).toBe(
+      "2 порции только при провале",
+    );
+    expect(
+      researchNeedsRu({ ...plan, consumablesRu: "Реактивы", consumablesGold: 5 })[2]?.valueRu,
+    ).toBe("реактивы, 5 зм");
   });
 });

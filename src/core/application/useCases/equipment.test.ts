@@ -17,10 +17,12 @@ import {
   adjustWornCount,
   editItem,
   editMoney,
+  renameItem,
   removeItem,
   setBagCount,
   recordItem,
   toggleWanted,
+  buyItem,
 } from "./equipment";
 
 const session = () => ({ character: createWizard(), log: [] });
@@ -37,7 +39,7 @@ function testOccasion(commandId = "command-1"): Occasion {
 const occasion = testOccasion();
 const ring = { nameRu: "Кольцо защиты", kinds: ["gear"] as const };
 const RING_ID = Items.idFromName(ring.nameRu);
-const potions = { nameRu: "Зелье лечения", kinds: ["consumable"] as const };
+const potions = { nameRu: "Зелье лечения", kinds: [] as const };
 const POTION_ID = Items.idFromName(potions.nameRu);
 
 const FOCUS_ID =
@@ -72,6 +74,19 @@ describe("правка снаряжения", () => {
     expect(Items.of(renamed.character).find(RING_ID)?.nameRu).toBe("Кольцо бабушки");
     expect(renamed.log[1]?.summaryRu).toBe("Правка вещи: Кольцо бабушки");
     expect(Items.of(undoLast(renamed).character).find(RING_ID)?.nameRu).toBe(ring.nameRu);
+  });
+
+  it("переименование называет прежнее имя и новое — и обратимо через лог", () => {
+    const carried = addItem(session(), ring, occasion);
+    const named = renameItem(carried, RING_ID, "Кольцо бабушки", occasion);
+
+    expect(Items.of(named.character).find(RING_ID)?.nameRu).toBe("Кольцо бабушки");
+    expect(named.log[1]?.summaryRu).toBe(`Переименовано: ${ring.nameRu} → Кольцо бабушки`);
+    expect(Items.of(undoLast(named).character).find(RING_ID)?.nameRu).toBe(ring.nameRu);
+  });
+
+  it("переименование незаведённой вещи отклоняется, а лог называет её идентичность", () => {
+    expect(() => renameItem(session(), "нет-такой", "Верёвка", occasion)).toThrow(/нет-такой/);
   });
 
   it("заметка вещи переживает правку самой вещи", () => {
@@ -143,6 +158,38 @@ describe("правка снаряжения", () => {
     expect(Equipment.of(bought.character).wants(id)).toBe(false);
     expect(bought.log[1]?.summaryRu).toBe("Из покупок: Верёвка");
     expect(Equipment.of(undoLast(bought).character).wants(id)).toBe(true);
+  });
+
+  it("купленное по списку встаёт в сумку и само говорит, откуда взялось", () => {
+    const wished = recordItem(session(), "Зелье невидимости", true, occasion);
+    const id = Items.idFromName("Зелье невидимости");
+    const bought = buyItem(wished, id, occasion);
+
+    expect(Equipment.of(bought.character).bagCount(id)).toBe(1);
+    expect(Items.of(bought.character).find(id)?.notes.at(-1)?.textRu).toBe(
+      "куплено по списку покупок",
+    );
+    expect(Equipment.of(bought.character).wants(id)).toBe(true);
+    expect(bought.log.at(-1)?.summaryRu).toBe("Куплено: Зелье невидимости (в сумке 1)");
+    expect(Equipment.of(undoLast(bought).character).bagCount(id)).toBe(0);
+  });
+
+  it("покупка вещи, которой нет среди заведённых, отвергается", () => {
+    expect(() => buyItem(session(), "неведомое", occasion)).toThrow("неведомое");
+  });
+
+  it("правка, снявшая признак экипировки, возвращает надетое в сумку", () => {
+    const worn = adjustWornCount(addItem(session(), ring, occasion), RING_ID, 1, occasion);
+    expect(Equipment.of(worn.character).wornCount(RING_ID)).toBe(1);
+
+    const plain = editItem(
+      worn,
+      { id: RING_ID, nameRu: ring.nameRu, kinds: [], notes: [] },
+      occasion,
+    );
+
+    expect(Equipment.of(plain.character).wornCount(RING_ID)).toBe(0);
+    expect(Equipment.of(plain.character).bagCount(RING_ID)).toBe(1);
   });
 
   it("встреченную вещь записывают без запаса и без желания её купить", () => {

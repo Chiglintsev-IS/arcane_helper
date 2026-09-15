@@ -3,6 +3,7 @@
 import type { ChoicesView, KnownRecipeView } from "@/contract/views";
 
 import {
+  difficultyRu,
   formulaAsideRu,
   goldPerHourRu,
   minutesRu,
@@ -20,8 +21,8 @@ const STANDARD_FORM = "стандартная форма";
 
 const SEPARATOR = " · ";
 
-function apparatusNeedRu(difficulty: number): string {
-  return `нужен набор на сложность ${difficulty}`;
+function apparatusNeedRu(difficulty: number, unpriced: boolean): string {
+  return `нужен набор на сложность ${difficultyRu(difficulty, unpriced)}`;
 }
 
 function Tile({ labelRu, valueRu }: { labelRu: string; valueRu: string }) {
@@ -71,7 +72,7 @@ export function RecipeList({
                     {DIFFICULTY_LABEL}
                   </span>
                   <span className="text-[1.75rem] font-semibold leading-none tabular-nums">
-                    {recipe.difficulty}
+                    {difficultyRu(recipe.difficulty, recipe.unpriced)}
                   </span>
                 </span>
               )}
@@ -104,7 +105,9 @@ export function RecipeList({
 
             <div className="flex items-center justify-between gap-2">
               <span className="min-w-0 text-[0.6875rem] text-ink-quiet">
-                {recipe.difficulty === null ? "" : apparatusNeedRu(recipe.difficulty)}
+                {recipe.difficulty === null
+                  ? ""
+                  : apparatusNeedRu(recipe.difficulty, recipe.unpriced)}
               </span>
               <button
                 type="button"

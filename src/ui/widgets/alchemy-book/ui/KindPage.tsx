@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import type { PreviewOf, Question } from "@/contract/questions";
 import type { CraftingView, IngredientKnowledgeView } from "@/contract/views";
 
-import { coinRu } from "@/shared/language";
+import { coinsRu } from "@/shared/language";
 import { researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
 import { propertySlots } from "@/ui/entities/crafting/lib/slots";
 import {
@@ -13,18 +13,23 @@ import {
   PropertyStripes,
   markNameRu,
 } from "@/ui/entities/crafting/ui/PropertyMark";
+import { CoinsEditor, PRICE_TITLE } from "@/ui/entities/character/ui/CoinsEditor";
 import { KindFieldEditor } from "@/ui/features/note-kind-field/ui/KindFieldEditor";
+import { editName } from "@/ui/shared/ui/buttonLabels";
 import {
   BASE_DIFFICULTY_LABEL,
+  INGREDIENT_RECORD_NAMES,
   RARITY_NOTE,
   propertyNumberRu,
   revealTitleRu,
 } from "@/ui/shared/lib/alchemyLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
+import { NameEditor, NAME_LABEL } from "@/ui/shared/ui/NameEditor";
+import { NOT_WRITTEN, ValueRow } from "@/ui/shared/ui/ValueRow";
+import { NoteList } from "@/ui/shared/ui/NoteList";
 import {
-  RULE_BLOCK,
   RULE_EDGE_ACTIVE,
-  RULE_ROW,
+  RULE_GROUP,
   RULE_SECTION,
   RULE_TILE,
 } from "@/ui/shared/ui/rule";
@@ -33,22 +38,19 @@ import { TONE_TEXT } from "@/ui/shared/ui/tone";
 
 const PROPERTIES_LABEL = "СВОЙСТВА";
 const SEARCH_LABEL = "ПОИСК И СБОР";
-const NOTES_LABEL = "СО СЛОВ МАСТЕРА";
+
+const DROP_KIND = "Убрать запись из алхимии";
+
+const DROP_KIND_HINT =
+  "Уйдёт всё записанное о виде — и раскрытое, и справка. Сама вещь с ценой и заметками останется.";
 
 const NOT_REVEALED = "не раскрыто";
-const NOT_WRITTEN = "не записано";
 
 const FIND_TILE = "НАЙТИ";
 const GATHER_TILE = "СОБРАТЬ";
 const YIELD_TILE = "СБОР ДАЁТ";
 
-const RECORD_NAMES = {
-  find: "СЛ поиска",
-  gather: "СЛ сбора",
-  yield: "Выход с источника",
-  portion: "Что такое порция",
-  price: "Цена порции",
-} as const;
+const RECORD_NAMES = INGREDIENT_RECORD_NAMES;
 
 type Field = keyof typeof RECORD_NAMES;
 
@@ -86,29 +88,6 @@ function Tile({
         {valueRu ?? NOT_WRITTEN}
       </span>
       <span className="text-[0.625rem] leading-tight text-ink-quiet">{captionRu}</span>
-    </button>
-  );
-}
-
-function Record({
-  labelRu,
-  valueRu,
-  onOpen,
-}: {
-  labelRu: string;
-  valueRu: string | null;
-  onOpen: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={`flex min-h-11 w-full items-baseline justify-between gap-3 py-2 text-left ${RULE_ROW}`}
-    >
-      <span className="shrink-0 text-xs text-ink-quiet">{labelRu}</span>
-      <span className={`min-w-0 text-right text-[0.8125rem] ${valueRu === null ? "text-off" : ""}`}>
-        {valueRu ?? NOT_WRITTEN}
-      </span>
     </button>
   );
 }
@@ -164,33 +143,56 @@ function Research({ kind, onReveal }: { kind: IngredientKnowledgeView; onReveal:
 export function KindPage({
   kind,
   checks,
+  currencies,
   onReveal,
+  onEditProperty,
+  onRename,
+  onWritePrice,
   onWrite,
+  onAddNote,
+  onRewriteNote,
+  onDropNote,
+  onDropKind,
 }: {
   kind: IngredientKnowledgeView;
   checks: CraftingView["handbook"]["checks"];
+  currencies: readonly string[];
   onReveal: () => void;
+  onEditProperty: (number: number) => void;
+  onRename: (nameRu: string) => void;
+  onWritePrice: (priced: Readonly<Record<string, number>>) => void;
   onWrite: (written: KindFieldWritten) => void;
+  onAddNote: (textRu: string) => void;
+  onRewriteNote: (noteId: string, textRu: string) => void;
+  onDropNote: (noteId: string) => void;
+  onDropKind: () => void;
 }) {
-  const [editing, setEditing] = useState<Field | null>(null);
+  const [editing, setEditing] = useState<Field | "name" | "price" | null>(null);
 
   const written: Record<Field, string | null> = {
     find: kind.findDc === null ? null : String(kind.findDc),
     gather: kind.gatherDc === null ? null : String(kind.gatherDc),
     yield: kind.yieldRu,
     portion: kind.portionRu,
-    price: kind.price === null ? null : coinRu(kind.price.amount, kind.price.currency),
   };
 
-  const editor =
-    editing === null ? null : (
+  const priced: Record<string, number> = Object.fromEntries(
+    currencies.map((currency) => [
+      currency,
+      kind.price?.find((coin) => coin.currency === currency)?.amount ?? 0,
+    ]),
+  );
+
+  /* Форма встаёт там, где стоит правимое: ответ, появившийся не под пальцем, ищут глазами. */
+  const editorOf = (field: Field): ReactNode =>
+    editing !== field ? null : (
       <KindFieldEditor
-        labelRu={RECORD_NAMES[editing]}
-        value={editing === "price" && kind.price !== null ? String(kind.price.amount) : (written[editing] ?? "")}
-        numeric={editing === "find" || editing === "gather" || editing === "price"}
+        labelRu={RECORD_NAMES[field]}
+        value={written[field] ?? ""}
+        numeric={field === "find" || field === "gather"}
         onWrite={(typed) => {
           setEditing(null);
-          onWrite({ field: editing, typed });
+          onWrite({ field, typed });
         }}
         onCancel={() => setEditing(null)}
       />
@@ -198,36 +200,60 @@ export function KindPage({
 
   return (
     <div className="flex flex-col gap-3.5 p-3">
-      <h2 className={`pb-2 text-[1.3125rem] font-semibold leading-tight ${RULE_SECTION}`}>
-        {kind.nameRu}
-      </h2>
+      {/* Имя вида — имя самой вещи: его правят и здесь, той же формой, что в карточке. */}
+      <section className={`flex flex-col gap-1.5 pb-3 ${RULE_SECTION}`}>
+        <ValueRow labelRu={NAME_LABEL} valueRu={kind.nameRu} onOpen={() => setEditing("name")} />
+        {editing !== "name" ? null : (
+          <NameEditor
+            nameRu={kind.nameRu}
+            onWrite={(nameRu) => {
+              setEditing(null);
+              onRename(nameRu);
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        )}
+      </section>
 
       <section className="flex flex-col gap-1">
         <span className="text-[0.625rem] tracking-[0.14em] text-accent">{PROPERTIES_LABEL}</span>
 
-        {propertySlots(kind).map((slot) => (
-          <div
-            key={slot.number}
-            className={`flex items-stretch gap-2 ${slot.nameRu === null ? "" : SURFACE_GROUP_BARE}`}
-          >
-            {slot.nameRu === null ? (
+        {/* Раскрытое правят нажатием по нему же: слова стола уточняются позже, чем записаны. */}
+        {propertySlots(kind).map((slot) =>
+          slot.nameRu === null ? (
+            <div key={slot.number} className="flex items-stretch gap-2">
               <EmptyStripes height="self-stretch" />
-            ) : (
-              <PropertyStripes slot={slot} height="self-stretch" />
-            )}
-            <span className="flex min-w-0 flex-1 items-baseline gap-2 py-1.5 pr-2">
-              <span className="w-7 shrink-0 text-[0.6875rem] tabular-nums text-ink-quiet">
-                {propertyNumberRu(slot.number)}
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className={`text-sm leading-tight ${slot.nameRu === null ? "text-off" : ""}`}>
-                  {slot.nameRu ?? NOT_REVEALED}
+              <span className="flex min-w-0 flex-1 items-baseline gap-2 py-1.5 pr-2">
+                <span className="w-7 shrink-0 text-[0.6875rem] tabular-nums text-ink-quiet">
+                  {propertyNumberRu(slot.number)}
                 </span>
-                <span className="text-[0.65625rem] text-ink-quiet">{markNameRu(slot)}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm leading-tight text-off">{NOT_REVEALED}</span>
+                  <span className="text-[0.65625rem] text-ink-quiet">{markNameRu(slot)}</span>
+                </span>
               </span>
-            </span>
-          </div>
-        ))}
+            </div>
+          ) : (
+            <button
+              key={slot.number}
+              type="button"
+              aria-label={editName(slot.nameRu)}
+              onClick={() => onEditProperty(slot.number)}
+              className={`flex min-h-11 items-stretch gap-2 text-left ${SURFACE_GROUP_BARE}`}
+            >
+              <PropertyStripes slot={slot} height="self-stretch" />
+              <span className="flex min-w-0 flex-1 items-baseline gap-2 py-1.5 pr-2">
+                <span className="w-7 shrink-0 text-[0.6875rem] tabular-nums text-ink-quiet">
+                  {propertyNumberRu(slot.number)}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm leading-tight">{slot.nameRu}</span>
+                  <span className="text-[0.65625rem] text-ink-quiet">{markNameRu(slot)}</span>
+                </span>
+              </span>
+            </button>
+          ),
+        )}
       </section>
 
       <Research kind={kind} onReveal={onReveal} />
@@ -252,6 +278,9 @@ export function KindPage({
           />
         </div>
 
+        {editorOf("find")}
+        {editorOf("gather")}
+
         <button
           type="button"
           onClick={() => setEditing("yield")}
@@ -266,33 +295,56 @@ export function KindPage({
             {written.yield ?? NOT_WRITTEN}
           </span>
         </button>
+
+        {editorOf("yield")}
       </section>
 
-      <section className="flex flex-col">
-        <Record
+      <section className="flex flex-col gap-1.5">
+        <ValueRow
           labelRu={RECORD_NAMES.portion}
           valueRu={written.portion}
           onOpen={() => setEditing("portion")}
         />
-        <Record
-          labelRu={RECORD_NAMES.price}
-          valueRu={written.price}
+        {editorOf("portion")}
+
+        <ValueRow
+          labelRu={PRICE_TITLE}
+          valueRu={kind.price === null ? null : coinsRu(kind.price)}
           onOpen={() => setEditing("price")}
         />
+        {editing !== "price" ? null : (
+          <CoinsEditor
+            titleRu={PRICE_TITLE}
+            currencies={currencies}
+            coins={priced}
+            onWrite={(price) => {
+              setEditing(null);
+              onWritePrice(price);
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        )}
       </section>
 
-      {editor}
+      {/* Заметки вида — заметки самой вещи: их правят одной и той же формой, где бы их ни читали. */}
+      <NoteList
+        notes={kind.notes}
+        onAdd={onAddNote}
+        onRewrite={onRewriteNote}
+        onDrop={onDropNote}
+      />
 
-      {kind.notes.length === 0 ? null : (
-        <section className="flex flex-col gap-1">
-          <span className="text-[0.625rem] tracking-[0.14em] text-accent">{NOTES_LABEL}</span>
-          {kind.notes.map((note) => (
-            <p key={note.id} className={`py-0.5 pl-2 text-xs leading-snug text-ink-soft ${RULE_BLOCK}`}>
-              {note.textRu}
-            </p>
-          ))}
-        </section>
-      )}
+      <section className="flex flex-col gap-1">
+        <button
+          type="button"
+          aria-label={`${DROP_KIND}: ${kind.nameRu}`}
+          onClick={onDropKind}
+          className={`min-h-11 px-3 text-xs font-medium ${TONE_TEXT.reaction} ${RULE_GROUP}`}
+        >
+          {DROP_KIND}
+        </button>
+        <p className="text-[0.65rem] leading-snug text-ink-quiet">{DROP_KIND_HINT}</p>
+      </section>
     </div>
   );
 }

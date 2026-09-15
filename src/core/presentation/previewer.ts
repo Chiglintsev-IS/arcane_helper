@@ -163,6 +163,7 @@ function recipePreview(live: LiveSession, question: RecipeQuestion): Preview {
         ? null
         : {
             total: difficulty.total,
+            unpriced: difficulty.unpriced,
             parts: difficulty.parts.map((part) => ({ ...part })),
             mainRu: difficulty.mainRu,
           },

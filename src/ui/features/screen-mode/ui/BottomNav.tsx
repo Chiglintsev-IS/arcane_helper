@@ -2,22 +2,9 @@
 
 import { useId, useState } from "react";
 
-import { SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
+import { SCREEN_LABELS, SCREEN_MODES, type ScreenMode } from "@/ui/shared/model/screenMode";
 import { RULE_BLOCK, RULE_ROW, RULE_SECTION } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP_BARE, SURFACE_PAGE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
-
-const LABELS: Record<ScreenMode, { title: string; hint: string }> = {
-  play: { title: "Игра", hint: "то, чем ходят" },
-  book: { title: "Книга", hint: "весь состав целиком, для чтения и сверки" },
-  things: { title: "Вещи", hint: "надетое с защитой, счётное с деньгами и чего не хватает" },
-  rest: { title: "Привал", hint: "отдых и восстановление" },
-  log: { title: "Лог", hint: "что случилось, что можно отменить и где взять копию" },
-  sheet: { title: "Лист", hint: "кто он: уровень, характеристики, навыки, владения" },
-  alchemy: { title: "Алхимия", hint: "виды ингредиентов, их свойства и верстак состава" },
-  smithing: { title: "Кузнечное дело", hint: "правил мастер пока не дал" },
-  notes: { title: "Заметки", hint: "записанное о мире: места, имена, обещания" },
-  familiar: { title: "Фамильяр", hint: "фрубит: о чём просить и что обещано" },
-};
 
 const MODES = "Режимы";
 
@@ -34,7 +21,7 @@ export function BottomNav({
 }) {
   const [listOpen, setListOpen] = useState(false);
   const titleId = useId();
-  const current = LABELS[mode];
+  const current = SCREEN_LABELS[mode];
 
   return (
     <>
@@ -70,9 +57,9 @@ export function BottomNav({
                   <span
                     className={`text-sm font-semibold ${value === mode ? "text-accent" : ""}`}
                   >
-                    {LABELS[value].title}
+                    {SCREEN_LABELS[value].title}
                   </span>
-                  <span className="text-xs text-ink-quiet">{LABELS[value].hint}</span>
+                  <span className="text-xs text-ink-quiet">{SCREEN_LABELS[value].hint}</span>
                 </span>
                 {value === mode ? (
                   <span className="shrink-0 text-xs text-accent">{NOW}</span>

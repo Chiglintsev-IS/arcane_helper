@@ -1,149 +1,127 @@
 "use client";
 
+import { useState } from "react";
+
 import type { BagView, ChoicesView, ItemView } from "@/contract/views";
 import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
 import { Purse } from "@/ui/entities/character/ui/Purse";
-import { StockControls } from "@/ui/entities/character/ui/StockControls";
-import { Choices } from "@/ui/shared/ui/Choices";
-import { QuickAddField } from "@/ui/shared/ui/QuickAddField";
-import { RULE_BETWEEN } from "@/ui/shared/ui/rule";
-import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { cycled, NO_SIFT, sifts, type TraitSift } from "@/ui/features/filter-items/model/itemFilter";
+import { ItemSift, SIFT_TITLE } from "@/ui/features/filter-items/ui/ItemSift";
+import { Magnifier } from "@/ui/shared/ui/Magnifier";
+import { FIELD_TEXT } from "@/ui/shared/ui/field";
+import { RULE_BETWEEN, RULE_COLUMN, RULE_EDGE_BOTTOM, RULE_GROUP } from "@/ui/shared/ui/rule";
+import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
-export const BAG_FILTERS = ["all", "gear", "consumable", "ingredient", "other"] as const;
+const SEARCH_LABEL = "Найти вещь";
 
-export type BagFilter = (typeof BAG_FILTERS)[number];
+const CLEAR_MARK = "✕";
 
-const FILTER_TITLES: Record<BagFilter, string> = {
-  all: "Всё",
-  gear: "Экипировка",
-  consumable: "Расходники",
-  ingredient: "Ингредиенты",
-  other: "Другое",
-};
+const NOTHING_FOUND = "Ничего не нашлось.";
 
-const ADD_LABELS: Record<BagFilter, string | null> = {
-  all: "Новая вещь",
-  gear: "Новая экипировка",
-  consumable: "Новый расходник",
-  ingredient: "Новый ингредиент",
-  other: "Новая вещь",
-};
+const EMPTY_BAG = "При себе ничего нет.";
 
-const ADDED_KINDS: Record<BagFilter, readonly string[]> = {
-  all: [],
-  gear: ["gear"],
-  consumable: ["consumable"],
-  ingredient: ["ingredient"],
-  other: [],
-};
-
-const EMPTY_LIST: Record<BagFilter, string> = {
-  all: "При себе ничего нет.",
-  gear: "Экипировки при себе нет.",
-  consumable: "Расходников при себе нет.",
-  ingredient: "Ингредиентов при себе нет.",
-  other: "Неопознанного при себе нет.",
-};
-
-function atHand(item: ItemView): boolean {
-  return item.bagCount > 0 || item.wornCount > 0;
-}
-
-function suits(item: ItemView, filter: BagFilter): boolean {
-  if (!atHand(item)) return false;
-  if (filter === "all") return true;
-  if (filter === "other") return item.kinds.length === 0;
-  return item.kinds.includes(filter);
-}
-
-function countRu(item: ItemView): string {
-  const inBag = `в сумке ${item.bagCount}`;
-  return item.wornCount === 0 ? inBag : `надето ${item.wornCount} · ${inBag}`;
-}
-
+/**
+ * Рюкзак: что при персонаже и сколько его. Сито и поиск стоят над списком, деньги — первой строкой,
+ * потому что за столом их трогают чаще всего.
+ */
 export function Bag({
-  bag,
+  items,
+  money,
   stats,
-  filter,
-  onChangeFilter,
-  onEditMoney,
+  openedId,
   onOpenItem,
-  onAddItem,
-  onAdjustBagCount,
-  onAdjustWornCount,
+  onSpend,
+  onStock,
+  onWriteMoney,
 }: {
-  bag: BagView;
+  items: readonly ItemView[];
+  money: BagView["money"];
   stats: ChoicesView["stats"];
-  filter: BagFilter;
-  onChangeFilter: (filter: BagFilter) => void;
-  onEditMoney: () => void;
+  openedId: string | null;
   onOpenItem: (id: string) => void;
-  onAddItem: (kinds: readonly string[], nameRu: string) => void;
-  onAdjustBagCount: (id: string, delta: number) => void;
-  onAdjustWornCount: (id: string, delta: number) => void;
+  onSpend: (id: string) => void;
+  onStock: (id: string) => void;
+  onWriteMoney: (coins: Readonly<Record<string, number>>) => void;
 }) {
-  const { money, items, armorClass } = bag;
-  const shown = items.filter((item) => suits(item, filter));
-  const wears = filter === "gear";
-  const addLabelRu = ADD_LABELS[filter];
+  const [query, setQuery] = useState("");
+  const [sift, setSift] = useState<TraitSift>(NO_SIFT);
+  const [moneyOpen, setMoneyOpen] = useState(false);
+  const [siftOpen, setSiftOpen] = useState(false);
+
+  const shown = items.filter((item) => sifts(item, sift, query));
 
   return (
-    <div className="flex flex-col gap-2">
-      <Purse money={money} onEdit={onEditMoney} />
-
-      <Choices
-        labelRu="Что в рюкзаке"
-        values={BAG_FILTERS}
-        titles={FILTER_TITLES}
-        chosen={filter}
-        onChoose={onChangeFilter}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <Purse
+        money={money}
+        opened={moneyOpen}
+        aside={
+          <button
+            type="button"
+            aria-expanded={siftOpen}
+            onClick={() => setSiftOpen(!siftOpen)}
+            className={`shrink-0 px-3 text-xs ${siftOpen ? "text-accent" : "text-ink-quiet"} ${RULE_COLUMN}`}
+          >
+            {SIFT_TITLE}
+          </button>
+        }
+        onToggle={() => setMoneyOpen(!moneyOpen)}
+        onWrite={onWriteMoney}
       />
 
-      {wears ? (
-        <section className={`flex items-center gap-3 px-3 py-2 ${SURFACE_GROUP}`}>
-          <h2 className="shrink-0 text-sm font-semibold">Защита</h2>
-          <p className="text-sm tabular-nums">
-            КД {armorClass.value}
-            {armorClass.baseNameRu === undefined ? null : (
-              <span className="text-ink-quiet">
-                {" · "}
-                {armorClass.baseNameRu}
-              </span>
-            )}
-          </p>
-        </section>
-      ) : null}
-
-      <section className={`flex flex-col gap-1 p-3 ${SURFACE_GROUP}`}>
-        {addLabelRu === null ? null : (
-          <QuickAddField
-            labelRu={addLabelRu}
-            onAdd={(nameRu) => onAddItem(ADDED_KINDS[filter], nameRu)}
+      <div className={`flex shrink-0 items-center gap-2 px-3 py-2 ${RULE_EDGE_BOTTOM}`}>
+        <label className={`flex min-h-11 flex-1 items-center gap-2 px-2.5 ${SURFACE_CONTROL}`}>
+          <span className="shrink-0 text-ink-quiet">
+            <Magnifier />
+          </span>
+          <input
+            type="search"
+            aria-label={SEARCH_LABEL}
+            placeholder={SEARCH_LABEL}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className={`min-w-0 flex-1 bg-transparent py-2 outline-none ${FIELD_TEXT}`}
           />
+        </label>
+        {query === "" ? null : (
+          <button
+            type="button"
+            aria-label={`${SEARCH_LABEL}: очистить`}
+            onClick={() => setQuery("")}
+            className={`shrink-0 px-3 text-xs text-ink-quiet ${RULE_GROUP}`}
+          >
+            <span aria-hidden="true">{CLEAR_MARK}</span>
+          </button>
         )}
+      </div>
 
+      {!siftOpen ? null : (
+        <div className={RULE_EDGE_BOTTOM}>
+          <ItemSift sift={sift} onCycle={(trait) => setSift(cycled(sift, trait))} />
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {shown.length === 0 ? (
-          <p className="text-xs text-ink-quiet">{EMPTY_LIST[filter]}</p>
+          <p className="px-3 py-3 text-xs text-ink-quiet">
+            {items.length === 0 ? EMPTY_BAG : NOTHING_FOUND}
+          </p>
         ) : (
-          <ul aria-label={FILTER_TITLES[filter]} className={`flex flex-col ${RULE_BETWEEN}`}>
+          <ul aria-label="Рюкзак" className={`flex flex-col ${RULE_BETWEEN}`}>
             {shown.map((item) => (
               <ItemRow
                 key={item.id}
                 item={item}
                 stats={stats}
-                countRu={countRu(item)}
+                opened={item.id === openedId}
                 onOpen={() => onOpenItem(item.id)}
-              >
-                <StockControls
-                  item={item}
-                  onAdjustBagCount={(delta) => onAdjustBagCount(item.id, delta)}
-                  onAdjustWornCount={(delta) => onAdjustWornCount(item.id, delta)}
-                />
-              </ItemRow>
+                onSpend={() => onSpend(item.id)}
+                onStock={() => onStock(item.id)}
+              />
             ))}
           </ul>
         )}
-      </section>
+      </div>
     </div>
   );
 }

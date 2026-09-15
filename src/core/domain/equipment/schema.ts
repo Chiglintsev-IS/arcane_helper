@@ -1,22 +1,12 @@
 import { z } from "zod";
 
-import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
+import { coinsSchema, NO_COINS, nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 export const MAXIMUM_ITEM_COUNT = 9999;
 
-const MAXIMUM_COIN_AMOUNT = 999_999;
-
-const coinAmount = z.number().int().min(0).max(MAXIMUM_COIN_AMOUNT);
-
-const moneySchema = z.object({
-  gold: coinAmount.default(0),
-  silver: coinAmount.default(0),
-  copper: coinAmount.default(0),
-});
-
-const NO_MONEY = { gold: 0, silver: 0, copper: 0 };
+const moneySchema = coinsSchema;
 
 const stockEntrySchema = z.object({
   itemId: nonEmpty,
@@ -29,7 +19,7 @@ const equipmentSchema = z
     worn: z.array(stockEntrySchema).default([]),
     wanted: z.array(nonEmpty).default([]),
 
-    money: moneySchema.default(NO_MONEY),
+    money: moneySchema.default(NO_COINS),
 
     components: z.object({ componentPouch: z.boolean() }).optional(),
   })
@@ -37,7 +27,7 @@ const equipmentSchema = z
     bag: [],
     worn: [],
     wanted: [],
-    money: NO_MONEY,
+    money: NO_COINS,
   });
 
 export function assertStockEntry(entry: unknown): void {
@@ -53,6 +43,19 @@ export const EQUIPMENT_FIELDS = {
 };
 
 export type EquipmentData = DeepReadonly<z.infer<typeof equipmentSchema>>;
+/** Счёт по каждой монете сам по себе: остаток кошелька бывает и отрицательным, а кошелёк — нет. */
+export type Coins = Readonly<Record<keyof z.infer<typeof moneySchema>, number>>;
+
+/**
+ * Чего стоят покупки: цены сложены по каждой монете отдельно, потому что пересчёта между монетами
+ * стол не делает; вещи без цены только сосчитаны, и в сумму им войти нечем.
+ */
+export type Shopping = {
+  cost: Coins;
+  rest: Coins;
+  unpriced: number;
+  short: boolean;
+};
 export type StockEntry = DeepReadonly<z.infer<typeof stockEntrySchema>>;
 export type Money = DeepReadonly<z.infer<typeof moneySchema>>;
 

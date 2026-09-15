@@ -5,6 +5,7 @@ import { proficiencyBonus } from "@/core/domain/character/abilities";
 import { RELIABLE_FIELD_KIT } from "@/core/domain/crafting/apparatus";
 import { RECIPE_CHOICES } from "@/core/domain/crafting/recipe";
 import { Items } from "@/core/domain/items/items";
+import { NO_COINS } from "@/core/domain/shared/schema";
 
 /**
  * Ингредиент опознаётся словом своего названия: партия списывает порции по названию вида, и другой
@@ -203,9 +204,9 @@ const CARRIED: readonly {
   kinds: readonly string[];
   notes?: readonly string[];
 }[] = [
-  { nameRu: "Сухпаёк", count: 7, kinds: ["consumable"] },
+  { nameRu: "Сухпаёк", count: 7, kinds: [] },
   { nameRu: "Брошь фракции лоялистов", count: 1, kinds: ["gear"] },
-  { nameRu: "Свиток заклинания «Катапульта»", count: 5, kinds: ["consumable"] },
+  { nameRu: "Свиток заклинания «Катапульта»", count: 5, kinds: [] },
   {
     nameRu: "Рисунок древней руны с наковальни великана",
     count: 1,
@@ -399,8 +400,8 @@ const RAW: unknown = {
     ...INGREDIENTS.map(({ nameRu, gold, revealed, notes, solo, ...reference }) => ({
       id: Items.idFromName(nameRu),
       nameRu,
-      kinds: ["ingredient"],
-      ...(gold === undefined ? {} : { price: { amount: gold, currency: "gold" } }),
+      kinds: [],
+      ...(gold === undefined ? {} : { price: { ...NO_COINS, gold } }),
       notes: written(nameRu, notes),
       alchemy: {
         properties: revealed ?? [],

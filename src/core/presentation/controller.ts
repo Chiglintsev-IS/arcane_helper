@@ -4,7 +4,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { characterStatePatchSchema } from "@/core/domain/assembly/state";
 import { RUNE_TARGETS } from "@/core/domain/arcana/runes";
 import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
-import { ITEM_KINDS, itemDefinitionOf } from "@/core/domain/items/schema";
+import { ITEM_KINDS, itemDefinitionOf, itemPriceOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
 import { revealedPropertyOf } from "@/core/domain/items/ingredient";
@@ -25,12 +25,13 @@ import {
 } from "@/core/application/session";
 import { castSpell } from "@/core/application/useCases/casting";
 import {
-  craftBatch,
   dropProperty,
   noteIngredient,
+  dropIngredient,
   noteIngredientReference,
   recordRecipe,
   revealProperty,
+  rewriteProperty,
   setWorkshop,
 } from "@/core/application/useCases/crafting";
 import {
@@ -52,8 +53,10 @@ import {
   removeItem,
   removeItemNote,
   recordItem,
+  renameItem,
   setBagCount,
   toggleWanted,
+  buyItem,
 } from "@/core/application/useCases/equipment";
 import {
   grantTemporaryHitPoints,
@@ -251,10 +254,14 @@ export function applyCommand(
       );
     case "edit_item":
       return changed(editItem(session, itemDefinitionOf(command.item), occasion));
+    case "rename_item":
+      return changed(renameItem(session, command.itemId, command.nameRu, occasion));
     case "remove_item":
       return changed(removeItem(session, command.itemId, occasion));
     case "toggle_wanted":
       return changed(toggleWanted(session, command.itemId, occasion));
+    case "buy_item":
+      return changed(buyItem(session, command.itemId, occasion));
     case "record_item":
       return changed(recordItem(session, command.nameRu, command.wanted, occasion));
     case "adjust_bag_count":
@@ -265,19 +272,6 @@ export function applyCommand(
       return changed(adjustWornCount(session, command.itemId, command.delta, occasion));
     case "edit_money":
       return changed(editMoney(session, moneyOf(command.money), occasion));
-
-    case "craft_batch":
-      return changed(
-        craftBatch(
-          session,
-          {
-            formula: recipeFormulaOf(command.formula),
-            portions: command.portions,
-            allowAnyway: command.allowAnyway,
-          },
-          occasion,
-        ),
-      );
 
     case "record_recipe":
       return changed(recordRecipe(session, recipeFormulaOf(command.formula), occasion));
@@ -294,7 +288,7 @@ export function applyCommand(
               ...(command.yieldRu === undefined ? {} : { yieldRu: command.yieldRu }),
               ...(command.portionRu === undefined ? {} : { portionRu: command.portionRu }),
             },
-            ...(command.priceGold === undefined ? {} : { priceGold: command.priceGold }),
+            ...(command.price === undefined ? {} : { price: itemPriceOf(command.price) }),
           },
           occasion,
         ),
@@ -302,9 +296,27 @@ export function applyCommand(
 
     case "note_ingredient":
       return changed(noteIngredient(session, command.nameRu, occasion));
+    case "drop_ingredient":
+      return changed(dropIngredient(session, command.itemId, occasion));
     case "reveal_property":
       return changed(
         revealProperty(
+          session,
+          {
+            itemId: command.itemId,
+            property: revealedPropertyOf({
+              number: command.number,
+              nameRu: command.propertyRu,
+              ...(command.directionRu === undefined ? {} : { dirRu: command.directionRu }),
+              ...(command.rarityRu === undefined ? {} : { rarityRu: command.rarityRu }),
+            }),
+          },
+          occasion,
+        ),
+      );
+    case "rewrite_property":
+      return changed(
+        rewriteProperty(
           session,
           {
             itemId: command.itemId,

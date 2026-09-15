@@ -1,4 +1,4 @@
-import { propertyMarks } from "@/ui/entities/crafting/lib/labels";
+import { SPECIAL_RARITY, propertyMarks, rarityTone } from "@/ui/entities/crafting/lib/labels";
 import { RULE_GROUP } from "@/ui/shared/ui/rule";
 import { TONE_TEXT } from "@/ui/shared/ui/tone";
 
@@ -25,13 +25,27 @@ const SPECIAL_STRIPE = "[background-image:repeating-linear-gradient(135deg,var(-
 /** Полоса шире волосяной линии: её читают цветом, а тонкую полосу цветом не прочесть. */
 const STRIPE_WIDTH = "w-2";
 
-/** Та же полоса всех цветов стоит и на кнопке выбора: выбираемое и выбранное помечены одинаково. */
-export function SpecialStripe({ height }: { height: string }) {
+/**
+ * Слово редкости там, где редкости стоят рядом кнопками: цвет у особой в тех же буквах, что у
+ * ступеней лестницы, и всеми цветами разом. Полоса рядом со словом отличала бы её не редкостью, а
+ * видом записи — потому цвет и живёт в букве, а не около неё.
+ */
+/* Класс собран одной строкой: склеенный из кусков Tailwind не увидит и правило не соберёт. */
+// prettier-ignore
+const SPECIAL_WORD = "[-webkit-background-clip:text] bg-clip-text text-transparent [background-image:linear-gradient(100deg,var(--color-damage),var(--color-roll),var(--color-ritual),var(--color-concentration),var(--color-action),var(--color-bonus))]";
+
+export function rarityWordClass(rarityRu: string): string {
+  return rarityRu === SPECIAL_RARITY ? SPECIAL_WORD : TONE_TEXT[rarityTone(rarityRu)];
+}
+
+/**
+ * Та же полоса всех цветов стоит там, где пометки читаются полосами: в списке, в слоте вида и в
+ * строке справочника. Ширину называет место: в столбце таблицы она равна соседним меткам, иначе
+ * особая строка выделялась бы толщиной, а не цветом.
+ */
+export function SpecialStripe({ height, width = STRIPE_WIDTH }: { height: string; width?: string }) {
   return (
-    <span
-      aria-hidden="true"
-      className={`block shrink-0 ${STRIPE_WIDTH} ${height} ${SPECIAL_STRIPE}`}
-    />
+    <span aria-hidden="true" className={`block shrink-0 ${width} ${height} ${SPECIAL_STRIPE}`} />
   );
 }
 

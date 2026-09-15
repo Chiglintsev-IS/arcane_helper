@@ -481,28 +481,29 @@ describe("ремесло", () => {
   };
 
   const stock: readonly Command[] = [
-    { kind: "add_item", nameRu: MOON_HERB, itemKinds: ["ingredient"] },
-    { kind: "add_item", nameRu: CRIMSON_ROOT, itemKinds: ["ingredient"] },
+    { kind: "add_item", nameRu: MOON_HERB, itemKinds: [] },
+    { kind: "add_item", nameRu: CRIMSON_ROOT, itemKinds: [] },
   ];
 
-  it("замысел, собранный из слов справочника, доходит до изготовления", () => {
+  it("замысел, собранный из слов справочника, доходит до записанного рецепта", () => {
     const known = Character.of(createThorne());
     const withKnowledge = [MOON_HERB_ID, CRIMSON_ROOT_ID].reduce(
       (items, itemId) =>
         items.revealProperty(itemId, { number: 1, nameRu: "Лечение здоровья" }),
       [MOON_HERB, CRIMSON_ROOT].reduce(
-        (items, nameRu) => items.addDefinition({ nameRu, kinds: ["ingredient"] }),
+        (items, nameRu) =>
+          items.addDefinition({ nameRu, kinds: [] }).startAlchemy(Items.idFromName(nameRu)),
         known.items,
       ),
     );
     const rated = known.withItems(withKnowledge);
-    const live = run([...stock, { kind: "craft_batch", formula, portions: 1 }], {
+    const live = run([...stock, { kind: "record_recipe", formula }], {
       session: createSession(rated.toState()),
       spellCatalog: CATALOG,
       spellCatalogSource: "built_in",
     });
 
-    expect(live.session.log.at(-1)?.kind).toBe("batch_crafted");
+    expect(live.session.log.at(-1)?.summaryRu).toMatch(/Записан рецепт: Лечение здоровья/);
   });
 
   it("вид записывается вещью, а свойство встаёт у неё словом стола", () => {
@@ -535,7 +536,11 @@ describe("ремесло", () => {
       { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, gatherDc: 7 },
       { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, yieldRu: "пучок с заросли" },
       { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, portionRu: "десять листьев" },
-      { kind: "note_ingredient_reference", itemId: MOON_HERB_ID, priceGold: 5 },
+      {
+        kind: "note_ingredient_reference",
+        itemId: MOON_HERB_ID,
+        price: { gold: 5, silver: 0, copper: 3 },
+      },
     ]);
     const items = Character.of(written.session.character).items;
 
@@ -546,7 +551,7 @@ describe("ремесло", () => {
       portionRu: "десять листьев",
       properties: [{ number: 1, nameRu: "Лечение здоровья", dirRu: "Зельеварение" }],
     });
-    expect(items.find(MOON_HERB_ID)?.price).toEqual({ amount: 5, currency: "gold" });
+    expect(items.find(MOON_HERB_ID)?.price).toEqual({ gold: 5, silver: 0, copper: 3 });
   });
 
   it("раскрытое убирается, и правка вещи его не теряет", () => {
@@ -556,7 +561,7 @@ describe("ремесло", () => {
       { kind: "reveal_property", itemId: MOON_HERB_ID, number: 2, propertyRu: "Пробуждение" },
     ]);
     const edited = run(
-      [{ kind: "edit_item", item: { id: MOON_HERB_ID, nameRu: MOON_HERB, kinds: ["ingredient"] } }],
+      [{ kind: "edit_item", item: { id: MOON_HERB_ID, nameRu: MOON_HERB, kinds: [] } }],
       known,
     );
     const dropped = run([{ kind: "drop_property", itemId: MOON_HERB_ID, number: 1 }], edited);
@@ -610,9 +615,8 @@ describe("ремесло", () => {
       refusal([
         ...stock,
         {
-          kind: "craft_batch",
+          kind: "record_recipe",
           formula: { ...formula, onset: "когда-нибудь" },
-          portions: 1,
         },
       ]),
     ).toMatch(/начало действия/);

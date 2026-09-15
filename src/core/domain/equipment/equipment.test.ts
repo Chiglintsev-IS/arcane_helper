@@ -31,7 +31,7 @@ const ring: ItemDefinition = {
   bonuses: { armorClass: 1, "save:wisdom": 1 },
 };
 
-const potion: ItemDefinition = { id: "healing-potion", nameRu: "Зелье лечения", kinds: ["consumable"], notes: [] };
+const potion: ItemDefinition = { id: "healing-potion", nameRu: "Зелье лечения", kinds: [], notes: [] };
 
 const rope: ItemDefinition = { id: "rope", nameRu: "Верёвка", kinds: [], notes: [] };
 
@@ -83,6 +83,43 @@ describe("снаряжение", () => {
 
     expect(bonusFor(worn.contributions(items(ring)), "armorClass")).toBe(1);
     expect(bonusFor(taken.contributions(items(ring)), "armorClass")).toBe(0);
+  });
+
+  it("надетое считается при персонаже наравне с лежащим в сумке", () => {
+    const worn = gear().adjustBagCount("ring", 3).equip("ring", 2, items(ring));
+
+    expect(worn.bagCount("ring")).toBe(1);
+    expect(worn.wornCount("ring")).toBe(2);
+    expect(worn.ownedCount("ring")).toBe(3);
+  });
+
+  it("покупки стоят монету к монете: пересчёта между номиналами снаряжение не делает", () => {
+    const priced = items(
+      { ...ring, price: { gold: 1, silver: 0, copper: 3 } },
+      { ...potion, price: { gold: 0, silver: 50, copper: 0 } },
+      rope,
+    );
+    const wished = gear()
+      .withMoney({ gold: 10, silver: 20, copper: 0 })
+      .withWanted("ring", true)
+      .withWanted("healing-potion", true)
+      .withWanted("rope", true);
+
+    expect(wished.shopping(priced)).toEqual({
+      cost: { gold: 1, silver: 50, copper: 3 },
+      rest: { gold: 9, silver: -30, copper: -3 },
+      unpriced: 1,
+      short: true,
+    });
+  });
+
+  it("без отмеченного покупки ничего не стоят, и кошелёк остаётся целым", () => {
+    expect(gear().withMoney({ gold: 7, silver: 0, copper: 0 }).shopping(items(ring))).toEqual({
+      cost: { gold: 0, silver: 0, copper: 0 },
+      rest: { gold: 7, silver: 0, copper: 0 },
+      unpriced: 0,
+      short: false,
+    });
   });
 
   it("запас ставится числом сразу, а не по одной штуке", () => {
@@ -166,7 +203,7 @@ describe("снаряжение", () => {
     expect(stocked.adjustBagCount("healing-potion", 4).bagCount("healing-potion")).toBe(7);
   });
 
-  it("ноль — состояние: кончившийся расходник остаётся в сумке нулём", () => {
+  it("ноль — состояние: кончившееся зелье остаётся в сумке нулём", () => {
     const empty = gear().adjustBagCount("healing-potion", 1).adjustBagCount("healing-potion", -1);
     expect(empty.bagCount("healing-potion")).toBe(0);
   });

@@ -9,6 +9,9 @@ export const RULE_TITLE = "border-b border-accent-rule";
 
 export const RULE_ROW = "border-t border-rule";
 
+/** Волосяная линия между столбцами строки: тем же волоском, что делит соседей списка. */
+export const RULE_COLUMN = "border-l border-rule";
+
 /** Волосяная линия между соседями списка: первого она не подчёркивает. */
 export const RULE_BETWEEN = "divide-y divide-rule";
 

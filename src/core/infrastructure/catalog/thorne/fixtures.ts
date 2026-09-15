@@ -210,7 +210,7 @@ export function withIngredientKnowledge(
 ): CharacterState {
   const root = Character.of(character);
   const itemId = Items.idFromName(nameRu);
-  const noted = root.items.addDefinition({ nameRu, kinds: ["ingredient"] });
+  const noted = root.items.addDefinition({ nameRu, kinds: [] }).startAlchemy(itemId);
   return root
     .withItems(
       properties.reduce((items, property) => items.revealProperty(itemId, property), noted),

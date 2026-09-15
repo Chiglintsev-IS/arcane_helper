@@ -105,10 +105,6 @@ export function trainingGlyph(training: string): string {
   return labelOf(TRAINING_GLYPHS, training);
 }
 
-export function currencyLabel(currency: string): string {
-  return labelOf(CURRENCY_LABELS, currency);
-}
-
 export function currencyAbbr(currency: string): string {
   return labelOf(CURRENCY_ABBREVIATIONS, currency);
 }
@@ -161,9 +157,10 @@ const TRAINING_GLYPHS: Readonly<Record<string, string>> = {
   expert: "◆",
 };
 
+export const WANTED_LABEL = "Хочу купить";
+
 const ITEM_KIND_LABELS: Readonly<Record<string, string>> = {
   gear: "Экипировка",
-  consumable: "Расходник",
   ingredient: "Ингредиент",
 };
 
@@ -172,12 +169,6 @@ const STAT_KIND_LABELS: Readonly<Record<string, string>> = {
   ability: "Характеристики",
   save: "Спасброски",
   skill: "Навыки",
-};
-
-const CURRENCY_LABELS: Readonly<Record<string, string>> = {
-  gold: "Золото",
-  silver: "Серебро",
-  copper: "Медь",
 };
 
 export const DASH = "—";
