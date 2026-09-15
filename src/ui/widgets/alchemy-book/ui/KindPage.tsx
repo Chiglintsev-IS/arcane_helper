@@ -8,10 +8,16 @@ import type { CraftingView, IngredientKnowledgeView } from "@/contract/views";
 import { coinRu } from "@/shared/language";
 import { directionTone, researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
 import { KindFieldEditor } from "@/ui/features/note-kind-field/ui/KindFieldEditor";
-import { propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
+import {
+  BASE_DIFFICULTY_LABEL,
+  RARITY_NOTE,
+  propertyNumberRu,
+  revealTitleRu,
+} from "@/ui/shared/lib/alchemyLabels";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import {
   RULE_BLOCK,
+  RULE_EDGE_ACTIVE,
   RULE_ROLE_WIDE,
   RULE_ROW,
   RULE_SECTION,
@@ -27,14 +33,9 @@ const NOTES_LABEL = "СО СЛОВ МАСТЕРА";
 const NOT_REVEALED = "не раскрыто";
 const NOT_WRITTEN = "не записано";
 
-const BASE_DIFFICULTY_LABEL = "БАЗОВАЯ СЛ";
-const RARITY_NOTE = "+ редкость свойства";
-
 const FIND_TILE = "НАЙТИ";
 const GATHER_TILE = "СОБРАТЬ";
 const YIELD_TILE = "СБОР ДАЁТ";
-
-const EQUIPMENT_NEED = "Оснащение";
 
 const RECORD_NAMES = {
   find: "СЛ поиска",
@@ -47,10 +48,6 @@ const RECORD_NAMES = {
 type Field = keyof typeof RECORD_NAMES;
 
 export type KindFieldWritten = { readonly field: Field; readonly typed: string };
-
-function revealTitleRu(number: number): string {
-  return `Раскрыть ${propertyNumberRu(number)} свойство`;
-}
 
 type Slot = { readonly number: number; readonly nameRu: string | null; readonly dirRu: string | null };
 
@@ -134,23 +131,15 @@ function Research({ kind, onReveal }: { kind: IngredientKnowledgeView; onReveal:
 
   if (number === null || research?.plan == null) return null;
   const plan = research.plan;
-  /* Набор, который такой работы не держит, виден раньше требований: цвет говорит то же, что слова. */
-  const held = plan.requirementRu === null;
 
   return (
     <button
       type="button"
       onClick={onReveal}
-      className={`flex w-full flex-col gap-2 p-3.5 text-left ${SURFACE_GROUP_BARE} ${
-        RULE_ROLE_WIDE[held ? "roll" : "reaction"]
-      }`}
+      className={`flex w-full flex-col gap-2 p-3.5 text-left ${SURFACE_GROUP_BARE} ${RULE_EDGE_ACTIVE}`}
     >
       <span className="flex w-full items-start justify-between gap-3">
-        <span
-          className={`text-[1.0625rem] font-semibold leading-tight ${
-            held ? "text-accent" : TONE_TEXT.reaction
-          }`}
-        >
+        <span className="text-[1.0625rem] font-semibold leading-tight text-accent">
           {revealTitleRu(number)}
         </span>
         <span className="flex shrink-0 flex-col items-end">
@@ -171,16 +160,6 @@ function Research({ kind, onReveal }: { kind: IngredientKnowledgeView; onReveal:
             <dd className="min-w-0 flex-1 text-[0.8125rem] leading-snug">{need.valueRu}</dd>
           </div>
         ))}
-        {plan.requirementRu === null ? null : (
-          <div className="flex items-baseline gap-2">
-            <dt className="w-[5.5rem] shrink-0 text-[0.6875rem] text-ink-quiet">
-              {EQUIPMENT_NEED}
-            </dt>
-            <dd className="min-w-0 flex-1 text-[0.8125rem] leading-snug text-reaction">
-              {plan.requirementRu}
-            </dd>
-          </div>
-        )}
       </dl>
     </button>
   );

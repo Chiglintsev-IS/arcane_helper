@@ -203,6 +203,7 @@ function researchPreview(live: LiveSession, question: ResearchQuestion): Preview
         consumablesRu: plan.consumablesRu,
         consumablesGold: plan.consumablesGold,
         rawSampleRu: plan.rawSampleRu,
+        laboratory: plan.laboratory,
         requirementRu: plan.requirementRu,
       },
     };

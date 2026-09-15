@@ -88,34 +88,60 @@ describe("«Алхимия»: книга", () => {
     expect(screen.getAllByText("не раскрыто")).toHaveLength(3);
     expect(await screen.findByText("Раскрыть 2-е свойство")).toBeDefined();
     expect(screen.getByText("12")).toBeDefined();
-    expect(screen.getByText("1 час")).toBeDefined();
+    expect(screen.getByText("1 ч")).toBeDefined();
   });
 
-  it("свойство раскрывают из блока раскрытия, и запас вида назван там же порциями", async () => {
+  it("раскрытие — своя страница: она называет цену работы по справочнику", async () => {
     const user = userEvent.setup();
-    const { stores } = await renderWithStores(
-      <AlchemyScreen />,
-      withIngredientKnowledge(blank(), MOON_HERB),
-    );
-    await stocked(stores, MOON_HERB, 6);
-    await stores.session
-      .getState()
-      .execute({ kind: "set_portion_size", itemId: Items.idFromName(MOON_HERB), pieces: 2 });
+    await renderWithStores(<AlchemyScreen />, withIngredientKnowledge(blank(), MOON_HERB));
 
     await openSection(user, "Ингредиенты");
     await user.click(press(new RegExp(MOON_HERB)));
     await user.click(await screen.findByRole("button", { name: /Раскрыть 1-е свойство/ }));
 
-    const sheet = within(screen.getByRole("dialog", { name: `Свойства: ${MOON_HERB}` }));
-    expect(sheet.getByText(/в сумке 6 · 3 порции/)).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Раскрыть 1-е свойство" })).toBeDefined();
+    expect(screen.getByText("Чего это стоит")).toBeDefined();
+    expect(screen.getByText("профильные походные инструменты")).toBeDefined();
+    /* Возврат ведёт к странице вида, а не к списку: работу открыли из неё. */
+    await user.click(press(MOON_HERB));
+    expect(screen.getByRole("heading", { name: MOON_HERB })).toBeDefined();
+  });
+
+  it("свойство записывают словами мастера вместе с направлением", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(
+      <AlchemyScreen />,
+      withIngredientKnowledge(blank(), MOON_HERB),
+    );
+
+    await openSection(user, "Ингредиенты");
+    await user.click(press(new RegExp(MOON_HERB)));
+    await user.click(await screen.findByRole("button", { name: /Раскрыть 1-е свойство/ }));
 
     await user.click(press("Зельеварение"));
     await user.type(screen.getByRole("textbox", { name: "Свойство" }), "Лечение здоровья");
-    await user.click(press("Сохранить"));
+    await user.click(press("Записать"));
 
     expect(
       shown(stores).crafting.ingredients.find((kind) => kind.nameRu === MOON_HERB)?.properties,
     ).toEqual([{ number: 1, nameRu: "Лечение здоровья", dirRu: "Зельеварение" }]);
+  });
+
+  it("раскрытое убирают с той же страницы", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(
+      <AlchemyScreen />,
+      withIngredientKnowledge(blank(), MOON_HERB, [HEALING]),
+    );
+
+    await openSection(user, "Ингредиенты");
+    await user.click(press(new RegExp(MOON_HERB)));
+    await user.click(await screen.findByRole("button", { name: /Раскрыть 2-е свойство/ }));
+    await user.click(press(`Убрать: ${HEALING.nameRu}`));
+
+    expect(
+      shown(stores).crafting.ingredients.find((kind) => kind.nameRu === MOON_HERB)?.properties,
+    ).toEqual([]);
   });
 
   it("поле вида дописывается со слов мастера и перекрывает прежнее", async () => {

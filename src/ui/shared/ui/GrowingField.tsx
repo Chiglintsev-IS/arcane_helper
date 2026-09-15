@@ -11,6 +11,7 @@ const DISMISS_MARK = "✕";
 export function GrowingField({
   value,
   labelRu,
+  placeholderRu = "",
   autoFocus = false,
   onChange,
   onSubmit,
@@ -18,6 +19,8 @@ export function GrowingField({
 }: {
   value: string;
   labelRu: string;
+  /** Подсказка внутри пустого поля: она говорит, откуда берётся то, что сюда пишут. */
+  placeholderRu?: string;
   autoFocus?: boolean;
   onChange: (value: string) => void;
   onSubmit: (value: string) => void;
@@ -30,6 +33,7 @@ export function GrowingField({
         rows={1}
         value={value}
         aria-label={labelRu}
+        placeholder={placeholderRu}
         autoFocus={autoFocus}
         enterKeyHint="done"
         onChange={(event) => onChange(event.target.value)}

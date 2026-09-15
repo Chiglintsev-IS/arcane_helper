@@ -4,6 +4,9 @@ export const RULE_SECTION = "border-b-[3px] border-double border-accent";
 
 export const RULE_BLOCK = "border-l-[3px] border-l-accent-rule";
 
+/** Линейка под заголовком работы: одинарная — двойная отбивает раздел, а не шаг внутри него. */
+export const RULE_TITLE = "border-b border-accent-rule";
+
 export const RULE_ROW = "border-t border-rule";
 
 /** Волосяная линия между соседями списка: первого она не подчёркивает. */

@@ -113,11 +113,16 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Минимальный размер интерактивной области — 44 × 44 px. */
-button,
-a[role="button"] {
-  min-height: 44px;
-  min-width: 44px;
+/*
+ * Минимальный размер интерактивной области — 44 × 44 px. Правило лежит в слое основы: вне слоёв оно
+ * сильнее утилит и молча съедает заданную высоту строки, а в слое — только подпирает её снизу.
+ */
+@layer base {
+  button,
+  a[role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /*

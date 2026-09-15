@@ -136,6 +136,8 @@ export function RecipeBench({
   const difficulty = preview?.difficulty ?? null;
   const batch = preview?.batch ?? null;
   const overHardest = preview?.warnings.some((warning) => warning.code === "over_hardest") === true;
+  /* Сколько порций берётся у каждого вида, считает ядро: самосмешивание берёт больше одной. */
+  const eachPortions = preview?.spend[0]?.portions ?? portions;
 
   const namedRu = crafting.ingredients
     .filter((kind) => draft.kinds.includes(kind.itemId))
@@ -172,7 +174,7 @@ export function RecipeBench({
           <Tile
             labelRu={TIME_LABEL}
             valueRu={minutesRu(batch.minutes)}
-            noteRu={batchOutRu(portions, batch.units)}
+            noteRu={batchOutRu(eachPortions, batch.units)}
             tone="action"
           />
           <Tile
@@ -338,7 +340,7 @@ export function RecipeBench({
         <div className="flex items-center gap-2">
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="text-[0.6875rem] leading-snug">
-              {batch === null ? atOnceRu(workshop.batch) : batchOutRu(portions, batch.units)}
+              {batch === null ? atOnceRu(workshop.batch) : batchOutRu(eachPortions, batch.units)}
             </span>
             <span className="text-[0.625rem] text-ink-quiet">{atOnceRu(workshop.batch)}</span>
           </span>

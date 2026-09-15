@@ -2,7 +2,7 @@ import type { RecipeFormulaView } from "@/contract/commands";
 import type { PreviewOf } from "@/contract/questions";
 import type { ChoicesView } from "@/contract/views";
 
-import { CURRENCY_ABBREVIATIONS, goldRu, timeSpanRu, withPlural } from "@/shared/language";
+import { CURRENCY_ABBREVIATIONS, coinRu, withPlural } from "@/shared/language";
 import type { Tone } from "@/ui/shared/ui/tone";
 
 /**
@@ -74,6 +74,16 @@ export type ResearchNeed = { readonly labelRu: string; readonly valueRu: string 
 
 const NO_CONSUMABLES_RU = "не нужны";
 
+/** Монета цены расходников: та же, какой справочник называет тарифы. */
+const GOLD = "gold";
+
+/**
+ * Чего работа требует от инструмента — по справочнику, а не по нашей сумке: книга нашего набора не
+ * знает. Профильность называется здесь же: непрофильным свойство раскрыть нельзя.
+ */
+const LABORATORY_RU = "профильная стационарная лаборатория";
+const FIELD_TOOLS_RU = "профильные походные инструменты";
+
 /**
  * Чего стоит исследование: каждое требование своей строкой и полным словом. В одну строку они не
  * складываются — там их читают как перечень сокращений, а не как условия работы.
@@ -81,26 +91,25 @@ const NO_CONSUMABLES_RU = "не нужны";
 export function researchNeedsRu(
   plan: NonNullable<PreviewOf<"research_preview">["plan"]>,
 ): readonly ResearchNeed[] {
-  const hours = plan.minutes / MINUTES_PER_HOUR;
-  const timeRu =
-    plan.minutes < MINUTES_PER_HOUR
-      ? timeSpanRu("minute", plan.minutes)
-      : timeSpanRu("hour", hours);
   const outcomeRu =
     plan.portionsOnSuccess === plan.portionsOnFailure
       ? "при любом исходе"
       : "только при провале";
 
   return [
-    { labelRu: "Время", valueRu: timeRu },
-    { labelRu: "Порции", valueRu: `${plan.portionsOnFailure} ${outcomeRu}` },
+    { labelRu: "Время", valueRu: minutesRu(plan.minutes) },
+    {
+      labelRu: "Порции",
+      valueRu: `${portionsRu(plan.portionsOnFailure)} ${outcomeRu}`,
+    },
     {
       labelRu: "Расходники",
       valueRu:
         plan.consumablesRu === null
           ? NO_CONSUMABLES_RU
-          : `${plan.consumablesRu.toLowerCase()}, ${goldRu(plan.consumablesGold)}`,
+          : `${plan.consumablesRu.toLowerCase()}, ${coinRu(plan.consumablesGold, GOLD)}`,
     },
+    { labelRu: "Оснащение", valueRu: plan.laboratory ? LABORATORY_RU : FIELD_TOOLS_RU },
   ];
 }
 

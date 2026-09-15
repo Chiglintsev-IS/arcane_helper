@@ -70,9 +70,24 @@ const referenceFields = z.object({
 
 export type IngredientReference = DeepReadonly<z.infer<typeof referenceFields>>;
 
+/** Смешать вид с самим собой стол разрешает не меньше чем двумя порциями: одна ни с чем не реагирует. */
+const FEWEST_SOLO_PORTIONS = 1;
+
+/**
+ * Одиночная реакция, утверждённая столом: названное свойство вид даёт без второго вида. Правило
+ * штучное — стол утверждает его отдельно каждому виду, вывести его не из чего, — и потому стоит
+ * при самом виде. Порций больше одной означает, что вид смешивают сам с собой.
+ */
+const soloReactionFields = z.object({
+  propertyRu: nonEmpty,
+  portions: z.number().int().min(FEWEST_SOLO_PORTIONS),
+});
+
+
 type AlchemyFields = {
   properties: readonly z.infer<typeof revealedPropertyFields>[];
   piecesPerPortion: number;
+  solo?: z.infer<typeof soloReactionFields> | undefined;
 } & z.infer<typeof referenceFields>;
 
 function inNumberOrder(alchemy: AlchemyFields): AlchemyFields {
@@ -90,6 +105,7 @@ export const ingredientAlchemySchema = z
       .int()
       .min(SMALLEST_PORTION_PIECES)
       .default(SMALLEST_PORTION_PIECES),
+    solo: soloReactionFields.optional(),
     ...referenceFields.shape,
   })
   .transform(inNumberOrder)

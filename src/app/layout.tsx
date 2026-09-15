@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
+import { SURFACE_PAGE } from "@/ui/shared/ui/surface";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,16 +23,17 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  // Цвет строки состояния берётся не токеном: браузер читает его до того, как появится лист стилей.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1120" },
+    { media: "(prefers-color-scheme: light)", color: "#efe8da" },
+    { media: "(prefers-color-scheme: dark)", color: "#15120e" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru">
-      <body className="bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
+      <body className={`text-ink antialiased ${SURFACE_PAGE}`}>
         {children}
       </body>
     </html>

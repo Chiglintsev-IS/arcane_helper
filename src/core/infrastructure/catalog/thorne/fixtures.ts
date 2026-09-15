@@ -174,6 +174,7 @@ export function withBloodPaid(
 export function withoutIngredientKnowledge(character: CharacterState): CharacterState {
   const root = Character.of(character);
   return root
+    .withCrafting(root.crafting.forgetRecipes())
     .withItems(
       root.items.ingredients.reduce(
         (items, item) => items.removeDefinition(item.id),

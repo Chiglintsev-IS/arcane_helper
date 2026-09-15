@@ -62,6 +62,8 @@ export type ResearchPlan = {
   readonly consumablesRu: string | null;
   readonly consumablesGold: number;
   readonly rawSampleRu: string | null;
+  /** Работа такой глубины идёт в стационарной лаборатории: это правило справочника, не наш набор. */
+  readonly laboratory: boolean;
   readonly requirementRu: string | null;
 };
 
@@ -101,6 +103,7 @@ export function researchPlan(input: {
     consumablesRu: burns ? consumables.nameRu : null,
     consumablesGold: burns ? consumables.goldPerStartedHour * startedHours(step.minutes) : 0,
     rawSampleRu: input.number === RAW_SAMPLE_NUMBER ? RAW_SAMPLE_RU : null,
+    laboratory: step.laboratory,
     requirementRu: apparatusRequirement(step, input.apparatus),
   };
 }

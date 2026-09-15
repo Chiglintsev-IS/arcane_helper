@@ -45,13 +45,6 @@ export function coinRu(amount: number, currency: string): string {
   return found === undefined ? String(amount) : `${amount} ${found[1]}`;
 }
 
-/** Полное имя монеты: его называют там, где цена стоит своей строкой и сокращать её незачем. */
-const GOLD_FORMS: [string, string, string] = ["золотой", "золотых", "золотых"];
-
-export function goldRu(amount: number): string {
-  return withPlural(amount, GOLD_FORMS);
-}
-
 export const AREA_SHAPES_RU = {
   cone: "Конус",
   cube: "Куб",

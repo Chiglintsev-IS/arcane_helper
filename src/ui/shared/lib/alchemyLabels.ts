@@ -11,3 +11,15 @@ export function propertyNumberRu(number: number): string {
 }
 
 export const NOTHING_REVEALED = "Ничего не раскрыто";
+
+/**
+ * Сложность исследования называется базовой: редкость свойства мастер добавит к ней сам, и заранее
+ * она неизвестна. Об этом говорят оба места, где число стоит, — и говорят одними словами.
+ */
+export const BASE_DIFFICULTY_LABEL = "БАЗОВАЯ СЛ";
+export const RARITY_NOTE = "+ редкость свойства";
+
+/** Номера идут подряд: очередное свойство ремесло называет само, выбирать игроку не из чего. */
+export function revealTitleRu(number: number): string {
+  return `Раскрыть ${propertyNumberRu(number)} свойство`;
+}

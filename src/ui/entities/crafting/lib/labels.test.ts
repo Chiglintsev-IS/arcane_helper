@@ -7,6 +7,7 @@ import {
   goldPerHourRu,
   goldTotalRu,
   portionsRu,
+  stockRu,
   unitsRu,
 } from "@/ui/entities/crafting/lib/labels";
 import { labelled } from "@/ui/shared/lib/alchemyLabels";
@@ -95,5 +96,10 @@ describe("чем замысел отличается от стандартног
       "подавлено: Диарея",
       "Состав портится через 1 час",
     ]);
+  });
+
+  it("штучная мера не повторяет одно число дважды, а составная называет порции", () => {
+    expect(stockRu({ inBag: 6, portionsInBag: 6 })).toBe("в сумке 6");
+    expect(stockRu({ inBag: 6, portionsInBag: 3 })).toBe("в сумке 6 · 3 порции");
   });
 });

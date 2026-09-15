@@ -3,6 +3,7 @@ import { arcaneRecoveryBudget, spellSlotsForLevel } from "@/core/domain/arcana/s
 import { runesMaximum } from "@/core/domain/arcana/runes";
 import { proficiencyBonus } from "@/core/domain/character/abilities";
 import { RELIABLE_FIELD_KIT } from "@/core/domain/crafting/apparatus";
+import { RECIPE_CHOICES } from "@/core/domain/crafting/recipe";
 import { Items } from "@/core/domain/items/items";
 
 /**
@@ -30,6 +31,7 @@ const INGREDIENTS: readonly {
   gatherDc?: number;
   yieldRu?: string;
   portionRu?: string;
+  solo?: { propertyRu: string; portions: number };
   notes: readonly string[];
 }[] = [
   {
@@ -75,10 +77,8 @@ const INGREDIENTS: readonly {
     gatherDc: 13,
     yieldRu: "1к4 порций с зрелой колонии",
     portionRu: "колония: 25 г свежей или 8 г сухой",
-    notes: [
-      "Две порции хвори друг с другом активируют «Отвращение к пиву» без второго вида — отдельно утверждённое исключение стола",
-      "Искать у старых шахт, пивных погребов и заброшенных поселений",
-    ],
+    solo: { propertyRu: "Отвращение к пиву", portions: 2 },
+    notes: ["Искать у старых шахт, пивных погребов и заброшенных поселений"],
   },
   {
     nameRu: "Подорожник",
@@ -153,10 +153,11 @@ const INGREDIENTS: readonly {
     gatherDc: 16,
     yieldRu: "одна порция со зрелого растения",
     portionRu: "зрелый очищенный корень",
+    solo: { propertyRu: "Постоянное усиление случайной характеристики", portions: 1 },
     notes: [
       "Спрос крайне высокий, устойчивого рынка почти нет: одни скрытые свойства оценивают не менее чем в 13 500 золотых",
       "2-е — очень редкое свойство: сложность его исследования была 16",
-      "Одной порции хватает на зелье 1-го свойства без второго вида, и для такого рецепта свойство считается очень редким; ступень обработки поднимает прирост: обычная +1, усиленная +2 (+3 к сложности), концентрированная +3 (+6)",
+      "В одиночном рецепте 1-е свойство считается очень редким; ступень обработки поднимает прирост: обычная +1, усиленная +2 (+3 к сложности), концентрированная +3 (+6)",
       "Сырая порция — спасбросок усвоения СЛ 18: успех даёт +1 к случайной характеристике навсегда, натуральная 20 — +2; провал — месяц помехи на проверки и спасброски Силы, Ловкости и Выносливости и тяжёлые приступы диареи. Торн выбросил натуральную 20 и получил +2 к Силе",
       "Искать в старых влажных почвах, насыщенных маной",
     ],
@@ -386,7 +387,7 @@ const RAW: unknown = {
       kinds,
       notes: written(nameRu, notes ?? []),
     })),
-    ...INGREDIENTS.map(({ nameRu, gold, revealed, notes, ...reference }) => ({
+    ...INGREDIENTS.map(({ nameRu, gold, revealed, notes, solo, ...reference }) => ({
       id: Items.idFromName(nameRu),
       nameRu,
       kinds: ["ingredient"],
@@ -398,6 +399,7 @@ const RAW: unknown = {
         ...(reference.gatherDc === undefined ? {} : { gatherDc: reference.gatherDc }),
         ...(reference.yieldRu === undefined ? {} : { yieldRu: reference.yieldRu }),
         ...(reference.portionRu === undefined ? {} : { portionRu: reference.portionRu }),
+        ...(solo === undefined ? {} : { solo }),
       },
     })),
   ],
@@ -424,6 +426,33 @@ const RAW: unknown = {
   suppression: { firedUponTurnStarts: 0, underDirectSunlight: false },
 
   alchemyApparatus: RELIABLE_FIELD_KIT,
+
+  /**
+   * Рецепты, которые отряд уже разработал: их повторяют без броска. Форма записана параметрами, а
+   * не числом — сложность считает ремесло, и пересчитает её, если стол поправит тариф.
+   */
+  knownRecipes: [
+    {
+      formula: {
+        ...RECIPE_CHOICES.standard,
+        kinds: [Items.idFromName("Корень мандрагоры")],
+        mainProperty: "Постоянное усиление случайной характеристики",
+        mainRarity: "Очень редкое",
+        duration: "Постоянно",
+        suppressed: [],
+        limitations: [],
+      },
+    },
+    {
+      formula: {
+        ...RECIPE_CHOICES.standard,
+        kinds: [Items.idFromName("Дварфийская хворь")],
+        mainProperty: "Отвращение к пиву",
+        suppressed: [],
+        limitations: [],
+      },
+    },
+  ],
 
   spellNotes: {},
 };

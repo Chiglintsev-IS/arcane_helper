@@ -518,6 +518,16 @@ test("every mode passes axe-core in both themes", async ({ page }) => {
       await page.getByRole("button", { name: new RegExp(`^${section}$`) }).click();
     }
 
+    // Страница вида и раскрытие лежат глубже разделов: панель режимов до них не достаёт.
+    await page.getByRole("button", { name: /^Ингредиенты/ }).click();
+    await page.getByRole("button", { name: /^Подорожник/ }).click();
+    await scan(`${scheme}: алхимия — страница вида`);
+    await page.getByRole("button", { name: /^Раскрыть / }).click();
+    await scan(`${scheme}: алхимия — раскрытие свойства`);
+    await page.getByRole("button", { name: "Подорожник", exact: true }).click();
+    await page.getByRole("button", { name: "Ингредиенты", exact: true }).click();
+    await page.getByRole("button", { name: "Ингредиенты", exact: true }).click();
+
     await alchemy.getByRole("button", { name: "Верстак" }).click();
     await expect(alchemy.getByRole("button", { name: "Верстак" })).toHaveAttribute(
       "aria-current",

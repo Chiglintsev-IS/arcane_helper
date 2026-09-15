@@ -192,7 +192,7 @@ export const RECIPE_CHOICES = {
     resistance: "Положительное воздействие на добровольную цель",
     mainRarity: PLAINEST_RARITY,
     purified: false,
-  },
+  } as const,
   durations: priced(DURATION_DIFFICULTY),
   onsets: priced(ONSET_DIFFICULTY),
   reaches: priced(REACH_DIFFICULTY),

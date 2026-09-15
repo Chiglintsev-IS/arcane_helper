@@ -22,6 +22,11 @@ export type MixtureKind = {
     readonly number: number;
     readonly nameRu: string;
   }[];
+  /**
+   * Одиночная реакция, утверждённая столом: названное свойство вид даёт без второго вида, а порций
+   * уходит столько, сколько стол назвал, — больше одной значит, что вид смешивают сам с собой.
+   */
+  readonly solo?: { readonly propertyRu: string; readonly portions: number } | undefined;
 };
 
 type CraftingState = {
@@ -30,10 +35,13 @@ type CraftingState = {
 };
 
 export const FEWEST_KINDS = 2;
+
+/** Разные виды состава берутся порция за порцию: свою меру в штуках каждый вид знает сам. */
+const PORTION_EACH = 1;
 export const MOST_KINDS = 4;
 
 function tooFewKindsRefusal(): string {
-  return "Состав собирается не меньше чем из двух разных видов ингредиентов";
+  return "Состав собирается из двух разных видов ингредиентов, пока стол не утвердил виду одиночную реакцию";
 }
 
 function tooManyKindsRefusal(): string {
@@ -107,8 +115,14 @@ export class Crafting {
 
   matches(kinds: readonly MixtureKind[]): readonly PropertyMatch[] {
     const distinct = [...new Map(kinds.map((kind) => [kind.id, kind])).values()];
-    if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
     if (distinct.length > MOST_KINDS) throw new DomainError(tooManyKindsRefusal());
+
+    const alone = distinct.length === 1 ? distinct[0] : undefined;
+    const solo = alone?.solo;
+    if (solo !== undefined && alone !== undefined) {
+      return [{ nameRu: solo.propertyRu, sources: [alone.nameRu], tier: tierOf(1) }];
+    }
+    if (distinct.length < FEWEST_KINDS) throw new DomainError(tooFewKindsRefusal());
 
     const gathered = new Map<string, string[]>();
     for (const kind of distinct) {
@@ -122,6 +136,20 @@ export class Crafting {
     return [...gathered]
       .filter(([, sources]) => sources.length >= FEWEST_KINDS)
       .map(([nameRu, sources]) => ({ nameRu, sources, tier: tierOf(sources.length) }));
+  }
+
+  /**
+   * Во сколько порций вида обходится одна порция замысла. Обычно в одну: состав ведут разные виды.
+   * Одиночную реакцию вид ведёт сам с собой, и тогда столько, сколько стол назвал.
+   */
+  /** Забыть записанное: рецепт держится на видах, и без них в книге ему нечего называть. */
+  forgetRecipes(): Crafting {
+    return new Crafting({ ...this.state, knownRecipes: [] });
+  }
+
+  portionsEach(kinds: readonly MixtureKind[]): number {
+    const alone = kinds.length === 1 ? kinds[0] : undefined;
+    return alone?.solo?.portions ?? PORTION_EACH;
   }
 
   /**

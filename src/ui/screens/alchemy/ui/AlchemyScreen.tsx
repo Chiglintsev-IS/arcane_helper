@@ -8,7 +8,7 @@ import type { ChoicesView, KnownRecipeView } from "@/contract/views";
 
 import { CHECK_DIE_RU, signed, withPlural } from "@/shared/language";
 import { KindFieldEditor } from "@/ui/features/note-kind-field/ui/KindFieldEditor";
-import { RevealPropertySheet } from "@/ui/features/reveal-property/ui/RevealPropertySheet";
+import { RevealPropertyPage } from "@/ui/features/reveal-property/ui/RevealPropertyPage";
 import { AlchemyHandbook, HANDBOOK_CHAPTERS } from "@/ui/widgets/alchemy-handbook/ui/AlchemyHandbook";
 import { BookSections } from "@/ui/widgets/alchemy-book/ui/BookSections";
 import { KindList, kindGroups } from "@/ui/widgets/alchemy-book/ui/KindList";
@@ -52,7 +52,7 @@ const SECTIONS = [
   },
 ] as const;
 
-type Page = "sections" | (typeof SECTIONS)[number]["id"] | "kind";
+type Page = "sections" | (typeof SECTIONS)[number]["id"] | "kind" | "reveal";
 
 const NOTE_KIND = "Записать вид";
 const NOTE_KIND_HINT =
@@ -104,7 +104,6 @@ export function AlchemyScreen() {
   const [mode, setMode] = useState<Mode>("book");
   const [page, setPage] = useState<Page>("sections");
   const [openedId, setOpenedId] = useState<string | null>(null);
-  const [revealOpen, setRevealOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [refusalRu, setRefusalRu] = useState<string | null>(null);
   const [draft, setDraft] = useState<RecipeFormulaView>(() =>
@@ -166,7 +165,13 @@ export function AlchemyScreen() {
     sections.find((section) => section.id === id) ?? sections[0]!;
 
   const header =
-    page === "sections" || mode === "bench" ? null : (
+    page === "sections" || mode === "bench" ? null : page === "reveal" ? (
+      <BackHeader
+        titleRu={opened?.nameRu ?? ""}
+        backNameRu={opened?.nameRu ?? ""}
+        onBack={() => setPage("kind")}
+      />
+    ) : (
       <BackHeader
         titleRu={sectionOf(page === "kind" ? "kinds" : page).titleRu}
         backNameRu={sectionOf(page === "kind" ? "kinds" : page).titleRu}
@@ -292,12 +297,19 @@ export function AlchemyScreen() {
               setPage("kind");
             }}
           />
+        ) : page === "reveal" && opened !== undefined && opened !== null ? (
+          <RevealPropertyPage
+            key={opened.itemId}
+            ingredient={opened}
+            directions={choices.alchemyDirections}
+            onSend={send}
+          />
         ) : page === "kind" && opened !== undefined && opened !== null ? (
           <KindPage
             key={opened.itemId}
             kind={opened}
             checks={crafting.handbook.checks}
-            onReveal={() => setRevealOpen(true)}
+            onReveal={() => setPage("reveal")}
             onWrite={(written) => writeField(written, opened.itemId)}
           />
         ) : page === "recipes" ? (
@@ -342,20 +354,6 @@ export function AlchemyScreen() {
           </button>
         ))}
       </nav>
-
-      {!revealOpen || opened === null || opened === undefined ? null : (
-        <RevealPropertySheet
-          key={opened.itemId}
-          ingredient={opened}
-          directions={choices.alchemyDirections}
-          refusalRu={refusalRu}
-          onSend={(command, whenDone) => send(command, whenDone)}
-          onCancel={() => {
-            setRefusalRu(null);
-            setRevealOpen(false);
-          }}
-        />
-      )}
     </div>
   );
 }

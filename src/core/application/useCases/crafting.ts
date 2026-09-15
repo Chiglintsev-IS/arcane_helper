@@ -26,23 +26,30 @@ export function mixtureKinds(items: Items, kinds: readonly string[]): readonly M
   return [...new Set(kinds)].map((itemId) => {
     const found = items.find(itemId);
     if (found === undefined || !ingredient(found)) throw new DomainError(unknownKindRefusal(itemId));
-    return { id: found.id, nameRu: found.nameRu, properties: items.alchemyOf(itemId).properties };
+    const alchemy = items.alchemyOf(itemId);
+    return {
+      id: found.id,
+      nameRu: found.nameRu,
+      properties: alchemy.properties,
+      solo: alchemy.solo,
+    };
   });
 }
 
 /**
- * Одна трата на все виды: партия списывает по порции каждого, а сколько в порции штук, знает сам
- * вид. Спросивший цену и заложивший партию идут этим же путём — вторая такая же трата разошлась бы
- * с настоящей при первой правке меры.
+ * Одна трата на все виды: сколько порций берёт партия, говорит ремесло, а сколько в порции штук —
+ * сам вид. Спросивший цену и заложивший партию идут этим же путём: вторая такая же трата разошлась
+ * бы с настоящей при первой правке меры.
  */
 function spentOnBatch(
   root: Character,
   kinds: readonly MixtureKind[],
   portions: number,
 ): Equipment {
+  const each = root.crafting.portionsEach(kinds) * portions;
   return kinds.reduce(
     (equipment, kind) =>
-      equipment.adjustBagCount(kind.id, -root.items.piecesForPortions(kind.id, portions)),
+      equipment.adjustBagCount(kind.id, -root.items.piecesForPortions(kind.id, each)),
     root.equipment,
   );
 }
@@ -61,14 +68,15 @@ export function batchSpending(
   kinds: readonly MixtureKind[],
   portions: number,
 ): readonly BatchSpending[] {
+  const each = root.crafting.portionsEach(kinds) * portions;
   return kinds.map((kind) => {
     const inBagPortions = root.items.portionsFromPieces(kind.id, root.equipment.bagCount(kind.id));
     return {
       itemId: kind.id,
       nameRu: kind.nameRu,
-      portions,
+      portions: each,
       inBagPortions,
-      shortPortions: Math.max(portions - inBagPortions, 0),
+      shortPortions: Math.max(each - inBagPortions, 0),
     };
   });
 }
