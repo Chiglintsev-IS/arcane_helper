@@ -32,6 +32,7 @@ export function StartOver({ onConfirm }: { onConfirm: () => void }) {
           body="Персонаж, лог и загруженные карточки будут заменены чистыми. Вернуть их получится только из копии, забранной до очистки."
           confirmLabel="Удалить и начать"
           cancelLabel={BUTTON_LABELS.dismiss}
+          removing
           onConfirm={() => {
             setAsking(false);
             onConfirm();

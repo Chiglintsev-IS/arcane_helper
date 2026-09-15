@@ -60,6 +60,7 @@ export function RemoveButton({
           body={bodyRu}
           confirmLabel={CONFIRM}
           cancelLabel={BUTTON_LABELS.dismiss}
+          removing
           onConfirm={() => {
             setAsking(false);
             onConfirm();

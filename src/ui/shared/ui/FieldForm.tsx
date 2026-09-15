@@ -11,6 +11,9 @@ import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/share
  * одинаково и нигде не вступает в силу сама: набранное в поле — ещё не решение игрока, а за столом
  * поле легко задеть рукой и не заметить, что записалось.
  *
+ * Пара ответов стоит в том же порядке, что и во всякой шторке приложения: палец запоминает место, а
+ * не слово, и переставленная пара срабатывает раньше, чем прочитан текст.
+ *
  * Открывают форму там же, где стоит правимое значение: ответ, появившийся не под пальцем, ищут
  * глазами.
  */
@@ -36,17 +39,17 @@ export function FieldForm({
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={onCancel}
-          className={`min-h-11 flex-1 px-3 text-sm ${SURFACE_CONTROL}`}
-        >
-          {BUTTON_LABELS.dismiss}
-        </button>
-        <button
-          type="button"
           onClick={onWrite}
           className={`min-h-11 flex-1 px-3 text-sm font-semibold ${SURFACE_PRIMARY}`}
         >
           {BUTTON_LABELS.write}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`min-h-11 shrink-0 px-3 text-sm ${SURFACE_CONTROL}`}
+        >
+          {BUTTON_LABELS.dismiss}
         </button>
       </div>
     </div>
