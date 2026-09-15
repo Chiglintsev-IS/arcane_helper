@@ -14,9 +14,9 @@ export function markNameRu(slot: Marked): string {
 }
 
 /**
- * Особое правило мастера не берёт себе цвета: свободных в палитре нет, и всякий занятый спутали бы
- * с направлением или с редкостью. Полоса собрана из всех цветов значений разом — так видно, что
- * это не строка справочника, а то, что придумал стол. Цвета взяты у палитры, своих здесь нет.
+ * Особая редкость не берёт себе цвета: свободных в палитре нет, и всякий занятый спутали бы со
+ * ступенью лестницы или с направлением. Полоса собрана из всех цветов значений разом — так видно,
+ * что это не строка справочника, а то, что назвал стол. Цвета взяты у палитры, своих здесь нет.
  */
 /* Класс собран одной строкой: склеенный из кусков Tailwind не увидит и правило не соберёт. */
 // prettier-ignore
@@ -25,16 +25,26 @@ const SPECIAL_STRIPE = "[background-image:repeating-linear-gradient(135deg,var(-
 /** Полоса шире волосяной линии: её читают цветом, а тонкую полосу цветом не прочесть. */
 const STRIPE_WIDTH = "w-2";
 
+/** Та же полоса всех цветов стоит и на кнопке выбора: выбираемое и выбранное помечены одинаково. */
+export function SpecialStripe({ height }: { height: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`block shrink-0 ${STRIPE_WIDTH} ${height} ${SPECIAL_STRIPE}`}
+    />
+  );
+}
+
 /**
  * Пометки свойства полосами: полоса на каждую пометку, в том же порядке, в каком они читаются
- * словами. Полос столько, сколько мастер назвал: направление, особое правило, редкость.
+ * словами. Полос столько, сколько мастер назвал: направление и редкость.
  */
 export function PropertyStripes({ slot, height }: { slot: Marked; height: string }) {
   return (
     <span aria-hidden="true" className="flex shrink-0 gap-0.5">
       {propertyMarks(slot).map((mark) =>
         mark.special ? (
-          <span key={mark.labelRu} className={`${STRIPE_WIDTH} ${height} ${SPECIAL_STRIPE}`} />
+          <SpecialStripe key={mark.labelRu} height={height} />
         ) : (
           <span
             key={mark.labelRu}

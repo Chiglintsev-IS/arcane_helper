@@ -9,9 +9,6 @@ import type { Tone } from "@/ui/shared/ui/tone";
  * Тон направления: у каждого направления свой навык и своё оснащение, и они различаются раньше слов
  * — цветом знака свойства. Цвета направлений не повторяют цветов редкости: обе половины знака стоят
  * рядом, и одинаковый цвет на них значил бы разное.
- *
- * Особое направление — отдельная воля мастера, а не четвёртое ремесло, и цвет у него свой: увидев
- * его, спрашивают у стола, а не ищут в справочнике.
  */
 export const DIRECTION_TONE: Readonly<Record<string, Tone>> = {
   "Зельеварение": "ritual",
@@ -20,14 +17,14 @@ export const DIRECTION_TONE: Readonly<Record<string, Tone>> = {
 };
 
 /**
- * Особое правило мастера цветом не кодируется: любой цвет здесь спутали бы с направлением или с
- * редкостью. Оно помечено всеми цветами разом — знак того, что в справочнике такого нет и спросить
- * надо у стола.
+ * Особая редкость цветом не кодируется: любой цвет здесь спутали бы со ступенью лестницы или с
+ * направлением. Она помечена всеми цветами разом — знак того, что строки справочника за ней нет и
+ * спросить надо у стола.
  */
-export const SPECIAL_DIRECTION = "Особое";
+export const SPECIAL_RARITY = "Особое";
 
 export function directionTone(dirRu: string | null): Tone {
-  return dirRu === null ? "muted" : (DIRECTION_TONE[dirRu] ?? "bonus");
+  return dirRu === null ? "muted" : (DIRECTION_TONE[dirRu] ?? "muted");
 }
 
 /**
@@ -47,8 +44,6 @@ export function rarityTone(rarityRu: string | null): Tone {
   return rarityRu === null ? "muted" : (RARITY_TONE[rarityRu] ?? "muted");
 }
 
-const DIRECTION_PARTS = " / ";
-
 const UNKNOWN_DIRECTION = "направление неизвестно";
 
 export type PropertyMark = {
@@ -60,27 +55,28 @@ export type PropertyMark = {
 
 /**
  * Чем свойство помечено: каждая пометка — своя полоса своего цвета, и порядок полос тот же, каким
- * пометки читаются словами. Составное направление — две пометки, а не одна: «зельеварение» говорит
- * о ремесле, «особое» — о том, что мастер придумал этому свойству отдельное правило.
+ * пометки читаются словами. Направление — ремесло, редкость — цена работы и цена эффекта; особая
+ * редкость полосы одного цвета не получает, потому что строки справочника за ней нет.
  */
 export function propertyMarks(slot: {
   readonly dirRu: string | null;
   readonly rarityRu: string | null;
 }): readonly PropertyMark[] {
-  const directions: readonly PropertyMark[] =
-    slot.dirRu === null
-      ? [{ labelRu: UNKNOWN_DIRECTION, tone: directionTone(null), special: false }]
-      : slot.dirRu.split(DIRECTION_PARTS).map((labelRu) => ({
-          labelRu,
-          tone: directionTone(labelRu),
-          special: labelRu === SPECIAL_DIRECTION,
-        }));
-
   return [
-    ...directions,
+    {
+      labelRu: slot.dirRu ?? UNKNOWN_DIRECTION,
+      tone: directionTone(slot.dirRu),
+      special: false,
+    },
     ...(slot.rarityRu === null
       ? []
-      : [{ labelRu: slot.rarityRu, tone: rarityTone(slot.rarityRu), special: false }]),
+      : [
+          {
+            labelRu: slot.rarityRu,
+            tone: rarityTone(slot.rarityRu),
+            special: slot.rarityRu === SPECIAL_RARITY,
+          },
+        ]),
   ];
 }
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Apparatus } from "./apparatus";
 import { Crafting, type MixtureKind } from "./crafting";
-import type { RarityRu } from "@/core/domain/shared/rarity";
+import type { RarityStepRu } from "@/core/domain/shared/rarity";
 import type { RecipeFormula } from "./recipe";
 
 const EMPTY = { knownRecipes: [] };
@@ -124,7 +124,7 @@ function grand(kinds: readonly MixtureKind[], changes: Partial<RecipeFormula>) {
 
 function suppressing(
   nameRu: string,
-  rarityRu: RarityRu = "Обычное",
+  rarityRu: RarityStepRu = "Обычное",
 ): RecipeFormula["suppressed"][number] {
   return { nameRu, rarityRu };
 }

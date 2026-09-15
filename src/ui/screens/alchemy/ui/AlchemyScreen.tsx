@@ -325,7 +325,7 @@ export function AlchemyScreen() {
             key={opened.itemId}
             ingredient={opened}
             directions={choices.alchemyDirections}
-            rarities={crafting.handbook.rarities.map((rarity) => rarity.nameRu)}
+            rarities={choices.alchemyRarities}
             onSend={send}
           />
         ) : page === "kind" && opened !== undefined && opened !== null ? (

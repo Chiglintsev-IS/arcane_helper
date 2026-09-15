@@ -6,8 +6,8 @@ import type { Command } from "@/contract/commands";
 import type { PreviewOf, Question } from "@/contract/questions";
 import type { IngredientKnowledgeView } from "@/contract/views";
 
-import { rarityTone, researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
-import { PropertyStripes, markNameRu } from "@/ui/entities/crafting/ui/PropertyMark";
+import { SPECIAL_RARITY, rarityTone, researchNeedsRu } from "@/ui/entities/crafting/lib/labels";
+import { PropertyStripes, SpecialStripe, markNameRu } from "@/ui/entities/crafting/ui/PropertyMark";
 import {
   BASE_DIFFICULTY_LABEL,
   NOTHING_REVEALED,
@@ -29,6 +29,9 @@ const REVEALED_LABEL = "УЖЕ РАСКРЫТО";
 const RARITY_LABEL = "РЕДКОСТЬ";
 
 const RARITY_HINT = "Редкость называет мастер: от неё зависит и цена эффекта, и сложность работы.";
+
+/** Особая редкость стоит вне лестницы: цены справочник ей не даёт, и полоса у неё всех цветов. */
+const SPECIAL_HINT = "Особое — то, для чего справочник цены не называет.";
 
 /** Свойство приходит словами стола: перечня, из которого его выбирать, у приложения нет. */
 const PROPERTY_FIELD = "Свойство";
@@ -160,15 +163,18 @@ export function RevealPropertyPage({
                   type="button"
                   aria-pressed={rarity === rarityRu}
                   onClick={() => setRarityRu(rarity === rarityRu ? null : rarity)}
-                  className={`min-h-11 grow px-2 text-[0.6875rem] leading-tight ${
+                  className={`flex min-h-11 grow items-stretch justify-center gap-1.5 px-2 text-[0.6875rem] leading-tight ${
                     rarity === rarityRu ? SURFACE_CHOSEN : SURFACE_CONTROL
                   } ${TONE_TEXT[rarityTone(rarity)]}`}
                 >
-                  {rarity}
+                  {rarity === SPECIAL_RARITY ? <SpecialStripe height="self-stretch" /> : null}
+                  <span className="self-center">{rarity}</span>
                 </button>
               ))}
             </div>
-            <p className="text-[0.65625rem] leading-snug text-ink-quiet">{RARITY_HINT}</p>
+            <p className="text-[0.65625rem] leading-snug text-ink-quiet">
+              {RARITY_HINT} {SPECIAL_HINT}
+            </p>
           </section>
 
           <section className="flex flex-col gap-1.5">

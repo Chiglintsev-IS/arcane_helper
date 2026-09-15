@@ -1062,6 +1062,74 @@ describe("знание об ингредиенте переезжает к ве�
   });
 });
 
+describe("особое правило стола переезжает из направления в редкость", () => {
+  function withProperty(property: Record<string, unknown>): Record<string, unknown> {
+    return {
+      ...createWizard(),
+      itemDefinitions: [
+        {
+          id: Items.idFromName("Корень мандрагоры"),
+          nameRu: "Корень мандрагоры",
+          kinds: ["ingredient"],
+          alchemy: { properties: [property] },
+        },
+      ],
+    };
+  }
+
+  function propertiesOf(state: unknown): unknown {
+    const parsed = characterStateSchema.parse(state);
+    return parsed.itemDefinitions[0]?.alchemy?.properties;
+  }
+
+  it("составное направление раскладывается на ремесло и особую редкость", () => {
+    const state = migrateCharacterState(
+      withProperty({ number: 1, nameRu: "Постоянное усиление", dirRu: "Зельеварение / Особое" }),
+    );
+
+    expect(propertiesOf(state)).toEqual([
+      { number: 1, nameRu: "Постоянное усиление", dirRu: "Зельеварение", rarityRu: "Особое" },
+    ]);
+  });
+
+  it("названная столом редкость сильнее особой: её не затирают", () => {
+    const state = migrateCharacterState(
+      withProperty({
+        number: 1,
+        nameRu: "Постоянное усиление",
+        dirRu: "Зельеварение / Особое",
+        rarityRu: "Легендарное",
+      }),
+    );
+
+    expect(propertiesOf(state)).toEqual([
+      { number: 1, nameRu: "Постоянное усиление", dirRu: "Зельеварение", rarityRu: "Легендарное" },
+    ]);
+  });
+
+  it("отменяющая правка раскладывается так же, как сохранение", () => {
+    const patch = fieldsOf(
+      migrateUndoPatch({
+        itemDefinitions: [
+          {
+            id: "корень",
+            nameRu: "Корень",
+            kinds: ["ingredient"],
+            alchemy: {
+              properties: [{ number: 1, nameRu: "Усиление", dirRu: "Зельеварение / Особое" }],
+            },
+          },
+        ],
+      }),
+    );
+    const alchemy = fieldsOf(fieldsOf(listOf(patch.itemDefinitions)[0]).alchemy);
+
+    expect(listOf(alchemy.properties)).toEqual([
+      { number: 1, nameRu: "Усиление", dirRu: "Зельеварение", rarityRu: "Особое" },
+    ]);
+  });
+});
+
 describe("набор по каждому направлению становится одним набором алхимика", () => {
   it("из записанных остаётся сильнейший, а при равном пределе сложности — вместительнейший", () => {
     const stronger = fieldsOf(

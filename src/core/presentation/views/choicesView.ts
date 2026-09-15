@@ -13,6 +13,7 @@ import { SKILL_TRAINING } from "@/core/domain/character/skills";
 import { ALCHEMY_DIRECTIONS } from "@/core/domain/items/ingredient";
 import { ITEM_KINDS } from "@/core/domain/items/schema";
 import { MAXIMUM_CHARACTER_LEVEL, MINIMUM_CHARACTER_LEVEL } from "@/core/domain/shared/levels";
+import { RARITY_NAMES } from "@/core/domain/shared/rarity";
 import { CURRENCIES } from "@/core/domain/shared/schema";
 import { STATS } from "@/core/domain/shared/stats";
 
@@ -33,6 +34,7 @@ export function toChoicesView(): ChoicesView {
     abilityScore: { minimum: MINIMUM_ABILITY_SCORE, maximum: MAXIMUM_ABILITY_SCORE },
     apparatusGrades: [...APPARATUS_GRADES],
     alchemyDirections: [...ALCHEMY_DIRECTIONS],
+    alchemyRarities: [...RARITY_NAMES],
     recipeForm: RECIPE_CHOICES,
   };
 }

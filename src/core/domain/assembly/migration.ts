@@ -4,7 +4,7 @@ import { arcaneRecoveryBudget } from "@/core/domain/arcana/slots";
 import { isStateField } from "@/core/domain/assembly/state";
 import { UNARMORED_ARMOR_CLASS_BASE } from "@/core/domain/sheet/stats/defense";
 import { strongestApparatus } from "@/core/domain/crafting/apparatus";
-import { PLAINEST_RARITY } from "@/core/domain/shared/rarity";
+import { PLAINEST_RARITY, SPECIAL_RARITY } from "@/core/domain/shared/rarity";
 import { MAXIMUM_ITEM_COUNT } from "@/core/domain/equipment/schema";
 import { Items } from "@/core/domain/items/items";
 import { filledWearableOnlyFields, withoutWearableOnlyFields } from "@/core/domain/items/schema";
@@ -165,6 +165,45 @@ function migrateIngredientKnowledge(state: unknown): unknown {
 
   const { ingredientKnowledge: _moved, ...rest } = fields;
   return { ...rest, itemDefinitions: definitions };
+}
+
+/**
+ * Особое правило стола стояло второй половиной направления; теперь это редкость, которой в таблице
+ * цен нет. Записанное прежде раскладывается надвое: ремесло остаётся направлением, особое
+ * становится редкостью — но только там, где редкости не записали, иначе названное столом точнее.
+ */
+const LEGACY_SPECIAL_DIRECTION = "Зельеварение / Особое";
+const LEGACY_SPECIAL_CRAFT = "Зельеварение";
+
+function migrateSpecialProperty(property: unknown): unknown {
+  const fields = fieldsOf(property);
+  if (fields.dirRu !== LEGACY_SPECIAL_DIRECTION) return property;
+  return {
+    ...(fields.rarityRu === undefined ? { rarityRu: SPECIAL_RARITY } : {}),
+    ...fields,
+    dirRu: LEGACY_SPECIAL_CRAFT,
+  };
+}
+
+function itemWithSplitDirection(item: unknown): unknown {
+  const fields = fieldsOf(item);
+  const alchemy = fieldsOf(fields.alchemy);
+  const stored = alchemy.properties;
+  if (!Array.isArray(stored)) return item;
+
+  const properties = stored.map(migrateSpecialProperty);
+  if (properties.every((property, at) => property === stored[at])) return item;
+  return { ...fields, alchemy: { ...alchemy, properties } };
+}
+
+function migrateSpecialDirection(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(itemWithSplitDirection);
+  if (items.every((item, at) => item === stored[at])) return state;
+  return { ...fields, itemDefinitions: items };
 }
 
 /**
@@ -574,6 +613,7 @@ export function migrateUndoPatch(patch: unknown): unknown {
     migrateFocusItems,
     migrateIngredientKnowledge,
     migrateItemKinds,
+    migrateSpecialDirection,
     migrateAlchemyApparatus,
     migrateKnownRecipes,
     migrateItemNotes,
@@ -600,6 +640,7 @@ export function migrateCharacterState(raw: unknown): unknown {
     migrateFocusItems,
     migrateIngredientKnowledge,
     migrateItemKinds,
+    migrateSpecialDirection,
     migrateAlchemyApparatus,
     migrateKnownRecipes,
     migrateItemNotes,

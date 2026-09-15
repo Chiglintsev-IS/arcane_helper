@@ -4,8 +4,8 @@ import { DomainError } from "@/core/domain/shared/errors";
 import { nonEmpty, parsedOrRefused } from "@/core/domain/shared/schema";
 import { improvisedDifficulty } from "./apparatus";
 import type { Apparatus } from "./apparatus";
-import { PLAINEST_RARITY, RARITY_NAMES } from "@/core/domain/shared/rarity";
-import type { RarityRu } from "@/core/domain/shared/rarity";
+import { PLAINEST_RARITY, RARITY_STEPS } from "@/core/domain/shared/rarity";
+import type { RarityStepRu } from "@/core/domain/shared/rarity";
 import { rarityCost } from "./rarity";
 
 type MatchTier = "plain" | "amplified" | "concentrated";
@@ -118,13 +118,13 @@ const MOST_LIMITATION_RELIEF = -6;
 /** Гасят названное свойство, и цену гашения задаёт его редкость — её тоже называет стол. */
 type SuppressedProperty = {
   readonly nameRu: string;
-  readonly rarityRu: RarityRu;
+  readonly rarityRu: RarityStepRu;
 };
 
 export type RecipeFormula = {
   readonly kinds: readonly string[];
   readonly mainProperty: string | null;
-  readonly mainRarity: RarityRu;
+  readonly mainRarity: RarityStepRu;
   readonly duration: keyof typeof DURATION_DIFFICULTY | null;
   readonly onset: keyof typeof ONSET_DIFFICULTY;
   readonly fullRepeats: number;
@@ -142,7 +142,7 @@ function fromTable<TTable extends object>(table: TTable, what: string) {
   });
 }
 
-const rarityField = z.enum(RARITY_NAMES);
+const rarityField = z.enum(RARITY_STEPS);
 
 const recipeFormulaSchema = z.object({
   kinds: z.array(nonEmpty),

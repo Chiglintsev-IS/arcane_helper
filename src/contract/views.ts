@@ -30,6 +30,7 @@ export const choicesViewSchema = z.object({
   abilityScore: z.object({ minimum: whole, maximum: whole }),
   apparatusGrades: z.array(word),
   alchemyDirections: z.array(word),
+  alchemyRarities: z.array(word),
   recipeForm: z.object({
     standard: z.object({
       duration: word.nullable(),

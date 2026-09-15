@@ -19,7 +19,6 @@ import { Items } from "@/core/domain/items/items";
 type Revealed = { number: number; nameRu: string; dirRu?: string; rarityRu?: string };
 
 const BREWING = "Зельеварение";
-const BREWING_SPECIAL = "Зельеварение / Особое";
 const POISONS = "Синтез ядов";
 
 const INGREDIENTS: readonly {
@@ -147,7 +146,12 @@ const INGREDIENTS: readonly {
     nameRu: "Корень мандрагоры",
     count: 2,
     revealed: [
-      { number: 1, nameRu: "Постоянное усиление случайной характеристики", dirRu: BREWING_SPECIAL },
+      {
+        number: 1,
+        nameRu: "Постоянное усиление случайной характеристики",
+        dirRu: BREWING,
+        rarityRu: "Особое",
+      },
       {
         number: 2,
         nameRu: "Полное восстановление здоровья",

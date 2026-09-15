@@ -58,7 +58,7 @@ describe("тон направления", () => {
     expect(directionTone("Синтез ядов")).toBe("damage");
     expect(directionTone("Трансмутация")).toBe("concentration");
     expect(directionTone(null)).toBe("muted");
-    expect(directionTone("Кулинария")).toBe("bonus");
+    expect(directionTone("Кулинария")).toBe("muted");
   });
 });
 
@@ -106,11 +106,11 @@ describe("чем замысел отличается от стандартног
     expect(rarityTone("Небывалое")).toBe("muted");
   });
 
-  it("составное направление читается двумя пометками, а редкость становится третьей", () => {
+  it("направление и редкость читаются пометкой каждое, а особая редкость — без цвета", () => {
     /* Особое цвета себе не берёт: свободных в палитре нет, и всякий занятый спутали бы с другим. */
-    expect(propertyMarks({ dirRu: "Зельеварение / Особое", rarityRu: null })).toEqual([
+    expect(propertyMarks({ dirRu: "Зельеварение", rarityRu: "Особое" })).toEqual([
       { labelRu: "Зельеварение", tone: "ritual", special: false },
-      { labelRu: "Особое", tone: "bonus", special: true },
+      { labelRu: "Особое", tone: "muted", special: true },
     ]);
     expect(propertyMarks({ dirRu: "Зельеварение", rarityRu: "Очень редкое" })).toEqual([
       { labelRu: "Зельеварение", tone: "ritual", special: false },
