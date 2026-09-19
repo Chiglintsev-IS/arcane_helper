@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 
 import type { ActiveEffectView } from "@/contract/views";
 
@@ -18,8 +18,7 @@ export function armorClassNote(effect: ActiveEffectView, armorClass: number): st
 function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
   const [value, setValue] = useState("");
 
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+  const add = (): void => {
     const nameRu = value.trim();
     if (nameRu === "") return;
     onAdd(nameRu);
@@ -27,17 +26,33 @@ function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
   };
 
   return (
-    <form onSubmit={submit} className="min-w-0 flex-1">
-      <label className={`flex min-h-11 items-center gap-2 px-2 text-xs ${SURFACE_CONTROL}`}>
-        <span className="shrink-0 text-ink-quiet">Новый статус</span>
-        <input
-          type="text"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          className={`min-w-0 flex-1 bg-transparent py-2 ${FIELD_TEXT} outline-none`}
-        />
-      </label>
-    </form>
+    <div className="flex min-w-0 flex-1 gap-2">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          add();
+        }}
+        className="min-w-0 flex-1"
+      >
+        <label className={`flex min-h-11 items-center gap-2 px-2 text-xs ${SURFACE_CONTROL}`}>
+          <span className="shrink-0 text-ink-quiet">Новый статус</span>
+          <input
+            type="text"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            className={`min-w-0 flex-1 bg-transparent py-2 ${FIELD_TEXT} outline-none`}
+          />
+        </label>
+      </form>
+      <button
+        type="button"
+        disabled={value.trim() === ""}
+        onClick={add}
+        className={`shrink-0 px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
+      >
+        Добавить
+      </button>
+    </div>
   );
 }
 

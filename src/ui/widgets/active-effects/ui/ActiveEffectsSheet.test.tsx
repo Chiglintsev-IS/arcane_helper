@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { vi } from "vitest";
 
 import type { ActiveEffectView } from "@/contract/views";
 import { ActiveEffectsSheet } from "@/ui/widgets/active-effects/ui/ActiveEffectsSheet";
@@ -56,5 +57,30 @@ describe("строка руны называет её число и срок (FR
 
     const [row] = within(screen.getByLabelText("Активные эффекты")).getAllByRole("listitem");
     expect(row?.textContent).not.toContain("футов");
+  });
+});
+
+describe("ручной статус", () => {
+  it("добавляется явной кнопкой без Enter", () => {
+    const onAddStatus = vi.fn();
+    render(
+      <ActiveEffectsSheet
+        effects={[]}
+        armorClass={14}
+        concentration={null}
+        onTakeDamage={() => {}}
+        onDropConcentration={() => {}}
+        onEndEffect={() => {}}
+        onAddStatus={onAddStatus}
+        onOpenMarks={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    const field = screen.getByLabelText("Новый статус");
+    fireEvent.change(field, { target: { value: "Опутанный" } });
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+
+    expect(onAddStatus).toHaveBeenCalledWith("Опутанный");
   });
 });

@@ -49,7 +49,8 @@ describe("«Вещи»", () => {
     const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     await user.click(screen.getByRole("button", { name: "Записать вещь" }));
-    await user.type(screen.getByLabelText("Название со слов мастера"), "Кольцо защиты{Enter}");
+    await user.type(screen.getByLabelText("Название со слов мастера"), "Кольцо защиты");
+    await user.click(screen.getByRole("button", { name: "Сохранить вещь" }));
 
     expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ bagCount: 1, kinds: [] });
   });

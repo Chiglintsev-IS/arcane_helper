@@ -6,7 +6,7 @@ import type { Snapshot } from "@/contract/snapshot";
 import { matchesQuery } from "@/ui/shared/lib/searchable";
 import { timeRu } from "@/ui/shared/lib/timeRu";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
-import { editName } from "@/ui/shared/ui/buttonLabels";
+import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { NOTE_REMOVAL, RemoveButton } from "@/ui/shared/ui/RemoveButton";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
@@ -99,15 +99,32 @@ export function WorldNotes({
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           {query === null ? (
-            <GrowingField
-              value={draft}
-              labelRu={NOTE_LABEL}
-              onChange={setDraft}
-              onSubmit={(text) => {
-                onAdd(text);
-                setDraft("");
-              }}
-            />
+            <div className="flex items-stretch gap-2">
+              <div className="min-w-0 flex-1">
+                <GrowingField
+                  value={draft}
+                  labelRu={NOTE_LABEL}
+                  onChange={setDraft}
+                  onSubmit={(text) => {
+                    onAdd(text);
+                    setDraft("");
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                disabled={draft.trim() === ""}
+                onClick={() => {
+                  const text = draft.trim();
+                  if (text === "") return;
+                  onAdd(text);
+                  setDraft("");
+                }}
+                className={`shrink-0 px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
+              >
+                {BUTTON_LABELS.write}
+              </button>
+            </div>
           ) : (
             <input
               type="search"

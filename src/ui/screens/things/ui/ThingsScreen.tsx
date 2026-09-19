@@ -33,6 +33,8 @@ const TAB_KEY = "thingsPart";
 
 const RECORD_ITEM = "Записать вещь";
 
+const SAVE_ITEM = "Сохранить вещь";
+
 const ADD_WANTED = "Добавить в покупки";
 
 const NAME_FIELD = "Название со слов мастера";
@@ -216,7 +218,8 @@ export function ThingsScreen({
       )}
 
       <FooterAction
-        labelRu={tab === "buy" ? ADD_WANTED : RECORD_ITEM}
+        labelRu={adding ? SAVE_ITEM : tab === "buy" ? ADD_WANTED : RECORD_ITEM}
+        disabled={adding && draft.trim() === ""}
         above={
           !adding ? null : (
             <div className="p-3">
@@ -232,7 +235,13 @@ export function ThingsScreen({
             </div>
           )
         }
-        onAct={() => setAdding(!adding)}
+        onAct={() => {
+          if (adding) {
+            record(draft.trim());
+          } else {
+            setAdding(true);
+          }
+        }}
       />
     </div>
   );

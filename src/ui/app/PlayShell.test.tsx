@@ -579,7 +579,8 @@ describe("ручной статус (FR-236)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Действует: ничего" }));
     const field = screen.getByLabelText<HTMLInputElement>("Новый статус");
-    await userEvent.type(field, "Опутанный{Enter}");
+    await userEvent.type(field, "Опутанный");
+    await userEvent.click(screen.getByRole("button", { name: "Добавить" }));
     await userEvent.click(screen.getByRole("button", { name: "Закрыть" }));
 
     const line = screen.getByLabelText("Действует");
