@@ -32,24 +32,9 @@ export type CastDraft = {
 
 const DEFAULT_RUNE_TARGET = "self";
 
-type Remembered = {
-  payment: Record<string, CastOptionView["payment"]>;
-};
-
-function samePayment(one: CastOptionView["payment"], other: CastOptionView["payment"]): boolean {
-  if (one.kind !== other.kind) return false;
-  return one.kind !== "slot" || other.kind !== "slot" || one.slotLevel === other.slotLevel;
-}
-
-function defaultOption(row: SpellRowView, remembered: Remembered): CastOptionView {
+function defaultOption(row: SpellRowView): CastOptionView {
   const [head, ...tail] = row.castOptions;
-  const rememberedPayment = remembered.payment[row.id];
-  const match =
-    rememberedPayment === undefined
-      ? undefined
-      : row.castOptions.find((option) => samePayment(option.payment, rememberedPayment));
-
-  return match ?? tail.find((option) => option.suggested) ?? head;
+  return tail.find((option) => option.suggested) ?? head;
 }
 
 export function visibleSteps(draft: CastDraft, row: SpellRowView): WizardStep[] {
@@ -116,8 +101,6 @@ function shift(
 
 export function createCastDraftStore(): StoreApi<CastDraftState> {
   return createStore<CastDraftState>((set, get) => {
-    const remembered: Remembered = { payment: {} };
-
     const edit = (change: (draft: CastDraft) => CastDraft): void => {
       const { draft } = get();
       if (draft === null) return;
@@ -130,7 +113,7 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
       start(row) {
         const draft: CastDraft = {
           spellId: row.id,
-          option: defaultOption(row, remembered),
+          option: defaultOption(row),
           allowAnyway: false,
           replaceConcentration: false,
           rune: null,
@@ -167,7 +150,6 @@ export function createCastDraftStore(): StoreApi<CastDraftState> {
 
       chooseCastOption(option) {
         edit((draft) => {
-          remembered.payment[draft.spellId] = option.payment;
           const reset = { hitDiceCount: null, hitDiceRolled: null };
           if (option.payment.kind !== "slot")
             return { ...draft, option, rune: null, runeTarget: DEFAULT_RUNE_TARGET, ...reset };

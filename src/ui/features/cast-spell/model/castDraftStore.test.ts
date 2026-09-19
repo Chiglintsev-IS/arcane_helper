@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { Command } from "@/contract/commands";
 import type { CastOptionView, SpellRowView } from "@/contract/views";
 import { castSpell } from "@/core/application/useCases/casting";
-import { createWizard, preparedForPlay, withoutSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import {
+  createWizard,
+  preparedForPlay,
+  withoutSlots,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 import { knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import type { CharacterState } from "@/core/domain/assembly/state";
@@ -343,38 +347,14 @@ describe("навигация по шагам", () => {
   });
 });
 
-describe("запоминание выбора", () => {
-  it("повторное применение предлагает прежний уровень ячейки", () => {
+describe("начальный способ оплаты", () => {
+  it("не переносит выбранный уровень ячейки на следующее применение", () => {
     const row = rowOf(mageArmor);
     store.getState().start(row);
     store.getState().chooseCastOption(slotOption(row, 3));
     store.getState().cancel();
 
     store.getState().start(row);
-    expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 3 });
-  });
-
-  it("запомненный уровень не переносится на другое заклинание", () => {
-    const row = rowOf(mageArmor);
-    store.getState().start(row);
-    store.getState().chooseCastOption(slotOption(row, 4));
-    store.getState().cancel();
-
-    store.getState().start(rowOf(shield));
-    expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 1 });
-  });
-
-  it("запомненный способ оплаты, которого больше нет, заменяется предложенным", () => {
-    const row = rowOf(mageArmor);
-    store.getState().start(row);
-    store.getState().chooseCastOption(slotOption(row, 4));
-    store.getState().cancel();
-
-    const thorne = createWizard();
-    const { 4: _lost, ...withoutFourth } = thorne.spellSlots;
-    const weaker = { ...thorne, spellSlots: withoutFourth };
-
-    store.getState().start(rowOf(mageArmor, weaker));
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 1 });
   });
 
@@ -394,17 +374,6 @@ describe("запоминание выбора", () => {
     expect(draftOf().option.payment).toEqual({ kind: "slot", slotLevel: 9 });
   });
 
-  it("оплату кровью тоже запоминает", () => {
-    const row = rowOf(mageArmor);
-    store.getState().start(row);
-    store
-      .getState()
-      .chooseCastOption(optionBy(row, (option) => option.payment.kind === "blood"));
-    store.getState().cancel();
-
-    store.getState().start(row);
-    expect(draftOf().option.payment).toEqual({ kind: "blood", castLevel: 1 });
-  });
 });
 
 describe("кости хитов в черновике", () => {
