@@ -134,6 +134,7 @@ export function HitPointsSheet({
   return (
     <Sheet
       titleRu="Хиты"
+      presentation="page"
       aside={
         <span id={questionId} className="shrink-0 text-sm text-ink-quiet">
           {QUESTION}?

@@ -62,6 +62,20 @@ describe("шторка выбирает вид по своему росту", ()
     expect(screen.getByRole("dialog", { name: "Свойства" }).className).toContain("bottom-0");
   });
 
+  it("режим страницы можно закрепить для переключаемого содержимого", () => {
+    growEachPart(40);
+    render(
+      <Sheet titleRu="Свойства" presentation="page">
+        <p>Содержимое.</p>
+      </Sheet>,
+    );
+
+    const sheet = screen.getByRole("dialog", { name: "Свойства" });
+
+    expect(sheet.className).toContain("inset-0");
+    expect(sheet.className).not.toContain("bottom-0");
+  });
+
   it("имя шторки — её заголовок, пока дело не зовётся другими словами", () => {
     growEachPart(40);
     render(

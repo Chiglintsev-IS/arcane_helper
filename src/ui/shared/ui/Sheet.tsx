@@ -33,6 +33,7 @@ export function Sheet({
   subtitleRu = null,
   footer = null,
   overSheet = false,
+  presentation = "auto",
   children,
 }: {
   titleRu: string;
@@ -44,6 +45,7 @@ export function Sheet({
   footer?: ReactNode;
   /** Шторка, открытая поверх другой: она лежит выше. */
   overSheet?: boolean;
+  presentation?: "auto" | "page";
   children: ReactNode;
 }) {
   const titleId = useId();
@@ -69,6 +71,7 @@ export function Sheet({
   }, []);
 
   const layer = overSheet ? "z-30" : "z-20";
+  const page = presentation === "page" || asPage;
 
   return (
     <section
@@ -76,7 +79,7 @@ export function Sheet({
       aria-modal="true"
       {...(nameRu === undefined ? { "aria-labelledby": titleId } : { "aria-label": nameRu })}
       className={
-        asPage
+        page
           ? `fixed inset-0 ${layer} flex flex-col ${SURFACE_PAGE}`
           : `fixed inset-x-0 bottom-0 ${layer} flex flex-col ${SURFACE_PANEL}`
       }
@@ -84,7 +87,7 @@ export function Sheet({
       <header
         ref={headerRef}
         className={
-          asPage
+          page
             ? `flex shrink-0 flex-col gap-0.5 p-3 ${SAFE_TOP} ${SURFACE_GROUP_BARE} ${RULE_EDGE_BOTTOM}`
             : "flex flex-col gap-0.5 px-3 pt-3"
         }
@@ -100,7 +103,7 @@ export function Sheet({
         )}
       </header>
 
-      <div className={asPage ? "min-h-0 flex-1 overflow-y-auto" : ""}>
+      <div className={page ? "min-h-0 flex-1 overflow-y-auto" : ""}>
         <div ref={contentRef} className="flex flex-col gap-3 p-3">
           {children}
         </div>
@@ -110,7 +113,7 @@ export function Sheet({
         <footer
           ref={footerRef}
           className={
-            asPage
+            page
               ? `flex shrink-0 flex-col gap-3 p-3 ${SAFE_BOTTOM} ${SURFACE_GROUP_BARE} ${RULE_EDGE_TOP}`
               : `flex flex-col gap-3 px-3 ${SAFE_BOTTOM}`
           }
