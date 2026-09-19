@@ -52,6 +52,16 @@ describe("шторка выбирает вид по своему росту", ()
     expect(sheet.className).not.toContain("bottom-0");
   });
 
+  it("изменение высоты окна от клавиатуры не меняет вид шторки", () => {
+    growEachPart(40);
+    renderSheet();
+
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 80 });
+    window.dispatchEvent(new Event("resize"));
+
+    expect(screen.getByRole("dialog", { name: "Свойства" }).className).toContain("bottom-0");
+  });
+
   it("имя шторки — её заголовок, пока дело не зовётся другими словами", () => {
     growEachPart(40);
     render(

@@ -60,9 +60,13 @@ export function Sheet({
     };
 
     measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  });
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    [headerRef.current, contentRef.current, footerRef.current].forEach((part) => {
+      if (part !== null) observer.observe(part);
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const layer = overSheet ? "z-30" : "z-20";
 
