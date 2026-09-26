@@ -4,7 +4,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { characterStatePatchSchema } from "@/core/domain/assembly/state";
 import { RUNE_TARGETS } from "@/core/domain/arcana/runes";
 import { CONCENTRATION_ENDS } from "@/core/domain/effects/effectBoard";
-import { ITEM_KINDS, itemDefinitionOf, itemPriceOf } from "@/core/domain/items/schema";
+import { ITEM_KINDS, itemDraftOf, itemPriceOf } from "@/core/domain/items/schema";
 import { moneyOf } from "@/core/domain/equipment/schema";
 import { recipeFormulaOf } from "@/core/domain/crafting/recipe";
 import { revealedPropertyOf } from "@/core/domain/items/ingredient";
@@ -253,7 +253,7 @@ export function applyCommand(
         ),
       );
     case "edit_item":
-      return changed(editItem(session, itemDefinitionOf(command.item), occasion));
+      return changed(editItem(session, itemDraftOf(command.item), occasion));
     case "rename_item":
       return changed(renameItem(session, command.itemId, command.nameRu, occasion));
     case "remove_item":

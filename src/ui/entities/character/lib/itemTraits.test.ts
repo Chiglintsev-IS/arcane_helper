@@ -22,7 +22,12 @@ function viewOf(definition: ItemDefinition): ItemView {
 
 describe("признаки вещи", () => {
   it("каждый признак назван своим словом", () => {
-    expect(ITEM_TRAITS.map(itemTraitLabel)).toEqual(["Экипировка", "Ингредиент", "Хочу купить"]);
+    expect(ITEM_TRAITS.map(itemTraitLabel)).toEqual([
+      "Экипировка",
+      "Безделушка",
+      "Ингредиент",
+      "Хочу купить",
+    ]);
   });
 
   it("фокусировка признаком не зовётся: ею проводят магию, а носят как экипировку", () => {

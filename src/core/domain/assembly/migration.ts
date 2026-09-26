@@ -20,6 +20,8 @@ const UNKNOWN_ABILITY_SCORE = 10;
 const LEGACY_INGREDIENT_KIND = "ingredient";
 const LEGACY_CONSUMABLE_KIND = "consumable";
 
+const TRINKET_KIND = "trinket";
+
 const NO_LEGACY_BONUSES = { spellcasting: 0, armorClass: 0, savingThrows: 0 };
 
 const legacyArmorClass = z.looseObject({
@@ -111,8 +113,7 @@ function migrateItem(item: unknown): unknown {
   const wearable = migrated.includes("gear");
   return {
     ...(wearable ? rest : withoutWearableOnlyFields(rest)),
-    kinds: migrated,
-    ...(!wearable && rest.bonuses !== undefined ? { worksCarried: true } : {}),
+    kinds: !wearable && rest.bonuses !== undefined ? [...migrated, TRINKET_KIND] : migrated,
     ...(capped ? { count: MAXIMUM_ITEM_COUNT } : {}),
   };
 }
@@ -282,6 +283,25 @@ function migrateConsumableKind(state: unknown): unknown {
   if (!Array.isArray(stored)) return state;
 
   const items = stored.map(itemWithoutConsumableKind);
+  return items.every((item, at) => item === stored[at])
+    ? state
+    : { ...fields, itemDefinitions: items };
+}
+
+function itemWithTrinketKind(item: unknown): unknown {
+  if (item === null || typeof item !== "object") return item;
+  const fields = fieldsOf(item);
+  const { worksCarried, kinds, ...rest } = fields;
+  if (worksCarried !== true || !Array.isArray(kinds)) return item;
+  return { ...rest, kinds: [...kinds, TRINKET_KIND] };
+}
+
+function migrateTrinketKind(state: unknown): unknown {
+  const fields = fieldsOf(state);
+  const stored = fields.itemDefinitions;
+  if (!Array.isArray(stored)) return state;
+
+  const items = stored.map(itemWithTrinketKind);
   return items.every((item, at) => item === stored[at])
     ? state
     : { ...fields, itemDefinitions: items };
@@ -688,6 +708,7 @@ export function migrateUndoPatch(patch: unknown): unknown {
     migrateItemPrices,
     migrateIngredientKind,
     migrateConsumableKind,
+    migrateTrinketKind,
     withoutForgottenFields,
   ]);
 }
@@ -718,6 +739,7 @@ export function migrateCharacterState(raw: unknown): unknown {
     migrateItemPrices,
     migrateIngredientKind,
     migrateConsumableKind,
+    migrateTrinketKind,
   ]);
 }
 

@@ -41,9 +41,8 @@ const stone: ItemDefinition = {
   id: "stone",
   nameRu: "Камень удачи",
   notes: [],
-  kinds: [],
+  kinds: ["trinket"],
   bonuses: { initiative: 1 },
-  worksCarried: true,
 };
 
 const chainmail: ItemDefinition = {

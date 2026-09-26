@@ -140,16 +140,15 @@ describe("покупки", () => {
     expect(itemOf(wishing, "rope").wanted).toBe(true);
   });
 
-  it("условие действия прибавки едет отметкой", () => {
+  it("безделушка едет признаком вместе с экипировкой", () => {
     const stone: ItemDefinition = {
       id: "stone",
       nameRu: "Камень удачи",
       notes: [],
-      kinds: [],
+      kinds: ["gear", "trinket"],
       bonuses: { initiative: 1 },
-      worksCarried: true,
     };
-    expect(itemOf(withStock(stone, { bag: 1 }), "stone").worksCarried).toBe(true);
-    expect(itemOf(withStock(rope, { bag: 1 }), "rope").worksCarried).toBe(false);
+    expect(itemOf(withStock(stone, { bag: 1 }), "stone").kinds).toEqual(["gear", "trinket"]);
+    expect(itemOf(withStock(rope, { bag: 1 }), "rope").kinds).toEqual([]);
   });
 });

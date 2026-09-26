@@ -11,11 +11,13 @@ import {
 import type { IngredientAlchemy, IngredientReference, RevealedProperty } from "./ingredient";
 import {
   alignedItemDefinition,
+  droppedNeededTrinket,
   ingredient,
   itemDefinitionOf,
   nameTakenRefusal,
   noteMissingRefusal,
   noteTakenRefusal,
+  trinketKeptRefusal,
 } from "./schema";
 import type { Alchemical, ItemDefinition, ItemDraft, ItemNote } from "./schema";
 
@@ -68,6 +70,7 @@ export class Items {
    */
   replaceDefinition(item: ItemDraft): Items {
     const found = this.located(item.id);
+    if (droppedNeededTrinket(found, item)) throw new DomainError(trinketKeptRefusal(found.nameRu));
     const kept = found.alchemy;
     const named = { ...item, notes: found.notes };
     const stored = alignedItemDefinition(

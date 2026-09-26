@@ -118,6 +118,7 @@ export function ThingsScreen({
         choices={choices}
         ingredient={openedIngredient}
         backTitleRu={TAB_TITLES[tab]}
+        refusalRu={refusalRu}
         onBack={() => {
           setRefusalRu(null);
           setOpenedId(null);

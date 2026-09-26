@@ -76,15 +76,11 @@ describe("подсхема вещи", () => {
     );
   });
 
-  it("прибавка не-экипировки действует при себе, иначе отказ", () => {
+  it("прибавка не-экипировки бывает только у безделушки, иначе отказ", () => {
     const bonuses = { armorClass: 1 };
     expect(withDefinition({ ...potion, bonuses }).success).toBe(false);
-    expect(withDefinition({ ...potion, bonuses, worksCarried: true }).success).toBe(true);
+    expect(withDefinition({ ...potion, kinds: ["trinket"], bonuses }).success).toBe(true);
     expect(withDefinition({ ...potion, kinds: ["gear"], bonuses }).success).toBe(true);
-  });
-
-  it("условие действия без прибавок не хранится", () => {
-    expect("worksCarried" in itemDefinitionOf({ ...potion, worksCarried: true })).toBe(false);
   });
 
   it("прибавка называет величину словаря, и выдуманной величины не бывает", () => {
@@ -96,7 +92,7 @@ describe("подсхема вещи", () => {
 
   it("отказ называет вещь по имени и говорит, чего ей не хватает", () => {
     expect(() => itemDefinitionOf({ ...potion, spellcastingFocus: true })).toThrow(/Зелье/);
-    expect(() => itemDefinitionOf({ ...potion, bonuses: { armorClass: 1 } })).toThrow(/при себе/);
+    expect(() => itemDefinitionOf({ ...potion, bonuses: { armorClass: 1 } })).toThrow(/Зелье/);
   });
 });
 
@@ -114,7 +110,7 @@ describe("свойства экипировки: перечисление, сн�
   it("экипировку и условие действия вещь называет сама", () => {
     expect(wearable(armored)).toBe(true);
     expect(wearable(potion)).toBe(false);
-    expect(countedCarried({ ...potion, bonuses: { speed: 5 }, worksCarried: true })).toBe(true);
+    expect(countedCarried({ ...potion, kinds: ["trinket"], bonuses: { speed: 5 } })).toBe(true);
     expect(countedCarried(armored)).toBe(false);
   });
 });
@@ -139,10 +135,9 @@ describe("объявление вещи", () => {
     expect(moved).toEqual({
       id: "ring",
       nameRu: "Кольцо защиты",
-      kinds: [],
+      kinds: ["trinket"],
       notes: [],
       bonuses: { armorClass: 1 },
-      worksCarried: true,
     });
   });
 
@@ -160,7 +155,11 @@ describe("объявление вещи", () => {
     const typed = itemDefinitionOf({ ...potion, bonuses: {} });
     expect("bonuses" in typed).toBe(false);
     expect(() => itemDefinitionOf({ ...potion, bonuses: { armorClass: 1 } })).toThrow(
-      /при себе/,
+      /не безделушка/,
     );
+  });
+
+  it("безделушка без прибавок остаётся безделушкой: признак ставят раньше чисел", () => {
+    expect(itemDefinitionOf({ ...potion, kinds: ["trinket"] }).kinds).toEqual(["trinket"]);
   });
 });

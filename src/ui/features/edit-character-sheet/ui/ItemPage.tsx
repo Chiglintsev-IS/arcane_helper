@@ -25,7 +25,7 @@ import { ValueRow } from "@/ui/shared/ui/ValueRow";
 import { NoteList } from "@/ui/shared/ui/NoteList";
 import { RemoveButton, RETURNED_IN_LOG } from "@/ui/shared/ui/RemoveButton";
 import { RULE_GROUP, RULE_ROW } from "@/ui/shared/ui/rule";
-import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
 import { TONE_TEXT } from "@/ui/shared/ui/tone";
 
 import { StatPicker } from "./StatPicker";
@@ -36,7 +36,6 @@ export type ItemPatch = {
   kinds: string[];
   price?: Record<string, number>;
   bonuses: Record<string, number>;
-  worksCarried?: true;
   spellcastingFocus?: true;
 };
 
@@ -58,10 +57,6 @@ const CARRIED_TITLE = "Сколько при себе";
 const WORN_TITLE = "Надето";
 
 const ADD_BONUS = "Добавить прибавку";
-
-const WORKS_WORN = "действует надетой";
-
-const WORKS_CARRIED = "действует при себе";
 
 const BONUS_HINT =
   "Нулевая прибавка снимается. Всё, что зависит от обстановки или требует броска, — заметка: в числа листа она не входит, бросаете и считаете сами.";
@@ -100,7 +95,6 @@ function patchOf(item: ItemView): ItemPatch {
     kinds: [...item.kinds],
     ...(item.price === undefined ? {} : { price: coinsOf(item.price) }),
     bonuses: Object.fromEntries(item.bonuses.map((bonus) => [bonus.stat, bonus.value])),
-    ...(item.worksCarried ? { worksCarried: true } : {}),
     ...(item.spellcastingFocus ? { spellcastingFocus: true } : {}),
   };
 }
@@ -171,6 +165,7 @@ export function ItemPage({
   choices,
   ingredient,
   backTitleRu,
+  refusalRu,
   onBack,
   onWrite,
   onToggleWanted,
@@ -187,6 +182,7 @@ export function ItemPage({
   choices: ChoicesView;
   ingredient: IngredientKnowledgeView | undefined;
   backTitleRu: string;
+  refusalRu: string | null;
   onBack: () => void;
   onWrite: (patch: ItemPatch) => void;
   onToggleWanted: () => void;
@@ -231,21 +227,15 @@ export function ItemPage({
   const toggleTrait = (trait: ItemTrait): void => {
     if (trait === "wanted") return onToggleWanted();
 
-    const kinds = item.kinds.includes(trait)
-      ? item.kinds.filter((kind) => kind !== trait)
-      : [...item.kinds, trait];
     write({
-      kinds,
-      ...(kinds.includes(GEAR) ? {} : { worksCarried: true }),
-      ...(kinds.includes(GEAR) && item.spellcastingFocus ? { spellcastingFocus: true } : {}),
+      kinds: item.kinds.includes(trait)
+        ? item.kinds.filter((kind) => kind !== trait)
+        : [...item.kinds, trait],
     });
   };
 
   const writeBonus = (stat: string, value: number): void => {
-    write({
-      bonuses: { ...patchOf(item).bonuses, [stat]: value },
-      ...(wearable && !item.worksCarried ? {} : { worksCarried: true }),
-    });
+    write({ bonuses: { ...patchOf(item).bonuses, [stat]: value } });
   };
 
   return (
@@ -371,31 +361,6 @@ export function ItemPage({
             {ADD_BONUS}
           </button>
 
-          {bonuses.length === 0 ? null : (
-            <div role="radiogroup" aria-label={BONUSES_TITLE} className="flex gap-1">
-              {[
-                { carried: false, labelRu: WORKS_WORN },
-                { carried: true, labelRu: WORKS_CARRIED },
-              ].map((choice) => (
-                <button
-                  key={choice.labelRu}
-                  type="button"
-                  role="radio"
-                  aria-checked={item.worksCarried === choice.carried}
-                  disabled={!wearable}
-                  onClick={() => write({ ...(choice.carried ? { worksCarried: true } : {}) })}
-                  className={`min-h-11 flex-1 px-2 text-[0.6875rem] ${
-                    item.worksCarried === choice.carried
-                      ? `${SURFACE_CHOSEN} font-medium`
-                      : `text-ink-quiet ${RULE_GROUP}`
-                  }`}
-                >
-                  {choice.labelRu}
-                </button>
-              ))}
-            </div>
-          )}
-
           <p className="text-[0.65rem] leading-snug text-ink-quiet">{BONUS_HINT}</p>
         </div>
 
@@ -497,6 +462,12 @@ export function ItemPage({
           )}
         </div>
       </div>
+
+      {refusalRu === null ? null : (
+        <p role="alert" className={`shrink-0 px-3 py-2 text-xs text-reaction ${SURFACE_PANEL}`}>
+          {refusalRu}
+        </p>
+      )}
 
       {!picking ? null : (
         <StatPicker

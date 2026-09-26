@@ -31,7 +31,7 @@ describe("подсхема персонажа", () => {
   it("лист Торна заполнен целиком", () => {
     const thorneState = createThorne();
     expect(thorneState.abilities).toEqual({
-      strength: 8,
+      strength: 10,
       dexterity: 14,
       constitution: 16,
       intelligence: 20,

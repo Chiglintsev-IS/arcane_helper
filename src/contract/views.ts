@@ -127,7 +127,6 @@ const itemViewSchema = z.object({
   wornCount: whole,
   ownedCount: whole,
   wanted: z.boolean(),
-  worksCarried: z.boolean(),
   price: coinsViewSchema.optional(),
   bonuses: z.array(z.object({ stat: word, value: whole })),
   bonusFacts: z.array(

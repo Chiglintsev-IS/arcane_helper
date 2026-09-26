@@ -396,7 +396,7 @@ describe("приведение состояния версии 1", () => {
       expect(wornOf(migrated)).toEqual([]);
     });
 
-    it("доспех вне экипировки снимается, прибавка действует при себе, сохранение читается", () => {
+    it("доспех вне экипировки снимается, вещь с прибавкой становится безделушкой", () => {
       const migrated = migrateCharacterState(
         withLegacyItems([
           {
@@ -411,9 +411,8 @@ describe("приведение состояния версии 1", () => {
       expect(definitionsOf(migrated)[0]).toEqual({
         id: "potion",
         nameRu: "Зелье",
-        kinds: [],
+        kinds: ["trinket"],
         bonuses: { armorClass: 1 },
-        worksCarried: true,
       });
       expect(characterStateSchema.safeParse(migrated).success).toBe(true);
     });
@@ -1074,6 +1073,57 @@ describe("знание об ингредиенте переезжает к ве�
     expect(moved.itemDefinitions).toEqual([
       { id: "зелье", nameRu: "Зелье", kinds: [] },
       "не запись",
+    ]);
+  });
+
+  it("отметка «действует при себе» становится признаком безделушки", () => {
+    const state = characterStateSchema.parse(
+      migrateCharacterState({
+        ...modern(),
+        itemDefinitions: [
+          {
+            id: "бусы",
+            nameRu: "Бусы арканы",
+            kinds: ["gear"],
+            notes: [],
+            bonuses: { "skill:arcana": 1 },
+            worksCarried: true,
+          },
+          {
+            id: "камень",
+            nameRu: "Камень удачи",
+            kinds: [],
+            notes: [],
+            bonuses: { initiative: 1 },
+            worksCarried: true,
+          },
+          {
+            id: "печать",
+            nameRu: "Печать без герба",
+            kinds: ["gear"],
+            notes: [],
+            bonuses: { "skill:intimidation": 1 },
+          },
+        ],
+      }),
+    );
+
+    expect(state.itemDefinitions.map((item) => item.kinds)).toEqual([
+      ["gear", "trinket"],
+      ["trinket"],
+      ["gear"],
+    ]);
+  });
+
+  it("отмена с отметкой «при себе» поднимается той же правкой", () => {
+    const moved = fieldsOf(
+      migrateUndoPatch({
+        itemDefinitions: [{ id: "бусы", nameRu: "Бусы", kinds: ["gear"], worksCarried: true }],
+      }),
+    );
+
+    expect(moved.itemDefinitions).toEqual([
+      { id: "бусы", nameRu: "Бусы", kinds: ["gear", "trinket"] },
     ]);
   });
 

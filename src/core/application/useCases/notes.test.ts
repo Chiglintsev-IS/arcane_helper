@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Notes } from "@/core/domain/notes/notes";
 import { undoLast, type Occasion, type Session } from "@/core/application/session";
 import { spendSpellSlot } from "@/core/application/useCases/resources";
-import { createThorne } from "@/core/infrastructure/catalog/thorne/character";
+import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { addWorldNote, editWorldNote, removeWorldNote } from "./notes";
 
 const AT = "2026-08-16T19:30:00.000Z";
@@ -16,7 +16,7 @@ function occasionOf(commandId: string): Occasion {
 }
 
 function session(): Session {
-  return { character: createThorne(), log: [] };
+  return { character: createWizard(), log: [] };
 }
 
 function written(): Session {

@@ -25,6 +25,8 @@ const POISONS = "Синтез ядов";
 const INGREDIENTS: readonly {
   nameRu: string;
   count: number;
+  worn?: number;
+  kinds?: readonly string[];
   gold?: number;
   wanted?: true;
   revealed?: readonly Revealed[];
@@ -145,7 +147,7 @@ const INGREDIENTS: readonly {
   },
   {
     nameRu: "Корень мандрагоры",
-    count: 2,
+    count: 1,
     revealed: [
       {
         number: 1,
@@ -192,6 +194,33 @@ const INGREDIENTS: readonly {
     wanted: true,
     notes: [],
   },
+  { nameRu: "Бутыль крови кискрика", count: 1, notes: [] },
+  { nameRu: "Красивая коряга", count: 1, notes: [] },
+  {
+    nameRu: "Очень красивый камень с болот",
+    count: 0,
+    worn: 1,
+    kinds: ["gear"],
+    notes: ["Камень, который Фрубит нашёл в болотах и подарил мне"],
+  },
+  { nameRu: "Сушёная кожа первобытного", count: 8, gold: 3, notes: [] },
+  { nameRu: "Желудочная слизь первобытного", count: 7, gold: 3, notes: [] },
+  { nameRu: "Внутреннее ухо эльфа", count: 7, gold: 10, notes: [] },
+  { nameRu: "Высушенная диафрагма кентавра", count: 6, gold: 5, notes: [] },
+  { nameRu: "Концентрированная желчь дварфа", count: 6, gold: 10, notes: [] },
+  { nameRu: "Высушенная селезёнка первобытного", count: 5, gold: 5, notes: [] },
+  { nameRu: "Ссохшееся сердце человека", count: 5, gold: 20, notes: [] },
+  { nameRu: "Сухожилия кентавра", count: 5, gold: 20, notes: [] },
+  { nameRu: "Высушенный глаз эльфа", count: 4, gold: 30, notes: [] },
+  { nameRu: "Кора с тела дриады", count: 4, gold: 30, notes: [] },
+  { nameRu: "Порошок из сердца кентавра", count: 2, gold: 85, notes: [] },
+  { nameRu: "Ссохшийся мозг эльфа", count: 1, gold: 230, notes: [] },
+  {
+    nameRu: "Странные грибы",
+    count: 3,
+    notes: ["Найдены рядом с канализацией, где был квест про сточные цепи"],
+  },
+  { nameRu: "Подозрительные нити", count: 1, notes: ["Квест про сточные цепи"] },
 ];
 
 /**
@@ -201,7 +230,10 @@ const INGREDIENTS: readonly {
 const CARRIED: readonly {
   nameRu: string;
   count: number;
+  worn?: number;
   kinds: readonly string[];
+  gold?: number;
+  bonuses?: Readonly<Record<string, number>>;
   notes?: readonly string[];
 }[] = [
   { nameRu: "Сухпаёк", count: 7, kinds: [] },
@@ -226,7 +258,94 @@ const CARRIED: readonly {
     notes: ["Вода стекалась к этой руне"],
   },
   { nameRu: "Фреска из древнего храма", count: 0, kinds: [] },
+  {
+    nameRu: "Красивая палка в виде посоха",
+    count: 0,
+    worn: 1,
+    kinds: ["gear"],
+    notes: ["К палке приделал красивый камень с болот", "И палку, и камень мне подарил мой фамильяр"],
+  },
+  {
+    nameRu: "Малое зелье лечения",
+    count: 2,
+    kinds: [],
+    gold: 30,
+    notes: ["Со скидкой (когда покупал кискрик) цена была 25 золотых"],
+  },
+  { nameRu: "Похоронная маска птицы", count: 0, kinds: ["gear"], notes: ["Очки здоровья +1"] },
+  {
+    nameRu: "Свиток без отверстий",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:investigation": 1 },
+  },
+  {
+    nameRu: "Карта несуществующего острова",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:acrobatics": 1 },
+  },
+  {
+    nameRu: "Бусы арканы",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:arcana": 1 },
+  },
+  { nameRu: "Печать без герба", count: 1, kinds: ["gear"], bonuses: { "skill:intimidation": 1 } },
+  {
+    nameRu: "Кукла с зашитой улыбкой",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:history": 1 },
+  },
+  {
+    nameRu: "Медный орден за ожидание",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:athletics": 1 },
+  },
+  {
+    nameRu: "Зеркало с чёрной рамой",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:religion": 1 },
+  },
+  {
+    nameRu: "Флакон последнего дыхания",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:sleightOfHand": 1 },
+  },
+  {
+    nameRu: "Пустая книга соболезнований",
+    count: 1,
+    kinds: ["gear", "trinket"],
+    bonuses: { "skill:intimidation": 1 },
+  },
+  { nameRu: "Плод дерева обжорства", count: 1, kinds: [] },
+  { nameRu: "Маленький свиток заклинания", count: 1, kinds: [], notes: ["Для чего он, непонятно"] },
+  {
+    nameRu: "Огромный свиток с нарисованной руной",
+    count: 1,
+    kinds: [],
+    notes: ["Размер свитка — 60 на 120 сантиметров"],
+  },
 ];
+
+const STOCKED = [...CARRIED, ...INGREDIENTS];
+
+const WORLD_NOTES_RECORDED_AT = "2026-09-26T08:36:06.632Z";
+
+const WORLD_NOTES: readonly string[] = [
+  "35% ингредиентов из 9 больших сточных цепней",
+  "75% ингредиентов из 19 молодых сточных цепней",
+  "Статус (шутка богов): нет эмоций, срок — 1 неделя",
+  "Статус (шутка богов): нет обоняния, срок — 1 месяц",
+];
+
+function priced(gold: number | undefined): { price?: typeof NO_COINS } {
+  return gold === undefined ? {} : { price: { ...NO_COINS, gold } };
+}
 
 /** Заметки приходят списком слов: идентичность им даёт вещь, при которой они записаны. */
 function written(nameRu: string, textsRu: readonly string[]): readonly { id: string; textRu: string }[] {
@@ -255,7 +374,7 @@ const RAW: unknown = {
   speed: 30,
 
   abilities: {
-    strength: 8,
+    strength: 10,
     dexterity: 14,
     constitution: 16,
     intelligence: 20,
@@ -326,19 +445,19 @@ const RAW: unknown = {
     "shield",
     "mage-armor",
     "magic-missile",
+    "catapult",
 
     "web",
     "rimes-binding-ice",
     "enlarge-reduce",
     "see-invisibility",
 
-    "lightning-bolt",
     "slow",
-    "thunder-step",
     "intellect-fortress",
 
-    "ice-storm",
+    "polymorph",
     "vitriolic-sphere",
+    "evards-black-tentacles",
   ],
 
   spellSlots: SLOTS,
@@ -391,17 +510,19 @@ const RAW: unknown = {
         "Растущий: меняется вместе с владельцем, но чисел под это мастер пока не назвал",
       ]),
     },
-    ...CARRIED.map(({ nameRu, kinds, notes }) => ({
+    ...CARRIED.map(({ nameRu, kinds, gold, bonuses, notes }) => ({
       id: Items.idFromName(nameRu),
       nameRu,
       kinds,
+      ...priced(gold),
+      ...(bonuses === undefined ? {} : { bonuses }),
       notes: written(nameRu, notes ?? []),
     })),
-    ...INGREDIENTS.map(({ nameRu, gold, revealed, notes, solo, ...reference }) => ({
+    ...INGREDIENTS.map(({ nameRu, kinds, gold, revealed, notes, solo, ...reference }) => ({
       id: Items.idFromName(nameRu),
       nameRu,
-      kinds: [],
-      ...(gold === undefined ? {} : { price: { ...NO_COINS, gold } }),
+      kinds: kinds ?? [],
+      ...priced(gold),
       notes: written(nameRu, notes),
       alchemy: {
         properties: revealed ?? [],
@@ -417,13 +538,15 @@ const RAW: unknown = {
     bag: [
       { itemId: "swamp-camouflage-kit", count: 1 },
       { itemId: "gormongol", count: 1 },
-      ...CARRIED.map(({ nameRu, count }) => ({ itemId: Items.idFromName(nameRu), count })),
-      ...INGREDIENTS.map(({ nameRu, count }) => ({ itemId: Items.idFromName(nameRu), count })),
+      ...STOCKED.map(({ nameRu, count }) => ({ itemId: Items.idFromName(nameRu), count })),
     ],
     worn: [
       { itemId: "spellcasting-focus", count: 1 },
       { itemId: "robe", count: 1 },
       { itemId: "cloak-of-protection", count: 1 },
+      ...STOCKED.flatMap(({ nameRu, worn }) =>
+        worn === undefined ? [] : [{ itemId: Items.idFromName(nameRu), count: worn }],
+      ),
     ],
     wanted: INGREDIENTS.filter(({ wanted }) => wanted === true).map(({ nameRu }) =>
       Items.idFromName(nameRu),
@@ -465,6 +588,11 @@ const RAW: unknown = {
   ],
 
   spellNotes: {},
+  worldNotes: WORLD_NOTES.map((text, index) => ({
+    id: `world-note-${index + 1}`,
+    at: WORLD_NOTES_RECORDED_AT,
+    text,
+  })),
 };
 
 export function createThorne(): CharacterState {

@@ -6,12 +6,16 @@ import { statBonusesSchema } from "@/core/domain/shared/stats";
 import type { DeepReadonly } from "@/core/domain/shared/readonly";
 
 /**
- * Признаки, которые ставят рукой. Ингредиента среди них нет: вещь становится видом алхимии, когда о
- * ней записано алхимическое знание, — пометкой этого не объявляют и снятием пометки не отменяют.
- * Расходника тоже нет: тратят счётом всякую вещь, и признак, ничего не меняющий, отличал бы одно
- * от другого только на словах.
+ * Признаки, которые ставят рукой: экипировку надевают, безделушка действует при себе. Ингредиента
+ * среди них нет: вещь становится видом алхимии, когда о ней записано алхимическое знание, — пометкой
+ * этого не объявляют и снятием пометки не отменяют. Расходника тоже нет: тратят счётом всякую вещь,
+ * и признак, ничего не меняющий, отличал бы одно от другого только на словах.
  */
-export const ITEM_KINDS = ["gear"] as const;
+export const ITEM_KINDS = ["gear", "trinket"] as const;
+
+const GEAR = "gear";
+
+const TRINKET = "trinket";
 
 function wearableOnlyRefusal(nameRu: string): string {
   return `«${nameRu}» не экипировка: доспеха и фокусировки у неё не бывает`;
@@ -33,8 +37,12 @@ export function notWearableRefusal(nameRu: string): string {
   return `«${nameRu}» не экипировка: её не надевают`;
 }
 
-function carriedBonusRefusal(nameRu: string): string {
-  return `«${nameRu}» не экипировка: её прибавка действует при себе`;
+function idleBonusRefusal(nameRu: string): string {
+  return `«${nameRu}» не экипировка и не безделушка: её прибавке негде действовать`;
+}
+
+export function trinketKeptRefusal(nameRu: string): string {
+  return `Вещь «${nameRu}» остаётся безделушкой: она не экипировка, и её прибавки действуют только при себе. Сначала отметьте экипировку или уберите прибавки.`;
 }
 
 /** Слова о вещи приходят по одной и живут поодиночке: потому у каждой своя запись, а не абзац. */
@@ -50,7 +58,6 @@ const itemDefinitionFields = z.object({
   price: coinsSchema.optional(),
   notes: z.array(noteFields).default([]),
   bonuses: statBonusesSchema.optional(),
-  worksCarried: z.literal(true).optional(),
   spellcastingFocus: z.literal(true).optional(),
   alchemy: ingredientAlchemySchema.optional(),
 });
@@ -100,35 +107,41 @@ function withoutEmptyPrice(item: ItemFields): ItemFields {
   return price === undefined || CURRENCIES.some((currency) => price[currency] > 0) ? item : rest;
 }
 
-function withoutIdleCondition(item: ItemFields): ItemFields {
-  if (item.bonuses !== undefined || item.worksCarried === undefined) return item;
-  const { worksCarried: _idle, ...rest } = item;
-  return rest;
-}
-
 function withOrderedKinds(item: ItemFields): ItemFields {
   return { ...item, kinds: ITEM_KINDS.filter((kind) => item.kinds.includes(kind)) };
 }
 
 function isWearable(item: { readonly kinds: readonly string[] }): boolean {
-  return item.kinds.includes("gear");
+  return item.kinds.includes(GEAR);
+}
+
+function isTrinket(item: { readonly kinds: readonly string[] }): boolean {
+  return item.kinds.includes(TRINKET);
+}
+
+function hasBonuses(item: ItemDraft): boolean {
+  return Object.values(item.bonuses ?? {}).some((value) => value !== 0);
+}
+
+/** Надеть вещь без экипировки нельзя, и прибавкам такой вещи остаётся действовать только при себе. */
+function bonusesNeedTrinket(item: ItemDraft): boolean {
+  return !isWearable(item) && hasBonuses(item);
 }
 
 const itemDefinitionSchema = itemDefinitionFields
   .transform(withOrderedKinds)
   .transform(withoutEmptyBonuses)
   .transform(withoutEmptyPrice)
-  .transform(withoutIdleCondition)
   .superRefine((item, context) => {
     if (!isWearable(item)) {
       for (const field of filledWearableOnlyFields(item)) {
         context.addIssue({ code: "custom", path: [field], message: wearableOnlyRefusal(item.nameRu) });
       }
-      if (item.bonuses !== undefined && item.worksCarried !== true) {
+      if (item.bonuses !== undefined && !isTrinket(item)) {
         context.addIssue({
           code: "custom",
-          path: ["worksCarried"],
-          message: carriedBonusRefusal(item.nameRu),
+          path: ["kinds"],
+          message: idleBonusRefusal(item.nameRu),
         });
       }
     }
@@ -148,6 +161,11 @@ export function itemDefinitionOf(value: unknown): ItemDefinition {
   return parsedOrRefused(itemDefinitionSchema, value, "вещь");
 }
 
+/** Черновик правки ещё не приведён к своим признакам: приводит и судит его агрегат вещей. */
+export function itemDraftOf(value: unknown): ItemDraft {
+  return parsedOrRefused(itemDefinitionFields, value, "вещь");
+}
+
 export function itemPriceOf(value: unknown): ItemDefinition["price"] {
   return parsedOrRefused(coinsSchema, value, "цена");
 }
@@ -157,7 +175,12 @@ export function wearable(item: ItemDefinition): boolean {
 }
 
 export function countedCarried(item: ItemDefinition): boolean {
-  return item.worksCarried === true;
+  return isTrinket(item);
+}
+
+/** Снятая безделушка, чьим прибавкам без неё негде действовать, — отказ, а не молча вернувшийся признак. */
+export function droppedNeededTrinket(before: ItemDefinition, after: ItemDraft): boolean {
+  return isTrinket(before) && !isTrinket(after) && bonusesNeedTrinket(after);
 }
 
 /**
@@ -169,13 +192,12 @@ export function ingredient(item: ItemDefinition): item is Alchemical {
 }
 
 export function alignedItemDefinition(item: ItemDraft): ItemDefinition {
-  const worn = isWearable(item)
-    ? item
-    : {
-        ...withoutWearableOnlyFields(item),
-        ...(item.bonuses === undefined ? {} : { worksCarried: true }),
-      };
-  return parsedOrRefused(itemDefinitionSchema, worn, "вещь");
+  const unworn = isWearable(item) ? item : withoutWearableOnlyFields(item);
+  const carried =
+    bonusesNeedTrinket(item) && !isTrinket(item)
+      ? { ...unworn, kinds: [...item.kinds, TRINKET] }
+      : unworn;
+  return parsedOrRefused(itemDefinitionSchema, carried, "вещь");
 }
 
 export const ITEMS_FIELDS = {

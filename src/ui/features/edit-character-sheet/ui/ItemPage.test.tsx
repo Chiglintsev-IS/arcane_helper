@@ -45,13 +45,18 @@ function viewOf(definition: ItemDefinition, bag = 1, worn = 0): ItemView {
   return found;
 }
 
-function renderPage(item: ItemView, onWrite: (patch: ItemPatch) => void = () => {}) {
+function renderPage(
+  item: ItemView,
+  onWrite: (patch: ItemPatch) => void = () => {},
+  refusalRu: string | null = null,
+) {
   return render(
     <ItemPage
       item={item}
       choices={choices}
       ingredient={undefined}
       backTitleRu="Рюкзак"
+      refusalRu={refusalRu}
       onBack={() => {}}
       onWrite={onWrite}
       onToggleWanted={() => {}}
@@ -77,6 +82,7 @@ function Editable({ start }: { start: ItemDefinition }) {
       choices={choices}
       ingredient={undefined}
       backTitleRu="Рюкзак"
+      refusalRu={null}
       onBack={() => {}}
       onWrite={(patch) => setDefinition(itemDefinitionOf({ ...patch, notes: definition.notes }))}
       onToggleWanted={() => {}}
@@ -120,15 +126,30 @@ describe("карточка вещи", () => {
     const onWrite = vi.fn();
     renderPage(viewOf(ring), onWrite);
 
-    /* Снятая экипировка оставляет прибавку действовать при себе, а не отменяет её. */
     await user.click(screen.getByRole("button", { name: "Экипировка" }));
-    expect(onWrite).toHaveBeenCalledWith(
-      expect.objectContaining({ kinds: [], worksCarried: true }),
-    );
+    expect(onWrite).toHaveBeenCalledWith(expect.objectContaining({ kinds: [] }));
 
-    renderPage(viewOf({ ...ring, kinds: [], worksCarried: true }), onWrite);
+    renderPage(viewOf({ ...ring, kinds: ["trinket"] }), onWrite);
     await user.click(screen.getAllByRole("button", { name: "Экипировка" })[1]!);
-    expect(onWrite).toHaveBeenCalledWith(expect.objectContaining({ kinds: ["gear"] }));
+    expect(onWrite).toHaveBeenCalledWith(expect.objectContaining({ kinds: ["trinket", "gear"] }));
+  });
+
+  it("безделушка ставится и снимается у экипировки в обе стороны", async () => {
+    const user = userEvent.setup();
+    render(<Editable start={ring} />);
+    const pressed = () =>
+      screen.getByRole("button", { name: "Безделушка" }).getAttribute("aria-pressed");
+
+    await user.click(screen.getByRole("button", { name: "Безделушка" }));
+    expect(pressed()).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "Безделушка" }));
+    expect(pressed()).toBe("false");
+  });
+
+  it("отказ ядра виден в самой карточке, а не за её пределами", () => {
+    renderPage(viewOf(ring), () => {}, "Вещь «Кольцо защиты» остаётся безделушкой");
+    expect(screen.getByRole("alert").textContent).toBe("Вещь «Кольцо защиты» остаётся безделушкой");
   });
 
   it("прибавку выбирают из величин листа и крутят числом", async () => {
@@ -207,6 +228,7 @@ describe("карточка вещи", () => {
         choices={choices}
         ingredient={undefined}
         backTitleRu="Рюкзак"
+        refusalRu={null}
         onBack={() => {}}
         onWrite={() => {}}
         onToggleWanted={() => {}}

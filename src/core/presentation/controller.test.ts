@@ -289,10 +289,25 @@ describe("снаряжение", () => {
 
     expect(() =>
       run(
-        [{ kind: "edit_item", item: { id, nameRu: "Верёвка", kinds: [], bonuses: { armorClass: 1 } } }],
+        [{ kind: "edit_item", item: { id, nameRu: "Верёвка", kinds: [], bonuses: { лихость: 1 } } }],
         added,
       ),
-    ).toThrow(/не экипировка/);
+    ).toThrow(/Не годится вещь/);
+  });
+
+  it("прибавка вне экипировки делает вещь безделушкой, а снятая безделушка — отказ", () => {
+    const added = run([rope]);
+    const id = idOf(added, "Верёвка");
+    const charmed = {
+      kind: "edit_item",
+      item: { id, nameRu: "Верёвка", kinds: [], bonuses: { armorClass: 1 } },
+    } as const;
+    const carried = run([charmed], added);
+    const kindsOf = (live: LiveSession) =>
+      live.session.character.itemDefinitions.find((item) => item.id === id)?.kinds;
+
+    expect(kindsOf(carried)).toEqual(["trinket"]);
+    expect(() => run([charmed], carried)).toThrow(/остаётся безделушкой/);
   });
 
   it("признак вещи не из списка отвергается", () => {

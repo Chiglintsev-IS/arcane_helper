@@ -6,7 +6,7 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import type { Spell } from "@/core/domain/catalog/spell";
 import { Equipment } from "@/core/domain/equipment/equipment";
 import { Items } from "@/core/domain/items/items";
-import { countedCarried, ingredient, type ItemDefinition } from "@/core/domain/items/schema";
+import { ingredient, type ItemDefinition } from "@/core/domain/items/schema";
 import { bonusFactsOf } from "@/core/domain/sheet/families";
 import { coinsView } from "@/core/presentation/views/coins";
 import { STAT_IDS } from "@/core/domain/shared/stats";
@@ -29,7 +29,6 @@ function itemView(
     wornCount: equipment.wornCount(item.id),
     ownedCount: equipment.ownedCount(item.id),
     wanted: equipment.wants(item.id),
-    worksCarried: countedCarried(item),
     ...(item.price === undefined ? {} : { price: coinsView(item.price) }),
     bonuses,
     bonusFacts: bonusFactsOf(bonuses).map((fact) => ({

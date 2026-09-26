@@ -637,17 +637,17 @@ test("blood pays for a slot inside the cast wizard", async ({ page }) => {
 
 test("search reaches a row without scrolling", async ({ page }) => {
   const list = page.getByLabel("Заклинания");
-  const lightning = page.getByRole("button", { name: /Молния/ });
+  const tentacles = page.getByRole("button", { name: /Эвардовы чёрные щупальца/ });
 
-  await expect(lightning).not.toBeInViewport();
+  await expect(tentacles).not.toBeInViewport();
 
   await page.getByRole("button", { name: "Поиск по названию" }).click();
-  await page.getByRole("searchbox", { name: "Поиск по названию" }).fill("молн");
+  await page.getByRole("searchbox", { name: "Поиск по названию" }).fill("щупал");
 
   await expect(list.getByRole("listitem")).toHaveCount(1);
-  await expect(lightning).toBeInViewport();
+  await expect(tentacles).toBeInViewport();
 
-  await lightning.click();
+  await tentacles.click();
   await page.getByRole("button", { name: "Закрыть" }).click();
   await expect(page.getByRole("searchbox", { name: "Поиск по названию" })).toBeHidden();
   await expect(list.getByRole("listitem")).toHaveCount(22);

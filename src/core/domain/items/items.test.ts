@@ -66,7 +66,7 @@ describe("вещи", () => {
     expect(() => Items.of({ itemDefinitions: [] }).replaceDefinition(rope)).toThrow(DomainError);
   });
 
-  it("правка со снятием экипировки оставляет прибавку действовать при себе", () => {
+  it("правка со снятием экипировки делает вещь с прибавкой безделушкой", () => {
     const armored: ItemDefinition = {
       id: "ring",
       nameRu: "Кольцо защиты",
@@ -80,11 +80,27 @@ describe("вещи", () => {
     expect(moved.find("ring")).toEqual({
       id: "ring",
       nameRu: "Кольцо защиты",
-      kinds: [],
+      kinds: ["trinket"],
       notes: [],
       bonuses: { armorClass: 1 },
-      worksCarried: true,
     });
+  });
+
+  it("снятая безделушка, чьим прибавкам без неё негде действовать, — отказ с причиной", () => {
+    const stone: ItemDefinition = {
+      id: "stone",
+      nameRu: "Камень удачи",
+      notes: [],
+      kinds: ["trinket"],
+      bonuses: { initiative: 1 },
+    };
+    const items = Items.of({ itemDefinitions: [stone] });
+    expect(() => items.replaceDefinition({ ...stone, kinds: [] })).toThrow(
+      "Вещь «Камень удачи» остаётся безделушкой: она не экипировка, и её прибавки действуют только при себе. Сначала отметьте экипировку или уберите прибавки.",
+    );
+    expect(items.replaceDefinition({ ...stone, kinds: ["gear"] }).find("stone")?.kinds).toEqual([
+      "gear",
+    ]);
   });
 
   it("переименование одним словом ничего больше о вещи не называет и не теряет", () => {

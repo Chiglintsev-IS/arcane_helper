@@ -161,6 +161,7 @@ export const WANTED_LABEL = "Хочу купить";
 
 const ITEM_KIND_LABELS: Readonly<Record<string, string>> = {
   gear: "Экипировка",
+  trinket: "Безделушка",
   ingredient: "Ингредиент",
 };
 
