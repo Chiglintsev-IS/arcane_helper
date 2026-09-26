@@ -32,7 +32,7 @@ describe("гроссбух бросков", () => {
     expect(screen.getAllByText("Бонус мастерства")).toHaveLength(1);
   });
 
-  it("шапка группы — дверь правки: форма встаёт на место навыков и закрывается записью", async () => {
+  it("шапка группы — дверь правки: страница правки закрывается записью", async () => {
     const user = userEvent.setup();
     const onWriteAbility = vi.fn<Write>(() => WRITTEN);
     show(onWriteAbility);
@@ -42,7 +42,7 @@ describe("гроссбух бросков", () => {
     });
     await user.click(header);
 
-    expect(screen.queryByRole("list", { name: "Интеллект" })).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Правка: Интеллект" })).toBeDefined();
     expect(screen.getByRole("radiogroup", { name: "Аркана" })).toBeDefined();
 
     await user.click(screen.getByRole("button", { name: "Сохранить" }));

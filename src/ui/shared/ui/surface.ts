@@ -10,6 +10,8 @@ export const SURFACE_CONTROL = `bg-control ${RULE_GROUP}`;
 
 export const SURFACE_PANEL = `bg-sheet ${RULE_EDGE_TOP}`;
 
+export const SURFACE_SCRIM = "bg-scrim";
+
 export const SURFACE_DISABLED = "disabled:bg-control";
 
 /** Белая подпись на золоте даёт 2.15 при требуемых 4.5; цвет страницы годится в обеих темах. */

@@ -7,60 +7,59 @@ import type { ActiveEffectView } from "@/contract/views";
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 import { MARKS_LABEL } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
 import { editName } from "@/ui/shared/ui/buttonLabels";
-import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
+import { FieldForm, WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { NameEditor } from "@/ui/shared/ui/NameEditor";
-import { RULE_MARK } from "@/ui/shared/ui/rule";
+import { TONE_TEXT } from "@/ui/shared/ui/tone";
 import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export const ACTIVE_SHEET_LABEL = "Действует";
 
 const NEW_STATUS = "Новый статус";
 
+const STATUS_RU = "Статус";
+
+const STATUS_HINT = "Как назвал мастер: «Опутан», «Благословение до конца боя»";
+
 export function armorClassNote(effect: ActiveEffectView, armorClass: number): string {
   return effect.changesArmorClass ? ` · КД ${armorClass}` : "";
 }
 
-function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => WriteAnswer }) {
+/** Статус пишут словами мастера: форма набора закрывает экран, а набранное переживает «Отмену». */
+function NewStatus({ onAdd }: { onAdd: (nameRu: string) => WriteAnswer }) {
+  const [adding, setAdding] = useState(false);
   const [value, setValue] = useState("");
-  const [refusalRu, setRefusalRu] = useState<string | null>(null);
 
-  const add = (): void => {
+  const add = (): WriteAnswer => {
     const nameRu = value.trim();
-    if (nameRu === "") return;
-    void onAdd(nameRu).then((refused) => {
-      setRefusalRu(refused);
+    if (nameRu === "") return WRITTEN;
+    return onAdd(nameRu).then((refused) => {
       if (refused === null) setValue("");
+      return refused;
     });
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-stretch gap-2">
-        <div className="min-w-0 flex-1">
+    <>
+      <button
+        type="button"
+        onClick={() => setAdding(true)}
+        className={`min-h-11 px-3 text-sm font-medium ${TONE_TEXT.action} ${SURFACE_CONTROL}`}
+      >
+        {NEW_STATUS}
+      </button>
+      {!adding ? null : (
+        <FieldForm titleRu={NEW_STATUS} subtitleRu={ACTIVE_SHEET_LABEL} onWrite={add} onClose={() => setAdding(false)}>
           <GrowingField
             labelRu={NEW_STATUS}
-            placeholderRu={NEW_STATUS}
+            placeholderRu={STATUS_HINT}
             value={value}
+            autoFocus
             onChange={setValue}
-            onSubmit={add}
           />
-        </div>
-        <button
-          type="button"
-          disabled={value.trim() === ""}
-          onClick={add}
-          className={`shrink-0 px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
-        >
-          Добавить
-        </button>
-      </div>
-      {refusalRu === null ? null : (
-        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm`}>
-          {refusalRu}
-        </p>
+        </FieldForm>
       )}
-    </div>
+    </>
   );
 }
 
@@ -237,6 +236,7 @@ export function ActiveEffectsSheet({
                 {renaming !== effect.id ? null : (
                   <NameEditor
                     nameRu={effect.nameRu}
+                    subtitleRu={STATUS_RU}
                     onWrite={(nameRu) => onRenameStatus(effect.id, nameRu)}
                     onClose={() => setRenaming(null)}
                   />
@@ -250,14 +250,16 @@ export function ActiveEffectsSheet({
           <p className="text-ink-quiet">Сейчас ничего не действует.</p>
         ) : null}
 
-        <NewStatusField onAdd={onAddStatus} />
-        <button
-          type="button"
-          onClick={onOpenMarks}
-          className={`min-h-11 px-3 text-xs ${SURFACE_CONTROL}`}
-        >
-          {MARKS_LABEL}
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <NewStatus onAdd={onAddStatus} />
+          <button
+            type="button"
+            onClick={onOpenMarks}
+            className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
+          >
+            {MARKS_LABEL}
+          </button>
+        </div>
       </div>
     </section>
   );

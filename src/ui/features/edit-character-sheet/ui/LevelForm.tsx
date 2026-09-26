@@ -32,12 +32,14 @@ function changeLine(change: LevelChangeView): string {
 export const LEVEL_LABEL = "Уровень";
 
 export function LevelForm({
+  ownerRu,
   level: currentLevel,
   hitPoints,
   choices,
   onWrite,
   onClose,
 }: {
+  ownerRu: string;
   level: number;
   hitPoints: SheetView["hitPoints"];
   choices: ChoicesView;
@@ -57,6 +59,7 @@ export function LevelForm({
   return (
     <FieldForm
       titleRu={LEVEL_LABEL}
+      subtitleRu={ownerRu}
       answerRu={BUTTON_LABELS.save}
       onWrite={() => {
         required.ask([level, maximum], () => {});

@@ -18,7 +18,10 @@ const EMPTY_RU = "Пока ничего не записано.";
 type User = ReturnType<typeof userEvent.setup>;
 
 async function write(user: User, text: string): Promise<void> {
-  await user.type(screen.getByRole("textbox", { name: "Заметка" }), `${text}{Enter}`);
+  await user.click(screen.getByRole("button", { name: "Записать заметку" }));
+  const page = screen.getByRole("dialog", { name: "Правка: Заметка" });
+  await user.type(within(page).getByRole("textbox", { name: "Заметка" }), text);
+  await user.click(within(page).getByRole("button", { name: "Записать" }));
 }
 
 function rows(): HTMLElement[] {
@@ -62,7 +65,8 @@ describe("режим «Заметки» (FR-321)", () => {
     await user.click(screen.getByRole("button", { name: `Правка: ${BARON}` }));
     const field = screen.getByRole("textbox", { name: `Правка: ${BARON}` });
     await user.clear(field);
-    await user.type(field, "Барон обещал мост к весне{Enter}");
+    await user.type(field, "Барон обещал мост к весне");
+    await user.click(screen.getByRole("button", { name: "Записать" }));
 
     const edited = "Правка: Барон обещал мост к весне";
     expect(screen.getByRole("button", { name: edited })).toBeDefined();
@@ -89,26 +93,40 @@ describe("режим «Заметки» (FR-321)", () => {
     expect(screen.getByRole("button", { name: `Правка: ${BARON}` })).toBeDefined();
   });
 
-  it("поле правки заметки высотой в текст", async () => {
+  it("квест пишут абзацами: «Ввод» переносит строку, записывает кнопка", async () => {
     const user = userEvent.setup();
     await renderWithStores(<NotesScreen />);
-    await write(user, LONG);
 
-    await user.click(screen.getByRole("button", { name: `Правка: ${LONG}` }));
+    await user.click(screen.getByRole("button", { name: "Записать заметку" }));
+    const page = screen.getByRole("dialog", { name: "Правка: Заметка" });
+    await user.type(
+      within(page).getByRole("textbox", { name: "Заметка" }),
+      `Квест: мост для барона{Enter}${LONG}`,
+    );
+    expect(screen.getByRole("dialog", { name: "Правка: Заметка" })).toBeDefined();
+    await user.click(within(page).getByRole("button", { name: "Записать" }));
 
-    expect(rows()[0]?.textContent).toContain(LONG);
-
-    await user.keyboard("{Escape}");
-    await user.type(screen.getByRole("textbox", { name: "Заметка" }), LONG);
-
-    expect(screen.getAllByText(LONG).length).toBeGreaterThan(0);
+    const text = rows()[0]?.querySelector("button");
+    expect(text?.textContent).toBe(`Квест: мост для барона\n${LONG}`);
+    expect(text?.className).toContain("whitespace-pre-line");
   });
 
-  it("имя поля и кнопки поиска остаётся произносимым, а места не занимает (FR-321)", async () => {
+  it("набранное переживает «Отмену»: заметку прервали, а не передумали", async () => {
+    const user = userEvent.setup();
     await renderWithStores(<NotesScreen />);
 
-    expect(screen.getByRole("textbox", { name: "Заметка" })).toBeDefined();
-    expect(screen.queryByText("Заметка")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Записать заметку" }));
+    await user.type(screen.getByRole("textbox", { name: "Заметка" }), BARON);
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+    await user.click(screen.getByRole("button", { name: "Записать заметку" }));
+
+    expect(screen.getByRole("textbox", { name: "Заметка" })).toHaveProperty("value", BARON);
+  });
+
+  it("вход в запись назван словами, а лупа произносима и места не занимает (FR-321)", async () => {
+    await renderWithStores(<NotesScreen />);
+
+    expect(screen.getByRole("button", { name: "Записать заметку" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Поиск по слову" }).textContent).toBe("");
   });
 
@@ -131,13 +149,13 @@ describe("режим «Заметки» (FR-321)", () => {
 
     await openSearch(user);
 
-    expect(screen.queryByRole("textbox", { name: "Заметка" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Записать заметку" })).toBeNull();
     await user.type(screen.getByRole("searchbox", { name: "Поиск по слову" }), "мельница");
     expect(screen.getByText("Ни одна запись не отвечает набранному.")).toBeDefined();
 
     await openSearch(user);
 
-    expect(screen.getByRole("textbox", { name: "Заметка" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Записать заметку" })).toBeDefined();
     expect(rows()).toHaveLength(1);
   });
 

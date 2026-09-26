@@ -23,11 +23,13 @@ function trainingChoices(
 }
 
 export function AbilityForm({
+  ownerRu,
   ability,
   choices,
   onWrite,
   onClose,
 }: {
+  ownerRu: string;
   ability: AbilityView;
   choices: ChoicesView;
   onWrite: (change: {
@@ -58,6 +60,7 @@ export function AbilityForm({
   return (
     <FieldForm
       titleRu={abilityLabel(ability.id)}
+      subtitleRu={ownerRu}
       answerRu={BUTTON_LABELS.save}
       onWrite={() => {
         required.ask([score], () => {});

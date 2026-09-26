@@ -1,5 +1,6 @@
 import { abilityModifier, proficiencyBonus } from "@/core/domain/character/abilities";
 import { averagePerHitDie } from "@/core/domain/vitality/hitDice";
+import type { Vitality } from "@/core/domain/vitality/vitality";
 import { Character } from "@/core/domain/assembly/character";
 import { skillsOfAbility, type SkillTraining } from "@/core/domain/character/skills";
 import {
@@ -89,21 +90,28 @@ export function editMarks(
   );
 }
 
+function healthEditSummary(before: Vitality, after: Vitality): string | null {
+  const maximumChanged =
+    after.maximumBase !== before.maximumBase || after.masterReduction !== before.masterReduction;
+  const currentChanged = after.current !== before.current;
+  const maximum = `Максимум хитов: ${after.maximum}`;
+  const current = `${before.current} → ${after.current}`;
+  if (maximumChanged && currentChanged) return `${maximum}, хиты: ${current}`;
+  if (maximumChanged) return maximum;
+  if (currentChanged) return `Хиты: ${current}`;
+  return null;
+}
+
 export function editHealth(
   session: Session,
-  change: { maximumBase: number; masterReduction: number },
+  change: { maximumBase: number; masterReduction: number; current: number },
   occasion: Occasion,
 ): Session {
   const root = Character.of(session.character);
-  const vitality = root.vitality
-    .withMaximumBase(change.maximumBase)
-    .withMasterReduction(change.masterReduction);
-  return commit(
-    session,
-    root.withVitality(vitality),
-    { kind: "sheet_edited", summaryRu: `Максимум хитов: ${vitality.maximum}` },
-    occasion,
-  );
+  const vitality = root.vitality.withHitPoints(change);
+  const summaryRu = healthEditSummary(root.vitality, vitality);
+  if (summaryRu === null) return session;
+  return commit(session, root.withVitality(vitality), { kind: "sheet_edited", summaryRu }, occasion);
 }
 
 type LeveledValue = "runes" | "arcaneRecovery" | "hitDice" | "preparedLimit";

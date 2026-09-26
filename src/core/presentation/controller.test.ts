@@ -97,11 +97,20 @@ describe("жизнеспособность", () => {
     const live = run([
       { kind: "take_damage", damage: 10 },
       { kind: "heal", amount: 4 },
-      { kind: "grant_temporary_hit_points", amount: 5 },
+      { kind: "set_temporary_hit_points", amount: 5 },
     ]);
 
     expect(live.session.character.hitPoints.current).toBe(54);
     expect(live.session.character.temporaryHitPoints).toBe(5);
+  });
+
+  it("временные хиты встают введённым числом, и меньшим тоже", () => {
+    const live = run([
+      { kind: "set_temporary_hit_points", amount: 8 },
+      { kind: "set_temporary_hit_points", amount: 3 },
+    ]);
+
+    expect(live.session.character.temporaryHitPoints).toBe(3);
   });
 
   it("огонь подавляет особенности: признак доезжает до сценария", () => {
@@ -411,13 +420,29 @@ describe("лист персонажа", () => {
   });
 
   it("отметки мастера и здоровье правятся", () => {
-    const live = run([
-      { kind: "edit_marks", exhaustion: 2, inspiration: true },
-      { kind: "edit_health", maximumBase: 55, masterReduction: 0 },
-    ]);
+    const before = start();
+    const live = run(
+      [
+        { kind: "edit_marks", exhaustion: 2, inspiration: true },
+        {
+          kind: "edit_health",
+          maximumBase: 55,
+          masterReduction: 0,
+          current: before.session.character.hitPoints.current,
+        },
+      ],
+      before,
+    );
 
     expect(live.session.character.exhaustion).toBe(2);
     expect(live.session.character.inspiration).toBe(true);
+    expect(live.session.character.hitPoints.maximumBase).toBe(55);
+  });
+
+  it("текущие хиты доезжают до правки листа", () => {
+    const live = run([{ kind: "edit_health", maximumBase: 55, masterReduction: 0, current: 20 }]);
+
+    expect(live.session.character.hitPoints.current).toBe(20);
     expect(live.session.character.hitPoints.maximumBase).toBe(55);
   });
 

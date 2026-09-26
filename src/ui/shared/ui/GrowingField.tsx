@@ -13,6 +13,7 @@ export function GrowingField({
   labelRu,
   placeholderRu = "",
   autoFocus = false,
+  paragraphs = false,
   onChange,
   onSubmit,
   onCancel,
@@ -22,24 +23,30 @@ export function GrowingField({
   /** Подсказка внутри пустого поля: она говорит, откуда берётся то, что сюда пишут. */
   placeholderRu?: string;
   autoFocus?: boolean;
+  /** Слова приходят абзацами — квест, обещание, правило: «Ввод» переносит строку, записывает кнопка. */
+  paragraphs?: boolean;
   onChange: (value: string) => void;
   /** Без него «Ввод» отправляет форму, в которой стоит поле. */
   onSubmit?: (value: string) => void;
   onCancel?: () => void;
 }) {
   const field = (
-    <label className={`grid min-h-11 content-center px-3 py-2 ${SURFACE_CONTROL}`}>
-      <span aria-hidden="true" className={`invisible ${FIELD_TEXT} ${TEXT_SHAPE}`}>{`${value} `}</span>
+    <label
+      className={`grid px-3 py-2 ${paragraphs ? "min-h-48 content-start" : "min-h-11 content-center"} ${SURFACE_CONTROL}`}
+    >
+      <span aria-hidden="true" className={`invisible ${FIELD_TEXT} ${TEXT_SHAPE}`}>
+        {`${value === "" ? placeholderRu : value} `}
+      </span>
       <textarea
         rows={1}
         value={value}
         aria-label={labelRu}
         placeholder={placeholderRu}
         autoFocus={autoFocus}
-        enterKeyHint="done"
+        enterKeyHint={paragraphs ? "enter" : "done"}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
+          if (event.key === "Enter" && !paragraphs) {
             event.preventDefault();
             const text = value.trim();
             if (onSubmit === undefined) event.currentTarget.form?.requestSubmit();

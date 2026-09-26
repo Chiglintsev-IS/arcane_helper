@@ -60,10 +60,10 @@ import {
   buyItem,
 } from "@/core/application/useCases/equipment";
 import {
-  grantTemporaryHitPoints,
   heal,
   recoverHitPointMaximum,
   setSunlight,
+  setTemporaryHitPoints,
   takeDamage,
 } from "@/core/application/useCases/health";
 import { setSpellNote, toggleMaterial, togglePreparation } from "@/core/application/useCases/library";
@@ -216,8 +216,8 @@ export function applyCommand(
       );
     case "heal":
       return changed(heal(session, command.amount, occasion));
-    case "grant_temporary_hit_points":
-      return changed(grantTemporaryHitPoints(session, command.amount, occasion));
+    case "set_temporary_hit_points":
+      return changed(setTemporaryHitPoints(session, command.amount, occasion));
     case "recover_hit_point_maximum":
       return changed(recoverHitPointMaximum(session, occasion));
     case "set_sunlight":
@@ -378,7 +378,11 @@ export function applyCommand(
       return changed(
         editHealth(
           session,
-          { maximumBase: command.maximumBase, masterReduction: command.masterReduction },
+          {
+            maximumBase: command.maximumBase,
+            masterReduction: command.masterReduction,
+            current: command.current,
+          },
           occasion,
         ),
       );

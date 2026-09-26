@@ -159,12 +159,12 @@ export function RestScreen() {
           hitPoints={snapshot.sheet.hitPoints}
           onCancel={closeWith(() => setDamageOpen(false))}
           onDamage={recordDamage}
-          onMaximum={(change) =>
+          onEdit={(change) =>
             void saveEdit({ kind: "edit_health", ...change }, () => setDamageOpen(false))
           }
           onHeal={(amount) => void saveEdit({ kind: "heal", amount }, () => setDamageOpen(false))}
           onTemporary={(amount) =>
-            void saveEdit({ kind: "grant_temporary_hit_points", amount }, () =>
+            void saveEdit({ kind: "set_temporary_hit_points", amount }, () =>
               setDamageOpen(false),
             )
           }

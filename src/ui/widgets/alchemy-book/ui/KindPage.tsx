@@ -195,6 +195,7 @@ export function KindPage({
     editing !== field ? null : (
       <KindFieldEditor
         labelRu={RECORD_NAMES[field]}
+        ownerRu={kind.nameRu}
         value={written[field] ?? ""}
         numeric={field === "find" || field === "gather"}
         onWrite={(typed) => onWrite({ field, typed })}
@@ -316,6 +317,7 @@ export function KindPage({
         {editing !== "price" ? null : (
           <CoinsEditor
             titleRu={PRICE_TITLE}
+            subtitleRu={kind.nameRu}
             currencies={currencies}
             coins={priced}
             onWrite={onWritePrice}
@@ -327,6 +329,7 @@ export function KindPage({
       {/* Заметки вида — заметки самой вещи: их правят одной и той же формой, где бы их ни читали. */}
       <NoteList
         notes={kind.notes}
+        ownerRu={kind.nameRu}
         onAdd={onAddNote}
         onRewrite={onRewriteNote}
         onDrop={onDropNote}

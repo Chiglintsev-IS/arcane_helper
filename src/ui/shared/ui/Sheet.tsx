@@ -3,13 +3,10 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { RULE_EDGE_BOTTOM, RULE_EDGE_TOP } from "@/ui/shared/ui/rule";
-import { SURFACE_GROUP_BARE, SURFACE_PAGE, SURFACE_PANEL } from "@/ui/shared/ui/surface";
+import { SURFACE_GROUP_BARE, SURFACE_PAGE, SURFACE_PANEL, SURFACE_SCRIM } from "@/ui/shared/ui/surface";
+import { useVisibleArea } from "@/ui/shared/ui/visibleArea";
 
-/**
- * Доля экрана, выше которой шторка открывается страницей: за высокой шторкой остаётся полоса
- * прежнего экрана, нажатие по которой доходит до того, что под ней, — и правит не то, чем сейчас
- * занят игрок.
- */
+/** Доля экрана, выше которой шторка открывается страницей: полоса над высокой шторкой ни на что не отвечает. */
 const PAGE_SHARE = 0.4;
 
 /**
@@ -23,6 +20,9 @@ const SAFE_BOTTOM = "pb-[calc(env(safe-area-inset-bottom)_+_0.75rem)]";
  * Шторка: заголовок, содержимое и действия внизу. Невысокая выезжает снизу; переросшая долю экрана
  * занимает его целиком — там прокручивается только содержимое, а заголовок с действиями стоят на
  * месте.
+ *
+ * Экран под невысокой шторкой притушен и не нажимается: нажатие мимо шторки не доходит до него и
+ * набранного не выбрасывает — оно лишь убирает клавиатуру. Уходят из шторки её же ответом.
  *
  * Отступы несут части, а не рама: их высота и есть рост шторки, по которому выбран вид.
  */
@@ -73,54 +73,79 @@ export function Sheet({
   const layer = overSheet ? "z-30" : "z-20";
   const page = presentation === "page" || asPage;
 
+  /* Клавиатура телефона ложится поверх низа экрана: шторка стоит над ней, и ответы видны, пока набирают. */
+  const area = useVisibleArea();
+  const keyboardOpen = area !== null && area.hiddenBelow > 0;
+  const placed =
+    area === null
+      ? undefined
+      : page
+        ? { top: area.top, height: area.height, bottom: "auto" }
+        : { bottom: area.hiddenBelow };
+  const footerEdge = keyboardOpen ? "pb-3" : SAFE_BOTTOM;
+
+  const hideKeyboard = (): void => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  };
+
   return (
-    <section
-      role="dialog"
-      aria-modal="true"
-      {...(nameRu === undefined ? { "aria-labelledby": titleId } : { "aria-label": nameRu })}
-      className={
-        page
-          ? `fixed inset-0 ${layer} flex flex-col ${SURFACE_PAGE}`
-          : `fixed inset-x-0 bottom-0 ${layer} flex flex-col ${SURFACE_PANEL}`
-      }
-    >
-      <header
-        ref={headerRef}
+    <>
+      {page ? null : (
+        <div
+          aria-hidden="true"
+          onClick={hideKeyboard}
+          className={`fixed inset-0 ${layer} ${SURFACE_SCRIM}`}
+        />
+      )}
+      <section
+        role="dialog"
+        aria-modal="true"
+        {...(nameRu === undefined ? { "aria-labelledby": titleId } : { "aria-label": nameRu })}
+        style={placed}
         className={
           page
-            ? `flex shrink-0 flex-col gap-0.5 p-3 ${SAFE_TOP} ${SURFACE_GROUP_BARE} ${RULE_EDGE_BOTTOM}`
-            : "flex flex-col gap-0.5 px-3 pt-3"
+            ? `fixed inset-0 ${layer} flex flex-col ${SURFACE_PAGE}`
+            : `fixed inset-x-0 bottom-0 ${layer} flex flex-col ${SURFACE_PANEL}`
         }
       >
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 id={titleId} className="text-base font-semibold leading-tight">
-            {titleRu}
-          </h2>
-          {aside}
-        </div>
-        {subtitleRu === null ? null : (
-          <p className="text-xs text-ink-quiet">{subtitleRu}</p>
-        )}
-      </header>
-
-      <div className={page ? "min-h-0 flex-1 overflow-y-auto" : ""}>
-        <div ref={contentRef} className="flex flex-col gap-3 p-3">
-          {children}
-        </div>
-      </div>
-
-      {footer === null ? null : (
-        <footer
-          ref={footerRef}
+        <header
+          ref={headerRef}
           className={
             page
-              ? `flex shrink-0 flex-col gap-3 p-3 ${SAFE_BOTTOM} ${SURFACE_GROUP_BARE} ${RULE_EDGE_TOP}`
-              : `flex flex-col gap-3 px-3 ${SAFE_BOTTOM}`
+              ? `flex shrink-0 flex-col gap-0.5 p-3 ${SAFE_TOP} ${SURFACE_GROUP_BARE} ${RULE_EDGE_BOTTOM}`
+              : "flex flex-col gap-0.5 px-3 pt-3"
           }
         >
-          {footer}
-        </footer>
-      )}
-    </section>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id={titleId} className="text-base font-semibold leading-tight">
+              {titleRu}
+            </h2>
+            {aside}
+          </div>
+          {subtitleRu === null ? null : (
+            <p className="text-xs text-ink-quiet">{subtitleRu}</p>
+          )}
+        </header>
+
+        <div className={page ? "min-h-0 flex-1 overflow-y-auto" : ""}>
+          <div ref={contentRef} className="flex flex-col gap-3 p-3">
+            {children}
+          </div>
+        </div>
+
+        {footer === null ? null : (
+          <footer
+            ref={footerRef}
+            className={
+              page
+                ? `flex shrink-0 flex-col gap-3 p-3 ${footerEdge} ${SURFACE_GROUP_BARE} ${RULE_EDGE_TOP}`
+                : `flex flex-col gap-3 px-3 ${footerEdge}`
+            }
+          >
+            {footer}
+          </footer>
+        )}
+      </section>
+    </>
   );
 }

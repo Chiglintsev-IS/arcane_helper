@@ -428,6 +428,7 @@ export function ItemPage({
           {editing !== "price" ? null : (
             <CoinsEditor
               titleRu={PRICE_TITLE}
+              subtitleRu={item.nameRu}
               currencies={choices.currencies}
               coins={priced}
               onWrite={(price) => onWrite({ ...patchOf(item), price })}
@@ -439,6 +440,7 @@ export function ItemPage({
         <div className={`${BLOCK_CLASS} ${RULE_ROW}`}>
           <NoteList
             notes={item.notes}
+            ownerRu={item.nameRu}
             onAdd={onAddNote}
             onRewrite={onRewriteNote}
             onDrop={onDropNote}

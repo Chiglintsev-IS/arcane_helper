@@ -18,7 +18,8 @@ import { Badge } from "@/ui/shared/ui/Badge";
 import { FieldForm, WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PAGE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
-import { ValueRow } from "@/ui/shared/ui/ValueRow";
+import { RULE_ROW } from "@/ui/shared/ui/rule";
+import { NOT_WRITTEN } from "@/ui/shared/ui/ValueRow";
 
 const MUTED = "text-ink-quiet";
 
@@ -189,14 +190,22 @@ export function SpellCardDetails({
         </details>
 
         <div className="flex flex-col gap-1.5">
-          <ValueRow
-            labelRu={NOTE_LABEL}
-            valueRu={row.note ?? null}
-            onOpen={() => setTypedNote(row.note ?? "")}
-          />
+          <button
+            type="button"
+            onClick={() => setTypedNote(row.note ?? "")}
+            className={`flex min-h-11 w-full flex-col gap-1 py-2 text-left ${RULE_ROW}`}
+          >
+            <span className="text-xs text-ink-quiet">{NOTE_LABEL}</span>
+            <span
+              className={`whitespace-pre-line text-sm leading-snug ${row.note === undefined ? "text-off" : ""}`}
+            >
+              {row.note ?? NOT_WRITTEN}
+            </span>
+          </button>
           {typedNote === null ? null : (
             <FieldForm
               titleRu={NOTE_LABEL}
+              subtitleRu={row.nameRu}
               onWrite={() =>
                 typedNote.trim() === (row.note ?? "").trim() ? WRITTEN : onWriteNote(typedNote)
               }
@@ -207,6 +216,7 @@ export function SpellCardDetails({
                 placeholderRu={NOTE_HINT}
                 value={typedNote}
                 autoFocus
+                paragraphs
                 onChange={setTypedNote}
               />
             </FieldForm>

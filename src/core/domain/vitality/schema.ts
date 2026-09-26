@@ -39,7 +39,15 @@ const hitPointsSchema = z
     path: ["current"],
   });
 
+export function isPossibleEnteredHitPoints(current: number, maximum: number): boolean {
+  return z.number().int().min(0).max(maximum).safeParse(current).success;
+}
+
 const temporaryHitPointsSchema = reduction.default(0);
+
+export function isPossibleTemporaryHitPoints(amount: number): boolean {
+  return temporaryHitPointsSchema.safeParse(amount).success;
+}
 
 const hitDiceSchema = z
   .object({

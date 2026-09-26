@@ -67,6 +67,7 @@ export function IdentityFieldForm({
     return (
       <SizeForm
         labelRu={labelRu}
+        ownerRu={sheet.name}
         size={sheet.size}
         sizes={choices.creatureSizes}
         onWrite={(size) => onWrite({ size })}
@@ -78,6 +79,7 @@ export function IdentityFieldForm({
     return (
       <NumberForm
         labelRu={labelRu}
+        ownerRu={sheet.name}
         value={NUMBER_VALUES[field](sheet)}
         onWrite={(value) => onWrite({ [field]: value })}
         onClose={onClose}
@@ -88,6 +90,7 @@ export function IdentityFieldForm({
     return (
       <TextForm
         labelRu={labelRu}
+        ownerRu={sheet.name}
         value={sheet[field]}
         onWrite={(text) => onWrite({ [field]: text })}
         onClose={onClose}
@@ -98,6 +101,7 @@ export function IdentityFieldForm({
   return (
     <TextForm
       labelRu={labelRu}
+      ownerRu={sheet.name}
       value={proficiencies[field].join(", ")}
       onWrite={(text) => onWrite({ proficiencies: { ...proficiencies, [field]: asList(text) } })}
       onClose={onClose}
@@ -107,11 +111,13 @@ export function IdentityFieldForm({
 
 function TextForm({
   labelRu,
+  ownerRu,
   value,
   onWrite,
   onClose,
 }: {
   labelRu: string;
+  ownerRu: string;
   value: string;
   onWrite: (text: string) => WriteAnswer;
   onClose: () => void;
@@ -121,6 +127,7 @@ function TextForm({
   return (
     <FieldForm
       titleRu={labelRu}
+      subtitleRu={ownerRu}
       answerRu={BUTTON_LABELS.save}
       onWrite={() => (typed.trim() === value.trim() ? WRITTEN : onWrite(typed.trim()))}
       onClose={onClose}
@@ -132,11 +139,13 @@ function TextForm({
 
 function NumberForm({
   labelRu,
+  ownerRu,
   value,
   onWrite,
   onClose,
 }: {
   labelRu: string;
+  ownerRu: string;
   value: number;
   onWrite: (value: number) => WriteAnswer;
   onClose: () => void;
@@ -148,6 +157,7 @@ function NumberForm({
   return (
     <FieldForm
       titleRu={labelRu}
+      subtitleRu={ownerRu}
       answerRu={BUTTON_LABELS.save}
       onWrite={() => {
         required.ask([number], () => {});
@@ -169,12 +179,14 @@ function NumberForm({
 
 function SizeForm({
   labelRu,
+  ownerRu,
   size,
   sizes,
   onWrite,
   onClose,
 }: {
   labelRu: string;
+  ownerRu: string;
   size: string;
   sizes: ChoicesView["creatureSizes"];
   onWrite: (size: string) => WriteAnswer;
@@ -185,7 +197,9 @@ function SizeForm({
   return (
     <FieldForm
       titleRu={labelRu}
+      subtitleRu={ownerRu}
       answerRu={BUTTON_LABELS.save}
+      choice
       onWrite={() => (chosen === size ? WRITTEN : onWrite(chosen))}
       onClose={onClose}
     >

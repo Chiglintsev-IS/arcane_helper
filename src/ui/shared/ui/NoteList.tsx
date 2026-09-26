@@ -13,7 +13,7 @@ export const NOTES_TITLE = "Заметки";
 
 const NOTE_FIELD = "Заметка";
 
-const ADD_NOTE = "Записать заметку";
+export const ADD_NOTE = "Записать заметку";
 
 const NOTES_EMPTY = "Ничего не записано словами";
 
@@ -29,11 +29,14 @@ type Opened = { readonly kind: "new" } | { readonly kind: "note"; readonly id: s
  */
 export function NoteList({
   notes,
+  ownerRu,
   onAdd,
   onRewrite,
   onDrop,
 }: {
   notes: readonly Note[];
+  /** Чьи это заметки: форма набора закрывает экран, и имя вещи уходит из виду. */
+  ownerRu: string;
   onAdd: (textRu: string) => WriteAnswer;
   onRewrite: (noteId: string, textRu: string) => WriteAnswer;
   onDrop: (noteId: string) => void;
@@ -57,60 +60,55 @@ export function NoteList({
     return opened.kind === "new" ? onAdd(textRu) : onRewrite(opened.id, textRu);
   };
 
-  const field = (
-    <FieldForm titleRu={NOTE_FIELD} onWrite={write} onClose={close}>
-      <GrowingField labelRu={NOTE_FIELD} value={draft} autoFocus onChange={setDraft} />
-    </FieldForm>
-  );
+  const opener = (next: Opened, textRu: string) => () => open(next, textRu);
+  const editedNote = opened?.kind === "note" ? notes.find((note) => note.id === opened.id) : undefined;
 
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-ink-quiet">{NOTES_TITLE}</span>
 
-      {opened?.kind === "new" ? (
-        field
-      ) : (
-        <button
-          type="button"
-          onClick={() => open({ kind: "new" }, "")}
-          className={`min-h-11 px-3 text-xs font-medium ${TONE_TEXT.action} ${RULE_GROUP}`}
-        >
-          {ADD_NOTE}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={opener({ kind: "new" }, "")}
+        className={`min-h-11 px-3 text-xs font-medium ${TONE_TEXT.action} ${RULE_GROUP}`}
+      >
+        {ADD_NOTE}
+      </button>
 
       {notes.length === 0 ? (
         <p className="text-xs text-ink-quiet">{NOTES_EMPTY}</p>
       ) : (
         <ul aria-label={NOTES_TITLE} className={`flex flex-col ${RULE_BETWEEN}`}>
-          {notes.map((note) =>
-            opened?.kind === "note" && opened.id === note.id ? (
-              <li key={note.id} className="flex flex-col gap-1 py-1.5">
-                {field}
-                <RemoveButton
-                  nameRu={note.textRu}
-                  askRu={NOTE_REMOVAL.askRu}
-                  bodyRu={NOTE_REMOVAL.bodyOf(note.textRu)}
-                  onConfirm={() => {
-                    close();
-                    onDrop(note.id);
-                  }}
-                />
-              </li>
-            ) : (
-              <li key={note.id} className="py-1.5">
-                <button
-                  type="button"
-                  aria-label={editName(note.textRu)}
-                  onClick={() => open({ kind: "note", id: note.id }, note.textRu)}
-                  className="w-full text-left text-sm leading-snug"
-                >
-                  {note.textRu}
-                </button>
-              </li>
-            ),
-          )}
+          {notes.map((note) => (
+            <li key={note.id} className="py-1.5">
+              <button
+                type="button"
+                aria-label={editName(note.textRu)}
+                onClick={opener({ kind: "note", id: note.id }, note.textRu)}
+                className="w-full whitespace-pre-line text-left text-sm leading-snug"
+              >
+                {note.textRu}
+              </button>
+            </li>
+          ))}
         </ul>
+      )}
+
+      {opened === null ? null : (
+        <FieldForm titleRu={NOTE_FIELD} subtitleRu={ownerRu} onWrite={write} onClose={close}>
+          <GrowingField labelRu={NOTE_FIELD} value={draft} autoFocus paragraphs onChange={setDraft} />
+          {editedNote === undefined ? null : (
+            <RemoveButton
+              nameRu={editedNote.textRu}
+              askRu={NOTE_REMOVAL.askRu}
+              bodyRu={NOTE_REMOVAL.bodyOf(editedNote.textRu)}
+              onConfirm={() => {
+                close();
+                onDrop(editedNote.id);
+              }}
+            />
+          )}
+        </FieldForm>
       )}
     </div>
   );

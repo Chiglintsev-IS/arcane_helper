@@ -335,11 +335,11 @@ export function AlchemyScreen({
         </div>
       )
     ) : page === "kinds" ? (
-      adding ? (
-        <div className={`flex shrink-0 flex-col gap-2 p-3 ${SURFACE_PANEL}`}>
-          <p className="text-[0.6875rem] leading-snug text-ink-quiet">{NOTE_KIND_HINT}</p>
+      <>
+        {!adding ? null : (
           <KindFieldEditor
             labelRu={NAME_LABEL}
+            hintRu={NOTE_KIND_HINT}
             value=""
             onWrite={(typed) => {
               const nameRu = typed.trim();
@@ -347,10 +347,9 @@ export function AlchemyScreen({
             }}
             onClose={() => setAdding(false)}
           />
-        </div>
-      ) : (
+        )}
         <FooterAction labelRu={NOTE_KIND} onAct={() => setAdding(true)} />
-      )
+      </>
     ) : page === "recipes" ? (
       <FooterAction
         labelRu={NOTE_RECIPE}

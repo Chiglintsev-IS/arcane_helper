@@ -30,6 +30,7 @@ export function CharacterSheet({
   const formOf = (row: SheetRow): ReactNode =>
     row.field === "level" ? (
       <LevelForm
+        ownerRu={sheet.name}
         level={sheet.level}
         hitPoints={sheet.hitPoints}
         choices={choices}

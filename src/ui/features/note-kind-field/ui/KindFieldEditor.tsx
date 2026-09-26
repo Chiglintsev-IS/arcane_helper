@@ -14,12 +14,18 @@ const FROM_MASTER = "со слов мастера";
  */
 export function KindFieldEditor({
   labelRu,
+  ownerRu = null,
+  hintRu = null,
   value,
   numeric = false,
   onWrite,
   onClose,
 }: {
   labelRu: string;
+  /** Вид, которому принадлежит поле; у нового вида его ещё нет. */
+  ownerRu?: string | null;
+  /** Что стоит знать до записи: у нового вида — что свойства не заполняются. */
+  hintRu?: string | null;
   value: string;
   numeric?: boolean;
   onWrite: (typed: string) => WriteAnswer;
@@ -30,9 +36,13 @@ export function KindFieldEditor({
   return (
     <FieldForm
       titleRu={`${labelRu} — ${FROM_MASTER}`}
+      subtitleRu={ownerRu}
       onWrite={() => onWrite(typed)}
       onClose={onClose}
     >
+      {hintRu === null ? null : (
+        <p className="text-[0.6875rem] leading-snug text-ink-quiet">{hintRu}</p>
+      )}
       <input
         type={numeric ? "number" : "text"}
         inputMode={numeric ? "numeric" : "text"}

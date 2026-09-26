@@ -9,7 +9,7 @@ import { applyEdit } from "@/ui/shared/model/editing";
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
-import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
+import { FieldForm, WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { FooterAction } from "@/ui/shared/ui/FooterAction";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { RULE_TAB_OFF, RULE_TAB_ON } from "@/ui/shared/ui/rule";
@@ -34,9 +34,11 @@ const TAB_KEY = "thingsPart";
 
 const RECORD_ITEM = "Записать вещь";
 
-const SAVE_ITEM = "Сохранить вещь";
-
 const ADD_WANTED = "Добавить в покупки";
+
+const NEW_ITEM = "Новая вещь";
+
+const NEW_WANTED = "Новая покупка";
 
 const NAME_FIELD = "Название со слов мастера";
 
@@ -103,14 +105,17 @@ export function ThingsScreen({
   const buy = (item: ItemView): void =>
     send({ kind: "buy_item", itemId: item.id }, () => setBought([...bought, item.id]));
 
-  const record = (nameRu: string): void => {
+  /* Набранное переживает «Отмену»: вещь прервали на полуслове, а не передумали записывать. */
+  const record = (): WriteAnswer => {
+    const nameRu = draft.trim();
+    if (nameRu === "") return WRITTEN;
     const command: Command =
       tab === "bag"
         ? { kind: "add_item", nameRu, itemKinds: [] }
         : { kind: "record_item", nameRu, wanted: tab === "buy" };
-    send(command, () => {
-      setAdding(false);
-      setDraft("");
+    return write(command).then((refused) => {
+      if (refused === null) setDraft("");
+      return refused;
     });
   };
 
@@ -223,31 +228,26 @@ export function ThingsScreen({
         </div>
       )}
 
+      {!adding ? null : (
+        <FieldForm
+          titleRu={tab === "buy" ? NEW_WANTED : NEW_ITEM}
+          subtitleRu={TAB_TITLES[tab]}
+          onWrite={record}
+          onClose={() => setAdding(false)}
+        >
+          <GrowingField
+            labelRu={NAME_FIELD}
+            placeholderRu={NAME_FIELD}
+            value={draft}
+            autoFocus
+            onChange={setDraft}
+          />
+        </FieldForm>
+      )}
+
       <FooterAction
-        labelRu={adding ? SAVE_ITEM : tab === "buy" ? ADD_WANTED : RECORD_ITEM}
-        disabled={adding && draft.trim() === ""}
-        above={
-          !adding ? null : (
-            <div className="p-3">
-              <GrowingField
-                labelRu={NAME_FIELD}
-                placeholderRu={NAME_FIELD}
-                value={draft}
-                autoFocus
-                onChange={setDraft}
-                onSubmit={record}
-                onCancel={() => setAdding(false)}
-              />
-            </div>
-          )
-        }
-        onAct={() => {
-          if (adding) {
-            record(draft.trim());
-          } else {
-            setAdding(true);
-          }
-        }}
+        labelRu={tab === "buy" ? ADD_WANTED : RECORD_ITEM}
+        onAct={() => setAdding(true)}
       />
     </div>
   );

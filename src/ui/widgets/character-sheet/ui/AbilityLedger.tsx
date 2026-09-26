@@ -40,6 +40,7 @@ export function AbilityLedger({
           editing={
             opened !== ability.id ? null : (
               <AbilityForm
+                ownerRu={sheet.name}
                 ability={ability.ability}
                 choices={choices}
                 onWrite={onWriteAbility}
@@ -90,7 +91,6 @@ function AbilityGroup({
   onOpen,
 }: {
   ability: LedgerAbility;
-  /** Форма встаёт на место навыков: она перечисляет их же с выбором степени владения. */
   editing: ReactNode;
   onOpen: () => void;
 }) {
@@ -114,9 +114,9 @@ function AbilityGroup({
         </span>
       </button>
 
-      {editing !== null ? (
-        <div className="px-1 pb-1">{editing}</div>
-      ) : ability.skills.length === 0 ? null : (
+      {editing}
+
+      {ability.skills.length === 0 ? null : (
         <ul aria-label={ability.titleRu} className="grid grid-cols-2 gap-x-2.5 px-2.5 pb-0.5">
           {ability.skills.map((skill) => (
             <li

@@ -19,7 +19,7 @@ import {
   startManualEffect,
   wardingSigilAvailable,
 } from "@/core/application/useCases/effects";
-import { grantTemporaryHitPoints, heal, recoverHitPointMaximum, setSunlight, takeDamage } from "@/core/application/useCases/health";
+import { heal, recoverHitPointMaximum, setSunlight, setTemporaryHitPoints, takeDamage } from "@/core/application/useCases/health";
 import { beginTurn, combatEndRecovery, deriveTurnEconomy, endCombat, startCombat } from "@/core/application/useCases/turn";
 import { adjustLastHint, adjustRunes, refundSpellSlot, spendSpellSlot } from "@/core/application/useCases/resources";
 import { castSpell } from "@/core/application/useCases/casting";
@@ -1591,25 +1591,8 @@ describe("правка хитов: лечение и временные (FR-205,
     expect(() => heal(hurt(40), amount, occasion)).toThrow(DomainError);
   });
 
-  it("временные хиты записываются отдельным числом", () => {
-    const after = grantTemporaryHitPoints(session, 8, occasion);
-    expect(after.character.temporaryHitPoints).toBe(8);
-    expect(after.character.hitPoints.current).toBe(60);
-    expect(after.log.at(-1)?.summaryRu).toBe("Временные хиты: 8");
-  });
-
-  it("не складываются: меньшее значение отклоняется", () => {
-    const granted = grantTemporaryHitPoints(session, 8, occasion);
-    expect(() => grantTemporaryHitPoints(granted, 5, occasion)).toThrow(/не складываются/);
-    expect(grantTemporaryHitPoints(granted, 10, occasion).character.temporaryHitPoints).toBe(10);
-  });
-
-  it.each([0, -1, 2.5])("отклоняет недопустимое значение %s", (amount) => {
-    expect(() => grantTemporaryHitPoints(session, amount, occasion)).toThrow(DomainError);
-  });
-
   it("урон идёт сначала по временным хитам", () => {
-    const granted = grantTemporaryHitPoints(session, 8, occasion);
+    const granted = setTemporaryHitPoints(session, 8, occasion);
     const after = takeDamage(granted, 5, occasion);
     expect(after.character.temporaryHitPoints).toBe(3);
     expect(after.character.hitPoints.current).toBe(60);
@@ -1617,20 +1600,20 @@ describe("правка хитов: лечение и временные (FR-205,
   });
 
   it("остаток урона сверх временных хитов бьёт по текущим", () => {
-    const granted = grantTemporaryHitPoints(session, 8, occasion);
+    const granted = setTemporaryHitPoints(session, 8, occasion);
     const after = takeDamage(granted, 20, occasion);
     expect(after.character.temporaryHitPoints).toBe(0);
     expect(after.character.hitPoints.current).toBe(48);
   });
 
   it("лечение временные хиты не восстанавливает", () => {
-    const spent = takeDamage(grantTemporaryHitPoints(hurt(40), 8, occasion), 20, occasion);
+    const spent = takeDamage(setTemporaryHitPoints(hurt(40), 8, occasion), 20, occasion);
     expect(spent.character.temporaryHitPoints).toBe(0);
     expect(heal(spent, 10, occasion).character.temporaryHitPoints).toBe(0);
   });
 
   it("долгий отдых снимает временные хиты", () => {
-    const granted = grantTemporaryHitPoints(session, 8, occasion);
+    const granted = setTemporaryHitPoints(session, 8, occasion);
     expect(longRest(granted, occasion).character.temporaryHitPoints).toBe(0);
   });
 });

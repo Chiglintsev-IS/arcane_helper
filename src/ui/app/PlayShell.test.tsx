@@ -441,7 +441,7 @@ describe("одно дело — одно слово (FR-264)", () => {
 
     await openSheet(user);
     await user.click(screen.getByRole("button", { name: /^Интеллект 18/ }));
-    const record = within(screen.getByRole("form", { name: "Правка: Интеллект" }));
+    const record = within(screen.getByRole("dialog", { name: "Правка: Интеллект" }));
     expect(record.getByRole("button", { name: "Сохранить" })).toBeDefined();
     expect(record.queryByRole("button", { name: "Подтвердить" })).toBeNull();
   });
@@ -452,7 +452,7 @@ describe("одно дело — одно слово (FR-264)", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Хиты 60/60. Что случилось: урон, лечение, временные, максимум",
+        name: "Хиты 60/60. Что случилось: урон, лечение, временные, правка",
       }),
     );
     expect(screen.getByRole("dialog", { name: "Хиты" })).toBeDefined();
@@ -578,15 +578,14 @@ describe("ручной статус (FR-236)", () => {
     await renderWithStores(<PlayShell />);
 
     await userEvent.click(screen.getByRole("button", { name: "Действует: ничего" }));
-    const field = screen.getByLabelText<HTMLInputElement>("Новый статус");
-    await userEvent.type(field, "Опутанный");
-    await userEvent.click(screen.getByRole("button", { name: "Добавить" }));
+    await userEvent.click(screen.getByRole("button", { name: "Новый статус" }));
+    await userEvent.type(screen.getByLabelText("Новый статус"), "Опутанный");
+    await userEvent.click(screen.getByRole("button", { name: "Записать" }));
     await userEvent.click(screen.getByRole("button", { name: "Закрыть" }));
 
     const line = screen.getByLabelText("Действует");
     expect(within(line).getByText(/Опутанный/)).toBeDefined();
     expect(within(line).queryByText(/КД/)).toBeNull();
-    expect(field.value).toBe("");
 
     await userEvent.click(screen.getByRole("button", { name: /^Действует: Опутанный/ }));
     await userEvent.click(screen.getByRole("button", { name: "Завершить: Опутанный" }));

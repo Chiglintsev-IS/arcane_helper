@@ -49,10 +49,12 @@ describe("«Вещи»", () => {
     const { stores } = await renderWithStores(<ThingsScreen />, createThorne());
 
     await user.click(screen.getByRole("button", { name: "Записать вещь" }));
-    await user.type(screen.getByLabelText("Название со слов мастера"), "Кольцо защиты");
-    await user.click(screen.getByRole("button", { name: "Сохранить вещь" }));
+    const page = screen.getByRole("dialog", { name: "Правка: Новая вещь" });
+    await user.type(within(page).getByLabelText("Название со слов мастера"), "Кольцо защиты");
+    await user.click(within(page).getByRole("button", { name: "Записать" }));
 
     expect(itemOf(stores, "кольцо-защиты")).toMatchObject({ bagCount: 1, kinds: [] });
+    expect(screen.queryByRole("dialog", { name: "Правка: Новая вещь" })).toBeNull();
   });
 
   it("списание отменяется плашкой, а опустевшая строка остаётся на месте", async () => {

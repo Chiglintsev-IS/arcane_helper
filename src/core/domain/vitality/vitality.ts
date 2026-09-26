@@ -11,9 +11,11 @@ import {
 } from "./blood";
 import {
   effectiveMaximum,
+  isPossibleEnteredHitPoints,
   isPossibleHitPointChange,
   isPossibleHitPointMaximum,
   isPossibleReduction,
+  isPossibleTemporaryHitPoints,
   type VitalityState,
 } from "./schema";
 
@@ -122,16 +124,13 @@ export class Vitality {
     return this.with({ temporaryHitPoints: Math.max(this.temporary, amount) });
   }
 
-  grantTemporaryExplicitly(amount: number): Vitality {
-    if (!isPossibleHitPointChange(amount)) {
-      throw new DomainError(`Временные хиты должны быть целым положительным, получено: ${amount}`);
-    }
-    if (amount <= this.temporary) {
+  withTemporary(amount: number): Vitality {
+    if (!isPossibleTemporaryHitPoints(amount)) {
       throw new DomainError(
-        `Временных хитов уже ${this.temporary}: они не складываются, меньшее не берётся`,
+        `Временные хиты — целое число от нуля (ноль их снимает), получено: ${amount}`,
       );
     }
-    return this.grantTemporary(amount);
+    return this.with({ temporaryHitPoints: amount });
   }
 
   spendHitDice(count: number): Vitality {
@@ -275,6 +274,23 @@ export class Vitality {
       );
     }
     return this.clamped({ ...this.state.hitPoints, masterReduction });
+  }
+
+  withHitPoints(change: { maximumBase: number; masterReduction: number; current: number }): Vitality {
+    const capped = this.withMaximumBase(change.maximumBase).withMasterReduction(
+      change.masterReduction,
+    );
+    if (change.current === this.current) return capped;
+    return capped.withEnteredCurrent(change.current);
+  }
+
+  private withEnteredCurrent(current: number): Vitality {
+    if (!isPossibleEnteredHitPoints(current, this.maximum)) {
+      throw new DomainError(
+        `Хиты — целое число от 0 до ${this.maximum} (действующий максимум), получено: ${current}`,
+      );
+    }
+    return this.with({ hitPoints: { ...this.state.hitPoints, current } });
   }
 
   private clamped(hitPoints: VitalityState["hitPoints"]): Vitality {

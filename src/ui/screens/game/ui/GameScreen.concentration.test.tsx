@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { GameScreen } from "@/ui/screens/game/ui/GameScreen";
 import type { CharacterState } from "@/core/domain/assembly/state";
-import { renderWithStores } from "@/ui/app/testing/stores";
+import { renderWithStores, shown } from "@/ui/app/testing/stores";
 import { createWizard, withoutRunes } from "@/core/infrastructure/catalog/thorne/fixtures";
 
 function concentrating(): CharacterState {
@@ -172,12 +172,32 @@ describe("ручной статус (FR-236)", () => {
     await renderWithStores(<GameScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: "Действует: ничего" }));
-    const field = screen.getByLabelText("Новый статус");
-    await userEvent.type(field, "   {Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "Новый статус" }));
+    await userEvent.type(screen.getByLabelText("Новый статус"), "   {Enter}");
 
     expect(screen.queryByLabelText("Активные эффекты")).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Правка: Новый статус" })).toBeNull();
+  });
+
+  it("статус пишут на странице набора, и он встаёт в список действующего", async () => {
+    await renderWithStores(<GameScreen />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Действует: ничего" }));
+    await userEvent.click(screen.getByRole("button", { name: "Новый статус" }));
+    const page = screen.getByRole("dialog", { name: "Правка: Новый статус" });
+    await userEvent.type(within(page).getByLabelText("Новый статус"), "Опутан");
+    await userEvent.click(within(page).getByRole("button", { name: "Записать" }));
+
+    expect(screen.queryByRole("dialog", { name: "Правка: Новый статус" })).toBeNull();
+    expect(within(screen.getByLabelText("Активные эффекты")).getByText(/Опутан/)).toBeDefined();
   });
 });
+
+async function stepAdjustment(direction: "больше" | "меньше", times: number): Promise<void> {
+  for (let step = 0; step < times; step += 1) {
+    await userEvent.click(screen.getByRole("button", { name: `Поправка: на единицу ${direction}` }));
+  }
+}
 
 describe("поправка к КД (FR-236)", () => {
   it("заводится и меняет итоговый КД тем же способом, что и временные хиты", async () => {
@@ -188,7 +208,8 @@ describe("поправка к КД (FR-236)", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
     const dialog = screen.getByRole("dialog", { name: "КД" });
-    await userEvent.type(within(dialog).getByLabelText("Поправка"), "2");
+    await stepAdjustment("больше", 2);
+    expect(within(dialog).getByRole("status").textContent).toBe("+2");
     await userEvent.click(within(dialog).getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.queryByRole("dialog", { name: "КД" })).toBeNull();
@@ -197,11 +218,11 @@ describe("поправка к КД (FR-236)", () => {
     expect(within(numbers).getByText("КД +2")).toBeDefined();
   });
 
-  it("отрицательная поправка печатается типографским минусом и снижает КД", async () => {
+  it("отрицательная поправка набирается без клавиатуры, печатается типографским минусом и снижает КД", async () => {
     await renderWithStores(<GameScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
-    await userEvent.type(screen.getByLabelText("Поправка"), "-3");
+    await stepAdjustment("меньше", 3);
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
@@ -213,12 +234,12 @@ describe("поправка к КД (FR-236)", () => {
     await renderWithStores(<GameScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
-    await userEvent.type(screen.getByLabelText("Поправка"), "2");
+    await stepAdjustment("больше", 2);
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
-    await userEvent.clear(screen.getByLabelText("Поправка"));
-    await userEvent.type(screen.getByLabelText("Поправка"), "5");
+    expect(screen.getByRole("status").textContent).toBe("+2");
+    await stepAdjustment("больше", 3);
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
@@ -231,15 +252,48 @@ describe("поправка к КД (FR-236)", () => {
     await renderWithStores(<GameScreen />);
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
-    await userEvent.type(screen.getByLabelText("Поправка"), "2");
+    await stepAdjustment("больше", 2);
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     await userEvent.click(screen.getByRole("button", { name: /^КД/ }));
-    await userEvent.clear(screen.getByLabelText("Поправка"));
+    await stepAdjustment("меньше", 2);
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
     const numbers = screen.getByLabelText("Ресурсы");
     expect(screen.getByRole("button", { name: /^КД 14/ })).toBeDefined();
     expect(within(numbers).queryByText(/КД [+−]/)).toBeNull();
+  });
+});
+
+describe("правка хитов — не урон", () => {
+  it("хиты, поправленные числом, встают как есть, и проверки концентрации нет", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<GameScreen />, concentrating());
+
+    await user.click(screen.getByRole("button", { name: /^Хиты/ }));
+    await user.click(screen.getByRole("radio", { name: "Правка" }));
+    await user.clear(screen.getByLabelText("Текущие хиты"));
+    await user.type(screen.getByLabelText("Текущие хиты"), "45");
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(shown(stores).sheet.hitPoints.current).toBe(45);
+    expect(screen.queryByRole("dialog", { name: "Хиты" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: /^Проверка концентрации/ })).toBeNull();
+    expect(shown(stores).concentration).toBeDefined();
+  });
+
+  it("хитов больше максимума не записать: отказ стоит в шторке", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<GameScreen />, concentrating());
+
+    await user.click(screen.getByRole("button", { name: /^Хиты/ }));
+    await user.click(screen.getByRole("radio", { name: "Правка" }));
+    await user.clear(screen.getByLabelText("Текущие хиты"));
+    await user.type(screen.getByLabelText("Текущие хиты"), "99");
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    const sheet = screen.getByRole("dialog", { name: "Хиты" });
+    expect(within(sheet).getByRole("alert").textContent).not.toBe("");
+    expect(shown(stores).sheet.hitPoints.current).toBe(60);
   });
 });

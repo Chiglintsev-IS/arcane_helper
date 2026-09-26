@@ -1,6 +1,11 @@
 import { Character } from "@/core/domain/assembly/character";
 import { describe, expect, it } from "vitest";
-import { createWizard, withSlotDebt, withSpentSlots } from "@/core/infrastructure/catalog/thorne/fixtures";
+import {
+  createWizard,
+  withDamage,
+  withSlotDebt,
+  withSpentSlots,
+} from "@/core/infrastructure/catalog/thorne/fixtures";
 
 import { characterStateSchema } from "@/core/domain/assembly/state";
 import { undoLast, type Occasion, type Session } from "@/core/application/session";
@@ -244,7 +249,11 @@ describe("правка листа", () => {
   });
 
   it("здоровье правится базой и снижением мастера", () => {
-    const after = editHealth(session(), { maximumBase: 70, masterReduction: 10 }, occasion);
+    const after = editHealth(
+      session(),
+      { maximumBase: 70, masterReduction: 10, current: 60 },
+      occasion,
+    );
     expect(after.character.hitPoints).toEqual({
       current: 60,
       maximumBase: 70,
@@ -263,5 +272,88 @@ describe("правка листа", () => {
       ),
     ).toThrow();
     expect(before.character.abilities.strength).toBe(8);
+  });
+});
+
+describe("правка хитов с листа", () => {
+  it("текущие правятся числом, и лог называет было и стало", () => {
+    const after = editHealth(
+      session(),
+      { maximumBase: 60, masterReduction: 0, current: 45 },
+      occasion,
+    );
+    expect(after.character.hitPoints.current).toBe(45);
+    expect(after.log).toHaveLength(1);
+    expect(after.log[0]).toMatchObject({ kind: "sheet_edited", summaryRu: "Хиты: 60 → 45" });
+  });
+
+  it("правка — не урон и не лечение: ни записи урона, ни регенерации", () => {
+    const after = editHealth(
+      session(),
+      { maximumBase: 60, masterReduction: 0, current: 10 },
+      occasion,
+    );
+    expect(after.character.hitPoints.current).toBe(10);
+    expect(after.log[0]).not.toHaveProperty("damage");
+  });
+
+  it("изменилось несколько — одна запись через запятую", () => {
+    const after = editHealth(
+      session(),
+      { maximumBase: 69, masterReduction: 0, current: 45 },
+      occasion,
+    );
+    expect(after.log).toHaveLength(1);
+    expect(after.log[0]?.summaryRu).toBe("Максимум хитов: 69, хиты: 60 → 45");
+  });
+
+  it("нетронутые текущие обрезаются новым максимумом, и лог это называет", () => {
+    const after = editHealth(
+      session(),
+      { maximumBase: 50, masterReduction: 0, current: 60 },
+      occasion,
+    );
+    expect(after.character.hitPoints.current).toBe(50);
+    expect(after.log[0]?.summaryRu).toBe("Максимум хитов: 50, хиты: 60 → 50");
+  });
+
+  it("ничего не изменилось — сессия та же, записи нет", () => {
+    const before = session();
+    expect(
+      editHealth(before, { maximumBase: 60, masterReduction: 0, current: 60 }, occasion),
+    ).toBe(before);
+  });
+
+  it("выше нового максимума — отказ с максимумом числом, состояние не тронуто", () => {
+    const before = session();
+    expect(() =>
+      editHealth(before, { maximumBase: 60, masterReduction: 5, current: 58 }, occasion),
+    ).toThrow(/от 0 до 55/);
+    expect(before.character.hitPoints.masterReduction).toBe(0);
+  });
+
+  it("отрицательные после крови с разрешения мастера переживают правку максимума", () => {
+    const root = Character.of(withDamage(createWizard(), 55));
+    const overdrawn: Session = {
+      character: root.withVitality(root.vitality.payWithBlood(9, { allowAnyway: true })).toState(),
+      log: [],
+    };
+
+    const after = editHealth(
+      overdrawn,
+      { maximumBase: 60, masterReduction: 5, current: -4 },
+      occasion,
+    );
+    expect(after.character.hitPoints.current).toBe(-4);
+    expect(after.log[0]?.summaryRu).toBe("Максимум хитов: 46");
+  });
+
+  it("отмена возвращает и максимум, и текущие", () => {
+    const after = editHealth(
+      session(),
+      { maximumBase: 69, masterReduction: 0, current: 45 },
+      occasion,
+    );
+    expect(undoLast(after).character.hitPoints).toEqual(session().character.hitPoints);
   });
 });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 import { Sheet } from "./Sheet";
 
@@ -86,5 +86,40 @@ describe("шторка выбирает вид по своему росту", ()
 
     expect(screen.getByRole("dialog", { name: "Правка: Деньги" })).toBeDefined();
     expect(screen.getByRole("heading", { name: "Деньги" })).toBeDefined();
+  });
+});
+
+describe("мимо невысокой шторки нажимать нечего", () => {
+  it("экран под ней закрыт подложкой: нажатие по ней лишь убирает клавиатуру", () => {
+    growEachPart(40);
+    render(
+      <Sheet titleRu="КД">
+        <input aria-label="Поправка" />
+      </Sheet>,
+    );
+
+    const field = screen.getByLabelText("Поправка");
+    field.focus();
+    const sheet = screen.getByRole("dialog", { name: "КД" });
+    const scrim = sheet.previousElementSibling;
+    if (scrim === null) throw new Error("под шторкой нет подложки");
+    expect(scrim.getAttribute("aria-hidden")).toBe("true");
+    expect(scrim.className).toContain("inset-0");
+
+    fireEvent.click(scrim);
+
+    expect(document.activeElement).not.toBe(field);
+    expect(screen.getByRole("dialog", { name: "КД" })).toBeDefined();
+  });
+
+  it("шторка-страница подложки не несёт: экрана под ней не видно", () => {
+    growEachPart(40);
+    render(
+      <Sheet titleRu="Хиты" presentation="page">
+        <p>Содержимое.</p>
+      </Sheet>,
+    );
+
+    expect(screen.getByRole("dialog", { name: "Хиты" }).previousElementSibling).toBeNull();
   });
 });

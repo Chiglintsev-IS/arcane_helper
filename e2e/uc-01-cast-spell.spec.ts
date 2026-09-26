@@ -316,7 +316,7 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
 
   const levelRow = page.getByRole("button", { name: /^Уровень/ });
   await levelRow.click();
-  const levelForm = page.getByRole("form", { name: "Правка: Уровень" });
+  const levelForm = page.getByRole("dialog", { name: "Правка: Уровень" });
   await levelForm.getByRole("spinbutton", { name: "Уровень" }).fill("8");
   await levelForm.getByRole("spinbutton", { name: "Базовый максимум хитов" }).fill("66");
   await levelForm.getByRole("button", { name: "Сохранить" }).click();
@@ -331,6 +331,23 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
 
   await switchMode(page, /^Игра/);
   await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("4/4");
+});
+
+test("a tap past a low sheet reaches nothing behind it and keeps the sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: /^КД/ }).click();
+  const sheet = page.getByRole("dialog", { name: "КД" });
+  await sheet.getByRole("button", { name: "Поправка: на единицу больше" }).click();
+  await sheet.getByRole("button", { name: "Поправка: на единицу больше" }).click();
+
+  const box = await sheet.boundingBox();
+  if (box === null) throw new Error("шторки КД не видно");
+  expect(box.y).toBeGreaterThan(0);
+  await page.mouse.click(box.x + box.width / 2, box.y / 2);
+
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("status")).toHaveText("+2");
+  await expect(page.getByRole("dialog", { name: /^Заклинание/ })).toHaveCount(0);
 });
 
 test("reaction shows when it returns", async ({ page }) => {
@@ -465,7 +482,7 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await switchToSheet(page);
 
   await page.getByRole("button", { name: /^Интеллект 20/ }).click();
-  await expect(page.getByRole("form", { name: "Правка: Интеллект" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
   await scan("форма правки листа");
   await page.getByRole("button", { name: "Отмена" }).click();
 

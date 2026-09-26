@@ -11,13 +11,13 @@ import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { Sheet } from "@/ui/shared/ui/Sheet";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
-type Kind = "damage" | "heal" | "temporary" | "maximum";
+type Kind = "damage" | "heal" | "temporary" | "edit";
 
 const TABS: { kind: Kind; label: string }[] = [
   { kind: "damage", label: "Урон" },
   { kind: "heal", label: "Лечение" },
   { kind: "temporary", label: "Временные" },
-  { kind: "maximum", label: "Максимум" },
+  { kind: "edit", label: "Правка" },
 ];
 
 const QUESTION = "Что случилось";
@@ -29,15 +29,20 @@ export const HIT_POINTS_EVENTS = `${QUESTION}: ${TABS.map((tab) =>
 const HINTS: Record<Kind, string> = {
   damage: "Списывается сначала с временных хитов, потом с текущих.",
   heal: "Выше максимума не поднимет; максимум учитывает снижение от магии крови и от мастера.",
-  temporary: "Не складываются: новое значение заменяет прежнее, если оно больше.",
-  maximum: "База растёт с уровнем; снижение мастера держится, пока он его не снимет.",
+  temporary: "Не складываются: наберите то, что остаётся, — прежние или новые. Ноль снимает их.",
+  edit: "Правка записанного — не урон и не лечение: проверки концентрации она не вызывает. База растёт с уровнем; снижение мастера держится, пока он его не снимет.",
 };
 
-const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
+type EventKind = Exclude<Kind, "temporary" | "edit">;
+
+const FIELD_LABELS: Record<EventKind, string> = {
   damage: "Полученный урон",
   heal: "Вылечено",
-  temporary: "Временные хиты",
 };
+
+const TEMPORARY_LABEL = "Временные хиты";
+
+const CURRENT_LABEL = "Текущие хиты";
 
 const fieldClass = "min-h-11 px-3 tabular-nums";
 
@@ -88,7 +93,7 @@ export function HitPointsSheet({
   onDamage,
   onHeal,
   onTemporary,
-  onMaximum,
+  onEdit,
   onCancel,
   error = null,
 }: {
@@ -97,36 +102,40 @@ export function HitPointsSheet({
   onDamage: (damage: number, fire: boolean) => void;
   onHeal: (amount: number) => void;
   onTemporary: (amount: number) => void;
-  onMaximum: (change: { maximumBase: number; masterReduction: number }) => void;
+  onEdit: (change: { current: number; maximumBase: number; masterReduction: number }) => void;
   onCancel: () => void;
 }) {
   const questionId = useId();
   const [kind, setKind] = useState<Kind>("damage");
   const [value, setValue] = useState("");
   const [fire, setFire] = useState(false);
+  const [temporaryText, setTemporaryText] = useState(String(hitPoints.temporary));
+  const [currentText, setCurrentText] = useState(String(hitPoints.current));
   const [baseText, setBaseText] = useState(String(hitPoints.maximumBase));
   const [masterText, setMasterText] = useState(String(hitPoints.masterReduction));
   const required = useRequiredNumbers();
   const amount = requiredFieldNumber(value);
+  const temporary = requiredFieldNumber(temporaryText);
 
+  const current = requiredFieldNumber(currentText);
   const maximumBase = requiredFieldNumber(baseText);
   const masterReduction = requiredFieldNumber(masterText);
   const filled = required.allTyped([maximumBase, masterReduction]);
   const preview = usePreview(
-    kind === "maximum" && filled ? { kind: "health_preview", maximumBase, masterReduction } : null,
+    kind === "edit" && filled ? { kind: "health_preview", maximumBase, masterReduction } : null,
   );
   const effective = preview?.kind === "health_preview" ? preview.effectiveMaximum : null;
 
   const submit = (): void => {
-    if (kind === "maximum") {
-      return required.ask([maximumBase, masterReduction], () =>
-        onMaximum({ maximumBase, masterReduction }),
+    if (kind === "edit") {
+      return required.ask([current, maximumBase, masterReduction], () =>
+        onEdit({ current, maximumBase, masterReduction }),
       );
     }
+    if (kind === "temporary") return required.ask([temporary], () => onTemporary(temporary));
     return required.ask([amount], () => {
       if (kind === "damage") return onDamage(amount, fire);
-      if (kind === "heal") return onHeal(amount);
-      return onTemporary(amount);
+      return onHeal(amount);
     });
   };
 
@@ -166,7 +175,7 @@ export function HitPointsSheet({
             role="radio"
             aria-checked={kind === tab.kind}
             onClick={required.touching(() => setKind(tab.kind))}
-            className={`min-h-11 flex-1 px-2 text-sm ${
+            className={`min-h-11 flex-auto px-1.5 text-sm ${
               kind === tab.kind
               ? `${SURFACE_CHOSEN} font-medium`
               : `text-ink-quiet ${SURFACE_GROUP_BARE}`
@@ -177,8 +186,15 @@ export function HitPointsSheet({
         ))}
       </div>
 
-      {kind === "maximum" ? (
+      {kind === "edit" ? (
         <>
+          <NumberField
+            labelRu={CURRENT_LABEL}
+            value={currentText}
+            min={0}
+            reasonRu={required.reasonOf(current)}
+            onChange={required.touching(setCurrentText)}
+          />
           <NumberField
             labelRu="Базовый максимум"
             value={baseText}
@@ -194,6 +210,14 @@ export function HitPointsSheet({
             onChange={required.touching(setMasterText)}
           />
         </>
+      ) : kind === "temporary" ? (
+        <NumberField
+          labelRu={TEMPORARY_LABEL}
+          value={temporaryText}
+          min={0}
+          reasonRu={required.reasonOf(temporary)}
+          onChange={required.touching(setTemporaryText)}
+        />
       ) : (
         <NumberField
           labelRu={FIELD_LABELS[kind]}
@@ -215,7 +239,7 @@ export function HitPointsSheet({
 
       <p className="text-xs text-ink-quiet">{HINTS[kind]}</p>
 
-      {kind === "maximum" ? (
+      {kind === "edit" ? (
         <p className="text-xs text-ink-quiet">
           Снижение кровью — {hitPoints.bloodReduction}, возвращается по часу и здесь не правится.
           Действующий максимум станет {effective ?? "—"}.

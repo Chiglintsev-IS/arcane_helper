@@ -7,17 +7,19 @@ import { matchesQuery } from "@/ui/shared/lib/searchable";
 import { timeRu } from "@/ui/shared/lib/timeRu";
 import { FieldForm, WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
-import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
+import { editName } from "@/ui/shared/ui/buttonLabels";
 import { NOTE_REMOVAL, RemoveButton } from "@/ui/shared/ui/RemoveButton";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
+import { ADD_NOTE } from "@/ui/shared/ui/NoteList";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { RULE_MARK } from "@/ui/shared/ui/rule";
+import { TONE_TEXT } from "@/ui/shared/ui/tone";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 type WorldNote = Snapshot["notes"][number];
 
 const SEARCH_LABEL = "Поиск по слову";
 const NOTE_LABEL = "Заметка";
+const WORLD_RU = "Про мир";
 const MUTED = "text-ink-quiet";
 
 const SELECTED = SURFACE_CHOSEN;
@@ -38,44 +40,40 @@ function NoteRow({
   const [draft, setDraft] = useState<string | null>(null);
   const named = editName(note.text);
 
-  if (draft === null) {
-    return (
-      <li className={`flex items-start justify-between gap-2 p-2 ${SURFACE_GROUP}`}>
-        <button
-          type="button"
-          aria-label={named}
-          onClick={() => setDraft(note.text)}
-          className="flex min-h-11 min-w-0 flex-1 items-start text-left text-sm leading-snug"
-        >
-          {note.text}
-        </button>
-        <Time at={note.at} />
-      </li>
-    );
-  }
-
   return (
-    <li className={`flex flex-col gap-1 p-2 ${SURFACE_GROUP}`}>
-      <FieldForm
-        titleRu={NOTE_LABEL}
-        onWrite={() => {
-          const text = draft.trim();
-          return text === "" || text === note.text ? WRITTEN : onEdit(text);
-        }}
-        onClose={() => setDraft(null)}
+    <li className={`flex items-start justify-between gap-2 p-2 ${SURFACE_GROUP}`}>
+      <button
+        type="button"
+        aria-label={named}
+        onClick={() => setDraft(note.text)}
+        className="flex min-h-11 min-w-0 flex-1 items-start whitespace-pre-line text-left text-sm leading-snug"
       >
-        <GrowingField value={draft} labelRu={named} autoFocus onChange={setDraft} />
-      </FieldForm>
+        {note.text}
+      </button>
+      <Time at={note.at} />
 
-      <div className="flex items-center justify-between gap-2">
-        <Time at={note.at} />
-        <RemoveButton
-          nameRu={note.text}
-          askRu={NOTE_REMOVAL.askRu}
-          bodyRu={NOTE_REMOVAL.bodyOf(note.text)}
-          onConfirm={onRemove}
-        />
-      </div>
+      {draft === null ? null : (
+        <FieldForm
+          titleRu={NOTE_LABEL}
+          subtitleRu={`${WORLD_RU} · ${timeRu(note.at)}`}
+          onWrite={() => {
+            const text = draft.trim();
+            return text === "" || text === note.text ? WRITTEN : onEdit(text);
+          }}
+          onClose={() => setDraft(null)}
+        >
+          <GrowingField value={draft} labelRu={named} autoFocus paragraphs onChange={setDraft} />
+          <RemoveButton
+            nameRu={note.text}
+            askRu={NOTE_REMOVAL.askRu}
+            bodyRu={NOTE_REMOVAL.bodyOf(note.text)}
+            onConfirm={() => {
+              setDraft(null);
+              onRemove();
+            }}
+          />
+        </FieldForm>
+      )}
     </li>
   );
 }
@@ -92,60 +90,46 @@ export function WorldNotes({
   onRemove: (noteId: string) => void;
 }) {
   const [query, setQuery] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
-  const [refusalRu, setRefusalRu] = useState<string | null>(null);
   const found = [...notes].reverse().filter((note) => matchesQuery(note.text, query ?? ""));
 
-  /* Набранное уходит из поля, только когда записано: отказ оставляет его на месте с причиной. */
-  const add = (text: string): void => {
-    void onAdd(text).then((refused) => {
-      setRefusalRu(refused);
+  /* Набранное переживает «Отмену»: заметку прервали на полуслове, а не передумали писать. */
+  const add = (): WriteAnswer => {
+    const text = draft.trim();
+    if (text === "") return WRITTEN;
+    return onAdd(text).then((refused) => {
       if (refused === null) setDraft("");
+      return refused;
     });
   };
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          {query === null ? (
-            <div className="flex items-stretch gap-2">
-              <div className="min-w-0 flex-1">
-                <GrowingField
-                  value={draft}
-                  labelRu={NOTE_LABEL}
-                  onChange={setDraft}
-                  onSubmit={add}
-                />
-              </div>
-              <button
-                type="button"
-                disabled={draft.trim() === ""}
-                onClick={() => {
-                  const text = draft.trim();
-                  if (text !== "") add(text);
-                }}
-                className={`shrink-0 px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
-              >
-                {BUTTON_LABELS.write}
-              </button>
-            </div>
-          ) : (
-            <input
-              type="search"
-              autoFocus
-              value={query}
-              aria-label={SEARCH_LABEL}
-              placeholder="Слово"
-              enterKeyHint="search"
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setQuery(null);
-              }}
-              className={`min-h-11 w-full px-3 ${FIELD_TEXT} outline-none ${SURFACE_CONTROL}`}
-            />
-          )}
-        </div>
+      <div className="flex items-stretch gap-2">
+        {query === null ? (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className={`min-h-11 min-w-0 flex-1 px-3 text-sm font-medium ${TONE_TEXT.action} ${SURFACE_CONTROL}`}
+          >
+            {ADD_NOTE}
+          </button>
+        ) : (
+          <input
+            type="search"
+            autoFocus
+            value={query}
+            aria-label={SEARCH_LABEL}
+            placeholder="Слово"
+            enterKeyHint="search"
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setQuery(null);
+            }}
+            className={`min-h-11 min-w-0 flex-1 px-3 ${FIELD_TEXT} outline-none ${SURFACE_CONTROL}`}
+          />
+        )}
 
         <button
           type="button"
@@ -160,10 +144,17 @@ export function WorldNotes({
         </button>
       </div>
 
-      {refusalRu === null || query !== null ? null : (
-        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm`}>
-          {refusalRu}
-        </p>
+      {!adding ? null : (
+        <FieldForm titleRu={NOTE_LABEL} subtitleRu={WORLD_RU} onWrite={add} onClose={() => setAdding(false)}>
+          <GrowingField
+            value={draft}
+            labelRu={NOTE_LABEL}
+            placeholderRu="Квест, имя, место, обещание — как сказал мастер"
+            autoFocus
+            paragraphs
+            onChange={setDraft}
+          />
+        </FieldForm>
       )}
 
       {found.length === 0 ? (

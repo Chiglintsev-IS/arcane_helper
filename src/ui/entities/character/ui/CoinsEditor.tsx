@@ -21,12 +21,14 @@ function digitsOf(typed: string): string {
  */
 export function CoinsEditor({
   titleRu,
+  subtitleRu = null,
   currencies,
   coins,
   onWrite,
   onClose,
 }: {
   titleRu: string;
+  subtitleRu?: string | null;
   currencies: readonly string[];
   coins: Readonly<Record<string, number>>;
   onWrite: (coins: Readonly<Record<string, number>>) => WriteAnswer;
@@ -39,6 +41,7 @@ export function CoinsEditor({
   return (
     <FieldForm
       titleRu={titleRu}
+      subtitleRu={subtitleRu}
       onWrite={() =>
         onWrite(
           Object.fromEntries(

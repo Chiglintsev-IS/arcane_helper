@@ -37,12 +37,21 @@ export function heal(session: Session, amount: number, occasion: Occasion): Sess
   );
 }
 
-export function grantTemporaryHitPoints(session: Session, amount: number, occasion: Occasion): Session {
+function temporarySummary(before: number, after: number): string {
+  return after === 0 ? "Временные хиты сняты" : `Временные хиты: ${before} → ${after}`;
+}
+
+export function setTemporaryHitPoints(session: Session, amount: number, occasion: Occasion): Session {
   const root = Character.of(session.character);
+  const vitality = root.vitality.withTemporary(amount);
+  if (vitality.temporary === root.vitality.temporary) return session;
   return commit(
     session,
-    root.withVitality(root.vitality.grantTemporaryExplicitly(amount)),
-    { kind: "hit_points_changed", summaryRu: `Временные хиты: ${amount}` },
+    root.withVitality(vitality),
+    {
+      kind: "hit_points_changed",
+      summaryRu: temporarySummary(root.vitality.temporary, vitality.temporary),
+    },
     occasion,
   );
 }

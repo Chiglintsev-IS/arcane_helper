@@ -26,7 +26,7 @@ describe("форма характеристики", () => {
   it("характеристика: форма держит значение, спасбросок и её навыки", async () => {
     const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilityForm choices={toChoicesView()}
+      <AbilityForm ownerRu="Торн" choices={toChoicesView()}
         ability={abilityOf("intelligence")}
         onWrite={onSave}
         onClose={() => {}}
@@ -52,7 +52,7 @@ describe("форма характеристики", () => {
   it("характеристика: набранное уходит владельцу, а причина отказа приходит от него", async () => {
     const onSave = vi.fn<Write>(() => Promise.resolve("Поле «abilities» не годится"));
     render(
-      <AbilityForm choices={toChoicesView()}
+      <AbilityForm ownerRu="Торн" choices={toChoicesView()}
         ability={abilityOf("strength")}
         onWrite={onSave}
         onClose={() => {}}
@@ -71,7 +71,7 @@ describe("форма характеристики", () => {
   it("характеристика: пустое значение не уходит владельцу и отказывает у поля", async () => {
     const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilityForm choices={toChoicesView()}
+      <AbilityForm ownerRu="Торн" choices={toChoicesView()}
         ability={abilityOf("intelligence")}
         onWrite={onSave}
         onClose={() => {}}
@@ -94,7 +94,7 @@ describe("форма характеристики", () => {
   it("характеристика: владение спасброском снимается переключателем", async () => {
     const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilityForm choices={toChoicesView()}
+      <AbilityForm ownerRu="Торн" choices={toChoicesView()}
         ability={abilityOf("intelligence")}
         onWrite={onSave}
         onClose={() => {}}
@@ -110,7 +110,7 @@ describe("форма характеристики", () => {
   it("характеристика: навык переключается в три состояния", async () => {
     const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilityForm choices={toChoicesView()}
+      <AbilityForm ownerRu="Торн" choices={toChoicesView()}
         ability={abilityOf("intelligence")}
         onWrite={onSave}
         onClose={() => {}}
@@ -132,7 +132,7 @@ describe("форма характеристики", () => {
     const onSave = vi.fn<Write>(() => WRITTEN);
     const state = createWizard();
     render(
-      <AbilityForm choices={toChoicesView()}
+      <AbilityForm ownerRu="Торн" choices={toChoicesView()}
         ability={abilityOf("intelligence", { ...state, skills: { arcana: "proficient" } })}
         onWrite={onSave}
         onClose={() => {}}

@@ -42,11 +42,39 @@ describe("шторки «Привала» (FR-205, FR-237)", () => {
 
     await user.click(screen.getByRole("button", { name: /^КД 14/ }));
     const sheet = screen.getByRole("dialog", { name: "КД" });
-    await user.type(within(sheet).getByLabelText("Поправка"), "2");
+    await user.click(within(sheet).getByRole("button", { name: "Поправка: на единицу больше" }));
+    await user.click(within(sheet).getByRole("button", { name: "Поправка: на единицу больше" }));
     await user.click(within(sheet).getByRole("button", { name: "Подтвердить" }));
 
     expect(screen.queryByRole("dialog", { name: "КД" })).toBeNull();
     expect(screen.getByRole("button", { name: /^КД 16/ })).toBeDefined();
+  });
+
+  it("временные хиты вписываются как есть и снимаются нулём", async () => {
+    const user = userEvent.setup();
+    const { stores } = await renderWithStores(<RestScreen />);
+
+    await user.click(screen.getByRole("button", { name: /^Хиты/ }));
+    await user.click(screen.getByRole("radio", { name: "Временные" }));
+    await user.clear(screen.getByLabelText("Временные хиты"));
+    await user.type(screen.getByLabelText("Временные хиты"), "8");
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    expect(shown(stores).sheet.hitPoints.temporary).toBe(8);
+
+    await user.click(screen.getByRole("button", { name: /^Хиты/ }));
+    await user.click(screen.getByRole("radio", { name: "Временные" }));
+    expect(screen.getByLabelText("Временные хиты")).toHaveProperty("value", "8");
+    await user.clear(screen.getByLabelText("Временные хиты"));
+    await user.type(screen.getByLabelText("Временные хиты"), "3");
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    expect(shown(stores).sheet.hitPoints.temporary).toBe(3);
+
+    await user.click(screen.getByRole("button", { name: /^Хиты/ }));
+    await user.click(screen.getByRole("radio", { name: "Временные" }));
+    await user.clear(screen.getByLabelText("Временные хиты"));
+    await user.type(screen.getByLabelText("Временные хиты"), "0");
+    await user.click(screen.getByRole("button", { name: "Подтвердить" }));
+    expect(shown(stores).sheet.hitPoints.temporary).toBe(0);
   });
 
   it("плитка хитов открывает правку урона и списывает хиты", async () => {

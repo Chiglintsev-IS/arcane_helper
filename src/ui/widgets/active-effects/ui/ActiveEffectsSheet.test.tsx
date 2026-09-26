@@ -79,26 +79,34 @@ describe("строка руны называет её число и срок (FR
 });
 
 describe("ручной статус", () => {
-  it("добавляется явной кнопкой без Enter", () => {
+  it("пишется на странице набора и записывается кнопкой", async () => {
+    const user = userEvent.setup();
     const onAddStatus = vi.fn<Props["onAddStatus"]>(() => WRITTEN);
     show([], { onAddStatus });
 
-    const field = screen.getByLabelText("Новый статус");
-    fireEvent.change(field, { target: { value: "Опутанный" } });
-    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+    await user.click(screen.getByRole("button", { name: "Новый статус" }));
+    const page = screen.getByRole("dialog", { name: "Правка: Новый статус" });
+    fireEvent.change(within(page).getByLabelText("Новый статус"), { target: { value: "Опутанный" } });
+    await user.click(within(page).getByRole("button", { name: "Записать" }));
 
     expect(onAddStatus).toHaveBeenCalledWith("Опутанный");
+    expect(screen.queryByRole("dialog", { name: "Правка: Новый статус" })).toBeNull();
   });
 
-  it("набранное уходит из поля, только когда записано: отказ оставляет его с причиной", async () => {
+  it("отказ оставляет набранное с причиной, а «Отмена» набранного не теряет", async () => {
     const user = userEvent.setup();
     const refusal = "Название эффекта не может быть пустым";
     show([], { onAddStatus: () => Promise.resolve(refusal) });
 
+    await user.click(screen.getByRole("button", { name: "Новый статус" }));
     await user.type(screen.getByLabelText("Новый статус"), "Опутанный");
-    await user.click(screen.getByRole("button", { name: "Добавить" }));
+    await user.click(screen.getByRole("button", { name: "Записать" }));
 
     expect(screen.getByRole("alert").textContent).toBe(refusal);
+    expect(screen.getByLabelText<HTMLTextAreaElement>("Новый статус").value).toBe("Опутанный");
+
+    await user.click(screen.getByRole("button", { name: "Отмена" }));
+    await user.click(screen.getByRole("button", { name: "Новый статус" }));
     expect(screen.getByLabelText<HTMLTextAreaElement>("Новый статус").value).toBe("Опутанный");
   });
 

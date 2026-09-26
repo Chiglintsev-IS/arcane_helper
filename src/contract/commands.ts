@@ -64,7 +64,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
 
   command("take_damage", { damage: numeric, fire: z.boolean().optional() }),
   command("heal", { amount: numeric }),
-  command("grant_temporary_hit_points", { amount: numeric }),
+  command("set_temporary_hit_points", { amount: numeric }),
   command("recover_hit_point_maximum", {}),
   command("set_sunlight", { underSunlight: z.boolean() }),
 
@@ -134,7 +134,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
     skills: z.record(word, word),
   }),
   command("edit_marks", { exhaustion: numeric, inspiration: z.boolean() }),
-  command("edit_health", { maximumBase: numeric, masterReduction: numeric }),
+  command("edit_health", { maximumBase: numeric, masterReduction: numeric, current: numeric }),
   command("change_level", { level: numeric, hitPointMaximumBase: numeric }),
 
   command("undo_last", {}),

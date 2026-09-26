@@ -12,10 +12,13 @@ export const NAME_LABEL = "Название";
 /** Правка названия: пустое имя и имя без изменений не пишутся вовсе — форма просто закрывается. */
 export function NameEditor({
   nameRu,
+  subtitleRu = null,
   onWrite,
   onClose,
 }: {
   nameRu: string;
+  /** Чьё имя правят, когда из самого имени это не видно. */
+  subtitleRu?: string | null;
   onWrite: (nameRu: string) => WriteAnswer;
   onClose: () => void;
 }) {
@@ -28,7 +31,7 @@ export function NameEditor({
   };
 
   return (
-    <FieldForm titleRu={NAME_LABEL} onWrite={write} onClose={onClose}>
+    <FieldForm titleRu={NAME_LABEL} subtitleRu={subtitleRu} onWrite={write} onClose={onClose}>
       <input
         type="text"
         aria-label={NAME_LABEL}

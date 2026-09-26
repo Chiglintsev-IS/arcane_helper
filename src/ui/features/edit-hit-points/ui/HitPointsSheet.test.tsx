@@ -10,7 +10,8 @@ import { HitPointsSheet } from "./HitPointsSheet";
 
 type Handlers = {
   onDamage?: (damage: number, fire: boolean) => void;
-  onMaximum?: (change: { maximumBase: number; masterReduction: number }) => void;
+  onTemporary?: (amount: number) => void;
+  onEdit?: (change: { current: number; maximumBase: number; masterReduction: number }) => void;
 };
 
 async function openHitPoints(
@@ -23,8 +24,8 @@ async function openHitPoints(
       hitPoints={sheet.hitPoints}
       onDamage={handlers.onDamage ?? (() => {})}
       onHeal={() => {}}
-      onTemporary={() => {}}
-      onMaximum={handlers.onMaximum ?? (() => {})}
+      onTemporary={handlers.onTemporary ?? (() => {})}
+      onEdit={handlers.onEdit ?? (() => {})}
       onCancel={() => {}}
     />,
     character,
@@ -59,10 +60,10 @@ describe("шторка хитов называет своё дело (FR-274)", 
 });
 
 describe("шторка хитов", () => {
-  it("хиты: урон, лечение, временные и максимум правятся одной шторкой (FR-230)", async () => {
+  it("хиты: урон, лечение, временные и правка стоят одной шторкой (FR-230)", async () => {
     await openHitPoints();
 
-    for (const tab of ["Урон", "Лечение", "Временные", "Максимум"]) {
+    for (const tab of ["Урон", "Лечение", "Временные", "Правка"]) {
       expect(screen.getByRole("radio", { name: tab })).toBeDefined();
     }
     expect(screen.queryByLabelText("Базовый максимум")).toBeNull();
@@ -71,28 +72,28 @@ describe("шторка хитов", () => {
   it("хиты: снижение кровью названо, но не правится (FR-240)", async () => {
     const hurt = withDamage(withBloodPaid(createWizard(), 1), 14);
     await openHitPoints(hurt);
-    await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Правка" }));
 
     expect(screen.getByText(/Снижение кровью — 6/)).toBeDefined();
     expect(screen.queryByLabelText("Снижение кровью")).toBeNull();
   });
 
   it("хиты: набранный максимум уходит владельцу, а действующий считает ядро (FR-240)", async () => {
-    const onMaximum = vi.fn();
+    const onEdit = vi.fn();
     const hurt = withDamage(withBloodPaid(createWizard(), 1), 14);
-    await openHitPoints(hurt, { onMaximum });
-    await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
+    await openHitPoints(hurt, { onEdit });
+    await userEvent.click(screen.getByRole("radio", { name: "Правка" }));
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));
     await userEvent.type(screen.getByLabelText("Базовый максимум"), "6");
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    expect(onMaximum).toHaveBeenCalledWith({ maximumBase: 6, masterReduction: 0 });
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ maximumBase: 6, masterReduction: 0 }));
   });
 
   it("хиты: пустое поле показывает прочерк вместо действующего максимума", async () => {
     await openHitPoints();
-    await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Правка" }));
 
     await userEvent.clear(screen.getByLabelText("Базовый максимум"));
 
@@ -128,15 +129,46 @@ describe("шторка хитов", () => {
     expect(leastHeight(row)).toBe(leastHeight(screen.getByRole("button", { name: "Подтвердить" })));
   });
 
-  it("хиты: сохранение отдаёт базу и снижение мастера", async () => {
-    const onMaximum = vi.fn();
-    await openHitPoints(createWizard(), { onMaximum });
-    await userEvent.click(screen.getByRole("radio", { name: "Максимум" }));
+  it("хиты: правка отдаёт текущие, базу и снижение мастера разом", async () => {
+    const onEdit = vi.fn();
+    await openHitPoints(createWizard(), { onEdit });
+    await userEvent.click(screen.getByRole("radio", { name: "Правка" }));
 
     await userEvent.clear(screen.getByLabelText("Снижение мастера"));
     await userEvent.type(screen.getByLabelText("Снижение мастера"), "10");
     await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
 
-    expect(onMaximum).toHaveBeenCalledWith({ maximumBase: 60, masterReduction: 10 });
+    expect(onEdit).toHaveBeenCalledWith({ current: 60, maximumBase: 60, masterReduction: 10 });
+  });
+
+  it("хиты правятся числом рядом с уроном и лечением, и поле стоит заполненным", async () => {
+    const onEdit = vi.fn();
+    await openHitPoints(withDamage(createWizard(), 14), { onEdit });
+    await userEvent.click(screen.getByRole("radio", { name: "Правка" }));
+
+    const current = screen.getByLabelText("Текущие хиты");
+    expect(current).toHaveProperty("value", "46");
+    expect(screen.getByText(/проверки концентрации она не вызывает/)).toBeDefined();
+
+    await userEvent.clear(current);
+    await userEvent.type(current, "40");
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(onEdit).toHaveBeenCalledWith({ current: 40, maximumBase: 60, masterReduction: 0 });
+  });
+
+  it("временные хиты вписываются как есть: поле несёт нынешние, ноль уходит владельцу", async () => {
+    const onTemporary = vi.fn();
+    await openHitPoints({ ...createWizard(), temporaryHitPoints: 8 }, { onTemporary });
+    await userEvent.click(screen.getByRole("radio", { name: "Временные" }));
+
+    const field = screen.getByLabelText("Временные хиты");
+    expect(field).toHaveProperty("value", "8");
+
+    await userEvent.clear(field);
+    await userEvent.type(field, "0");
+    await userEvent.click(screen.getByRole("button", { name: "Подтвердить" }));
+
+    expect(onTemporary).toHaveBeenCalledWith(0);
   });
 });

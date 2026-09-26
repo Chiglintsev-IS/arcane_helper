@@ -300,8 +300,9 @@ describe("«Алхимия»: книга", () => {
 
     await openSection(user, "Ингредиенты");
     await user.click(press("Записать вид"));
-    expect(screen.queryByRole("button", { name: "Записать вид" })).toBeNull();
-    await user.type(screen.getByLabelText("Название"), MOON_HERB);
+    const page = within(screen.getByRole("dialog", { name: "Правка: Название — со слов мастера" }));
+    expect(page.getByText(/нераскрытый/)).toBeDefined();
+    await user.type(page.getByLabelText("Название"), MOON_HERB);
     await user.click(press("Записать"));
 
     expect(shown(stores).crafting.ingredients.map((kind) => kind.nameRu)).toEqual([MOON_HERB]);

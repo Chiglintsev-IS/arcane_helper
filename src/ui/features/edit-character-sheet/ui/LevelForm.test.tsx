@@ -17,7 +17,7 @@ async function openLevel(
 ): Promise<void> {
   const { sheet } = testSnapshot(character);
   await renderWithStores(
-    <LevelForm choices={toChoicesView()}
+    <LevelForm ownerRu="Торн" choices={toChoicesView()}
       level={sheet.level}
       hitPoints={sheet.hitPoints}
       onWrite={onSave}
