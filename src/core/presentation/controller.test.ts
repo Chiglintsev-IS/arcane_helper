@@ -161,6 +161,25 @@ describe("эффекты и концентрация", () => {
     expect(ended.session.character.activeEffects).toHaveLength(0);
   });
 
+  it("набранный статус переименовывается, а поправка к КД — нет", () => {
+    const started = run([
+      { kind: "start_manual_effect", nameRu: "Ослеплн" },
+      { kind: "set_armor_class_adjustment", value: 2 },
+    ]);
+    const [status, adjustment] = started.session.character.activeEffects;
+
+    const renamed = run(
+      [{ kind: "rename_effect", effectId: status!.id, nameRu: "Ослеплён" }],
+      started,
+    );
+    expect(renamed.session.character.activeEffects[0]?.nameRu).toBe("Ослеплён");
+    expect(renamed.session.log.at(-1)?.summaryRu).toBe("Эффект переименован: Ослеплн → Ослеплён");
+
+    expect(() =>
+      run([{ kind: "rename_effect", effectId: adjustment!.id, nameRu: "Прикрытие" }], started),
+    ).toThrow("«Поправка к КД» не статус: переименовать можно только статус, набранный вручную");
+  });
+
   it("ручной эффект несёт вклад в защиту, когда он назван", () => {
     const before = Character.of(start().session.character).sheet.value("armorClass");
     const live = run([{ kind: "start_manual_effect", nameRu: "Прикрытие", armorClassBonus: 2 }]);

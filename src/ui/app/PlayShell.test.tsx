@@ -441,7 +441,7 @@ describe("одно дело — одно слово (FR-264)", () => {
 
     await openSheet(user);
     await user.click(screen.getByRole("button", { name: /^Интеллект 18/ }));
-    const record = within(screen.getByRole("dialog", { name: "Правка: Интеллект" }));
+    const record = within(screen.getByRole("form", { name: "Правка: Интеллект" }));
     expect(record.getByRole("button", { name: "Сохранить" })).toBeDefined();
     expect(record.queryByRole("button", { name: "Подтвердить" })).toBeNull();
   });

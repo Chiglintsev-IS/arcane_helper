@@ -7,25 +7,27 @@ import type { CharacterState } from "@/core/domain/assembly/state";
 import { createWizard, withSlotDebt } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot } from "@/ui/app/testing/stores";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
-import { LevelSheet } from "./LevelSheet";
+import { WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
+
+import { LevelForm } from "./LevelForm";
 
 async function openLevel(
   character: CharacterState = createWizard(),
-  onSave: (next: { level: number; hitPointMaximumBase: number }) => void = () => {},
+  onSave: (next: { level: number; hitPointMaximumBase: number }) => WriteAnswer = () => WRITTEN,
 ): Promise<void> {
   const { sheet } = testSnapshot(character);
   await renderWithStores(
-    <LevelSheet choices={toChoicesView()}
+    <LevelForm choices={toChoicesView()}
       level={sheet.level}
       hitPoints={sheet.hitPoints}
-      onSave={onSave}
-      onCancel={() => {}}
+      onWrite={onSave}
+      onClose={() => {}}
     />,
     character,
   );
 }
 
-describe("шторка уровня", () => {
+describe("форма уровня", () => {
   it("уровень: показывает, что изменится, до подтверждения", async () => {
     await openLevel();
 
@@ -86,7 +88,7 @@ describe("шторка уровня", () => {
   });
 
   it("уровень: пустое поле не уходит владельцу и отказывает у себя", async () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<Parameters<typeof LevelForm>[0]["onWrite"]>(() => WRITTEN);
     await openLevel(createWizard(), onSave);
 
     const maximum = screen.getByLabelText("Базовый максимум хитов");
@@ -104,7 +106,7 @@ describe("шторка уровня", () => {
   });
 
   it("уровень: сохранение отдаёт уровень и введённый максимум", async () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<Parameters<typeof LevelForm>[0]["onWrite"]>(() => WRITTEN);
     await openLevel(createWizard(), onSave);
 
     const level = screen.getByLabelText("Уровень");

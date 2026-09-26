@@ -6,7 +6,7 @@ import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { Sheet } from "@/ui/shared/ui/Sheet";
-import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 export function EditSheetFrame({
   titleRu,
@@ -86,7 +86,7 @@ export function NumberField({
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
           className={`min-h-11 w-20 px-3 ${FIELD_TEXT} tabular-nums ${
-          reasonRu === null ? SURFACE_GROUP : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`
+          reasonRu === null ? SURFACE_CONTROL : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`
           }`}
         />
       </label>
@@ -100,30 +100,5 @@ export function NumberField({
         </p>
       )}
     </div>
-  );
-}
-
-export function TextField({
-  labelRu,
-  value,
-  onChange,
-  wide = false,
-}: {
-  labelRu: string;
-  value: string;
-  onChange: (value: string) => void;
-  /** Поле, которое и есть предмет правки, берёт всю свободную ширину: длинное имя надо видеть. */
-  wide?: boolean;
-}) {
-  return (
-    <label className="flex items-center justify-between gap-2 text-sm">
-      <span className="shrink-0">{labelRu}</span>
-      <input
-        type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`min-h-11 px-3 ${FIELD_TEXT} ${wide ? "min-w-0 flex-1" : "w-40"} ${SURFACE_CONTROL}`}
-      />
-    </label>
   );
 }

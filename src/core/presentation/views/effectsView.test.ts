@@ -41,6 +41,18 @@ describe("проекция действующего (FR-334)", () => {
     expect(view?.changesArmorClass).toBe(true);
   });
 
+  it("правка названия предлагается только набранному статусу", () => {
+    const [status] = toEffectViews(holding({ nameRu: "Отравлен", manualKind: "status" }));
+    const [rune] = toEffectViews(holding({}));
+    const [adjustment] = toEffectViews(holding({ manualKind: "armorAdjustment" }));
+
+    expect([status?.renamable, rune?.renamable, adjustment?.renamable]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+  });
+
   it("число эффекта уходит строкой, а без него строки нет вовсе", () => {
     const [noted] = toEffectViews(holding({ note: "+10 футов скорости себе" }));
     const [bare] = toEffectViews(holding({}));

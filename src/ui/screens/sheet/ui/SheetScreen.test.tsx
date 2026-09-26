@@ -69,20 +69,23 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
         .map((skill) => skill.id),
     ).toEqual(["sleightOfHand", "arcana", "investigation", "nature", "perception", "survival"]);
     expect(shown(stores).log).toHaveLength(1);
-    expect(screen.queryByRole("dialog", { name: "Правка: Интеллект" })).toBeNull();
+    expect(screen.queryByLabelText("Значение")).toBeNull();
     expect(screen.getByRole("button", { name: /^Интеллект 20, \+5/ })).toBeDefined();
   });
 
-  it("«Лист»: языки правятся своей шторкой, а владения — своей (FR-230)", async () => {
+  it("«Лист»: языки и владения правятся каждый своей строкой (FR-230)", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
     await openIdentity(user);
 
-    await user.click(screen.getByRole("button", { name: "Правка: Владения" }));
+    await user.click(screen.getByRole("button", { name: /^Инструменты/ }));
     await user.type(screen.getByLabelText("Инструменты"), "Инструменты кузнеца");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(screen.getByRole("button", { name: /^Инструменты/ }).textContent).toContain(
+      "Инструменты кузнеца",
+    );
 
-    await user.click(screen.getByRole("button", { name: "Правка: Языки" }));
+    await user.click(screen.getByRole("button", { name: /^Знает/ }));
     await user.type(screen.getByLabelText("Знает"), "Общий, Троллий");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
@@ -95,7 +98,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
     await openIdentity(user);
-    await user.click(screen.getByRole("button", { name: "Правка: Уровень" }));
+    await user.click(screen.getByRole("button", { name: /^Уровень/ }));
 
     const level = screen.getByLabelText("Уровень");
     await user.clear(level);
@@ -114,7 +117,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(shown(stores).log).toHaveLength(1);
   });
 
-  it("«Лист»: отмена шторки состояния не трогает", async () => {
+  it("«Лист»: отмена формы состояния не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
     const before = shown(stores).sheet.abilities;
@@ -128,7 +131,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     expect(shown(stores).log).toHaveLength(0);
   });
 
-  it("«Лист»: отказ владельца остаётся в шторке причиной, а состояние не трогает", async () => {
+  it("«Лист»: отказ владельца остаётся в форме причиной, а состояние не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
     const before = shown(stores).sheet.abilities;
@@ -140,11 +143,11 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(screen.getByRole("alert").textContent).toContain("не годится");
-    expect(screen.getByRole("dialog", { name: /Правка: Интеллект/ })).toBeDefined();
+    expect(screen.getByLabelText<HTMLInputElement>("Значение").value).toBe("40");
     expect(shown(stores).sheet.abilities).toEqual(before);
   });
 
-  it("«Лист»: дробное число из шторки уходит владельцу как есть — отказ по-русски, состояние не трогает", async () => {
+  it("«Лист»: дробное число из формы уходит владельцу как есть — отказ по-русски, состояние не трогает", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<SheetScreen />);
     const before = shown(stores).sheet.abilities;
@@ -156,7 +159,7 @@ describe("«Лист» (FR-230, FR-231, FR-227)", () => {
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     expect(screen.getByRole("alert").textContent).toContain("целое число");
-    expect(screen.getByRole("dialog", { name: /Правка: Интеллект/ })).toBeDefined();
+    expect(screen.getByLabelText<HTMLInputElement>("Значение").value).toBe("12.5");
     expect(shown(stores).sheet.abilities).toEqual(before);
   });
 });

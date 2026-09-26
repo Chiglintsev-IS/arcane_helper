@@ -1,6 +1,7 @@
 import type { ActiveEffectView } from "@/contract/views";
 
 import type { CharacterState } from "@/core/domain/assembly/state";
+import { renamable } from "@/core/domain/effects/effectBoard";
 
 export function toEffectViews(character: CharacterState): ActiveEffectView[] {
   return character.activeEffects.map((effect) => ({
@@ -11,6 +12,7 @@ export function toEffectViews(character: CharacterState): ActiveEffectView[] {
     changesArmorClass: effect.contributions.some(
       (contribution) => contribution.stat === "armorClass",
     ),
+    renamable: renamable(effect),
     ...(effect.note === undefined ? {} : { noteRu: effect.note }),
     ...(effect.repeatableAction === undefined
       ? {}

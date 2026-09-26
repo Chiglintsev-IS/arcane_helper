@@ -7,6 +7,7 @@ import { ItemRow } from "@/ui/entities/character/ui/ItemRow";
 import { Purse } from "@/ui/entities/character/ui/Purse";
 import { cycled, NO_SIFT, sifts, type TraitSift } from "@/ui/features/filter-items/model/itemFilter";
 import { ItemSift, SIFT_TITLE } from "@/ui/features/filter-items/ui/ItemSift";
+import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { RULE_BETWEEN, RULE_COLUMN, RULE_EDGE_BOTTOM, RULE_GROUP } from "@/ui/shared/ui/rule";
@@ -41,7 +42,7 @@ export function Bag({
   onOpenItem: (id: string) => void;
   onSpend: (id: string) => void;
   onStock: (id: string) => void;
-  onWriteMoney: (coins: Readonly<Record<string, number>>) => void;
+  onWriteMoney: (coins: Readonly<Record<string, number>>) => WriteAnswer;
 }) {
   const [query, setQuery] = useState("");
   const [sift, setSift] = useState<TraitSift>(NO_SIFT);

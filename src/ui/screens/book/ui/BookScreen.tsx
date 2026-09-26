@@ -13,6 +13,7 @@ import { CastWizard } from "@/ui/widgets/cast-wizard/ui/CastWizard";
 import { SpellCardCompact } from "@/ui/entities/spell/ui/SpellCardCompact";
 import { SpellCardDetails } from "@/ui/widgets/spell-details/ui/SpellCardDetails";
 import { SpellFilters } from "@/ui/features/filter-spells/ui/SpellFilters";
+import { applyEdit } from "@/ui/shared/model/editing";
 import { useDraft, useSession, useStores } from "@/ui/shared/model/storeContext";
 import { spellListLabel } from "@/ui/shared/lib/spellLabels";
 import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
@@ -140,7 +141,9 @@ export function BookScreen() {
           row={openRow}
           casting={casting}
           onCast={() => draftStore.getState().start(openRow)}
-          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openRow.id, note })}
+          onWriteNote={(note) =>
+            applyEdit(sessionStore, { kind: "set_spell_note", spellId: openRow.id, note })
+          }
           onToggleMaterial={() => void execute({ kind: "toggle_material", spellId: openRow.id })}
           onClose={() => setOpenSpellId(null)}
         />

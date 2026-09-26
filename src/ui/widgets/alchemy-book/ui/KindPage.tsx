@@ -15,6 +15,7 @@ import {
 } from "@/ui/entities/crafting/ui/PropertyMark";
 import { CoinsEditor, PRICE_TITLE } from "@/ui/entities/character/ui/CoinsEditor";
 import { KindFieldEditor } from "@/ui/features/note-kind-field/ui/KindFieldEditor";
+import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { editName } from "@/ui/shared/ui/buttonLabels";
 import {
   BASE_DIFFICULTY_LABEL,
@@ -165,11 +166,11 @@ export function KindPage({
   currencies: readonly string[];
   onReveal: () => void;
   onEditProperty: (number: number) => void;
-  onRename: (nameRu: string) => void;
-  onWritePrice: (priced: Readonly<Record<string, number>>) => void;
-  onWrite: (written: KindFieldWritten) => void;
-  onAddNote: (textRu: string) => void;
-  onRewriteNote: (noteId: string, textRu: string) => void;
+  onRename: (nameRu: string) => WriteAnswer;
+  onWritePrice: (priced: Readonly<Record<string, number>>) => WriteAnswer;
+  onWrite: (written: KindFieldWritten) => WriteAnswer;
+  onAddNote: (textRu: string) => WriteAnswer;
+  onRewriteNote: (noteId: string, textRu: string) => WriteAnswer;
   onDropNote: (noteId: string) => void;
   onDropKind: () => void;
 }) {
@@ -196,11 +197,8 @@ export function KindPage({
         labelRu={RECORD_NAMES[field]}
         value={written[field] ?? ""}
         numeric={field === "find" || field === "gather"}
-        onWrite={(typed) => {
-          setEditing(null);
-          onWrite({ field, typed });
-        }}
-        onCancel={() => setEditing(null)}
+        onWrite={(typed) => onWrite({ field, typed })}
+        onClose={() => setEditing(null)}
       />
     );
 
@@ -212,11 +210,8 @@ export function KindPage({
         {editing !== "name" ? null : (
           <NameEditor
             nameRu={kind.nameRu}
-            onWrite={(nameRu) => {
-              setEditing(null);
-              onRename(nameRu);
-            }}
-            onCancel={() => setEditing(null)}
+            onWrite={onRename}
+            onClose={() => setEditing(null)}
           />
         )}
       </section>
@@ -323,11 +318,8 @@ export function KindPage({
             titleRu={PRICE_TITLE}
             currencies={currencies}
             coins={priced}
-            onWrite={(price) => {
-              setEditing(null);
-              onWritePrice(price);
-            }}
-            onCancel={() => setEditing(null)}
+            onWrite={onWritePrice}
+            onClose={() => setEditing(null)}
           />
         )}
       </section>

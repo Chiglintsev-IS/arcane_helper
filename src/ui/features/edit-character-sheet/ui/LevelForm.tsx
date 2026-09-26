@@ -7,7 +7,10 @@ import type { ChoicesView, SheetView } from "@/contract/views";
 import { ARCANE_RECOVERY_LABEL, DERIVED_LABELS } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
 import { usePreview } from "@/ui/shared/model/usePreview";
-import { EditSheetFrame, NumberField } from "./EditSheetFrame";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { FieldForm, UNSENT, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
+
+import { NumberField } from "./EditSheetFrame";
 
 type LevelChangeView = PreviewOf<"level_preview">["changes"][number];
 
@@ -26,20 +29,20 @@ function changeLine(change: LevelChangeView): string {
   return `${label}: ${change.before} → ${change.after}`;
 }
 
-export function LevelSheet({
+export const LEVEL_LABEL = "Уровень";
+
+export function LevelForm({
   level: currentLevel,
   hitPoints,
   choices,
-  onSave,
-  onCancel,
-  error = null,
+  onWrite,
+  onClose,
 }: {
-  error?: string | null;
   level: number;
   hitPoints: SheetView["hitPoints"];
   choices: ChoicesView;
-  onSave: (next: { level: number; hitPointMaximumBase: number }) => void;
-  onCancel: () => void;
+  onWrite: (next: { level: number; hitPointMaximumBase: number }) => WriteAnswer;
+  onClose: () => void;
 }) {
   const [levelText, setLevelText] = useState(String(currentLevel));
   const [maximumText, setMaximumText] = useState(String(hitPoints.maximumBase));
@@ -52,16 +55,18 @@ export function LevelSheet({
   const shown = preview?.kind === "level_preview" ? preview : null;
 
   return (
-    <EditSheetFrame
-      titleRu="Уровень"
-      error={error}
-      onCancel={onCancel}
-      onSave={() =>
-        required.ask([level, maximum], () => onSave({ level, hitPointMaximumBase: maximum }))
-      }
+    <FieldForm
+      titleRu={LEVEL_LABEL}
+      answerRu={BUTTON_LABELS.save}
+      onWrite={() => {
+        required.ask([level, maximum], () => {});
+        if (!required.allTyped([level, maximum])) return UNSENT;
+        return onWrite({ level, hitPointMaximumBase: maximum });
+      }}
+      onClose={onClose}
     >
       <NumberField
-        labelRu="Уровень"
+        labelRu={LEVEL_LABEL}
         value={levelText}
         onChange={required.touching(setLevelText)}
         min={choices.characterLevel.minimum}
@@ -91,6 +96,6 @@ export function LevelSheet({
           ))}
         </ul>
       )}
-    </EditSheetFrame>
+    </FieldForm>
   );
 }

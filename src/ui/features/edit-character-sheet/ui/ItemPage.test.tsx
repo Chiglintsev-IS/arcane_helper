@@ -11,6 +11,8 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 
+import { WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
+
 import { ItemPage, type ItemPatch } from "./ItemPage";
 
 const spells = loadThorneSpells();
@@ -45,10 +47,12 @@ function viewOf(definition: ItemDefinition, bag = 1, worn = 0): ItemView {
   return found;
 }
 
+/** Куда ушла правка — нажатием или формой — прогону всё равно: он смотрит, что именно ушло. */
 function renderPage(
   item: ItemView,
-  onWrite: (patch: ItemPatch) => void = () => {},
+  onPatch: (patch: ItemPatch) => void = () => {},
   refusalRu: string | null = null,
+  answer: () => WriteAnswer = () => WRITTEN,
 ) {
   return render(
     <ItemPage
@@ -58,12 +62,16 @@ function renderPage(
       backTitleRu="Рюкзак"
       refusalRu={refusalRu}
       onBack={() => {}}
-      onWrite={onWrite}
+      onChange={onPatch}
+      onWrite={(patch) => {
+        onPatch(patch);
+        return answer();
+      }}
       onToggleWanted={() => {}}
       onAdjustBagCount={() => {}}
       onAdjustWornCount={() => {}}
-      onAddNote={() => {}}
-      onRewriteNote={() => {}}
+      onAddNote={() => WRITTEN}
+      onRewriteNote={() => WRITTEN}
       onDropNote={() => {}}
       onRemove={() => {}}
       onOpenAlchemy={() => {}}
@@ -84,12 +92,16 @@ function Editable({ start }: { start: ItemDefinition }) {
       backTitleRu="Рюкзак"
       refusalRu={null}
       onBack={() => {}}
-      onWrite={(patch) => setDefinition(itemDefinitionOf({ ...patch, notes: definition.notes }))}
+      onChange={(patch) => setDefinition(itemDefinitionOf({ ...patch, notes: definition.notes }))}
+      onWrite={(patch) => {
+        setDefinition(itemDefinitionOf({ ...patch, notes: definition.notes }));
+        return WRITTEN;
+      }}
       onToggleWanted={() => {}}
       onAdjustBagCount={() => {}}
       onAdjustWornCount={() => {}}
-      onAddNote={() => {}}
-      onRewriteNote={() => {}}
+      onAddNote={() => WRITTEN}
+      onRewriteNote={() => WRITTEN}
       onDropNote={() => {}}
       onRemove={() => {}}
       onOpenAlchemy={() => {}}
@@ -119,6 +131,24 @@ describe("карточка вещи", () => {
 
     expect(onWrite).toHaveBeenCalledWith(expect.objectContaining({ nameRu: "Кольцо бабушки" }));
     expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
+  });
+
+  it("записанное закрывает форму, а отказ оставляет набранное и причину у поля", async () => {
+    const user = userEvent.setup();
+    const refusal = "Вещь с таким названием уже записана";
+    const answers = [Promise.resolve(refusal), WRITTEN];
+    renderPage(viewOf(ring), () => {}, null, () => answers.shift() ?? WRITTEN);
+
+    await user.click(screen.getByRole("button", { name: /Название/ }));
+    await user.clear(screen.getByLabelText("Название"));
+    await user.type(screen.getByLabelText("Название"), "Кольцо бабушки");
+    await user.click(screen.getByRole("button", { name: "Записать" }));
+
+    expect(screen.getByRole("alert").textContent).toBe(refusal);
+    expect(screen.getByLabelText<HTMLInputElement>("Название").value).toBe("Кольцо бабушки");
+
+    await user.click(screen.getByRole("button", { name: "Записать" }));
+    expect(screen.queryByLabelText("Название")).toBeNull();
   });
 
   it("признак ставится и снимается нажатием, а не выбором одного из", async () => {
@@ -230,12 +260,13 @@ describe("карточка вещи", () => {
         backTitleRu="Рюкзак"
         refusalRu={null}
         onBack={() => {}}
-        onWrite={() => {}}
+        onChange={() => {}}
+        onWrite={() => WRITTEN}
         onToggleWanted={() => {}}
         onAdjustBagCount={() => {}}
         onAdjustWornCount={() => {}}
-        onAddNote={() => {}}
-        onRewriteNote={() => {}}
+        onAddNote={() => WRITTEN}
+        onRewriteNote={() => WRITTEN}
         onDropNote={() => {}}
         onRemove={() => {}}
         onOpenAlchemy={() => {}}

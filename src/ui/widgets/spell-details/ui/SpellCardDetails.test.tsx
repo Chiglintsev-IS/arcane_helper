@@ -7,6 +7,8 @@ import userEvent from "@testing-library/user-event";
 import { createWizard, knowing } from "@/core/infrastructure/catalog/thorne/fixtures";
 import { renderWithStores, testSnapshot, testSpellRow } from "@/ui/app/testing/stores";
 
+import { WRITTEN } from "@/ui/shared/ui/FieldForm";
+
 import { SpellCardDetails } from "./SpellCardDetails";
 
 const CASTING = testSnapshot().casting;
@@ -17,7 +19,7 @@ async function cardOf(id: string, onToggleMaterial: () => void = () => {}) {
       row={testSpellRow(id, knowing(createWizard(), "arcane-lock"))}
       casting={CASTING}
       onCast={() => {}}
-      onNoteChange={() => {}}
+      onWriteNote={() => WRITTEN}
       onToggleMaterial={onToggleMaterial}
       onClose={() => {}}
     />,

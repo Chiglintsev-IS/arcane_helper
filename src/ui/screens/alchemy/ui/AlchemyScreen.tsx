@@ -22,6 +22,7 @@ import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { scrollPlaces } from "@/ui/shared/model/scrollPlaces";
 import { usePreview } from "@/ui/shared/model/usePreview";
 import { BackHeader } from "@/ui/shared/ui/BackHeader";
+import { WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { FooterAction } from "@/ui/shared/ui/FooterAction";
 import { NAME_LABEL } from "@/ui/shared/ui/NameEditor";
 import { RULE_GROUP, RULE_TAB_OFF, RULE_TAB_ON } from "@/ui/shared/ui/rule";
@@ -174,6 +175,9 @@ export function AlchemyScreen({
     });
   };
 
+  /* Набранное в форме получает ответ у самой формы: причина встаёт у поля, где набирали. */
+  const write = (command: Command): WriteAnswer => applyEdit(sessionStore, command);
+
   const question: Question = { kind: "recipe_preview", formula: draft, portions };
   const answer = usePreview(question);
   const preview: PreviewOf<"recipe_preview"> | null =
@@ -198,18 +202,19 @@ export function AlchemyScreen({
   const openedAt = ordered.findIndex((kind) => kind.itemId === openedId);
   const opened = openedAt === -1 ? null : ordered[openedAt];
 
-  const writeField = (written: KindFieldWritten, itemId: string): void => {
+  const writeField = (written: KindFieldWritten, itemId: string): WriteAnswer => {
     const typed = written.typed.trim();
-    if (typed === "") return;
+    if (typed === "") return WRITTEN;
     const number = requiredFieldNumber(typed);
 
-    if (written.field === "yield") send({ kind: "note_ingredient_reference", itemId, yieldRu: typed });
-    else if (written.field === "portion")
-      send({ kind: "note_ingredient_reference", itemId, portionRu: typed });
-    else if (Number.isNaN(number)) setRefusalRu(NOT_A_NUMBER);
-    else if (written.field === "find")
-      send({ kind: "note_ingredient_reference", itemId, findDc: number });
-    else send({ kind: "note_ingredient_reference", itemId, gatherDc: number });
+    if (written.field === "yield")
+      return write({ kind: "note_ingredient_reference", itemId, yieldRu: typed });
+    if (written.field === "portion")
+      return write({ kind: "note_ingredient_reference", itemId, portionRu: typed });
+    if (Number.isNaN(number)) return Promise.resolve(NOT_A_NUMBER);
+    if (written.field === "find")
+      return write({ kind: "note_ingredient_reference", itemId, findDc: number });
+    return write({ kind: "note_ingredient_reference", itemId, gatherDc: number });
   };
 
   const sections = SECTIONS.map((section) => ({
@@ -330,27 +335,22 @@ export function AlchemyScreen({
         </div>
       )
     ) : page === "kinds" ? (
-      <FooterAction
-        labelRu={NOTE_KIND}
-        above={
-          !adding ? null : (
-            <div className="flex flex-col gap-2 p-3">
-              <p className="text-[0.6875rem] leading-snug text-ink-quiet">{NOTE_KIND_HINT}</p>
-              <KindFieldEditor
-                labelRu={NAME_LABEL}
-                value=""
-                onWrite={(typed) => {
-                  const nameRu = typed.trim();
-                  if (nameRu === "") return setAdding(false);
-                  send({ kind: "note_ingredient", nameRu }, () => setAdding(false));
-                }}
-                onCancel={() => setAdding(false)}
-              />
-            </div>
-          )
-        }
-        onAct={() => setAdding(!adding)}
-      />
+      adding ? (
+        <div className={`flex shrink-0 flex-col gap-2 p-3 ${SURFACE_PANEL}`}>
+          <p className="text-[0.6875rem] leading-snug text-ink-quiet">{NOTE_KIND_HINT}</p>
+          <KindFieldEditor
+            labelRu={NAME_LABEL}
+            value=""
+            onWrite={(typed) => {
+              const nameRu = typed.trim();
+              return nameRu === "" ? WRITTEN : write({ kind: "note_ingredient", nameRu });
+            }}
+            onClose={() => setAdding(false)}
+          />
+        </div>
+      ) : (
+        <FooterAction labelRu={NOTE_KIND} onAct={() => setAdding(true)} />
+      )
     ) : page === "recipes" ? (
       <FooterAction
         labelRu={NOTE_RECIPE}
@@ -417,6 +417,7 @@ export function AlchemyScreen({
             directions={choices.alchemyDirections}
             rarities={choices.alchemyRarities}
             onSend={send}
+            onRewritten={() => setPage("kind")}
           />
         ) : page === "kind" && opened !== undefined && opened !== null ? (
           <KindPage
@@ -432,14 +433,14 @@ export function AlchemyScreen({
               setEdited(number);
               setPage("reveal");
             }}
-            onRename={(nameRu) => send({ kind: "rename_item", itemId: opened.itemId, nameRu })}
+            onRename={(nameRu) => write({ kind: "rename_item", itemId: opened.itemId, nameRu })}
             onWritePrice={(priced) =>
-              send({ kind: "note_ingredient_reference", itemId: opened.itemId, price: priced })
+              write({ kind: "note_ingredient_reference", itemId: opened.itemId, price: priced })
             }
             onWrite={(written) => writeField(written, opened.itemId)}
-            onAddNote={(textRu) => send({ kind: "add_item_note", itemId: opened.itemId, textRu })}
+            onAddNote={(textRu) => write({ kind: "add_item_note", itemId: opened.itemId, textRu })}
             onRewriteNote={(noteId, textRu) =>
-              send({ kind: "edit_item_note", itemId: opened.itemId, noteId, textRu })
+              write({ kind: "edit_item_note", itemId: opened.itemId, noteId, textRu })
             }
             onDropNote={(noteId) =>
               send({ kind: "remove_item_note", itemId: opened.itemId, noteId })

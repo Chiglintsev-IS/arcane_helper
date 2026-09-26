@@ -9,7 +9,7 @@ import { usePreview } from "@/ui/shared/model/usePreview";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
 import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { Sheet } from "@/ui/shared/ui/Sheet";
-import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP_BARE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
 
 type Kind = "damage" | "heal" | "temporary" | "maximum";
 
@@ -39,8 +39,7 @@ const FIELD_LABELS: Record<Exclude<Kind, "maximum">, string> = {
   temporary: "Временные хиты",
 };
 
-const fieldClass = `min-h-11 px-3 tabular-nums ${SURFACE_CONTROL}`;
-const quietBorder = SURFACE_GROUP;
+const fieldClass = "min-h-11 px-3 tabular-nums";
 
 function NumberField({
   labelRu,
@@ -68,7 +67,7 @@ function NumberField({
           onChange={(event) => onChange(event.target.value)}
           aria-invalid={reasonRu !== null}
           aria-describedby={reasonRu === null ? undefined : reasonId}
-          className={`${FIELD_TEXT} ${fieldClass} ${reasonRu === null ? quietBorder : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`}`}
+          className={`${FIELD_TEXT} ${fieldClass} ${reasonRu === null ? SURFACE_CONTROL : `${SURFACE_GROUP_BARE} ${RULE_MARK.reaction}`}`}
         />
       </label>
       {reasonRu === null ? null : (

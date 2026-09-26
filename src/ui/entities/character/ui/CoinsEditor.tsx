@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { FieldForm } from "@/ui/shared/ui/FieldForm";
+import { FieldForm, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 /** Цену называют за одну штуку запаса: у ингредиента штука и есть порция, второй меры между ними нет. */
@@ -24,13 +24,13 @@ export function CoinsEditor({
   currencies,
   coins,
   onWrite,
-  onCancel,
+  onClose,
 }: {
   titleRu: string;
   currencies: readonly string[];
   coins: Readonly<Record<string, number>>;
-  onWrite: (coins: Readonly<Record<string, number>>) => void;
-  onCancel: () => void;
+  onWrite: (coins: Readonly<Record<string, number>>) => WriteAnswer;
+  onClose: () => void;
 }) {
   const [typed, setTyped] = useState<Readonly<Record<string, string>>>(() =>
     Object.fromEntries(currencies.map((currency) => [currency, String(coins[currency] ?? 0)])),
@@ -46,7 +46,7 @@ export function CoinsEditor({
           ),
         )
       }
-      onCancel={onCancel}
+      onClose={onClose}
     >
       <div className="flex gap-1.5">
         {currencies.map((currency) => (

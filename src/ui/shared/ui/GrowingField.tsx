@@ -23,7 +23,8 @@ export function GrowingField({
   placeholderRu?: string;
   autoFocus?: boolean;
   onChange: (value: string) => void;
-  onSubmit: (value: string) => void;
+  /** Без него «Ввод» отправляет форму, в которой стоит поле. */
+  onSubmit?: (value: string) => void;
   onCancel?: () => void;
 }) {
   const field = (
@@ -41,7 +42,8 @@ export function GrowingField({
           if (event.key === "Enter") {
             event.preventDefault();
             const text = value.trim();
-            if (text !== "") onSubmit(text);
+            if (onSubmit === undefined) event.currentTarget.form?.requestSubmit();
+            else if (text !== "") onSubmit(text);
           }
           if (event.key === "Escape") onCancel?.();
         }}

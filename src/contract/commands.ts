@@ -54,6 +54,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
   command("spend_rune_on_animal_speech", {}),
   command("start_manual_effect", { nameRu: word, armorClassBonus: numeric.optional() }),
   command("set_armor_class_adjustment", { value: numeric }),
+  command("rename_effect", { effectId: word, nameRu: word }),
   command("end_effect", { effectId: word }),
 
   command("adjust_runes", { delta: numeric }),

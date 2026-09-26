@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EffectBoard } from "@/core/domain/effects/effectBoard";
+import { EffectBoard, renamable } from "@/core/domain/effects/effectBoard";
 import { DomainError } from "@/core/domain/shared/errors";
 import type { Spell } from "@/core/domain/catalog/spell";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
@@ -126,5 +126,80 @@ describe("EffectBoard.afterLongRest", () => {
 
     expect(board.toState()).toEqual({ activeEffects: [] });
     expect(expired).toEqual([held]);
+  });
+});
+
+describe("переименование статуса", () => {
+  const status = manualEffect({ id: "status-1", nameRu: "Отравлн", manualKind: "status" });
+  const web = manualEffect({
+    id: "web-1",
+    spellId: "web",
+    nameRu: "Паутина",
+    duration: { type: "until_spell_ends" },
+    isConcentration: true,
+    slotLevelUsed: 2,
+  });
+  const windRune = manualEffect({
+    id: "rune-1",
+    nameRu: "Руна ветра",
+    duration: { type: "rounds", value: 1 },
+    slotLevelUsed: 2,
+    endConditionRu: "Держится до начала вашего следующего хода.",
+  });
+  const adjustment = manualEffect({
+    id: "adjustment-1",
+    nameRu: "Поправка к КД",
+    manualKind: "armorAdjustment",
+    contributions: [{ stat: "armorClass", kind: "bonus", value: 2 }],
+  });
+  const board = [status, web, windRune, adjustment].reduce(
+    (carried, effect) => carried.start(effect, effect.startedAt),
+    emptyBoard(),
+  );
+
+  it("набранный статус получает новое название, всё остальное на доске остаётся", () => {
+    const { board: renamed, before, after } = board.rename("status-1", "Отравлен");
+
+    expect(before).toEqual(status);
+    expect(after).toEqual({ ...status, nameRu: "Отравлен" });
+    expect(renamed.toState()).toEqual({
+      activeEffects: [after, web, windRune, adjustment],
+      concentration: board.toState().concentration,
+    });
+  });
+
+  it("пробелы по краям названия не записываются", () => {
+    expect(board.rename("status-1", "  Отравлен  ").after.nameRu).toBe("Отравлен");
+  });
+
+  it("пустое название отвергается той же причиной, что и при заведении статуса", () => {
+    expect(() => board.rename("status-1", "   ")).toThrow(
+      new DomainError("Название эффекта не может быть пустым"),
+    );
+  });
+
+  it("название, которое дали заклинание, руна или поправка к КД, не переписывается", () => {
+    for (const named of [web, windRune, adjustment]) {
+      expect(() => board.rename(named.id, "Иное")).toThrow(
+        new DomainError(
+          `«${named.nameRu}» не статус: переименовать можно только статус, набранный вручную`,
+        ),
+      );
+    }
+  });
+
+  it("эффекта, которого нет на доске, переименовать нельзя", () => {
+    expect(() => board.rename("нет-такого", "Отравлен")).toThrow(
+      new DomainError("Активного эффекта «нет-такого» нет"),
+    );
+  });
+
+  it("переименовать можно только статус: признак читается у эффекта", () => {
+    expect([status, web, windRune, adjustment].map(renamable)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
   });
 });

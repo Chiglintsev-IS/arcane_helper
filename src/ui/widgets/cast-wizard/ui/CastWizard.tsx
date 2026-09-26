@@ -291,7 +291,7 @@ function HitDiceStep({
             className={`min-h-11 px-3 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
           />
           {hitDice.rollPossible === false ? (
-            <span id="hit-dice-rolled-hint" className="text-xs text-danger">
+            <span id="hit-dice-rolled-hint" className="text-xs text-reaction">
               На {count}d{size} может выпасть от {hitDice.roll?.minimum} до {hitDice.roll?.maximum}
             </span>
           ) : hitDice.restored === undefined ? (

@@ -309,6 +309,7 @@ export const activeEffectViewSchema = z.object({
   endConditionRu: word,
   isConcentration: z.boolean(),
   changesArmorClass: z.boolean(),
+  renamable: z.boolean(),
   noteRu: word.optional(),
   repeatableAction: z.object({ label: word, description: word }).optional(),
 });

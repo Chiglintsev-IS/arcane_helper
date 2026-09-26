@@ -170,6 +170,7 @@ describe("«Алхимия»: книга", () => {
     expect(shown(stores).log.at(-1)?.summaryRu).toBe(
       `Переписано раскрытое: ${MOON_HERB} — Лечение ран`,
     );
+    expect(press("Правка: Лечение ран")).toBeDefined();
   });
 
   it("раскрытое убирают с той же страницы", async () => {
@@ -299,10 +300,12 @@ describe("«Алхимия»: книга", () => {
 
     await openSection(user, "Ингредиенты");
     await user.click(press("Записать вид"));
+    expect(screen.queryByRole("button", { name: "Записать вид" })).toBeNull();
     await user.type(screen.getByLabelText("Название"), MOON_HERB);
     await user.click(press("Записать"));
 
     expect(shown(stores).crafting.ingredients.map((kind) => kind.nameRu)).toEqual([MOON_HERB]);
+    expect(screen.queryByLabelText("Название")).toBeNull();
   });
 
   it("вид открывают с верстака и возвращаются на верстак, не собирая замысел заново", async () => {

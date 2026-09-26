@@ -20,6 +20,7 @@ import { propertySlots } from "@/ui/entities/crafting/lib/slots";
 import { markNameRu, PropertyStripes } from "@/ui/entities/crafting/ui/PropertyMark";
 import { INGREDIENT_RECORD_NAMES, propertyNumberRu } from "@/ui/shared/lib/alchemyLabels";
 import { BackHeader } from "@/ui/shared/ui/BackHeader";
+import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { NameEditor, NAME_LABEL } from "@/ui/shared/ui/NameEditor";
 import { ValueRow } from "@/ui/shared/ui/ValueRow";
 import { NoteList } from "@/ui/shared/ui/NoteList";
@@ -157,8 +158,8 @@ function Stepper({
 }
 
 /**
- * Карточка вещи страницей: её дописывают по ходу игры, и шторка с клавиатурой этому мешает. Всякая
- * правка вступает в силу сразу — «Сохранить» здесь нечего ждать, слова о вещи приходят по одному.
+ * Карточка вещи страницей: её дописывают по ходу игры, и шторка с клавиатурой этому мешает. Признак,
+ * счётчик и прибавка вступают в силу нажатием; набранное — ответом формы под своей строкой.
  */
 export function ItemPage({
   item,
@@ -167,6 +168,7 @@ export function ItemPage({
   backTitleRu,
   refusalRu,
   onBack,
+  onChange,
   onWrite,
   onToggleWanted,
   onAdjustBagCount,
@@ -184,12 +186,13 @@ export function ItemPage({
   backTitleRu: string;
   refusalRu: string | null;
   onBack: () => void;
-  onWrite: (patch: ItemPatch) => void;
+  onChange: (patch: ItemPatch) => void;
+  onWrite: (patch: ItemPatch) => WriteAnswer;
   onToggleWanted: () => void;
   onAdjustBagCount: (delta: number) => void;
   onAdjustWornCount: (delta: number) => void;
-  onAddNote: (textRu: string) => void;
-  onRewriteNote: (noteId: string, textRu: string) => void;
+  onAddNote: (textRu: string) => WriteAnswer;
+  onRewriteNote: (noteId: string, textRu: string) => WriteAnswer;
   onDropNote: (noteId: string) => void;
   onRemove: () => void;
   onOpenAlchemy: () => void;
@@ -222,12 +225,12 @@ export function ItemPage({
   );
   Object.assign(priced, item.price === undefined ? {} : coinsOf(item.price));
 
-  const write = (change: Partial<ItemPatch>): void => onWrite({ ...patchOf(item), ...change });
+  const change = (changed: Partial<ItemPatch>): void => onChange({ ...patchOf(item), ...changed });
 
   const toggleTrait = (trait: ItemTrait): void => {
     if (trait === "wanted") return onToggleWanted();
 
-    write({
+    change({
       kinds: item.kinds.includes(trait)
         ? item.kinds.filter((kind) => kind !== trait)
         : [...item.kinds, trait],
@@ -235,7 +238,7 @@ export function ItemPage({
   };
 
   const writeBonus = (stat: string, value: number): void => {
-    write({ bonuses: { ...patchOf(item).bonuses, [stat]: value } });
+    change({ bonuses: { ...patchOf(item).bonuses, [stat]: value } });
   };
 
   return (
@@ -261,11 +264,8 @@ export function ItemPage({
           {editing !== "name" ? null : (
             <NameEditor
               nameRu={item.nameRu}
-              onWrite={(nameRu) => {
-                setEditing(null);
-                write({ nameRu });
-              }}
-              onCancel={() => setEditing(null)}
+              onWrite={(nameRu) => onWrite({ ...patchOf(item), nameRu })}
+              onClose={() => setEditing(null)}
             />
           )}
           {neededForRu === undefined ? null : (
@@ -430,11 +430,8 @@ export function ItemPage({
               titleRu={PRICE_TITLE}
               currencies={choices.currencies}
               coins={priced}
-              onWrite={(price) => {
-                setEditing(null);
-                write({ price });
-              }}
-              onCancel={() => setEditing(null)}
+              onWrite={(price) => onWrite({ ...patchOf(item), price })}
+              onClose={() => setEditing(null)}
             />
           )}
         </div>

@@ -681,14 +681,20 @@ describe("подробная карточка (FR-011, FR-012)", () => {
     expect(within(card).getByText("Действует").nextElementSibling).not.toBeNull();
   });
 
-  it("заметка сохраняется в состоянии и не попадает в лог", async () => {
+  it("заметка записывается ответом, остаётся в строке и не попадает в лог", async () => {
     const user = userEvent.setup();
     const { stores } = await renderWithStores(<GameScreen />);
 
     await user.click(screen.getByRole("button", { name: /Щит/ }));
+    await user.click(screen.getByRole("button", { name: /^Заметка/ }));
     await user.type(screen.getByLabelText("Заметка"), "гасит и стрелу");
+    expect(shown(stores).spells.find((row) => row.id === "shield")?.note).toBeUndefined();
+
+    await user.click(screen.getByRole("button", { name: "Записать" }));
 
     expect(shown(stores).spells.find((row) => row.id === "shield")?.note).toBe("гасит и стрелу");
+    expect(screen.queryByLabelText("Заметка")).toBeNull();
+    expect(screen.getByRole("button", { name: /^Заметка/ }).textContent).toContain("гасит и стрелу");
     expect(shown(stores).log).toHaveLength(0);
   });
 });

@@ -9,6 +9,7 @@ import { applyEdit } from "@/ui/shared/model/editing";
 import { readRemembered, writeRemembered } from "@/ui/shared/model/rememberedChoice";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { FooterAction } from "@/ui/shared/ui/FooterAction";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { RULE_TAB_OFF, RULE_TAB_ON } from "@/ui/shared/ui/rule";
@@ -74,6 +75,9 @@ export function ThingsScreen({
     });
   };
 
+  /* Набранное в форме получает ответ у самой формы: причина встаёт у поля, где набирали. */
+  const write = (command: Command): WriteAnswer => applyEdit(sessionStore, command);
+
   const changeTab = (next: Tab): void => {
     setTab(next);
     setSpent(null);
@@ -123,7 +127,8 @@ export function ThingsScreen({
           setRefusalRu(null);
           setOpenedId(null);
         }}
-        onWrite={(patch: ItemPatch) => send({ kind: "edit_item", item: patch })}
+        onChange={(patch: ItemPatch) => send({ kind: "edit_item", item: patch })}
+        onWrite={(patch: ItemPatch) => write({ kind: "edit_item", item: patch })}
         onToggleWanted={() => send({ kind: "toggle_wanted", itemId: opened.id })}
         onAdjustBagCount={(delta) =>
           send({ kind: "adjust_bag_count", itemId: opened.id, delta })
@@ -131,9 +136,9 @@ export function ThingsScreen({
         onAdjustWornCount={(delta) =>
           send({ kind: "adjust_worn_count", itemId: opened.id, delta })
         }
-        onAddNote={(textRu) => send({ kind: "add_item_note", itemId: opened.id, textRu })}
+        onAddNote={(textRu) => write({ kind: "add_item_note", itemId: opened.id, textRu })}
         onRewriteNote={(noteId, textRu) =>
-          send({ kind: "edit_item_note", itemId: opened.id, noteId, textRu })
+          write({ kind: "edit_item_note", itemId: opened.id, noteId, textRu })
         }
         onDropNote={(noteId) => send({ kind: "remove_item_note", itemId: opened.id, noteId })}
         onRemove={() => send({ kind: "remove_item", itemId: opened.id }, () => setOpenedId(null))}
@@ -175,7 +180,7 @@ export function ThingsScreen({
             if (item !== undefined) spend(item);
           }}
           onStock={(id) => send({ kind: "adjust_bag_count", itemId: id, delta: 1 })}
-          onWriteMoney={(money) => send({ kind: "edit_money", money })}
+          onWriteMoney={(money) => write({ kind: "edit_money", money })}
         />
       ) : tab === "met" ? (
         <MetItems

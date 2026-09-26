@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
-import { FieldForm } from "@/ui/shared/ui/FieldForm";
+import { FieldForm, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 const FROM_MASTER = "со слов мастера";
@@ -17,13 +17,13 @@ export function KindFieldEditor({
   value,
   numeric = false,
   onWrite,
-  onCancel,
+  onClose,
 }: {
   labelRu: string;
   value: string;
   numeric?: boolean;
-  onWrite: (typed: string) => void;
-  onCancel: () => void;
+  onWrite: (typed: string) => WriteAnswer;
+  onClose: () => void;
 }) {
   const [typed, setTyped] = useState(value);
 
@@ -31,7 +31,7 @@ export function KindFieldEditor({
     <FieldForm
       titleRu={`${labelRu} — ${FROM_MASTER}`}
       onWrite={() => onWrite(typed)}
-      onCancel={onCancel}
+      onClose={onClose}
     >
       <input
         type={numeric ? "number" : "text"}
@@ -40,10 +40,6 @@ export function KindFieldEditor({
         autoFocus
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") onWrite(typed);
-          if (event.key === "Escape") onCancel();
-        }}
         className={`min-h-11 w-full px-2 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
       />
     </FieldForm>

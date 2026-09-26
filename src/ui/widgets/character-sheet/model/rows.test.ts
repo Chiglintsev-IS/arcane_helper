@@ -27,7 +27,6 @@ describe("«Кто он» — то, что спрашивают раз за ве
     expect(block?.features?.map((feature) => feature.nameRu)).toEqual(["Почерк рун"]);
     expect(block?.features?.[0]?.summaryRu).toContain("Минута над записью");
     expect(block?.rows).toEqual([]);
-    expect(block?.edit).toBeUndefined();
   });
 
   it("особенностей нет ни одной — карточка остаётся пустым списком", () => {
@@ -35,20 +34,40 @@ describe("«Кто он» — то, что спрашивают раз за ве
     expect(featureless.find((block) => block.id === "features")?.features).toEqual([]);
   });
 
-  it("кто он — вид, возраст и класс с уровнем", () => {
+  it("кто он — вид, класс и уровень отдельными строками", () => {
     const rows = blockById("identity")?.rows ?? [];
-    expect(rows).toContainEqual({ labelRu: "Вид", value: "Тролль" });
-    expect(rows).toContainEqual({ labelRu: "Класс", value: "Волшебник, 7" });
-    expect(rows).toContainEqual({ labelRu: "Подкласс", value: "Рунист" });
+    expect(rows).toContainEqual({ field: "species", labelRu: "Вид", value: "Тролль" });
+    expect(rows).toContainEqual({ field: "className", labelRu: "Класс", value: "Волшебник" });
+    expect(rows).toContainEqual({ field: "level", labelRu: "Уровень", value: "7" });
+    expect(rows).toContainEqual({ field: "subclass", labelRu: "Подкласс", value: "Рунист" });
   });
 
-  it("незаполненное справочное поле называется прочерком, а не нулём", () => {
-    expect(blockById("identity")?.rows).toContainEqual({ labelRu: "Возраст", value: "—" });
+  it("незаполненное справочное поле — не записанное, а не ноль", () => {
+    expect(blockById("identity")?.rows).toContainEqual({
+      field: "age",
+      labelRu: "Возраст",
+      value: null,
+    });
   });
 
-  it("размера и скорости здесь нет: их называют, пока ходят, и живут они в шапке «Игры»", () => {
-    const labels = (blockById("identity")?.rows ?? []).map((row) => row.labelRu);
-    expect(labels).toEqual(["Имя", "Вид", "Возраст", "Класс", "Подкласс"]);
+  it("записанный возраст стоит числом", () => {
+    const aged = blocksOf({ ...createWizard(), age: 142 }).find((block) => block.id === "identity");
+    expect(aged?.rows).toContainEqual({ field: "age", labelRu: "Возраст", value: "142" });
+  });
+
+  it("всякое правимое стоит строкой: размер и своя скорость — тоже, а действующая живёт в «Игре»", () => {
+    const rows = blockById("identity")?.rows ?? [];
+    expect(rows.map((row) => row.labelRu)).toEqual([
+      "Имя",
+      "Вид",
+      "Возраст",
+      "Класс",
+      "Уровень",
+      "Подкласс",
+      "Размер",
+      "Своя скорость",
+    ]);
+    expect(rows.find((row) => row.field === "speed")?.value).toBe("30 футов");
   });
 
   it("отметок мастера на листе нет: их ставят там, где мастер их и называет (FR-232)", () => {
@@ -110,25 +129,37 @@ describe("«Кто он» — то, что спрашивают раз за ве
 
     expect(blocksOf(armed).map((block) => block.titleRu)).not.toContain("Снаряжение и языки");
     expect(proficiencies?.rows).toContainEqual({
+      field: "tools",
       labelRu: "Инструменты",
       value: "Алхимические принадлежности, Инструменты кузнеца",
     });
     expect(proficiencies?.rows.map((row) => row.labelRu)).toEqual(["Оружие", "Доспехи", "Инструменты"]);
-    expect(languages?.rows).toEqual([{ labelRu: "Знает", value: "Общий, Великаний" }]);
+    expect(languages?.rows).toEqual([
+      { field: "languages", labelRu: "Знает", value: "Общий, Великаний" },
+    ]);
   });
 
-  it("пустой список владений называется прочерком", () => {
-    expect(blockById("languages")?.rows).toContainEqual({ labelRu: "Знает", value: "—" });
-    expect(blockById("proficiencies")?.rows).toContainEqual({ labelRu: "Доспехи", value: "—" });
-  });
-
-  it("каждая карточка называет свою шторку, а уровень правится второй кнопкой", () => {
-    expect(blockById("identity")?.secondary).toEqual({
-      labelRu: "Уровень",
-      edit: { block: "level" },
+  it("пустой список владений — не записанное", () => {
+    expect(blockById("languages")?.rows).toContainEqual({
+      field: "languages",
+      labelRu: "Знает",
+      value: null,
     });
-    expect(blockById("proficiencies")?.edit).toEqual({ block: "proficiencies" });
-    expect(blockById("languages")?.edit).toEqual({ block: "languages" });
+    expect(blockById("proficiencies")?.rows).toContainEqual({
+      field: "armor",
+      labelRu: "Доспехи",
+      value: null,
+    });
+  });
+
+  it("каждая строка правит своё поле, а не всю карточку", () => {
+    const fields = blocksOf(createWizard()).flatMap((block) => block.rows.map((row) => row.field));
+    expect(new Set(fields).size).toBe(fields.length);
+    expect(blockById("proficiencies")?.rows.map((row) => row.field)).toEqual([
+      "weapons",
+      "armor",
+      "tools",
+    ]);
   });
 });
 
@@ -202,9 +233,7 @@ describe("«Броски» — гроссбух того, чем отвечаю�
     );
   });
 
-  it("группа называет свою шторку и отдаёт ей саму характеристику", () => {
-    const wisdom = abilityById("wisdom")?.edit;
-    expect(wisdom?.block).toBe("ability");
-    expect(wisdom?.block === "ability" ? wisdom.ability.id : null).toBe("wisdom");
+  it("группа несёт саму характеристику — её правит форма под шапкой", () => {
+    expect(abilityById("wisdom")?.ability.id).toBe("wisdom");
   });
 });

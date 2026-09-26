@@ -1,60 +1,39 @@
 "use client";
 
-import { DASH } from "@/ui/entities/character/lib/labels";
+import { Fragment, type ReactNode } from "react";
 
-import type { SheetBlockData, SheetEdit } from "../model/rows";
-import { EDIT_LABEL, editName } from "@/ui/shared/ui/buttonLabels";
-import { SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { DASH } from "@/ui/entities/character/lib/labels";
+import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
+import { ValueRow } from "@/ui/shared/ui/ValueRow";
+
+import type { SheetBlockData, SheetField, SheetRow } from "../model/rows";
 
 export function SheetBlock({
   block,
-  onEdit,
+  opened,
+  formOf,
+  onOpen,
 }: {
   block: SheetBlockData;
-  onEdit: (edit: SheetEdit) => void;
+  opened: SheetField | null;
+  formOf: (row: SheetRow) => ReactNode;
+  onOpen: (field: SheetField) => void;
 }) {
-  const { edit, secondary, features } = block;
+  const { features } = block;
 
   return (
     <section className={`flex flex-col gap-1 p-3 ${SURFACE_GROUP}`}>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">{block.titleRu}</h2>
-        <div className="flex gap-1">
-          {secondary === undefined ? null : (
-            <button
-              type="button"
-              onClick={() => onEdit(secondary.edit)}
-              aria-label={editName(secondary.labelRu)}
-              className={`min-h-11 px-3 text-sm ${SURFACE_CONTROL}`}
-            >
-              {secondary.labelRu}
-            </button>
-          )}
-          {edit === undefined ? null : (
-            <button
-              type="button"
-              onClick={() => onEdit(edit)}
-              aria-label={editName(block.titleRu)}
-              className={`min-h-11 min-w-11 px-3 text-sm ${SURFACE_CONTROL}`}
-            >
-              {EDIT_LABEL}
-            </button>
-          )}
+      <h2 className="text-sm font-semibold">{block.titleRu}</h2>
+      {block.rows.length === 0 ? null : (
+        <div className="flex flex-col gap-1">
+          {block.rows.map((row) => (
+            <Fragment key={row.field}>
+              <ValueRow labelRu={row.labelRu} valueRu={row.value} onOpen={() => onOpen(row.field)} />
+              {opened === row.field ? formOf(row) : null}
+            </Fragment>
+          ))}
         </div>
-      </div>
-      <dl className="flex flex-col gap-0.5 text-sm">
-        {block.rows.map((row) => (
-          <div key={row.labelRu} className="flex items-baseline justify-between gap-2">
-            <dt className="text-ink-quiet">{row.labelRu}</dt>
-            <dd className="tabular-nums">
-              {row.value}
-              {row.hint === undefined ? null : (
-                <span className="ml-1 text-xs text-ink-quiet">({row.hint})</span>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      )}
       {features === undefined ? null : features.length === 0 ? (
         <p className="text-sm text-ink-quiet">{DASH}</p>
       ) : (

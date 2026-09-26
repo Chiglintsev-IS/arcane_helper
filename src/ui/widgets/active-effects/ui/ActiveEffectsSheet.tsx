@@ -6,53 +6,78 @@ import type { ActiveEffectView } from "@/contract/views";
 
 import type { ConcentrationSummary } from "@/ui/entities/concentration/lib/summary";
 import { MARKS_LABEL } from "@/ui/features/edit-character-sheet/ui/MarksSheet";
-import { FIELD_TEXT } from "@/ui/shared/ui/field";
+import { editName } from "@/ui/shared/ui/buttonLabels";
+import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
+import { GrowingField } from "@/ui/shared/ui/GrowingField";
+import { NameEditor } from "@/ui/shared/ui/NameEditor";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { SURFACE_CONTROL, SURFACE_PAGE, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 export const ACTIVE_SHEET_LABEL = "Действует";
+
+const NEW_STATUS = "Новый статус";
 
 export function armorClassNote(effect: ActiveEffectView, armorClass: number): string {
   return effect.changesArmorClass ? ` · КД ${armorClass}` : "";
 }
 
-function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => void }) {
+function NewStatusField({ onAdd }: { onAdd: (nameRu: string) => WriteAnswer }) {
   const [value, setValue] = useState("");
+  const [refusalRu, setRefusalRu] = useState<string | null>(null);
 
   const add = (): void => {
     const nameRu = value.trim();
     if (nameRu === "") return;
-    onAdd(nameRu);
-    setValue("");
+    void onAdd(nameRu).then((refused) => {
+      setRefusalRu(refused);
+      if (refused === null) setValue("");
+    });
   };
 
   return (
-    <div className="flex min-w-0 flex-1 gap-2">
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          add();
-        }}
-        className="min-w-0 flex-1"
-      >
-        <label className={`flex min-h-11 items-center gap-2 px-2 text-xs ${SURFACE_CONTROL}`}>
-          <span className="shrink-0 text-ink-quiet">Новый статус</span>
-          <input
-            type="text"
+    <div className="flex flex-col gap-1">
+      <div className="flex items-stretch gap-2">
+        <div className="min-w-0 flex-1">
+          <GrowingField
+            labelRu={NEW_STATUS}
+            placeholderRu={NEW_STATUS}
             value={value}
-            onChange={(event) => setValue(event.target.value)}
-            className={`min-w-0 flex-1 bg-transparent py-2 ${FIELD_TEXT} outline-none`}
+            onChange={setValue}
+            onSubmit={add}
           />
-        </label>
-      </form>
-      <button
-        type="button"
-        disabled={value.trim() === ""}
-        onClick={add}
-        className={`shrink-0 px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
-      >
-        Добавить
-      </button>
+        </div>
+        <button
+          type="button"
+          disabled={value.trim() === ""}
+          onClick={add}
+          className={`shrink-0 px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
+        >
+          Добавить
+        </button>
+      </div>
+      {refusalRu === null ? null : (
+        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm`}>
+          {refusalRu}
+        </p>
+      )}
     </div>
+  );
+}
+
+function EffectSummary({ effect, armorClass }: { effect: ActiveEffectView; armorClass: number }) {
+  return (
+    <>
+      <span aria-hidden="true">◈</span> {effect.nameRu}
+      {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
+      {effect.noteRu === undefined ? null : (
+        <span className="block text-xs text-ink-quiet">{effect.noteRu}</span>
+      )}
+      {effect.repeatableAction === undefined ? null : (
+        <span className="block text-xs text-action">
+          ↻ {effect.repeatableAction.label}: {effect.repeatableAction.description}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -133,6 +158,7 @@ export function ActiveEffectsSheet({
   onDropConcentration,
   onEndEffect,
   onAddStatus,
+  onRenameStatus,
   onOpenMarks,
   onClose,
 }: {
@@ -143,11 +169,13 @@ export function ActiveEffectsSheet({
   onTakeDamage: () => void;
   onDropConcentration: () => void;
   onEndEffect: (effectId: string) => void;
-  onAddStatus: (nameRu: string) => void;
+  onAddStatus: (nameRu: string) => WriteAnswer;
+  onRenameStatus: (effectId: string, nameRu: string) => WriteAnswer;
   onOpenMarks: () => void;
   onClose: () => void;
 }) {
   const otherEffects = effects.filter((effect) => !effect.isConcentration);
+  const [renaming, setRenaming] = useState<string | null>(null);
 
   return (
     <section
@@ -180,27 +208,39 @@ export function ActiveEffectsSheet({
         {otherEffects.length > 0 ? (
           <ul aria-label="Активные эффекты" className="flex flex-col gap-2">
             {otherEffects.map((effect) => (
-              <li key={effect.id} className="flex items-start justify-between gap-2">
-                <span>
-                  <span aria-hidden="true">◈</span> {effect.nameRu}
-                  {armorClassNote(effect, armorClass)} · {effect.endConditionRu}
-                  {effect.noteRu === undefined ? null : (
-                    <span className="block text-xs text-ink-quiet">{effect.noteRu}</span>
-                  )}
-                  {effect.repeatableAction === undefined ? null : (
-                    <span className="block text-xs text-action">
-                      ↻ {effect.repeatableAction.label}: {effect.repeatableAction.description}
+              <li key={effect.id} className="flex flex-col gap-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  {effect.renamable ? (
+                    <button
+                      type="button"
+                      aria-label={editName(effect.nameRu)}
+                      aria-expanded={renaming === effect.id}
+                      onClick={() => setRenaming(effect.id)}
+                      className="min-h-11 min-w-0 flex-1 text-left"
+                    >
+                      <EffectSummary effect={effect} armorClass={armorClass} />
+                    </button>
+                  ) : (
+                    <span className="min-w-0 flex-1">
+                      <EffectSummary effect={effect} armorClass={armorClass} />
                     </span>
                   )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onEndEffect(effect.id)}
-                  aria-label={`Завершить: ${effect.nameRu}`}
-                  className={`min-h-11 shrink-0 px-3 text-xs ${SURFACE_CONTROL}`}
-                >
-                  Завершить
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => onEndEffect(effect.id)}
+                    aria-label={`Завершить: ${effect.nameRu}`}
+                    className={`min-h-11 shrink-0 px-3 text-xs ${SURFACE_CONTROL}`}
+                  >
+                    Завершить
+                  </button>
+                </div>
+                {renaming !== effect.id ? null : (
+                  <NameEditor
+                    nameRu={effect.nameRu}
+                    onWrite={(nameRu) => onRenameStatus(effect.id, nameRu)}
+                    onClose={() => setRenaming(null)}
+                  />
+                )}
               </li>
             ))}
           </ul>
@@ -210,16 +250,14 @@ export function ActiveEffectsSheet({
           <p className="text-ink-quiet">Сейчас ничего не действует.</p>
         ) : null}
 
-        <div className="flex items-stretch gap-2">
-          <NewStatusField onAdd={onAddStatus} />
-          <button
-            type="button"
-            onClick={onOpenMarks}
-            className={`min-h-11 shrink-0 px-3 text-xs ${SURFACE_CONTROL}`}
-          >
-            {MARKS_LABEL}
-          </button>
-        </div>
+        <NewStatusField onAdd={onAddStatus} />
+        <button
+          type="button"
+          onClick={onOpenMarks}
+          className={`min-h-11 px-3 text-xs ${SURFACE_CONTROL}`}
+        >
+          {MARKS_LABEL}
+        </button>
       </div>
     </section>
   );

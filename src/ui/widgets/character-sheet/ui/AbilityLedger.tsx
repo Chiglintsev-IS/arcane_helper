@@ -1,8 +1,11 @@
 "use client";
 
-import type { SheetView } from "@/contract/views";
+import { useState, type ComponentProps, type ReactNode } from "react";
+
+import type { ChoicesView, SheetView } from "@/contract/views";
 
 import { DERIVED_LABELS, SAVE_ABBR } from "@/ui/entities/character/lib/labels";
+import { AbilityForm } from "@/ui/features/edit-character-sheet/ui/AbilityForm";
 import { RULE_ROW } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP } from "@/ui/shared/ui/surface";
 import { signed } from "@/shared/language";
@@ -11,22 +14,41 @@ import {
   abilityLedger,
   PROFICIENT_MARK,
   type LedgerAbility,
-  type SheetEdit,
   type TrainingMark,
 } from "../model/rows";
 
+type AbilityWrite = ComponentProps<typeof AbilityForm>["onWrite"];
+
 export function AbilityLedger({
   sheet,
-  onEdit,
+  choices,
+  onWriteAbility,
 }: {
   sheet: SheetView;
-  onEdit: (edit: SheetEdit) => void;
+  choices: ChoicesView;
+  onWriteAbility: AbilityWrite;
 }) {
+  const [opened, setOpened] = useState<string | null>(null);
+
   return (
     <div className="flex flex-col gap-[5px]">
       <ProficiencyBar bonus={signed(sheet.proficiencyBonus)} />
       {abilityLedger(sheet).map((ability) => (
-        <AbilityGroup key={ability.id} ability={ability} onEdit={onEdit} />
+        <AbilityGroup
+          key={ability.id}
+          ability={ability}
+          editing={
+            opened !== ability.id ? null : (
+              <AbilityForm
+                ability={ability.ability}
+                choices={choices}
+                onWrite={onWriteAbility}
+                onClose={() => setOpened(null)}
+              />
+            )
+          }
+          onOpen={() => setOpened(ability.id)}
+        />
       ))}
     </div>
   );
@@ -64,16 +86,19 @@ function Training({ mark }: { mark: TrainingMark | undefined }) {
 
 function AbilityGroup({
   ability,
-  onEdit,
+  editing,
+  onOpen,
 }: {
   ability: LedgerAbility;
-  onEdit: (edit: SheetEdit) => void;
+  /** Форма встаёт на место навыков: она перечисляет их же с выбором степени владения. */
+  editing: ReactNode;
+  onOpen: () => void;
 }) {
   return (
     <section className={SURFACE_GROUP}>
       <button
         type="button"
-        onClick={() => onEdit(ability.edit)}
+        onClick={onOpen}
         aria-label={ability.accessibleName}
         className="grid h-11 w-full grid-cols-[1fr_48px_92px] items-center px-2.5 text-left"
       >
@@ -89,7 +114,9 @@ function AbilityGroup({
         </span>
       </button>
 
-      {ability.skills.length === 0 ? null : (
+      {editing !== null ? (
+        <div className="px-1 pb-1">{editing}</div>
+      ) : ability.skills.length === 0 ? null : (
         <ul aria-label={ability.titleRu} className="grid grid-cols-2 gap-x-2.5 px-2.5 pb-0.5">
           {ability.skills.map((skill) => (
             <li

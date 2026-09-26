@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { editName } from "@/ui/shared/ui/buttonLabels";
-import { FieldForm } from "@/ui/shared/ui/FieldForm";
+import { FieldForm, WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { NOTE_REMOVAL, RemoveButton } from "@/ui/shared/ui/RemoveButton";
 import { RULE_BETWEEN, RULE_GROUP } from "@/ui/shared/ui/rule";
@@ -34,8 +34,8 @@ export function NoteList({
   onDrop,
 }: {
   notes: readonly Note[];
-  onAdd: (textRu: string) => void;
-  onRewrite: (noteId: string, textRu: string) => void;
+  onAdd: (textRu: string) => WriteAnswer;
+  onRewrite: (noteId: string, textRu: string) => WriteAnswer;
   onDrop: (noteId: string) => void;
 }) {
   const [opened, setOpened] = useState<Opened | null>(null);
@@ -51,17 +51,15 @@ export function NoteList({
     setDraft("");
   };
 
-  const write = (): void => {
+  const write = (): WriteAnswer => {
     const textRu = draft.trim();
-    if (textRu === "" || opened === null) return close();
-    if (opened.kind === "new") onAdd(textRu);
-    else onRewrite(opened.id, textRu);
-    close();
+    if (textRu === "" || opened === null) return WRITTEN;
+    return opened.kind === "new" ? onAdd(textRu) : onRewrite(opened.id, textRu);
   };
 
   const field = (
-    <FieldForm titleRu={NOTE_FIELD} onWrite={write} onCancel={close}>
-      <GrowingField labelRu={NOTE_FIELD} value={draft} autoFocus onChange={setDraft} onSubmit={write} />
+    <FieldForm titleRu={NOTE_FIELD} onWrite={write} onClose={close}>
+      <GrowingField labelRu={NOTE_FIELD} value={draft} autoFocus onChange={setDraft} />
     </FieldForm>
   );
 

@@ -159,7 +159,9 @@ export function GameScreen() {
   const listLabel = spellListLabel(hintShown || sigilShown || speechShown);
 
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
-    if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
+    const reason = await applyEdit(sessionStore, { kind: "take_damage", damage, fire });
+    setRefusal(reason);
+    if (reason !== null) return;
     setDamageOpen(false);
     setActiveOpen(false);
     setCheckOpen(true);
@@ -283,7 +285,9 @@ export function GameScreen() {
             const ready = draftStore.getState().start(openRow);
             if (ready !== null) void confirm(ready);
           }}
-          onNoteChange={(note) => void execute({ kind: "set_spell_note", spellId: openRow.id, note })}
+          onWriteNote={(note) =>
+            applyEdit(sessionStore, { kind: "set_spell_note", spellId: openRow.id, note })
+          }
           onToggleMaterial={() => void execute({ kind: "toggle_material", spellId: openRow.id })}
           onClose={() => setOpenSpellId(null)}
         />
@@ -317,7 +321,12 @@ export function GameScreen() {
             }
           }}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
-          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
+          onAddStatus={(nameRu) =>
+            applyEdit(sessionStore, { kind: "start_manual_effect", nameRu })
+          }
+          onRenameStatus={(effectId, nameRu) =>
+            applyEdit(sessionStore, { kind: "rename_effect", effectId, nameRu })
+          }
           onOpenMarks={() => {
             setActiveOpen(false);
             setMarksOpen(true);

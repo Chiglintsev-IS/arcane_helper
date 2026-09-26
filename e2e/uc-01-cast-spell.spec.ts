@@ -314,18 +314,20 @@ test("the sheet mode survives a reload and feeds the header", async ({ page }) =
   await page.getByRole("tab", { name: "Кто он" }).click();
   await expect(page.getByRole("heading", { name: "Кто он" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Правка: Уровень" }).click();
-  const levelSheet = page.getByRole("dialog", { name: "Правка: Уровень" });
-  await levelSheet.getByRole("spinbutton", { name: "Уровень" }).fill("8");
-  await levelSheet.getByRole("spinbutton", { name: "Базовый максимум хитов" }).fill("66");
-  await page.getByRole("button", { name: "Сохранить" }).click();
+  const levelRow = page.getByRole("button", { name: /^Уровень/ });
+  await levelRow.click();
+  const levelForm = page.getByRole("form", { name: "Правка: Уровень" });
+  await levelForm.getByRole("spinbutton", { name: "Уровень" }).fill("8");
+  await levelForm.getByRole("spinbutton", { name: "Базовый максимум хитов" }).fill("66");
+  await levelForm.getByRole("button", { name: "Сохранить" }).click();
 
-  await expect(page.getByText("Волшебник, 8")).toBeVisible();
+  await expect(levelForm).toBeHidden();
+  await expect(levelRow).toContainText("8");
 
   await page.reload();
   await expect(page.getByRole("tab", { name: "Броски" })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Кто он" }).click();
-  await expect(page.getByText("Волшебник, 8")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Уровень/ })).toContainText("8");
 
   await switchMode(page, /^Игра/);
   await expect(page.getByRole("button", { name: /Ячейки 1 уровня/ })).toContainText("4/4");
@@ -463,8 +465,8 @@ test("combat screen, spell card and wizard pass axe-core", async ({ page }) => {
   await switchToSheet(page);
 
   await page.getByRole("button", { name: /^Интеллект 20/ }).click();
-  await expect(page.getByRole("dialog", { name: "Правка: Интеллект" })).toBeVisible();
-  await scan("шторка правки листа");
+  await expect(page.getByRole("form", { name: "Правка: Интеллект" })).toBeVisible();
+  await scan("форма правки листа");
   await page.getByRole("button", { name: "Отмена" }).click();
 
   await switchMode(page, /^Привал/);

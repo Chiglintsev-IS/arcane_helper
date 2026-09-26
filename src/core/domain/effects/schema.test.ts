@@ -105,9 +105,10 @@ describe("схема активного эффекта", () => {
     expect(entry.safeParse({ ...manual, isConcentration: false }).success).toBe(true);
   });
 
-  it("признак ручного эффекта — закрытый словарь: поправка к КД принимается, чужое слово нет", () => {
+  it("признак ручного эффекта — закрытый словарь: статус и поправка к КД, чужое слово нет", () => {
     const { spellId: _omitted, ...manual } = WEB_EFFECT;
     const withKind = (manualKind: string) => ({ ...manual, isConcentration: false, manualKind });
+    expect(entry.safeParse(withKind("status")).success).toBe(true);
     expect(entry.safeParse(withKind("armorAdjustment")).success).toBe(true);
     expect(entry.safeParse(withKind("blessing")).success).toBe(false);
   });

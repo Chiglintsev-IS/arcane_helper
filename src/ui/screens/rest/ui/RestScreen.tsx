@@ -2,6 +2,9 @@
 
 import { useState, useMemo } from "react";
 
+import type { Command } from "@/contract/commands";
+
+import { applyEdit } from "@/ui/shared/model/editing";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 import { describeConcentration } from "@/ui/entities/concentration/lib/summary";
 
@@ -33,6 +36,18 @@ export function RestScreen() {
   const [marksOpen, setMarksOpen] = useState(false);
 
   const execute = sessionStore.getState().execute;
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  const saveEdit = async (command: Command, close: () => void): Promise<void> => {
+    const reason = await applyEdit(sessionStore, command);
+    setRefusal(reason);
+    if (reason === null) close();
+  };
+
+  const closeWith = (close: () => void) => (): void => {
+    setRefusal(null);
+    close();
+  };
 
   const { concentration } = snapshot;
   const concentrationSummary = useMemo(() => {
@@ -44,7 +59,9 @@ export function RestScreen() {
     });
   }, [concentration, snapshot.spells, snapshot.casting]);
   const recordDamage = async (damage: number, fire: boolean): Promise<void> => {
-    if ((await execute({ kind: "take_damage", damage, fire })) !== null) return;
+    const reason = await applyEdit(sessionStore, { kind: "take_damage", damage, fire });
+    setRefusal(reason);
+    if (reason !== null) return;
     setDamageOpen(false);
     setActiveOpen(false);
     setCheckOpen(true);
@@ -126,30 +143,31 @@ export function RestScreen() {
       {armorClassOpen ? (
         <ArmorClassSheet
           value={snapshot.resources.armorClassAdjustment}
-          onCancel={() => setArmorClassOpen(false)}
-          onSave={async (value) => {
-            const failure = await execute({ kind: "set_armor_class_adjustment", value });
-            if (failure === null) setArmorClassOpen(false);
-          }}
+          error={refusal}
+          onCancel={closeWith(() => setArmorClassOpen(false))}
+          onSave={(value) =>
+            void saveEdit({ kind: "set_armor_class_adjustment", value }, () =>
+              setArmorClassOpen(false),
+            )
+          }
         />
       ) : null}
 
       {damageOpen ? (
         <HitPointsSheet
+          error={refusal}
           hitPoints={snapshot.sheet.hitPoints}
-          onCancel={() => setDamageOpen(false)}
+          onCancel={closeWith(() => setDamageOpen(false))}
           onDamage={recordDamage}
-          onMaximum={async (change) => {
-            if ((await execute({ kind: "edit_health", ...change })) === null) setDamageOpen(false);
-          }}
-          onHeal={async (amount) => {
-            if ((await execute({ kind: "heal", amount })) === null) setDamageOpen(false);
-          }}
-          onTemporary={async (amount) => {
-            if ((await execute({ kind: "grant_temporary_hit_points", amount })) === null) {
-              setDamageOpen(false);
-            }
-          }}
+          onMaximum={(change) =>
+            void saveEdit({ kind: "edit_health", ...change }, () => setDamageOpen(false))
+          }
+          onHeal={(amount) => void saveEdit({ kind: "heal", amount }, () => setDamageOpen(false))}
+          onTemporary={(amount) =>
+            void saveEdit({ kind: "grant_temporary_hit_points", amount }, () =>
+              setDamageOpen(false),
+            )
+          }
         />
       ) : null}
 
@@ -176,7 +194,12 @@ export function RestScreen() {
             }
           }}
           onEndEffect={(effectId) => void execute({ kind: "end_effect", effectId })}
-          onAddStatus={(nameRu) => void execute({ kind: "start_manual_effect", nameRu })}
+          onAddStatus={(nameRu) =>
+            applyEdit(sessionStore, { kind: "start_manual_effect", nameRu })
+          }
+          onRenameStatus={(effectId, nameRu) =>
+            applyEdit(sessionStore, { kind: "rename_effect", effectId, nameRu })
+          }
           onOpenMarks={() => {
             setActiveOpen(false);
             setMarksOpen(true);
@@ -189,10 +212,11 @@ export function RestScreen() {
         <MarksSheet
           marks={snapshot.sheet}
           choices={snapshot.choices}
-          onCancel={() => setMarksOpen(false)}
-          onSave={async (marks) => {
-            if ((await execute({ kind: "edit_marks", ...marks })) === null) setMarksOpen(false);
-          }}
+          error={refusal}
+          onCancel={closeWith(() => setMarksOpen(false))}
+          onSave={(marks) =>
+            void saveEdit({ kind: "edit_marks", ...marks }, () => setMarksOpen(false))
+          }
         />
       ) : null}
 

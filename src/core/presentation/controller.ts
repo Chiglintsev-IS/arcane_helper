@@ -37,6 +37,7 @@ import {
 import {
   endConcentration,
   endEffect,
+  renameEffect,
   setArmorClassAdjustment,
   spendRuneOnAnimalSpeech,
   spendRuneOnWardingSigil,
@@ -190,6 +191,8 @@ export function applyCommand(
       );
     case "set_armor_class_adjustment":
       return changed(setArmorClassAdjustment(session, command.value, occasion));
+    case "rename_effect":
+      return changed(renameEffect(session, command.effectId, command.nameRu, occasion));
     case "end_effect":
       return changed(endEffect(session, command.effectId, occasion));
 

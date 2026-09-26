@@ -15,10 +15,16 @@ import {
 } from "@/ui/entities/spell/lib/format";
 import { areaLabel, rangeLabel, resolutionBadge } from "@/ui/shared/lib/spellLabels";
 import { Badge } from "@/ui/shared/ui/Badge";
-import { FIELD_TEXT } from "@/ui/shared/ui/field";
+import { FieldForm, WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
+import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { SURFACE_CONTROL, SURFACE_GROUP, SURFACE_PAGE, SURFACE_PRIMARY } from "@/ui/shared/ui/surface";
+import { ValueRow } from "@/ui/shared/ui/ValueRow";
 
 const MUTED = "text-ink-quiet";
+
+const NOTE_LABEL = "Заметка";
+
+const NOTE_HINT = "Домашнее правило или напоминание";
 
 const ROLL_LABELS: Readonly<Record<string, string>> = {
   spell_attack: "Мой бросок",
@@ -71,18 +77,19 @@ export function SpellCardDetails({
   row,
   casting,
   onCast,
-  onNoteChange,
+  onWriteNote,
   onToggleMaterial,
   onClose,
 }: {
   row: SpellRowView;
   casting: CastingView;
   onCast: () => void;
-  onNoteChange: (note: string) => void;
+  onWriteNote: (note: string) => WriteAnswer;
   onToggleMaterial: () => void;
   onClose: () => void;
 }) {
   const [diagramOpen, setDiagramOpen] = useState(false);
+  const [typedNote, setTypedNote] = useState<string | null>(null);
   const { card } = row;
   const slotCost = slotCostLabel(row);
   const damage = row.damage ?? null;
@@ -181,16 +188,30 @@ export function SpellCardDetails({
           <p className="mt-2 whitespace-pre-line text-sm">{card.fullRulesRu}</p>
         </details>
 
-        <label className="flex flex-col gap-1 text-xs">
-          <span className="font-medium">Заметка</span>
-          <textarea
-            value={row.note ?? ""}
-            onChange={(event) => onNoteChange(event.target.value)}
-            rows={2}
-            placeholder="Домашнее правило или напоминание"
-            className={`p-2 ${FIELD_TEXT} ${SURFACE_CONTROL}`}
+        <div className="flex flex-col gap-1.5">
+          <ValueRow
+            labelRu={NOTE_LABEL}
+            valueRu={row.note ?? null}
+            onOpen={() => setTypedNote(row.note ?? "")}
           />
-        </label>
+          {typedNote === null ? null : (
+            <FieldForm
+              titleRu={NOTE_LABEL}
+              onWrite={() =>
+                typedNote.trim() === (row.note ?? "").trim() ? WRITTEN : onWriteNote(typedNote)
+              }
+              onClose={() => setTypedNote(null)}
+            >
+              <GrowingField
+                labelRu={NOTE_LABEL}
+                placeholderRu={NOTE_HINT}
+                value={typedNote}
+                autoFocus
+                onChange={setTypedNote}
+              />
+            </FieldForm>
+          )}
+        </div>
       </div>
 
       <footer className={` p-3 ${SURFACE_GROUP}`}>

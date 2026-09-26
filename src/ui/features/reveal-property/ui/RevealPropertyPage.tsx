@@ -92,6 +92,7 @@ export function RevealPropertyPage({
   directions,
   rarities,
   onSend,
+  onRewritten,
 }: {
   ingredient: IngredientKnowledgeView;
   /** Раскрытое, которое правят: без него страница записывает очередное, а не переписывает. */
@@ -99,6 +100,8 @@ export function RevealPropertyPage({
   directions: readonly string[];
   rarities: readonly string[];
   onSend: (command: Command, whenDone?: () => void) => void;
+  /** Переписанное читают там же, где его открыли: запись возвращает к странице вида. */
+  onRewritten: () => void;
 }) {
   const [propertyRu, setPropertyRu] = useState(edited?.nameRu ?? "");
   const [dirRu, setDirRu] = useState<string | null>(edited?.dirRu ?? null);
@@ -126,7 +129,7 @@ export function RevealPropertyPage({
         ...(rarityRu === null ? {} : { rarityRu }),
       },
       edited !== undefined
-        ? undefined
+        ? onRewritten
         : () => {
             setPropertyRu("");
             setDirRu(null);

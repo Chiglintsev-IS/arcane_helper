@@ -5,13 +5,24 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 
 import { createWizard } from "@/core/infrastructure/catalog/thorne/fixtures";
+import { toChoicesView } from "@/core/presentation/views/choicesView";
 import { toSheetView } from "@/core/presentation/views/sheetView";
+import { WRITTEN } from "@/ui/shared/ui/FieldForm";
+
 import { AbilityLedger } from "./AbilityLedger";
 
 afterEach(cleanup);
 
-function show(onEdit: (edit: unknown) => void = () => {}) {
-  render(<AbilityLedger sheet={toSheetView(createWizard())} onEdit={onEdit} />);
+type Write = Parameters<typeof AbilityLedger>[0]["onWriteAbility"];
+
+function show(onWriteAbility: Write = () => WRITTEN) {
+  render(
+    <AbilityLedger
+      sheet={toSheetView(createWizard())}
+      choices={toChoicesView()}
+      onWriteAbility={onWriteAbility}
+    />,
+  );
 }
 
 describe("гроссбух бросков", () => {
@@ -21,18 +32,24 @@ describe("гроссбух бросков", () => {
     expect(screen.getAllByText("Бонус мастерства")).toHaveLength(1);
   });
 
-  it("шапка группы — дверь правки целиком, и зовётся она своими числами", async () => {
+  it("шапка группы — дверь правки: форма встаёт на место навыков и закрывается записью", async () => {
     const user = userEvent.setup();
-    const onEdit = vi.fn();
-    show(onEdit);
+    const onWriteAbility = vi.fn<Write>(() => WRITTEN);
+    show(onWriteAbility);
 
     const header = screen.getByRole("button", {
       name: "Интеллект 18, +4, Спасбросок +8, владение. Правка: Интеллект",
     });
     await user.click(header);
 
-    expect(onEdit).toHaveBeenCalledTimes(1);
-    expect(onEdit.mock.calls[0]?.[0]).toMatchObject({ block: "ability" });
+    expect(screen.queryByRole("list", { name: "Интеллект" })).toBeNull();
+    expect(screen.getByRole("radiogroup", { name: "Аркана" })).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    expect(onWriteAbility).toHaveBeenCalledWith(expect.objectContaining({ ability: "intelligence" }));
+    expect(screen.queryByRole("radiogroup", { name: "Аркана" })).toBeNull();
+    expect(screen.getByRole("list", { name: "Интеллект" })).toBeDefined();
   });
 
   it("владение названо словом, а не одним знаком: без слова точка ничего не значит", () => {

@@ -11,6 +11,8 @@ import { loadThorneSpells } from "@/core/infrastructure/catalog/thorne";
 import { toBagView } from "@/core/presentation/views/bagView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
 
+import { WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
+
 import { Bag } from "./Bag";
 
 const spells = loadThorneSpells();
@@ -56,7 +58,7 @@ function renderBag(
     onSpend: (id: string) => void;
     onStock: (id: string) => void;
     onOpenItem: (id: string) => void;
-    onWriteMoney: (coins: Readonly<Record<string, number>>) => void;
+    onWriteMoney: (coins: Readonly<Record<string, number>>) => WriteAnswer;
   }> = {},
 ) {
   const view = toBagView(stateOf(entries), spells);
@@ -69,7 +71,7 @@ function renderBag(
       onOpenItem={handlers.onOpenItem ?? (() => {})}
       onSpend={handlers.onSpend ?? (() => {})}
       onStock={handlers.onStock ?? (() => {})}
-      onWriteMoney={handlers.onWriteMoney ?? (() => {})}
+      onWriteMoney={handlers.onWriteMoney ?? (() => WRITTEN)}
     />,
   );
 }
@@ -150,7 +152,7 @@ describe("«Рюкзак» в «Вещах»", () => {
         onOpenItem={() => {}}
         onSpend={() => {}}
         onStock={() => {}}
-        onWriteMoney={() => {}}
+        onWriteMoney={() => WRITTEN}
       />,
     );
 
@@ -159,7 +161,7 @@ describe("«Рюкзак» в «Вещах»", () => {
 
   it("деньги правятся прямо в строке, а записываются ответом, а не вводом", async () => {
     const user = userEvent.setup();
-    const onWriteMoney = vi.fn();
+    const onWriteMoney = vi.fn(() => WRITTEN);
     renderBag([{ definition: ring, bag: 1 }], { onWriteMoney });
 
     await user.click(screen.getByRole("button", { name: "Деньги" }));
@@ -171,5 +173,6 @@ describe("«Рюкзак» в «Вещах»", () => {
 
     await user.click(screen.getByRole("button", { name: "Записать" }));
     expect(onWriteMoney).toHaveBeenCalledWith({ gold: 215, silver: 0, copper: 0 });
+    expect(screen.queryByLabelText("зм")).toBeNull();
   });
 });

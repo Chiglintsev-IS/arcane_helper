@@ -567,10 +567,10 @@ describe("приведение состояния версии 1", () => {
       expect(fieldsOf(effectsOf(migrated)[0]).manualKind).toBe("armorAdjustment");
     });
 
-    it("статус того же имени без вклада в КД признака не получает", () => {
+    it("статус того же имени без вклада в КД остаётся статусом", () => {
       const { armorClass: _none, ...namesake } = legacyAdjustment;
       const migrated = migrateCharacterState(withEffects([namesake]));
-      expect(fieldsOf(effectsOf(migrated)[0]).manualKind).toBeUndefined();
+      expect(fieldsOf(effectsOf(migrated)[0]).manualKind).toBe("status");
     });
 
     it("эффект нынешней формы проходит насквозь той же ссылкой", () => {
@@ -586,7 +586,7 @@ describe("приведение состояния версии 1", () => {
       expect(migrateCharacterState(marked)).toBe(marked);
 
       const foreign = withEffects([{ ...legacyAdjustment, nameRu: "Прикрытие союзника" }]);
-      expect(fieldsOf(effectsOf(migrateCharacterState(foreign))[0]).manualKind).toBeUndefined();
+      expect(fieldsOf(effectsOf(migrateCharacterState(foreign))[0]).manualKind).toBe("status");
     });
 
     it("порченая запись эффекта проходит как есть: её отвергнет схема, а не приведение", () => {
@@ -638,6 +638,60 @@ describe("приведение состояния версии 1", () => {
     it("снимок отмены получает тот же срок, что и состояние", () => {
       const patch = { activeEffects: [legacyUntimed({ spellId: "web" })] };
       expect(durationTypesOf(migrateUndoPatch(patch))).toEqual(["until_spell_ends"]);
+    });
+  });
+
+  describe("статус, набранный игроком, получает признак статуса", () => {
+    const legacyStatus = (overrides: Record<string, unknown>) => ({
+      id: "status",
+      nameRu: "Отравлн",
+      startedAt: "2026-07-31T12:00:00.000Z",
+      duration: { type: "until_removed" },
+      isConcentration: false,
+      slotLevelUsed: 0,
+      contributions: [],
+      endConditionRu: "Снимается вручную.",
+      ...overrides,
+    });
+    const withEffects = (activeEffects: unknown[]) => ({ ...createWizard(), activeEffects });
+    const kindsOf = (migrated: unknown): unknown[] =>
+      listOf(fieldsOf(migrated).activeEffects).map((effect) => fieldsOf(effect).manualKind);
+
+    it("статус без признака открывается и переименовывается", () => {
+      const state = characterStateSchema.parse(
+        migrateCharacterState(withEffects([legacyStatus({})])),
+      );
+
+      const { after } = Character.of(state).effects.rename("status", "Отравлен");
+      expect(after.nameRu).toBe("Отравлен");
+    });
+
+    it("статус с особым сроком прежней формы тоже становится статусом", () => {
+      const migrated = migrateCharacterState(
+        withEffects([legacyStatus({ duration: { type: "special" } })]),
+      );
+      expect(kindsOf(migrated)).toEqual(["status"]);
+    });
+
+    it("эффект заклинания, след руны и поправка к КД признака статуса не получают", () => {
+      const migrated = migrateCharacterState(
+        withEffects([
+          legacyStatus({ id: "web", spellId: "web", duration: { type: "until_spell_ends" } }),
+          legacyStatus({ id: "rune", duration: { type: "rounds", value: 1 } }),
+          legacyStatus({ id: "adjustment", manualKind: "armorAdjustment" }),
+        ]),
+      );
+      expect(kindsOf(migrated)).toEqual([undefined, undefined, "armorAdjustment"]);
+    });
+
+    it("статус нынешней формы проходит насквозь той же ссылкой", () => {
+      const marked = withEffects([legacyStatus({ manualKind: "status" })]);
+      expect(migrateCharacterState(marked)).toBe(marked);
+    });
+
+    it("снимок отмены приводится так же, как состояние", () => {
+      const patch = { activeEffects: [legacyStatus({})] };
+      expect(kindsOf(migrateUndoPatch(patch))).toEqual(["status"]);
     });
   });
 

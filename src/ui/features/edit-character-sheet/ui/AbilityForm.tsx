@@ -5,8 +5,11 @@ import { useState } from "react";
 import type { AbilityView, ChoicesView } from "@/contract/views";
 import { abilityLabel, skillLabel, trainingLabel } from "@/ui/entities/character/lib/labels";
 import { requiredFieldNumber, useRequiredNumbers } from "@/ui/shared/lib/fieldNumber";
-import { EditSheetFrame, NumberField } from "./EditSheetFrame";
+import { BUTTON_LABELS } from "@/ui/shared/ui/buttonLabels";
+import { FieldForm, UNSENT, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
+
+import { NumberField } from "./EditSheetFrame";
 
 type Skills = Record<string, string>;
 
@@ -19,23 +22,21 @@ function trainingChoices(
   ];
 }
 
-export function AbilitySheet({
+export function AbilityForm({
   ability,
   choices,
-  onSave,
-  onCancel,
-  error = null,
+  onWrite,
+  onClose,
 }: {
-  error?: string | null;
   ability: AbilityView;
   choices: ChoicesView;
-  onSave: (change: {
+  onWrite: (change: {
     ability: string;
     score: number;
     saveProficient: boolean;
     skills: Skills;
-  }) => void;
-  onCancel: () => void;
+  }) => WriteAnswer;
+  onClose: () => void;
 }) {
   const owned = ability.skills;
   const [scoreText, setScoreText] = useState(String(ability.score));
@@ -55,13 +56,15 @@ export function AbilitySheet({
   };
 
   return (
-    <EditSheetFrame
+    <FieldForm
       titleRu={abilityLabel(ability.id)}
-      error={error}
-      onCancel={onCancel}
-      onSave={() =>
-        required.ask([score], () => onSave({ ability: ability.id, score, saveProficient, skills }))
-      }
+      answerRu={BUTTON_LABELS.save}
+      onWrite={() => {
+        required.ask([score], () => {});
+        if (!required.typed(score)) return UNSENT;
+        return onWrite({ ability: ability.id, score, saveProficient, skills });
+      }}
+      onClose={onClose}
     >
       <NumberField
         labelRu="Значение"
@@ -88,7 +91,7 @@ export function AbilitySheet({
       </button>
 
       {owned.map(({ id }) => (
-        <div key={id} className="flex items-center justify-between gap-2 text-sm">
+        <div key={id} className="flex flex-col gap-1 text-sm">
           <span>{skillLabel(id)}</span>
           <div role="radiogroup" aria-label={skillLabel(id)} className="flex gap-1">
             {trainingChoices(choices.skillTrainings).map((choice) => (
@@ -111,6 +114,6 @@ export function AbilitySheet({
           </div>
         </div>
       ))}
-    </EditSheetFrame>
+    </FieldForm>
   );
 }

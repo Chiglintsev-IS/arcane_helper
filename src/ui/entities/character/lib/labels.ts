@@ -173,7 +173,3 @@ const STAT_KIND_LABELS: Readonly<Record<string, string>> = {
 };
 
 export const DASH = "—";
-
-export function orDash(value: string | number): string {
-  return value === "" || value === 0 ? DASH : String(value);
-}

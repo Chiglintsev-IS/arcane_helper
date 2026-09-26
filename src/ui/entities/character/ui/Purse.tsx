@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { BagView } from "@/contract/views";
 import { currencyAbbr } from "@/ui/entities/character/lib/labels";
 import { CoinsEditor } from "@/ui/entities/character/ui/CoinsEditor";
+import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { RULE_EDGE_BOTTOM } from "@/ui/shared/ui/rule";
 import { SURFACE_GROUP_BARE } from "@/ui/shared/ui/surface";
 
@@ -28,7 +29,7 @@ export function Purse({
   /** Соседнее нажатие в той же строке: у денег и сита один поясок над списком. */
   aside?: ReactNode;
   onToggle: () => void;
-  onWrite: (coins: Readonly<Record<string, number>>) => void;
+  onWrite: (coins: Readonly<Record<string, number>>) => WriteAnswer;
 }) {
   const lineRu = money
     .map(({ currency, amount }) => `${amount} ${currencyAbbr(currency)}`)
@@ -57,7 +58,7 @@ export function Purse({
             currencies={money.map(({ currency }) => currency)}
             coins={Object.fromEntries(money.map(({ currency, amount }) => [currency, amount]))}
             onWrite={onWrite}
-            onCancel={onToggle}
+            onClose={onToggle}
           />
         </div>
       )}

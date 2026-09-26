@@ -7,7 +7,7 @@ import {
 } from "@/core/domain/arcana/runes";
 import { Character } from "@/core/domain/assembly/character";
 import type { ActiveEffect } from "@/core/domain/effects/schema";
-import type { ConcentrationEnd } from "@/core/domain/effects/effectBoard";
+import { EMPTY_EFFECT_NAME_RU, type ConcentrationEnd } from "@/core/domain/effects/effectBoard";
 import { effectEndConditionRu } from "@/core/domain/effects/concentration";
 import type { StatContribution } from "@/core/domain/shared/stats";
 import { DomainError } from "@/core/domain/shared/errors";
@@ -111,7 +111,7 @@ function buildManualEffect(
   nameRu: string,
   contributions: readonly StatContribution[],
   occasion: Occasion,
-  manualKind?: ActiveEffect["manualKind"],
+  manualKind: NonNullable<ActiveEffect["manualKind"]>,
 ): ActiveEffect {
   return {
     id: occasion.nextId(),
@@ -121,7 +121,7 @@ function buildManualEffect(
     isConcentration: false,
     slotLevelUsed: 0,
     contributions,
-    ...(manualKind === undefined ? {} : { manualKind }),
+    manualKind,
     endConditionRu: MANUAL_EFFECT_END_CONDITION_RU,
   };
 }
@@ -133,7 +133,7 @@ function armorClassBonus(value: number): StatContribution {
 export function startManualEffect(session: Session, input: ManualEffectInput, occasion: Occasion): Session {
   const nameRu = input.nameRu.trim();
   if (nameRu === "") {
-    throw new DomainError("Название эффекта не может быть пустым");
+    throw new DomainError(EMPTY_EFFECT_NAME_RU);
   }
   if (input.armorClassBonus !== undefined && !Number.isInteger(input.armorClassBonus)) {
     throw new DomainError("Вклад в Класс Доспеха должен быть целым числом");
@@ -147,6 +147,7 @@ export function startManualEffect(session: Session, input: ManualEffectInput, oc
     nameRu,
     input.armorClassBonus === undefined ? [] : [armorClassBonus(input.armorClassBonus)],
     occasion,
+    "status",
   );
   return commit(
     session,
@@ -195,6 +196,23 @@ export function endEffect(session: Session, effectId: string, occasion: Occasion
       summaryRu: `Эффект завершён: ${ended.nameRu}`,
       ...(ended.spellId === undefined ? {} : { spellId: ended.spellId }),
     },
+    occasion,
+  );
+}
+
+export function renameEffect(
+  session: Session,
+  effectId: string,
+  nameRu: string,
+  occasion: Occasion,
+): Session {
+  const root = Character.of(session.character);
+  const { board, before, after } = root.effects.rename(effectId, nameRu);
+  if (after.nameRu === before.nameRu) return session;
+  return commit(
+    session,
+    root.withEffects(board),
+    { kind: "sheet_edited", summaryRu: `Эффект переименован: ${before.nameRu} → ${after.nameRu}` },
     occasion,
   );
 }

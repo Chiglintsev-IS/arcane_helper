@@ -25,7 +25,7 @@ const activeEffectSchema = z.object({
 
   contributions: z.array(statContributionSchema).default([]),
 
-  manualKind: z.literal("armorAdjustment").optional(),
+  manualKind: z.enum(["status", "armorAdjustment"]).optional(),
 
   endConditionRu: nonEmpty,
   note: nonEmpty.optional(),

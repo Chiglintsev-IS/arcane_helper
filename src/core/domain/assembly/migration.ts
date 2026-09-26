@@ -639,8 +639,27 @@ function migrateEffectDuration(effect: unknown): unknown {
   };
 }
 
+const UNTIL_REMOVED_DURATION = "until_removed";
+
+/**
+ * Статус, набранный игроком, признака прежде не нёс: его выдаёт срок до снятия рукой без
+ * заклинания — поправка к КД к этому шагу уже получила свой признак.
+ */
+function migrateStatusMarker(effect: unknown): unknown {
+  const fields = fieldsOf(effect);
+  const duration = fieldsOf(fields.duration);
+  if (
+    duration.type !== UNTIL_REMOVED_DURATION ||
+    fields.spellId !== undefined ||
+    fields.manualKind !== undefined
+  ) {
+    return effect;
+  }
+  return { ...fields, manualKind: "status" };
+}
+
 function migrateEffect(effect: unknown): unknown {
-  return migrateEffectDuration(migrateEffectContributions(effect));
+  return migrateStatusMarker(migrateEffectDuration(migrateEffectContributions(effect)));
 }
 
 function migrateEffectShapes(state: unknown): unknown {

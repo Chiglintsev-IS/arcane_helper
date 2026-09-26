@@ -8,9 +8,13 @@ import type { AbilityView } from "@/contract/views";
 import type { CharacterState } from "@/core/domain/assembly/state";
 import { toSheetView } from "@/core/presentation/views/sheetView";
 import { toChoicesView } from "@/core/presentation/views/choicesView";
-import { AbilitySheet } from "./AbilitySheet";
+import { WRITTEN } from "@/ui/shared/ui/FieldForm";
+
+import { AbilityForm } from "./AbilityForm";
 
 afterEach(cleanup);
+
+type Write = Parameters<typeof AbilityForm>[0]["onWrite"];
 
 function abilityOf(id: string, character: CharacterState = createWizard()): AbilityView {
   const found = toSheetView(character).abilities.find((ability) => ability.id === id);
@@ -18,14 +22,14 @@ function abilityOf(id: string, character: CharacterState = createWizard()): Abil
   return found;
 }
 
-describe("шторка характеристики", () => {
-  it("характеристика: шторка держит значение, спасбросок и её навыки", async () => {
-    const onSave = vi.fn();
+describe("форма характеристики", () => {
+  it("характеристика: форма держит значение, спасбросок и её навыки", async () => {
+    const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilitySheet choices={toChoicesView()}
+      <AbilityForm choices={toChoicesView()}
         ability={abilityOf("intelligence")}
-        onSave={onSave}
-        onCancel={() => {}}
+        onWrite={onSave}
+        onClose={() => {}}
       />,
     );
 
@@ -46,13 +50,12 @@ describe("шторка характеристики", () => {
   });
 
   it("характеристика: набранное уходит владельцу, а причина отказа приходит от него", async () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<Write>(() => Promise.resolve("Поле «abilities» не годится"));
     render(
-      <AbilitySheet choices={toChoicesView()}
+      <AbilityForm choices={toChoicesView()}
         ability={abilityOf("strength")}
-        error="Поле «abilities» не годится"
-        onSave={onSave}
-        onCancel={() => {}}
+        onWrite={onSave}
+        onClose={() => {}}
       />,
     );
 
@@ -66,12 +69,12 @@ describe("шторка характеристики", () => {
   });
 
   it("характеристика: пустое значение не уходит владельцу и отказывает у поля", async () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilitySheet choices={toChoicesView()}
+      <AbilityForm choices={toChoicesView()}
         ability={abilityOf("intelligence")}
-        onSave={onSave}
-        onCancel={() => {}}
+        onWrite={onSave}
+        onClose={() => {}}
       />,
     );
 
@@ -89,12 +92,12 @@ describe("шторка характеристики", () => {
   });
 
   it("характеристика: владение спасброском снимается переключателем", async () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilitySheet choices={toChoicesView()}
+      <AbilityForm choices={toChoicesView()}
         ability={abilityOf("intelligence")}
-        onSave={onSave}
-        onCancel={() => {}}
+        onWrite={onSave}
+        onClose={() => {}}
       />,
     );
 
@@ -105,12 +108,12 @@ describe("шторка характеристики", () => {
   });
 
   it("характеристика: навык переключается в три состояния", async () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<Write>(() => WRITTEN);
     render(
-      <AbilitySheet choices={toChoicesView()}
+      <AbilityForm choices={toChoicesView()}
         ability={abilityOf("intelligence")}
-        onSave={onSave}
-        onCancel={() => {}}
+        onWrite={onSave}
+        onClose={() => {}}
       />,
     );
 
@@ -126,13 +129,13 @@ describe("шторка характеристики", () => {
   });
 
   it("характеристика: «нет» убирает навык, а не записывает значение", async () => {
-    const onSave = vi.fn();
+    const onSave = vi.fn<Write>(() => WRITTEN);
     const state = createWizard();
     render(
-      <AbilitySheet choices={toChoicesView()}
+      <AbilityForm choices={toChoicesView()}
         ability={abilityOf("intelligence", { ...state, skills: { arcana: "proficient" } })}
-        onSave={onSave}
-        onCancel={() => {}}
+        onWrite={onSave}
+        onClose={() => {}}
       />,
     );
 

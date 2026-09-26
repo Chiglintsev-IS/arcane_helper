@@ -13,6 +13,18 @@ export const CONCENTRATION_ENDS = ["manual", "failed_check", "replaced", "long_r
 
 export type ConcentrationEnd = (typeof CONCENTRATION_ENDS)[number];
 
+export const EMPTY_EFFECT_NAME_RU = "Название эффекта не может быть пустым";
+
+type Renaming = { board: EffectBoard; before: ActiveEffect; after: ActiveEffect };
+
+export function renamable(effect: ActiveEffect): boolean {
+  return effect.manualKind === "status";
+}
+
+function notStatusRefusal(nameRu: string): string {
+  return `«${nameRu}» не статус: переименовать можно только статус, набранный вручную`;
+}
+
 function contributionsOf(
   nameRu: string,
   contributions: Spell["contributions"],
@@ -67,16 +79,37 @@ export class EffectBoard {
     };
   }
 
-  end(effectId: string): { board: EffectBoard; ended: ActiveEffect } {
-    const ended = this.state.activeEffects.find((candidate) => candidate.id === effectId);
-    if (ended === undefined) {
+  private located(effectId: string): ActiveEffect {
+    const found = this.state.activeEffects.find((candidate) => candidate.id === effectId);
+    if (found === undefined) {
       throw new DomainError(`Активного эффекта «${effectId}» нет`);
     }
+    return found;
+  }
+
+  end(effectId: string): { board: EffectBoard; ended: ActiveEffect } {
+    const ended = this.located(effectId);
     const rest = this.state.activeEffects.filter((candidate) => candidate.id !== effectId);
     return {
       board: ended.isConcentration ? this.with(rest, undefined) : this.with(rest, this.state.concentration),
       ended,
     };
+  }
+
+  rename(effectId: string, nameRu: string): Renaming {
+    const before = this.located(effectId);
+    if (!renamable(before)) {
+      throw new DomainError(notStatusRefusal(before.nameRu));
+    }
+    const written = nameRu.trim();
+    if (written === "") {
+      throw new DomainError(EMPTY_EFFECT_NAME_RU);
+    }
+    const after = { ...before, nameRu: written };
+    const effects = this.state.activeEffects.map((effect) =>
+      effect.id === effectId ? after : effect,
+    );
+    return { board: this.with(effects, this.state.concentration), before, after };
   }
 
   expire(elapsedRounds: (effect: ActiveEffect) => number): Expiry {

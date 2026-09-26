@@ -6,14 +6,9 @@ import type { Command } from "@/contract/commands";
 import { useSession, useStores } from "@/ui/shared/model/storeContext";
 
 import { AbilityLedger } from "@/ui/widgets/character-sheet/ui/AbilityLedger";
-import { AbilitySheet } from "@/ui/features/edit-character-sheet/ui/AbilitySheet";
 import { CharacterSheet } from "@/ui/widgets/character-sheet/ui/CharacterSheet";
-import type { SheetEdit } from "@/ui/widgets/character-sheet/model/rows";
-import { IdentitySheet } from "@/ui/features/edit-character-sheet/ui/IdentitySheet";
-import { LanguagesSheet } from "@/ui/features/edit-character-sheet/ui/LanguagesSheet";
-import { LevelSheet } from "@/ui/features/edit-character-sheet/ui/LevelSheet";
-import { ProficienciesSheet } from "@/ui/features/edit-character-sheet/ui/ProficienciesSheet";
 import { applyEdit } from "@/ui/shared/model/editing";
+import type { WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { SURFACE_CHOSEN, SURFACE_CONTROL } from "@/ui/shared/ui/surface";
 
 const TABS = [
@@ -28,27 +23,9 @@ export function SheetScreen() {
   const { sheet, choices } = useSession((state) => state.snapshot)!;
 
   const [tab, setTab] = useState<Tab>("rolls");
-  const [open, setOpen] = useState<SheetEdit | null>(null);
-  const [refusal, setRefusal] = useState<string | null>(null);
   const panelId = useId();
 
-  const save = async (command: Command, close: () => void): Promise<void> => {
-    const reason = await applyEdit(sessionStore, command);
-    setRefusal(reason);
-    if (reason === null) close();
-  };
-
-  const openSheet = (edit: SheetEdit | null): void => {
-    setRefusal(null);
-    setOpen(edit);
-  };
-
-  const closeSheet = (): void => {
-    setRefusal(null);
-    setOpen(null);
-  };
-
-  const editedAbility = open?.block === "ability" ? open.ability : null;
+  const write = (command: Command): WriteAnswer => applyEdit(sessionStore, command);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -76,65 +53,20 @@ export function SheetScreen() {
         className="min-h-0 flex-1 overflow-y-auto px-3 pb-2.5 pt-1.5"
       >
         {tab === "rolls" ? (
-          <AbilityLedger sheet={sheet} onEdit={openSheet} />
+          <AbilityLedger
+            sheet={sheet}
+            choices={choices}
+            onWriteAbility={(change) => write({ kind: "edit_ability", ...change })}
+          />
         ) : (
-          <CharacterSheet sheet={sheet} onEdit={openSheet} />
+          <CharacterSheet
+            sheet={sheet}
+            choices={choices}
+            onWriteIdentity={(patch) => write({ kind: "edit_identity", patch })}
+            onWriteLevel={(next) => write({ kind: "change_level", ...next })}
+          />
         )}
       </div>
-
-      {open?.block === "identity" ? (
-        <IdentitySheet
-          sheet={sheet}
-          choices={choices}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(patch) => void save({ kind: "edit_identity", patch }, closeSheet)}
-        />
-      ) : null}
-
-      {open?.block === "level" ? (
-        <LevelSheet
-          level={sheet.level}
-          hitPoints={sheet.hitPoints}
-          choices={choices}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(next) => void save({ kind: "change_level", ...next }, closeSheet)}
-        />
-      ) : null}
-
-      {editedAbility === null ? null : (
-        <AbilitySheet
-          key={editedAbility.id}
-          ability={editedAbility}
-          choices={choices}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(change) => void save({ kind: "edit_ability", ...change }, closeSheet)}
-        />
-      )}
-
-      {open?.block === "proficiencies" ? (
-        <ProficienciesSheet
-          proficiencies={sheet.proficiencies}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(proficiencies) =>
-            void save({ kind: "edit_identity", patch: { proficiencies } }, closeSheet)
-          }
-        />
-      ) : null}
-
-      {open?.block === "languages" ? (
-        <LanguagesSheet
-          proficiencies={sheet.proficiencies}
-          error={refusal}
-          onCancel={closeSheet}
-          onSave={(proficiencies) =>
-            void save({ kind: "edit_identity", patch: { proficiencies } }, closeSheet)
-          }
-        />
-      ) : null}
     </div>
   );
 }

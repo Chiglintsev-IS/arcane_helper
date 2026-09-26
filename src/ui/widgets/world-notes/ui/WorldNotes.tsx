@@ -5,11 +5,13 @@ import { useState } from "react";
 import type { Snapshot } from "@/contract/snapshot";
 import { matchesQuery } from "@/ui/shared/lib/searchable";
 import { timeRu } from "@/ui/shared/lib/timeRu";
+import { FieldForm, WRITTEN, type WriteAnswer } from "@/ui/shared/ui/FieldForm";
 import { GrowingField } from "@/ui/shared/ui/GrowingField";
 import { BUTTON_LABELS, editName } from "@/ui/shared/ui/buttonLabels";
 import { NOTE_REMOVAL, RemoveButton } from "@/ui/shared/ui/RemoveButton";
 import { Magnifier } from "@/ui/shared/ui/Magnifier";
 import { FIELD_TEXT } from "@/ui/shared/ui/field";
+import { RULE_MARK } from "@/ui/shared/ui/rule";
 import { SURFACE_CHOSEN, SURFACE_CONTROL, SURFACE_GROUP } from "@/ui/shared/ui/surface";
 
 type WorldNote = Snapshot["notes"][number];
@@ -30,7 +32,7 @@ function NoteRow({
   onRemove,
 }: {
   note: WorldNote;
-  onEdit: (text: string) => void;
+  onEdit: (text: string) => WriteAnswer;
   onRemove: () => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -54,17 +56,16 @@ function NoteRow({
 
   return (
     <li className={`flex flex-col gap-1 p-2 ${SURFACE_GROUP}`}>
-      <GrowingField
-        value={draft}
-        labelRu={named}
-        autoFocus
-        onChange={setDraft}
-        onSubmit={(text) => {
-          if (text !== note.text) onEdit(text);
-          setDraft(null);
+      <FieldForm
+        titleRu={NOTE_LABEL}
+        onWrite={() => {
+          const text = draft.trim();
+          return text === "" || text === note.text ? WRITTEN : onEdit(text);
         }}
-        onCancel={() => setDraft(null)}
-      />
+        onClose={() => setDraft(null)}
+      >
+        <GrowingField value={draft} labelRu={named} autoFocus onChange={setDraft} />
+      </FieldForm>
 
       <div className="flex items-center justify-between gap-2">
         <Time at={note.at} />
@@ -86,13 +87,22 @@ export function WorldNotes({
   onRemove,
 }: {
   notes: Snapshot["notes"];
-  onAdd: (text: string) => void;
-  onEdit: (noteId: string, text: string) => void;
+  onAdd: (text: string) => WriteAnswer;
+  onEdit: (noteId: string, text: string) => WriteAnswer;
   onRemove: (noteId: string) => void;
 }) {
   const [query, setQuery] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [refusalRu, setRefusalRu] = useState<string | null>(null);
   const found = [...notes].reverse().filter((note) => matchesQuery(note.text, query ?? ""));
+
+  /* Набранное уходит из поля, только когда записано: отказ оставляет его на месте с причиной. */
+  const add = (text: string): void => {
+    void onAdd(text).then((refused) => {
+      setRefusalRu(refused);
+      if (refused === null) setDraft("");
+    });
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -105,10 +115,7 @@ export function WorldNotes({
                   value={draft}
                   labelRu={NOTE_LABEL}
                   onChange={setDraft}
-                  onSubmit={(text) => {
-                    onAdd(text);
-                    setDraft("");
-                  }}
+                  onSubmit={add}
                 />
               </div>
               <button
@@ -116,9 +123,7 @@ export function WorldNotes({
                 disabled={draft.trim() === ""}
                 onClick={() => {
                   const text = draft.trim();
-                  if (text === "") return;
-                  onAdd(text);
-                  setDraft("");
+                  if (text !== "") add(text);
                 }}
                 className={`shrink-0 px-3 text-sm font-semibold ${SURFACE_CONTROL}`}
               >
@@ -154,6 +159,12 @@ export function WorldNotes({
           <Magnifier />
         </button>
       </div>
+
+      {refusalRu === null || query !== null ? null : (
+        <p role="alert" className={`${RULE_MARK.reaction} p-2 text-sm`}>
+          {refusalRu}
+        </p>
+      )}
 
       {found.length === 0 ? (
         <p className={`text-sm ${MUTED}`}>
