@@ -1,0 +1,3 @@
+:HL["/arcane_helper/_next/static/chunks/21_ohwngjdfmr.css","style"]
+1:[["children",{"s":"__PAGE__","h":160}]]
+0:{"b":"TSixl-q7wugLR-xFMkQvn","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
